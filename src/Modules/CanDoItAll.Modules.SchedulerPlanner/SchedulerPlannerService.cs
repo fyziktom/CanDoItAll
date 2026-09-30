@@ -1122,6 +1122,10 @@ public sealed class SchedulerTargetLauncher(
                 routeElement.ValueKind == JsonValueKind.String)
             {
                 route = routeElement.GetString() ?? string.Empty;
+                // Project Structure outputs also carry a UI navigation route, not a Scheduler outcome.
+                if (route.StartsWith('/')) {
+                    route = string.Empty;
+                }
             }
 
             if (document.RootElement.TryGetProperty(WorkflowNoMessagesPropertyName, out var noMessagesElement) &&

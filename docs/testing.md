@@ -897,3 +897,55 @@ The [Resources boundary receipt](architecture/resources-ui-boundary.md) records 
 executed selections, source and published asset proof, source-mode graph/watch and
 three-sample edit measurements. Portability, documentation/evidence and secret gates
 remain mandatory; targeted test success does not replace them.
+
+## Workspace completion proof
+
+`tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests` belongs to Components,
+Stable and all three CI component shards. It exercises the real renderer, independent
+read lifetimes, command admission, retained acknowledgements and the backend-free
+sandbox dependency closure. The existing `StoragePlacementRecoveryDialogTests` still
+tests the production composition wrapper.
+
+`StorageRecoveryBrowserTests` prepares genuine interrupted Workflow outputs in a private
+PostgreSQL host, continues them through the production UI and independently compares
+file hashes, original receipts and run state. It also checks a real read-only managed
+credential. Its authenticated browser circuit uses the server-advertised LongPolling
+transport so the test credential's HTTP header reaches the circuit; authorization
+services are unchanged. `StorageRecoverySandboxBrowserTests` covers source and published
+Production assets without a backend. Neither is live-model evidence.
+
+Use build-backed discovery and the same filter for execution:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests --configuration Release --no-build --no-restore /m:1
+dotnet test tests/Playwright/CanDoItAll.Tests.Playwright --configuration Release --filter "FullyQualifiedName~StorageRecoveryBrowserTests|FullyQualifiedName~StorageRecoverySandboxBrowserTests" /m:1
+```
+
+The PostgreSQL, browser and private-root prerequisites above apply to the production
+journey. The [Workspace completion record](architecture/workspace-completion-ui-boundaries.md)
+keeps stage proof distinct from the later frozen full-application campaign.
+
+The corresponding Data Sources leaf suite covers stable drafts, one-use password input,
+independent reads, scoped operation receipts and held transfers. `DataSourcesOwnerTests`
+uses real private PostgreSQL/control-plane owners; `DataSourcesBrowserTests` exercises
+profile save, physical schema creation, partial transfer and actual owned-host restart.
+`DataSourcesSandboxBrowserTests` runs source and published Production with no backend.
+
+Configuration's renderer stays in the existing Configuration.UI project. Main Components
+contains `ConfigurationSchemaRendererTests`, `ConnectorConfigFieldEditorTests`,
+`SettingsRendererTests` and the real `WorkflowImageGenerationSettingsRendererTests`.
+`ConfigurationSandboxBrowserTests` covers its independent source/published host;
+`ConfigurationWorkflowBrowserTests` saves and reads back actual generic and registered
+settings without executing external effects. See the [Workspace closure map](architecture/workspace-closure-map.json).
+
+Live UI proof additionally requires an existing absolute `CANDOITALL_LIVE_REQUEST_BUDGET_FILE`
+containing a JSON reservation list, initially `[]`. Keep the same file across campaign
+retries. A test-only loopback proxy reserves before each outbound Responses request,
+refuses after ten in an execution or forty in the campaign, and forwards only to the
+configured OpenAI Responses destination. It never records credentials or message bodies.
+The private provider catalog is changed through its normal owner; application authority
+and provider/runtime implementations stay unchanged. `LiveRequestBudgetTests` verifies
+concurrent and persisted admission without sending model requests. Evidence separately
+records outbound reservations, HTTP success and actual provider-history journal rows;
+tool-admission batches are no longer represented as request counts.

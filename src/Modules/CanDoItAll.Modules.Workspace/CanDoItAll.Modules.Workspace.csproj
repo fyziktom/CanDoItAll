@@ -9,6 +9,7 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.DataSources.UI/CanDoItAll.Workspace.DataSources.UI.csproj" />
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
@@ -19,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageRecovery.UI/CanDoItAll.Workspace.StorageRecovery.UI.csproj" />
     <ProjectReference Include="../CanDoItAll.Modules.Workspace.Presentation/CanDoItAll.Modules.Workspace.Presentation.csproj" />
     <ProjectReference Include="../CanDoItAll.Modules.Workspace.StorageSelection.Contracts/CanDoItAll.Modules.Workspace.StorageSelection.Contracts.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />

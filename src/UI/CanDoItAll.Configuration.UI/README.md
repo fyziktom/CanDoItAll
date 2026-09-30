@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Shared connector field rendering for Resources and the existing Workspace fallback configuration editor. It uses the existing SharedKernel schema/state and BaseLib controls.
+Shared connector fields and the actual neutral schema loop for Resources and Workspace
+configuration hosts. It uses the existing SharedKernel schema/state and BaseLib controls.
 
 ## Project Type
 
@@ -22,3 +23,8 @@ records the evaluated source-mode closure, validation and compatibility decision
 ## Architecture Notes
 
 ConfigurationInputDraft retains unblurred raw text and per-field edit versions while owner validation uses the canonical configuration state. Secret options contain only IDs and names. Unknown references stay visible. Callers that need draft continuity across remounts own and pass the draft; this library never loads secret values or executes connectors.
+
+`ConfigurationSchemaRenderer` owns ordinary field rendering and encoded field-level issues.
+Workspace retains only the reference projection and trusted renderer resolution. The
+[independent sandbox](../../Sandboxes/CanDoItAll.Configuration.UiSandbox/README.md) loads no
+renderer registry or arbitrary component types.

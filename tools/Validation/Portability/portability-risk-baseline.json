@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-30T01:17:46.193223+00:00",
+  "generated_utc": "2026-09-30T08:23:12.594071+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15208,
+  "allowance_count": 15214,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -67778,6 +67778,18 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.DataSources.Contracts/DataSourcesContracts.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0af18b8fc15ef0cc9f958be8ca7035b798f73a6f493fafb5c4348e7927edf43a",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.DataSources.Contracts/DataSourcesContracts.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "32072ab1764be377a63def80ddce5ace9e70ba54433409620c3d2a899785d2b5",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "9528dcf6c5596493dda69c0ec5b5ff12f95a1490ea7889813356d6e5092884b8",
@@ -67934,6 +67946,24 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "357df43a999471cdc84ca44739605b4dcf50749a57ac2c3e9bc4b6d0467c7ea9",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "466836cd7f9f812fc2750bee9848c7b23072b2c569d740d60189a2d6a93abf36",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Database/WorkspaceDataSourcesOwner.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "af66110b87181c8b54db7aafa36816fc46d4bbbfb37f827d58cc55e1479554fe",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
       "category": "secret-provider",
       "source_fingerprint": "68aedfe780bbe639a676f5f956fb9a8315613ea72651f969f2f84c8110ee7844",
@@ -67943,54 +67973,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
       "category": "secret-provider",
       "source_fingerprint": "ec9914e93d608b5b59eef699c6098cdc908844226330b1e8886f6eeac354c939",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ConfigurationSchemaFallbackRenderer.razor",
-      "category": "case-policy",
-      "source_fingerprint": "40c26f983b86a62df2c7d528006ac61278c1b04d02f17cf363201419ea2b153f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "23f099d3265eac700379d29bf156e561d17363761f14baf03cdf592f2b2d6ade",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "3b3c091a26f21cbf70d3157b5399ec232c1698045e6e4fce8167cc7e85f66f99",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "5283fed53691f5c311062845dc67e7f82510513ead495dc24505003f89e76710",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "2461a0a0e3de2f9ddd29697541295a4fd3d2f175102f8724c8846ccd806e4794",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "27f03cafb3c0591e169527fbbf8617e38de621b6f46a7e6abb46fa2ccdc4ccea",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "80a0cb1f9adf81247593caf2faa6a6232d58aa5fe898a21fa4e54aa3eff6042b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f84a38e120a575c1a09379de9dde5a4ffc8b1b508a8b21ab0bda86dcd31f1be5",
       "count": 1
     },
     {
@@ -74648,6 +74630,12 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationSchemaRenderer.razor",
+      "category": "case-policy",
+      "source_fingerprint": "e338fd3c753c829357dd66ceb2c3ae0aaf54a8aee9ce7c92d6be004e01df8a4a",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.Configuration.UI/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "0c61e60a70dc88575de039bc9dea1a3f0bd358f6731db2177ef32cef3ebd3f8d",
@@ -75359,6 +75347,54 @@
       "path": "src/UI/CanDoItAll.Workspace.ApiAccess.UI/ApiScopePickerDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "e1d88f8ed99e91ea56dab7e49d151b1ba1c60de87eef70517e1b44ed2cc6974c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesPanel.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0642676f4936157962b2f347ccccb06bdcc620217a6694c4493998b3cd0ac75a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesPanel.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ff6db217b93b8a4c813f817c7ef7e47a7caba0b483f0a3d42cbe76ffeae69c34",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesSession.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "8ec5442f7a14590d5fef0fd61f5dd7334aa9c341b1c9547f6bc8d89692759bd2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesSession.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a75c49711af3d3620feb6b3439dfec63f962bf7d6da89df72605ea80cea8831b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesSession.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b66ed83d6bd0e8eec10a118c7242a3fc85b957af5cab6f276b3af9fa3e1769e2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b926af80e1e8c76f0125a1a2fb9fe9a665eca649a40da80f0aec28e3362722e9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "c9479345976b206b887595e390612bd4bdc6805729ae6337f268d6494bad6676",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/ProfileDraft.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ede36ea18f229de7a5e54ad4f2646178528c3b4b78435d291f91869bed1999d6",
       "count": 1
     },
     {

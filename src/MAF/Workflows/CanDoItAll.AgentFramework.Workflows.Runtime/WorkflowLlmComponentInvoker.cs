@@ -52,6 +52,11 @@ public sealed class WorkflowLlmComponentInvoker(
             new LlmMessage(LlmMessageRole.System, node.Settings.Instructions.Trim()),
             new LlmMessage(LlmMessageRole.User, BuildPrompt(definition, node, effectiveComponent, input))
         };
+        var modelParameters = effectiveComponent.ModelSettings.MaxOutputTokens is { } maximum
+            ? JsonSerializer.Serialize(new Dictionary<string, int> {
+                [AgentProviderModelParameterPolicy.MaxOutputTokensConfigurationPropertyName] = maximum
+            })
+            : string.Empty;
         var request = new LlmInvocationRequest(
             provider,
             model,
@@ -63,7 +68,7 @@ public sealed class WorkflowLlmComponentInvoker(
                     "workflow_llm_component_result",
                     $"Workflow LLM component '{effectiveComponent.Name}' JSON result.")
                 : null,
-            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature),
+            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature, modelParameters),
             correlationId: $"workflow:{definition.Id:N}:{node.Id}") {
                 History = WorkflowHistoryInvocation.Create(invocationId)
             };

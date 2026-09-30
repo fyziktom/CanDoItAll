@@ -52,6 +52,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<IWorkspaceFilesOwner, WorkspaceFilesOwner>();
         services.TryAddScoped<IStorageCatalogSelectionSource, WorkspaceStorageCatalogSelectionSource>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
+        services.AddScoped<CanDoItAll.Workspace.DataSources.UI.DataSourceOperationLedger>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();
         return services;

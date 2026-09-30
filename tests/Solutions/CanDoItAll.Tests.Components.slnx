@@ -9,6 +9,8 @@
     <Project Path="../Components/CanDoItAll.Workspace.UI.Tests/CanDoItAll.Workspace.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workspace.ApiAccess.UI.Tests/CanDoItAll.Workspace.ApiAccess.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workspace.StorageCatalog.UI.Tests/CanDoItAll.Workspace.StorageCatalog.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests/CanDoItAll.Workspace.StorageRecovery.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.DataSources.UI.Tests/CanDoItAll.Workspace.DataSources.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workspace.StorageSelection.UI.Tests/CanDoItAll.Workspace.StorageSelection.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
   </Folder>

@@ -1,3 +1,10 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
@@ -81,13 +88,13 @@ public sealed class PromptGalleryBrowserTests
         var row = page.GetByTestId("prompt-gallery-grid").GetByText(title, new() { Exact = true });
         await row.WaitForAsync();
         await page.GetByTestId("prompt-gallery-grid").GetByText("v1", new() { Exact = true }).WaitForAsync();
+        Assert.True(Guid.TryParse(await page.GetByTestId("prompt-gallery-edit").GetAttributeAsync("data-item-id"), out var promptId));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "04-list-refreshed.png") });
 
         await page.GetByTestId("prompt-gallery-edit").First.ClickAsync();
         await editor.WaitForAsync();
         Assert.Equal(title, await page.GetByTestId("prompt-gallery-editor-title").InputValueAsync());
-        var promptId = await page.EvaluateAsync<string>("() => document.querySelector('[data-testid=\"prompt-gallery-editor-versions\"]') ? 'present' : 'missing'");
-        Assert.Equal("present", promptId);
+        await VerifyPersistedPromptAsync(promptId, title, "Summarize the supplied research in five bullets.", true, "finalized-owner-proof.json");
         await page.GetByTestId("prompt-gallery-editor-cancel").ClickAsync();
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
 
@@ -153,7 +160,7 @@ public sealed class PromptGalleryBrowserTests
         var workflowOnlyTitle = $"Workflow-only prompt {Guid.NewGuid():N}";
 
         await OpenGalleryAsync(page, "/prompt-gallery");
-        await CreateDraftAsync(page, compatibleTitle, compatibleContent);
+        var compatibleId = await CreateDraftAsync(page, compatibleTitle, compatibleContent);
         await CreateDraftAsync(page, restrictedTitle, restrictedContent, async editor =>
         {
             // A supported model no chat agent uses makes the compatibility check raise the provider/model warning.
@@ -196,6 +203,7 @@ public sealed class PromptGalleryBrowserTests
         await picker.GetByTestId("prompt-gallery-select").ClickAsync();
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         await Assertions.Expect(composerInput).ToHaveValueAsync(compatibleContent);
+        await VerifyPersistedPromptAsync(compatibleId, compatibleTitle, compatibleContent, false, "consumer-owner-proof.json");
         Assert.Equal(0, await compatibilityDialog.CountAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "10-embedded-inserted.png") });
 
@@ -339,6 +347,35 @@ public sealed class PromptGalleryBrowserTests
         }
 
         throw new TimeoutException($"The {description} did not open from the chat panel.");
+    }
+
+    private async Task VerifyPersistedPromptAsync(Guid id, string title, string content, bool finalized, string evidenceName) {
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(fixture.OwnedDatabaseProfile,
+            "Prompt.Gallery.Browser.Readback", TestSchemaBootstrapModules.Full,
+            new Dictionary<string, string?> { [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind });
+        await using var scope = provider.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<IPromptGalleryService>();
+        var read = await owner.GetItemAsync(id);
+        Assert.True(read.IsSuccess);
+        var item = Assert.IsType<PromptGalleryItemDetails>(read.Value);
+        Assert.Equal(id, item.Id);
+        Assert.Equal(title, item.Title);
+        Assert.Equal(content, item.DraftContent);
+        Assert.Equal(finalized ? 1 : 0, item.CurrentVersionNumber);
+        Guid? versionId = null;
+        if (finalized) {
+            versionId = Assert.Single(item.Versions).Id;
+            var version = await owner.GetVersionSnapshotAsync(versionId.Value);
+            Assert.True(version.IsSuccess);
+            Assert.Equal(id, version.Value!.PromptArtifactId);
+            Assert.Equal(1, version.Value.VersionNumber);
+            Assert.Equal(content, version.Value.Content);
+        }
+        await File.WriteAllTextAsync(Path.Combine(ArtifactsDirectory(), evidenceName), JsonSerializer.Serialize(new {
+            item.Id, item.CurrentVersionNumber, VersionId = versionId,
+            ContentSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))),
+            Consumer = finalized ? "Gallery reopened final version" : "Agent chat composer accepted exact persisted draft"
+        }, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private async Task<IBrowserContext> NewContextAsync()

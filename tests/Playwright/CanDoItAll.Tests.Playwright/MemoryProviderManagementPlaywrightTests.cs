@@ -161,12 +161,14 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
             await ExpectTextAsync(page, "regression browser memory");
 
+            await SelectSavedProviderAsync(page, "provider-regression-browser");
+
             await SelectTabAsync(page, "memory-ui-tab-query", "memory-ui-query");
             await page.GetByTestId("memory-ui-query-text").FillAsync("contract source references");
             await page.GetByTestId("memory-ui-query-submit").ClickAsync();
-            await ExpectTextAsync(page, "Mock memory context for contract source references");
-            await ExpectTextAsync(page, "Deterministic mock memory");
-            await ExpectTextAsync(page, "Project 1");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-query"), "Mock memory context for contract source references");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-query"), "Deterministic mock memory");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-query"), "Project 1");
             await Assertions.Expect(page.GetByTestId("memory-ui-feedback-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
@@ -184,9 +186,9 @@ public sealed class MemoryProviderManagementPlaywrightTests
             });
 
             await SelectTabAsync(page, "memory-ui-tab-operations", "memory-ui-operations");
-            await ExpectTextAsync(page, "ContextQuery");
-            await ExpectTextAsync(page, "Completed");
-            await ExpectTextAsync(page, "context.query.sync");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-operations"), "ContextQuery");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-operations"), "Completed");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-operations"), "context.query.sync");
             await Assertions.Expect(page.GetByTestId("memory-ui-cancel-operation")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
@@ -261,6 +263,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
             await ExpectTextAsync(page, "regression browser memory");
+
+            await SelectSavedProviderAsync(page, "provider-regression-browser");
 
             await SelectTabAsync(page, "memory-ui-tab-provider-ui", "memory-ui-provider-ui");
             await ExpectTextAsync(page, "Provider panel");
@@ -379,6 +383,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
 
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
             await ExpectTextAsync(page, "regression checkpoint memory");
+            await SelectSavedProviderAsync(page, "provider-regression-browser");
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
                 Path = Path.Combine(screenshotRoot, "memory-ui-checkpoint-provider-list-desktop.png"),
@@ -388,8 +393,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await SelectTabAsync(page, "memory-ui-tab-query", "memory-ui-query");
             await page.GetByTestId("memory-ui-query-text").FillAsync("checkpoint source references");
             await page.GetByTestId("memory-ui-query-submit").ClickAsync();
-            await ExpectTextAsync(page, "Mock memory context for checkpoint source references");
-            await ExpectTextAsync(page, "Deterministic mock memory");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-query"), "Mock memory context for checkpoint source references");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-query"), "Deterministic mock memory");
             await Assertions.Expect(page.GetByTestId("memory-ui-feedback-submit")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
@@ -407,8 +412,8 @@ public sealed class MemoryProviderManagementPlaywrightTests
             });
 
             await SelectTabAsync(page, "memory-ui-tab-operations", "memory-ui-operations");
-            await ExpectTextAsync(page, "ContextQuery");
-            await ExpectTextAsync(page, "context.query.sync");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-operations"), "ContextQuery");
+            await ExpectTextAsync(page.GetByTestId("memory-ui-operations"), "context.query.sync");
             await Assertions.Expect(page.GetByTestId("memory-ui-cancel-operation")).Not.ToBeVisibleAsync();
             await page.ScreenshotAsync(new PageScreenshotOptions
             {
@@ -442,6 +447,7 @@ public sealed class MemoryProviderManagementPlaywrightTests
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
             await WaitForVisibleWithDialogDismissalAsync(page, "memory-ui-provider-list");
             await ExpectTextAsync(page, "regression fallback provider");
+            await SelectSavedProviderAsync(page, "provider-regression-fallback");
 
             await page.GetByTestId("memory-ui-editor-provider-ui-url").FillAsync("javascript:alert(1)");
             await page.GetByTestId("memory-ui-save-provider").ClickAsync();
@@ -478,8 +484,18 @@ public sealed class MemoryProviderManagementPlaywrightTests
         }
     }
 
+    private static async Task SelectSavedProviderAsync(IPage page, string testIdSegment) {
+        var row = page.GetByTestId($"memory-provider-{testIdSegment}");
+        await row.ClickAsync();
+        await Assertions.Expect(row).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("memory-ui-provider-option--selected"));
+        await page.GetByTestId("memory-ui-provider-detail").WaitForAsync();
+    }
+
     private static async Task ExpectTextAsync(IPage page, string text)
         => await Assertions.Expect(page.GetByText(text, new PageGetByTextOptions { Exact = false }).First).ToBeVisibleAsync();
+
+    private static async Task ExpectTextAsync(ILocator panel, string text)
+        => await Assertions.Expect(panel.GetByText(text, new() { Exact = false }).First).ToBeVisibleAsync();
 
     private static async Task WaitForVisibleWithDialogDismissalAsync(IPage page, string testId) {
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);

@@ -1,0 +1,480 @@
+{
+  "schema_version": 1,
+  "scope": "Recursive Workspace Razor/code-behind/scoped CSS/JS and actual external render consumers",
+  "entry_commit": "1080c24163afd3cf65fcc68756913c5dd3262a62",
+  "workspace_ui_complete": true,
+  "application_regression_ready": false,
+  "notes": [
+    "Workspace has no feature-owned scoped CSS or JavaScript. Shared app and BaseLib assets remain real implementations.",
+    "The only Workspace DynamicComponent is SettingsRendererHost. Registry services stay in Workspace; the sole registered source is WorkflowSettingsRendererSource.",
+    "Plugins contribute executor/schema metadata; no plugin ISettingsRendererSource implementation was found. Generic contributed Workflow schemas use the same trusted host no-request branch.",
+    "Proof IDs name campaign groups; completion requires their evidence, not this census alone."
+  ],
+  "files": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/_Imports.razor",
+      "component": "Workspace imports",
+      "actual_callers": [
+        "Workspace Razor compiler"
+      ],
+      "route_or_slot": "Module compilation",
+      "reads_owner": "None",
+      "writes_owner": "None",
+      "authorization_owner": "None",
+      "lifetime_owner": "None",
+      "rendering_owner": "Namespace imports only",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "GATE-01",
+        "GATE-03"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+      "component": "SettingsPage",
+      "actual_callers": [
+        "CanDoItAll.Composition.ModuleAssemblies",
+        "Web Routes"
+      ],
+      "route_or_slot": "/settings; eight section entries; Providers redirects to /agents?tab=providers",
+      "reads_owner": "Workspace defaults/secrets/files owners; explicit history load",
+      "writes_owner": "Same owners; section navigation",
+      "authorization_owner": "Owner adapters and current circuit caller",
+      "lifetime_owner": "SettingsPage controllers; caller/profile retirement and disposal",
+      "rendering_owner": "WorkspaceSettingsSurface and dedicated deferred slots",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-01",
+        "APP-02",
+        "WS-05"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
+      "component": "SettingsPage",
+      "actual_callers": [
+        "CanDoItAll.Composition.ModuleAssemblies",
+        "Web Routes"
+      ],
+      "route_or_slot": "/settings; eight section entries; Providers redirects to /agents?tab=providers",
+      "reads_owner": "Workspace defaults/secrets/files owners; explicit history load",
+      "writes_owner": "Same owners; section navigation",
+      "authorization_owner": "Owner adapters and current circuit caller",
+      "lifetime_owner": "SettingsPage controllers; caller/profile retirement and disposal",
+      "rendering_owner": "WorkspaceSettingsSurface and dedicated deferred slots",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-01",
+        "APP-02",
+        "WS-05"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
+      "component": "WorkspaceApiAccessHost",
+      "actual_callers": [
+        "SettingsPage"
+      ],
+      "route_or_slot": "API Access",
+      "reads_owner": "Instance control-plane API configuration/token/account owners",
+      "writes_owner": "Instance control-plane API configuration/token/account owners",
+      "authorization_owner": "Existing owner policies; no renderer grants",
+      "lifetime_owner": "Circuit caller and scoped operation ledger",
+      "rendering_owner": "ApiAccessSurface",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-03"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
+      "component": "StorageSettingsPanel",
+      "actual_callers": [
+        "SettingsPage"
+      ],
+      "route_or_slot": "Storage",
+      "reads_owner": "IStorageCatalogOwner",
+      "writes_owner": "IStorageCatalogOwner",
+      "authorization_owner": "Existing owner policies; no renderer grants",
+      "lifetime_owner": "CatalogSession; caller/profile retirement; opens exact Recovery target",
+      "rendering_owner": "CatalogSurface",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj",
+      "proof_ids": [
+        "BASE-01",
+        "APP-04"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StoragePlacementRecoveryDialog.razor",
+      "component": "StoragePlacementRecoveryDialog",
+      "actual_callers": [
+        "StorageSettingsPanel"
+      ],
+      "route_or_slot": "Recovery modal",
+      "reads_owner": "Existing recovery and owner-continuation services through WorkspaceStorageRecoveryOwner",
+      "writes_owner": "Existing recovery and owner-continuation services through WorkspaceStorageRecoveryOwner",
+      "authorization_owner": "Existing owner policies; no renderer grants",
+      "lifetime_owner": "Captured target/caller session; read generations and accepted commands",
+      "rendering_owner": "StorageRecoveryDialog",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/CanDoItAll.Workspace.StorageRecovery.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-01",
+        "WS-02"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
+      "component": "DatabaseSourcesSettingsPanel",
+      "actual_callers": [
+        "SettingsPage"
+      ],
+      "route_or_slot": "Data Sources",
+      "reads_owner": "DatabaseProfileWorkspaceService/canonical runtime/schema/transfer owners through WorkspaceDataSourcesOwner",
+      "writes_owner": "DatabaseProfileWorkspaceService/canonical runtime/schema/transfer owners through WorkspaceDataSourcesOwner",
+      "authorization_owner": "Existing owner policies; no renderer grants",
+      "lifetime_owner": "Host session plus circuit-scoped operation ledger; safe receipt notification",
+      "rendering_owner": "DataSourcesPanel and DataSourceTransferDialog",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/CanDoItAll.Workspace.DataSources.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-03",
+        "WS-04",
+        "WS-05"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderHistoryPolicyPanel.razor",
+      "component": "ProviderHistoryPolicyPanel",
+      "actual_callers": [
+        "SettingsPage"
+      ],
+      "route_or_slot": "Provider history",
+      "reads_owner": "IProviderHistoryPolicyService explicit Load",
+      "writes_owner": "Versioned policy/pruning owner; preview and confirmation",
+      "authorization_owner": "Owner and current circuit/profile",
+      "lifetime_owner": "WorkspaceHistoryController; caller/profile retirement",
+      "rendering_owner": "WorkspaceHistorySurface",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-02"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderHistoryPolicyPanel.razor.cs",
+      "component": "ProviderHistoryPolicyPanel",
+      "actual_callers": [
+        "SettingsPage"
+      ],
+      "route_or_slot": "Provider history",
+      "reads_owner": "IProviderHistoryPolicyService explicit Load",
+      "writes_owner": "Versioned policy/pruning owner; preview and confirmation",
+      "authorization_owner": "Owner and current circuit/profile",
+      "lifetime_owner": "WorkspaceHistoryController; caller/profile retirement",
+      "rendering_owner": "WorkspaceHistorySurface",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-02"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ConfigurationSchemaFallbackRenderer.razor",
+      "component": "ConfigurationSchemaFallbackRenderer",
+      "actual_callers": [
+        "SettingsRendererHost",
+        "WorkflowImageGenerationSettingsRenderer"
+      ],
+      "route_or_slot": "Workflow generic settings and trusted renderer remaining fields",
+      "reads_owner": "Supplied schema/state/reference metadata; no service reads",
+      "writes_owner": "Explicit original StateChanged callback",
+      "authorization_owner": "Trusted consumer/owner; reference options do not resolve secrets",
+      "lifetime_owner": "Caller owns state; metadata projection retained by value equality",
+      "rendering_owner": "ConfigurationSchemaRenderer",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/SettingsRendererHost.razor",
+      "component": "SettingsRendererHost",
+      "actual_callers": [
+        "WorkflowCanvasEditor inspector",
+        "WorkflowCanvasEditor node dialog"
+      ],
+      "route_or_slot": "Workflow executor settings",
+      "reads_owner": "ISettingsRendererRegistry exact key/owner/trust/schema resolution",
+      "writes_owner": "Parameter adapter and callback only",
+      "authorization_owner": "Registry rejects incomplete/missing/owner/trust/schema mismatch",
+      "lifetime_owner": "Owning Workflow editor",
+      "rendering_owner": "Exact approved DynamicComponent or neutral fallback only when no renderer requested",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/FileApplicationSettingsPanel.razor",
+      "component": "FileApplicationSettingsPanel",
+      "actual_callers": [],
+      "route_or_slot": "No live slot: Files is rendered by WorkspaceSettingsSurface",
+      "reads_owner": "None after retirement",
+      "writes_owner": "None after retirement",
+      "authorization_owner": "None",
+      "lifetime_owner": "Retired",
+      "rendering_owner": "WorkspaceFilesSurface via SettingsPage",
+      "disposition": "retired dead code",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
+      "proof_ids": [
+        "APP-02"
+      ],
+      "remaining_risk": "Source-wide caller and registration search found no consumers; obsolete wrapper removed.",
+      "finding_id": null
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConfigurationSchemaRenderer.razor",
+      "component": "ConfigurationSchemaRenderer",
+      "actual_callers": [
+        "Workspace compatibility host",
+        "Resources field composition",
+        "Configuration sandbox"
+      ],
+      "route_or_slot": "Schema fields",
+      "reads_owner": "Supplied state and safe reference options",
+      "writes_owner": "Explicit StateChanged callback only",
+      "authorization_owner": "Caller owner",
+      "lifetime_owner": "State/draft identity; no late callback writes",
+      "rendering_owner": "Actual BaseLib/form controls",
+      "disposition": "extracted",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "GATE-03"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI/ConnectorConfigFieldEditor.razor",
+      "component": "ConnectorConfigFieldEditor",
+      "actual_callers": [
+        "Workspace compatibility host",
+        "Resources field composition",
+        "Configuration sandbox"
+      ],
+      "route_or_slot": "Schema fields",
+      "reads_owner": "Supplied state and safe reference options",
+      "writes_owner": "Explicit StateChanged callback only",
+      "authorization_owner": "Caller owner",
+      "lifetime_owner": "State/draft identity; no late callback writes",
+      "rendering_owner": "Actual BaseLib/form controls",
+      "disposition": "extracted",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "GATE-03"
+      ],
+      "remaining_risk": "No new authority or effect path.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
+      "component": "WorkflowCanvasEditor.razor",
+      "actual_callers": [
+        "WorkflowsPage; WorkflowCanvasEditor; trusted registry"
+      ],
+      "route_or_slot": "/agents/workflows Editor",
+      "reads_owner": "Existing Workflow catalog/provider-option service",
+      "writes_owner": "Existing catalog saves explicit definition/version; configuration callback",
+      "authorization_owner": "Application-approved ImageGeneration descriptor; plugin manifests cannot supply arbitrary component types",
+      "lifetime_owner": "Existing Workflow editor and registered renderer",
+      "rendering_owner": "Existing Workflow canvas plus extracted Configuration fields",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "APP-07"
+      ],
+      "remaining_risk": "Workflow renderer/provider loading remains a production consumer; broad Workflow extraction is outside this bundle.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+      "component": "WorkflowCanvasEditor.razor.cs",
+      "actual_callers": [
+        "WorkflowsPage; WorkflowCanvasEditor; trusted registry"
+      ],
+      "route_or_slot": "/agents/workflows Editor",
+      "reads_owner": "Existing Workflow catalog/provider-option service",
+      "writes_owner": "Existing catalog saves explicit definition/version; configuration callback",
+      "authorization_owner": "Application-approved ImageGeneration descriptor; plugin manifests cannot supply arbitrary component types",
+      "lifetime_owner": "Existing Workflow editor and registered renderer",
+      "rendering_owner": "Existing Workflow canvas plus extracted Configuration fields",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "APP-07"
+      ],
+      "remaining_risk": "Workflow renderer/provider loading remains a production consumer; broad Workflow extraction is outside this bundle.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
+      "component": "WorkflowImageGenerationSettingsRenderer.razor",
+      "actual_callers": [
+        "WorkflowsPage; WorkflowCanvasEditor; trusted registry"
+      ],
+      "route_or_slot": "/agents/workflows Editor",
+      "reads_owner": "Existing Workflow catalog/provider-option service",
+      "writes_owner": "Existing catalog saves explicit definition/version; configuration callback",
+      "authorization_owner": "Application-approved ImageGeneration descriptor; plugin manifests cannot supply arbitrary component types",
+      "lifetime_owner": "Existing Workflow editor and registered renderer",
+      "rendering_owner": "Existing Workflow canvas plus extracted Configuration fields",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "APP-07"
+      ],
+      "remaining_risk": "Workflow renderer/provider loading remains a production consumer; broad Workflow extraction is outside this bundle.",
+      "finding_id": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowSettingsRendererSource.cs",
+      "component": "WorkflowSettingsRendererSource.cs",
+      "actual_callers": [
+        "WorkflowsPage; WorkflowCanvasEditor; trusted registry"
+      ],
+      "route_or_slot": "/agents/workflows Editor",
+      "reads_owner": "Existing Workflow catalog/provider-option service",
+      "writes_owner": "Existing catalog saves explicit definition/version; configuration callback",
+      "authorization_owner": "Application-approved ImageGeneration descriptor; plugin manifests cannot supply arbitrary component types",
+      "lifetime_owner": "Existing Workflow editor and registered renderer",
+      "rendering_owner": "Existing Workflow canvas plus extracted Configuration fields",
+      "disposition": "intentional production host",
+      "dependency_root": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
+      "proof_ids": [
+        "WS-06",
+        "APP-07"
+      ],
+      "remaining_risk": "Workflow renderer/provider loading remains a production consumer; broad Workflow extraction is outside this bundle.",
+      "finding_id": null
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
+      "component": "MainLayout.razor",
+      "actual_callers": [
+        "Web Routes/MainLayout"
+      ],
+      "route_or_slot": "Global startup prompt/profile dialog/flyout",
+      "reads_owner": "Canonical runtime/profile coordinator",
+      "writes_owner": "Pending restart activation through existing coordinator",
+      "authorization_owner": "Existing canonical and startup-lock policy",
+      "lifetime_owner": "App shell and browser startup dismissal; preserved S0 lifetime",
+      "rendering_owner": "Existing shell dialog/topbar",
+      "disposition": "intentional production host",
+      "dependency_root": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "proof_ids": [
+        "WS-05",
+        "APP-01"
+      ],
+      "remaining_risk": "Explicitly retained app-wide composition; no whole-shell extraction authorized.",
+      "finding_id": null
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
+      "component": "MainLayout.DatabaseProfiles.cs",
+      "actual_callers": [
+        "Web Routes/MainLayout"
+      ],
+      "route_or_slot": "Global startup prompt/profile dialog/flyout",
+      "reads_owner": "Canonical runtime/profile coordinator",
+      "writes_owner": "Pending restart activation through existing coordinator",
+      "authorization_owner": "Existing canonical and startup-lock policy",
+      "lifetime_owner": "App shell and browser startup dismissal; preserved S0 lifetime",
+      "rendering_owner": "Existing shell dialog/topbar",
+      "disposition": "intentional production host",
+      "dependency_root": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "proof_ids": [
+        "WS-05",
+        "APP-01"
+      ],
+      "remaining_risk": "Explicitly retained app-wide composition; no whole-shell extraction authorized.",
+      "finding_id": null
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayoutDatabaseDialog.razor",
+      "component": "MainLayoutDatabaseDialog.razor",
+      "actual_callers": [
+        "Web Routes/MainLayout"
+      ],
+      "route_or_slot": "Global startup prompt/profile dialog/flyout",
+      "reads_owner": "Canonical runtime/profile coordinator",
+      "writes_owner": "Pending restart activation through existing coordinator",
+      "authorization_owner": "Existing canonical and startup-lock policy",
+      "lifetime_owner": "App shell and browser startup dismissal; preserved S0 lifetime",
+      "rendering_owner": "Existing shell dialog/topbar",
+      "disposition": "intentional production host",
+      "dependency_root": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "proof_ids": [
+        "WS-05",
+        "APP-01"
+      ],
+      "remaining_risk": "Explicitly retained app-wide composition; no whole-shell extraction authorized.",
+      "finding_id": null
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayoutTopBar.razor",
+      "component": "MainLayoutTopBar.razor",
+      "actual_callers": [
+        "Web Routes/MainLayout"
+      ],
+      "route_or_slot": "Global startup prompt/profile dialog/flyout",
+      "reads_owner": "Canonical runtime/profile coordinator",
+      "writes_owner": "Pending restart activation through existing coordinator",
+      "authorization_owner": "Existing canonical and startup-lock policy",
+      "lifetime_owner": "App shell and browser startup dismissal; preserved S0 lifetime",
+      "rendering_owner": "Existing shell dialog/topbar",
+      "disposition": "intentional production host",
+      "dependency_root": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "proof_ids": [
+        "WS-05",
+        "APP-01"
+      ],
+      "remaining_risk": "Explicitly retained app-wide composition; no whole-shell extraction authorized.",
+      "finding_id": null
+    }
+  ]
+}

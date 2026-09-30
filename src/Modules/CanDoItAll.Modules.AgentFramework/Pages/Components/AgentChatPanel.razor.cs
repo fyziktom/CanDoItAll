@@ -759,8 +759,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private async Task CancelPendingApprovalsCoreAsync(Guid runId, Guid agentId, Guid sessionId,
         AgentChatHandleId? handleId, long owner, DatabaseProfileGeneration profileGeneration) {
         var committed = false;
+        var previousStream = activeActivityStreamId;
+        var operationId = AgentExecutionOperationId.New();
         try {
-            var result = await WorkspaceService.CancelPendingExecutionApprovalsAsync(runId, AgentExecutionOperationId.New());
+            var result = await WorkspaceService.CancelPendingExecutionApprovalsAsync(runId, operationId);
             if (result.Run.Id != runId || result.Run.AgentId != agentId || result.Run.ChatSessionId != sessionId ||
                 result.Run.Outcome != RunOutcome.Cancelled) {
                 throw new InvalidOperationException("Cancellation returned an unexpected execution receipt.");
@@ -769,6 +771,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
             if (!IsOperationTargetCurrent(agentId, sessionId, handleId, owner) ||
                 ProfileGenerationSource.GetGeneration() != profileGeneration) {
                 return;
+            }
+            if (previousStream is not null) {
+                activeActivityStreamId = new(previousStream.DatabaseProfileId, previousStream.WorkspaceScope,
+                    previousStream.DatabaseProfileGeneration, operationId);
             }
             await LoadWorkspaceAsync(agentId, sessionId);
             if (IsOperationTargetCurrent(agentId, sessionId, handleId, owner) &&

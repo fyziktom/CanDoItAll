@@ -2,6 +2,9 @@
   <Folder Name="/src/Sandboxes/">
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/CanDoItAll.Workspace.StorageRecovery.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/CanDoItAll.Workspace.DataSources.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/CanDoItAll.Workspace.StorageSelection.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
@@ -45,6 +48,8 @@
     <Project Path="src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.ApiAccess.UI/CanDoItAll.Workspace.ApiAccess.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Workspace.StorageRecovery.UI/CanDoItAll.Workspace.StorageRecovery.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Workspace.DataSources.UI/CanDoItAll.Workspace.DataSources.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.StorageSelection.UI/CanDoItAll.Workspace.StorageSelection.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
@@ -131,6 +136,8 @@
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace.Contracts/CanDoItAll.Modules.Workspace.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace.ApiAccess.Contracts/CanDoItAll.Modules.Workspace.ApiAccess.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace.StorageCatalog.Contracts/CanDoItAll.Modules.Workspace.StorageCatalog.Contracts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Workspace.StorageRecovery.Contracts/CanDoItAll.Modules.Workspace.StorageRecovery.Contracts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Workspace.DataSources.Contracts/CanDoItAll.Modules.Workspace.DataSources.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace.StorageSelection.Contracts/CanDoItAll.Modules.Workspace.StorageSelection.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace.Presentation/CanDoItAll.Modules.Workspace.Presentation.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />

@@ -1,0 +1,58 @@
+@page "/"
+@implements IDisposable
+
+<PageTitle>Data Sources scenarios</PageTitle>
+<Stack GapScale="LayoutGap.Medium">
+    <SectionHeading>Data Sources scenarios</SectionHeading>
+    <TextBlock TextStyle="TextStyle.Body2" Value="Simulation using the actual profile and transfer renderers. No database, driver, credential store or process is registered." />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <label>Scenario
+            <InputSelect TValue="DataSourcesScenario" Value="scenario" ValueChanged="ChangeScenario" ValueExpression="@(() => scenario)" data-testid="data-sources-scenario">
+                @foreach (var value in Enum.GetValues<DataSourcesScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+        </label>
+        <Button Text="Release delayed operation" Click="Release" data-testid="data-sources-release" />
+        <Button Text="Allow observation" Click="AllowObservation" data-testid="data-sources-allow-observation" />
+        <Button Text="Reopen panel" Click="Reopen" data-testid="data-sources-reopen" />
+    </Cluster>
+    <p data-testid="data-sources-command-count">Simulated commands: @owner.Commands.Count</p>
+    @if (interactive) {
+        <span data-testid="data-sources-ready" hidden>Ready</span>
+    }
+    <DataSourcesPanel @key="session" Session="session" />
+</Stack>
+
+@code {
+    private DataSourcesScenario scenario;
+    private DataSourcesScenarioOwner owner = new();
+    private DataSourceOperationLedger operations = new();
+    private DataSourcesSession session = null!;
+    private bool interactive;
+    protected override void OnInitialized() => Start();
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    private void Start() {
+        session = new(owner, operations);
+        _ = session.InitializeAsync();
+    }
+    private void ChangeScenario(DataSourcesScenario value) {
+        session.Dispose();
+        scenario = value;
+        owner = new(value);
+        operations = new();
+        Start();
+    }
+    private void Reopen() {
+        session.Dispose();
+        Start();
+    }
+    private void Release() => owner.Release();
+    private void AllowObservation() => owner.FailObservation = false;
+    public void Dispose() => session.Dispose();
+}

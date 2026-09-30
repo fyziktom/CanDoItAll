@@ -28,6 +28,8 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         });
         Assert.True(party.IsSuccess);
         var owner = services.GetRequiredService<TestLabService>();
+        var unrelated = await owner.SaveAsync(new() { Title = $"Unrelated TestLab reset {Guid.NewGuid():N}" });
+        Assert.True(unrelated.IsSuccess);
         await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
         var page = await context.NewPageAsync();
         var errors = Observe(page);
@@ -78,7 +80,17 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         await page.GetByTestId("testlab-search").FillAsync("no matching result");
         await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync("0 matching plans");
         await page.GetByRole(AriaRole.Button, new() { Name = "Reset", Exact = true }).First.ClickAsync();
-        await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync("1 matching plans");
+        var allPlans = await owner.ListAsync();
+        Assert.Contains(allPlans, plan => plan.Id == id);
+        Assert.Contains(allPlans, plan => plan.Id == unrelated.Value);
+        await Assertions.Expect(page.GetByTestId("testlab-project-filter")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("testlab-phase-filter")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("testlab-result-filter")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("testlab-search")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync($"{allPlans.Count} matching plans");
+        foreach (var plan in allPlans) {
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex(Regex.Escape(plan.Title)) })).ToBeVisibleAsync();
+        }
         await ScreenshotAsync(page, "production-overview");
 
         await OpenAsync(page, $"{fixture.BaseUrl}/test-lab");

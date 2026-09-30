@@ -6,14 +6,15 @@
 
 .chat-panel-header__row {
     align-items: center;
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.65rem;
-    grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .chat-panel-header__identity {
     align-items: center;
     display: flex;
+    flex: 1 1 18rem;
     gap: 0.65rem;
     min-width: 0;
 }
@@ -21,6 +22,7 @@
 .chat-panel-header__main {
     align-items: center;
     display: flex;
+    flex: 1 1 auto;
     gap: 0.5rem;
     min-width: 0;
 }
@@ -53,5 +55,7 @@
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
+    flex-wrap: wrap;
     gap: 0.35rem;
+    max-width: 100%;
 }

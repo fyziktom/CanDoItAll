@@ -21,6 +21,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     private TestDatabaseProfile? _activeProfile;
 
     public IReadOnlyDictionary<string, string?> RuntimeConfiguration { get; init; } = new Dictionary<string, string?>();
+    internal bool EnableBackgroundWorkers { get; init; }
 
     public string BaseUrl { get; } = ResolveBaseUrl();
 
@@ -89,7 +90,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
         var configuration = new Dictionary<string, string?>(RuntimeConfiguration) {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
-            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = EnableBackgroundWorkers ? "" : LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
         };
         foreach (var pair in _activeProfile.CreateEnvironmentVariables(configuration))
         {
@@ -123,25 +124,26 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         Playwright?.Dispose();
 
-        if (_process is not null && !_process.HasExited)
-        {
-            _process.Kill(entireProcessTree: true);
-            await _process.WaitForExitAsync();
-        }
-
-        if (_stdoutPump is not null)
-        {
-            await _stdoutPump;
-        }
-
-        if (_stderrPump is not null)
-        {
-            await _stderrPump;
-        }
+        await StopOwnedApplicationAsync();
 
         if (_testEnvironment is not null)
         {
             await _testEnvironment.DisposeAsync();
+        }
+    }
+
+    internal async Task StopOwnedApplicationAsync() {
+        if (_process is not null && !_process.HasExited) {
+            _process.Kill(entireProcessTree: true);
+            await _process.WaitForExitAsync();
+        }
+
+        if (_stdoutPump is not null) {
+            await _stdoutPump;
+        }
+
+        if (_stderrPump is not null) {
+            await _stderrPump;
         }
     }
 

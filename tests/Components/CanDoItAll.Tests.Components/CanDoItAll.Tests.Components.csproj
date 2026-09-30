@@ -61,4 +61,7 @@
     <ProjectReference Include="..\..\..\tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

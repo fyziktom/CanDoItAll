@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
@@ -30,7 +32,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
     private const string FixtureActor = "live-agent-ui-smoke-fixture";
     // The managed HR flow asks the operator to confirm a creation in its own turn: per chat a directory search, the
     // confirmed proposal and the continuation after the decision, for two chats plus a small reserve.
-    private const int MaximumModelRequestsPerExecution = 10;
+    private const int MaximumModelRequestsPerExecution = LiveModelRequestProxy.PerExecutionLimit;
     private const float ModelTurnTimeoutMilliseconds = 240_000;
     private static readonly Regex TerminalPhase = TerminalPhasePattern();
 
@@ -507,6 +509,8 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
         private IBrowserContext? context;
         private Task watchdog = Task.CompletedTask;
         private Guid watchedAgentId;
+        private LiveModelRequestProxy? requestProxy;
+        private Guid? boundedProviderId;
 
         private LiveUiHost()
         {
@@ -517,6 +521,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
         internal string BaseUrl => fixture.BaseUrl;
 
         internal bool SpendBoundExceeded { get; private set; }
+        internal int ProviderJournalRequests { get; private set; }
 
         internal static async Task<LiveUiHost> StartAsync()
         {
@@ -554,12 +559,40 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             return page;
         }
 
-        internal Task<int> CountModelRequestsAsync()
-            => watchedAgentId == Guid.Empty
-                ? Task.FromResult(0)
-                : SeedAsync(async services => (await services.GetRequiredService<IAgentFrameworkWorkspaceService>()
-                    .ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: watchedAgentId)))
-                    .Sum(run => run.ToolAdmission?.Batches.Length ?? 0));
+        internal Task<int> CountModelRequestsAsync() => Task.FromResult(requestProxy?.Admitted ?? 0);
+
+        internal async Task BoundProviderAsync(Guid providerId) {
+            if (IsRehearsal() || boundedProviderId == providerId) {
+                return;
+            }
+            if (boundedProviderId.HasValue) {
+                throw new InvalidOperationException("A live execution cannot switch its admitted provider.");
+            }
+            requestProxy = await LiveModelRequestProxy.StartAsync();
+            await SeedAsync(async services => {
+                var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+                var editor = await workspace.GetProviderEditorAsync(providerId);
+                Assert.Equal(ProviderKind.OpenAi, editor.Kind);
+                Assert.Equal(ProviderTransportKind.Responses, editor.Transport);
+                Assert.Equal("https://api.openai.com/v1", editor.BaseUrl.TrimEnd('/'));
+                editor.BaseUrl = requestProxy.BaseUrl;
+                Assert.Equal(providerId, await workspace.SaveProviderAsync(editor));
+                return true;
+            });
+            boundedProviderId = providerId;
+        }
+
+        internal Task<object> ReadProviderJournalAsync() => SeedAsync<object>(async services => {
+            await using var database = await services.GetRequiredService<IDbContextFactory<ProviderHistoryDbContext>>().CreateDbContextAsync();
+            var rows = await database.Set<HistoryEntryRow>().AsNoTracking()
+                .Where(row => row.Granularity == HistoryGranularity.ProviderCallAttempt)
+                .Select(row => new { row.Id, row.RequestId, row.AttemptId, row.ProviderId, row.RequestedModel, row.ResolvedModel,
+                    row.Outcome, row.InputTokens, row.OutputTokens, row.Amount, row.Currency }).ToArrayAsync();
+            ProviderJournalRequests = rows.Length;
+            return new { count = rows.Length, rows, outboundReservations = requestProxy?.Admitted ?? 0,
+                successfulHttpResponses = requestProxy?.Successful ?? 0, budgetRefusals = requestProxy?.Refused ?? 0,
+                budgetExecution = requestProxy?.Execution };
+        });
 
         // Spend guard: the journey has no cancellation handle on the server-side run, so a run that exceeds the bound
         // loses its host.
@@ -578,17 +611,19 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
                         int used;
                         try
                         {
-                            used = await CountModelRequestsAsync();
+                            used = await SeedAsync(async services => (await services.GetRequiredService<IAgentFrameworkWorkspaceService>()
+                                .ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: watchedAgentId)))
+                                .Sum(run => run.ToolAdmission?.Batches.Length ?? 0));
                         }
                         catch (Exception exception) when (exception is not OperationCanceledException)
                         {
                             continue;
                         }
 
-                        if (used >= MaximumModelRequestsPerExecution)
+                        if (used >= MaximumModelRequestsPerExecution || requestProxy?.Refused > 0)
                         {
                             SpendBoundExceeded = true;
-                            await fixture.DisposeAsync();
+                            await fixture.StopOwnedApplicationAsync();
                             return;
                         }
                     }
@@ -613,9 +648,10 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
                 await owner.DisposeAsync();
             }
 
-            if (!SpendBoundExceeded)
-            {
-                await fixture.DisposeAsync();
+            await fixture.DisposeAsync();
+
+            if (requestProxy is not null) {
+                await requestProxy.DisposeAsync();
             }
 
             stopWatchdog.Dispose();
@@ -653,6 +689,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
 
         internal async Task DescribeProviderAsync(LiveUiHost host, AgentDefinition agent)
         {
+            await host.BoundProviderAsync(agent.ProviderProfileId!.Value);
             provider = await host.SeedAsync(async services =>
             {
                 var profile = (await services.GetRequiredService<IAgentFrameworkWorkspaceService>().ListProvidersAsync())
@@ -675,7 +712,7 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
                 providerName = detail.Run.ProviderName,
                 model = detail.Run.Model,
                 sourceKind = detail.Run.SourceKind,
-                modelRequestsInRun = detail.Run.ToolAdmission?.Batches.Length ?? 0,
+                toolAdmissionBatches = detail.Run.ToolAdmission?.Batches.Length ?? 0,
                 usageObservations = detail.UsageObservations.Count,
                 resultSummary = Sanitize(detail.Run.ResultSummary),
                 executionLog = detail.ExecutionLog.OrderBy(item => item.CreatedAtUtc).TakeLast(12).Select(item => new
@@ -733,7 +770,11 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
             }
             catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
             {
-                // No run was created before the failure.
+                Observations["failureRunRead"] = exception.GetType().Name;
+            }
+            catch (Exception exception) when (host.SpendBoundExceeded)
+            {
+                Observations["failureRunRead"] = "Unavailable after spend guard: " + exception.GetType().Name;
             }
         }
 
@@ -760,14 +801,14 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
 
         internal async Task WriteAsync(LiveUiHost host)
         {
+            ModelRequests = await host.CountModelRequestsAsync();
             try
             {
-                ModelRequests = await host.CountModelRequestsAsync();
+                Observations["providerJournal"] = await host.ReadProviderJournalAsync();
             }
             catch (Exception)
             {
-                // An unreadable journal must not hide the original failure; the bound assertion then fails closed.
-                ModelRequests = -1;
+                Observations["providerJournal"] = "Unavailable; this attempt cannot certify live provider-history proof.";
             }
 
             var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "live-agent-smoke",
@@ -788,6 +829,9 @@ public sealed partial class CrmHrLiveAgentToolUiSmokeTests
                 observations = Observations,
                 runs
             }, Json));
+            if (Passed && Execution == "live") {
+                Assert.True(host.ProviderJournalRequests > 0, "Live proof requires actual provider-history request rows.");
+            }
         }
     }
 }

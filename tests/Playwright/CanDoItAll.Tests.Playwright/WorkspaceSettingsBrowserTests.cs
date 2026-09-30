@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
@@ -52,7 +53,12 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
             var saved = await workspace.GetSettingsAsync();
             Assert.Equal("Browser saved workspace", saved.WorkspaceName);
             Assert.Equal("EUR", saved.CurrencyCode);
+            Assert.Equal("de-DE", saved.CurrencyCultureName);
             Assert.Equal("Owned production proof", saved.Notes);
+            var formatter = services.GetRequiredService<ICurrencyFormatter>();
+            Assert.Equal("EUR", formatter.CurrencyCode);
+            Assert.Contains("1.234,50", formatter.Format(1234.5m), StringComparison.Ordinal);
+            Assert.Contains("€", formatter.Format(1234.5m), StringComparison.Ordinal);
             await Shot(page, "production-defaults");
 
             await Tab(page, "Secrets");

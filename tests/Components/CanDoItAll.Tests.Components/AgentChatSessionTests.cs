@@ -329,6 +329,7 @@ public sealed class AgentChatSessionTests {
         public Func<Guid, Guid?, CancellationToken, Task<ChatAgentWorkspaceSnapshot>>? Workspace { get; set; }
         public Func<Guid, CancellationToken, Task<ExecutionRunDetail>>? Detail { get; set; }
         public Func<Guid, CancellationToken, Task<ExecutionRunDetail>>? CancelPending { get; set; }
+        public AgentExecutionOperationId? CancellationOperationId { get; private set; }
         public Func<Guid, Guid, string, Task<ChatSessionRecord>>? Rename { get; set; }
         public Func<Guid, Task<ChatSessionRecord>>? CreateThread { get; set; }
         public Func<Guid, Task<AgentEditorModel>>? Editor { get; set; }
@@ -349,6 +350,7 @@ public sealed class AgentChatSessionTests {
                 case nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync):
                     return Detail!((Guid)args![0]!, (CancellationToken)args![1]!);
                 case nameof(IAgentFrameworkWorkspaceService.CancelPendingExecutionApprovalsAsync):
+                    CancellationOperationId = (AgentExecutionOperationId)args![1]!;
                     return CancelPending!((Guid)args![0]!, args.OfType<CancellationToken>().Single());
                 case nameof(IAgentFrameworkWorkspaceService.RenameChatSessionAsync):
                     return Rename!((Guid)args![0]!, (Guid)args![1]!, (string)args![2]!);
