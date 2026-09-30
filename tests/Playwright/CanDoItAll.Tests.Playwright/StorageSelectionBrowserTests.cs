@@ -85,7 +85,10 @@ public sealed class StorageSelectionBrowserTests {
         async Task ApplyChild() {
             await page.GetByTestId("agents-catalog-storage-selection-choose").ClickAsync();
             var option = page.GetByTestId($"agents-catalog-storage-selection-dialog-option-{catalogId:N}");
+            await Assertions.Expect(option).ToBeVisibleAsync();
+            await Assertions.Expect(option).ToHaveAttributeAsync("aria-pressed", "false");
             await option.FocusAsync();
+            await Assertions.Expect(option).ToBeFocusedAsync();
             await option.PressAsync("Space");
             await Assertions.Expect(option).ToHaveAttributeAsync("aria-pressed", "true");
             var search = page.GetByTestId("agents-catalog-storage-selection-dialog-picker-search");

@@ -24,6 +24,13 @@ roadmap. Its estimates are planning ranges, not a complete audit of every remain
   A controlled delayed-creation row reproduces the failed startup observation. The factory
   now consistently simulates non-cooperation, and cleanup covers failed observations too.
   All 39 owning-class cases pass. Production Process timeout behavior is unchanged.
+- The second broad browser attempt exposed an input-admission gap in the storage selection
+  test. Holding the real Dialog open invocation leaves its option attached but invisible;
+  `FocusAsync` and `PressAsync` can then complete without selecting it. The test now waits
+  for visibility, verifies the empty draft and observes focus before sending Space. The
+  controlled delay proves this harness gap; the original failure lacked the observations
+  needed to attribute its precise timing. The isolated unchanged test passed, which does
+  not erase the broad failure. A new frozen campaign follows this correction.
 
 The first broad Stable/browser attempts were interrupted for that fixture correction and
 an evidence hygiene defect. A historical general JSON receipt contained the secret scanner's
@@ -34,7 +41,7 @@ live-budget entry was rewritten. The interrupted attempts do not establish closu
 ## Source and dependency delivery
 
 The entry app was `6b05246f72fa29ad069a85d12881c80631de263f`. Signed production repairs are
-in `56088be3f`; the later change above affects a Unit test fixture only. Raw private proof
+in `56088be3f`; later corrections affect Unit and browser test observation only. Raw private proof
 is under `artifacts/workspace-closure-r2/20260930-6b05246f7`, outside the sealed package.
 Each attempt records its own source manifest and exact discovery/execution result.
 
