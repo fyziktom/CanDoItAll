@@ -19,9 +19,11 @@ internal static class SharedProviderMetadataUiChecks {
         await page.GetByTestId("providers-suggested-models").FillAsync(suggestedModels);
         await page.GetByTestId("providers-suggested-models").PressAsync("Tab");
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
+        await page.GetByTestId("provider-pricing-table").WaitForAsync();
         await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
         await Assertions.Expect(page.GetByTestId("providers-suggested-models")).ToHaveValueAsync(suggestedModels);
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
+        await page.GetByTestId("provider-pricing-table").WaitForAsync();
         var rows = page.GetByTestId("provider-pricing-table").Locator("tbody tr[data-testid^='provider-pricing-row-']");
         if (await rows.CountAsync() == 0) {
             await page.GetByTestId("provider-pricing-add-button").ClickAsync();
@@ -110,7 +112,9 @@ internal static class SharedProviderMetadataUiChecks {
         var provider = page.GetByTestId("providers-tree-provider")
             .Filter(new() { HasTextString = providerName }).First;
         await provider.WaitForAsync();
+        var previousName = await page.GetByTestId("providers-name-input").ElementHandleAsync();
         await provider.ClickAsync();
+        await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
         await Assertions.Expect(page.GetByTestId("providers-name-input")).ToHaveValueAsync(providerName);
     }
 

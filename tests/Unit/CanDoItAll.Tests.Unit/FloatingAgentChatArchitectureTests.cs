@@ -1804,6 +1804,38 @@ public sealed class AgentChatExecutionOrchestratorTests
 
 public sealed class FloatingAgentChatCoordinatorTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Initialization_stops_after_a_held_settings_read_when_its_owner_or_caller_retires(bool retireOwner) {
+        var clock = new ManualTimeProvider();
+        var (workspace, _) = CreateWorkspaceService();
+        var pool = new CoordinatorPreparationPool(CreateAgent("Held initialization", clock.GetUtcNow()));
+        var settings = new TaskCompletionSource<FloatingAgentChatSettings>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var settingsService = new CoordinatorSettingsService(FloatingAgentChatSettings.Default) { PendingRead = settings.Task };
+        await using var coordinator = CreateCoordinator(workspace, new ActiveAgentChatRegistry(clock), pool, settingsService, clock);
+        using var caller = new CancellationTokenSource();
+        var pending = coordinator.InitializeAsync(caller.Token);
+        Assert.Equal(1, settingsService.GetSettingsCallCount);
+        if (retireOwner) {
+            await coordinator.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        } else {
+            caller.Cancel();
+        }
+        settings.SetResult(FloatingAgentChatSettings.Default);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Empty(pool.ConfiguredSettings);
+        Assert.Equal(0, pool.WarmCallCount);
+        if (retireOwner) {
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => coordinator.InitializeAsync());
+        } else {
+            await coordinator.InitializeAsync();
+            Assert.Single(pool.ConfiguredSettings);
+            Assert.Equal(1, pool.WarmCallCount);
+        }
+    }
+
     [Fact]
     public async Task StartNewChatAsync_attaches_the_exact_created_session_and_preserves_catalog()
     {
@@ -2389,13 +2421,14 @@ public sealed class FloatingAgentChatCoordinatorTests
         : IFloatingAgentChatSettingsService
     {
         public int GetSettingsCallCount { get; private set; }
+        public Task<FloatingAgentChatSettings>? PendingRead { get; init; }
 
         public Task<FloatingAgentChatSettings> GetSettingsAsync(
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             GetSettingsCallCount++;
-            return Task.FromResult(settings);
+            return PendingRead ?? Task.FromResult(settings);
         }
 
         public Task<FloatingAgentChatSettings> SaveSettingsAsync(

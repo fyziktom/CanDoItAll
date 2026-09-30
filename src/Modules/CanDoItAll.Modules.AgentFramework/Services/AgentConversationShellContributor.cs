@@ -171,7 +171,9 @@ public sealed class AgentConversationShellContributor(
         try
         {
             await coordinator.InitializeAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             await LoadAgentsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             initialized = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -200,6 +202,7 @@ public sealed class AgentConversationShellContributor(
                 IncludeAgentTemplates: false,
                 ActiveAgentsOnly: true),
             cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         agents = referenceData.Agents;
         providersById = referenceData.ProviderById;
         failureMessage = string.Empty;

@@ -10,6 +10,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     private readonly object gate = new();
     private readonly SemaphoreSlim settingsLoadGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly CancellationToken lifetimeToken;
     private readonly IAgentFrameworkWorkspaceService workspaceService;
     private readonly IActiveAgentChatRegistry activeChatRegistry;
     private readonly IAgentChatPreparationPool preparationPool;
@@ -37,6 +38,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         IAgentConversationContextService? conversationContextService = null)
     {
         this.workspaceService = workspaceService;
+        lifetimeToken = lifetimeCts.Token;
         this.activeChatRegistry = activeChatRegistry;
         this.preparationPool = preparationPool;
         this.settingsService = settingsService;
@@ -79,13 +81,21 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await EnsureSettingsLoadedAsync(cancellationToken);
-        PruneExpired();
+        using var initialization = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+        var initializationToken = initialization.Token;
+        await EnsureSettingsLoadedAsync(initializationToken);
+        lock (gate) {
+            initializationToken.ThrowIfCancellationRequested();
+            if (isDisposed) {
+                throw new OperationCanceledException(lifetimeToken);
+            }
+            PruneExpired();
+        }
         try
         {
-            await preparationPool.WarmAsync(cancellationToken);
+            await preparationPool.WarmAsync(initializationToken);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (initializationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -98,6 +108,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 CurrentSettings.MaximumPreparedAgents);
         }
 
+        initializationToken.ThrowIfCancellationRequested();
         EnsureMaintenanceLoopRunning();
     }
 
@@ -279,12 +290,12 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
     public async ValueTask DisposeAsync()
     {
-        if (isDisposed)
-        {
-            return;
+        lock (gate) {
+            if (isDisposed) {
+                return;
+            }
+            isDisposed = true;
         }
-
-        isDisposed = true;
         activeChatRegistry.Changed -= HandleActiveChatsChanged;
         workspaceService.ExecutionUpdated -= HandleExecutionUpdated;
         await lifetimeCts.CancelAsync();
@@ -407,6 +418,10 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 await settingsService.GetSettingsAsync(cancellationToken));
             lock (gate)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (isDisposed) {
+                    throw new OperationCanceledException(lifetimeToken);
+                }
                 if (!settingsLoaded && settingsVersion == versionBeforeLoad)
                 {
                     currentSettings = loadedSettings;
@@ -414,9 +429,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 }
 
                 loadedSettings = currentSettings;
+                preparationPool.Configure(loadedSettings);
             }
-
-            preparationPool.Configure(loadedSettings);
             return loadedSettings;
         }
         finally
@@ -527,9 +541,12 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
         lock (gate)
         {
+            if (isDisposed) {
+                return;
+            }
             if (pruneLoopTask is null or { IsCompleted: true })
             {
-                pruneLoopTask = RunPruneLoopAsync(lifetimeCts.Token);
+                pruneLoopTask = RunPruneLoopAsync(lifetimeToken);
             }
         }
     }

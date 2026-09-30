@@ -137,9 +137,9 @@ public sealed class ProviderHistoryUiAcceptanceTests {
 
     private static async Task<IssuedCredential> IssueCredentialAsync(IPage page, string baseUrl, string displayName, string subject) {
         await NavigateAsync(page, $"{baseUrl}/settings?tab=api-access");
-        await FieldByLabel(page, "Subject").FillAsync(subject);
-        await FieldByLabel(page, "Display name").FillAsync(displayName);
-        await FieldByLabel(page, "Lifetime minutes").FillAsync("30");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync(subject);
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync(displayName);
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("30");
         await page.GetByTestId("api-token-scopes").FillAsync(CredentialScopes);
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
         var field = page.GetByTestId("api-issued-token");
@@ -190,7 +190,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     }
 
     private static async Task CreateAgentAsync(IPage page, string baseUrl, string agentName) {
-        await NavigateAsync(page, $"{baseUrl}/agents?tab=agents");
+        await OpenAgentCatalogAsync(page, baseUrl);
         await page.GetByTestId("agents-catalog-new").ClickAsync();
         var dialog = page.GetByTestId("agents-details-dialog");
         await dialog.WaitForAsync();
@@ -214,7 +214,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     }
 
     private static async Task DeleteAgentAsync(IPage page, string baseUrl, string agentName) {
-        await NavigateAsync(page, $"{baseUrl}/agents?tab=agents");
+        await OpenAgentCatalogAsync(page, baseUrl);
         var card = page.GetByTestId("agents-catalog-card-shell")
             .Filter(new() { HasTextString = agentName })
             .First;
@@ -230,6 +230,11 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await page.GetByTestId("agents-catalog-delete-confirm").ClickAsync();
         await confirmation.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.GetByText("Agent deleted", new() { Exact = true }).WaitForAsync();
+    }
+
+    private static async Task OpenAgentCatalogAsync(IPage page, string baseUrl) {
+        await NavigateAsync(page, $"{baseUrl}/agents?tab=agents");
+        await page.Locator(".agent-catalog-panel").GetByText(new Regex(@"^\d+ of \d+ agent\(s\)$")).WaitForAsync();
     }
 
     private static async Task SelectOptionContainingAsync(ILocator select, string expectedText) {
@@ -255,6 +260,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         var card = switcher.GetByTestId("agent-switch-card-shell").Filter(new() { HasTextString = agentName });
         await card.GetByTestId("agent-switch-card").ClickAsync();
         await switcher.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page.GetByTestId("agent-thread-selected-agent")).ToContainTextAsync(agentName);
         var chat = page.GetByTestId("agents-chat-panel");
         var newThread = chat.GetByRole(AriaRole.Button, new() { Name = "New thread", Exact = true }).First;
         await Assertions.Expect(newThread).ToBeEnabledAsync();
@@ -279,10 +285,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     }
 
     private static async Task<IReadOnlyList<Guid>> SearchProviderAsync(IPage page, string baseUrl, string providerName) {
-        await NavigateAsync(page, $"{baseUrl}/agents?tab=providers");
-        await page.GetByTestId("providers-search").FillAsync(providerName);
-        var provider = page.GetByTestId("providers-tree-provider").Filter(new() { HasTextString = providerName }).First;
-        await provider.ClickAsync();
+        await SharedProviderMetadataUiChecks.OpenProviderAsync(page, baseUrl, providerName);
         await page.GetByTestId("provider-editor-tab-history").ClickAsync();
         return await SearchAndReadIdsAsync(page, providerName);
     }
@@ -304,7 +307,9 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             var dialog = page.GetByTestId("history-detail-dialog");
             await dialog.GetByText("Entry / provider", new() { Exact = true }).WaitForAsync();
             var text = await dialog.InnerTextAsync();
-            Assert.Contains("Content has not been requested", text, StringComparison.Ordinal);
+            Assert.Contains("Content loads on request in a separate read-only dialog.", text, StringComparison.Ordinal);
+            await Assertions.Expect(page.GetByTestId("history-content-dialog")).ToHaveCountAsync(0);
+            await Assertions.Expect(page.GetByTestId("history-content-text")).ToHaveCountAsync(0);
             var identity = await dialog.GetByText("Entry / provider", new() { Exact = true }).Locator("xpath=following-sibling::*[1]").InnerTextAsync();
             var match = Regex.Match(identity, @"^[0-9a-fA-F-]{36}");
             Assert.True(match.Success, "The history detail dialog did not expose the entry identity.");
@@ -324,7 +329,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await secret.ClickAsync();
         await Assertions.Expect(FieldByLabel(page, "Name")).ToHaveValueAsync(name);
         await page.GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true }).ClickAsync();
-        await page.GetByText("Secret deleted", new() { Exact = true }).WaitForAsync();
+        await page.GetByTestId("settings-operation").First.GetByText("DeleteSecret: Committed", new() { Exact = true }).WaitForAsync();
     }
 
     private static async Task DeleteCredentialsByPrefixAsync(IPage page, string baseUrl, string displayNamePrefix) {
@@ -367,18 +372,8 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         }
     }
 
-    private static async Task NavigateAsync(IPage page, string url) {
-        var response = await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
-        Assert.NotNull(response);
-        Assert.True(response.Ok, $"Navigation to '{url}' returned HTTP {response.Status}.");
-        var startup = page.GetByTestId("database-startup-modal");
-        try {
-            await startup.WaitForAsync(new() { Timeout = 1_000 });
-            await page.GetByTestId("database-startup-continue").ClickAsync();
-            await startup.WaitForAsync(new() { State = WaitForSelectorState.Detached });
-        } catch (TimeoutException) {
-        }
-    }
+    private static Task NavigateAsync(IPage page, string url)
+        => SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, url);
 
     private static ILocator FieldByLabel(IPage page, string label) => FieldByLabel(page.Locator("body"), label);
 
