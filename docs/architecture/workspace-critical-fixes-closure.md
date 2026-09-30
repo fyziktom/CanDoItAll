@@ -1,5 +1,8 @@
 # Workspace critical fixes and closure — 2026-09-30
 
+This is the preceding campaign's retained disposition. See the [R2 continuation](workspace-closure-r2.md)
+for the current repair, dependency and regression evidence; the failed results below remain historical facts.
+
 **Workspace rendering remains complete. `ready_for_next_module=false`.** WCL-R1, WC-C1
 and WC-C2 are closed locally. WC-C3's original controlled defects are repaired, but composed
 navigation remains open under WCL-NAV1. A new Agent deletion failure, WCL-DEL1, also remains
