@@ -12,5 +12,6 @@
     <PackageReference Include="bunit" Version="2.7.2" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Projects.UiSandbox/CanDoItAll.Projects.UiSandbox.csproj" />
     <Using Include="Xunit" />
+    <Compile Include="../CanDoItAll.Tests.Components/BunitContextLifecycleExtensions.cs" Link="BunitContextLifecycleExtensions.cs" />
   </ItemGroup>
 </Project>

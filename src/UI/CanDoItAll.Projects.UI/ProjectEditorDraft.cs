@@ -11,7 +11,8 @@ public enum ProjectEditorMutationState {
     SeedOutcomeUnknown,
     Deleting,
     DeleteOutcomeUnknown,
-    Deleted
+    Deleted,
+    AdmissionRefused
 }
 
 public sealed class ProjectEditorDraft {

@@ -783,7 +783,12 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             target.IsError = false;
             if (submitted.Seeds.Count > 0) {
                 target.Mutation = ProjectEditorMutationState.Seeding;
-                await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(result.Value.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
+                try {
+                    await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(result.Value.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
+                } catch (ProjectWriteAdmissionRejectedException exception) when (exception.Admission == result.Value.Project) {
+                    RefuseMutation(target, exception, "Project saved. Starter-object creation was refused because the acquired project lifetime no longer exists. Close and reopen the current project before another write.");
+                    return null;
+                }
                 target.AcknowledgeSeeds(submitted);
                 target.Message = "Project saved and starter objects seeded to the structure workbench.";
             }
@@ -821,11 +826,18 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         return true;
     }
 
-    private void ReleaseMutation(ProjectEditorDraft target) {
-        target.Mutation = ProjectEditorMutationState.Ready;
+    private void ReleaseMutation(ProjectEditorDraft target, ProjectEditorMutationState state = ProjectEditorMutationState.Ready) {
+        target.Mutation = state;
         if (target.Model.Id is { } id && mutationTargets.TryGetValue(id, out var owner) && ReferenceEquals(owner, target)) {
             mutationTargets.Remove(id);
         }
+    }
+
+    private void RefuseMutation(ProjectEditorDraft target, ProjectWriteAdmissionRejectedException exception, string message) {
+        Logger.LogWarning(exception, "Project operation refused before native writes for {ProjectId}; stage {Stage}.", target.Model.Id, target.Mutation);
+        ReleaseMutation(target, ProjectEditorMutationState.AdmissionRefused);
+        target.Message = message;
+        target.IsError = true;
     }
 
     private bool IsActiveEditor(ProjectEditorDraft target, long intent)
@@ -846,14 +858,19 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return;
         }
         long intent = ++editorIntent;
+        var admission = target.Model.ExpectedProjectAdmission;
         try {
-            var admission = target.Model.ExpectedProjectAdmission
-                ?? throw new InvalidOperationException("The acquired editor has no owner-issued deletion admission.");
+            if (admission is null) {
+                throw new InvalidOperationException("The acquired editor has no owner-issued deletion admission.");
+            }
             var deletion = await ProjectsService.DeleteAsync(id, expectedProjectAdmission: admission);
             RecordDeletion(target, intent);
             projectDeletionNotice = deletion.Warnings.Count == 0 ? "Project deleted."
                 : BuildProjectDeletionWarningMessage("Project deleted with retained managed media.", deletion.Warnings);
             projectDeletionNoticeIsError = deletion.Warnings.Count > 0;
+        } catch (ProjectWriteAdmissionRejectedException exception) when (admission is not null && exception.Admission == admission) {
+            RefuseMutation(target, exception, "Deletion was refused because the acquired project lifetime no longer exists. Close and reopen the current project before another write.");
+            return;
         } catch (ProjectDeletionPartialCommitException exception) {
             RecordDeletion(target, intent);
             foreach (var failure in exception.Recovery.Failures.Where(item => item.RecoveryId.HasValue)) {

@@ -32,7 +32,8 @@ public sealed class ProjectsBoundaryTests {
             }
         }
         Assert.DoesNotContain(typeof(ProjectModalHost).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance),
-            item => item.GetCustomAttribute<InjectAttribute>() is not null && item.PropertyType != typeof(Microsoft.JSInterop.IJSRuntime));
+            item => item.GetCustomAttribute<InjectAttribute>() is not null && item.PropertyType != typeof(Microsoft.JSInterop.IJSRuntime) &&
+                item.PropertyType != typeof(Microsoft.Extensions.Logging.ILogger<ProjectModalHost>));
         Assert.Equal("CanDoItAll.Modules.Projects.Contracts", typeof(ProjectEditorModel).Assembly.GetName().Name);
     }
 

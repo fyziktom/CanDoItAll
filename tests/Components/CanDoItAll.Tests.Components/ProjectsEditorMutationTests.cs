@@ -211,8 +211,10 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Single(await harness.Context.Services.GetRequiredService<ProjectsService>().ListAsync());
     }
 
-    [Fact]
-    public async Task Seed_transaction_refuses_the_original_admission_after_same_id_recreation() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Seed_transaction_refuses_the_original_admission_after_same_id_recreation(bool reacquireWhilePending) {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -227,6 +229,14 @@ public sealed class ProjectsEditorMutationTests {
         var original = draft.Model.ExpectedProjectAdmission;
         await projects.DeleteAsync(id);
         Assert.True((await projects.CreateAsync(id, new() { Name = "Successor lifetime" })).IsSuccess);
+        ProjectEditorDraft? current = null;
+        string? pendingMessage = null;
+        if (reacquireWhilePending) {
+            current = await ReacquireThroughAnotherProjectAsync(cut, projects, id);
+            await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(current.Capture()));
+            pendingMessage = current.Message;
+            Assert.Contains("previous operation", pendingMessage);
+        }
         controls.Release.TrySetResult();
         await pending;
         Assert.IsType<ProjectWriteAdmissionRejectedException>(controls.SeedFailure);
@@ -234,6 +244,108 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Equal(original, draft.Model.ExpectedProjectAdmission);
         Assert.NotEqual(original!.LifetimeId, (await projects.GetAsync(id)).ExpectedLifetimeId);
         Assert.Equal(1, controls.SeedCalls);
+        Assert.Equal(ProjectEditorMutationState.AdmissionRefused, draft.Mutation);
+        Assert.False(draft.CanMutate);
+        Assert.Contains("Project saved", draft.Message);
+        Assert.Contains("refused", draft.Message);
+        Assert.Equal(original, draft.Acknowledgement!.Project);
+        Assert.False(Assert.Single(draft.StarterObjects).IsSeeded);
+        if (current is not null) {
+            Assert.Same(current, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+            Assert.Equal(pendingMessage, current.Message);
+            Assert.True(current.CanMutate);
+        } else {
+            await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(draft.Capture()));
+            current = await ReacquireThroughAnotherProjectAsync(cut, projects, id);
+        }
+        current.Model.Name = "Explicit current-lifetime edit";
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(current.Capture()));
+        Assert.Equal("Explicit current-lifetime edit", (await projects.GetAsync(id)).Name);
+        Assert.Equal(1, controls.SeedCalls);
+        Assert.Empty(await ObjectsAsync(harness, id));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delete_refusal_preserves_the_replacement_and_releases_only_the_original_operation(bool reacquireWhilePending) {
+        var controls = new Controls();
+        var participant = new CountingDeletion();
+        await using var harness = await Harness(controls, participant);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid id = (await projects.SaveAsync(new() { Name = "Original delete lifetime" })).Value;
+        var cut = harness.Context.Render<ProjectsPage>();
+        cut.WaitForElement("[data-testid='project-card']");
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        var oldEditor = cut.FindComponent<ProjectModalHost>();
+        var oldDraft = oldEditor.Instance.Draft;
+        var original = oldDraft.Model.ExpectedProjectAdmission;
+        await projects.DeleteAsync(id);
+        Assert.True((await projects.CreateAsync(id, new() { Name = "Replacement retained" })).IsSuccess);
+        int preparations = participant.Preparations;
+        controls.HoldNextRead = 1;
+        Task pending = cut.InvokeAsync(() => oldEditor.Instance.Delete.InvokeAsync());
+        await using var operation = new PendingOperation(pending, controls);
+        await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await cut.InvokeAsync(() => oldEditor.Instance.Delete.InvokeAsync());
+        ProjectEditorDraft? current = null;
+        if (reacquireWhilePending) {
+            current = await ReacquireThroughAnotherProjectAsync(cut, projects, id);
+            await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(current.Capture()));
+            Assert.Contains("previous operation", current.Message);
+        }
+        string? message = current?.Message;
+        controls.Release.TrySetResult();
+        await pending;
+        Assert.Equal(preparations, participant.Preparations);
+        Assert.Equal("Replacement retained", (await projects.GetAsync(id)).Name);
+        Assert.Equal(original, oldDraft.Model.ExpectedProjectAdmission);
+        Assert.Equal(ProjectEditorMutationState.AdmissionRefused, oldDraft.Mutation);
+        Assert.False(oldDraft.CanMutate);
+        Assert.Contains("refused", oldDraft.Message);
+        Assert.Empty(cut.FindAll("[data-testid='project-deletion-notice']"));
+        Assert.Empty(cut.FindComponent<ProjectDeletionStatusSurface>().Instance.Pending);
+        if (current is not null) {
+            Assert.Same(current, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+            Assert.Equal(message, current.Message);
+            Assert.True(current.CanMutate);
+        } else {
+            current = await ReacquireThroughAnotherProjectAsync(cut, projects, id);
+        }
+        Assert.NotEqual(original, current.Model.ExpectedProjectAdmission);
+        current.Model.Name = "Current lifetime remains writable";
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Save.InvokeAsync(current.Capture()));
+        Assert.Equal("Current lifetime remains writable", (await projects.GetAsync(id)).Name);
+        Assert.Equal(preparations, participant.Preparations);
+    }
+
+    private static async Task<ProjectEditorDraft> ReacquireThroughAnotherProjectAsync(IRenderedComponent<ProjectsPage> cut, ProjectsService projects, Guid id) {
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Close.InvokeAsync());
+        Guid other = (await projects.SaveAsync(new() { Name = "Independent project" })).Value;
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(other));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.Close.InvokeAsync());
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        return cut.FindComponent<ProjectModalHost>().Instance.Draft;
+    }
+
+    private sealed class CountingDeletion : IProjectDeletionParticipant {
+        public ProjectDeletionParticipantId Id { get; } = new("projects-refusal-proof");
+        public IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; } = [];
+        public int Preparations { get; private set; }
+
+        public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(Guid projectId, CancellationToken cancellationToken = default) {
+            Preparations++;
+            return Task.FromResult<ProjectDeletionParticipantPreparation?>(null);
+        }
+
+        public Task<ProjectDeletionParticipantCompletion> CompleteAsync(ProjectDeletionParticipantPreparation preparation, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("A null preparation has no completion.");
+
+        public Task<IReadOnlyList<ProjectDeletionParticipantRecovery>> ListPendingRecoveriesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectDeletionParticipantRecovery>>([]);
+
+        public Task<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>> ListCompletionNoticesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>>([]);
     }
 
     [Fact]

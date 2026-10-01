@@ -3,7 +3,9 @@
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging
 @inject IJSRuntime JS
+@inject ILogger<ProjectModalHost> Logger
 @implements IAsyncDisposable
 
 @if (IsOpen) {
@@ -551,9 +553,11 @@
     private bool openAfterSubmit;
     private bool validating;
     private bool retired;
-    private bool focusInvalid;
+    private ProjectEditorDraft? focusDraft;
     private readonly string formId = $"project-editor-{Guid.NewGuid():N}";
-    private Task<IJSObjectReference>? moduleLoad;
+    private Task<IJSObjectReference?>? moduleLoad;
+    private IJSObjectReference? loadedModule;
+    private Task? moduleCleanup;
 
     private async Task HandleSaveAsync() {
         bool open = openAfterSubmit;
@@ -562,51 +566,94 @@
             return;
         }
         validating = true;
-        var submitted = Draft.Capture();
+        var origin = Draft;
+        var submitted = origin.Capture();
+        var save = open ? SaveAndOpenStructure : Save;
+        var changeStep = WizardTabChanged;
         try {
-            moduleLoad ??= JS.InvokeAsync<IJSObjectReference>("import", "./_content/CanDoItAll.Projects.UI/project-editor.js").AsTask();
+            moduleLoad ??= AcquireModuleAsync();
             var module = await moduleLoad;
+            if (module is null || !IsCurrent(origin)) {
+                return;
+            }
             var validity = await module.InvokeAsync<ProjectFormValidity>("inspect", formId);
-            if (retired) {
+            if (!IsCurrent(origin)) {
                 return;
             }
             if (!validity.IsValid) {
-                Draft.Message = validity.Message ?? "Complete the invalid date before saving.";
-                Draft.IsError = true;
-                focusInvalid = true;
+                origin.Message = validity.Message ?? "Complete the invalid date before saving.";
+                origin.IsError = true;
+                focusDraft = origin;
                 if (validity.Step is { } step) {
-                    await WizardTabChanged.InvokeAsync(step.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    await changeStep.InvokeAsync(step.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 }
                 return;
             }
-            if (open) {
-                await SaveAndOpenStructure.InvokeAsync(submitted);
-            } else {
-                await Save.InvokeAsync(submitted);
-            }
-        } catch (JSException) {
-            Draft.Message = "Unable to validate the current form. Close and reopen the editor before saving.";
-            Draft.IsError = true;
+            await save.InvokeAsync(submitted);
+        } catch (Exception exception) when (exception is JSException or OperationCanceledException) {
+            ReportInteropFailure(origin, exception);
         } finally {
-            validating = false;
+            if (IsCurrent(origin)) {
+                validating = false;
+            }
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (focusInvalid && moduleLoad is not null && !retired) {
-            focusInvalid = false;
-            await (await moduleLoad).InvokeVoidAsync("focusInvalid", formId);
+        var origin = focusDraft;
+        var module = loadedModule;
+        focusDraft = null;
+        if (origin is null || module is null || !IsCurrent(origin)) {
+            return;
+        }
+        try {
+            await module.InvokeVoidAsync("focusInvalid", formId);
+        } catch (Exception exception) when (exception is JSException or OperationCanceledException) {
+            ReportInteropFailure(origin, exception);
         }
     }
 
-    public async ValueTask DisposeAsync() {
-        retired = true;
-        if (moduleLoad is not null) {
-            try {
-                await (await moduleLoad).DisposeAsync();
-            } catch (JSDisconnectedException) {
-            }
+    private bool IsCurrent(ProjectEditorDraft origin) => !retired && ReferenceEquals(Draft, origin);
+
+    private async Task<IJSObjectReference?> AcquireModuleAsync() {
+        var module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CanDoItAll.Projects.UI/project-editor.js");
+        if (retired) {
+            await ReleaseModuleAsync(module);
+            return null;
         }
+        loadedModule = module;
+        return module;
+    }
+
+    private void ReportInteropFailure(ProjectEditorDraft origin, Exception exception) {
+        if (retired && exception is JSDisconnectedException or OperationCanceledException) {
+            return;
+        }
+        Logger.LogWarning(exception, "Project form interop failed. Retired={Retired} CurrentDraft={CurrentDraft}.", retired, ReferenceEquals(Draft, origin));
+        if (IsCurrent(origin)) {
+            origin.Message = "Unable to validate the current form. Close and reopen the editor before saving.";
+            origin.IsError = true;
+        }
+    }
+
+    private async Task ReleaseModuleAsync(IJSObjectReference module) {
+        try {
+            await module.DisposeAsync();
+        } catch (JSDisconnectedException) when (retired) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Project form module cleanup failed. Retired={Retired}.", retired);
+        }
+    }
+
+    public ValueTask DisposeAsync() {
+        retired = true;
+        focusDraft = null;
+        var module = loadedModule;
+        loadedModule = null;
+        if (module is not null) {
+            moduleCleanup = ReleaseModuleAsync(module);
+        }
+        return moduleCleanup is null ? ValueTask.CompletedTask : new(moduleCleanup);
     }
 
     private void ChangeText(object model, string field, Action<string> update, ChangeEventArgs args) {

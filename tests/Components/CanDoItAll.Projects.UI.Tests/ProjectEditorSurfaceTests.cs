@@ -169,12 +169,12 @@ public sealed class ProjectEditorSurfaceTests {
         return context;
     }
 
-    private static ProjectEditorDraft NewDraft() => new(new() {
+    internal static ProjectEditorDraft NewDraft() => new(new() {
         Name = "Project",
         Options = [new() { Category = ProjectOptionCategory.Language }]
     });
 
-    private static IRenderedComponent<ProjectModalHost> Render(BunitContext context, ProjectEditorDraft draft, Action? save = null)
+    internal static IRenderedComponent<ProjectModalHost> Render(BunitContext context, ProjectEditorDraft draft, Action? save = null)
         => context.Render<ProjectModalHost>(p => p.Add(x => x.Draft, draft).Add(x => x.IsOpen, true).Add(x => x.IsEditorMode, true)
             .Add(x => x.WizardSteps, ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"])
             .Add(x => x.WizardTabs, Enumerable.Range(0, 5).Select(index => new SecondaryTabItem(index.ToString(), index.ToString())).ToArray())
