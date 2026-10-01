@@ -1,5 +1,30 @@
 # Projects Files rendering boundary
 
+## P2-R1 follow-up, 2026-10-01
+
+On application `92a3c373`, overlapping previews inside one accepted activation could
+publish a retired operation's exception into the newer preview. Four session controls
+and four real FileBrowser/production-wrapper controls reproduced this before repair.
+Error publication now requires both the activation and its exact operation. Cancellation
+sources still live until their request unwinds; the existing identity-checked `finally`
+does not release a successor's operation. File authorization and content owners are unchanged.
+
+The controls cover newer success/failure, A-to-B-to-A, current failure and recovery,
+late successful grants, close and a pending explicit action without replay. Both production
+wrappers use real native content. The source title contained the actual UTF-8 `Â·` sequence;
+the renderer now uses the intended middle dot, checked in the real Dialog title.
+
+Current `AgentEditorProof` discovery and execution: session/action 21; native Files plus
+P1 mutation 22 (including the retained 14 P1 controls); P1 renderer/interop 18; Files leaf
+17; production portfolio/download/Workspace browser journey 1. All passed with isolated
+PostgreSQL 18 and a 1920×1080 browser. Portability-static passed without writing a baseline
+(15,241 reviewed findings). Private commands, discovery, TRX and failure histories are in
+`artifacts/agent-editor-a1/20261001-92a3c373`. The first unit attempt was aborted after an
+invalid action fixture stalled; its follow-up had four product failures, one bounded fixture
+timeout and two passes. The fixture was corrected to use the explicit local-open policy;
+that mixed attempt remains distinct from the final 21 passing controls. No broad Stable
+trigger applies to this local publication guard and title repair.
+
 ## Decision and ownership
 
 The two former Files components mixed complete rendering with file-scope acquisition,

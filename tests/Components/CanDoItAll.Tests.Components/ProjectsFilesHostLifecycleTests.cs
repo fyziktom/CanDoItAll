@@ -10,11 +10,68 @@ using CanDoItAll.Projects.Files.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectsFilesHostLifecycleTests {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Same_activation_real_browser_preserves_newer_preview_or_failure(bool portfolio, bool newerFails) {
+        var control = new PreviewControl(newerFails);
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            Decorate<IProjectFilesPilotCoordinator>(services, owner => new HeldPreview(owner, control));
+            Decorate<IProjectFilePortfolioCoordinator>(services, owner => new HeldPortfolioPreview(owner, control));
+        });
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid project = (await projects.SaveAsync(new() { Name = "Preview ordering" })).Value;
+        string root = harness.Context.Services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+        string directory = Path.Combine(root, "managed-files", "project-media", "files", project.ToString("N"));
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "alpha.txt"), "Original preview bytes");
+        await File.WriteAllTextAsync(Path.Combine(directory, "beta.txt"), "Accepted successor bytes");
+        var projection = ProjectFileFilterProjection.Create(await projects.ListAsync(), [], new());
+        IRenderedComponent<Microsoft.AspNetCore.Components.ComponentBase> cut = portfolio
+            ? harness.Context.Render<ProjectFilesPortfolioPane>(p => p.Add(x => x.Projection, projection))
+            : harness.Context.Render<ProjectFilesDialog>(p => p.Add(x => x.IsOpen, true).Add(x => x.ProjectId, project).Add(x => x.ProjectName, "Preview ordering"));
+        try {
+            cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".ft-file-browser__item-main").Count));
+            var browser = cut.FindComponent<FileBrowser>().Instance.Session;
+            var pending = cut.InvokeAsync(() => cut.FindAll(".ft-file-browser__item-main").Single(x => x.TextContent.Contains("alpha.txt")).KeyUpAsync(new KeyboardEventArgs { Key = "Enter" }));
+            await control.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await cut.InvokeAsync(() => cut.FindAll(".ft-file-browser__item-main").Single(x => x.TextContent.Contains("beta.txt")).KeyUpAsync(new KeyboardEventArgs { Key = "Enter" }));
+            var newest = View().Preview;
+            Assert.Same(browser, View().Browse!.Session);
+            control.Release.TrySetResult();
+            await pending;
+            Assert.Equal(2, control.Calls);
+            Assert.Equal(newerFails ? "Newest native preview was revoked." : null, View().ActivationError);
+            Assert.Same(newest, View().Preview);
+            if (newerFails) {
+                Assert.Contains("Newest native preview was revoked.", cut.Markup);
+                await cut.InvokeAsync(() => cut.FindAll(".ft-file-browser__item-main").Single(x => x.TextContent.Contains("beta.txt")).KeyUpAsync(new KeyboardEventArgs { Key = "Enter" }));
+                newest = View().Preview;
+                Assert.Null(View().ActivationError);
+            }
+            Assert.NotNull(newest);
+            Assert.Equal("beta.txt", newest.Request.FileName);
+            await using var lease = await newest.ContentSource.OpenReadAsync(new(newest.Request.File));
+            using var reader = new StreamReader(lease.Stream);
+            Assert.Equal("Accepted successor bytes", await reader.ReadToEndAsync());
+        } finally {
+            control.Release.TrySetResult();
+            await harness.Context.DisposeRenderedComponentsAsync();
+        }
+
+        ProjectFilesViewState View() => portfolio
+            ? cut.FindComponent<ProjectFilesPortfolioPaneView>().Instance.State
+            : cut.FindComponent<ProjectFilesDialogView>().Instance.State;
+    }
+
     [Fact]
     public async Task Native_portfolio_accepts_64_sources_and_refuses_65_without_truncation() {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -178,6 +235,43 @@ public sealed class ProjectsFilesHostLifecycleTests {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default) {
             Request = request;
             return ValueTask.FromException<FileToolsKnownFileSession>(new IOException("Injected primary construction failure"));
+        }
+    }
+
+    private sealed class PreviewControl(bool newerFails) {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls { get; private set; }
+        public async ValueTask BeforeAsync() {
+            Calls++;
+            if (Calls == 1) {
+                Started.TrySetResult();
+                await Release.Task;
+                throw new IOException("Retired native preview failure");
+            }
+            if (Calls == 2 && newerFails) {
+                throw new FileAccessDeniedException(FileAccessFailureCode.Revoked, "Newest native preview was revoked.");
+            }
+        }
+    }
+
+    private sealed class HeldPreview(IProjectFilesPilotCoordinator inner, PreviewControl control) : IProjectFilesPilotCoordinator {
+        public ValueTask<ProjectFilesPilotWorkspace> OpenAsync(Guid projectId, string projectName, CancellationToken cancellationToken = default)
+            => inner.OpenAsync(projectId, projectName, cancellationToken);
+        public async ValueTask<ProjectFilesPilotInteraction> ActivateAsync(ProjectFilesPilotWorkspace workspace, FileBrowserItemKey itemKey, CancellationToken cancellationToken = default) {
+            await control.BeforeAsync();
+            return await inner.ActivateAsync(workspace, itemKey, cancellationToken);
+        }
+    }
+
+    private sealed class HeldPortfolioPreview(IProjectFilePortfolioCoordinator inner, PreviewControl control) : IProjectFilePortfolioCoordinator {
+        public ValueTask<ProjectFilePortfolioWorkspace> OpenAsync(ProjectFileFilterProjection projection, CancellationToken cancellationToken = default)
+            => inner.OpenAsync(projection, cancellationToken);
+        public ValueTask<bool> UpdateAsync(ProjectFilePortfolioWorkspace workspace, ProjectFileFilterProjection projection, CancellationToken cancellationToken = default)
+            => inner.UpdateAsync(workspace, projection, cancellationToken);
+        public async ValueTask<ProjectFilesPilotInteraction> ActivateAsync(ProjectFilePortfolioWorkspace workspace, FileBrowserItemKey itemKey, CancellationToken cancellationToken = default) {
+            await control.BeforeAsync();
+            return await inner.ActivateAsync(workspace, itemKey, cancellationToken);
         }
     }
 

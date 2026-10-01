@@ -19,6 +19,9 @@ public sealed class FilesRendererTests {
         using var context = Context();
         await using var surface = new FilesScenarioSurface(new object(), FilesScenario.Empty);
         var cut = Render(context, dialog, surface.State);
+        if (dialog) {
+            Assert.Contains("Files · Fixture project", cut.FindComponent<Dialog>().Instance.Title);
+        }
         Assert.Contains(dialog ? "No project file sources" : "No projects match the shared filters", cut.Markup);
         Assert.Null(surface.State.OpenError);
         Assert.Empty(surface.Browser.Snapshot.Sources);

@@ -71,7 +71,7 @@ internal sealed class ProjectFilesSurfaceSession(
         } catch (OperationCanceledException) when (operation.Token.IsCancellationRequested) {
         } catch (Exception exception) {
             Report(exception, "open", origin);
-            if (IsCurrent(origin)) {
+            if (IsCurrent(origin, operation)) {
                 State = State with { IsLoading = false, OpenError = SafeMessage(exception, "Unable to open project files. Retry to resolve the current sources.") };
             }
         } finally {
@@ -121,7 +121,7 @@ internal sealed class ProjectFilesSurfaceSession(
         } catch (OperationCanceledException) when (operation.Token.IsCancellationRequested) {
         } catch (Exception exception) {
             Report(exception, "preview", origin);
-            if (IsCurrent(origin)) {
+            if (IsCurrent(origin, operation)) {
                 State = State with { ActivationError = SafeMessage(exception, "Unable to open the selected project file.") };
             }
         } finally {
@@ -165,7 +165,7 @@ internal sealed class ProjectFilesSurfaceSession(
         } catch (OperationCanceledException) when (operation.Token.IsCancellationRequested) {
         } catch (Exception exception) {
             Report(exception, "action", origin);
-            if (IsCurrent(origin)) {
+            if (IsCurrent(origin, operation)) {
                 State = State with { ActivationError = SafeMessage(exception, action == FileToolsHostAction.Download
                     ? "Download completion could not be confirmed. Inspect browser downloads before another explicit attempt."
                     : "Local-open completion could not be confirmed. Inspect the application before another explicit attempt.") };
@@ -187,6 +187,8 @@ internal sealed class ProjectFilesSurfaceSession(
     }
 
     private bool IsCurrent(ProjectFilesActivation origin) => !disposed && !origin.Retired && ReferenceEquals(active, origin);
+    private bool IsCurrent(ProjectFilesActivation origin, ProjectFilesOperation operation)
+        => IsCurrent(origin) && ReferenceEquals(origin.Operation, operation);
     private bool IsBound(ProjectFilesActivation origin, ProjectFilesOwnedWorkspace workspace) => IsCurrent(origin) && ReferenceEquals(origin.Workspace, workspace);
     private static bool ContainsItem(ProjectFilesOwnedWorkspace workspace, FileBrowserItemKey key) => workspace.Browser.Snapshot.Items.Any(item => item.Key == key);
     private bool SupportsLocalOpen(ProjectFilesOwnedWorkspace workspace, FileBrowserSourceId source) => actions.IsLocalLaunchAvailable && workspace.Availability(source).SupportsLocalOpen;

@@ -101,7 +101,7 @@
     [Parameter]
     public string ProjectName { get; set; } = string.Empty;
 
-    private string DialogTitle => State.Preview?.Request.FileName ?? $"Files Â· {ProjectName}";
+    private string DialogTitle => State.Preview?.Request.FileName ?? $"Files \u00B7 {ProjectName}";
     private string DialogSubtitle => State.Preview is null
         ? "Browse and search this project's authorized text-file source. Activate a file to replace browsing with a read-only interaction."
         : "Read-only content is authorized independently from the browser component.";

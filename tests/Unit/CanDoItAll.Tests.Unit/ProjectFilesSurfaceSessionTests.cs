@@ -1,6 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileBrowser.Components;
 using CanDoItAll.FileTools.FileInteraction;
+using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Projects.Files.UiSandbox;
@@ -11,6 +12,113 @@ using Microsoft.JSInterop;
 namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectFilesSurfaceSessionTests {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Same_activation_late_preview_error_cannot_annotate_the_newest_operation(bool newestFails, bool returnToFirstItem) {
+        var fixture = new SurfaceFixture();
+        await using var surface = fixture.Create();
+        var held = new FilesFixtureGate();
+        var workspace = new OwnedWorkspace("alpha") {
+            BeforePreview = async invocation => {
+                if (invocation == 1) {
+                    await held.WaitAsync();
+                    throw new IOException("Retired preview failure");
+                }
+                if (newestFails && invocation == (returnToFirstItem ? 3 : 2)) {
+                    throw new FileAccessDeniedException(FileAccessFailureCode.Revoked, "Newest preview was revoked.");
+                }
+            }
+        };
+        await surface.OpenAsync(workspace.Open, "A");
+        var pending = PreviewAsync(surface);
+        await held.Entered.Task;
+        var oldToken = workspace.PreviewToken;
+        await PreviewAsync(surface, 1);
+        if (returnToFirstItem) {
+            await PreviewAsync(surface);
+        }
+        var newest = surface.State.Preview;
+        Assert.True(oldToken.IsCancellationRequested);
+        using var registration = oldToken.Register(() => { });
+        held.Release();
+        await pending;
+        Assert.Same(newest, surface.State.Preview);
+        Assert.Equal(newestFails ? "Newest preview was revoked." : null, surface.State.ActivationError);
+        if (!newestFails) {
+            await using var lease = await newest!.ContentSource.OpenReadAsync(new(newest.Request.File));
+            Assert.True(lease.Length > 0);
+        }
+        await PreviewAsync(surface);
+        Assert.NotNull(surface.State.Preview);
+        Assert.Null(surface.State.ActivationError);
+    }
+
+    [Fact]
+    public async Task Same_activation_old_preview_finally_does_not_release_a_pending_action_or_replay_it() {
+        var fixture = new SurfaceFixture();
+        fixture.Actions.Gate = new();
+        await using var surface = fixture.Create(new FileInteractionComponentBuilder().Build());
+        var held = new FilesFixtureGate();
+        var workspace = new OwnedWorkspace("alpha") {
+            BeforePreview = async _ => {
+                await held.WaitAsync();
+                throw new IOException("Retired preview failure");
+            }
+        };
+        await surface.OpenAsync(workspace.Open, "A");
+        var preview = PreviewAsync(surface);
+        await held.Entered.Task;
+        var browse = surface.State.Browse!;
+        var args = new FileBrowserItemInvokedEventArgs(browse.Session.Snapshot.Items.Single(item => item.Name == "diagram.mermaid"), FileBrowserInvocationKind.PointerDoubleClick);
+        var action = browse.ItemInvoked.InvokeAsync(args);
+        await fixture.Actions.Gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        held.Release();
+        await preview;
+        var staleError = surface.State.ActivationError;
+        await browse.ItemInvoked.InvokeAsync(args);
+        fixture.Actions.Gate.Release();
+        await action;
+        Assert.Equal(1, fixture.Actions.Launches);
+        Assert.Null(staleError);
+        Assert.Equal("Recorded original launch", surface.State.ActionFeedback);
+        Assert.Null(surface.State.ActivationError);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Same_activation_late_success_releases_only_its_grant(bool close) {
+        var fixture = new SurfaceFixture();
+        await using var surface = fixture.Create();
+        var held = new FilesFixtureGate();
+        var workspace = new OwnedWorkspace("alpha") { BeforePreview = async invocation => {
+            if (invocation == 1) {
+                await held.WaitAsync();
+            }
+        } };
+        await surface.OpenAsync(workspace.Open, "A");
+        var pending = PreviewAsync(surface);
+        await held.Entered.Task;
+        await PreviewAsync(surface, 1);
+        var newest = surface.State.Preview!;
+        if (close) {
+            await surface.State.Closed.InvokeAsync();
+        }
+        held.Release();
+        await pending;
+        Assert.Equal(1, workspace.Contents[1].Releases);
+        Assert.Equal(close ? 1 : 0, workspace.Contents[0].Releases);
+        Assert.Null(surface.State.ActivationError);
+        if (!close) {
+            Assert.Same(newest, surface.State.Preview);
+            await using var lease = await newest.ContentSource.OpenReadAsync(new(newest.Request.File));
+            Assert.True(lease.Length > 0);
+        }
+    }
+
     [Fact]
     public async Task Open_captures_context_before_held_old_cleanup_and_refuses_a_context_switch() {
         var fixture = new SurfaceFixture();
@@ -227,14 +335,15 @@ public sealed class ProjectFilesSurfaceSessionTests {
         Assert.Null(surface.State.ActivationError);
     }
 
-    private static Task PreviewAsync(ProjectFilesSurfaceSession surface) => surface.State.Browse!.ItemInvoked.InvokeAsync(
-        new(surface.State.Browse.Session.Snapshot.Items[0], FileBrowserInvocationKind.Keyboard));
+    private static Task PreviewAsync(ProjectFilesSurfaceSession surface, int index = 0) => surface.State.Browse!.ItemInvoked.InvokeAsync(
+        new(surface.State.Browse.Session.Snapshot.Items[index], FileBrowserInvocationKind.Keyboard));
 
     private sealed class SurfaceFixture {
         public MutableContext Contexts { get; } = new();
         public RecordingActions Actions { get; } = new();
         public RecordingLog Log { get; } = new();
-        public ProjectFilesSurfaceSession Create() => new(new object(), Contexts, Actions, FilesFixtureComposition.Create(), new NoJs(), Log);
+        public ProjectFilesSurfaceSession Create(FileInteractionComponentComposition? composition = null)
+            => new(new object(), Contexts, Actions, composition ?? FilesFixtureComposition.Create(), new NoJs(), Log);
     }
 
     private sealed class MutableContext : IFileAccessContextProvider {
@@ -252,6 +361,7 @@ public sealed class ProjectFilesSurfaceSessionTests {
         public FilesFixtureGate? PreviewGate { get; init; }
         public FilesFixtureGate? PreviewRelease { get; init; }
         public bool FailPreviewRelease { get; init; }
+        public Func<int, Task>? BeforePreview { get; init; }
         public CancellationToken PreviewToken { get; private set; }
         public int Disposals { get; private set; }
         public int Activations { get; private set; }
@@ -267,6 +377,9 @@ public sealed class ProjectFilesSurfaceSessionTests {
         private async ValueTask<ProjectFilesPilotInteraction> ActivateAsync(FileBrowserItemKey item, CancellationToken token) {
             Activations++;
             PreviewToken = token;
+            if (BeforePreview is not null) {
+                await BeforePreview(Activations);
+            }
             var content = new FilesFixtureContent(providers.Single(provider => provider.Descriptor.Id == item.SourceId).Get(item));
             Contents.Add(content);
             if (PreviewGate is not null) {
