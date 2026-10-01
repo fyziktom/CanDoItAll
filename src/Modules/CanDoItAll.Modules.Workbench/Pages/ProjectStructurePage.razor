@@ -726,10 +726,9 @@ else
     </ProjectStructureOverlayDialog>
 }
 
-<ProjectModalHost IsOpen="@showProjectCreateModal"
+<ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
                   IsEditorMode="true"
-                  Editor="@projectCreateEditor"
-                  StarterObjects="@projectCreateStarterObjects"
+                  Draft="@projectCreateDraft"
                   StarterObjectKinds="@ProjectCreateStarterObjectKinds"
                   ProjectSummaries="@projectCreateProjectSummaries"
                   WizardStep="@projectCreateWizardStep"

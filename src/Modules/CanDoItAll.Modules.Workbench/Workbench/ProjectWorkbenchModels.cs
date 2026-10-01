@@ -533,7 +533,7 @@ public sealed partial class ProjectWorkbenchService(
     ProjectWorkbenchLifecycleService lifecycleService,
     ProjectWorkbenchCommandService commandService,
     ProjectWorkbenchCrossModuleMutationService crossModuleMutationService,
-    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService
+    ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary) : IProjectWorkbenchSeedService, IAdmittedProjectWorkbenchSeedService
 {
     public ProjectWorkbenchService(
         IDbContextFactory<WorkbenchDbContext> dbContextFactory,
@@ -960,8 +960,17 @@ public sealed partial class ProjectWorkbenchService(
         }
     }
 
-    public async Task SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedRequest> seeds, CancellationToken cancellationToken = default)
-    {
+    public Task SeedProjectObjectsAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedRequest> seeds, CancellationToken cancellationToken = default)
+        => SeedProjectObjectsCoreAsync(projectId, seeds, null, cancellationToken);
+
+    public Task SeedProjectObjectsAsync(ProjectWriteAdmission project, IReadOnlyCollection<ProjectObjectSeedDraft> seeds,
+        CancellationToken cancellationToken = default)
+        => SeedProjectObjectsCoreAsync(project.ProjectId, seeds.Select(seed => new ProjectObjectSeedRequest(
+            seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, DurationSeconds: seed.DurationSeconds)).ToArray(),
+            project, cancellationToken);
+
+    private async Task SeedProjectObjectsCoreAsync(Guid projectId, IReadOnlyCollection<ProjectObjectSeedRequest> seeds,
+        ProjectWriteAdmission? admission, CancellationToken cancellationToken) {
         if (seeds.Count == 0)
         {
             return;
@@ -973,7 +982,8 @@ public sealed partial class ProjectWorkbenchService(
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken,
+                expectedAdmissions: admission is null ? null : [admission]);
         var existingCount = await dbContext.Set<ProjectObjectRecord>().CountAsync(item => item.ProjectId == projectId && !item.IsSystemManaged, cancellationToken);
         var index = 0;
         var projectRootNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);

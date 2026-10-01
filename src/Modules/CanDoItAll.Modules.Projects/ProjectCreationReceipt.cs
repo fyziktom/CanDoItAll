@@ -30,7 +30,7 @@ public interface IProjectPartyDeletionStateQuery {
 public sealed partial class ProjectsService {
     private const string CreationFingerprintDomain = "projects-owner-creation-v1";
 
-    private sealed record ProjectSaveOutcome(Guid Id, ProjectCreationReceipt? CreationReceipt);
+    private sealed record ProjectSaveOutcome(Guid Id, ProjectCreationReceipt? CreationReceipt, ProjectEditorAcknowledgement Editor);
 
     public async Task<Result<ProjectCreationReceipt>> CreateWithReceiptAsync(Guid newProjectId, ProjectEditorModel model,
         Guid? parentProjectId = null, CancellationToken cancellationToken = default,

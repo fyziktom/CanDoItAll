@@ -1,0 +1,38 @@
+@if (!string.IsNullOrWhiteSpace(Message)) {
+    <Alert AlertStyle="@(IsError ? AlertStyle.Warning : AlertStyle.Info)" Variant="Variant.Outlined" data-testid="project-deletion-notice">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="@Message" />
+            @foreach (var cleanup in Pending) {
+                <Stack @key="cleanup.Target" GapScale="LayoutGap.Small">
+                    <TextBlock Value="@($"Project {cleanup.Target.ProjectId:D} · {cleanup.Target.ParticipantId} · mutation {cleanup.Target.RecoveryId:D} · {cleanup.Status}")" />
+                    <TextBlock Value="@cleanup.RetryGuidance" />
+                    @if (!cleanup.CanRetryNow && cleanup.RetryAvailableAtUtc.HasValue) {
+                        <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; use retry to refresh its state.")" />
+                    }
+                    <Cluster JustifyContent="JustifyContent.End">
+                        <Button Text="Retry cleanup" ButtonStyle="ButtonStyle.Warning"
+                                Disabled="@BusyTargets.Contains(cleanup.Target)" Click="@(() => Retry.InvokeAsync(cleanup.Target))"
+                                data-testid="project-deletion-retry" />
+                    </Cluster>
+                </Stack>
+            }
+            @foreach (var notice in Completed) {
+                <Stack @key="notice.Target" GapScale="LayoutGap.Small">
+                    <TextBlock Value="@($"Project {notice.Target.ProjectId:D} · {notice.Target.ParticipantId} · mutation {notice.Target.RecoveryId:D} · {notice.Operation} completed")" />
+                    @foreach (var warning in notice.Warnings) {
+                        <TextBlock Value="@warning" />
+                    }
+                </Stack>
+            }
+        </Stack>
+    </Alert>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool IsError { get; set; }
+    [Parameter] public IReadOnlyList<ProjectCleanupStatus> Pending { get; set; } = [];
+    [Parameter] public IReadOnlyList<ProjectCleanupNotice> Completed { get; set; } = [];
+    [Parameter] public IReadOnlySet<ProjectCleanupTarget> BusyTargets { get; set; } = new HashSet<ProjectCleanupTarget>();
+    [Parameter] public EventCallback<ProjectCleanupTarget> Retry { get; set; }
+}

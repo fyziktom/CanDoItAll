@@ -1,6 +1,5 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.SharedKernel
 
@@ -336,7 +335,7 @@
                     <TabsItem Text="Files"
                               Icon="folder_open"
                               BadgeText="@ProjectProjection.Projects.Count.ToString()">
-                        <ProjectFilesPortfolioPane Projection="ProjectProjection" />
+                        @FilesContent?.Invoke(ProjectProjection)
                     </TabsItem>
                 </TabItems>
             </Tabs>
@@ -345,6 +344,9 @@
 </section>
 
 @code {
+    [Parameter, EditorRequired]
+    public RenderFragment<ProjectFileFilterProjection>? FilesContent { get; set; }
+
     [Parameter, EditorRequired]
     public IReadOnlyList<ProjectSummary> ProjectSummaries { get; set; } = default!;
 
@@ -448,7 +450,7 @@
     public EventCallback<string> ProjectPackagePathChanged { get; set; }
 
     [Parameter]
-    public IReadOnlyList<DatabaseProfileSummary> ProjectPackageTargetProfiles { get; set; } = [];
+    public IReadOnlyList<ProjectPackageTargetOption> ProjectPackageTargetProfiles { get; set; } = [];
 
     [Parameter]
     public Guid? ProjectPackageTargetProfileId { get; set; }

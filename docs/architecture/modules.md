@@ -60,7 +60,7 @@ evidence.
 
 ## Rendering libraries and contracts assemblies
 
-Current rendering boundaries, reviewed for Workspace closure R2 on 2026-09-30, are listed
+Current rendering boundaries, including Workspace closure R2 and Projects P1, are listed
 below. Routed hosts, production adapters, authorization and durable effects remain with
 their owners. The boundary records distinguish completed rendering from application acceptance.
 
@@ -80,6 +80,7 @@ their owners. The boundary records distinguish completed rendering from applicat
 | Workspace Storage selection | `CanDoItAll.Modules.Workspace.StorageSelection.Contracts` | `CanDoItAll.Workspace.StorageSelection.UI` | `CanDoItAll.Workspace.StorageSelection.UiSandbox` |
 | Workspace Storage recovery | `CanDoItAll.Modules.Workspace.StorageRecovery.Contracts` | `CanDoItAll.Workspace.StorageRecovery.UI` | `CanDoItAll.Workspace.StorageRecovery.UiSandbox` |
 | Workspace Data Sources | `CanDoItAll.Modules.Workspace.DataSources.Contracts` | `CanDoItAll.Workspace.DataSources.UI` | `CanDoItAll.Workspace.DataSources.UiSandbox` |
+| Projects P1 | `CanDoItAll.Modules.Projects.Contracts` | `CanDoItAll.Projects.UI` | `CanDoItAll.Projects.UiSandbox` |
 
 The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
 schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
@@ -93,10 +94,12 @@ other provider/runtime dialogs still contain substantial rendering in the module
 Simple Chats and Workflows UI libraries under `src/MAF` are additional foundations, not evidence
 that every Agent or Workflow authoring surface has moved.
 
-`CanDoItAll.Modules.Projects.Contracts` exists for the same reason in the other direction: it lets a
-renderer or another module name a project, its write admission and its assignment queries without
-referencing the Projects implementation. A contracts assembly keeps the namespace of its module, so
-no consumer had to be rewritten when the types moved.
+`CanDoItAll.Modules.Projects.Contracts` lets renderers and other modules name portfolio/editor
+data, project write admissions and assignment queries without referencing the implementation.
+The [Projects P1 record](projects-portfolio-ui-p1.md) covers the portfolio, hierarchy inspection,
+overview, five-step editor, package presentation and deletion notices. Its typed Files slot
+retains the actual Files owners; Files P2 is deferred. Contract namespaces and wire fields
+remain stable when their assembly changes.
 
 The owners above remain authoritative. Renderers and presentation controllers may own drafts
 and read lifetimes; production adapters own durable writes and authorization.
@@ -151,7 +154,7 @@ caller, descendant, asset and evaluated-dependency census precedes that assignme
 
 | Order | Family and current source | Proposed scope | Effort / provisional slices |
 |---|---|---|---|
-| 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): portfolio, board/cards, modal editor, hierarchy and file panes remain in the implementation | Start with portfolio and the real editor flow; preserve route selection, project lifetime admission, CRM references and governed files | 3/5 first slice; 4/5 family; 2–3 slices |
+| 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): P1 complete / Files P2 deferred | Portfolio, hierarchy inspection, overview and editor are extracted. A future explicit Files cut must preserve the actual pane/dialog, access and viewer leases; see the P1 validation record | 4/5 remaining Files family; explicit later slice |
 | 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): extracted catalog/capabilities/Overview alongside the remaining detail forms and provider/runtime/dialog renderers | Technical editor and dependent selectors, then provider/history/configuration and residual chat/usage surfaces; preserve permissions and nested lifetimes | 3–4/5; 2–4 slices |
 | 3 | [Workflow authoring](../../src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor): substantial canvas/toolbox/inspector markup remains despite the existing light Workflows.UI project | Reuse Workflows.UI; separate catalog/run views, canvas/inspector and settings/admission dialogs while retaining immutable version/input and launch authority | 4/5; 2–4 slices |
 | 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |

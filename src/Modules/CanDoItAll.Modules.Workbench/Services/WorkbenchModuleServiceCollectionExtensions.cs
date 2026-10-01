@@ -239,6 +239,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureLocalFileActionCoordinator>();
         services.AddScoped<ProjectStructureFileActionCoordinator>();
         services.AddScoped<IProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
+        services.AddScoped<IAdmittedProjectWorkbenchSeedService>(serviceProvider => serviceProvider.GetRequiredService<ProjectWorkbenchService>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             WorkbenchProjectTransferTargetStateParticipant>());

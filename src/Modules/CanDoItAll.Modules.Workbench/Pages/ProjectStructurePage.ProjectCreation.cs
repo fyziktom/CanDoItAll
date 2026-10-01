@@ -18,8 +18,9 @@ public partial class ProjectStructurePage
         ProjectObjectType.Link
     ];
 
-    private readonly List<StarterObjectDraft> projectCreateStarterObjects = [];
-    private ProjectEditorModel projectCreateEditor = new();
+    private ProjectEditorDraft projectCreateDraft = new(new());
+    private List<StarterObjectDraft> projectCreateStarterObjects => projectCreateDraft.StarterObjects;
+    private ProjectEditorModel projectCreateEditor => projectCreateDraft.Model;
     private IReadOnlyList<ProjectSummary> projectCreateProjectSummaries = [];
     private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialogBeforeCreate;
     private string? projectCreateMessage;
@@ -39,7 +40,7 @@ public partial class ProjectStructurePage
     {
         projectHierarchyDialogBeforeCreate = projectHierarchyDialog;
         projectHierarchyDialog = null;
-        projectCreateEditor = await ProjectsService.GetAsync(null);
+        projectCreateDraft = new(await ProjectsService.GetAsync(null));
         projectCreateProjectSummaries = await ProjectsService.ListAsync();
         projectCreateStarterObjects.Clear();
         projectCreateWizardStep = 0;
@@ -99,9 +100,9 @@ public partial class ProjectStructurePage
     private void NextProjectCreateStep()
         => projectCreateWizardStep = Math.Min(ProjectCreateWizardSteps.Length - 1, projectCreateWizardStep + 1);
 
-    private async Task SaveProjectCreateAsync()
+    private async Task SaveProjectCreateAsync(ProjectEditorSubmission submitted)
     {
-        var result = await ProjectsService.SaveAsync(projectCreateEditor);
+        var result = await ProjectsService.SaveAsync(submitted.Model);
         projectCreateMessage = result.IsSuccess
             ? "Project saved."
             : string.Join(" ", result.Errors.Select(error => error.Message));
@@ -113,18 +114,16 @@ public partial class ProjectStructurePage
             return;
         }
 
-        if (projectCreateStarterObjects.Count > 0)
+        if (submitted.Seeds.Count > 0)
         {
             await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
                 result.Value,
-                projectCreateStarterObjects
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
-                    .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
+                submitted.Seeds.Select(item => item.Value)
                     .ToList());
             projectCreateStarterObjects.Clear();
         }
 
-        projectCreateEditor = await ProjectsService.GetAsync(result.Value);
+        projectCreateDraft = new(await ProjectsService.GetAsync(result.Value));
         showProjectCreateModal = false;
 
         if (projectHierarchyDialogBeforeCreate is { } dialogState)
@@ -139,10 +138,10 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task SaveProjectCreateAndOpenStructureAsync()
+    private async Task SaveProjectCreateAndOpenStructureAsync(ProjectEditorSubmission submitted)
     {
         var pendingHierarchyDialog = projectHierarchyDialogBeforeCreate;
-        await SaveProjectCreateAsync();
+        await SaveProjectCreateAsync(submitted);
 
         if (projectCreateEditor.Id.HasValue)
         {

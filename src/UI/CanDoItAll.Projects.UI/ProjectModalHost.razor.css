@@ -1,3 +1,13 @@
+@media (min-width: 1200px) {
+    .projects-modal-host [data-wizard-step] {
+        align-self: stretch;
+    }
+
+    .projects-modal-host ::deep footer > section {
+        width: 100%;
+    }
+}
+
 .projects-modal-host ::deep [data-testid="projects-editor-modal"],
 .projects-modal-host ::deep [data-testid="projects-detail-modal"] {
     z-index: 360 !important;

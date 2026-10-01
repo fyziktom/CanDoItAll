@@ -112,7 +112,10 @@ public sealed class FileJourneyHarnessBrowserTests {
         var delayed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         try {
-            var fixture = await CreateFileJourneyAsync(host);
+            var page = await host.NewPageAsync();
+            var oracle = CrmHrBrowserOracle.Attach(page);
+            Guid projectId = await ProjectsPortfolioUiJourney.CreateAndEditAsync(host, page, oracle);
+            var fixture = await CreateFileJourneyAsync(host, projectId);
             await ConfigureScriptedAgentAsync(host, fixture.Agent.Id, wire.BaseUrl);
             host.Watch(fixture.Agent.Id);
             var expected = new FileApprovalIntent(fixture.ProjectId, fixture.ParentId, "Exact fixture file",
@@ -142,8 +145,6 @@ public sealed class FileJourneyHarnessBrowserTests {
                     return new([], "The exact file and attachment were read back.");
                 }
             ];
-            var page = await host.NewPageAsync();
-            var oracle = CrmHrBrowserOracle.Attach(page);
             await GrantFileJourneyAsync(host, oracle, page, fixture);
             var chat = await OpenFileChatAsync(host, oracle, page, fixture);
             var read = await FileTurnAsync(host, page, chat, fixture.Agent.Id, "Read the existing selected asset and report its actual content.");
@@ -196,7 +197,12 @@ public sealed class FileJourneyHarnessBrowserTests {
         await using var wire = await AgentResponseFixture.StartAsync(ProjectStructureToolPolicy.ProjectStructureAssetCreate);
         await using var host = await LiveUiHost.StartAsync();
         try {
-            var fixture = await CreateFileJourneyAsync(host);
+            var page = await host.NewPageAsync();
+            await page.SetViewportSizeAsync(1920, 1080);
+            var oracle = CrmHrBrowserOracle.Attach(page);
+            Guid? projectId = attack == FileHarnessAttack.SiblingProject
+                ? await ProjectsPortfolioUiJourney.CreateAndEditAsync(host, page, oracle) : null;
+            var fixture = await CreateFileJourneyAsync(host, projectId);
             await ConfigureScriptedAgentAsync(host, fixture.Agent.Id, wire.BaseUrl);
             host.Watch(fixture.Agent.Id);
             var writeAttack = attack is FileHarnessAttack.AnotherPath or FileHarnessAttack.Overwrite;
@@ -218,8 +224,6 @@ public sealed class FileJourneyHarnessBrowserTests {
             wire.Steps = attack == FileHarnessAttack.SecondAttachment
                 ? [_ => new([attackCall]), _ => new([Asset(true)]), _ => new([], "Stopped after the rejected second attachment.")]
                 : [_ => new([attackCall]), _ => new([], "Stopped after refusal.")];
-            var page = await host.NewPageAsync();
-            var oracle = CrmHrBrowserOracle.Attach(page);
             await GrantFileJourneyAsync(host, oracle, page, fixture);
             var chat = await OpenFileChatAsync(host, oracle, page, fixture);
             var failure = await Record.ExceptionAsync(() => FileTurnAsync(host, page, chat, fixture.Agent.Id,

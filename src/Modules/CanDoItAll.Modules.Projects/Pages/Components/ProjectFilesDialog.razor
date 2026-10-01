@@ -1,4 +1,5 @@
 @implements IAsyncDisposable
+@using CanDoItAll.Components.Common
 @inject IProjectFilesPilotCoordinator Coordinator
 @inject IFileToolsBrowseItemActionService ItemActionService
 @inject FileInteractionComponentComposition InteractionComposition
@@ -45,7 +46,7 @@
             }
             else if (interaction is not null)
             {
-                <Stack GapScale="LayoutGap.Small">
+                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
                     @if (!string.IsNullOrWhiteSpace(activationError))
                     {
                         <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">

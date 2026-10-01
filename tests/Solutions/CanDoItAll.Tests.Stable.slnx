@@ -5,6 +5,7 @@
     <Project Path="../Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
   </Folder>
   <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj" />

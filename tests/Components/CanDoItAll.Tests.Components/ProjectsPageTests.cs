@@ -20,6 +20,38 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectsPageTests
 {
     [Fact]
+    public async Task Cancelled_new_project_cannot_transfer_planned_objects_to_another_editor() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid projectId = await CreateProjectAsync(projects, "Successor project");
+        var cut = harness.Context.Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Successor project", cut.Markup));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
+        for (int step = 0; step < 3; step++) {
+            await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Next").ClickAsync(new()));
+        }
+        await cut.InvokeAsync(() => cut.FindAll("button").First(button => button.TextContent.Trim() == "Add planned object").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-starter-title']").ChangeAsync(new() { Value = "Abandoned plan" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='project-card']")
+            .Single(card => card.TextContent.Contains("Successor project", StringComparison.Ordinal))
+            .QuerySelector("[data-testid='project-card-details-button']")!.ClickAsync(new()));
+        Assert.Equal(projectId, cut.FindComponent<ProjectModalHost>().Instance.Editor.Id);
+        Assert.Empty(cut.FindComponent<ProjectModalHost>().Instance.StarterObjects);
+    }
+
+    [Fact]
+    public async Task Save_captures_the_last_unicode_name_input_without_blur() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var cut = harness.Context.Render<ProjectsPage>();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Žluťoučký 東京" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        Assert.Equal("Žluťoučký 東京", Assert.Single(await projects.ListAsync()).Name);
+    }
+
+    [Fact]
     public async Task Project_files_pilot_accepts_each_registered_viewer_family()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

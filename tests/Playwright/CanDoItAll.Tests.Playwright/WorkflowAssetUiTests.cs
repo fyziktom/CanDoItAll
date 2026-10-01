@@ -70,11 +70,10 @@ public sealed class WorkflowAssetUiTests {
                     });
                 });
             }
-            var (projectId, definition) = await host.SeedAsync(async services => {
-                var project = await services.GetRequiredService<ProjectsService>().SaveAsync(new ProjectEditorModel {
-                    Name = "Workflow generated file " + marker, Description = "Synthetic private Workflow file proof."
-                });
-                Assert.True(project.IsSuccess);
+            var page = await host.NewPageAsync();
+            var oracle = CrmHrBrowserOracle.Attach(page);
+            Guid projectId = await ProjectsPortfolioUiJourney.CreateAndEditAsync(host, page, oracle);
+            var definition = await host.SeedAsync(async services => {
                 var instructions = "Return exactly this Markdown, with no additional text or fences: " + output;
                 var component = await services.GetRequiredService<IWorkflowComponentLibraryService>().SaveComponentAsync(new(null,
                     "Bounded file proof", providerId, ManagedSeedProviderFallbacks.OpenAiDefaultModel, WorkflowModality.Text,
@@ -90,8 +89,8 @@ public sealed class WorkflowAssetUiTests {
                     WorkflowValueShape.Text, new(WorkflowValueShapeKind.Json, "{}", "Asset receipt")) {
                         ExecutorId = WorkflowExecutorIds.ProjectStructure,
                         ExecutorSettingsJson = WorkflowExecutorJson.Serialize(new WorkflowProjectStructureExecutorSettings {
-                            Operation = WorkflowProjectStructureOperation.CreateAsset, ProjectId = project.Value,
-                            NodeId = $"project:{project.Value:D}", Title = "Workflow generated proof", AssetKind = "md",
+                            Operation = WorkflowProjectStructureOperation.CreateAsset, ProjectId = projectId,
+                            NodeId = $"project:{projectId:D}", Title = "Workflow generated proof", AssetKind = "md",
                             ContentFromInput = true, ContentType = "text/markdown"
                         }),
                         ExecutionPolicy = WorkflowExecutorExecutionPolicy.Default with { CaptureOutputArtifact = true, TimeoutSeconds = 45 }
@@ -105,13 +104,11 @@ public sealed class WorkflowAssetUiTests {
                 var saved = await services.GetRequiredService<IWorkflowCatalogService>().SaveDefinitionAsync(new(null, null,
                     "Bounded Workflow proof " + marker, "Actual model to managed project asset.", WorkflowLifecycleStatus.Draft,
                     new(start.Id, nodes, edges), new(WorkflowRuntimeBackendKind.InProcess, true, false, false, false)));
-                return (project.Value, saved);
+                return saved;
             });
             evidence.Targets["workflowId"] = definition.Id.Value;
             evidence.Targets["versionId"] = definition.VersionId.Value;
             evidence.Targets["projectId"] = projectId;
-            var page = await host.NewPageAsync();
-            var oracle = CrmHrBrowserOracle.Attach(page);
             await oracle.NavigateAsync($"{host.BaseUrl}/agents/workflows?workflowId={definition.Id.Value:D}");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
             await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
@@ -218,6 +215,7 @@ public sealed class WorkflowAssetUiTests {
                 Assert.Equal(TestCaseStatus.Passed, plan.Runs[0].Result);
                 await oracle.NavigateAsync($"{host.BaseUrl}/test-lab?planId={planId:D}");
                 await Assertions.Expect(page.GetByTestId("testlab-workspace")).ToHaveAttributeAsync("data-interactive", "true");
+                await Assertions.Expect(page.GetByTestId("testlab-save-state")).ToHaveAttributeAsync("data-plan-id", planId.ToString("D"));
                 await page.GetByRole(AriaRole.Button, new() { NameRegex = new System.Text.RegularExpressions.Regex("^Runs") }).ClickAsync();
                 await Assertions.Expect(page.GetByTestId("testlab-run-summary")).ToHaveValueAsync(summary);
                 await page.ScreenshotAsync(new() { Path = host.Artifact("testlab-actual-workflow-record.png") });

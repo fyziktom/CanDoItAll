@@ -162,6 +162,13 @@ internal sealed class LiveUiHost : IAsyncDisposable {
 
     internal Task CaptureHostLogAsync() => File.WriteAllTextAsync(Artifact("server.log"), fixture.GetLogSnapshot(int.MaxValue));
 
+    internal async Task AcknowledgeNavigationAsync(IPage page, Func<Task> navigate) {
+        await page.EvaluateAsync("() => navigationAcknowledgementProbe.records.length = 0");
+        int start = fixture.GetLogLines().Length;
+        await navigate();
+        await NavigationAcknowledgementProbe.WaitForCompletionAsync(page, fixture, start);
+    }
+
     public ValueTask DisposeAsync() => new(disposal ??= DisposeCoreAsync());
 
     private async Task DisposeCoreAsync() {

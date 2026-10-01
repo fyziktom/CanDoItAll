@@ -513,6 +513,33 @@ contains the exact filters, discovery/execution counts, application matrix, grap
 comparisons, reversible edit measurements and broad Stable assessment. Sandbox Apply
 is evidence of staged selection only, never a substitute for Agent persistence/authority.
 
+## Projects portfolio P1
+
+`CanDoItAll.Projects.UI.Tests` is registered in Components, Stable and all three CI component
+project lists. It exercises the actual five-step form, retained EditContext/raw input,
+submission capture before asynchronous validation, acknowledgement reconciliation and the
+renderer/sandbox dependency boundary. Discover its current cases before executing:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --no-build --no-restore
+```
+
+The real PostgreSQL composition topic is
+`FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests|FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests`.
+It retains Files leases/filter scope, package constraints, exact lifetime refusal and partial
+cleanup checks alongside held native save/seed/read/deletion regressions. Use an owned test
+environment and isolated configuration; fake seed acknowledgements are not persistence proof.
+
+The production browser entry is `ProjectsPortfolioBrowserTests`, with the shared five-step
+journey also used by deterministic File Agent and Workflow asset acceptance. New checks run
+at 1920×1080, wait for interactive readiness, retain navigation acknowledgements and verify
+native IDs/bytes. Scripted external model tests do not authorize paid inference. See the
+[P1 record](architecture/projects-portfolio-ui-p1.md) for exact executed counts, the qualified
+S0 disposition, package/source pair, development-loop observations and final integration gate.
+Moved public contracts and the native acknowledgement/admitted seed seam trigger Stable;
+Files P2 remains outside this extraction.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

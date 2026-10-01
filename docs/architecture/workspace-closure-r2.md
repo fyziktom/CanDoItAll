@@ -140,20 +140,18 @@ Informational revisions and binary hashes differ and are recorded separately; bi
 is not claimed and no mechanical version bump was made.
 
 CI selects Components with `github.base_ref || github.ref_name` and pins the resolved SHA.
-The reviewed remote development head remains `ff5289746573a6dd6456754a7764844627ddd49f`,
-main is `f258ab6a959a97fa16c01d0858e7dc122728a11a`, and no matching
-`components-decoupling` Components branch or open application PR was found. The actual
-consumer target must be chosen by the operator. After explicit publication authorization
-and a fresh remote/ancestry check, a development-targeted consumer can use the prepared
-normal fast-forward:
+The 2026-10-01 Projects P1 entry check found remote `development` at
+`4a858412d2c2a3f6123bf23d8c4584f05b47627d`, with the repaired tree now available there.
+Remote `main` remains `f258ab6a959a97fa16c01d0858e7dc122728a11a`; there is no matching
+`components-decoupling` Components branch. This task made no remote writes. A
+development-targeted consumer can resolve the repaired source; main and direct feature
+branch workflows still need their corresponding dependency integration. Source availability
+alone does not prove a later consumer binary or successful CI.
 
-```powershell
-git -C ../CanDoItAll.Components push origin 4a858412d2c2a3f6123bf23d8c4584f05b47627d:refs/heads/development
-```
-
-That command was **not executed**. A main-targeted consumer needs its own compatible
-integration; a direct feature-branch workflow needs its matching dependency branch. Local
-package verification does not establish remote delivery or successful consumer CI.
+The bounded S0 follow-up is recorded in [Projects P1](projects-portfolio-ui-p1.md).
+Its cold ordered acceptance case and deterministic provider controls passed with disposition
+`REVALIDATED_WITHOUT_ROOT_CAUSE`. The original R2 failure and historical checkpoint
+counts above remain unchanged; this is qualified Projects entry, not global closure.
 
 The original live journal remains exactly **40/40**, with zero newly authorized or issued
 real-model requests. Six browser cases need their explicit real-provider/access fixtures;

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-30T08:23:12.594071+00:00",
+  "generated_utc": "2026-10-01T12:21:50.807734+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15214,
+  "allowance_count": 15216,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -55232,6 +55232,48 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "239a8b7c0b789fc20c3447c31a635a8bc351789a887df017a83ab096481e7fe2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2726a49f3593f2c77103c3d5fcdc3fa1ca0e5e0193bf66c44970ef9ec104001f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4bc1e4505d78dd1ff5780c2855f1ef288ac2408a13d99b5b2118cb54197c8d65",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "735f99af68f641105f303e495609348f9537309d519ed09f9d7aa6741315e9d1",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8f8a59211e4196f9caf486e10c406786ce1d0e4933c108248b82844f4074c7a8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9ef2c6ce819a3ec15533e0a601f068bdbde7d85aba0fcded69d86c9a0162b29c",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/ProjectFileFilterProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e35727a09c1bd1b5fa4755dac39188d1cc4333143c4a3ea8614a9d6570000f71",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Projects/AgentContext/ManagedProjectMediaPath.cs",
       "category": "case-policy",
       "source_fingerprint": "1a141a873041c5c709841753061821c5d5fd1232f833721db2b76e14900e2332",
@@ -55550,42 +55592,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectPortfolioTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "5502bc3dfbd8acde539b0ad5c86b63ea80628e350bc7e22a3a40b7bd500cad91",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectPortfolioTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "873b119e78538744a239dbdd18372560bf7e10bf70e49617e54706b18edffd3b",
-      "count": 3
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor",
-      "category": "case-policy",
-      "source_fingerprint": "2fb0e65909eae24cccff9d851b7f2cded662916b80cf686afd218aeadfea2c3a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f3688da63c3c5514c35b5961c047a040d1e387f9f7bd22bf5448d75ea6781a28",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "1941dd044308f89c329e5ef74f4af6be96deb6ca4b13decf81f91f5793aafedb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "25a883c5807c3bb5265a253bb0bd9adefb9b819ea97a150fd4a8680052a28f89",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "category": "case-policy",
       "source_fingerprint": "7ea6e1ec19debdbcfd4d0b4e7c2ee038fa5b578d37b88267c6e98eeb9264c3f2",
@@ -55607,48 +55613,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileBrowserPolicy.cs",
       "category": "external-tool",
       "source_fingerprint": "e2a18b06a83c770d1a90c064a281b2db19106761bf137fad65a5379b61b4d7bd",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2609ebcb52b1dca7b7199c7d7959049e5ef899a62b3e360c90fbbe9e023bacfe",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "470ad2baaafddee5e769fdac748725d870fd93fe1a8872e0185d93e0f8165adb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "7c1ea10e8fbbc58049377eaaf72dbc5b2fdc9c5134ed77f386cdfab6c2814526",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a8436568c0a7d019ac05c4e6e28c58b38e64caaca65f7f5fe1c8be870ee77209",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a92fe2adb050a97d8b7ed40ef408b961e218a545e3072c56288f3ad3572519e6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d6b1ed86e3b9ce362dc6189ad04877a142ef38057446624351d65b698fa8e474",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e84dfcfc8e6787b975f5597671bbf614a8585c0a8e5d1c8974e4b84b78552240",
       "count": 1
     },
     {
@@ -73412,6 +73376,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "67b12143c130b38f49e6f2fd34ca22e721466b75e156f064a14948d72e08ba07",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "5802752e7a57b53ab51b319af4fd7d64a3fc0d72722c6a1814ab85045cca8ed4",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/PromptGallerySandboxFixture.cs",
       "category": "case-policy",
       "source_fingerprint": "045fb3b188e78611edef23b1fbbaf276a91eec062066163a1d1b9e8e3a90b012",
@@ -75017,6 +74993,42 @@
       "path": "src/UI/CanDoItAll.Plugins.UI/README.md",
       "category": "windows-executable",
       "source_fingerprint": "8e0276edd126fea87c77b38b0b3564a73b7751f9efb8f851381dc98b8dc56ee3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectPortfolioTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "234453d161b977ac7acee404ec4444aa8a65e309721cf6795b5016f492b124e8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectPortfolioTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c31f8998a38cdeba88f008747e8658a6f598ede8454ca7e7a3084435b08b143c",
+      "count": 3
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
+      "category": "case-policy",
+      "source_fingerprint": "b0ba1883b07254ff8697b5f377013bf064eee2170369647e4388119a864032a2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
+      "category": "case-policy",
+      "source_fingerprint": "d25c7f4a4e8e6bb5a79ae80692ccb4416f8abacfe6cfa91e9e50606d9928faef",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "de8642651dcb65f7d1995918e6d32079b7380ce92f88c8ce20d2afa4a927b879",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "67b1d206b2c6633bc3204f75f822ab0b4b7240e8176d65b94d6373c34ca5208b",
       "count": 1
     },
     {

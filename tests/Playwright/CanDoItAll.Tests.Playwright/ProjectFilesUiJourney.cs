@@ -117,21 +117,31 @@ internal static class ProjectFilesUiJourney {
         return Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data));
     });
 
-    internal static Task<FileJourney> CreateFileJourneyAsync(LiveUiHost host) => host.SeedAsync(async services => {
+    internal static Task<FileJourney> CreateFileJourneyAsync(LiveUiHost host, Guid? existingProjectId = null) => host.SeedAsync(async services => {
         var projects = services.GetRequiredService<ProjectsService>();
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        var projectName = "Live files " + suffix;
-        var project = await projects.SaveAsync(new ProjectEditorModel { Name = projectName, Description = "Synthetic live file proof." });
+        Guid projectId;
+        string projectName;
+        if (existingProjectId is { } acquiredId) {
+            var acquired = await projects.GetAsync(acquiredId);
+            Assert.Equal(acquiredId, acquired.Id);
+            projectId = acquiredId;
+            projectName = acquired.Name;
+        } else {
+            projectName = "Live files " + suffix;
+            var project = await projects.SaveAsync(new ProjectEditorModel { Name = projectName, Description = "Synthetic live file proof." });
+            Assert.True(project.IsSuccess);
+            projectId = project.Value;
+        }
         var sibling = await projects.SaveAsync(new ProjectEditorModel { Name = "Denied sibling " + suffix });
-        Assert.True(project.IsSuccess);
         Assert.True(sibling.IsSuccess);
-        var parent = await services.GetRequiredService<ProjectWorkbenchService>().CreateObjectAsync(project.Value,
-            new(ProjectObjectType.ProjectBlock, "Selected files", "", "Synthetic file proof parent.", $"project:{project.Value:D}", X: 450, Y: 220));
+        var parent = await services.GetRequiredService<ProjectWorkbenchService>().CreateObjectAsync(projectId,
+            new(ProjectObjectType.ProjectBlock, "Selected files", "", "Synthetic file proof parent.", $"project:{projectId:D}", X: 450, Y: 220));
         var agentService = services.GetRequiredService<ProjectStructureAgentService>();
         var setup = new ProjectStructureAgentContext(FixtureActor, FixtureActor, Environment.MachineName, "", "", suffix);
         var nonce = "seed-" + Guid.NewGuid().ToString("D");
         var seededBytes = "Existing asset nonce: " + nonce;
-        var seed = await agentService.CreateAssetAsync(project.Value, new(ProjectObjectType.File, "Existing nonce asset", "", "",
+        var seed = await agentService.CreateAssetAsync(projectId, new(ProjectObjectType.File, "Existing nonce asset", "", "",
             new("seed.txt", "text/plain", Convert.ToBase64String(Encoding.UTF8.GetBytes(seededBytes))), parent.Id), setup);
         var canary = "sibling-" + Guid.NewGuid().ToString("D");
         var siblingAsset = await agentService.CreateAssetAsync(sibling.Value, new(ProjectObjectType.File, "Private sibling asset", "", "",
@@ -143,7 +153,7 @@ internal static class ProjectFilesUiJourney {
             Model = providerAgent.Model, Instructions = "Use only the exact requested tools and scoped project. Respect approvals and denials. Never invent tool results.",
             WorkspaceToolAccess = new() { Profile = AgentWorkspaceToolProfileKind.Custom }
         });
-        return new FileJourney(project.Value, projectName, parent.Id, seed.Id, nonce, seededBytes, sibling.Value,
+        return new FileJourney(projectId, projectName, parent.Id, seed.Id, nonce, seededBytes, sibling.Value,
             siblingAsset.Id, canary, await FindAgentAsync(services, agentId));
     });
 
