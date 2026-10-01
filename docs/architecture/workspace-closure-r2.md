@@ -1,120 +1,176 @@
 # Workspace closure R2
 
-The third frozen Stable run on `6833728ca` completed all 19 projects: 15,878 passed,
-one failed and none skipped. Its sole failure was the post-header SSE timeout fixture:
-the synthetic stream timed out after `Task.Yield()` before the client necessarily consumed
-the first frame. A real Kestrel/dispatcher control confirms that ordering and verifies an
-explicit client-read barrier while retaining the actual transport failure, timeout category,
-usage and disposal assertions. The fixture correction requires a new frozen full checkpoint;
-the failed third run remains unchanged in `checkpoint03-full-failure.json`.
+Workspace rendering and the six documented repair obligations are closed on the tested
+source pair. **Complete application readiness remains false** (`ready_for_next_module=false`).
+One ordinary shared-provider setup regression remains unresolved. Remote dependency
+delivery, live authorization, six real-provider/browser prerequisites,
+the generated-app fixture, unavailable macOS execution and the recorded cleanup rejection
+remain explicit limits. No next module was started.
 
-Workspace rendering remains complete. Final composed validation is in progress;
-`ready_for_next_module=false`. No new module is authorized by this repair campaign.
-The [module map](modules.md) now records the completed leaves and a provisional remaining
-roadmap. Its estimates are planning ranges, not a complete audit of every remaining renderer.
+## Repairs and preserved boundaries
 
-## Repairs and validation boundaries
+- [WCL-DEL1](workspace-agent-deletion-closure-finding.md): the retained original bytes
+  reproduced strict receipt-count underflow before journal admission. The independent audit
+  writer can persist receipt/artifact files before a later run-detail index update computes
+  its delta. Deletion now reconciles only derived session/receipt/artifact counts from their
+  existing owner paths. Run consistency, active/unresolved-effect and pending-approval
+  refusal, managed-agent protection, exact ownership and the durable journal remain strict.
+  Original UI deletion and independent owner read-back pass; the new final-pair two-turn
+  journey also passes, preserving unrelated histories and provider history under its owner.
+- [WCL-NAV1](workspace-navigation-acknowledgement-finding.md): the corrected test observes
+  the real JS acknowledgement and matching server navigation completion before teardown.
+  A visible URL was insufficient. Real held acknowledgements distinguish active timeout,
+  retained disconnection and permanent retirement. Production navigation, JS timeout,
+  circuit retention and error assertions are unchanged. The historical caller lacked
+  correlation; its exact causality is not retrospectively claimed.
+- WCL-R1 and WC-C1/C2/C3 remain verified: coordinated Data Sources edit admission, complete
+  Simple Chat dependency-scope ownership, exact Dialog registration/focus cleanup, and
+  MainLayout/browser-state retirement. All 11 retained Workspace UI files are byte-identical
+  to entry; all 22 census entries remain classified. No replacement Settings manager,
+  HTTP-only UI boundary or module extraction was introduced.
 
-- [WCL-DEL1](workspace-agent-deletion-closure-finding.md): the original retained file bytes
-  reproduce strict receipt-count underflow before journal admission. The independent audit
-  writer can persist receipts and artifacts without updating the run-detail counter delta.
-  Deletion reconciles only those derived counters and the existing session count. Target
-  ownership, pending approvals, unresolved effects and other corruption checks remain strict.
-- [WCL-NAV1](workspace-navigation-acknowledgement-finding.md): real framework JS dispatch
-  controls distinguish a visible route from the initiating navigation's acknowledgement.
-  The usage journey waits for its actual acknowledgement and server completion before
-  teardown. Active timeout remains observable; permanent retirement uses the framework's
-  session-ended path. No product navigation manager, timeout, retention or error allowlist
-  changed. The historical caller was not instrumented, so its exact correlation is not
-  retrospectively claimed.
-- The first R2 broad Unit attempt exposed a separate test-fixture inconsistency. The
-  non-cooperating strategy's factory still honored cancellation before execution started.
-  A controlled delayed-creation row reproduces the failed startup observation. The factory
-  now consistently simulates non-cooperation, and cleanup covers failed observations too.
-  All 39 owning-class cases pass. Production Process timeout behavior is unchanged.
-- The second broad browser attempt exposed an input-admission gap in the storage selection
-  test. Holding the real Dialog open invocation leaves its option attached but invisible;
-  `FocusAsync` and `PressAsync` can then complete without selecting it. The test now waits
-  for visibility, verifies the empty draft and observes focus before sending Space. The
-  controlled delay proves this harness gap; the original failure lacked the observations
-  needed to attribute its precise timing. The isolated unchanged test passed, which does
-  not erase the broad failure. A new frozen campaign follows this correction.
+Six bounded validation corrections retain their original failures. The first broad Unit
+run exposed a supposedly non-cooperating strategy factory that still honored cancellation;
+the corrected fixture passes all 39 owning cases. The second browser run exposed input
+admission before the actual Dialog became visible/focused; a held open invocation controls
+that gap. The third full Stable run completed with 15,878 passes and one SSE-fixture failure:
+its synthetic timeout could precede consumption of the first response frame. A client-read
+barrier corrects the fixture and all 16 streaming cases pass on Windows and Linux.
 
-The first broad Stable/browser attempts were interrupted for that fixture correction and
-an evidence hygiene defect. A historical general JSON receipt contained the secret scanner's
-synthetic key parameter. Its exact original is preserved with DPAPI; only that known test
-parameter was redacted, with before/after hashes. No historical test outcome or exhausted
-live-budget entry was rewritten. The interrupted attempts do not establish closure.
+The fourth Stable attempt was interrupted after a TestLab validation-host collection race
+(37/38 owning cases passed). Repeating its original compiled test reproduced the exception
+after 612 completed iterations. Immutable snapshots with interlocked add/remove preserve
+pending-operation order and pass 4,000 controlled retirement iterations plus all 38 owning
+cases on Windows and Linux. The fourth complete browser inventory had 161 passes and
+14 failures: twelve prerequisite failures, a catalog New/Next ordering gap and a Recovery
+footer-focus observation gap. Real browser controls reproduce both gaps. The tests now
+observe the new provider before advancing and the initial focus frame before choosing
+footer focus. All five owning browser cases pass. Exact historical timing is not invented.
+These corrections change validation fixtures/observations, not application owner behavior.
 
-## Source and dependency delivery
+## Frozen regression evidence
 
-The entry app was `6b05246f72fa29ad069a85d12881c80631de263f`. Signed production repairs are
-in `56088be3f`; later corrections affect Unit and browser test observation only. Raw private proof
-is under `artifacts/workspace-closure-r2/20260930-6b05246f7`, outside the sealed package.
-Each attempt records its own source manifest and exact discovery/execution result.
+The final tested application is `f09a44a196ea139d1d37cb3ce2bcb33c6cdffd91`, Components is
+`4a858412d2c2a3f6123bf23d8c4584f05b47627d`, and FileTools is
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`. Production repairs were signed in `56088be3f`;
+later pre-freeze edits affect tests, the TestLab validation sandbox and maintained documentation. Final documentation edits
+are recorded separately and do not change those built binaries. The evidence root is
+`artifacts/workspace-closure-r2/20260930-6b05246f7`; the sealed package is unchanged.
 
-The actual local Components checkout is signed merge
-`4a858412d2c2a3f6123bf23d8c4584f05b47627d`, with the same tree
-`1e318a37f187c120e74d88357715ba22ae5cec31` as repaired commit
-`22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`. The rebuilt consumer assembly identifies `4a858412`.
-An isolated clean clone discovers 437 entries, expanding to 443 passing cases: two form
-theories expand into five and three rows. The private BaseLib package records the actual
-merge commit and contains identical Dialog and initializer JS bytes to the source checkout.
+`executed-command-manifest-final05.json` records the exact expanded discovery/test arguments
+and retained invocation-script hashes. Root builds and all selected supplemental browser
+runs use Release with verified frozen test-assembly provenance.
+Attempts use isolated owned PostgreSQL and disabled live flags; evaluated credentials are excluded. Raw TRX,
+discovery inventories and reconciliation records remain beside each original attempt.
+`sibling-state-final05.json` lists current sibling revisions and dirty-file hashes, including
+the eight pre-existing MCP edits that this run did not change.
 
-Local FileTools `3a080ecd31068a77c1e1bd639f7a78e21c93db85` and CI pin
-`498b36825bd5a5222429972af120b04becf4b3f6` share tree
-`6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d`. Both revisions build all eight application-consumed
-libraries. Evaluated framework, language, compilation, package and reference settings agree
-after normalizing the two clone paths. Informational versions include their different Git
-revisions, and binary hashes are recorded separately; binary equality is not claimed.
+The provenance audit rejected an earlier existing-catalog pass and two avatar passes because
+their runner used an older `e6672c14` test assembly in `WclExternalObservation`, despite a
+current checkout receipt. The actual final Release assembly was rerun for all three cases
+and passed. Restart attempts first exposed changed proxy ports, an incorrect proxy source
+address and duplicate retained fixture names. Those failed attempts remain recorded. Exact
+proxy addresses were restored to the unchanged host trust configuration; owned definitions
+were renamed through UI while preserving identities and histories. The final wrapper checks
+the test version/hash, owned host identity, loopback binding, actual proxy authority and health.
+`supplemental-provenance-review05.json` records each disposition and the exact guard scope.
 
-Remote delivery remains a separate gate. CI selects Components using
-`github.base_ref || github.ref_name`, then pins the resolved SHA for build jobs. The observed
-remote development branch still points to `ff5289746573a6dd6456754a7764844627ddd49f`;
-it is an ancestor of the tested local merge. No remote write is authorized in this campaign.
-After explicit publication authorization and a fresh remote check, the operator must deliver
-the tested Components commit to the application's actual target branch before running its
-CI. For a development-targeted app PR, the prepared normal fast-forward is:
+The local Ollama inventory prerequisite was available. Its actual metadata-only case passes
+after renewing an expired owned source credential with catalog-read scope only. It verifies
+the real installed-model list, source refresh and client mirroring without running inference.
+The expired-credential failure remains retained; no real-provider execution case was enabled.
+
+| Gate | Actual execution and limit |
+|---|---|
+| Product, persistence, Stable and Playwright roots | Windows Release builds passed; independent Linux root builds passed |
+| Full Stable | 15,879 passed, zero failures/skips, all 19 projects; 15,824 discovered entries reconciled with runtime theory expansion; no focused-case substitutions |
+| Full non-live/non-quarantined browser inventory | 175 executed: 163 runner passes and 12 prerequisite failures; the original full run is retained |
+| Reconciled browser inventory | 167 passed, one failed, six blocked, one not run after six separately configured case executions on the exact frozen pair; generated-app early return is not counted as proof |
+| DEL owner controls | All 28 current owner cases pass, including real audit-writer histories, survivor bytes, journal/crash stages, cancellation and corrupt/foreign/active/unresolved refusal; repeated on Linux |
+| Late deletion UI reply | Two additional frozen-binary controls hold the admitted reply across A→B and A→B→A; the original deletion completes once without closing or resetting the successor dialog/draft |
+| Published navigation | Seven actual requests, seven acknowledgements and seven matching server completions; ABA, permanent retirement and an independent surviving circuit |
+| Overlapping navigation acknowledgements | An additional frozen-binary Development control holds both A→B→A callbacks until the successor A is visible, then proves no retargeting and successful independent-context navigation; three requests/acknowledgements/server completions |
+| Dialog and renderers | 30 actual nested production-dialog checks, 12 separately published Components checks, seven freshly published Workspace/Configuration sandboxes at 1600/900/390 widths |
+| Components sibling | Isolated source build: 437 discovered entries expand to 443 passing cases across its test projects; private package and served assets match repaired source |
+| Runtime portability | Windows 436 Unit + 44 Integration + one browser case; Linux 436 Unit + 44 Integration, plus 160 Core Unit + 15 Core Integration, 16 streaming and 38 TestLab scenario cases; Windows/Linux headless publishes start and restart outside the checkout |
+| Static gates | All eight evaluated project/package/watch closures unchanged; mandatory no-write portability enforcement passes with 15,214 unchanged reviewed findings; nine documentation-evidence controls and Windows PowerShell 5.1 installer-script validation pass; documentation and package/tool controls retained |
+
+The configured two-instance setup failed at its second Simple Chat editor: the UI Shared
+Ollama model selector still had one option after the five-second expected-three assertion.
+This is an ordinary failure, not an absent-fixture classification. The saved catalog has
+all three expected models. Nineteen subsequent direct editor observations (including six
+fresh page loads) and the distinct existing-catalog journey passed, but cannot establish
+the missing event state in that failed run. `shared-setup-failure05.json` retains the raw
+failure and bounded controls. APP-06 and GATE-02 remain failed; no speculative product
+change, timeout increase or focused-pass substitution was made. A future isolated setup
+needs provider-selection, model-render and connection/server timing at that assertion.
+
+The original recovered Agent was deleted through its actual UI on the preceding R2 build,
+whose production bytes are proven identical to the final pair: 77 target files removed,
+176 unrelated files byte-identical, 18 provider-history rows unchanged, and the CRM binding
+retained as Missing/Error. The new final-pair two-turn journey independently removes 77
+target files, preserves 174 unrelated files and all four client history entries matching
+both exact runtime requests. The UI's newest-two-entry query is distinguished from that
+independent four-entry check. The other owner indexes and journal are verified explicitly.
+
+Complete published logs are retained through shutdown. All eleven hosts exited zero with no navigation failure, unhandled exception, critical header or ObjectDisposedException. Source/client logs retain the same eight TaskCanceledException entries across four retryable history-maintenance events. The final source log additionally contains one antiforgery failure during manual credential renewal: its missing key ID matches the client key, and that manual helper shared a browser context across localhost ports. The subsequent test used isolated contexts and added no failure header. All errors remain visible; no whole-host clean claim or exception allowlist is made.
+`checkpoint05c-stopped-log-review.json` records that final observation, including the restarted
+shared hosts through their last shutdown. The initial checkpoint-05 logs remain unchanged. Earlier checkpoint
+antiforgery errors and retryable history-maintenance cancellations remain in their original
+logs and reviews; they are not silently filtered or attributed to the final hosts.
+The unchanged complete Development test-host assertions pass. Earlier failed/interrupted
+campaigns and failing-first controls are retained, not relabelled as successful final runs.
+The separate Components foreground host was stopped through its owned tool session; the
+tool returned interruption exit 1. Its log and zero remaining listener/process checks are
+retained in `cleanup-components-host05.json`; graceful exit zero is not claimed for that host.
+
+## Dependency delivery and operator prerequisites
+
+The actual signed Components merge `4a858412d2c2a3f6123bf23d8c4584f05b47627d` has the same
+tree `1e318a37f187c120e74d88357715ba22ae5cec31` as repaired commit
+`22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`. Actual Windows/Linux consumer assemblies identify
+the merge commit. Dialog JS is `f8420ce4b601a8c952cb51cde2e9b01e2da03df515ef831f5b4bda84af1e39f5`;
+the 190-byte initializer is `d6cfb59cfb3f7decacbfbb8d174298bea7a43a090d3962a2b05ed117deef94bc`.
+Source, package, final publish and served bytes agree.
+
+FileTools' local revision and CI pin `498b36825bd5a5222429972af120b04becf4b3f6` share tree
+`6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d`. Both build all eight consumed libraries, and
+evaluated compilation/package/reference settings agree after normalizing clone paths.
+Informational revisions and binary hashes differ and are recorded separately; binary equality
+is not claimed and no mechanical version bump was made.
+
+CI selects Components with `github.base_ref || github.ref_name` and pins the resolved SHA.
+The reviewed remote development head remains `ff5289746573a6dd6456754a7764844627ddd49f`,
+main is `f258ab6a959a97fa16c01d0858e7dc122728a11a`, and no matching
+`components-decoupling` Components branch or open application PR was found. The actual
+consumer target must be chosen by the operator. After explicit publication authorization
+and a fresh remote/ancestry check, a development-targeted consumer can use the prepared
+normal fast-forward:
 
 ```powershell
 git -C ../CanDoItAll.Components push origin 4a858412d2c2a3f6123bf23d8c4584f05b47627d:refs/heads/development
 ```
 
-That command has not been executed. A main-targeted consumer requires its own compatible
-Components integration. A local package or application push cannot establish remote delivery.
+That command was **not executed**. A main-targeted consumer needs its own compatible
+integration; a direct feature-branch workflow needs its matching dependency branch. Local
+package verification does not establish remote delivery or successful consumer CI.
 
-## Required final decision
+The original live journal remains exactly **40/40**, with zero newly authorized or issued
+real-model requests. Six browser cases need their explicit real-provider/access fixtures;
+the generated-app case needs its actual URL/output root. macOS was unavailable and is not
+claimed as a passing platform. These are separate prerequisites, not a synthesized waiver.
 
-The fresh composed campaign must retain all 38 closure groups, original UI deletion and
-projection read-back, real scripted two-turn history cleanup, current full Stable and browser
-dispositions, served assets, protected graphs, headless restarts and final secret review.
-The first eight evaluated graph/watch closures match the previous final source pair exactly.
-Portability enforcement passed with 15,214 unchanged reviewed findings; it will be repeated
-after the final test-fixture edit. All 53 package files and 52 tooling controls pass.
+Completed private owner snapshots are DPAPI-protected with a verified plaintext archive
+hash and restore receipt; original historical archives remain unchanged. Generic evidence
+uses safe identities/hashes, with secret-rule, actual-credential sentinel and representative
+visual checks. Automatic approval review rejected removal of 21 unused fixture credential/
+environment/certificate files and three verified temporary build roots, reporting only
+"blocked by policy". Their exact private paths and dispositions are in the cleanup receipts;
+that cleanup gate remains blocked. No alternative interpreter or container mount was used
+to bypass the rejection.
 
-The previous live journal remains exhausted at 40/40. This bundle authorizes zero new model
-requests. Missing live authority, external fixtures, macOS execution and remote delivery must
-remain explicit prerequisites; they cannot be inferred from local deterministic results.
-Product-fix closure and complete application readiness are separate decisions.
-
-## Fourth checkpoint corrections
-
-The fourth full browser inventory on `1e9fe933f` executed 175 cases: 161 passed and
-14 failed. Twelve failures identify missing external prerequisites; the two ordinary
-failures remain recorded as failures. The catalog test could send Next against an old
-wizard immediately after New. A controlled browser-turn ordering reproduces that gap;
-the test now observes the requested provider before advancing the successor wizard.
-The Recovery sandbox test could focus its footer before the Dialog's scheduled initial
-focus callback ran. Holding the actual served callback reproduces that focus change;
-the test now observes the next browser frame before its explicit footer-focus assertion.
-Neither historical failure had instrumentation sufficient to assert its exact timing.
-
-The fourth Stable attempt was interrupted after a TestLab scenario-host failure, with
-37 of its 38 UI cases passing. Concurrent completion removed an item from the scenario
-host's mutable pending list while retirement enumerated it. Repeating the original
-compiled retirement test reproduced the exception after 612 completed iterations.
-An immutable snapshot with interlocked add/remove preserves pending-operation order
-and passed 4,000 controlled retirement iterations. This correction affects the validation
-host, not the Workspace renderers or the application owner boundaries. The interrupted
-Stable attempt is not a complete gate. A new frozen full checkpoint is required after
-these three bounded corrections.
+`closure-results.json` inventories all 38 obligations and separates product-fix closure
+from full readiness. The [current module roadmap](modules.md#remaining-rendering-roadmap)
+places Projects, remaining AgentFramework renderers, Workflow authoring, Workbench and
+Processes in a provisional order. It is representative-source planning, not a full audit
+of every remaining renderer or authorization to begin that work.

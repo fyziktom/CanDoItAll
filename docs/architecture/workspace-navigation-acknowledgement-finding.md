@@ -1,6 +1,6 @@
 # WCL-NAV1: navigation acknowledgement outlives the observed browser sequence
 
-Status: **R2 observation correction verified; frozen composed closure pending**. New tests
+Status: **Closed as an R2 test-completion correction**. New tests
 intercept the real framework dispatcher and independently hold only the navigation JS
 acknowledgement. They retain the actual callback and connection identities. The browser
 route and both usage charts are visible before that acknowledgement reaches the server.
@@ -21,8 +21,39 @@ passes eight discovered cases (three controls and all five original consolidatio
 `nav-permanent-02` separately proves permanent retirement. ABA navigation and two independent
 contexts are covered; closing the first does not break the survivor. The first permanent
 control used a deadline shorter than the framework's unchanged interop deadline and failed;
-that attempt is retained as `nav-permanent-01`. Fresh full shared Development history and
-published-host evidence are still required for composed closure.
+that attempt is retained as `nav-permanent-01`. Those were interim controls. The final composed evidence below completes the
+required Development and published-host proof without changing the original failure.
+
+## Final R2 composed closure
+
+The fresh complete browser inventory on application
+`f09a44a196ea139d1d37cb3ce2bcb33c6cdffd91` and Components
+`4a858412d2c2a3f6123bf23d8c4584f05b47627d` passes all four acknowledgement controls,
+all five consolidation cases, the shared-host lifetime sequence and Collaboration's unchanged
+whole accumulated-log assertion. The reconciled full inventory separately retains an unresolved
+shared-provider setup/model-selector failure and external prerequisites. That ordinary failure
+does not occur in the NAV1 controls and is not replaced with a focused pass.
+
+The separately published .NET 10.0.12 Production host records seven actual navigation requests,
+seven released successful acknowledgements and seven matching server completions. The held
+acknowledgement proves a visible route can precede framework completion. ABA visits retain
+their individual callback/connection identities. Permanent retirement of the first circuit
+is observed in its server log, and an independent second circuit completes navigation after
+that retirement. No NavigationFailed or unhandled circuit exception is recorded. Initial
+historical antiforgery errors remain in their original checkpoint logs; the final shutdown-inclusive
+log review records the current hosts separately without suppressing errors.
+
+`production-navigation-verification-05.json` binds the actual callbacks, circuits, URI counts,
+timestamps and complete log hashes. `frozen-browsers-05/browsers.trx` retains the fresh broad
+run; `browser-semantic-final05.json` reconciles its separately configured prerequisites.
+The separate `navigation-overlap` proof holds both real callbacks across A→B→A before release,
+then verifies that the successor view remains unchanged and a second context navigates after
+the first closes. All three callbacks match server completions; the complete Development host
+log contains no navigation, circuit or disposal failure. Its copied assemblies match the
+frozen output, and the extra control does not relabel or replace the full browser inventory.
+The final Stable gate passes with the prior C1/C2/C3 owners intact. This closes the demonstrated
+observation defect; it does not invent caller identity for the uninstrumented historical event.
+The historical continuation below is preserved as investigation history.
 
 ## Original observation and ownership
 

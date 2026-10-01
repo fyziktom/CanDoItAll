@@ -1,5 +1,11 @@
 # Workspace critical fixes and closure — 2026-09-30
 
+Current R2 disposition: WCL-R1, WC-C1/C2/C3, WCL-DEL1 and WCL-NAV1 have controlling
+final-pair proof. Complete readiness is still false because one ordinary shared-provider
+setup/model-selector regression is unresolved and external/live/delivery and
+recorded cleanup prerequisites remain. See the [final R2 report](workspace-closure-r2.md).
+The checkpoint and failed attempts below remain historical evidence, not the current status.
+
 This is the preceding campaign's retained disposition. See the [R2 continuation](workspace-closure-r2.md)
 for the current repair, dependency and regression evidence; the failed results below remain historical facts.
 

@@ -1,6 +1,6 @@
 # WCL-DEL1: Agent deletion cannot confirm cleanup after completed history runs
 
-Status: **R2 owner repair verified; composed closure pending**. The original failed attempt
+Status: **Closed on the final R2 source pair**. The original failed attempt
 below remains failed. R2 reproduced the exact retained bytes in a new private root: deletion
 throws `InvalidDataException` while subtracting the canonical receipt count, before journal
 admission. The index records two receipts while the target's two terminal runs own four;
@@ -19,8 +19,44 @@ New ignored evidence lives under `artifacts/workspace-closure-r2/20260930-6b0524
 `deletion-final.json` records deletion of the same Agent, one session and two runs after
 the final owner checks. `del-owner-04` passes all 28 discovered cases, including real audit
 writer histories, survivor bytes, all journal boundaries, restart, cancellation, pending
-approval, unresolved effects and foreign payload refusal. The original UI/projection and
-shared-provider acceptance must still pass before closing the composed finding.
+approval, unresolved effects and foreign payload refusal. Those were interim owner checks. The completed UI/owner closure below supersedes
+that pending disposition; all original failed attempts remain retained.
+
+## Final R2 UI and owner closure
+
+Application `f09a44a196ea139d1d37cb3ce2bcb33c6cdffd91` with Components
+`4a858412d2c2a3f6123bf23d8c4584f05b47627d` completes the new real scripted two-turn
+history journey and its actual UI deletion. An independent observer captures both successful
+terminal runs before deletion; owner read-back confirms 77 removed target files, 174 unchanged
+unrelated files, exactly five changed catalog/index files, no pending deletion journal,
+and the retained CRM binding projected Missing/Error. All four client history entries and
+attempts match both exact runtime request/usage identities; publisher and relay histories
+remain under their own retention policy. No live model call was issued.
+
+The original retained Agent `6fba9f8d-329c-43b5-ae00-afe220d5a56a` also deletes through
+the recovered private UI. Its 77 target files are removed; 176 unrelated files and all 18
+provider-history rows remain unchanged. The target CRM binding changes availability/status
+while the other 31 bindings remain semantically unchanged. Background maintenance checkpoint
+clocks are separate effects, so whole-database byte equality is not claimed. That UI proof
+uses `12086beedd8e5d642bb1beb9404bc2ebd6745a0d`; the final source comparison proves production
+owner/renderer bytes unchanged across the recorded 02→03→04→05 comparisons. Later changes
+affect test observation and the TestLab validation sandbox, which the application does not consume.
+
+The separate `late-delete-retirement` controls use byte-identical frozen UI/test assemblies.
+They hold an admitted deletion reply across A→B and A→B→A, then verify exactly one original
+owner call and the still-open successor dialog with its unsaved draft intact. Their controlled
+owner boundary supplements, rather than substitutes for, the actual durable owner cases.
+
+Controlling records are `scripted-history-05-owner-observation.json`,
+`scripted-history-05-owner-verification.json`, `external-provider-history-05/result.trx`,
+`original-agent-ui-delete.json`, `original-ui-owner-verification.json`, and
+`source-scope-equivalence-02-03.json`, `source-scope-equivalence-03-04.json` and
+`source-scope-equivalence-04-05.json` in the R2 evidence root. Final full Stable and Linux
+owner controls pass. Private snapshots are preserved in `private-owner-snapshots.dpapi`
+with round-trip hashes and restore instructions; earlier plaintext copies were removed before
+the later unrelated runtime-input cleanup rejection. The final three snapshots are separate
+DPAPI archives captured from Docker through memory, without writing plaintext archive files. The historical investigation below records
+what was known at that time, not a remaining instruction to repeat this repair.
 
 ## Original operation, scope and effects
 

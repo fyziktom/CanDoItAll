@@ -9,10 +9,10 @@
     "The only Workspace DynamicComponent is SettingsRendererHost. Registry services stay in Workspace; the sole registered source is WorkflowSettingsRendererSource.",
     "Plugins contribute executor/schema metadata; no plugin ISettingsRendererSource implementation was found. Generic contributed Workflow schemas use the same trusted host no-request branch.",
     "Proof IDs name campaign groups; completion requires their evidence, not this census alone.",
-    "Closure on production application 3d7c88f384b7920744464a7c7570530ca825325a and Components 22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e preserves all 22 census entries and the completed 11-file Workspace UI boundary.",
-    "WCL-R1, WC-C1 and WC-C2 are locally repaired and verified. WC-C3 controlled repairs pass, but composed navigation remains open under WCL-NAV1; see workspace-critical-fixes-closure.md.",
-    "WCL-DEL1 remains open after history identity assertions passed but actual Agent deletion failed; the original task-owned workspace is preserved in an encrypted private snapshot for investigation.",
-    "Live authorization is exhausted at 40/40. External/platform proof and remote Components publication remain separate readiness blockers. No new module is authorized."
+    "Final R2 application f09a44a196ea139d1d37cb3ce2bcb33c6cdffd91 and Components 4a858412d2c2a3f6123bf23d8c4584f05b47627d preserve all 22 census entries and the completed 11-file Workspace UI boundary; retained module UI bytes equal the R2 entry source.",
+    "WCL-R1, WC-C1/C2/C3, WCL-DEL1 and WCL-NAV1 are closed with final owner/browser evidence; see workspace-closure-r2.md. NAV1 is a demonstrated test-completion correction, not a production NavigationManager change.",
+    "Original and final scripted two-turn Agent UI deletion and independent owner/history/CRM read-back pass; private owner snapshots remain DPAPI-protected with verified restore hashes.",
+    "The original live journal remains exhausted at 40/40. One ordinary shared-provider setup/model-selector failure is unresolved. Six real-provider/access cases, generated-app/macOS proof, remote Components delivery and automatically rejected private filesystem cleanup remain explicit readiness prerequisites. No new module was started."
   ],
   "files": [
     {
