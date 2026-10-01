@@ -1,5 +1,13 @@
 # Workspace closure R2
 
+The third frozen Stable run on `6833728ca` completed all 19 projects: 15,878 passed,
+one failed and none skipped. Its sole failure was the post-header SSE timeout fixture:
+the synthetic stream timed out after `Task.Yield()` before the client necessarily consumed
+the first frame. A real Kestrel/dispatcher control confirms that ordering and verifies an
+explicit client-read barrier while retaining the actual transport failure, timeout category,
+usage and disposal assertions. The fixture correction requires a new frozen full checkpoint;
+the failed third run remains unchanged in `checkpoint03-full-failure.json`.
+
 Workspace rendering remains complete. Final composed validation is in progress;
 `ready_for_next_module=false`. No new module is authorized by this repair campaign.
 The [module map](modules.md) now records the completed leaves and a provisional remaining
