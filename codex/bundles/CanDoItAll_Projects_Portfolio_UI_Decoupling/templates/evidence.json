@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "application_tests_executed_by_package_author": false,
+  "workspace_rendering_baseline": "COMPLETE_REPORTED_AND_SOURCE_REVIEWED",
+  "s0_disposition": "NOT_RUN",
+  "projects_p1_complete": false,
+  "application_readiness": "NOT_CERTIFIED",
+  "paid_live_requests_authorized": 0,
+  "viewports": [
+    {
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "groups": [
+    {
+      "id": "E0",
+      "title": "Source pair and protected dependency baseline",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S0",
+      "title": "Configured shared-provider selector follow-up",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-01",
+      "title": "Contracts and leaf graph",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-02",
+      "title": "Portfolio/tree/filter parity",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-03",
+      "title": "Full editor and raw-input lifetime",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-04",
+      "title": "Mutation admission and alternate save",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-05",
+      "title": "Commit and child identity reconciliation",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-06",
+      "title": "Starter draft isolation and no replay",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-07",
+      "title": "Real lifetime/authority and admitted seed",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-08",
+      "title": "Deletion and cleanup outcomes",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-09",
+      "title": "Production Files/package handoff",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-10",
+      "title": "Actual Agent/Workflow/file consumers",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-11",
+      "title": "Source/published sandbox assets",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-12",
+      "title": "Production route and neighboring Workspace",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-13",
+      "title": "Measured desktop development loop",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G1",
+      "title": "Required tests and static/documentation closure",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    }
+  ]
+}
