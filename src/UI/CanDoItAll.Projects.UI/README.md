@@ -10,13 +10,15 @@ The routed Projects host composes these components in production; the
 The leaf references BaseLib and Projects.Contracts. Source-mode BaseLib adds Common;
 Projects.Contracts adds SharedKernel. It has no reference to Infrastructure, EF,
 Workspace, concrete Projects services, Workbench or AgentFramework. The shared namespace
-preserves existing component consumers. The only injected service is IJSRuntime for
-native form validity and focus; all product reads, writes and navigation are typed callbacks.
+preserves existing component consumers. The modal injects IJSRuntime for native form
+validity/focus and its typed logger for active validation and cleanup diagnostics;
+all product reads, writes and navigation are typed callbacks.
 
 `ProjectsBoard.FilesContent` receives the same bounded `ProjectFileFilterProjection` used
 by Cards. The production host supplies the existing `ProjectFilesPortfolioPane` and
 `ProjectFilesDialog`. Their coordinators, access checks and leases remain in the Projects
-implementation. Files P2 is deferred. Package targets are safe ID/label projections;
+implementation. Their rendering now lives in the separate
+[Projects.Files.UI leaf](../CanDoItAll.Projects.Files.UI/README.md). Package targets are safe ID/label projections;
 profile acquisition and package transfer remain with their current owners.
 
 ## Editing

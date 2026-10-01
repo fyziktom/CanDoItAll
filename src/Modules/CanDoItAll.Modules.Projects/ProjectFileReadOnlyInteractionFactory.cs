@@ -49,9 +49,12 @@ internal sealed class ProjectFileReadOnlyInteractionFactory(
                 activation.Size);
             return new ProjectFilesPilotInteraction(request, session, knownFileSessionReleaser);
         }
-        catch
-        {
-            await knownFileSessionReleaser.ReleaseAsync(activation.Request.File, CancellationToken.None);
+        catch (Exception primary) {
+            try {
+                await knownFileSessionReleaser.ReleaseAsync(activation.Request.File, CancellationToken.None);
+            } catch (Exception cleanup) {
+                throw new AggregateException("Project file preview construction failed and its grant cleanup is incomplete.", primary, cleanup);
+            }
             throw;
         }
     }

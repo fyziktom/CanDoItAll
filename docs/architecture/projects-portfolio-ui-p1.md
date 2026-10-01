@@ -1,6 +1,8 @@
 # Projects portfolio UI P1
 
-Status: **Projects P1 complete / Files P2 deferred**. S0 remains qualified as
+Historical P1 checkpoint: **Projects P1 complete / Files P2 deferred at that checkpoint**.
+The subsequent [Projects Files P2 record](projects-files-ui-decoupling.md) records the
+two bounded P1 follow-ups and the separate Files extraction. The original S0 remains qualified as
 `REVALIDATED_WITHOUT_ROOT_CAUSE`; application release readiness is not certified.
 
 ## S0 entry — 2026-10-01

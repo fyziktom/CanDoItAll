@@ -194,6 +194,8 @@ public sealed class WorkflowAssetUiTests {
             var preview = page.GetByRole(AriaRole.Dialog, new() { NameRegex = new System.Text.RegularExpressions.Regex("file interaction$") });
             await Assertions.Expect(preview).ToContainTextAsync(marker);
             await page.ScreenshotAsync(new() { Path = host.Artifact(live ? "workflow-live-preview.png" : "workflow-scripted-preview.png") });
+            await ProjectsFilesBrowserProof.ReopenProducedAssetAsync(host, page, oracle, projectId,
+                node.MediaRelativePath!, output, "workflow-produced-file");
             if (!live) {
                 Assert.Equal(1, scripted!.Requests);
                 await oracle.NavigateAsync($"{host.BaseUrl}/test-lab?projectId={projectId:D}");

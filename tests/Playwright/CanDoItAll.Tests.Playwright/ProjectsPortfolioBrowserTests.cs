@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,20 +34,23 @@ public sealed class ProjectsPortfolioBrowserTests {
             await Assertions.Expect(card).ToHaveCountAsync(1);
             await card.GetByTestId("project-card-files-button").ClickAsync();
             var files = page.GetByTestId("project-files-dialog");
+            await ProjectsFilesBrowserProof.DownloadAsync(host, page, files, "portfolio-proof.md", Encoding.UTF8.GetBytes(content), "projects-dialog");
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" }).PressAsync("Enter");
-            await Assertions.Expect(files.GetByTestId("interaction-text-view")).ToContainTextAsync("Actual authorized Markdown bytes.");
+            await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("Actual authorized Markdown bytes.");
             await AssertVisibleFileSurfaceAsync(files);
             await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
             await page.ScreenshotAsync(new() { Path = host.Artifact("projects-native-files-dialog.png") });
             await files.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+            await Assertions.Expect(files).ToHaveCountAsync(0);
             await page.GetByTestId("projects-portfolio-tabs").GetByRole(AriaRole.Tab, new() { NameRegex = new Regex("^Files") }).ClickAsync();
             var pane = page.GetByTestId("project-files-portfolio-pane");
+            await ProjectsFilesBrowserProof.DownloadAsync(host, page, pane, "portfolio-proof.md", Encoding.UTF8.GetBytes(content), "projects-portfolio");
             await pane.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" }).PressAsync("Enter");
-            await Assertions.Expect(pane.GetByTestId("interaction-text-view")).ToContainTextAsync("Actual authorized Markdown bytes.");
+            await Assertions.Expect(pane.GetByTestId("interaction-markdown-view")).ToContainTextAsync("Actual authorized Markdown bytes.");
             await AssertVisibleFileSurfaceAsync(pane);
             await page.GetByTestId("projects-search-input").FillAsync("No matching owned project");
             await Assertions.Expect(pane.GetByText("No projects match the shared filters", new() { Exact = true })).ToBeVisibleAsync();
-            await Assertions.Expect(pane.GetByTestId("interaction-text-view")).ToHaveCountAsync(0);
+            await Assertions.Expect(pane.GetByTestId("interaction-markdown-view")).ToHaveCountAsync(0);
             await page.GetByTestId("projects-search-input").FillAsync(name);
             await Assertions.Expect(pane.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" })).ToBeVisibleAsync();
             await page.ScreenshotAsync(new() { Path = host.Artifact("projects-native-files-portfolio.png") });
@@ -86,10 +90,10 @@ public sealed class ProjectsPortfolioBrowserTests {
     }
 
     private static async Task AssertVisibleFileSurfaceAsync(ILocator host) {
-        await Assertions.Expect(host.GetByTestId("interaction-text-view")).ToBeVisibleAsync();
+        await Assertions.Expect(host.GetByTestId("interaction-markdown-view")).ToBeVisibleAsync();
         var bounds = await host.GetByTestId("file-interaction").BoundingBoxAsync();
         Assert.NotNull(bounds);
         Assert.True(bounds.Width >= 640, $"The actual desktop file renderer collapsed to {bounds.Width}px.");
-        await Assertions.Expect(host.GetByTestId("interaction-text-view")).ToBeInViewportAsync();
+        await Assertions.Expect(host.GetByTestId("interaction-markdown-view")).ToBeInViewportAsync();
     }
 }

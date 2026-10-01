@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/Sandboxes/">
+    <Project Path="src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Projects.UiSandbox/CanDoItAll.Projects.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj" />
@@ -47,6 +48,7 @@
   </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Projects.Files.UI/CanDoItAll.Projects.Files.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.ApiAccess.UI/CanDoItAll.Workspace.ApiAccess.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />

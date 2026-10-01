@@ -540,6 +540,32 @@ S0 disposition, package/source pair, development-loop observations and final int
 Moved public contracts and the native acknowledgement/admitted seed seam trigger Stable;
 Files P2 remains outside this extraction.
 
+## Projects Files P2
+
+The separate `CanDoItAll.Projects.Files.UI.Tests` leaf is registered in Components,
+Stable and all three CI component selections. It checks both real renderers, supported
+fixture content, independent session/content ownership and forbidden dependency edges.
+Discover current cases using the same configuration and filter before execution:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --no-build --no-restore
+```
+
+`ProjectFilesSurfaceSessionTests` and `ProjectFilesActionInteropTests` control delayed
+owners and JS boundaries. Native `ProjectsFilesHostLifecycleTests` uses actual project
+scopes/grants alongside the retained `ProjectsPageTests`, `ProjectsEditorMutationTests`
+and FileTools authorization/lease suites. The P1 modal tests retain failed-import and
+retirement controls. Use isolated PostgreSQL resources and current build-backed discovery.
+
+`ProjectsFilesSandboxBrowserTests` validates source and standalone publish without
+backend dependencies. `ProjectsPortfolioBrowserTests` verifies saved browser downloads.
+The deterministic File Agent and Workflow/TestLab journeys reopen their actual produced
+assets through Projects Files and compare downloaded bytes. These use 1920×1080; no paid
+model calls are permitted. Never build into an output directory while its owned test
+host is running. See [the P2 record](architecture/projects-files-ui-decoupling.md) for
+actual counts, limitations, graph/watch evidence and the wider-gate decision.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

@@ -126,7 +126,7 @@ public sealed class ProjectsPageTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Replaced authorized content.", cut.Find("[data-testid='interaction-text-view']").TextContent);
+            Assert.Contains("Replaced authorized content.", cut.Find("[data-testid='interaction-markdown-view']").TextContent);
             Assert.Empty(cut.FindAll(".ft-file-browser"));
             Assert.True(cut.Find("[data-testid='interaction-mode-edit']").HasAttribute("disabled"));
         });
@@ -438,7 +438,7 @@ public sealed class ProjectsPageTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Authorized aggregate content.", cut.Find("[data-testid='interaction-text-view']").TextContent);
+            Assert.Contains("Authorized aggregate content.", cut.Find("[data-testid='interaction-markdown-view']").TextContent);
             Assert.Empty(cut.FindAll(".ft-file-browser"));
             Assert.NotNull(cut.Find("[data-testid='project-files-portfolio-back']"));
         });

@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/CanDoItAll.SchedulerPlanner.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Memory.UiSandbox/CanDoItAll.Memory.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Resources.UiSandbox/CanDoItAll.Resources.UiSandbox.csproj" ReferenceOutputAssembly="false" />

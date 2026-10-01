@@ -172,6 +172,8 @@ public sealed class FileJourneyHarnessBrowserTests {
             await page.GetByTestId("project-structure-selection-window").GetByRole(AriaRole.Button, new() { Name = "Expand preview", Exact = true }).ClickAsync();
             await Assertions.Expect(page.GetByRole(AriaRole.Dialog, new() { Name = "roundtrip.md file interaction", Exact = true })).ToContainTextAsync(expected.Content[2..]);
             await page.ScreenshotAsync(new() { Path = host.Artifact("exact-file-preview.png") });
+            await ProjectsFilesBrowserProof.ReopenProducedAssetAsync(host, page, oracle, fixture.ProjectId,
+                file.MediaRelativePath!, expected.Content, "agent-produced-file");
             Assert.Equal(6, wire.Requests);
             evidence.Observations["effects"] = new { file.Id, file.ParentId, writes = 1, attachments = 1, wire.Requests,
                 sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(expected.Content))) };
