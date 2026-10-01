@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "application_tests_executed_by_package_author": false,
+  "workspace_rendering_baseline": "COMPLETE_REPORTED_AND_SOURCE_REVIEWED_IN_PRIOR_CLOSURE",
+  "projects_p1_baseline": "PRESERVE_WITH_TWO_BOUNDED_FOLLOW_UPS",
+  "historical_selector_s0": "REVALIDATED_WITHOUT_ROOT_CAUSE",
+  "s0_disposition": "NOT_RUN",
+  "projects_p2_complete": false,
+  "application_readiness": "NOT_CERTIFIED",
+  "paid_live_requests_authorized": 0,
+  "viewports": [
+    {
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "groups": [
+    {
+      "id": "E0",
+      "title": "Source pair, owned environment and protected graph baseline",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S0",
+      "title": "P1-R1 known lifetime refusal, exact operation release and explicit reacquisition",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S0-02",
+      "title": "P1-R2 failed JS import and actual modal retirement/reopen",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-01",
+      "title": "Light Files boundary and protected P1/Workspace graph",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-02",
+      "title": "Both actual Files renderers and state parity",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-03",
+      "title": "Open, close, retirement and exact cleanup ownership",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-04",
+      "title": "Captured projection and consistent mutable source replacement",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-05",
+      "title": "Failed, empty and retry source/read states",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-06",
+      "title": "Actual current file authorization and removed-source refusal",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-07",
+      "title": "Independent read-only preview and complete grant cleanup",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-08",
+      "title": "Safe exact native launch and unavailable/refused modes",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-09",
+      "title": "Actual browser download bytes and lease/stream cleanup",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-10",
+      "title": "Source/page/search bounds and call-count regression",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-11",
+      "title": "Real standalone Files sandbox and published assets",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-12",
+      "title": "Actual Agent/file and Workflow/TestLab consumers",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-13",
+      "title": "P1 and adjacent Workspace/Resources/route regression",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-14",
+      "title": "Measured large-desktop development loop",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G1",
+      "title": "Current tests, impact-based broad gate, static rules and census closure",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    }
+  ]
+}
