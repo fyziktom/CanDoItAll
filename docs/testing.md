@@ -566,6 +566,27 @@ model calls are permitted. Never build into an output directory while its owned 
 host is running. See [the P2 record](architecture/projects-files-ui-decoupling.md) for
 actual counts, limitations, graph/watch evidence and the wider-gate decision.
 
+## Agent Editor Core A1
+
+The [Editor.UI light tests](../tests/Components/CanDoItAll.AgentFramework.Editor.UI.Tests/README.md)
+exercise the actual core form and neutral widgets through the independent sandbox. They are
+included in the Components/Stable solutions and the three component CI lists. Assembly guards
+check transitive/public dependencies and reject forbidden or unresolved edges.
+
+Build the AgentFramework module directly before discovering the owning `AgentEditor*`,
+`AgentDetailsDialog*`, thinking-effort/model selector, catalog and conversation component
+selections. `AgentEditorCoreRoundTripTests` saves through the actual rendered host and native
+commands, preserving deferred settings, project lifetimes, host bindings, extension JSON,
+Favorite tags and another agent. Native adapters and unit snapshot/policy tests remain necessary.
+
+`AgentEditorSandboxBrowserTests` checks source and standalone publish at 1920×1080 without
+product DI/database. The positive `FileJourneyHarnessBrowserTests` case edits the four core
+sections through the real application, validates actual model/effort/instructions requests,
+and proves scoped approved file writes, attachments, read-backs and downloads. Its denial
+and retained-evidence controls remain part of the consumer selection. Only the external model
+response is scripted; this lane authorizes zero paid model requests. See the
+[A1 record](architecture/agent-editor-core-ui-a1.md) for current results and the bounded-gate decision.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

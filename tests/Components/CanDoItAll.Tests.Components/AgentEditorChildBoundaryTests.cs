@@ -1,6 +1,7 @@
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Editor.UI;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework;
@@ -9,10 +10,56 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
+using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentEditorChildBoundaryTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Source_refresh_read_cannot_publish_after_provider_selection_changes(bool returnToOriginal) {
+        using var context = AgentDetailsDialogAvatarGenerationTests.CreateContext(new UnavailableAgentImageGenerationService());
+        var service = DispatchProxy.Create<ISharedProviderManagementService, SharedProviderRefreshButtonTests.RefreshProxy>();
+        var proxy = (SharedProviderRefreshButtonTests.RefreshProxy)(object)service;
+        context.Services.AddSingleton(service);
+        var model = SharedProviderRoutingModelIdCodec.Create(proxy.Selected.RemotePublicationId, "real-model").Value;
+        var first = AgentDetailsDialogAvatarGenerationTests.CreateImageProvider() with {
+            Id = proxy.Selected.ProviderProfileId, Name = "Original shared provider", Purpose = ProviderProfilePurpose.Chat,
+            DefaultModel = model, SuggestedModels = [model],
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, proxy.Selected.SourceId)
+        };
+        var second = first with { Id = Guid.NewGuid(), Name = "Successor local provider", CredentialBinding = null };
+        var cut = context.RenderEditor(new() { Name = "Unrelated draft", ProviderProfileId = first.Id }, AgentEditorSection.Runtime, [first, second]);
+        var reads = context.Services.GetRequiredService<AgentEditorReadFixture>();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = new TaskCompletionSource<IReadOnlyList<ProviderProfile>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        reads.ReadProviders = _ => {
+            started.TrySetResult();
+            return released.Task;
+        };
+        var refresh = cut.Find("[data-testid='shared-provider-refresh-capabilities']").ClickAsync();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Select(second.Name);
+        if (returnToOriginal) {
+            Select(first.Name);
+        }
+        released.SetResult([first with { Name = "Obsolete catalog response" }]);
+        await refresh;
+        var current = cut.FindComponent<AgentEditorCoreSurface>().Instance.State;
+        Assert.Equal(returnToOriginal ? first.Name : second.Name, current.RuntimeProvider!.Name);
+        Assert.Equal("Unrelated draft", current.Draft.Name);
+        Assert.Equal(2, current.RuntimeProviders.Count);
+        Assert.Equal(1, reads.ProviderReads);
+        Assert.DoesNotContain("Obsolete catalog response", cut.Markup);
+
+        void Select(string name) {
+            var input = cut.Find("[data-testid='agents-catalog-provider']");
+            input.Change(input.QuerySelectorAll("option").Single(option => option.TextContent.Trim() == name).GetAttribute("value"));
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

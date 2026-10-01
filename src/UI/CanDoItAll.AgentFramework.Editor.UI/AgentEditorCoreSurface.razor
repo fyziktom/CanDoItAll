@@ -1,0 +1,365 @@
+@{
+    var state = State;
+}
+@if (state.LoadState == AgentEditorLoadState.Loading) {
+    <SurfaceCard Soft="true" data-testid="agents-details-loading">
+        <p class="cda-eyebrow">Loading agent</p>
+        <h3 class="mt-1 text-lg font-semibold text-slate-950">Preparing technical editor</h3>
+        <p class="mt-3 text-sm leading-6 text-slate-600">
+            AgentFramework is loading the selected technical record and runtime catalogs.
+        </p>
+    </SurfaceCard>
+}
+else if (state.LoadState == AgentEditorLoadState.Failed) {
+    <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-details-load-failed">
+        <p>The agent editor could not be loaded. @state.LoadError</p>
+        <Button Text="Retry" Click="state.RetryLoad" data-testid="agents-details-retry-load" />
+        @if (state.Close.HasDelegate) {
+            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="state.Close" />
+        }
+    </Alert>
+}
+else {
+    <EditForm @key="state.Origin" EditContext="@state.Context" OnValidSubmit="state.Save">
+        <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
+            <Header>
+                @if (state.CommitWarning is { } warning) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-commit-warning">
+                        <p>@warning</p>
+                    </Alert>
+                }
+                @if (!state.IsBusy && state.PendingRefreshMessage is { } pendingMessage) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-refresh-pending">
+                        <p>@pendingMessage Your draft is retained.</p>
+                        <Button Text="Retry editor refresh" ButtonStyle="ButtonStyle.Light"
+                                Click="state.RetryRefresh" data-testid="agents-editor-retry-refresh" />
+                    </Alert>
+                }
+                @if (state.HasUnconfirmedWrite) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-write-unconfirmed">
+                        <p>The save result could not be confirmed. Your draft is retained. Check the catalog before reopening the agent or starting another draft.</p>
+                    </Alert>
+                }
+                @if (state.LinkedPartyId.HasValue) {
+                    <Alert AlertStyle="AlertStyle.Info">
+                        <p class="font-semibold">Bound CRM-HR resource</p>
+                        <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={state.LinkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
+                    </Alert>
+                }
+            </Header>
+            <Sections>
+                <Tabs data-testid="agents-details-tabs"
+                  SelectedIndex="@AgentEditorSections.IndexOf(state.Section)"
+                  SelectedIndexChanged="index => state.SectionChanged.InvokeAsync(AgentEditorSections.At(index).Section)"
+                  Variant="@(TabsVariant.ModalCompact)"
+                  BorderMode="@(TabsBorderMode.Soft)"
+                  Tone="@(TabsTone.Info)"
+                  OverflowMode="@(TabsOverflowMode.Scroll)"
+                  PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+                  FillHeight="true"
+                  Class="agent-details-dialog__tabs w-full min-w-0 flex-1 min-h-0"
+                  AriaLabel="Agent details sections">
+                <TabItems>
+                    @foreach (var definition in AgentEditorSections.All) {
+                        <TabsItem Text="@definition.Label">
+                            @{
+                                var sectionState = State;
+                                var sectionDraft = sectionState.Draft;
+                            }
+                            @switch (definition.Section) {
+                                case AgentEditorSection.Identity:
+                                    <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
+                                        <ConversationIdentityFields Name="@sectionDraft.Name"
+                                                                    Immediate="true"
+                                                                    NameChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Name(value))"
+                                                                    Role="@sectionDraft.RoleTitle"
+                                                                    RoleChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Role(value))"
+                                                                    Summary="@sectionDraft.Summary"
+                                                                    SummaryChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Summary(value))"
+                                                                    Instructions="@sectionDraft.Instructions"
+                                                                    InstructionsChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Instructions(value))"
+                                                                    Avatar="@IdentityAvatar(sectionDraft)"
+                                                                    AvatarStatus="@ResolveAvatarSelectionText(sectionDraft)"
+                                                                    AvatarDescription="Stored with the technical agent identity and reused by runtime surfaces."
+                                                                    RoleLabel="Role title"
+                                                                    InstructionsLabel="Instructions"
+                                                                    NameTestId="agents-catalog-name"
+                                                                    RoleTestId="agents-catalog-role"
+                                                                    AvatarTestId="agents-catalog-avatar-summary"
+                                                                    SummaryTestId="agents-catalog-summary"
+                                                                    InstructionsTestId="agents-catalog-instructions">
+                                            <AvatarActions>
+                                                @AvatarActions?.Invoke(new(sectionState.Origin, sectionDraft, AgentEditorSection.Identity))
+                                            </AvatarActions>
+                                            <AdditionalFields>
+                                                <FormField Text="Tags"
+                                                           data-testid="agents-catalog-tags-section">
+                                                    <TagEditor Value="@sectionState.Tags"
+                                                               ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Tags(value))"
+                                                               Suggestions="@sectionState.TagSuggestions"
+                                                               Placeholder="Add agent tag"
+                                                               Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                                                               MaxTags="12"
+                                                               TestId="agents-catalog-tags"
+                                                               InputTestId="agents-catalog-tags-input" />
+                                                </FormField>
+                                            </AdditionalFields>
+                                        </ConversationIdentityFields>
+                                    </FormSection>
+                                    break;
+                                case AgentEditorSection.Runtime:
+                                    <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
+                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                            <ConversationProviderSelector Options="@sectionState.RuntimeProviders"
+                                                                          Value="@sectionState.RuntimeProviderKey"
+                                                                          ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.RuntimeProvider(value))"
+                                                                          IsLoading="@(!sectionState.AreProvidersLoaded && string.IsNullOrWhiteSpace(sectionState.ProviderLoadError))"
+                                                                          LoadingMessage="Loading providers for runtime binding..."
+                                                                          ErrorMessage="@sectionState.ProviderLoadError"
+                                                                          InputTestId="agents-catalog-provider" />
+                                            <ConversationProviderModelSelector Provider="@sectionState.RuntimeProvider"
+                                                                   Value="@sectionDraft.Model"
+                                                                   ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.RuntimeModel(value))"
+                                                                   Disabled="@(!sectionState.AreProvidersLoaded && string.IsNullOrWhiteSpace(sectionState.ProviderLoadError))"
+                                                                   TestId="agents-catalog-model-selector"
+                                                                   ChoiceTestId="agents-catalog-model-choice"
+                                                                   OverrideTestId="agents-catalog-model-override"
+                                                                   CustomModelTestId="agents-catalog-model" />
+                                        </Grid>
+
+                                        <ConversationThinkingEffortSettings TValue="AgentReasoningEffortLevel?" Presentation="@sectionState.ThinkingEffort"
+                                                                     ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ThinkingEffort(value))"
+                                                                     Disabled="@(!sectionState.AreProvidersLoaded && string.IsNullOrWhiteSpace(sectionState.ProviderLoadError))"
+                                                                     TestId="agents-catalog-thinking-effort"
+                                                                     SupportTestId="agents-catalog-thinking-effort-support" />
+                                        @ProviderRefresh?.Invoke(new(sectionState.Origin, sectionDraft, AgentEditorSection.Runtime))
+
+                                        <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                                            <div>
+                                                <label class="cda-field-label">Status</label>
+                                                <InputSelect @bind-Value="sectionDraft.Status" class="cda-input">
+                                                    @foreach (var status in Enum.GetValues<AgentLifecycleStatus>()) {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
+                                            <div>
+                                                <label class="cda-field-label">Workload</label>
+                                                <InputSelect @bind-Value="sectionDraft.Workload" class="cda-input">
+                                                    @foreach (var workload in Enum.GetValues<AgentWorkloadKind>()) {
+                                                        <option value="@workload">@workload</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
+                                            <div>
+                                                <label class="cda-field-label">Chat history</label>
+                                                <InputSelect @bind-Value="sectionDraft.ChatHistoryMode" class="cda-input">
+                                                    @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>()) {
+                                                        <option value="@mode">@mode</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
+                                        </Grid>
+
+                                        @if (sectionState.RuntimeParameterPolicy is { } runtimePolicy) {
+                                            <Alert AlertStyle="AlertStyle.Info">
+                                                <p class="font-semibold">Runtime parameter policy</p>
+                                                <p class="mt-1">@runtimePolicy</p>
+                                            </Alert>
+                                        }
+
+                                        <SurfaceCard Soft="true" data-testid="agents-catalog-tool-policy">
+                                            <label class="cda-inline-option">
+                                                <input type="checkbox"
+                                                       checked="@sectionDraft.Permissions.CanUseTools"
+                                                       @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ToolUse(args.Value is true))"
+                                                       data-testid="agents-catalog-can-use-tools" />
+                                                Allow tool use
+                                            </label>
+                                            <TextBlock TextStyle="TextStyle.Body2"
+                                                       Value="Turn off tool use for an agent that should only exchange chat messages. Existing capability assignments and access settings are preserved." />
+                                        </SurfaceCard>
+
+                                        <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
+                                            <Stack GapScale="LayoutGap.Small">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />
+                                                <label class="cda-inline-option">
+                                                    <input type="checkbox"
+                                                           checked="@sectionDraft.Permissions.RequiresApprovalForExternalCalls"
+                                                           @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ExternalCallApproval(args.Value is true))"
+                                                           data-testid="agents-catalog-require-external-approval" />
+                                                    Require approval for external calls
+                                                </label>
+                                                <label class="cda-inline-option">
+                                                    <input @key="sectionState.AutoApprovalInputVersion"
+                                                           type="checkbox"
+                                                           checked="@sectionDraft.Permissions.AutoApproveExternalCallsByDefault"
+                                                           disabled="@sectionState.IsConfirmingAutoApproval"
+                                                           @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.AutoApproval(args.Value is true))"
+                                                           data-testid="agents-catalog-auto-approval" />
+                                                    Auto-approve approval-required tool calls by default
+                                                </label>
+                                                <TextBlock TextStyle="TextStyle.Body2"
+                                                           Value="Per-run approval choices remain available in chat. This setting changes the default for every new run of this agent." />
+
+                                                @if (sectionDraft.Permissions.AutoApproveExternalCallsByDefault) {
+                                                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-auto-approval-warning">
+                                                        <p class="font-semibold">Automatic approval is enabled</p>
+                                                        <p class="mt-1">This agent can continue approval-required tool calls without asking for each call. Scope and runtime policy checks still apply.</p>
+                                                    </Alert>
+                                                }
+                                            </Stack>
+                                        </SurfaceCard>
+                                    </FormSection>
+                                    break;
+                                case AgentEditorSection.Memory:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.Images:
+                                    <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
+                                        <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">
+                                            <div class="cda-admin-subpanel">
+                                                <p class="cda-field-label mb-2">Access</p>
+                                                <Stack GapScale="LayoutGap.Small">
+                                                    <label class="cda-inline-option">
+                                                        <input type="checkbox"
+                                                               checked="@sectionDraft.ImageGenerationAccess.CanGenerateImages"
+                                                               @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ImageGeneration(args.Value is true))"
+                                                               data-testid="agents-catalog-image-generation-enabled" />
+                                                        Can generate images
+                                                    </label>
+                                                    <label class="cda-inline-option">
+                                                        <input type="checkbox"
+                                                               checked="@sectionDraft.ImageGenerationAccess.CanStoreImagesAsProjectAssets"
+                                                               @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ImageAssetStorage(args.Value is true))"
+                                                               data-testid="agents-catalog-image-generation-project-assets" />
+                                                        Can store generated images as project assets
+                                                    </label>
+                                                </Stack>
+                                            </div>
+                                            <div class="cda-admin-subpanel md:col-span-2">
+                                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                                    <ConversationProviderSelector Options="@sectionState.ImageProviders"
+                                                                                  Value="@sectionState.ImageProviderKey"
+                                                                                  ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ImageProvider(value))"
+                                                                                  Label="Image provider"
+                                                                                  NoneLabel="Choose recommended image provider on save"
+                                                                                  ShowDisabledStatus="true"
+                                                                                  Disabled="@(!sectionDraft.ImageGenerationAccess.CanGenerateImages)"
+                                                                                  IsLoading="@(!sectionState.AreProvidersLoaded && string.IsNullOrWhiteSpace(sectionState.ProviderLoadError))"
+                                                                                  LoadingMessage="Loading image-generation providers..."
+                                                                                  ErrorMessage="@sectionState.ProviderLoadError"
+                                                                                  EmptyMessage="No image-generation provider profiles are configured."
+                                                                                  InputTestId="agents-catalog-image-generation-provider" />
+                                                    <ConversationProviderModelSelector Provider="@sectionState.ImageProvider"
+                                                                           Value="@sectionDraft.ImageGenerationAccess.DefaultModel"
+                                                                           ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ImageModel(value))"
+                                                                           Disabled="@(!sectionDraft.ImageGenerationAccess.CanGenerateImages || sectionState.ImageProvider is null)"
+                                                                           Label="Image model"
+                                                                           TestId="agents-catalog-image-model-selector"
+                                                                           ChoiceTestId="agents-catalog-image-model-choice"
+                                                                           OverrideTestId="agents-catalog-image-model-override"
+                                                                           CustomModelTestId="agents-catalog-image-model" />
+                                                </Grid>
+
+                                                <Alert AlertStyle="AlertStyle.Info" Class="mt-4">
+                                                    <p class="font-semibold">Image provider policy</p>
+                                                    <p class="mt-1">@sectionState.ImageProviderPolicy</p>
+                                                </Alert>
+
+                                                @{
+                                                    var imageGenerationWarning = sectionState.ImageWarning;
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(imageGenerationWarning)) {
+                                                    <Alert AlertStyle="AlertStyle.Warning" Class="mt-3">
+                                                        <p class="font-semibold">Image generation configuration needs attention</p>
+                                                        <p class="mt-1">@imageGenerationWarning</p>
+                                                    </Alert>
+                                                }
+                                            </div>
+                                        </Grid>
+                                    </FormSection>
+                                    break;
+                                case AgentEditorSection.ProjectStructureAccess:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.WorkspaceTools:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.Secrets:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.ProcessAccess:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.Capabilities:
+                                    @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))
+                                    break;
+                                case AgentEditorSection.Voice:
+                                    <FormSection Title="Voice" Description="Allow this agent to participate in audio mode and optionally override the general text-to-speech voice.">
+                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2" data-testid="agents-catalog-voice-access">
+                                            <div class="cda-admin-subpanel">
+                                                <p class="cda-field-label mb-2">Voice access</p>
+                                                <Stack GapScale="LayoutGap.Small">
+                                                    <label class="cda-inline-option">
+                                                        <input type="checkbox"
+                                                               checked="@sectionDraft.VoiceAccess.CanUseVoiceMode"
+                                                               @onchange="args => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Voice(args.Value is true))"
+                                                               data-testid="agents-catalog-voice-enabled" />
+                                                        Can use audio mode
+                                                    </label>
+                                                </Stack>
+                                            </div>
+                                            <div class="cda-admin-subpanel">
+                                                <label class="cda-field-label">Voice override</label>
+                                                <InputSelect @bind-Value="sectionDraft.VoiceAccess.PreferredVoiceId"
+                                                             class="cda-input"
+                                                             disabled="@(!sectionDraft.VoiceAccess.CanUseVoiceMode)"
+                                                             data-testid="agents-catalog-voice-override">
+                                                    <option value="">Use general voice</option>
+                                                    @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds) {
+                                                        <option value="@voiceId">@voiceId</option>
+                                                    }
+                                                </InputSelect>
+                                                <p class="mt-2 text-sm leading-6 text-slate-600">
+                                                    When set, this voice takes priority over the general AgentFramework voice.
+                                                </p>
+                                            </div>
+                                        </Grid>
+                                    </FormSection>
+                                    break;
+                            }
+                        </TabsItem>
+                    }
+
+                </TabItems>
+                </Tabs>
+            </Sections>
+            <Actions>
+                <StickyActionFooter StatusLabel="Technical agents">
+                    <SecondaryActions>
+                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="state.Clear" />
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        <Button Text="Save agent"
+                                Type="submit"
+                                Disabled="@(state.IsMutationBlocked || state.HasIncompatibleThinkingEffort)"
+                                IsBusy="@state.IsBusy"
+                                data-testid="agents-catalog-save" />
+                    </PrimaryActions>
+                    <DangerActions>
+                        @if (state.CanDelete) {
+                            <Button Text="Delete"
+                                    Icon="delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Disabled="@(state.IsMutationBlocked || state.IsConfirmingDelete)"
+                                    IsBusy="@state.IsBusy"
+                                    Click="state.Delete"
+                                    data-testid="agents-catalog-delete" />
+                        }
+                    </DangerActions>
+                </StickyActionFooter>
+            </Actions>
+        </ConversationDefinitionEditorShell>
+    </EditForm>
+}

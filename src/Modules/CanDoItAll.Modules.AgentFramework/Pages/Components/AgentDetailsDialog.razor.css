@@ -1,11 +1,3 @@
-.agent-details-dialog {
-    min-height: min(72vh, 52rem);
-}
-
-.agent-details-dialog__tabs {
-    min-height: min(60vh, 42rem);
-}
-
 .agent-details-dialog__custom-avatar {
     width: 100%;
 }
@@ -58,14 +50,6 @@
 }
 
 @media (max-width: 760px) {
-    .agent-details-dialog {
-        min-height: auto;
-    }
-
-    .agent-details-dialog__tabs {
-        min-height: 34rem;
-    }
-
     .agent-details-dialog__capability-filters {
         grid-template-columns: 1fr;
     }

@@ -16,6 +16,31 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPanelTestBase {
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task Empty_name_is_rejected_before_persistence_and_retains_the_raw_draft(string rawName) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var existing = (await workspace.ListAgentsAsync(false)).First();
+        var before = System.Text.Json.JsonSerializer.Serialize(await workspace.GetAgentEditorAsync(existing.Id));
+        var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
+            .Add(component => component.AgentId, existing.Id));
+        cut.WaitForAssertion(() => Assert.Equal(existing.Name, cut.Find("[data-testid='agents-catalog-name']").GetAttribute("value")));
+        var context = cut.FindComponent<EditForm>().Instance.EditContext!;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-name']").Input(rawName));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(await workspace.GetAgentEditorAsync(existing.Id)));
+        Assert.Same(context, cut.FindComponent<EditForm>().Instance.EditContext);
+        Assert.Equal(rawName, ((AgentEditorModel)context.Model).Name);
+        Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
+        Assert.Contains(harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary == "Agent save failed");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-name']").Input("Corrected agent name"));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Equal("Corrected agent name", (await workspace.GetAgentEditorAsync(existing.Id)).Name);
+    }
+
     [Fact]
     public async Task Known_validation_rejection_keeps_the_draft_writable_for_correction() {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -23,7 +48,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
         var existing = (await workspace.ListAgentsAsync(false)).First();
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Correctable draft");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Correctable draft");
         var context = cut.FindComponent<EditForm>().Instance.EditContext!;
         var draft = (AgentEditorModel)context.Model;
         draft.TemplateKey = existing.TemplateKey;
@@ -47,7 +72,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
                 new WarningCommands(ActivatorUtilities.CreateInstance<AgentEditorCommands>(provider))));
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Saved with projection warning");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Saved with projection warning");
         await cut.Find("form").SubmitAsync();
         var id = cut.Instance.CurrentTarget.AgentId;
         Assert.NotNull(id);
@@ -96,7 +121,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completed.Add))
             .Add(component => component.TargetChanged, EventCallback.Factory.Create<AgentEditorTarget>(this, targets.Add)));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Reconciliation test");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Reconciliation test");
         probe.Save = request => probe.Target.SaveAgentAsync(request);
         probe.Failure = AgentEditorProbeFailure.RefreshAfterSave;
         await cut.Find("form").SubmitAsync();
@@ -106,7 +131,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
         Assert.Equal(1, probe.AcceptedSaves);
         Assert.Empty(completed);
         Assert.True(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
-        cut.Find("[data-testid='agents-catalog-name']").Change("Edited after acknowledgement");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Edited after acknowledgement");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         probe.Failure = AgentEditorProbeFailure.None;
         await cut.Find("[data-testid='agents-editor-retry-refresh']").ClickAsync();
@@ -132,7 +157,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this,
                 _ => Task.FromException(new InvalidOperationException("Caller refresh failed.")))));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Callback test");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Callback test");
         probe.Save = request => probe.Target.SaveAgentAsync(request);
         await cut.Find("form").SubmitAsync();
         var draft = (AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model;
@@ -151,7 +176,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Recoverable draft");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Recoverable draft");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         probe.Save = _ => Task.FromException<Guid>(new IOException("Acknowledgement unavailable."));
         await cut.Find("form").SubmitAsync();

@@ -1,0 +1,44 @@
+@implements IDisposable
+<SurfaceCard data-testid="@TestId">
+    <Cluster Gap="LayoutGap.Small">
+        <Button Text="Hold save" Click="session.Hold" Disabled="session.IsHeld" />
+        <Button Text="Release save" Click="session.Release" Disabled="@(!session.IsHeld)" />
+        <Button Text="Close editor" Click="session.Close" />
+        <Button Text="Reopen editor" Click="Reset" />
+        <TextBlock Value="@($"Synthetic writes: {session.Writes}; reads: {session.Reads}")" data-testid="scenario-counts" />
+    </Cluster>
+    <TextBlock Value="@session.Notice" data-testid="scenario-notice" />
+    @if (session.SubmittedName is { } submittedName) {
+        <TextBlock Value="@($"Captured name: {submittedName}")" data-testid="scenario-submission" />
+    }
+    @if (session.IsConfirmingApproval) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            <p>Synthetic automatic approval confirmation. This grants no production access.</p>
+            <Button Text="Confirm approval" Click="() => session.ConfirmApproval(true)" />
+            <Button Text="Cancel approval" Click="() => session.ConfirmApproval(false)" />
+        </Alert>
+    }
+    @if (!session.IsClosed) {
+        <AgentEditorCoreSurface State="@(session.State with { Clear = EventCallback.Factory.Create(this, Reset) })">
+            <AvatarActions><TextBlock Value="Avatar generation remains a production host integration." /></AvatarActions>
+            <ProviderRefresh><TextBlock Value="Shared-provider refresh remains a production host integration." /></ProviderRefresh>
+            <DeferredSection Context="slot">
+                <EmptyState Title="@($"{AgentEditorSections.All.Single(item => item.Section == slot.Section).Label}: retained production section")"
+                            Description="This sandbox exercises only the A1 core. The real production host supplies this section under the same form and session." />
+            </DeferredSection>
+        </AgentEditorCoreSurface>
+    }
+</SurfaceCard>
+
+@code {
+    [Parameter] public AgentEditorScenario Scenario { get; set; }
+    [Parameter] public string Name { get; set; } = "Fixture agent";
+    [Parameter] public string TestId { get; set; } = "scenario-editor";
+    private AgentEditorScenarioSession session = default!;
+    protected override void OnInitialized() => session = new(this, Scenario, Name);
+    private void Reset() {
+        session.Dispose();
+        session = new(this, Scenario, Name);
+    }
+    public void Dispose() => session.Dispose();
+}

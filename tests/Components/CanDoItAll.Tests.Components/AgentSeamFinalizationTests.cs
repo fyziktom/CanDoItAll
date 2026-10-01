@@ -25,7 +25,7 @@ public sealed class AgentSeamFinalizationTests {
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
         await catalog.Find("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogs.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Saved during initial catalog read");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Saved during initial catalog read");
         await editor.Find("form").SubmitAsync();
         var savedId = editor.Instance.CurrentTarget.AgentId;
         Assert.NotNull(savedId);

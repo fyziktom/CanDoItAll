@@ -1,27 +1,13 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Editor.UI;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.AgentFramework;
-
-public enum AgentEditorSection {
-    Identity,
-    Runtime,
-    Memory,
-    Images,
-    ProjectStructureAccess,
-    WorkspaceTools,
-    Secrets,
-    ProcessAccess,
-    Capabilities,
-    Voice
-}
 
 public readonly record struct AgentEditorTarget(Guid? AgentId) {
     public bool IsNew => !AgentId.HasValue;
     public static AgentEditorTarget Create => new(null);
 }
-
-public enum AgentEditorLoadState { Loading, Ready, Failed }
 
 public enum AgentEditorMutationKind { Save, CapabilityVerification }
 
@@ -37,6 +23,7 @@ public sealed class AgentEditorSession : IDisposable {
         CancellationToken = cancellation.Token;
     }
 
+    public AgentEditorOrigin Origin { get; } = new(Guid.NewGuid());
     public AgentEditorTarget Target { get; private set; }
     public AgentEditorModel Draft { get; private set; }
     public EditContext Context { get; private set; }

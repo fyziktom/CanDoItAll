@@ -55,7 +55,8 @@ public sealed class AgentEditorLoadCharacterizationTests {
         cut.WaitForAssertion(() => Assert.Equal(agent.Id,
             Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id));
 
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Clear"));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").ClickAsync());
 
         var draft = Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model);
         Assert.Null(draft.Id);
@@ -75,7 +76,7 @@ public sealed class AgentEditorLoadCharacterizationTests {
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completed.Add)));
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         probe.Failure = AgentEditorProbeFailure.RefreshAfterSave;
-        cut.Find("[data-testid='agents-catalog-name']").Change("Refresh characterization");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Refresh characterization");
 
         cut.Find("form").Submit();
 

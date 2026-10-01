@@ -155,7 +155,7 @@ public sealed class AgentCatalogBoundaryTests {
         await cut.WaitForElement("[data-testid='agents-catalog-card']").ClickAsync();
         await cut.Find("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogHost.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Delayed catalog publication");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Delayed catalog publication");
         var pending = new TaskCompletionSource<AgentCatalogSnapshot>();
         operations.NextLoad = pending.Task;
         var submitted = editor.Find("form").SubmitAsync();
@@ -186,7 +186,7 @@ public sealed class AgentCatalogBoundaryTests {
         page.WaitForDashboardLoaded();
         await page.WaitForElement("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogHost.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Page save echo proof");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Page save echo proof");
         await editor.Find("form").SubmitAsync();
         var savedId = editor.Instance.CurrentTarget.AgentId;
         Assert.NotNull(savedId);
@@ -194,7 +194,7 @@ public sealed class AgentCatalogBoundaryTests {
             page.FindComponent<AgentCatalogPanel>().Instance.Selection.AgentId));
         Assert.Single(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);
         Assert.Same(editor.Instance, dialogHost.FindComponent<AgentDetailsDialog>().Instance);
-        editor.Find("[data-testid='agents-catalog-name']").Change("Page save echo updated");
+        editor.Find("[data-testid='agents-catalog-name']").Input("Page save echo updated");
         await editor.Find("form").SubmitAsync();
         Assert.Equal(savedId, editor.Instance.CurrentTarget.AgentId);
         Assert.Single(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);

@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
+using CanDoItAll.AgentFramework.Editor.UI;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
@@ -81,7 +82,7 @@ public partial class AgentDetailsDialog : IDisposable
     private string? projectStructureProjectsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
-    private int selectedTabIndex => AgentEditorSections.IndexOf(Section);
+    private long providerSelectionRevision;
     private int autoApprovalInputVersion;
     private bool isConfirmingWorkspaceRisk;
     private int workspaceRiskInputVersion;
@@ -101,13 +102,13 @@ public partial class AgentDetailsDialog : IDisposable
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
-    private async Task RefreshRuntimeProvidersAsync(AgentEditorSession owner) {
+    private async Task RefreshRuntimeProvidersAsync(AgentEditorSession owner, Guid providerId, long selectionRevision) {
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
-        if (!IsCurrent(owner)) {
+        if (!IsCurrent(owner) || providerSelectionRevision != selectionRevision || owner.Draft.ProviderProfileId != providerId) {
             throw new OperationCanceledException(request.Token);
         }
         var refreshedProviders = await EditorReads.ReadProvidersAsync(request.Token);
-        if (!IsCurrent(owner)) {
+        if (!IsCurrent(owner) || providerSelectionRevision != selectionRevision || owner.Draft.ProviderProfileId != providerId) {
             throw new OperationCanceledException(request.Token);
         }
         providers = refreshedProviders;
@@ -180,12 +181,6 @@ public partial class AgentDetailsDialog : IDisposable
     private ConversationPresentationKey? SelectedImageGenerationProviderKey
         => AgentProviderPresentationMapper.ToPresentationKey(
             editorModel.ImageGenerationAccess.PreferredProviderProfileId);
-
-    private ConversationAvatarPresentation IdentityAvatar => new(
-        ResolveAvatarAltText(),
-        editorModel.AvatarImageUrl,
-        ResolveAvatarFallbackText(),
-        ResolveAvatarSeed());
 
     private IReadOnlyList<string> VisibleTagSuggestions => agents
         .SelectMany(agent => agent.Tags)
@@ -293,6 +288,84 @@ public partial class AgentDetailsDialog : IDisposable
 
     private bool IsCurrent(AgentEditorSession owner) => !isDisposed && ReferenceEquals(session, owner);
 
+    private Task RunFor(AgentEditorSession owner, Func<Task> action)
+        => IsCurrent(owner) ? action() : Task.CompletedTask;
+
+    private Task ChangeFor(AgentEditorSession owner, Action action) {
+        if (IsCurrent(owner)) {
+            action();
+        }
+        return Task.CompletedTask;
+    }
+
+    private AgentEditorCoreState CreateCoreState(AgentEditorSession owner) => new(owner.Origin, owner.Context) {
+        LoadState = loadState,
+        Section = Section,
+        LoadError = coreLoadError,
+        CommitWarning = owner.CommitWarning,
+        PendingRefreshMessage = owner.PendingRefresh is { } pending
+            ? pending.Kind == AgentEditorMutationKind.Save
+                ? "The agent was saved, but the editor could not refresh."
+                : "The capability was verified, but the editor could not refresh."
+            : null,
+        HasUnconfirmedWrite = owner.HasUnconfirmedWrite,
+        LinkedPartyId = linkedPartyId,
+        IsBusy = isBusy,
+        IsMutationBlocked = IsMutationBlocked,
+        CanDelete = owner.Draft.Id.HasValue && !IsManagedSeedAgent,
+        IsConfirmingDelete = isConfirmingDelete,
+        IsConfirmingAutoApproval = isConfirmingAutoApproval,
+        AutoApprovalInputVersion = autoApprovalInputVersion,
+        HasIncompatibleThinkingEffort = HasIncompatibleThinkingEffortOverride,
+        Tags = tagValues,
+        TagSuggestions = VisibleTagSuggestions,
+        AreProvidersLoaded = areProvidersLoaded,
+        ProviderLoadError = providerLoadErrorMessage,
+        RuntimeProviders = RuntimeProviderOptions,
+        RuntimeProviderKey = SelectedRuntimeProviderKey,
+        RuntimeProvider = SelectedRuntimeProvider is { } runtime ? AgentProviderPresentationMapper.Map(runtime) : null,
+        ThinkingEffort = AgentThinkingEffortPresentation.Create(SelectedRuntimeProvider, owner.Draft.Model, owner.Draft.ThinkingEffortOverride),
+        RuntimeParameterPolicy = SelectedRuntimeProvider is { } provider ? DescribeRuntimeParameterPolicy(provider) : null,
+        ImageProviders = ImageGenerationProviderPresentationOptions,
+        ImageProviderKey = SelectedImageGenerationProviderKey,
+        ImageProvider = SelectedImageGenerationProvider is { } image ? AgentProviderPresentationMapper.Map(image) : null,
+        ImageProviderPolicy = DescribeImageGenerationProviderChoice(),
+        ImageWarning = ResolveImageGenerationWarning(),
+        Changed = EventCallback.Factory.Create<AgentEditorCoreIntent>(this, intent => HandleCoreIntentAsync(owner, intent)),
+        SectionChanged = EventCallback.Factory.Create<AgentEditorSection>(this, section => RunFor(owner, () => HandleSelectedTabIndexChanged(AgentEditorSections.IndexOf(section)))),
+        Save = EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Forms.EditContext>(this, _ => RunFor(owner, SaveAgentAsync)),
+        Clear = EventCallback.Factory.Create(this, () => RunFor(owner, ResetAgentAsync)),
+        Delete = EventCallback.Factory.Create(this, () => RunFor(owner, DeleteAgentAsync)),
+        RetryLoad = EventCallback.Factory.Create(this, () => RunFor(owner, LoadAsync)),
+        RetryRefresh = EventCallback.Factory.Create(this, () => RunFor(owner, RetrySavedRefreshAsync)),
+        Close = DialogReference is null ? default : EventCallback.Factory.Create(this, () => RunFor(owner, CloseFailedEditorAsync))
+    };
+
+    private Task HandleCoreIntentAsync(AgentEditorSession owner, AgentEditorCoreIntent intent) {
+        if (!IsCurrent(owner)) {
+            return Task.CompletedTask;
+        }
+        return intent switch {
+            AgentEditorCoreIntent.Name value => HandleNameChangedAsync(value.Value),
+            AgentEditorCoreIntent.Role value => HandleRoleChangedAsync(value.Value),
+            AgentEditorCoreIntent.Summary value => HandleSummaryChangedAsync(value.Value),
+            AgentEditorCoreIntent.Instructions value => HandleInstructionsChangedAsync(value.Value),
+            AgentEditorCoreIntent.Tags value => HandleTagsChangedAsync(value.Value),
+            AgentEditorCoreIntent.RuntimeProvider value => HandleRuntimeProviderPresentationChangedAsync(value.Value),
+            AgentEditorCoreIntent.RuntimeModel value => HandleRuntimeModelChangedAsync(value.Value),
+            AgentEditorCoreIntent.ThinkingEffort value => HandleThinkingEffortChangedAsync(value.Value),
+            AgentEditorCoreIntent.ToolUse value => ChangeFor(owner, () => ToggleToolAccess(value.Value)),
+            AgentEditorCoreIntent.ExternalCallApproval value => ChangeFor(owner, () => ToggleExternalCallApprovalRequirement(value.Value)),
+            AgentEditorCoreIntent.AutoApproval value => HandleAutoApprovalChangedAsync(value.Value),
+            AgentEditorCoreIntent.ImageGeneration value => ChangeFor(owner, () => ToggleImageGenerationAccess(value.Value)),
+            AgentEditorCoreIntent.ImageAssetStorage value => ChangeFor(owner, () => ToggleImageProjectAssetStorage(value.Value)),
+            AgentEditorCoreIntent.ImageProvider value => HandleImageGenerationProviderPresentationChangedAsync(value.Value),
+            AgentEditorCoreIntent.ImageModel value => HandleImageGenerationModelChangedAsync(value.Value),
+            AgentEditorCoreIntent.Voice value => ChangeFor(owner, () => ToggleVoiceModeAccess(value.Value)),
+            _ => throw new ArgumentOutOfRangeException(nameof(intent), intent, "Unknown agent core intent.")
+        };
+    }
+
     private void ReplaceSession(AgentEditorTarget target) {
         session.Dispose();
         session = new(target);
@@ -376,6 +449,10 @@ public partial class AgentDetailsDialog : IDisposable
             return false;
         }
         var owner = session;
+        if (string.IsNullOrWhiteSpace(owner.Draft.Name)) {
+            NotificationService.Error(failureTitle, "Enter an agent name before saving. Your draft is preserved.");
+            return false;
+        }
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isBusy = true;
         try {
@@ -589,35 +666,6 @@ public partial class AgentDetailsDialog : IDisposable
         => string.IsNullOrWhiteSpace(editorModel.ImageGenerationAccess.DefaultModel)
             ? provider.DefaultModel.Trim()
             : editorModel.ImageGenerationAccess.DefaultModel.Trim();
-
-    private string ResolveAvatarSelectionText()
-    {
-        if (string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl))
-        {
-            return "Default generated avatar";
-        }
-
-        if (AgentAvatarImageCatalog.IsBundledAvatarUrl(editorModel.AvatarImageUrl))
-        {
-            return "Bundled avatar selected";
-        }
-
-        if (editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Custom avatar loaded";
-        }
-
-        return "Custom avatar selected";
-    }
-
-    private string ResolveAvatarAltText()
-        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
-
-    private string ResolveAvatarFallbackText()
-        => BuildInitials(ResolveAvatarSeed());
-
-    private string ResolveAvatarSeed()
-        => FirstNonEmpty(editorModel.Name, editorModel.RoleTitle, "Agent avatar");
 
     private async Task ToggleCapabilityAsync(Guid capabilityId) {
         if (IsMutationBlocked) {
@@ -1382,6 +1430,7 @@ public partial class AgentDetailsDialog : IDisposable
 
     private Task HandleRuntimeProviderChangedAsync(Guid? providerId)
     {
+        providerSelectionRevision++;
         editorModel.ProviderProfileId = providerId;
         editorModel.Model = string.Empty;
 
@@ -1597,20 +1646,6 @@ public partial class AgentDetailsDialog : IDisposable
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
-
-    private static string BuildInitials(string value)
-    {
-        var words = value
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(2)
-            .ToArray();
-        return words.Length == 0
-            ? "A"
-            : string.Concat(words.Select(word => char.ToUpperInvariant(word[0])));
     }
 
     private static string ResolveCapabilityWizardTitle(CapabilityKind kind)

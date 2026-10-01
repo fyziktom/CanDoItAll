@@ -1,301 +1,36 @@
-@if (isLoading)
-{
-    <SurfaceCard Soft="true" data-testid="agents-details-loading">
-        <p class="cda-eyebrow">Loading agent</p>
-        <h3 class="mt-1 text-lg font-semibold text-slate-950">Preparing technical editor</h3>
-        <p class="mt-3 text-sm leading-6 text-slate-600">
-            AgentFramework is loading the selected technical record and runtime catalogs.
-        </p>
-    </SurfaceCard>
-}
-else if (loadState == AgentEditorLoadState.Failed) {
-    <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-details-load-failed">
-        <p>The agent editor could not be loaded. @coreLoadError</p>
-        <Button Text="Retry" Click="LoadAsync" data-testid="agents-details-retry-load" />
-        @if (DialogReference is not null) {
-            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="CloseFailedEditorAsync" />
-        }
-    </Alert>
-}
-else
-{
+@using CanDoItAll.AgentFramework.Editor.UI
+@{
     var renderedSession = session;
-    <EditForm @key="renderedSession" EditContext="@session.Context" OnValidSubmit="SaveAgentAsync">
-        <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
-            <Header>
-                @if (session.CommitWarning is { } warning) {
-                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-commit-warning">
-                        <p>@warning</p>
-                    </Alert>
-                }
-                @if (!isBusy && session.PendingRefresh is not null) {
-                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-refresh-pending">
-                        <p>@(session.PendingRefresh.Kind == AgentEditorMutationKind.Save
-                            ? "The agent was saved, but the editor could not refresh."
-                            : "The capability was verified, but the editor could not refresh.") Your draft is retained.</p>
-                        <Button Text="Retry editor refresh" ButtonStyle="ButtonStyle.Light"
-                                Click="RetrySavedRefreshAsync" data-testid="agents-editor-retry-refresh" />
-                    </Alert>
-                }
-                @if (session.HasUnconfirmedWrite) {
-                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-write-unconfirmed">
-                        <p>The save result could not be confirmed. Your draft is retained. Check the catalog before reopening the agent or starting another draft.</p>
-                    </Alert>
-                }
-                @if (linkedPartyId.HasValue)
-                {
-                    <Alert AlertStyle="AlertStyle.Info">
-                        <p class="font-semibold">Bound CRM-HR resource</p>
-                        <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={linkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
-                    </Alert>
-                }
-            </Header>
-            <Sections>
-                <Tabs data-testid="agents-details-tabs"
-                  SelectedIndex="@selectedTabIndex"
-                  SelectedIndexChanged="HandleSelectedTabIndexChanged"
-                  Variant="@(TabsVariant.ModalCompact)"
-                  BorderMode="@(TabsBorderMode.Soft)"
-                  Tone="@(TabsTone.Info)"
-                  OverflowMode="@(TabsOverflowMode.Scroll)"
-                  PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
-                  FillHeight="true"
-                  Class="agent-details-dialog__tabs w-full min-w-0 flex-1 min-h-0"
-                  AriaLabel="Agent details sections">
-                <TabItems>
-                    @foreach (var definition in AgentEditorSections.All) {
-                        <TabsItem Text="@definition.Label">
-                            @switch (definition.Section) {
-                                case AgentEditorSection.Identity:
-                        <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
-                            <ConversationIdentityFields Name="@editorModel.Name"
-                                                        NameChanged="HandleNameChangedAsync"
-                                                        Role="@editorModel.RoleTitle"
-                                                        RoleChanged="HandleRoleChangedAsync"
-                                                        Summary="@editorModel.Summary"
-                                                        SummaryChanged="HandleSummaryChangedAsync"
-                                                        Instructions="@editorModel.Instructions"
-                                                        InstructionsChanged="HandleInstructionsChangedAsync"
-                                                        Avatar="@IdentityAvatar"
-                                                        AvatarStatus="@ResolveAvatarSelectionText()"
-                                                        AvatarDescription="Stored with the technical agent identity and reused by runtime surfaces."
-                                                        RoleLabel="Role title"
-                                                        InstructionsLabel="Instructions"
-                                                        NameTestId="agents-catalog-name"
-                                                        RoleTestId="agents-catalog-role"
-                                                        AvatarTestId="agents-catalog-avatar-summary"
-                                                        SummaryTestId="agents-catalog-summary"
-                                                        InstructionsTestId="agents-catalog-instructions">
-                                <AvatarActions>
-                                    <AvatarPicker Value="@editorModel.AvatarImageUrl"
-                                                  ValueChanged="value => HandleAvatarChangedAsync(renderedSession, value)"
-                                                  EntityName="@editorModel.Name"
-                                                  EntityDescription="@editorModel.RoleTitle"
-                                                  EntityKind="Agent"
-                                                  GenerationSource="@AvatarGenerationSource"
-                                                  Disabled="@isBusy"
-                                                  TestIdPrefix="agents-catalog-avatar" />
-                                </AvatarActions>
-                                <AdditionalFields>
-                                    <FormField Text="Tags"
-                                               data-testid="agents-catalog-tags-section">
-                                        <TagEditor Value="@tagValues"
-                                                   ValueChanged="HandleTagsChangedAsync"
-                                                   Suggestions="@VisibleTagSuggestions"
-                                                   Placeholder="Add agent tag"
-                                                   Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
-                                                   MaxTags="12"
-                                                   TestId="agents-catalog-tags"
-                                                   InputTestId="agents-catalog-tags-input" />
-                                    </FormField>
-                                </AdditionalFields>
-                            </ConversationIdentityFields>
-                        </FormSection>
-                                    break;
-                                case AgentEditorSection.Runtime:
-                        <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
-                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <ConversationProviderSelector Options="@RuntimeProviderOptions"
-                                                              Value="@SelectedRuntimeProviderKey"
-                                                              ValueChanged="HandleRuntimeProviderPresentationChangedAsync"
-                                                              IsLoading="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                              LoadingMessage="Loading providers for runtime binding..."
-                                                              ErrorMessage="@providerLoadErrorMessage"
-                                                              InputTestId="agents-catalog-provider" />
-                                <ProviderModelSelector Provider="@SelectedRuntimeProvider"
-                                                       Value="@editorModel.Model"
-                                                       ValueChanged="HandleRuntimeModelChangedAsync"
-                                                       Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                       TestId="agents-catalog-model-selector"
-                                                       ChoiceTestId="agents-catalog-model-choice"
-                                                       OverrideTestId="agents-catalog-model-override"
-                                                       CustomModelTestId="agents-catalog-model" />
-                            </Grid>
-
-                            <AgentThinkingEffortSettings Provider="@SelectedRuntimeProvider"
-                                                         Model="@editorModel.Model"
-                                                         Value="@editorModel.ThinkingEffortOverride"
-                                                         ValueChanged="HandleThinkingEffortChangedAsync"
-                                                         Disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                         TestId="agents-catalog-thinking-effort"
-                                                         SupportTestId="agents-catalog-thinking-effort-support" />
-                            @if (SelectedRuntimeProvider is { IsSourceManaged: true } sharedProvider) {
-                                <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id" Refreshed="delivery => delivery.ReconcileAsync(() => RefreshRuntimeProvidersAsync(renderedSession))" />
-                            }
-
-                            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                <div>
-                                    <label class="cda-field-label">Status</label>
-                                    <InputSelect @bind-Value="editorModel.Status" class="cda-input">
-                                        @foreach (var status in Enum.GetValues<AgentLifecycleStatus>())
-                                        {
-                                            <option value="@status">@status</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Workload</label>
-                                    <InputSelect @bind-Value="editorModel.Workload" class="cda-input">
-                                        @foreach (var workload in Enum.GetValues<AgentWorkloadKind>())
-                                        {
-                                            <option value="@workload">@workload</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Chat history</label>
-                                    <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="cda-input">
-                                        @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>())
-                                        {
-                                            <option value="@mode">@mode</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                            </Grid>
-
-                            @if (SelectedRuntimeProvider is { } runtimeProvider)
-                            {
-                                <Alert AlertStyle="AlertStyle.Info">
-                                    <p class="font-semibold">Runtime parameter policy</p>
-                                    <p class="mt-1">@DescribeRuntimeParameterPolicy(runtimeProvider)</p>
-                                </Alert>
-                            }
-
-                            <SurfaceCard Soft="true" data-testid="agents-catalog-tool-policy">
-                                <label class="cda-inline-option">
-                                    <input type="checkbox"
-                                           checked="@editorModel.Permissions.CanUseTools"
-                                           @onchange="args => ToggleToolAccess(args.Value)"
-                                           data-testid="agents-catalog-can-use-tools" />
-                                    Allow tool use
-                                </label>
-                                <TextBlock TextStyle="TextStyle.Body2"
-                                           Value="Turn off tool use for an agent that should only exchange chat messages. Existing capability assignments and access settings are preserved." />
-                            </SurfaceCard>
-
-                            <SurfaceCard Soft="true" data-testid="agents-catalog-approval-policy">
-                                <Stack GapScale="LayoutGap.Small">
-                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Approval policy" />
-                                    <label class="cda-inline-option">
-                                        <input type="checkbox"
-                                               checked="@editorModel.Permissions.RequiresApprovalForExternalCalls"
-                                               @onchange="args => ToggleExternalCallApprovalRequirement(args.Value)"
-                                               data-testid="agents-catalog-require-external-approval" />
-                                        Require approval for external calls
-                                    </label>
-                                    <label class="cda-inline-option">
-                                        <input @key="autoApprovalInputVersion"
-                                               type="checkbox"
-                                               checked="@editorModel.Permissions.AutoApproveExternalCallsByDefault"
-                                               disabled="@isConfirmingAutoApproval"
-                                               @onchange="args => HandleAutoApprovalChangedAsync(args.Value)"
-                                               data-testid="agents-catalog-auto-approval" />
-                                        Auto-approve approval-required tool calls by default
-                                    </label>
-                                    <TextBlock TextStyle="TextStyle.Body2"
-                                               Value="Per-run approval choices remain available in chat. This setting changes the default for every new run of this agent." />
-
-                                    @if (editorModel.Permissions.AutoApproveExternalCallsByDefault)
-                                    {
-                                        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-auto-approval-warning">
-                                            <p class="font-semibold">Automatic approval is enabled</p>
-                                            <p class="mt-1">This agent can continue approval-required tool calls without asking for each call. Scope and runtime policy checks still apply.</p>
-                                        </Alert>
-                                    }
-                                </Stack>
-                            </SurfaceCard>
-                        </FormSection>
-                                    break;
-                                case AgentEditorSection.Memory:
+    var renderedProvider = SelectedRuntimeProvider;
+    var renderedProviderRevision = providerSelectionRevision;
+}
+<AgentEditorCoreSurface State="@CreateCoreState(renderedSession)">
+    <AvatarActions Context="slot">
+        @if (IsCurrent(renderedSession) && slot.Origin == renderedSession.Origin) {
+            <AvatarPicker Value="@slot.Draft.AvatarImageUrl"
+                          ValueChanged="value => HandleAvatarChangedAsync(renderedSession, value)"
+                          EntityName="@slot.Draft.Name"
+                          EntityDescription="@slot.Draft.RoleTitle"
+                          EntityKind="Agent"
+                          GenerationSource="@AvatarGenerationSource"
+                          Disabled="@isBusy"
+                          TestIdPrefix="agents-catalog-avatar" />
+        }
+    </AvatarActions>
+    <ProviderRefresh Context="slot">
+        @if (IsCurrent(renderedSession) && slot.Origin == renderedSession.Origin && renderedProvider is { IsSourceManaged: true } sharedProvider) {
+            <SharedProviderRefreshButton @key="sharedProvider.Id" ProviderId="sharedProvider.Id"
+                Refreshed="delivery => delivery.ReconcileAsync(() => RefreshRuntimeProvidersAsync(renderedSession, sharedProvider.Id, renderedProviderRevision))" />
+        }
+    </ProviderRefresh>
+    <DeferredSection Context="slot">
+        @if (IsCurrent(renderedSession) && slot.Origin == renderedSession.Origin) {
+            var editorModel = slot.Draft;
+            @switch (slot.Section) {
+            case AgentEditorSection.Memory:
                         <AgentMemorySettingsPanel Value="@editorModel.MemoryAccess" />
-                                    break;
-                                case AgentEditorSection.Images:
-                        <FormSection Title="Image Generation" Description="Control whether this agent may generate image deliverables and which image provider it should use.">
-                            <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-image-generation-access">
-                                <div class="cda-admin-subpanel">
-                                    <p class="cda-field-label mb-2">Access</p>
-                                    <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ImageGenerationAccess.CanGenerateImages"
-                                                   @onchange="args => ToggleImageGenerationAccess(args.Value)"
-                                                   data-testid="agents-catalog-image-generation-enabled" />
-                                            Can generate images
-                                        </label>
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.ImageGenerationAccess.CanStoreImagesAsProjectAssets"
-                                                   @onchange="args => ToggleImageProjectAssetStorage(args.Value)"
-                                                   data-testid="agents-catalog-image-generation-project-assets" />
-                                            Can store generated images as project assets
-                                        </label>
-                                    </Stack>
-                                </div>
-                                <div class="cda-admin-subpanel md:col-span-2">
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <ConversationProviderSelector Options="@ImageGenerationProviderPresentationOptions"
-                                                                      Value="@SelectedImageGenerationProviderKey"
-                                                                      ValueChanged="HandleImageGenerationProviderPresentationChangedAsync"
-                                                                      Label="Image provider"
-                                                                      NoneLabel="Choose recommended image provider on save"
-                                                                      ShowDisabledStatus="true"
-                                                                      Disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages)"
-                                                                      IsLoading="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                                      LoadingMessage="Loading image-generation providers..."
-                                                                      ErrorMessage="@providerLoadErrorMessage"
-                                                                      EmptyMessage="No image-generation provider profiles are configured."
-                                                                      InputTestId="agents-catalog-image-generation-provider" />
-                                        <ProviderModelSelector Provider="@SelectedImageGenerationProvider"
-                                                               Value="@editorModel.ImageGenerationAccess.DefaultModel"
-                                                               ValueChanged="HandleImageGenerationModelChangedAsync"
-                                                               Disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || SelectedImageGenerationProvider is null)"
-                                                               Label="Image model"
-                                                               TestId="agents-catalog-image-model-selector"
-                                                               ChoiceTestId="agents-catalog-image-model-choice"
-                                                               OverrideTestId="agents-catalog-image-model-override"
-                                                               CustomModelTestId="agents-catalog-image-model" />
-                                    </Grid>
-
-                                    <Alert AlertStyle="AlertStyle.Info" Class="mt-4">
-                                        <p class="font-semibold">Image provider policy</p>
-                                        <p class="mt-1">@DescribeImageGenerationProviderChoice()</p>
-                                    </Alert>
-
-                                    @{
-                                        var imageGenerationWarning = ResolveImageGenerationWarning();
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(imageGenerationWarning))
-                                    {
-                                        <Alert AlertStyle="AlertStyle.Warning" Class="mt-3">
-                                            <p class="font-semibold">Image generation configuration needs attention</p>
-                                            <p class="mt-1">@imageGenerationWarning</p>
-                                        </Alert>
-                                    }
-                                </div>
-                            </Grid>
-                        </FormSection>
-                                    break;
-                                case AgentEditorSection.ProjectStructureAccess:
+                break;
+            case AgentEditorSection.ProjectStructureAccess:
                         <FormSection Title="Project Structure Access" Description="Project reads, project creation, subproject creation, non-task structure changes, task-only changes, and unrestricted changes are separate permissions. Advanced plan and cost analysis additionally requires its assigned planning skill and tool capability.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-project-structure-access">
                                 <div class="cda-admin-subpanel">
@@ -304,21 +39,21 @@ else
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.CanRead"
-                                                   @onchange="args => ToggleProjectStructureRead(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureRead(args.Value))"
                                                    data-testid="agents-catalog-project-structure-read" />
                                             Can read project structure
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.CanCreateProjects"
-                                                   @onchange="args => ToggleProjectCreation(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectCreation(args.Value))"
                                                    data-testid="agents-catalog-project-create" />
                                             Can create standalone projects
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.CanCreateSubprojects"
-                                                   @onchange="args => ToggleSubprojectCreation(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleSubprojectCreation(args.Value))"
                                                    data-testid="agents-catalog-subproject-create" />
                                             Can create subprojects under allowed projects
                                         </label>
@@ -326,7 +61,7 @@ else
                                             <input type="checkbox"
                                                    checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteNonTaskStructure)"
                                                    disabled="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureNonTaskWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureNonTaskWrite(args.Value))"
                                                    data-testid="agents-catalog-project-structure-non-task-write" />
                                             Can write project structure except tasks
                                         </label>
@@ -334,21 +69,21 @@ else
                                             <input type="checkbox"
                                                    checked="@(editorModel.ProjectStructureAccess.CanWrite || editorModel.ProjectStructureAccess.CanWriteTasks)"
                                                    disabled="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureTaskWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureTaskWrite(args.Value))"
                                                    data-testid="agents-catalog-project-structure-task-write" />
                                             Can write project tasks
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.CanWrite"
-                                                   @onchange="args => ToggleProjectStructureWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureWrite(args.Value))"
                                                    data-testid="agents-catalog-project-structure-write" />
                                             Can write entire project structure (includes tasks)
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProjectStructureAccess.AllowAllProjects"
-                                                   @onchange="args => ToggleProjectStructureAllowAll(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureAllowAll(args.Value))"
                                                    data-testid="agents-catalog-project-structure-all" />
                                             Allow all current and future projects
                                         </label>
@@ -370,12 +105,12 @@ else
                                             <Button Text="Select all"
                                                     ButtonStyle="ButtonStyle.Light"
                                                     Size="ButtonSize.Small"
-                                                    Click="SelectAllProjectStructureProjects"
+                                                    Click="() => ChangeFor(renderedSession, SelectAllProjectStructureProjects)"
                                                     Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
                                             <Button Text="Clear"
                                                     ButtonStyle="ButtonStyle.Light"
                                                     Size="ButtonSize.Small"
-                                                    Click="ClearProjectStructureProjects"
+                                                    Click="() => ChangeFor(renderedSession, ClearProjectStructureProjects)"
                                                     Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
                                         </Cluster>
                                     </Split>
@@ -397,7 +132,7 @@ else
                                             <Button Text="Load project list"
                                                     ButtonStyle="ButtonStyle.Light"
                                                     Size="ButtonSize.Small"
-                                                    Click="RequestProjectStructureProjectsAsync"
+                                                    Click="() => RunFor(renderedSession, () => RequestProjectStructureProjectsAsync())"
                                                     Disabled="@isLoadingProjectStructureProjects"
                                                     IsBusy="@isLoadingProjectStructureProjects"
                                                     data-testid="agents-catalog-project-structure-load" />
@@ -421,7 +156,7 @@ else
                                             <Button Text="Retry project list"
                                                     ButtonStyle="ButtonStyle.Light"
                                                     Size="ButtonSize.Small"
-                                                    Click="RequestProjectStructureProjectsAsync"
+                                                    Click="() => RunFor(renderedSession, () => RequestProjectStructureProjectsAsync())"
                                                     Disabled="@isLoadingProjectStructureProjects"
                                                     IsBusy="@isLoadingProjectStructureProjects" />
                                         </Cluster>
@@ -442,7 +177,7 @@ else
                                                     <label class="cda-inline-option cda-inline-option--muted">
                                                         <input type="checkbox"
                                                                checked="@HasProjectStructureProjectAccess(project.Id)"
-                                                               @onchange="args => ToggleProjectStructureProject(project.Id, args.Value)" />
+                                                               @onchange="args => ChangeFor(renderedSession, () => ToggleProjectStructureProject(project.Id, args.Value))" />
                                                         @project.Name
                                                     </label>
                                                 }
@@ -452,8 +187,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                                    break;
-                                case AgentEditorSection.WorkspaceTools:
+                break;
+            case AgentEditorSection.WorkspaceTools:
                         <FormSection Title="Workspace Tools" Description="These settings decide whether the current agent receives native workspace file tools, external workspace roots, and storage-driver tools.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-workspace-tools">
                                 <div class="cda-admin-subpanel">
@@ -461,7 +196,7 @@ else
                                     <select id="agents-catalog-workspace-profile"
                                             class="cda-input mt-2"
                                             value="@editorModel.WorkspaceToolAccess.Profile"
-                                            @onchange="args => ChangeWorkspaceToolProfile(args.Value)"
+                                            @onchange="args => ChangeFor(renderedSession, () => ChangeWorkspaceToolProfile(args.Value))"
                                             data-testid="agents-catalog-workspace-profile">
                                         @foreach (var profile in WorkspaceToolProfileOptions)
                                         {
@@ -478,7 +213,7 @@ else
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanRunValidationCommands"
-                                                   @onchange="args => ToggleWorkspaceValidationCommands(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceValidationCommands(args.Value))"
                                                    data-testid="agents-catalog-workspace-validation" />
                                             Can run build, test, and app commands
                                         </label>
@@ -487,7 +222,7 @@ else
                                                    type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanRunLocalScripts"
                                                    disabled="@isConfirmingWorkspaceRisk"
-                                                   @onchange="args => HandleWorkspaceLocalScriptsChangedAsync(args.Value)"
+                                                   @onchange="args => RunFor(renderedSession, () => HandleWorkspaceLocalScriptsChangedAsync(args.Value))"
                                                    data-testid="agents-catalog-workspace-scripts" />
                                             Can run local scripts
                                         </label>
@@ -496,28 +231,28 @@ else
                                                    type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment"
                                                    disabled="@(isConfirmingWorkspaceRisk || !editorModel.WorkspaceToolAccess.CanRunLocalScripts)"
-                                                   @onchange="args => HandleScriptsReadEnvironmentChangedAsync(args.Value)"
+                                                   @onchange="args => RunFor(renderedSession, () => HandleScriptsReadEnvironmentChangedAsync(args.Value))"
                                                    data-testid="agents-catalog-workspace-scripts-environment" />
                                             Scripts may read environment variables
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanScaffoldProjects"
-                                                   @onchange="args => ToggleWorkspaceScaffoldProjects(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceScaffoldProjects(args.Value))"
                                                    data-testid="agents-catalog-workspace-scaffold" />
                                             Can scaffold projects
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanManageWorkspacePaths"
-                                                   @onchange="args => ToggleWorkspaceManagePaths(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceManagePaths(args.Value))"
                                                    data-testid="agents-catalog-workspace-manage-paths" />
                                             Can move, copy, and delete paths
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanTransformArtifacts"
-                                                   @onchange="args => ToggleWorkspaceTransformArtifacts(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceTransformArtifacts(args.Value))"
                                                    data-testid="agents-catalog-workspace-transform" />
                                             Can transform artifacts
                                         </label>
@@ -544,14 +279,14 @@ else
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanReadFiles"
-                                                   @onchange="args => ToggleWorkspaceFileRead(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceFileRead(args.Value))"
                                                    data-testid="agents-catalog-workspace-read" />
                                             Can browse and read files
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanWriteFiles"
-                                                   @onchange="args => ToggleWorkspaceFileWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleWorkspaceFileWrite(args.Value))"
                                                    data-testid="agents-catalog-workspace-write" />
                                             Can write files
                                         </label>
@@ -573,21 +308,21 @@ else
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanReadStorage"
-                                                   @onchange="args => ToggleStorageRead(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleStorageRead(args.Value))"
                                                    data-testid="agents-catalog-storage-read" />
                                             Can read storage driver catalogs
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.CanWriteStorage"
-                                                   @onchange="args => ToggleStorageWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleStorageWrite(args.Value))"
                                                    data-testid="agents-catalog-storage-write" />
                                             Can write storage driver objects
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
-                                                   @onchange="args => ToggleStorageAllowAll(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleStorageAllowAll(args.Value))"
                                                    data-testid="agents-catalog-storage-all" />
                                             Allow all storage catalogs
                                         </label>
@@ -606,8 +341,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                                    break;
-                                case AgentEditorSection.Secrets:
+                break;
+            case AgentEditorSection.Secrets:
                         <FormSection Title="Secrets" Description="Grant only the stored secrets this agent may request during explicit runtime actions. Values are not stored in the agent definition.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-secrets">
                                 <div class="cda-admin-subpanel">
@@ -645,7 +380,7 @@ else
                                                     <label class="cda-inline-option cda-inline-option--muted">
                                                         <input type="checkbox"
                                                                checked="@HasAllowedSecret(secret.Id)"
-                                                               @onchange="args => ToggleAllowedSecret(secret, args.Value)" />
+                                                               @onchange="args => ChangeFor(renderedSession, () => ToggleAllowedSecret(secret, args.Value))" />
                                                         @secret.Name
                                                         <span class="text-slate-500">(@secret.KindLabel)</span>
                                                     </label>
@@ -656,8 +391,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                                    break;
-                                case AgentEditorSection.ProcessAccess:
+                break;
+            case AgentEditorSection.ProcessAccess:
                         <FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">
                                 <div class="cda-admin-subpanel">
@@ -666,21 +401,21 @@ else
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProcessAccess.CanRead"
-                                                   @onchange="args => ToggleProcessRead(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProcessRead(args.Value))"
                                                    data-testid="agents-catalog-process-read" />
                                             Can read processes
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProcessAccess.CanWrite"
-                                                   @onchange="args => ToggleProcessWrite(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProcessWrite(args.Value))"
                                                    data-testid="agents-catalog-process-write" />
                                             Can write processes
                                         </label>
                                         <label class="cda-inline-option">
                                             <input type="checkbox"
                                                    checked="@editorModel.ProcessAccess.AllowAllDefinitions"
-                                                   @onchange="args => ToggleProcessAllowAll(args.Value)"
+                                                   @onchange="args => ChangeFor(renderedSession, () => ToggleProcessAllowAll(args.Value))"
                                                    data-testid="agents-catalog-process-all" />
                                             Allow all current and future processes
                                         </label>
@@ -697,8 +432,8 @@ else
                                 </div>
                             </Grid>
                         </FormSection>
-                                    break;
-                                case AgentEditorSection.Capabilities:
+                break;
+            case AgentEditorSection.Capabilities:
                         <FormSection Title="Capabilities" Description="Attach cataloged tools, skills, and MCP servers to this agent, or open the guided setup flow to create and assign one.">
                             <div data-testid="agents-details-capability-summary">
                                 <CompactStatStrip>
@@ -734,21 +469,21 @@ else
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
-                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
+                                        Click="@(() => RunFor(renderedSession, () => OpenCapabilityWizardAsync(CapabilityKind.Tool)))"
                                         data-testid="agents-details-new-tool" />
                                 <Button Text="New MCP"
                                         Icon="hub"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
-                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
+                                        Click="@(() => RunFor(renderedSession, () => OpenCapabilityWizardAsync(CapabilityKind.McpServer)))"
                                         data-testid="agents-details-new-mcp" />
                                 <Button Text="New skill"
                                         Icon="psychology"
                                         ButtonStyle="ButtonStyle.Light"
                                         Size="ButtonSize.Small"
                                         Disabled="@(IsMutationBlocked || isOpeningCapabilityWizard)"
-                                        Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
+                                        Click="@(() => RunFor(renderedSession, () => OpenCapabilityWizardAsync(CapabilityKind.Skill)))"
                                         data-testid="agents-details-new-skill" />
                             </Cluster>
 
@@ -779,7 +514,7 @@ else
                                         <Button Text="Reset"
                                                 ButtonStyle="ButtonStyle.Light"
                                                 Size="ButtonSize.Small"
-                                                Click="ResetCapabilityFilters"
+                                                Click="() => ChangeFor(renderedSession, ResetCapabilityFilters)"
                                                 data-testid="agents-details-capability-filter-reset" />
                                     </div>
                                 </FilterBar>
@@ -803,80 +538,14 @@ else
                                                      AttachedCapabilityIds="@editorModel.SelectedCapabilityIds"
                                                      IsBusy="@IsMutationBlocked"
                                                      CanVerify="@editorModel.Id.HasValue"
-                                                     AssignmentRequested="ToggleCapabilityAsync"
-                                                     VerificationRequested="VerifyCapabilityAsync"
+                                                     AssignmentRequested="value => RunFor(renderedSession, () => ToggleCapabilityAsync(value))"
+                                                     VerificationRequested="value => RunFor(renderedSession, () => VerifyCapabilityAsync(value))"
                                                      TestIdPrefix="agents-details-capability"
                                                      ColumnTemplateLg="repeat(2,minmax(16rem,1fr))" />
                             }
                         </FormSection>
-                                    break;
-                                case AgentEditorSection.Voice:
-                        <FormSection Title="Voice" Description="Allow this agent to participate in audio mode and optionally override the general text-to-speech voice.">
-                            <Grid Gap="LayoutGap.Large" ColumnsMd="2" data-testid="agents-catalog-voice-access">
-                                <div class="cda-admin-subpanel">
-                                    <p class="cda-field-label mb-2">Voice access</p>
-                                    <Stack GapScale="LayoutGap.Small">
-                                        <label class="cda-inline-option">
-                                            <input type="checkbox"
-                                                   checked="@editorModel.VoiceAccess.CanUseVoiceMode"
-                                                   @onchange="args => ToggleVoiceModeAccess(args.Value)"
-                                                   data-testid="agents-catalog-voice-enabled" />
-                                            Can use audio mode
-                                        </label>
-                                    </Stack>
-                                </div>
-                                <div class="cda-admin-subpanel">
-                                    <label class="cda-field-label">Voice override</label>
-                                    <InputSelect @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
-                                                 class="cda-input"
-                                                 disabled="@(!editorModel.VoiceAccess.CanUseVoiceMode)"
-                                                 data-testid="agents-catalog-voice-override">
-                                        <option value="">Use general voice</option>
-                                        @foreach (var voiceId in AgentVoiceDefaults.OpenAiVoiceIds)
-                                        {
-                                            <option value="@voiceId">@voiceId</option>
-                                        }
-                                    </InputSelect>
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                                        When set, this voice takes priority over the general AgentFramework voice.
-                                    </p>
-                                </div>
-                            </Grid>
-                        </FormSection>
-                                    break;
-                            }
-                        </TabsItem>
-                    }
-
-                </TabItems>
-                </Tabs>
-            </Sections>
-            <Actions>
-                <StickyActionFooter StatusLabel="Technical agents">
-                    <SecondaryActions>
-                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
-                    </SecondaryActions>
-                    <PrimaryActions>
-                        <Button Text="Save agent"
-                                Type="submit"
-                                Disabled="@(IsMutationBlocked || HasIncompatibleThinkingEffortOverride)"
-                                IsBusy="@isBusy"
-                                data-testid="agents-catalog-save" />
-                    </PrimaryActions>
-                    <DangerActions>
-                        @if (editorModel.Id.HasValue && !IsManagedSeedAgent)
-                        {
-                            <Button Text="Delete"
-                                    Icon="delete"
-                                    ButtonStyle="ButtonStyle.Danger"
-                                    Disabled="@(IsMutationBlocked || isConfirmingDelete)"
-                                    IsBusy="@isBusy"
-                                    Click="DeleteAgentAsync"
-                                    data-testid="agents-catalog-delete" />
-                        }
-                    </DangerActions>
-                </StickyActionFooter>
-            </Actions>
-        </ConversationDefinitionEditorShell>
-    </EditForm>
-}
+                break;
+            }
+        }
+    </DeferredSection>
+</AgentEditorCoreSurface>

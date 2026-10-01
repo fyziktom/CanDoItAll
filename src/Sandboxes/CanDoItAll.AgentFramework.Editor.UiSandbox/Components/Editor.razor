@@ -1,0 +1,34 @@
+@page "/"
+<PageTitle>Agent Editor Core A1 sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Small" data-testid="editor-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
+    <FormSection Title="Agent Editor Core A1" Description="Independent scenarios: form, Identity, Runtime, Images and Voice. Six sections and external integrations remain with production owners.">
+        <Cluster Gap="LayoutGap.Small">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario" data-testid="editor-scenario">
+                @foreach (var value in Enum.GetValues<AgentEditorScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="() => revision++" data-testid="editor-reset" />
+            <Button Text="Two independent editors" Click="() => twoEditors = !twoEditors" data-testid="editor-two" />
+        </Cluster>
+    </FormSection>
+    <Grid ColumnsMd="@(twoEditors ? 2 : 1)" Gap="LayoutGap.Medium" @key="revision">
+        <ScenarioEditor Scenario="scenario" Name="Fixture agent A" TestId="editor-a" />
+        @if (twoEditors) {
+            <ScenarioEditor Scenario="scenario" Name="Fixture agent B" TestId="editor-b" />
+        }
+    </Grid>
+</Stack>
+
+@code {
+    private AgentEditorScenario scenario;
+    private int revision;
+    private bool twoEditors;
+    private bool interactive;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+}

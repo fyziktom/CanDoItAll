@@ -81,11 +81,11 @@ public sealed class AgentEditorCommandLifetimeTests {
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.AgentId, agent.Id)
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Submitted name");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Submitted name");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         var submitted = cut.Find("form").SubmitAsync();
         var request = await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
-        cut.Find("[data-testid='agents-catalog-name']").Change("Later edit");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Later edit");
         var submittedNameAfterEdit = request.Name;
         await cut.InvokeAsync(() => pending.SetResult(agent.Id));
         await submitted;
@@ -101,7 +101,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         await using var harness = await AgentEditorLoadCharacterizationTests.CreateHarnessAsync(workspace, probe);
         var host = harness.Context.Render<AgentEditorTargetEchoHost>();
         var cut = host.FindComponent<AgentDetailsDialog>();
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Echo submitted");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Echo submitted");
         var pending = new TaskCompletionSource();
         var saveStarted = ObserveSave(probe, async request => {
             await pending.Task;
@@ -110,7 +110,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         var submitted = cut.Find("form").SubmitAsync();
         await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
-        cut.Find("[data-testid='agents-catalog-name']").Change("Echo later edit");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Echo later edit");
         await cut.InvokeAsync(() => pending.SetResult());
         await submitted;
         cut.WaitForAssertion(() => Assert.NotNull(host.Instance.AgentId));
@@ -130,7 +130,7 @@ public sealed class AgentEditorCommandLifetimeTests {
         var saveStarted = ObserveSave(probe, _ => pending.Task);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Cancelled editor");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Cancelled editor");
         var submitted = cut.Find("form").SubmitAsync();
         await saveStarted.WaitAsync(TimeSpan.FromSeconds(10));
         await cut.FindComponent<StickyActionFooter>().FindAll("button")

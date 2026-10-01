@@ -146,6 +146,13 @@ public sealed class FileJourneyHarnessBrowserTests {
                 }
             ];
             await GrantFileJourneyAsync(host, oracle, page, fixture);
+            var core = await AgentEditorCoreUiJourney.EditAsync(host, oracle, page, fixture.Agent.Id);
+            Assert.Equal(0, wire.Requests);
+            wire.Steps = wire.Steps.Select(step => new Func<JsonElement, AgentResponseFixture.ScriptedTurn>(input => {
+                AgentEditorCoreUiJourney.AssertRequest(input, core);
+                return step(input);
+            })).ToArray();
+            evidence.Observations["saved-core-runtime"] = core;
             var chat = await OpenFileChatAsync(host, oracle, page, fixture);
             var read = await FileTurnAsync(host, page, chat, fixture.Agent.Id, "Read the existing selected asset and report its actual content.");
             Assert.Contains(fixture.SeedNonce, read.Run.ResultSummary, StringComparison.Ordinal);

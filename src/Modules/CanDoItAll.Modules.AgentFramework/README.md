@@ -22,6 +22,14 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
+The [Agent Editor Core A1 renderer](../../UI/CanDoItAll.AgentFramework.Editor.UI/README.md)
+owns the form shell and Identity, Runtime, Images and Voice. `AgentDetailsDialog` retains
+the single editor session and whole-agent commands, all authority and reconciliation,
+the six deferred sections, AvatarPicker integration and shared-provider refresh. Refresh
+publication is fenced by both editor origin and provider selection revision, including
+A→B→A. The [A1 record](../../../docs/architecture/agent-editor-core-ui-a1.md) documents the
+selected boundary and validation; it does not declare every AgentFramework surface complete.
+
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 The module adapts the generic activity/preparation contracts to the current database
