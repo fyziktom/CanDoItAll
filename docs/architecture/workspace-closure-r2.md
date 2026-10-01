@@ -96,3 +96,25 @@ The previous live journal remains exhausted at 40/40. This bundle authorizes zer
 requests. Missing live authority, external fixtures, macOS execution and remote delivery must
 remain explicit prerequisites; they cannot be inferred from local deterministic results.
 Product-fix closure and complete application readiness are separate decisions.
+
+## Fourth checkpoint corrections
+
+The fourth full browser inventory on `1e9fe933f` executed 175 cases: 161 passed and
+14 failed. Twelve failures identify missing external prerequisites; the two ordinary
+failures remain recorded as failures. The catalog test could send Next against an old
+wizard immediately after New. A controlled browser-turn ordering reproduces that gap;
+the test now observes the requested provider before advancing the successor wizard.
+The Recovery sandbox test could focus its footer before the Dialog's scheduled initial
+focus callback ran. Holding the actual served callback reproduces that focus change;
+the test now observes the next browser frame before its explicit footer-focus assertion.
+Neither historical failure had instrumentation sufficient to assert its exact timing.
+
+The fourth Stable attempt was interrupted after a TestLab scenario-host failure, with
+37 of its 38 UI cases passing. Concurrent completion removed an item from the scenario
+host's mutable pending list while retirement enumerated it. Repeating the original
+compiled retirement test reproduced the exception after 612 completed iterations.
+An immutable snapshot with interlocked add/remove preserves pending-operation order
+and passed 4,000 controlled retirement iterations. This correction affects the validation
+host, not the Workspace renderers or the application owner boundaries. The interrupted
+Stable attempt is not a complete gate. A new frozen full checkpoint is required after
+these three bounded corrections.

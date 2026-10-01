@@ -106,6 +106,7 @@ public sealed class StorageRecoverySandboxBrowserTests {
             }
             Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
             var footer = page.GetByTestId("storage-recovery-close");
+            await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(resolve))");
             await footer.FocusAsync();
             await Assertions.Expect(footer).ToBeFocusedAsync();
             await Assertions.Expect(footer).ToBeInViewportAsync();

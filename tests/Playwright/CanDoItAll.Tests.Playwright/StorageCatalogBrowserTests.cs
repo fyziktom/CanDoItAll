@@ -86,10 +86,12 @@ public sealed class StorageCatalogBrowserTests {
         await Assertions.Expect(page.GetByTestId("database-data-sources-summary")).ToBeVisibleAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Storage", Exact = true }).ClickAsync();
         await page.GetByTestId("storage-settings-new-ipfs").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("storage-settings-provider")).ToHaveValueAsync(CatalogProvider.Ipfs.ToString());
         await Next(page);
         await page.GetByTestId("storage-settings-ipfs-gateway").WaitForAsync();
         await Shot(page, "production-storage-ipfs");
         await page.GetByTestId("storage-settings-new-ftp").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("storage-settings-provider")).ToHaveValueAsync(CatalogProvider.Ftp.ToString());
         await Next(page);
         await page.GetByTestId("storage-settings-ftp-port").WaitForAsync();
         await Shot(page, "production-storage-ftp");

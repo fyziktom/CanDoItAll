@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.TestLab.UI;
 
@@ -12,7 +13,7 @@ public enum TestLabScenario {
 
 public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposable {
     private readonly Action changed;
-    private readonly List<Pending> pending = [];
+    private ImmutableList<Pending> pending = [];
     private long generation;
     private long referenceGeneration;
     private bool disposed;
@@ -178,12 +179,12 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
 
     private async Task<bool> WaitAsync(Operation kind) {
         var wait = new Pending(kind);
-        pending.Add(wait);
+        ImmutableInterlocked.Update(ref pending, items => items.Add(wait));
         Changed();
         try {
             return await wait.Completion.Task;
         } finally {
-            pending.Remove(wait);
+            ImmutableInterlocked.Update(ref pending, items => items.Remove(wait));
         }
     }
 
