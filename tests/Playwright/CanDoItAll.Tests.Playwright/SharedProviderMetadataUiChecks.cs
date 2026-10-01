@@ -149,6 +149,7 @@ internal static class SharedProviderMetadataUiChecks {
             await card.GetByRole(AriaRole.Button, new() { Name = "Edit", Exact = true }).ClickAsync();
         }
         var dialog = page.GetByTestId("llm-chat-definition-editor-dialog");
+        await using var selectorTrace = await SharedProviderSelectorTrace.StartAsync(page, evidenceDirectory, label);
         await dialog.GetByTestId("llm-chat-definition-name").FillAsync(definitionName);
         await dialog.GetByTestId("llm-chat-definition-tab-runtime").ClickAsync();
         await dialog.GetByTestId("llm-chat-definition-provider").SelectOptionAsync(new SelectOptionValue { Label = providerName });
@@ -157,6 +158,7 @@ internal static class SharedProviderMetadataUiChecks {
         await Assertions.Expect(selector.Locator("option")).ToHaveCountAsync(models.Count);
         Assert.Equal(models.Where(model => model != defaultModel).Append($"Provider default ({defaultModel})").Order(),
             (await selector.Locator("option").AllTextContentsAsync()).Order());
+        await selectorTrace.DisposeAsync();
         var overrides = await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync();
         if (importedProvider) {
             Assert.Empty(overrides);
