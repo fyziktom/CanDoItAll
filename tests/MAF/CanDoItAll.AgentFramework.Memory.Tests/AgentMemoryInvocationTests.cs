@@ -7,6 +7,46 @@ namespace CanDoItAll.AgentFramework.Memory.Tests.Runtime;
 
 public sealed class AgentMemoryInvocationTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Explicit_directive_mode_skips_nontext_continuations_without_dispatch(bool userEnvelope, bool required) {
+        var handler = new RoutingMemoryOperationHandler();
+        var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
+        var settings = CreateSettings(AgentMemoryInvocationMode.ExplicitDirective, Binding("primary", "memory.primary"));
+        settings.RequireContextContributions = required;
+        var request = CreateRequest(CreateAgent(settings), string.Empty) with {
+            RequestMessages = userEnvelope ? [new(AgentContextMessageRole.User, string.Empty)] : []
+        };
+
+        var result = await contributor.ContributeAsync(request);
+
+        Assert.Equal(AgentContextContributionStatus.Skipped, result.Status);
+        Assert.Empty(result.Messages);
+        Assert.Null(result.RequestMessageTransformation);
+        Assert.Empty(handler.Requests);
+        Assert.Equal(MemoryAgentContextContributionTraceReasons.DirectiveRequired,
+            result.TraceMetadata[MemoryAgentContextContributionTraceKeys.Reason]);
+    }
+
+    [Theory]
+    [InlineData(AgentMemoryInvocationMode.ExplicitDirective, "/mem:primary")]
+    [InlineData(AgentMemoryInvocationMode.Automatic, "/mem:primary")]
+    [InlineData(AgentMemoryInvocationMode.Automatic, "")]
+    public async Task Requested_memory_query_still_rejects_empty_text_without_dispatch(AgentMemoryInvocationMode mode, string prompt) {
+        var handler = new RoutingMemoryOperationHandler();
+        var contributor = new MemoryAgentContextContributor(handler, TimeProvider.System);
+        var agent = CreateAgent(CreateSettings(mode, Binding("primary", "memory.primary")));
+
+        var result = await contributor.ContributeAsync(CreateRequest(agent, prompt));
+
+        Assert.Equal(AgentContextContributionStatus.Failed, result.Status);
+        Assert.Contains("non-empty query", result.FailureMessage, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
     [Fact]
     public void Directive_parser_accepts_only_leading_provider_aliases()
     {

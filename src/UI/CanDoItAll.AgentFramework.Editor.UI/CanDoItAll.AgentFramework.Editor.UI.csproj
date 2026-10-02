@@ -9,5 +9,6 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../../MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="../CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
+    <ProjectReference Include="../CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
   </ItemGroup>
 </Project>

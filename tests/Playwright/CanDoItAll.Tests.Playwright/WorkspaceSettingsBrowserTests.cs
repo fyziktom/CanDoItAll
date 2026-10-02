@@ -35,7 +35,7 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
         var executable = Path.Combine(fixture.OwnedDatabaseProfile.WorkspaceRootPath, "never-execute-workspace-fixture.exe");
         await File.WriteAllTextAsync(executable, "Harmless fixture; never execute.");
         await using var context = await fixture.Browser.NewContextAsync(new() {
-            ViewportSize = new() { Width = 1600, Height = 1000 }, Permissions = ["clipboard-read", "clipboard-write"]
+            ViewportSize = new() { Width = 1920, Height = 1080 }, Permissions = ["clipboard-read", "clipboard-write"]
         });
         var page = await context.NewPageAsync();
         var errors = Observe(page);

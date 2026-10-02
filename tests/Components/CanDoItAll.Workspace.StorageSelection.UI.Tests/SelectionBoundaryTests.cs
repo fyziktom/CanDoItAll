@@ -28,14 +28,15 @@ public sealed class SelectionBoundaryTests {
     [Fact]
     public void Traversal_rejects_forbidden_unresolved_and_cyclic_dependencies() {
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", _ => ["CanDoItAll.Infrastructure"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", _ => ["CanDoItAll.AppComponents"]));
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", name =>
-            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents"] : ["CanDoItAll.Infrastructure"]));
+            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents.RecordBrowsing"] : ["CanDoItAll.Infrastructure"]));
         Assert.Throws<FileNotFoundException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", _ => throw new FileNotFoundException()));
         Assert.Throws<FileNotFoundException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", name =>
-            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents"] : throw new FileNotFoundException()));
+            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents.RecordBrowsing"] : throw new FileNotFoundException()));
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", _ => ["CanDoItAll.Workspace.StorageSelection.UI"]));
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.StorageSelection.UI", name =>
-            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents"] : ["CanDoItAll.Workspace.StorageSelection.UI"]));
+            name == "CanDoItAll.Workspace.StorageSelection.UI" ? ["CanDoItAll.AppComponents.RecordBrowsing"] : ["CanDoItAll.Workspace.StorageSelection.UI"]));
     }
 
     [Fact]
@@ -45,8 +46,7 @@ public sealed class SelectionBoundaryTests {
         using var assets = JsonDocument.Parse(File.ReadAllText(Path.Combine(project, "obj", "project.assets.json")));
         var libraries = assets.RootElement.GetProperty("libraries");
         var projects = libraries.EnumerateObject().Where(library => library.Value.GetProperty("type").GetString() == "project").Select(library => library.Name.Split('/')[0]).ToArray();
-        Assert.Equal(16, projects.Length);
-        Assert.All(projects, name => Assert.Contains(name, FeatureAssemblies));
+        Assert.Equal(FeatureAssemblies.Where(name => name != "CanDoItAll.Workspace.StorageSelection.UiSandbox").Order(StringComparer.Ordinal), projects.Order(StringComparer.Ordinal));
         foreach (var target in assets.RootElement.GetProperty("targets").EnumerateObject()) {
             foreach (var library in target.Value.EnumerateObject()) {
                 Assert.False(library.Value.TryGetProperty("native", out _));
@@ -116,21 +116,10 @@ public sealed class SelectionBoundaryTests {
     private static bool Allowed(string name) => Framework(name) || name == "Markdig" || FeatureAssemblies.Contains(name);
     private static readonly HashSet<string> FeatureAssemblies = [
         "CanDoItAll.Components.BaseLib",
-        "CanDoItAll.Components.CanvasLib",
         "CanDoItAll.Components.Common",
-        "CanDoItAll.Components.OverlayLib",
-        "CanDoItAll.FileTools.Abstractions",
-        "CanDoItAll.FileTools.FileBrowser.Components",
-        "CanDoItAll.FileTools.FileBrowser.Core",
-        "CanDoItAll.FileTools.FileInteraction.Components",
-        "CanDoItAll.FileTools.FileInteraction.Core",
-        "CanDoItAll.SharedKernel",
-        "CanDoItAll.FileTools.Integration.Abstractions",
         "CanDoItAll.Modules.Workspace.StorageSelection.Contracts",
         "CanDoItAll.Workspace.StorageSelection.UiSandbox",
         "CanDoItAll.AppComponents.RecordBrowsing",
-        "CanDoItAll.AppComponents",
-        "CanDoItAll.Conversations.Components",
         "CanDoItAll.Workspace.StorageSelection.UI"
     ];
 }

@@ -19,6 +19,8 @@ public sealed record AgentEditorCoreState(AgentEditorOrigin Origin, EditContext 
     public string? CommitWarning { get; init; }
     public string? PendingRefreshMessage { get; init; }
     public bool HasUnconfirmedWrite { get; init; }
+    public string? VerificationMessage { get; init; }
+    public bool CanReviewVerification { get; init; }
     public Guid? LinkedPartyId { get; init; }
     public bool IsBusy { get; init; }
     public bool IsMutationBlocked { get; init; }

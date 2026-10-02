@@ -133,8 +133,8 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         {
             ViewportSize = new ViewportSize
             {
-                Width = 1600,
-                Height = 1000
+                Width = 1920,
+                Height = 1080
             }
         });
         await NavigationAcknowledgementProbe.InstallAsync(context);

@@ -1,0 +1,21 @@
+@using CanDoItAll.AgentFramework.Editor.UI
+@if (Delete) {
+    <AgentDeleteConfirmation AgentName="@AgentName" Completed="Complete" />
+} else if (Risk is null) {
+    <AgentAutoApprovalConfirmation Completed="Complete" />
+} else {
+    <AgentWorkspaceRiskConfirmation Question="@Question" Warning="@Warning" Acknowledgement="I understand the scope of this permission."
+        ConfirmText="Enable permission" TestIdPrefix="@TestId" Completed="Complete" />
+}
+@code {
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    [Parameter] public AgentEditorAccessFlag? Risk { get; set; }
+    [Parameter] public bool Delete { get; set; }
+    [Parameter] public string AgentName { get; set; } = string.Empty;
+    private string Question => Risk == AgentEditorAccessFlag.WorkspaceLocalScripts ? "Enable local scripts?" : "Allow environment access?";
+    private string Warning => Risk == AgentEditorAccessFlag.WorkspaceLocalScripts
+        ? "Scripts run with the operator's account rights and can change files, start programs and reach the network. This sandbox simulates the permission only."
+        : "Scripts may read every environment variable passed to them. This sandbox simulates the permission only.";
+    private string TestId => Risk == AgentEditorAccessFlag.WorkspaceLocalScripts ? "agents-workspace-scripts-confirmation" : "agents-workspace-environment-confirmation";
+    private Task Complete(bool accepted) => DialogReference?.CloseAsync(accepted) ?? Task.CompletedTask;
+}

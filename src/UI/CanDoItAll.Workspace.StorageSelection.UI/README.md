@@ -2,6 +2,8 @@
 
 The production Storage catalog selection field and nested dialog. They reuse the real
 AppComponents `ResourceCardPicker` / `SelectedReferenceTable` and BaseLib dialogs.
+Those neutral controls are delivered by AppComponents.RecordBrowsing, so this leaf no
+longer references the broader AppComponents implementation assembly.
 Pass the parent editor's `OwnerLifetime` cancellation token with the staged ID list and
 policy flags. Equal normalized parameter echoes preserve staging; changed selection,
 policy, owner lifetime or source context retires the exact outstanding requests.

@@ -82,7 +82,7 @@ their owners. The boundary records distinguish completed rendering from applicat
 | Workspace Data Sources | `CanDoItAll.Modules.Workspace.DataSources.Contracts` | `CanDoItAll.Workspace.DataSources.UI` | `CanDoItAll.Workspace.DataSources.UiSandbox` |
 | Projects P1 | `CanDoItAll.Modules.Projects.Contracts` | `CanDoItAll.Projects.UI` | `CanDoItAll.Projects.UiSandbox` |
 | Projects Files P2 | Existing typed FileTools contracts | `CanDoItAll.Projects.Files.UI` | `CanDoItAll.Projects.Files.UiSandbox` |
-| Agent Editor Core A1 | Existing Agent models and origin-bound presentation | `CanDoItAll.AgentFramework.Editor.UI` | `CanDoItAll.AgentFramework.Editor.UiSandbox` |
+| Agent Editor A2 | Existing Agent models and origin-bound presentation | `CanDoItAll.AgentFramework.Editor.UI` | `CanDoItAll.AgentFramework.Editor.UiSandbox` |
 
 The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
 schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
@@ -91,10 +91,11 @@ classifies its remaining wrappers and external render consumers; a retained Razo
 automatically unfinished rendering work. See the [Workspace completion record](workspace-completion-ui-boundaries.md).
 
 AgentFramework is partially extracted: its [UI library](../../src/UI/CanDoItAll.AgentFramework.UI/README.md)
-and sandbox cover the catalog, capabilities and Overview. [Editor Core A1](agent-editor-core-ui-a1.md)
-extracts the technical form shell, Identity, Runtime, Images and Voice. Memory, Project Structure
-Access, Workspace Tools, Secrets, Process Access and Capabilities remain real production slots;
-avatar generation and shared-provider refresh remain host integrations. Other provider/runtime
+and sandbox cover the catalog, capabilities and Overview. [Editor A2](agent-editor-completion-a2.md)
+completes all ten technical editor sections, actual Memory/root children and small confirmations.
+The actual capability list and Storage picker are composed through narrow slots; native Memory
+eligibility, root binding resolution, avatar generation, capability-definition authoring and
+shared-provider refresh remain host integrations. Other provider/runtime
 dialogs still contain substantial rendering in the module. Existing
 Simple Chats and Workflows UI libraries under `src/MAF` are additional foundations, not evidence
 that every Agent or Workflow authoring surface has moved.
@@ -160,7 +161,7 @@ caller, descendant, asset and evaluated-dependency census precedes that assignme
 | Order | Family and current source | Proposed scope | Effort / provisional slices |
 |---|---|---|---|
 | 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): P1 / Files P2 complete | Portfolio, hierarchy inspection, overview, editor and both Files renderers are extracted. File authorization, coordinators and content leases retain their original owners; see the P1 and P2 validation records | Completed selected surfaces; actual file owners retained |
-| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): catalog/capabilities/Overview and selected Editor Core A1 complete | Six deferred editor sections and retained integrations, provider/history/configuration and residual chat/usage surfaces remain; preserve whole-agent data and authority | A1 selected sections only; later slices require review |
+| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): catalog/capabilities/Overview and ten-section Editor A2 | Provider administration, capability-definition authoring, team dialogs and residual chat/usage surfaces remain; preserve whole-agent data and authority | Editor rendering complete; provider administration 4/5, definition/team authoring 3–4/5; later slices require review |
 | 3 | [Workflow authoring](../../src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor): substantial canvas/toolbox/inspector markup remains despite the existing light Workflows.UI project | Reuse Workflows.UI; separate catalog/run views, canvas/inspector and settings/admission dialogs while retaining immutable version/input and launch authority | 4/5; 2–4 slices |
 | 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |
 | 5 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md): thin routes still compose implementation-bound rendering and runtime services | Catalog/read panels, editor/configuration, launch/approval, monitoring/recovery and final integration; preserve SSE, claims, snapshots and receipts | 5/5; 4–6 slices; last major family |

@@ -11,7 +11,7 @@ namespace CanDoItAll.Tests.Playwright;
 internal sealed class AgentEditorSandboxHost : IAsyncDisposable {
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("agent-editor-sandbox");
     private readonly ConcurrentQueue<string> logs = new();
-    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "agent-editor-a1", "sandbox-hosts", Guid.NewGuid().ToString("N"));
+    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "agent-editor-a2", "sandbox-hosts", Guid.NewGuid().ToString("N"));
     private Process? process;
     private bool publishedHost;
     private Task[] pumps = [];

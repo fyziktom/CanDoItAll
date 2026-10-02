@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-01T23:23:06.522493+00:00",
+  "generated_utc": "2026-10-02T02:34:10.218744+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15245,
+  "allowance_count": 15246,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -43696,67 +43696,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
       "category": "absolute-path-field",
-      "source_fingerprint": "74dec60e3a6e74868f49c63d10a591314669723f094404bef1c921062d893d99",
+      "source_fingerprint": "a6a7e6e2acfa54554e16dbea0b306c14f78e8f77f75661d5cba830d9aa35dbec",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
       "category": "absolute-path-field",
-      "source_fingerprint": "d54ef3c7b1ea6dde03bcfac19644159b91c9cd1227fd1e2e708cd486e580b5e2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "02c8bf16937fff0157151e077546b7f055542c537745a1ec009f97a0b255064f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "0fd235c309a6fbad96ef4839411739a99b9afbe443a34e67ab6f3e998151284a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "1dded083d81efc62a89cf2d101808204e83e5a207a65bcaaa793cd307ba8bb3f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "26f5fc3f410578523ffeac5b9781b45ea04bd4e3c6fbb056843d57e20decce60",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "28dd8f8cd3fa863b81285db29281b11166f40b5c69177256a4c80d00aea9f5ec",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "4a4ed74121cae209c0b0821dac70113a7f5fa9679f257603839fd0fcc00a0b10",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "9330f8b9169888510bbdc2c4c7d87cc5de7b4cc246c5196f996a05f3d9d073eb",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "d911ce6a07e52066701a81b1b064ba86ba888890b4b4ad219a2322b57733233d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
-      "category": "mcp",
-      "source_fingerprint": "ea78d8978c918d635bc06780adfe0ff456e05f28afa56950c9237337238b2cdf",
+      "source_fingerprint": "f5fd3461d518a999c968384b6e364b9df53b3df219a12461b3680261f3e58a71",
       "count": 1
     },
     {
@@ -43768,38 +43714,8 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "0c6c9ce224f51adc26a368a45b320d3316ec61990fdb8371200ae712b26d89f0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
       "source_fingerprint": "0ca9264a443c6f9c617094e98f63ae1143e06cc60a3b0792dab51e1fc10756c5",
       "count": 3
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "15b8d8168e623c01eb0235edbcb2068cf4735ce0cd097d4e4df2cfbf8d8cd2b1",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2a0cf3fcde9bfa0f2a17f03f2e6ca76f2a80edb5f3d7f87a176ee6a3f5d8053f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "3cd0281a977ab124d053a082890476ee4a5163e54e4818b79e68430020eb72bc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "d29f7aabc7006a3083ba1db7f2df37bd7960216b611a7da574d66176715750d0",
-      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
@@ -43815,18 +43731,6 @@
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "fa53d8d57105e3d2b16a34454dee544c509132196921e7603e339b47a07afecc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "550885258a88da2d2484a54e7faa780a9fdf24294350b03cece7182ce1fc53b9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "mcp",
       "source_fingerprint": "65aec1393feae57247096a9b98affa350a797633e8ae6f3488018a2084385fd4",
       "count": 1
@@ -43835,18 +43739,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "mcp",
       "source_fingerprint": "a9f4dccfd719415c4d3b126c44d119af672d74b89941d36a1ca2fd7736030045",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "d1a626b6f3fb2c63328e80c9d0e6f587808160c208ffb2f71688863667b276d0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "category": "mcp",
-      "source_fingerprint": "d6dcbdf96b9ef8834b5f542dd10d446a75b19e3e59f34d260fb67d6dfcfa1b1c",
       "count": 1
     },
     {
@@ -43874,21 +43766,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemoryBindingRemovalPolicy.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanel.razor",
       "category": "case-policy",
-      "source_fingerprint": "65a398deda568cbf8aefb72870eb68bf4565a2521afa760e0d29648efa9629aa",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanelState.cs",
-      "category": "case-policy",
-      "source_fingerprint": "9d98dcf21b15b50c04b7ce04f88343c6c4760c9ff02bfa9f5522b6e24e5c9df7",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanelState.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e3406c8e9d04455c39ee9fc88ed553b5b1e66d9accc7501f13a438ce6f01e3c5",
+      "source_fingerprint": "23feb20a5f92bfd1eed3e7a04d3ef8a4f627e16e99191bdaea21a159274da5de",
       "count": 1
     },
     {
@@ -45176,12 +45056,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor",
-      "category": "windows-path",
-      "source_fingerprint": "bd35dd64ccda83eb0f984ee4ffcd92e9160b4cd35d6ad0ef64bb4e9d0a45f8b2",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "71e80e453ffb12673d40a30bf2d80c5f0b7c20b8cc89f3838e4c3acc75f0f8c9",
@@ -45196,19 +45070,19 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "9c1706dbfaa680beb723fbca9f99cc584ed0859b52220b3ad4328332a72fcdf1",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "ef6a619cd40137d07f1b6dace30c5eb4a5df99c2a683e9dd1b794797dadf90ca",
+      "source_fingerprint": "8f40a50866eb88d68346938bf1333959700d0926bdfe9fd9355aaea5e76be5be",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "f416d2f0f3beaaf2b71815f59ba0d257f57a672be2e20d92a1719511caec9566",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ff333d7ee4585c70f08d85c9b260aae057de09bdbe0cc30e8b9933c947a5fc7f",
       "count": 1
     },
     {
@@ -72482,6 +72356,18 @@
       "count": 2
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/AgentEditorScenarioSession.cs",
+      "category": "case-policy",
+      "source_fingerprint": "67c4e7f8ac65aedb85b6d83d5eb91088c6bbc4640f131b10f40200677ade6dbd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/AgentEditorScenarioSession.cs",
+      "category": "mcp",
+      "source_fingerprint": "8f9d6cd175730ae0985a058310866023ca2192d544cace862c2e3f3271fd8de1",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "11bbf9fa0aed004fca2110f64ac347681600973b26a386affc9b7b95b58c2f79",
@@ -73736,9 +73622,129 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "26924267068b28b6c3995dd7fb8b92d4f1226881e3aa4971305a6caff82ba300",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "849460102b91d8f094dc25179044a091b2f67c204a77e116940982bf65d5a39b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b4a93746d34878d02b5a4574ee0c7ede9f48b77119cd9cd65ed927db24db48d5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bfa2ca071c4c40b5537d7a9e48ea79d593f082344148269179d2d942971aca6e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ca7c9d94e733daea8b3429fdfb9f98eb1882cf6c4398090e72df54ce800de4ff",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e44963bad7778f1c2c23de2a06b6f2ac34ada40f84526c772e52da9a2ebca697",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "mcp",
+      "source_fingerprint": "0d98e14926c6ef8311520c7a1a201f02e483cd019dede4b9844f1fedceb51ae5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "mcp",
+      "source_fingerprint": "5330f22194d1e63b71dae364451c568801af27ec5fd45f34799ef460e80af2f5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorAccessState.cs",
+      "category": "mcp",
+      "source_fingerprint": "9fb30d990a6aaf4ebf886017d87ce8d0ec0c979df3f1958e8fd1e917cbe39080",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "331af2660b0685a79e95e5095d4dd471d694d8fe4bb7aa34dbfe4ad0fba2f0b3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "4e3c5c6767a86fda79b2c82e04e00c0519f7f22073599416fba8dd81f8aaad52",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "51a33b2732a3eea1d01f0948516eed7cc53c3b11cec9f7af03abb9d302110735",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "9fdde7d08e9eacb0c2328c82b51d64afa4c3c55bccaf9b5245ae713b11151589",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "ba72594cec7b3e03d312e571e24156090222740aaf466ac52181081f45ab42c7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "c1dc84f18bcb89fc2a9513811753ef5b20eba7ed54504fb93b927374cc74a89a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "f51567964e16bf6fdeabff3b7a5ce030cbec6f90639096ffec756afa07e18044",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "f7ff1e02b7bd4705f830b99d9cecfede1c58cd2e3fe79f5c5106af1e43b79093",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCapabilitiesSection.razor",
+      "category": "mcp",
+      "source_fingerprint": "f90b8a37563753730756300cce6c7613ca07e7522b31c221949f080cb574a323",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "35a148e86dabf30ba5846b7af750ffde9097ee838330a4964e39b58803ca0c26",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentMemoryBindingRemovalPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fb306dd3fc8ae3988ef7d18833dd30a8070f8ea14dc249c26313f0c81411391b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentMemoryEditorState.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f4e49eea6f934ea295ee614d7fb489ab25985f5a6295304d8d408447b1acb6fe",
       "count": 1
     },
     {
@@ -74024,6 +74030,12 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/ResourceCardPicker.razor",
+      "category": "case-policy",
+      "source_fingerprint": "8d1be6324e62c673b5e811cca3e0f3389adbb4211e6ab2fbf5bcf845605446b8",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
       "category": "external-tool",
       "source_fingerprint": "158c9594c151fb993265565c8704ec3ed24ac24b5310837ae3724223d4a5b3a0",
@@ -74177,12 +74189,6 @@
       "path": "src/UI/CanDoItAll.AppComponents/Components/EmbeddedBrowser.razor",
       "category": "case-policy",
       "source_fingerprint": "b1245e448f9e4d0dca7330ce9739f6595e9c6862749e21a65976b5b6d4accae0",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.AppComponents/Components/ResourceCardPicker.razor",
-      "category": "case-policy",
-      "source_fingerprint": "8bf8aa024a14fa68c13b1f526cf73b3c3a70ceab06592631f08af37b9d4ad09f",
       "count": 1
     },
     {

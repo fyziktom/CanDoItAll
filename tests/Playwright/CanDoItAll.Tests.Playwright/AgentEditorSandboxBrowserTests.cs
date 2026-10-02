@@ -9,7 +9,7 @@ public sealed class AgentEditorSandboxBrowserTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Core_editor_runs_independently_with_real_widgets_assets_and_two_lifetimes(bool published) {
+    public async Task Complete_editor_runs_independently_with_real_children_assets_and_two_lifetimes(bool published) {
         await using var host = new AgentEditorSandboxHost();
         await host.StartAsync(published);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
@@ -28,7 +28,7 @@ public sealed class AgentEditorSandboxBrowserTests {
                 assets.Add(path);
             }
         };
-        var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "agent-editor-a1",
+        var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "agent-editor-a2",
             $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Guid.NewGuid():N}", published ? "published" : "source");
         Directory.CreateDirectory(directory);
         try {
@@ -43,6 +43,11 @@ public sealed class AgentEditorSandboxBrowserTests {
             await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 1");
             await Shot("identity");
             await Tab("Runtime");
+            await editor.GetByTestId("agents-catalog-auto-approval").CheckAsync();
+            await Assertions.Expect(page.GetByTestId("agents-auto-approval-cancel")).ToBeInViewportAsync(new() { Ratio = 1 });
+            await Shot("auto-approval-confirmation");
+            await page.GetByTestId("agents-auto-approval-cancel").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-auto-approval")).Not.ToBeCheckedAsync();
             await editor.GetByTestId("agents-catalog-thinking-effort").SelectOptionAsync(new SelectOptionValue { Label = "None" });
             await Assertions.Expect(editor.GetByTestId("agents-catalog-thinking-effort").Locator("option:checked")).ToHaveTextAsync("None");
             await editor.GetByTestId("agents-catalog-thinking-effort").SelectOptionAsync(new SelectOptionValue { Label = "Provider default" });
@@ -68,10 +73,74 @@ public sealed class AgentEditorSandboxBrowserTests {
             await save.FocusAsync();
             await Assertions.Expect(save).ToBeFocusedAsync();
             await Shot("voice-footer");
-            foreach (var section in new[] { "Memory", "Project Structure Access", "Workspace Tools", "Secrets", "Process Access", "Capabilities" }) {
-                await Tab(section);
-                await Assertions.Expect(editor).ToContainTextAsync("retained production section");
-            }
+            await editor.GetByTestId("agents-catalog-delete").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("agents-catalog-delete-cancel")).ToBeInViewportAsync(new() { Ratio = 1 });
+            await Shot("delete-confirmation");
+            await page.GetByTestId("agents-catalog-delete-cancel").ClickAsync();
+            await Tab("Memory");
+            var alias = editor.GetByTestId("agents-catalog-memory-new-alias");
+            await alias.FillAsync("team");
+            await editor.GetByTestId("agents-catalog-memory-new-provider").SelectOptionAsync("team-fixture");
+            Assert.True(await alias.EvaluateAsync<bool>("element => element.form === null"));
+            await alias.PressAsync("Enter");
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 1");
+            await editor.GetByTestId("agents-catalog-memory-add-binding").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-memory-remove-team")).ToBeVisibleAsync();
+            await alias.FillAsync("Unadded 東京");
+            await Shot("memory");
+            await Tab("Project Structure Access");
+            await editor.GetByTestId("agents-catalog-project-structure-load").ClickAsync();
+            await editor.GetByTestId("agents-catalog-project-structure-projects").Locator("input").First.CheckAsync();
+            await editor.GetByTestId("agents-catalog-project-structure-task-write").CheckAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-project-structure-all")).Not.ToBeCheckedAsync();
+            await Shot("project-access");
+            await Tab("Workspace Tools");
+            await editor.GetByTestId("agents-catalog-workspace-write").CheckAsync();
+            var root = editor.GetByTestId("agents-catalog-workspace-external-roots-input");
+            var fixtureRoot = Path.Combine(Path.GetTempPath(), "agent-editor-fixture", "東京");
+            await root.FillAsync(fixtureRoot);
+            Assert.True(await root.EvaluateAsync<bool>("element => element.form === null"));
+            await root.PressAsync("Enter");
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 1");
+            await editor.GetByTestId("agents-catalog-workspace-external-roots-add").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-workspace-external-roots-table")).ToContainTextAsync(fixtureRoot);
+            await editor.GetByTestId("agents-catalog-storage-read").CheckAsync();
+            await editor.GetByTestId("agents-catalog-storage-selection-choose").ClickAsync();
+            var storage = page.GetByTestId("agents-catalog-storage-selection-dialog-shell");
+            await Assertions.Expect(storage).ToBeVisibleAsync();
+            await page.GetByTestId("agents-catalog-storage-selection-dialog-option-11111111110011001100111111111111").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("agents-catalog-storage-selection-dialog-option-22222222220022002200222222222222")).ToBeDisabledAsync();
+            await Shot("storage-picker");
+            await page.GetByTestId("agents-catalog-storage-selection-dialog-apply").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 1");
+            await editor.GetByTestId("agents-catalog-workspace-scripts").CheckAsync();
+            await page.GetByTestId("agents-workspace-scripts-confirmation-cancel").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-workspace-scripts")).Not.ToBeCheckedAsync();
+            await editor.GetByTestId("agents-catalog-workspace-scripts").CheckAsync();
+            await page.GetByTestId("agents-workspace-scripts-confirmation-risk-acknowledgement").CheckAsync();
+            await Shot("script-confirmation");
+            await page.GetByTestId("agents-workspace-scripts-confirmation-confirm").ClickAsync();
+            await editor.GetByTestId("agents-catalog-workspace-scripts-environment").CheckAsync();
+            await page.GetByTestId("agents-workspace-environment-confirmation-cancel").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-workspace-scripts-environment")).Not.ToBeCheckedAsync();
+            await Shot("workspace-tools");
+            await Tab("Secrets");
+            await editor.GetByTestId("agents-catalog-secret-list").Locator("input").First.CheckAsync();
+            await Shot("secrets");
+            await Tab("Process Access");
+            await editor.GetByTestId("agents-catalog-process-write").CheckAsync();
+            await Assertions.Expect(editor).ToContainTextAsync("Process definition selection is unavailable");
+            await Shot("process-access");
+            await Tab("Capabilities");
+            await editor.GetByTestId("agents-details-capability-toggle").First.ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 2");
+            await Assertions.Expect(editor.GetByTestId("scenario-committed")).ToContainTextAsync("Žluťoučký 東京");
+            await editor.GetByTestId("agents-details-capability-verify").First.ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToContainTextAsync("writes: 2");
+            await Shot("capabilities");
+            await Tab("Memory");
+            await Assertions.Expect(alias).ToHaveValueAsync("Unadded 東京");
+            Assert.Equal(1, await editor.Locator("form").CountAsync());
             await Scenario("UnknownEffort");
             await Tab("Runtime");
             await Assertions.Expect(save).ToBeDisabledAsync();
@@ -85,6 +154,14 @@ public sealed class AgentEditorSandboxBrowserTests {
             await Tab("Runtime");
             await Assertions.Expect(editor.GetByTestId("agents-catalog-provider").Locator("option")).ToHaveCountAsync(153);
             await editor.GetByTestId("agents-catalog-provider").SelectOptionAsync(new SelectOptionValue { Label = "Fixture provider 149 · 東京" });
+            await Tab("Project Structure Access");
+            await editor.GetByTestId("agents-catalog-project-structure-load").ClickAsync();
+            await Assertions.Expect(editor.GetByTestId("agents-catalog-project-structure-projects").Locator("input")).ToHaveCountAsync(100);
+            await Shot("large-project-list");
+            await Tab("Capabilities");
+            await editor.GetByTestId("agents-details-capability-search").FillAsync("Fixture capability 89");
+            await Assertions.Expect(editor.GetByTestId("agents-details-capability-toggle")).ToHaveCountAsync(1);
+            await Shot("large-filtered-capabilities");
             await Scenario("LoadFailure");
             await Assertions.Expect(editor.Locator("form")).ToHaveCountAsync(0);
             await editor.GetByTestId("agents-details-retry-load").ClickAsync();
@@ -96,7 +173,7 @@ public sealed class AgentEditorSandboxBrowserTests {
             await save.ClickAsync();
             await Assertions.Expect(save).ToBeDisabledAsync();
             await editor.GetByTestId("agents-editor-retry-refresh").ClickAsync();
-            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToHaveTextAsync("Synthetic writes: 1; reads: 1");
+            await Assertions.Expect(editor.GetByTestId("scenario-counts")).ToHaveTextAsync("Synthetic writes: 1; reads: 2");
             await Scenario("UnknownResult");
             await save.ClickAsync();
             await Assertions.Expect(save).ToBeDisabledAsync();
@@ -132,6 +209,9 @@ public sealed class AgentEditorSandboxBrowserTests {
             await File.WriteAllTextAsync(Path.Combine(directory, "failure.txt"), await page.Locator("body").InnerTextAsync());
             throw;
         }
-        Task Shot(string name) => page.ScreenshotAsync(new() { Path = Path.Combine(directory, name + ".png") });
+        async Task Shot(string name) {
+            Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= window.innerWidth && window.devicePixelRatio === 1"));
+            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, name + ".png") });
+        }
     }
 }

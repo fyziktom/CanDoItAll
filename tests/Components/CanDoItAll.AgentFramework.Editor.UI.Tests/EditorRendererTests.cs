@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Components.AgentEditorUi;
 
 public sealed class EditorRendererTests {
     [Fact]
-    public async Task All_ten_sections_share_one_form_and_draft_with_explicit_deferred_slots() {
+    public async Task All_ten_sections_share_one_form_and_draft_with_real_section_renderers() {
         using var context = Context();
         var cut = context.Render<ScenarioEditor>();
         var form = cut.FindComponent<EditForm>().Instance.EditContext;
@@ -23,7 +23,8 @@ public sealed class EditorRendererTests {
             Assert.Same(form, cut.FindComponent<EditForm>().Instance.EditContext);
             Assert.Single(cut.FindAll("form"));
             if (section.Section is not (AgentEditorSection.Identity or AgentEditorSection.Runtime or AgentEditorSection.Images or AgentEditorSection.Voice)) {
-                Assert.Contains("retained production section", cut.Markup);
+                Assert.Single(cut.FindComponents<AgentEditorAccessSurface>());
+                Assert.DoesNotContain("retained production section", cut.Markup);
             }
         }
         await context.DisposeRenderedComponentsAsync();
@@ -137,7 +138,7 @@ public sealed class EditorRendererTests {
         Assert.Equal(blocked, cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
         if (scenario == AgentEditorScenario.RefreshFailure) {
             await cut.Find("[data-testid='agents-editor-retry-refresh']").ClickAsync();
-            Assert.Contains("writes: 1; reads: 1", cut.Markup);
+            Assert.Contains("writes: 1; reads: 2", cut.Markup);
             Assert.False(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
         }
     }
@@ -171,6 +172,7 @@ public sealed class EditorRendererTests {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<CanDoItAll.Modules.Workspace.StorageSelection.Contracts.IStorageCatalogSelectionSource, EditorStorageSource>();
         return context;
     }
     private static AgentEditorModel Draft(IRenderedComponent<ScenarioEditor> cut)

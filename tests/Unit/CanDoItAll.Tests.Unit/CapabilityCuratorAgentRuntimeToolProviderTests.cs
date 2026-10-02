@@ -1537,7 +1537,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
             return Task.FromResult(updated.Id);
         }
 
-        private Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId)
+        private Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId)
         {
             if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeOwner) {
                 throw new IOException("Owner write was not started.");
@@ -1568,7 +1568,7 @@ public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests
             if (AcknowledgementFault == CuratorOwnerAcknowledgementFault.BeforeReceipt) {
                 throw new IOException("The owner acknowledgement was lost.");
             }
-            return Task.CompletedTask;
+            return Task.FromResult(new CapabilityVerificationOutcome(CapabilityVerificationDisposition.Committed));
         }
     }
 }

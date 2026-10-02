@@ -399,7 +399,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
     }
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         IAgentFrameworkWorkspaceService workspace;
         try {
             cancellationToken.ThrowIfCancellationRequested();

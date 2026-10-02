@@ -1,31 +1,26 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.Editor.UI;
 
-internal static class AgentMemoryBindingRemovalPolicy
-{
+internal static class AgentMemoryBindingRemovalPolicy {
     public static void Remove(
         AgentMemoryAccessSettings settings,
-        AgentMemoryProviderAlias alias)
-    {
+        AgentMemoryProviderAlias alias) {
         var removed = settings.ProviderBindings.FirstOrDefault(binding => binding.Alias == alias);
         settings.ProviderBindings = settings.ProviderBindings
             .Where(binding => binding.Alias != alias)
             .ToArray();
-        if (removed is null)
-        {
+        if (removed is null) {
             return;
         }
 
         var providerId = removed.ProviderInstanceId;
-        if (SameProvider(settings.PreferredProviderInstanceId, providerId))
-        {
+        if (SameProvider(settings.PreferredProviderInstanceId, providerId)) {
             settings.PreferredProviderInstanceId = null;
         }
 
-        if (SameProvider(settings.DefaultProviderInstanceId, providerId))
-        {
+        if (SameProvider(settings.DefaultProviderInstanceId, providerId)) {
             settings.DefaultProviderInstanceId = null;
         }
 

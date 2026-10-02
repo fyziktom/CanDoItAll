@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Editor.UI;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents;
+using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Modules.AgentFramework;
@@ -46,6 +48,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
     private bool busy;
     private bool pendingRefresh;
     private bool unconfirmed;
+    private int autoApprovalInputVersion;
     private string? warning;
     public AgentEditorModel Draft => (AgentEditorModel)context.Model;
     public int Writes { get; private set; }
@@ -60,9 +63,13 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
     public AgentEditorCoreState State => new(origin, context) {
         LoadState = load, Section = section, LoadError = "Injected scenario load failure.",
         CommitWarning = warning, HasUnconfirmedWrite = unconfirmed,
+        VerificationMessage = verificationPending ? Notice : null, CanReviewVerification = verificationPending,
         PendingRefreshMessage = pendingRefresh ? "The synthetic write committed; read-back failed." : null,
-        IsBusy = busy, IsMutationBlocked = busy || pendingRefresh || unconfirmed,
+        IsBusy = busy, IsMutationBlocked = busy || pendingRefresh || unconfirmed || verificationPending,
         IsConfirmingAutoApproval = IsConfirmingApproval,
+        AutoApprovalInputVersion = autoApprovalInputVersion,
+        CanDelete = Draft.Id.HasValue,
+        Delete = EventCallback.Factory.Create(receiver, () => ConfirmDeleteRequested?.Invoke() ?? Task.CompletedTask),
         Tags = Draft.Tags.Where(tag => tag != "Favorite").ToArray(), TagSuggestions = ["Fixture", "Review", "東京"],
         AreProvidersLoaded = scenario != AgentEditorScenario.ProviderFailure,
         ProviderLoadError = scenario == AgentEditorScenario.ProviderFailure ? "Injected provider catalog failure." : null,
@@ -101,7 +108,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
                 : "Scenario: None is explicit; Provider default inherits the supplied provider setting.");
     }
 
-    private void Change(AgentEditorCoreIntent intent) {
+    private async Task Change(AgentEditorCoreIntent intent) {
         if (retired) {
             return;
         }
@@ -139,9 +146,16 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
                 Draft.Permissions = Draft.Permissions with { RequiresApprovalForExternalCalls = value.Value };
                 break;
             case AgentEditorCoreIntent.AutoApproval value:
+                var revision = ++approvalRevision;
                 IsConfirmingApproval = value.Value;
                 if (!value.Value) {
                     Draft.Permissions = Draft.Permissions with { AutoApproveExternalCallsByDefault = false };
+                }
+                if (value.Value && ConfirmApprovalRequested is not null) {
+                    var accepted = await ConfirmApprovalRequested();
+                    if (!retired && revision == approvalRevision) {
+                        ConfirmApproval(accepted);
+                    }
                 }
                 break;
             case AgentEditorCoreIntent.ImageGeneration value:
@@ -165,7 +179,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
     }
 
     private async Task SaveAsync(EditContext submittedContext) {
-        if (retired || busy || pendingRefresh || unconfirmed || !ReferenceEquals(context, submittedContext)) {
+        if (retired || busy || pendingRefresh || unconfirmed || verificationPending || !ReferenceEquals(context, submittedContext)) {
             return;
         }
         if (string.IsNullOrWhiteSpace(Draft.Name)) {
@@ -173,7 +187,8 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
             return;
         }
         busy = true;
-        SubmittedJson = JsonSerializer.Serialize(Draft);
+        var submission = AgentEditorDraftSnapshot.Copy(Draft);
+        SubmittedJson = JsonSerializer.Serialize(submission);
         SubmittedName = Draft.Name;
         Writes++;
         try {
@@ -182,6 +197,15 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
             }
             if (retired) {
                 return;
+            }
+            if (scenario is not (AgentEditorScenario.SaveRefusal or AgentEditorScenario.UnknownResult)) {
+                committed = AgentEditorDraftSnapshot.Copy(submission);
+                committed.Id ??= Guid.NewGuid();
+                committed.ExpectedUpdatedAtUtc = DateTimeOffset.UtcNow;
+                Draft.Id = committed.Id;
+                Draft.ExpectedUpdatedAtUtc = committed.ExpectedUpdatedAtUtc;
+                Reads++;
+                CommittedName = ReadCommitted()!.Name;
             }
             switch (scenario) {
                 case AgentEditorScenario.SaveRefusal:
@@ -216,6 +240,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
             Draft.Permissions = Draft.Permissions with { AutoApproveExternalCallsByDefault = true };
         }
         IsConfirmingApproval = false;
+        autoApprovalInputVersion++;
     }
     private void RetryLoad() {
         if (!retired) {
@@ -224,6 +249,10 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
         }
     }
     private void RetryRefresh() {
+        if (!retired && verificationPending) {
+            ReviewVerification();
+            return;
+        }
         if (!retired && pendingRefresh) {
             Reads++;
             pendingRefresh = false;
@@ -235,7 +264,242 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
         Dispose();
     }
     public void Dispose() {
+        if (retired) {
+            return;
+        }
         retired = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
         Release();
+        ReleaseVerification();
+    }
+    private readonly CancellationTokenSource lifetime = new();
+    private AgentEditorAccessState? access;
+    private AgentMemoryEditorState? memory;
+    private AgentEditorModel? committed;
+    private long riskRevision;
+    private long approvalRevision;
+    private int rootSequence;
+    private TaskCompletionSource? heldVerification;
+    private bool verificationPending;
+    private bool verificationUnknown;
+    private Guid? verifiedCapabilityId;
+    public int Diagnostics { get; private set; }
+    public bool IsVerificationHeld => heldVerification is not null;
+    private readonly Dictionary<string, string> rootNames = new(StringComparer.Ordinal);
+    public string? CommittedName { get; private set; }
+    public AgentEditorModel? ReadCommitted() => committed is null ? null : AgentEditorDraftSnapshot.Copy(committed);
+    public CancellationToken Token => lifetime.Token;
+    public string EntryFormId => $"agent-entry-{origin.Value:N}";
+    public AgentRootEntry RootEntry { get; } = new();
+    public Func<AgentEditorAccessFlag, Task<bool>>? ConfirmRiskRequested { get; set; }
+    public Func<Task>? ConfirmDeleteRequested { get; set; }
+    public Func<Task<bool>>? ConfirmApprovalRequested { get; set; }
+    public AgentEditorAccessState Access {
+        get {
+            access ??= CreateAccess();
+            access.MutationBlocked = busy || pendingRefresh || unconfirmed || verificationPending;
+            return access;
+        }
+    }
+    public AgentMemoryEditorState Memory => memory ??= new(Draft.MemoryAccess) {
+        ProvidersLoaded = scenario != AgentEditorScenario.MemoryReadFailure,
+        ProviderLoadError = scenario == AgentEditorScenario.MemoryReadFailure ? "Injected memory metadata failure. Bindings are retained." : string.Empty,
+        AvailableProviders = scenario is AgentEditorScenario.MemoryUnavailable or AgentEditorScenario.MemoryReadFailure ? [] : MemoryProviders
+    };
+    private static readonly AgentMemoryProviderOption[] MemoryProviders = [new(MemoryProviderInstanceId.Parse("team-fixture"), "Team memory · 東京"),
+        new(MemoryProviderInstanceId.Parse("project-fixture"), "Project memory")];
+    public void RetryMemory() {
+        if (!retired) {
+            Reads++;
+            Memory.AvailableProviders = MemoryProviders;
+            Memory.ProvidersLoaded = true;
+            Memory.ProviderLoadError = string.Empty;
+        }
+    }
+    public IReadOnlyList<SelectedReferenceItem<string>> Roots => Draft.WorkspaceToolAccess.AllowedExternalTargetAliases
+        .Select(alias => new SelectedReferenceItem<string>(alias, rootNames.GetValueOrDefault(alias, "Path unavailable in fixture"), alias) {
+            CanRemove = true, StatusText = rootNames.ContainsKey(alias) ? "Fixture" : "Unresolved"
+        }).ToArray();
+
+    private AgentEditorAccessState CreateAccess() {
+        var count = scenario == AgentEditorScenario.LargeCatalog ? 90 : 3;
+        var state = new AgentEditorAccessState(origin, Draft) {
+            SecretsLoaded = true,
+            Secrets = Enumerable.Range(1, count).Select(index => new AgentEditorSecret(new Guid(index, 2, 0, new byte[8]), $"Secret reference {index} · 東京", "Token")).ToArray(),
+            Capabilities = Enumerable.Range(1, count).Select(index => new CapabilityCatalogItem(new Guid(index, 3, 0, new byte[8]),
+                (index % 3) switch { 0 => CapabilityKind.Tool, 1 => CapabilityKind.Skill, _ => CapabilityKind.McpServer },
+                $"fixture-{index}", $"Fixture capability {index} · 東京", "Synthetic catalog metadata", "fixture:local", "{}",
+                CapabilityProofStatus.NotRun, string.Empty, null, false)).ToArray(),
+            Changed = EventCallback.Factory.Create<AgentEditorAccessIntent>(receiver, ChangeAccessAsync)
+        };
+        if (scenario == AgentEditorScenario.ReferenceFailure) {
+            state.SecretsLoaded = false;
+            state.SecretsError = "Injected secret metadata failure. Saved references are retained.";
+            Draft.AllowedSecretReferences.Add(new(Guid.NewGuid(), "Unavailable secret", "fixture-purpose"));
+            Draft.ProjectStructureAccess.AllowedProjectIds.Add(Guid.NewGuid());
+            Draft.WorkspaceToolAccess.AllowedStorageCatalogIds.Add(Guid.NewGuid());
+        }
+        return state;
+    }
+
+    private async Task ChangeAccessAsync(AgentEditorAccessIntent intent) {
+        if (retired) {
+            return;
+        }
+        var state = Access;
+        switch (intent) {
+            case AgentEditorAccessIntent.LoadProjects:
+                Reads++;
+                if (scenario == AgentEditorScenario.ProjectReadFailure && !state.ProjectsRequested) {
+                    state.ProjectsRequested = true;
+                    state.ProjectsError = "Injected project metadata failure. Saved selections are retained.";
+                    return;
+                }
+                state.ProjectsRequested = true;
+                state.ProjectsLoaded = true;
+                state.Projects = Enumerable.Range(1, scenario == AgentEditorScenario.LargeCatalog ? 100 : 3)
+                    .Select(index => new AgentEditorProject(new Guid(index, 1, 0, new byte[8]), $"Project {index} · Žluťoučký 東京")).ToArray();
+                state.ProjectsError = null;
+                return;
+            case AgentEditorAccessIntent.RetrySecrets:
+                Reads++;
+                state.SecretsLoaded = true;
+                state.SecretsError = null;
+                return;
+            case AgentEditorAccessIntent.CreateCapability create:
+                var capability = new CapabilityCatalogItem(Guid.NewGuid(), create.Kind, "created-fixture", "Created fixture capability", "Created only in memory", "fixture:local", "{}", CapabilityProofStatus.NotRun, string.Empty, null, false);
+                state.Capabilities = state.Capabilities.Append(capability).ToArray();
+                state.CreatedCapabilityId = capability.Id;
+                state.CreatedCapabilityMessage = "Fixture capability created. Assign to this draft.";
+                return;
+            case AgentEditorAccessIntent.ReviewCreatedCapability:
+                Reads++;
+                state.CreatedCapabilityNeedsRead = false;
+                return;
+            case AgentEditorAccessIntent.AssignCreatedCapability:
+                if (state.CreatedCapabilityId is { } createdId) {
+                    await AssignCapabilityAsync(createdId);
+                    state.CreatedCapabilityId = null;
+                    state.CreatedCapabilityMessage = null;
+                }
+                return;
+            case AgentEditorAccessIntent.Flag { Kind: AgentEditorAccessFlag.WorkspaceLocalScripts or AgentEditorAccessFlag.ScriptsReadEnvironment } risk:
+                var revision = ++riskRevision;
+                var enabled = risk.Value && ConfirmRiskRequested is not null && await ConfirmRiskRequested(risk.Kind);
+                if (!retired && revision == riskRevision) {
+                    if (risk.Kind == AgentEditorAccessFlag.WorkspaceLocalScripts) {
+                        Draft.WorkspaceToolAccess.CanRunLocalScripts = enabled;
+                    } else {
+                        Draft.WorkspaceToolAccess.CanScriptsReadEnvironment = enabled;
+                    }
+                    Draft.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
+                    Draft.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(Draft.WorkspaceToolAccess);
+                    state.WorkspaceRiskInputVersion++;
+                }
+                return;
+            case AgentEditorAccessIntent.Profile:
+                riskRevision++;
+                break;
+        }
+        state.Apply(intent);
+    }
+
+    public void ApplyStorage(IReadOnlyList<Guid> ids) {
+        if (!retired) {
+            Draft.WorkspaceToolAccess.AllowedStorageCatalogIds = ids.ToList();
+        }
+    }
+    public void ChangeRootCandidate(string value) {
+        if (!retired) {
+            RootEntry.Candidate = value;
+            RootEntry.ValidationMessage = null;
+        }
+    }
+    public void AddRoot() {
+        if (retired) {
+            return;
+        }
+        var candidate = RootEntry.Candidate.Trim();
+        if (!Path.IsPathFullyQualified(candidate)) {
+            RootEntry.ValidationMessage = "Enter a native absolute path for this fixture.";
+            return;
+        }
+        if (rootNames.Values.Contains(candidate, StringComparer.OrdinalIgnoreCase)) {
+            RootEntry.ValidationMessage = "This fixture root is already selected.";
+            return;
+        }
+        var alias = $"external-target/v1/{++rootSequence:x24}";
+        rootNames.Add(alias, candidate);
+        Draft.WorkspaceToolAccess.AllowedExternalTargetAliases.Add(alias);
+        RootEntry.Candidate = string.Empty;
+        RootEntry.ValidationMessage = null;
+    }
+    public void RemoveRoot(string alias) {
+        if (!retired) {
+            Draft.WorkspaceToolAccess.AllowedExternalTargetAliases.Remove(alias);
+            rootNames.Remove(alias);
+        }
+    }
+    public async Task AssignCapabilityAsync(Guid id) {
+        if (retired || busy || pendingRefresh || unconfirmed || verificationPending) {
+            return;
+        }
+        if (!Draft.SelectedCapabilityIds.Remove(id)) {
+            Draft.SelectedCapabilityIds.Add(id);
+        }
+        if (Draft.Id.HasValue && context.Validate()) {
+            await SaveAsync(context);
+        }
+    }
+    public async Task VerifyCapabilityAsync(Guid id) {
+        if (retired || busy || pendingRefresh || unconfirmed || verificationPending || committed is null || !Draft.SelectedCapabilityIds.Contains(id)) {
+            return;
+        }
+        busy = true;
+        Diagnostics++;
+        try {
+            if (heldVerification is { } pending) {
+                await pending.Task;
+            }
+            if (retired) {
+                return;
+            }
+            committed.ExpectedUpdatedAtUtc = DateTimeOffset.UtcNow;
+            verifiedCapabilityId = id;
+            verificationPending = true;
+            verificationUnknown = scenario == AgentEditorScenario.VerificationUnknown;
+            if (scenario == AgentEditorScenario.VerificationReadFailure) {
+                Notice = "Fixture proof committed; read-back failed. Retry the read without repeating the diagnostic.";
+                return;
+            }
+            ReviewVerification();
+        } finally {
+            busy = false;
+        }
+    }
+    private void ReviewVerification() {
+        Reads++;
+        if (verificationUnknown) {
+            Notice = "Fixture publication remains unconfirmed without a receipt. The unsaved draft is retained and writes stay blocked.";
+            return;
+        }
+        Draft.ExpectedUpdatedAtUtc = committed!.ExpectedUpdatedAtUtc;
+        Access.Capabilities = Access.Capabilities.Select(item => item.Id == verifiedCapabilityId ? item with { ProofStatus = CapabilityProofStatus.Verified } : item).ToArray();
+        verificationPending = false;
+        Notice = "Fixture diagnostic published. Unsaved configuration and edit context retained.";
+    }
+    public void HoldVerification() => heldVerification ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public void ReleaseVerification() {
+        var pending = heldVerification;
+        heldVerification = null;
+        pending?.TrySetResult();
+    }
+    public void DeleteCommitted(bool confirmed) {
+        if (!retired && confirmed) {
+            committed = null;
+            Writes++;
+            Close();
+        }
     }
 }

@@ -260,7 +260,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         }, cancellationToken);
     }
 
-    public async Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+    public async Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         if (providerSource is not IProviderRuntimeProfileSnapshotSource snapshots) {
             throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.InfrastructureUnavailable));
         }
@@ -269,6 +269,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         if (outcome.Disposition != CapabilityVerificationDisposition.Committed) {
             throw new CapabilityVerificationException(outcome);
         }
+        return outcome;
     }
 
     private static void EnsureUniqueCapabilityIdentity(IEnumerable<CapabilityCatalogItem> existingCapabilities, CapabilityCatalogItem capability)

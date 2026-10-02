@@ -145,9 +145,10 @@ public class CapabilitiesWorkspaceProxy : DispatchProxy {
         return Save?.Invoke(model) ?? Task.FromResult(model.Id!.Value);
     }
 
-    private Task Verify(Guid agentId, Guid capabilityId, CancellationToken token) {
+    private async Task<CapabilityVerificationOutcome> Verify(Guid agentId, Guid capabilityId, CancellationToken token) {
         VerifyCalls++;
-        return VerifyOperation?.Invoke(agentId, capabilityId, token) ?? Task.CompletedTask;
+        await (VerifyOperation?.Invoke(agentId, capabilityId, token) ?? Task.CompletedTask);
+        return new(CapabilityVerificationDisposition.Committed);
     }
 }
 

@@ -35,7 +35,7 @@ public sealed class ResourcesBrowserTests(PlaywrightAppFixture fixture) {
         Assert.StartsWith(Path.GetFullPath(fixture.OwnedDatabaseProfile.WorkspaceRootPath) + Path.DirectorySeparatorChar, path, StringComparison.OrdinalIgnoreCase);
         const string content = "Task-owned Resources browser content and download.";
         await File.WriteAllTextAsync(path, content);
-        await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
+        await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
         var page = await context.NewPageAsync();
         var errors = Observe(page);
         try {

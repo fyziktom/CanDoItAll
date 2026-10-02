@@ -23,6 +23,15 @@ else {
     <EditForm @key="state.Origin" EditContext="@state.Context" OnValidSubmit="state.Save">
         <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
             <Header>
+                @if (state.VerificationMessage is { } verificationMessage) {
+                    <Alert AlertStyle="AlertStyle.Info" data-testid="agents-editor-verification-result">
+                        <p>@verificationMessage</p>
+                        @if (state.CanReviewVerification) {
+                            <Button Text="Review capability proof" ButtonStyle="ButtonStyle.Light"
+                                    Disabled="state.IsBusy" Click="state.RetryRefresh" data-testid="agents-editor-retry-verification" />
+                        }
+                    </Alert>
+                }
                 @if (state.CommitWarning is { } warning) {
                     <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-editor-commit-warning">
                         <p>@warning</p>

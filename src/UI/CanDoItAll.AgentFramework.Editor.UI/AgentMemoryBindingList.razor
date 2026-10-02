@@ -1,16 +1,15 @@
+@using CanDoItAll.Memory.Abstractions
+@namespace CanDoItAll.Modules.AgentFramework.Pages.Components
 @using CanDoItAll.AgentFramework.Models
 
-@if (Bindings.Count == 0)
-{
+@if (Bindings.Count == 0) {
     <SurfaceCard Soft="true">
         <p class="text-sm text-slate-600">No external memory providers are bound to this agent.</p>
     </SurfaceCard>
 }
-else
-{
+else {
     <Stack GapScale="LayoutGap.Small" data-testid="agents-catalog-memory-bindings">
-        @for (var index = 0; index < Bindings.Count; index++)
-        {
+        @for (var index = 0; index < Bindings.Count; index++) {
             var binding = Bindings[index];
             var bindingIndex = index;
             <SurfaceCard Soft="true">
@@ -27,8 +26,7 @@ else
                                      ValueExpression="@(() => binding.Requirement)"
                                      class="cda-input"
                                      data-testid="@($"agents-catalog-memory-requirement-{binding.Alias.Value}")">
-                            @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
-                            {
+                            @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>()) {
                                 <option value="@requirement">@requirement</option>
                             }
                         </InputSelect>

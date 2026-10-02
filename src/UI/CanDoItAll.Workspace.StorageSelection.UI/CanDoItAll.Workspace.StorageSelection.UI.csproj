@@ -6,6 +6,6 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../../Modules/CanDoItAll.Modules.Workspace.StorageSelection.Contracts/CanDoItAll.Modules.Workspace.StorageSelection.Contracts.csproj" />
-    <ProjectReference Include="../CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="../CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
   </ItemGroup>
 </Project>

@@ -42,6 +42,9 @@ public partial class AgentDetailsDialog : IDisposable
     public IAgentEditorReads EditorReads { get; set; } = default!;
 
     [Inject]
+    public IAgentCapabilityCommands CapabilityCommands { get; set; } = default!;
+
+    [Inject]
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
@@ -61,9 +64,6 @@ public partial class AgentDetailsDialog : IDisposable
     private IReadOnlyList<AgentEditorProject> projectStructureProjects = [];
     private IReadOnlyList<AgentEditorSecret> secrets = [];
     private IReadOnlyList<string> tagValues = [];
-    private string capabilitySearch = string.Empty;
-    private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
-    private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
     private Guid? linkedPartyId;
     private AgentEditorLoadState loadState = AgentEditorLoadState.Loading;
     private bool isLoading => loadState == AgentEditorLoadState.Loading;
@@ -77,26 +77,20 @@ public partial class AgentDetailsDialog : IDisposable
     private bool isLoadingProjectStructureProjects;
     private bool projectStructureProjectsRequested;
     private bool areSecretsLoaded;
-    private bool isLoadingSecrets => isLoading;
+    private bool isLoadingSecrets;
     private string? providerLoadErrorMessage;
     private string? projectStructureProjectsErrorMessage;
     private string? secretsErrorMessage;
     private Task? projectStructureProjectsLoadTask;
     private long providerSelectionRevision;
+    private long editorLoadRevision;
     private int autoApprovalInputVersion;
-    private bool isConfirmingWorkspaceRisk;
+    private AgentWorkspaceRiskRequest? pendingWorkspaceRisk;
+    private bool isConfirmingWorkspaceRisk => pendingWorkspaceRisk is not null;
+    private sealed record AgentWorkspaceRiskRequest(AgentEditorOrigin Origin, AgentEditorAccessFlag Kind, long Revision);
     private int workspaceRiskInputVersion;
-
-    private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
-    [
-        AgentWorkspaceToolProfileKind.Custom,
-        AgentWorkspaceToolProfileKind.ReadOnly,
-        AgentWorkspaceToolProfileKind.SoftwareDevelopment,
-        AgentWorkspaceToolProfileKind.QualityValidation,
-        AgentWorkspaceToolProfileKind.ArchitectureReview,
-        AgentWorkspaceToolProfileKind.SecurityReview,
-        AgentWorkspaceToolProfileKind.BusinessAnalysis
-    ];
+    private long workspacePermissionRevision;
+    private long autoApprovalRevision;
 
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
@@ -183,24 +177,11 @@ public partial class AgentDetailsDialog : IDisposable
             editorModel.ImageGenerationAccess.PreferredProviderProfileId);
 
     private IReadOnlyList<string> VisibleTagSuggestions => agents
+        .Where(agent => !agent.IsTemplate)
         .SelectMany(agent => agent.Tags)
         .Where(tag => !AgentSpecialTags.IsFavorite(tag))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    private IReadOnlyList<CapabilityCatalogItem> AssignableCapabilities => capabilities
-        .Where(item => item.Kind is CapabilityKind.Tool or CapabilityKind.Skill or CapabilityKind.McpServer ||
-                       editorModel.SelectedCapabilityIds.Contains(item.Id))
-        .OrderByDescending(item => editorModel.SelectedCapabilityIds.Contains(item.Id))
-        .ThenBy(item => item.Kind)
-        .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    private IReadOnlyList<CapabilityCatalogItem> FilteredAssignableCapabilities => AssignableCapabilities
-        .Where(MatchesCapabilitySearch)
-        .Where(MatchesCapabilityAssignmentFilter)
-        .Where(MatchesCapabilityKindFilter)
         .ToList();
 
     private IReadOnlyList<string> AvailableCapabilityTags => capabilities
@@ -238,12 +219,13 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task LoadAsync() {
         var owner = session;
+        var revision = ++editorLoadRevision;
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         loadState = AgentEditorLoadState.Loading;
         coreLoadError = null;
         try {
             var loaded = await EditorReads.LoadAsync(owner.Target, InitialProviders, request.Token);
-            if (!IsCurrent(owner)) {
+            if (!IsCurrent(owner) || revision != editorLoadRevision) {
                 return;
             }
             if (loaded.Draft.Id != owner.Target.AgentId) {
@@ -263,14 +245,14 @@ public partial class AgentDetailsDialog : IDisposable
                 NotificationService.Error("Providers failed to load", providerLoadErrorMessage);
             }
             if (loaded.Secrets.Error is not null) {
-                secretsErrorMessage = "Secret references are unavailable. Retry loading the editor.";
+                secretsErrorMessage = "Secret references are unavailable. Retry the secret list without changing your draft.";
                 NotificationService.Error("Secrets failed to load", secretsErrorMessage);
             }
             loadState = AgentEditorLoadState.Ready;
             await TargetChanged.InvokeAsync(owner.Target);
         } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
         } catch (Exception) {
-            if (IsCurrent(owner)) {
+            if (IsCurrent(owner) && revision == editorLoadRevision) {
                 loadState = AgentEditorLoadState.Failed;
                 coreLoadError = "The requested agent editor could not be loaded. Retry or close the editor.";
                 NotificationService.Error("Agent editor failed to load", coreLoadError);
@@ -309,6 +291,8 @@ public partial class AgentDetailsDialog : IDisposable
                 : "The capability was verified, but the editor could not refresh."
             : null,
         HasUnconfirmedWrite = owner.HasUnconfirmedWrite,
+        VerificationMessage = owner.Verification?.Message,
+        CanReviewVerification = owner.Verification?.NeedsReview == true,
         LinkedPartyId = linkedPartyId,
         IsBusy = isBusy,
         IsMutationBlocked = IsMutationBlocked,
@@ -366,6 +350,91 @@ public partial class AgentDetailsDialog : IDisposable
         };
     }
 
+    private AgentEditorAccessState CreateAccessState(AgentEditorSession owner) {
+        var state = owner.Access;
+        state.Projects = projectStructureProjects;
+        state.ProjectsLoaded = areProjectStructureProjectsLoaded;
+        state.ProjectsLoading = isLoadingProjectStructureProjects;
+        state.ProjectsRequested = projectStructureProjectsRequested;
+        state.ProjectsError = projectStructureProjectsErrorMessage;
+        state.Secrets = secrets;
+        state.SecretsLoaded = areSecretsLoaded;
+        state.SecretsLoading = isLoadingSecrets;
+        state.SecretsError = secretsErrorMessage;
+        state.ConfirmingWorkspaceRisk = isConfirmingWorkspaceRisk;
+        state.WorkspaceRiskInputVersion = workspaceRiskInputVersion;
+        state.OpeningCapabilityWizard = isOpeningCapabilityWizard;
+        state.MutationBlocked = IsMutationBlocked;
+        state.Capabilities = capabilities;
+        state.Changed = EventCallback.Factory.Create<AgentEditorAccessIntent>(this, intent => HandleAccessIntentAsync(owner, intent));
+        return state;
+    }
+
+    private async Task HandleAccessIntentAsync(AgentEditorSession owner, AgentEditorAccessIntent intent) {
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        switch (intent) {
+            case AgentEditorAccessIntent.LoadProjects:
+                await RequestProjectStructureProjectsAsync();
+                return;
+            case AgentEditorAccessIntent.RetrySecrets:
+                await LoadSecretsAsync(owner);
+                return;
+            case AgentEditorAccessIntent.CreateCapability create:
+                await OpenCapabilityWizardAsync(create.Kind);
+                return;
+            case AgentEditorAccessIntent.ReviewCreatedCapability:
+                await ReviewCreatedCapabilityAsync(owner);
+                return;
+            case AgentEditorAccessIntent.AssignCreatedCapability:
+                await AssignCreatedCapabilityAsync(owner);
+                return;
+            case AgentEditorAccessIntent.Flag { Kind: AgentEditorAccessFlag.WorkspaceLocalScripts } scripts:
+                workspacePermissionRevision++;
+                await HandleWorkspaceLocalScriptsChangedAsync(scripts.Value);
+                return;
+            case AgentEditorAccessIntent.Flag { Kind: AgentEditorAccessFlag.ScriptsReadEnvironment } environment:
+                workspacePermissionRevision++;
+                await HandleScriptsReadEnvironmentChangedAsync(environment.Value);
+                return;
+            case AgentEditorAccessIntent.Profile:
+                workspacePermissionRevision++;
+                break;
+        }
+        owner.Access.Apply(intent);
+        if (intent is AgentEditorAccessIntent.Flag { Value: true, Kind:
+                AgentEditorAccessFlag.ProjectStructureRead or AgentEditorAccessFlag.ProjectCreation or
+                AgentEditorAccessFlag.SubprojectCreation or AgentEditorAccessFlag.ProjectStructureNonTaskWrite or
+                AgentEditorAccessFlag.ProjectStructureTaskWrite or AgentEditorAccessFlag.ProjectStructureWrite }) {
+            await RequestProjectStructureProjectsAsync();
+        }
+    }
+
+    private async Task LoadSecretsAsync(AgentEditorSession owner) {
+        if (isLoadingSecrets) {
+            return;
+        }
+        isLoadingSecrets = true;
+        secretsErrorMessage = null;
+        try {
+            var references = await EditorReads.ReadSecretsAsync(owner.CancellationToken);
+            if (IsCurrent(owner)) {
+                secrets = references;
+                areSecretsLoaded = true;
+            }
+        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
+        } catch (Exception) {
+            if (IsCurrent(owner)) {
+                secretsErrorMessage = "Secret references could not be loaded. Retry without changing your selections.";
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isLoadingSecrets = false;
+            }
+        }
+    }
+
     private void ReplaceSession(AgentEditorTarget target) {
         session.Dispose();
         session = new(target);
@@ -374,9 +443,12 @@ public partial class AgentDetailsDialog : IDisposable
         isBusy = false;
         isConfirmingDelete = false;
         isConfirmingAutoApproval = false;
-        isConfirmingWorkspaceRisk = false;
+        pendingWorkspaceRisk = null;
         isOpeningCapabilityWizard = false;
         isLoadingProjectStructureProjects = false;
+        isLoadingSecrets = false;
+        workspacePermissionRevision++;
+        autoApprovalRevision++;
         projectStructureProjectsLoadTask = null;
         autoApprovalInputVersion++;
         workspaceRiskInputVersion++;
@@ -451,6 +523,9 @@ public partial class AgentDetailsDialog : IDisposable
         var owner = session;
         if (string.IsNullOrWhiteSpace(owner.Draft.Name)) {
             NotificationService.Error(failureTitle, "Enter an agent name before saving. Your draft is preserved.");
+            return false;
+        }
+        if (!owner.Context.Validate()) {
             return false;
         }
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
@@ -551,14 +626,18 @@ public partial class AgentDetailsDialog : IDisposable
     }
 
     private async Task RetrySavedRefreshAsync() {
-        if (isBusy || session.PendingRefresh is null) {
+        if (isBusy || session.PendingRefresh is null && session.Verification?.NeedsReview != true) {
             return;
         }
         var owner = session;
         isBusy = true;
         try {
+            if (owner.Verification?.NeedsReview == true) {
+                await ReconcileVerificationAsync(owner);
+                return;
+            }
             await ReconcileSaveAsync(owner,
-                owner.PendingRefresh.Kind == AgentEditorMutationKind.Save ? "Agent saved" : "Capability verified",
+                owner.PendingRefresh!.Kind == AgentEditorMutationKind.Save ? "Agent saved" : "Capability verified",
                 owner.PendingRefresh.Kind == AgentEditorMutationKind.Save ? "Technical agent saved." : "Capability verification completed.");
         } finally {
             if (IsCurrent(owner)) {
@@ -685,7 +764,7 @@ public partial class AgentDetailsDialog : IDisposable
     }
 
     private async Task OpenCapabilityWizardAsync(CapabilityKind initialKind) {
-        if (IsMutationBlocked || isOpeningCapabilityWizard) {
+        if (IsMutationBlocked || isOpeningCapabilityWizard || session.Access.CreatedCapabilityId.HasValue) {
             return;
         }
         var owner = session;
@@ -711,28 +790,12 @@ public partial class AgentDetailsDialog : IDisposable
                 return;
             }
             created = true;
-            isBusy = true;
-            var refreshedCapabilities = await EditorReads.ReadCapabilitiesAsync(request.Token);
-            if (!IsCurrent(owner)) {
-                return;
-            }
-            capabilities = refreshedCapabilities;
-            owner.Draft.SelectedCapabilityIds = owner.Draft.SelectedCapabilityIds
-                .Append(capability.CapabilityId).Distinct().OrderBy(id => id).ToList();
-            isBusy = false;
-            if (owner.Draft.Id.HasValue) {
-                var reconciled = await SaveCurrentDraftAsync("Capability created",
-                    "Capability was created and assigned.", "Capability was created, but assignment failed");
-                if (!reconciled && IsCurrent(owner)) {
-                    NotificationService.Info("Capability created", owner.PendingRefresh is not null
-                        ? "Agent assignment was saved; the editor refresh still needs attention."
-                        : owner.HasUnconfirmedWrite
-                            ? "The agent assignment could not be confirmed."
-                            : "The agent assignment was not saved.");
-                }
-            } else {
-                NotificationService.Success("Capability created",
-                    "Capability was created and staged for assignment when the new agent is saved.");
+            owner.Access.CreatedCapabilityId = capability.CapabilityId;
+            owner.Access.CreatedCapabilityNeedsRead = true;
+            owner.Access.CreatedCapabilityMessage = "Capability created. Reviewing the catalog before assigning it.";
+            await ReviewCreatedCapabilityAsync(owner);
+            if (IsCurrent(owner) && !owner.Access.CreatedCapabilityNeedsRead) {
+                await AssignCreatedCapabilityAsync(owner);
             }
         } catch (Exception) {
             if (IsCurrent(owner)) {
@@ -746,48 +809,55 @@ public partial class AgentDetailsDialog : IDisposable
         }
     }
 
-    private bool MatchesCapabilitySearch(CapabilityCatalogItem capability)
-    {
-        if (string.IsNullOrWhiteSpace(capabilitySearch))
-        {
-            return true;
+    private async Task ReviewCreatedCapabilityAsync(AgentEditorSession owner) {
+        if (!IsCurrent(owner) || owner.Access.CreatedCapabilityId is not { } createdId || isBusy) {
+            return;
         }
-
-        var search = capabilitySearch.Trim();
-        return capability.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               capability.Key.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               capability.Description.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               capability.EndpointOrPath.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               capability.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
+        isBusy = true;
+        try {
+            var items = await EditorReads.ReadCapabilitiesAsync(owner.CancellationToken);
+            if (!IsCurrent(owner) || owner.Access.CreatedCapabilityId != createdId) {
+                return;
+            }
+            capabilities = items;
+            owner.Access.CreatedCapabilityNeedsRead = !items.Any(item => item.Id == createdId);
+            owner.Access.CreatedCapabilityMessage = owner.Access.CreatedCapabilityNeedsRead
+                ? "The created capability is not visible yet. Review the catalog again; creation will not be repeated."
+                : "Capability created. Assign it with the current whole-agent draft.";
+        } catch (OperationCanceledException) when (owner.CancellationToken.IsCancellationRequested) {
+        } catch (Exception) {
+            if (IsCurrent(owner)) {
+                owner.Access.CreatedCapabilityNeedsRead = true;
+                owner.Access.CreatedCapabilityMessage = "Capability created, but the catalog read failed. Retry this read before assignment.";
+            }
+        } finally {
+            if (IsCurrent(owner)) {
+                isBusy = false;
+            }
+        }
     }
 
-    private bool MatchesCapabilityAssignmentFilter(CapabilityCatalogItem capability)
-    {
-        var isAttached = editorModel.SelectedCapabilityIds.Contains(capability.Id);
-        return capabilityAssignmentFilter switch
-        {
-            CapabilityDialogAssignmentFilter.Attached => isAttached,
-            CapabilityDialogAssignmentFilter.Available => !isAttached,
-            _ => true
-        };
-    }
-
-    private bool MatchesCapabilityKindFilter(CapabilityCatalogItem capability)
-    {
-        return capabilityKindFilter switch
-        {
-            CapabilityDialogKindFilter.Tool => capability.Kind == CapabilityKind.Tool,
-            CapabilityDialogKindFilter.Skill => capability.Kind == CapabilityKind.Skill,
-            CapabilityDialogKindFilter.Mcp => capability.Kind == CapabilityKind.McpServer,
-            _ => true
-        };
-    }
-
-    private void ResetCapabilityFilters()
-    {
-        capabilitySearch = string.Empty;
-        capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
-        capabilityKindFilter = CapabilityDialogKindFilter.All;
+    private async Task AssignCreatedCapabilityAsync(AgentEditorSession owner) {
+        if (!IsCurrent(owner) || IsMutationBlocked || owner.Access.CreatedCapabilityNeedsRead ||
+            owner.Access.CreatedCapabilityId is not { } createdId) {
+            return;
+        }
+        owner.Draft.SelectedCapabilityIds = owner.Draft.SelectedCapabilityIds.Append(createdId).Distinct().OrderBy(id => id).ToList();
+        if (!owner.Draft.Id.HasValue) {
+            owner.Access.CreatedCapabilityMessage = "Capability created and staged. Save the new agent to persist its assignment.";
+            owner.Access.CreatedCapabilityId = null;
+            return;
+        }
+        var completed = await SaveCurrentDraftAsync("Capability created", "Capability created and assigned.", "Capability created, but assignment failed");
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        if (completed) {
+            owner.Access.CreatedCapabilityId = null;
+            owner.Access.CreatedCapabilityMessage = null;
+        } else {
+            owner.Access.CreatedCapabilityMessage = "Capability created. Its assignment needs attention; creation will not be repeated.";
+        }
     }
 
     private async Task VerifyCapabilityAsync(Guid capabilityId) {
@@ -795,18 +865,22 @@ public partial class AgentDetailsDialog : IDisposable
             return;
         }
         var owner = session;
+        var agentId = owner.Draft.Id!.Value;
+        var expectedVersion = owner.Draft.ExpectedUpdatedAtUtc;
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
         isBusy = true;
         try {
-            var submission = AgentEditorDraftPolicy.Capture(owner.Draft, tagValues, providers);
-            await EditorCommands.VerifyCapabilityAsync(owner.Draft.Id!.Value, capabilityId, request.Token);
+            var outcome = await CapabilityCommands.DiagnoseAsync(agentId, capabilityId, request.Token);
             if (!IsCurrent(owner)) {
                 return;
             }
-            owner.AcknowledgeMutation(owner.Draft.Id.Value, submission, AgentEditorMutationKind.CapabilityVerification);
-            await ReconcileSaveAsync(owner, "Capability verified", "Capability verification completed.");
+            owner.Verification = new(agentId, capabilityId, expectedVersion, outcome);
+            if (owner.Verification.NeedsReview) {
+                await ReconcileVerificationAsync(owner);
+            }
         } catch (Exception) {
             if (IsCurrent(owner)) {
+                owner.Verification = new(agentId, capabilityId, expectedVersion, new(CapabilityVerificationDisposition.Unconfirmed));
                 NotificationService.Error("Capability verification failed", "The verification result could not be confirmed. Refresh the capability evidence before retrying.");
             }
         } finally {
@@ -816,132 +890,25 @@ public partial class AgentDetailsDialog : IDisposable
         }
     }
 
-    private static int CountAllowedProjectStructureProjects(AgentEditorModel editor)
-    {
-        return editor.ProjectStructureAccess.AllowedProjectIds
-            .Where(projectId => projectId != Guid.Empty)
-            .Distinct()
-            .Count();
-    }
-
-    private static string DescribeProjectStructureScope(AgentEditorModel editor)
-    {
-        return editor.ProjectStructureAccess.AllowAllProjects
-            ? "All current and future projects"
-            : $"{CountAllowedProjectStructureProjects(editor)} selected";
-    }
-
-    private static int CountAllowedProcesses(AgentEditorModel editor)
-    {
-        return editor.ProcessAccess.AllowedDefinitionIds
-            .Where(definitionId => definitionId != Guid.Empty)
-            .Distinct()
-            .Count();
-    }
-
-    private static string DescribeProcessScope(AgentEditorModel editor)
-    {
-        return editor.ProcessAccess.AllowAllDefinitions
-            ? "All current and future processes"
-            : $"{CountAllowedProcesses(editor)} selected";
-    }
-
-    private static string DescribeWorkspaceFileScope(AgentEditorModel editor)
-    {
-        if (!editor.WorkspaceToolAccess.CanReadFiles &&
-            !editor.WorkspaceToolAccess.CanWriteFiles)
-        {
-            return "File tools disabled";
+    private async Task ReconcileVerificationAsync(AgentEditorSession owner) {
+        var verification = owner.Verification ?? throw new InvalidOperationException("There is no diagnostic to review.");
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
+        try {
+            var refreshed = await EditorCommands.ReconcileAsync(owner.Target.AgentId!.Value, providers, request.Token);
+            if (!IsCurrent(owner) || !ReferenceEquals(owner.Verification, verification)) {
+                return;
+            }
+            var accepted = verification.Reconcile(owner.Draft, refreshed);
+            agents = refreshed.Agents;
+            capabilities = refreshed.Capabilities;
+            if (accepted) {
+                NotificationService.Success("Capability verified", "Proof updated. Unsaved editor changes are retained.");
+            }
+        } catch (Exception) {
+            if (IsCurrent(owner) && ReferenceEquals(owner.Verification, verification)) {
+                NotificationService.Error("Capability proof review failed", "Retry the read-back without repeating the diagnostic. Your draft is retained.");
+            }
         }
-
-        var accessMode = editor.WorkspaceToolAccess.CanWriteFiles
-            ? "Read/write"
-            : "Read-only";
-        var externalRootCount = editor.WorkspaceToolAccess.AllowedExternalTargetAliases.Count;
-        return externalRootCount == 0
-            ? $"{accessMode}; managed workspace only"
-            : $"{accessMode}; {externalRootCount} external root(s)";
-    }
-
-    private static string DescribeWorkspaceExecutionScope(AgentEditorModel editor)
-    {
-        var access = editor.WorkspaceToolAccess;
-        var enabled = new List<string>();
-        if (access.CanRunValidationCommands)
-        {
-            enabled.Add("build/test/run");
-        }
-
-        if (access.CanRunLocalScripts)
-        {
-            enabled.Add(access.CanScriptsReadEnvironment ? "local scripts (with environment access)" : "local scripts");
-        }
-
-        if (access.CanScaffoldProjects)
-        {
-            enabled.Add("project scaffolding");
-        }
-
-        if (access.CanManageWorkspacePaths)
-        {
-            enabled.Add("path management");
-        }
-
-        if (access.CanTransformArtifacts)
-        {
-            enabled.Add("artifact transforms");
-        }
-
-        return enabled.Count == 0
-            ? "Execution tools disabled"
-            : $"Enabled: {string.Join(", ", enabled)}";
-    }
-
-    private static string DescribeStorageScope(AgentEditorModel editor)
-    {
-        if (!editor.WorkspaceToolAccess.CanReadStorage &&
-            !editor.WorkspaceToolAccess.CanWriteStorage)
-        {
-            return "Storage tools disabled";
-        }
-
-        var accessMode = editor.WorkspaceToolAccess.CanWriteStorage
-            ? "Read/write"
-            : "Read-only";
-
-        return editor.WorkspaceToolAccess.AllowAllStorageCatalogs
-            ? $"{accessMode}; all storage catalogs"
-            : $"{accessMode}; {editor.WorkspaceToolAccess.AllowedStorageCatalogIds.Count} storage catalog(s)";
-    }
-
-    private static string DescribeSecretScope(AgentEditorModel editor)
-    {
-        var count = editor.AllowedSecretReferences
-            .Where(item => item.SecretId != Guid.Empty)
-            .Select(item => item.SecretId)
-            .Distinct()
-            .Count();
-        return count == 0
-            ? "No stored secrets"
-            : $"{count} stored secret(s)";
-    }
-
-    private bool HasAllowedSecret(Guid secretId)
-        => editorModel.AllowedSecretReferences.Any(item => item.SecretId == secretId);
-
-    private void ToggleAllowedSecret(AgentEditorSecret secret, object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.AllowedSecretReferences.RemoveAll(item => item.SecretId == secret.Id);
-        if (!isEnabled)
-        {
-            return;
-        }
-
-        editorModel.AllowedSecretReferences.Add(new AgentAllowedSecretReference(
-            secret.Id,
-            secret.Name,
-            AgentSecretPurposes.GeneralAgentRequest));
     }
 
     private string DescribeRuntimeParameterPolicy(ProviderProfile provider)
@@ -971,194 +938,13 @@ public partial class AgentDetailsDialog : IDisposable
             : editorModel.Model.Trim();
     }
 
-    private void ToggleProjectStructureRead(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanRead = isEnabled;
-        if (isEnabled)
-        {
-            projectStructureProjectsRequested = true;
-            _ = EnsureProjectStructureProjectsLoadedAsync();
-        }
-
-        if (!isEnabled)
-        {
-            editorModel.ProjectStructureAccess.CanWrite = false;
-            editorModel.ProjectStructureAccess.CanWriteNonTaskStructure = false;
-            editorModel.ProjectStructureAccess.CanWriteTasks = false;
-            editorModel.ProjectStructureAccess.CanCreateProjects = false;
-            editorModel.ProjectStructureAccess.CanCreateSubprojects = false;
-            editorModel.ProjectStructureAccess.AllowAllProjects = false;
-            editorModel.ProjectStructureAccess.AllowedProjectIds = [];
-        }
-    }
-
-    private void ToggleProjectCreation(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanCreateProjects = isEnabled;
-        EnsureProjectAccessLoadedWhenEnabled(isEnabled);
-    }
-
-    private void ToggleSubprojectCreation(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanCreateSubprojects = isEnabled;
-        EnsureProjectAccessLoadedWhenEnabled(isEnabled);
-    }
-
-    private void EnsureProjectAccessLoadedWhenEnabled(bool isEnabled)
-    {
-        if (!isEnabled)
-        {
-            return;
-        }
-
-        editorModel.ProjectStructureAccess.CanRead = true;
-        projectStructureProjectsRequested = true;
-        _ = EnsureProjectStructureProjectsLoadedAsync();
-    }
-
-    private void ToggleProjectStructureNonTaskWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanWriteNonTaskStructure = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProjectStructureAccess.CanRead = true;
-            projectStructureProjectsRequested = true;
-            _ = EnsureProjectStructureProjectsLoadedAsync();
-        }
-    }
-
-    private void ToggleProjectStructureTaskWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanWriteTasks = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProjectStructureAccess.CanRead = true;
-            projectStructureProjectsRequested = true;
-            _ = EnsureProjectStructureProjectsLoadedAsync();
-        }
-    }
-
-    private void ToggleProjectStructureWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.CanWrite = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProjectStructureAccess.CanRead = true;
-            projectStructureProjectsRequested = true;
-            _ = EnsureProjectStructureProjectsLoadedAsync();
-        }
-    }
-
-    private void ToggleProjectStructureAllowAll(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProjectStructureAccess.AllowAllProjects = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProjectStructureAccess.CanRead = true;
-            editorModel.ProjectStructureAccess.AllowedProjectIds = [];
-        }
-    }
-
-    private void ToggleProcessRead(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProcessAccess.CanRead = isEnabled;
-        if (!isEnabled)
-        {
-            editorModel.ProcessAccess.CanWrite = false;
-            editorModel.ProcessAccess.AllowAllDefinitions = false;
-        }
-    }
-
-    private void ToggleProcessWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProcessAccess.CanWrite = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProcessAccess.CanRead = true;
-        }
-    }
-
-    private void ToggleProcessAllowAll(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.ProcessAccess.AllowAllDefinitions = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.ProcessAccess.CanRead = true;
-        }
-    }
-
-    private void ChangeWorkspaceToolProfile(object? rawValue)
-    {
-        if (!Enum.TryParse<AgentWorkspaceToolProfileKind>(rawValue?.ToString(), ignoreCase: true, out var profile) ||
-            !Enum.IsDefined(profile))
-        {
-            return;
-        }
-
-        var current = editorModel.WorkspaceToolAccess;
-        var next = profile == AgentWorkspaceToolProfileKind.Custom
-            ? AgentEditorDraftPolicy.CopyWorkspaceAccess(current)
-            : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
-        next.Profile = profile;
-        next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
-        next.ExternalTargetRootBindings = current.ExternalTargetRootBindings.ToList();
-        next.CanReadStorage = current.CanReadStorage;
-        next.CanWriteStorage = current.CanWriteStorage;
-        next.AllowAllStorageCatalogs = current.AllowAllStorageCatalogs;
-        next.AllowedStorageCatalogIds = current.AllowedStorageCatalogIds.ToList();
-        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(next);
-    }
-
-    private void ToggleWorkspaceFileRead(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanReadFiles = isEnabled;
-        if (!isEnabled)
-        {
-            editorModel.WorkspaceToolAccess.CanWriteFiles = false;
-        }
-
-        NormalizeWorkspaceToolAccess();
-    }
-
-    private void ToggleWorkspaceFileWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanWriteFiles = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.WorkspaceToolAccess.CanReadFiles = true;
-        }
-
-        NormalizeWorkspaceToolAccess();
-    }
-
-    private void ToggleWorkspaceValidationCommands(object? rawValue)
-    {
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanRunValidationCommands = rawValue is bool value && value;
-        NormalizeWorkspaceToolAccess();
-    }
-
     private async Task HandleWorkspaceLocalScriptsChangedAsync(object? rawValue)
     {
         if (rawValue is not true)
         {
-            MarkWorkspaceToolProfileCustom();
+            editorModel.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
             editorModel.WorkspaceToolAccess.CanRunLocalScripts = false;
-            NormalizeWorkspaceToolAccess();
+            editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
             return;
         }
 
@@ -1168,6 +954,7 @@ public partial class AgentDetailsDialog : IDisposable
         }
 
         if (await ConfirmWorkspaceRiskAsync(
+                AgentEditorAccessFlag.WorkspaceLocalScripts,
                 "Allow this agent to run local scripts?",
                 "Enable local scripts?",
                 "The agent can run PowerShell and Python scripts in its workspace with your account's rights. Scripts can change files, start programs and reach the network. Each run still needs approval unless auto-approval is on, and scripts are inspected before they run.",
@@ -1175,9 +962,9 @@ public partial class AgentDetailsDialog : IDisposable
                 "Enable local scripts",
                 "agents-workspace-scripts-confirmation"))
         {
-            MarkWorkspaceToolProfileCustom();
+            editorModel.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
             editorModel.WorkspaceToolAccess.CanRunLocalScripts = true;
-            NormalizeWorkspaceToolAccess();
+            editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
         }
     }
 
@@ -1186,7 +973,7 @@ public partial class AgentDetailsDialog : IDisposable
         if (rawValue is not true)
         {
             editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment = false;
-            NormalizeWorkspaceToolAccess();
+            editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
             return;
         }
 
@@ -1196,6 +983,7 @@ public partial class AgentDetailsDialog : IDisposable
         }
 
         if (await ConfirmWorkspaceRiskAsync(
+                AgentEditorAccessFlag.ScriptsReadEnvironment,
                 "Allow this agent's scripts to read environment variables?",
                 "Allow environment access?",
                 "Scripts will be able to list all environment variables they receive and read any of them, including proxy settings and extra variables the operator passes to processes (proxy URLs can contain credentials). Host secrets such as API keys are still never passed to processes.",
@@ -1204,11 +992,12 @@ public partial class AgentDetailsDialog : IDisposable
                 "agents-workspace-environment-confirmation"))
         {
             editorModel.WorkspaceToolAccess.CanScriptsReadEnvironment = true;
-            NormalizeWorkspaceToolAccess();
+            editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
         }
     }
 
     private async Task<bool> ConfirmWorkspaceRiskAsync(
+        AgentEditorAccessFlag kind,
         string question,
         string title,
         string warning,
@@ -1222,8 +1011,9 @@ public partial class AgentDetailsDialog : IDisposable
         }
 
         var owner = session;
+        var decision = new AgentWorkspaceRiskRequest(owner.Origin, kind, workspacePermissionRevision);
         using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.CancellationToken);
-        isConfirmingWorkspaceRisk = true;
+        pendingWorkspaceRisk = decision;
         var confirmed = false;
         try
         {
@@ -1247,7 +1037,8 @@ public partial class AgentDetailsDialog : IDisposable
                     TestId = testId
                 },
                 cancellationToken: request.Token) is true;
-            return confirmed && IsCurrent(owner);
+            confirmed = confirmed && IsCurrent(owner) && decision.Revision == workspacePermissionRevision && pendingWorkspaceRisk == decision;
+            return confirmed;
         }
         catch (Exception)
         {
@@ -1262,74 +1053,12 @@ public partial class AgentDetailsDialog : IDisposable
         {
             if (IsCurrent(owner))
             {
-                isConfirmingWorkspaceRisk = false;
+                pendingWorkspaceRisk = null;
                 if (!confirmed)
                 {
                     workspaceRiskInputVersion++;
                 }
             }
-        }
-    }
-
-    private void ToggleWorkspaceScaffoldProjects(object? rawValue)
-    {
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanScaffoldProjects = rawValue is bool value && value;
-        NormalizeWorkspaceToolAccess();
-    }
-
-    private void ToggleWorkspaceManagePaths(object? rawValue)
-    {
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanManageWorkspacePaths = rawValue is bool value && value;
-        NormalizeWorkspaceToolAccess();
-    }
-
-    private void ToggleWorkspaceTransformArtifacts(object? rawValue)
-    {
-        MarkWorkspaceToolProfileCustom();
-        editorModel.WorkspaceToolAccess.CanTransformArtifacts = rawValue is bool value && value;
-        NormalizeWorkspaceToolAccess();
-    }
-
-    private void MarkWorkspaceToolProfileCustom()
-    {
-        editorModel.WorkspaceToolAccess.Profile = AgentWorkspaceToolProfileKind.Custom;
-    }
-
-    private void NormalizeWorkspaceToolAccess()
-    {
-        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
-    }
-
-    private void ToggleStorageRead(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.WorkspaceToolAccess.CanReadStorage = isEnabled;
-        if (!isEnabled)
-        {
-            editorModel.WorkspaceToolAccess.CanWriteStorage = false;
-            editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs = false;
-        }
-    }
-
-    private void ToggleStorageWrite(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.WorkspaceToolAccess.CanWriteStorage = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.WorkspaceToolAccess.CanReadStorage = true;
-        }
-    }
-
-    private void ToggleStorageAllowAll(object? rawValue)
-    {
-        var isEnabled = rawValue is bool value && value;
-        editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs = isEnabled;
-        if (isEnabled)
-        {
-            editorModel.WorkspaceToolAccess.CanReadStorage = true;
         }
     }
 
@@ -1341,49 +1070,6 @@ public partial class AgentDetailsDialog : IDisposable
         {
             editorModel.VoiceAccess.PreferredVoiceId = string.Empty;
         }
-    }
-
-    private bool HasProjectStructureProjectAccess(Guid projectId)
-    {
-        return editorModel.ProjectStructureAccess.AllowedProjectIds.Contains(projectId);
-    }
-
-    private void ToggleProjectStructureProject(Guid projectId, object? rawValue)
-    {
-        var selectedProjects = editorModel.ProjectStructureAccess.AllowedProjectIds.ToList();
-        var isEnabled = rawValue is bool value && value;
-        if (isEnabled)
-        {
-            editorModel.ProjectStructureAccess.AllowAllProjects = false;
-            if (!selectedProjects.Contains(projectId))
-            {
-                selectedProjects.Add(projectId);
-            }
-        }
-        else
-        {
-            selectedProjects.RemoveAll(item => item == projectId);
-        }
-
-        editorModel.ProjectStructureAccess.AllowedProjectIds = selectedProjects
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void SelectAllProjectStructureProjects()
-    {
-        editorModel.ProjectStructureAccess.AllowAllProjects = false;
-        editorModel.ProjectStructureAccess.AllowedProjectIds = projectStructureProjects
-            .Select(item => item.Id)
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-    }
-
-    private void ClearProjectStructureProjects()
-    {
-        editorModel.ProjectStructureAccess.AllowedProjectIds = [];
     }
 
     private Task HandleTagsChangedAsync(IReadOnlyList<string> value)
@@ -1468,6 +1154,7 @@ public partial class AgentDetailsDialog : IDisposable
 
     private async Task HandleAutoApprovalChangedAsync(object? rawValue)
     {
+        var revision = ++autoApprovalRevision;
         var shouldEnable = rawValue is bool value && value;
         if (!shouldEnable)
         {
@@ -1500,7 +1187,8 @@ public partial class AgentDetailsDialog : IDisposable
                     AriaLabel = "Confirm automatic approval for agent tool calls",
                     TestId = "agents-auto-approval-confirmation"
                 }, cancellationToken: request.Token) is true;
-            if (confirmed && IsCurrent(owner))
+            confirmed = confirmed && IsCurrent(owner) && revision == autoApprovalRevision;
+            if (confirmed)
             {
                 editorModel.Permissions = editorModel.Permissions with
                 {
@@ -1621,7 +1309,7 @@ public partial class AgentDetailsDialog : IDisposable
         }
         editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = selection.AllowedAliases.ToList();
         editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = selection.RootBindings.ToList();
-        NormalizeWorkspaceToolAccess();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
     }
 
     private void ApplyStorageCatalogSelection(AgentEditorSession owner, IReadOnlyList<Guid> catalogIds)
@@ -1634,7 +1322,7 @@ public partial class AgentDetailsDialog : IDisposable
             .Distinct()
             .OrderBy(catalogId => catalogId)
             .ToList();
-        NormalizeWorkspaceToolAccess();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
     }
 
     private static IReadOnlyList<string> NormalizeVisibleTags(IEnumerable<string> tags)
@@ -1658,37 +1346,9 @@ public partial class AgentDetailsDialog : IDisposable
         };
     }
 
-    private static string FormatWorkspaceToolProfile(AgentWorkspaceToolProfileKind profile)
-    {
-        return profile switch
-        {
-            AgentWorkspaceToolProfileKind.ReadOnly => "Read only",
-            AgentWorkspaceToolProfileKind.SoftwareDevelopment => "Software development",
-            AgentWorkspaceToolProfileKind.QualityValidation => "Quality validation",
-            AgentWorkspaceToolProfileKind.ArchitectureReview => "Architecture review",
-            AgentWorkspaceToolProfileKind.SecurityReview => "Security review",
-            AgentWorkspaceToolProfileKind.BusinessAnalysis => "Business analysis",
-            _ => "Custom"
-        };
-    }
-
     private void ApplyDerivedEditorState()
     {
         tagValues = NormalizeVisibleTags(editorModel.Tags);
     }
 
-private enum CapabilityDialogAssignmentFilter
-    {
-        All,
-        Attached,
-        Available
-    }
-
-    private enum CapabilityDialogKindFilter
-    {
-        All,
-        Tool,
-        Skill,
-        Mcp
-    }
 }

@@ -1,30 +1,41 @@
+@using CanDoItAll.AgentFramework.UI.Capabilities
+@using CanDoItAll.Workspace.StorageSelection.UI
+@inject DialogService DialogService
 @implements IDisposable
 <SurfaceCard data-testid="@TestId">
     <Cluster Gap="LayoutGap.Small">
         <Button Text="Hold save" Click="session.Hold" Disabled="session.IsHeld" />
         <Button Text="Release save" Click="session.Release" Disabled="@(!session.IsHeld)" />
+        <Button Text="Hold diagnostic" Click="session.HoldVerification" Disabled="session.IsVerificationHeld" />
+        <Button Text="Release diagnostic" Click="session.ReleaseVerification" Disabled="@(!session.IsVerificationHeld)" />
         <Button Text="Close editor" Click="session.Close" />
         <Button Text="Reopen editor" Click="Reset" />
         <TextBlock Value="@($"Synthetic writes: {session.Writes}; reads: {session.Reads}")" data-testid="scenario-counts" />
     </Cluster>
     <TextBlock Value="@session.Notice" data-testid="scenario-notice" />
+    <TextBlock Value="@($"Synthetic diagnostics: {session.Diagnostics}")" data-testid="scenario-diagnostics" />
     @if (session.SubmittedName is { } submittedName) {
         <TextBlock Value="@($"Captured name: {submittedName}")" data-testid="scenario-submission" />
     }
-    @if (session.IsConfirmingApproval) {
-        <Alert AlertStyle="AlertStyle.Warning">
-            <p>Synthetic automatic approval confirmation. This grants no production access.</p>
-            <Button Text="Confirm approval" Click="() => session.ConfirmApproval(true)" />
-            <Button Text="Cancel approval" Click="() => session.ConfirmApproval(false)" />
-        </Alert>
+    @if (session.CommittedName is { } committedName) {
+        <TextBlock Value="@($"Read back: {committedName}")" data-testid="scenario-committed" />
     }
     @if (!session.IsClosed) {
         <AgentEditorCoreSurface State="@(session.State with { Clear = EventCallback.Factory.Create(this, Reset) })">
             <AvatarActions><TextBlock Value="Avatar generation remains a production host integration." /></AvatarActions>
             <ProviderRefresh><TextBlock Value="Shared-provider refresh remains a production host integration." /></ProviderRefresh>
             <DeferredSection Context="slot">
-                <EmptyState Title="@($"{AgentEditorSections.All.Single(item => item.Section == slot.Section).Label}: retained production section")"
-                            Description="This sandbox exercises only the A1 core. The real production host supplies this section under the same form and session." />
+                <AgentEditorAccessSurface State="session.Access" Section="slot.Section">
+                    <Memory><AgentMemorySection State="session.Memory" Retry="session.RetryMemory" EntryFormId="@session.EntryFormId" /></Memory>
+                    <ExternalRoots><AgentExternalRootsField Entry="session.RootEntry" SelectedRoots="session.Roots"
+                        CandidateChanged="session.ChangeRootCandidate" Add="session.AddRoot" Remove="session.RemoveRoot" EntryFormId="@session.EntryFormId" /></ExternalRoots>
+                    <StorageSelection><StorageCatalogSelectionField Value="session.Draft.WorkspaceToolAccess.AllowedStorageCatalogIds"
+                        ValueChanged="session.ApplyStorage" OwnerLifetime="session.Token" AllowAll="session.Draft.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                        DataTestId="agents-catalog-storage-selection" /></StorageSelection>
+                    <CapabilityList Context="items"><AgentCapabilityList Items="items" AttachedCapabilityIds="session.Draft.SelectedCapabilityIds"
+                        CanVerify="session.Draft.Id.HasValue" IsBusy="session.Access.MutationBlocked" AssignmentRequested="session.AssignCapabilityAsync"
+                        VerificationRequested="session.VerifyCapabilityAsync" TestIdPrefix="agents-details-capability" /></CapabilityList>
+                </AgentEditorAccessSurface>
             </DeferredSection>
         </AgentEditorCoreSurface>
     }
@@ -35,10 +46,36 @@
     [Parameter] public string Name { get; set; } = "Fixture agent";
     [Parameter] public string TestId { get; set; } = "scenario-editor";
     private AgentEditorScenarioSession session = default!;
-    protected override void OnInitialized() => session = new(this, Scenario, Name);
+    protected override void OnInitialized() => CreateSession();
+    private void CreateSession() {
+        session = new(this, Scenario, Name);
+        var owner = session;
+        owner.ConfirmRiskRequested = risk => ConfirmRiskAsync(owner, risk);
+        owner.ConfirmDeleteRequested = () => ConfirmDeleteAsync(owner);
+        owner.ConfirmApprovalRequested = () => ConfirmApprovalAsync(owner);
+    }
+    private async Task<bool> ConfirmRiskAsync(AgentEditorScenarioSession owner, AgentEditorAccessFlag risk) {
+        var result = await DialogService.OpenAsync<ScenarioConfirmation>("Confirm workspace permission",
+            new Dictionary<string, object?> { [nameof(ScenarioConfirmation.Risk)] = risk },
+            new DialogOptions { Size = ModalSize.Compact, DenseChrome = true }, owner.Token);
+        return ReferenceEquals(owner, session) && result is true;
+    }
+    private async Task ConfirmDeleteAsync(AgentEditorScenarioSession owner) {
+        var result = await DialogService.OpenAsync<ScenarioConfirmation>("Delete fixture agent?",
+            new Dictionary<string, object?> { [nameof(ScenarioConfirmation.Delete)] = true, [nameof(ScenarioConfirmation.AgentName)] = owner.Draft.Name },
+            new DialogOptions { Size = ModalSize.Compact, DenseChrome = true }, owner.Token);
+        if (ReferenceEquals(owner, session)) {
+            owner.DeleteCommitted(result is true);
+        }
+    }
+    private async Task<bool> ConfirmApprovalAsync(AgentEditorScenarioSession owner) {
+        var result = await DialogService.OpenAsync<ScenarioConfirmation>("Enable automatic approval?",
+            options: new DialogOptions { Size = ModalSize.Compact, DenseChrome = true }, cancellationToken: owner.Token);
+        return ReferenceEquals(owner, session) && result is true;
+    }
     private void Reset() {
         session.Dispose();
-        session = new(this, Scenario, Name);
+        CreateSession();
     }
     public void Dispose() => session.Dispose();
 }

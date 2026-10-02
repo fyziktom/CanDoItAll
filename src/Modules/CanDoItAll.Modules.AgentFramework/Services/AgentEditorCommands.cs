@@ -50,7 +50,7 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
 
     public async Task<AgentEditorCatalogRefresh> ReconcileAsync(Guid agentId, IReadOnlyList<ProviderProfile> providers,
         CancellationToken cancellationToken = default) {
-        var agents = await workspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agents = await workspace.ListAgentsAsync(includeTemplates: true, cancellationToken);
         var capabilities = await workspace.ListCapabilitiesAsync(cancellationToken);
         var definition = agents.FirstOrDefault(agent => agent.Id == agentId)
             ?? throw new InvalidOperationException("The saved agent is not available in the refreshed catalog.");

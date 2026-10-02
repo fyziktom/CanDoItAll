@@ -202,7 +202,7 @@ public sealed class AgentEditorCommandCompositionTests : AgentMemorySettingsPane
         var draft = (AgentEditorModel)cut.FindComponent<EditForm>().Instance.EditContext!.Model;
         draft.Name = "Memory editor round trip";
         cut.Find("[data-testid='agents-catalog-memory-mode']").Change(nameof(AgentMemoryInvocationMode.Automatic));
-        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Change("review-memory");
+        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Input("review-memory");
         cut.Find("[data-testid='agents-catalog-memory-new-provider']").Change("provider.editor");
         cut.Find("[data-testid='agents-catalog-memory-new-requirement']").Change(nameof(AgentMemoryProviderRequirement.Required));
         cut.Find("[data-testid='agents-catalog-memory-add-binding']").Click();

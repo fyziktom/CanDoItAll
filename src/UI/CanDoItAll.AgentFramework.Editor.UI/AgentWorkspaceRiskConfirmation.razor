@@ -1,0 +1,61 @@
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@($"{TestIdPrefix}-content")">
+    <TextBlock TextStyle="TextStyle.Body1" Value="@Question" />
+
+    <Alert AlertStyle="AlertStyle.Warning">
+        @Warning
+    </Alert>
+
+    <label class="cda-inline-option">
+        <input type="checkbox"
+               @bind="riskAcknowledged"
+               data-testid="@($"{TestIdPrefix}-risk-acknowledgement")" />
+        @Acknowledgement
+    </label>
+
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             JustifyContent="JustifyContent.End">
+        <Button Text="Cancel"
+                ButtonStyle="ButtonStyle.Light"
+                Click="CancelAsync"
+                data-testid="@($"{TestIdPrefix}-cancel")" />
+        <Button Text="@ConfirmText"
+                Icon="warning"
+                ButtonStyle="ButtonStyle.Warning"
+                Disabled="@(!riskAcknowledged)"
+                Click="ConfirmAsync"
+                data-testid="@($"{TestIdPrefix}-confirm")" />
+    </Cluster>
+</Stack>
+
+@code {
+    [Parameter] public EventCallback<bool> Completed { get; set; }
+
+    [Parameter]
+    public string Question { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Warning { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Acknowledgement { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ConfirmText { get; set; } = "Enable";
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "agents-workspace-risk";
+
+    private bool riskAcknowledged;
+
+    private Task ConfirmAsync() {
+        return riskAcknowledged
+            ? Completed.InvokeAsync(true)
+            : Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+        => Completed.InvokeAsync(false);
+}

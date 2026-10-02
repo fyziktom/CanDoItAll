@@ -20,7 +20,7 @@ public sealed class SharedHostLifetimeBrowserTests {
         Directory.CreateDirectory(host.ArtifactDirectory);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
-        await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
+        await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
         var locked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var queryHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

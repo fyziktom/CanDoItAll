@@ -184,6 +184,9 @@ public sealed class FileJourneyHarnessBrowserTests {
             Assert.Equal(6, wire.Requests);
             evidence.Observations["effects"] = new { file.Id, file.ParentId, writes = 1, attachments = 1, wire.Requests,
                 sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(expected.Content))) };
+            await AgentEditorCoreUiJourney.DeleteCompletedFixtureAsync(host, oracle, page, fixture.Agent.Id);
+            Assert.Equal(expected.Content, await ReadFileContentAsync(host, fixture.ProjectId, file.Id));
+            Assert.Equal(fixture.SiblingContent, await ReadFileContentAsync(host, fixture.SiblingId, fixture.SiblingAssetId));
             await oracle.AssertCleanAsync();
             evidence.Passed = true;
         } finally {

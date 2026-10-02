@@ -11,5 +11,11 @@ public enum AgentEditorScenario {
     SaveRefusal,
     CommitWarning,
     RefreshFailure,
+    ReferenceFailure,
+    MemoryUnavailable,
+    MemoryReadFailure,
+    ProjectReadFailure,
+    VerificationReadFailure,
+    VerificationUnknown,
     UnknownResult
 }

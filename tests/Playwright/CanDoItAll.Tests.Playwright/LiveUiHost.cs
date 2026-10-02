@@ -72,7 +72,7 @@ internal sealed class LiveUiHost : IAsyncDisposable {
     }
 
     internal async Task<IPage> NewPageAsync() {
-        context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
+        context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
         var page = await context.NewPageAsync();
         page.SetDefaultTimeout(45_000);
         return page;

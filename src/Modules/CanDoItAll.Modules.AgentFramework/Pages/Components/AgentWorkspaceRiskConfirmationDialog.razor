@@ -1,63 +1,11 @@
-<Stack GapScale="LayoutGap.Medium"
-       AlignItems="AlignItems.Stretch"
-       data-testid="@($"{TestIdPrefix}-content")">
-    <TextBlock TextStyle="TextStyle.Body1" Value="@Question" />
-
-    <Alert AlertStyle="AlertStyle.Warning">
-        @Warning
-    </Alert>
-
-    <label class="cda-inline-option">
-        <input type="checkbox"
-               @bind="riskAcknowledged"
-               data-testid="@($"{TestIdPrefix}-risk-acknowledgement")" />
-        @Acknowledgement
-    </label>
-
-    <Cluster Gap="LayoutGap.Small"
-             Wrap="FlexWrap.Wrap"
-             JustifyContent="JustifyContent.End">
-        <Button Text="Cancel"
-                ButtonStyle="ButtonStyle.Light"
-                Click="CancelAsync"
-                data-testid="@($"{TestIdPrefix}-cancel")" />
-        <Button Text="@ConfirmText"
-                Icon="warning"
-                ButtonStyle="ButtonStyle.Warning"
-                Disabled="@(!riskAcknowledged)"
-                Click="ConfirmAsync"
-                data-testid="@($"{TestIdPrefix}-confirm")" />
-    </Cluster>
-</Stack>
-
+@using CanDoItAll.AgentFramework.Editor.UI
+<AgentWorkspaceRiskConfirmation Question="@Question" Warning="@Warning" Acknowledgement="@Acknowledgement" ConfirmText="@ConfirmText" TestIdPrefix="@TestIdPrefix" Completed="CompleteAsync" />
 @code {
-    [CascadingParameter]
-    public DialogReference? DialogReference { get; set; }
-
-    [Parameter]
-    public string Question { get; set; } = string.Empty;
-
-    [Parameter]
-    public string Warning { get; set; } = string.Empty;
-
-    [Parameter]
-    public string Acknowledgement { get; set; } = string.Empty;
-
-    [Parameter]
-    public string ConfirmText { get; set; } = "Enable";
-
-    [Parameter]
-    public string TestIdPrefix { get; set; } = "agents-workspace-risk";
-
-    private bool riskAcknowledged;
-
-    private Task ConfirmAsync()
-    {
-        return riskAcknowledged
-            ? DialogReference?.CloseAsync(true) ?? Task.CompletedTask
-            : Task.CompletedTask;
-    }
-
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync(false) ?? Task.CompletedTask;
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    [Parameter] public string Question { get; set; } = string.Empty;
+    [Parameter] public string Warning { get; set; } = string.Empty;
+    [Parameter] public string Acknowledgement { get; set; } = string.Empty;
+    [Parameter] public string ConfirmText { get; set; } = "Enable";
+    [Parameter] public string TestIdPrefix { get; set; } = "agents-workspace-risk";
+    private Task CompleteAsync(bool confirmed) => DialogReference?.CloseAsync(confirmed) ?? Task.CompletedTask;
 }

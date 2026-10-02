@@ -3026,7 +3026,7 @@ public sealed partial class ProcessWorkspaceShellTests
 
         public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(
             bool includeTemplates = false,

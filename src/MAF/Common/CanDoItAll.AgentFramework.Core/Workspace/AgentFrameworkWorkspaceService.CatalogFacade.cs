@@ -159,7 +159,7 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
 
     public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(

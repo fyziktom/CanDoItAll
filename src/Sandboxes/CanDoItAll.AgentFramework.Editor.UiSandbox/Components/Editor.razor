@@ -1,7 +1,7 @@
 @page "/"
-<PageTitle>Agent Editor Core A1 sandbox</PageTitle>
+<PageTitle>Agent Editor Completion A2 sandbox</PageTitle>
 <Stack Class="p-4" GapScale="LayoutGap.Small" data-testid="editor-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
-    <FormSection Title="Agent Editor Core A1" Description="Independent scenarios: form, Identity, Runtime, Images and Voice. Six sections and external integrations remain with production owners.">
+    <FormSection Title="Agent Editor Completion A2" Description="One ten-section editor with the real memory rows, root list, storage chooser, capability list and confirmations. Native effects are simulated with in-memory fixture state.">
         <Cluster Gap="LayoutGap.Small">
             <InputSelect @bind-Value="scenario" aria-label="Scenario" data-testid="editor-scenario">
                 @foreach (var value in Enum.GetValues<AgentEditorScenario>()) {
@@ -18,6 +18,8 @@
             <ScenarioEditor Scenario="scenario" Name="Fixture agent B" TestId="editor-b" />
         }
     </Grid>
+    <DialogHost />
+    <NotificationHost />
 </Stack>
 
 @code {

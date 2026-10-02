@@ -18,6 +18,9 @@ public sealed class EditorBoundaryTests {
     public void Transitive_forbidden_and_missing_edges_are_rejected() {
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", name => name == "CanDoItAll.AgentFramework.Editor.UI" ? ["CanDoItAll.Components.BaseLib"] : ["CanDoItAll.Infrastructure"]));
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", _ => ["Microsoft.EntityFrameworkCore"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", _ => ["CanDoItAll.Components.Canvas"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", _ => ["CanDoItAll.FileTools"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", _ => ["CanDoItAll.AgentFramework.Core"]));
         Assert.Throws<FileNotFoundException>(() => Visit("CanDoItAll.AgentFramework.Editor.UI", _ => throw new FileNotFoundException("Unresolved reference")));
     }
 
@@ -48,6 +51,9 @@ public sealed class EditorBoundaryTests {
         (name is "mscorlib" or "netstandard" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.", StringComparison.Ordinal));
     private static bool Allowed(string name) => Framework(name) || name is
         "CanDoItAll.AgentFramework.Editor.UI" or "CanDoItAll.AgentFramework.Editor.UiSandbox" or
+        "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Workspace.StorageSelection.UI" or
+        "CanDoItAll.Modules.Workspace.StorageSelection.Contracts" or "CanDoItAll.AgentFramework.UI" or
+        "CanDoItAll.AgentFramework.Usage" or "CanDoItAll.Components.Charts" or "Blazor-ApexCharts" or
         "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Components.OverlayLib" or
         "CanDoItAll.Conversations.Components" or "Markdig" or "CanDoItAll.AgentFramework.Models" or
         "CanDoItAll.AgentFramework.Capabilities.Abstractions" or "CanDoItAll.Memory.Abstractions" or

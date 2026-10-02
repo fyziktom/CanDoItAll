@@ -566,26 +566,36 @@ model calls are permitted. Never build into an output directory while its owned 
 host is running. See [the P2 record](architecture/projects-files-ui-decoupling.md) for
 actual counts, limitations, graph/watch evidence and the wider-gate decision.
 
-## Agent Editor Core A1
+## Agent Editor A2
 
 The [Editor.UI light tests](../tests/Components/CanDoItAll.AgentFramework.Editor.UI.Tests/README.md)
-exercise the actual core form and neutral widgets through the independent sandbox. They are
+exercise all ten sections, actual child renderers and neutral widgets through the independent sandbox. They are
 included in the Components/Stable solutions and the three component CI lists. Assembly guards
 check transitive/public dependencies and reject forbidden or unresolved edges.
 
 Build the AgentFramework module directly before discovering the owning `AgentEditor*`,
 `AgentDetailsDialog*`, thinking-effort/model selector, catalog and conversation component
 selections. `AgentEditorCoreRoundTripTests` saves through the actual rendered host and native
-commands, preserving deferred settings, project lifetimes, host bindings, extension JSON,
+commands in separate core-only and access-section edits, preserving project lifetimes, host bindings, extension JSON,
 Favorite tags and another agent. Native adapters and unit snapshot/policy tests remain necessary.
 
 `AgentEditorSandboxBrowserTests` checks source and standalone publish at 1920×1080 without
-product DI/database. The positive `FileJourneyHarnessBrowserTests` case edits the four core
+product DI/database. The positive `FileJourneyHarnessBrowserTests` case traverses all ten
 sections through the real application, validates actual model/effort/instructions requests,
 and proves scoped approved file writes, attachments, read-backs and downloads. Its denial
 and retained-evidence controls remain part of the consumer selection. Only the external model
 response is scripted; this lane authorizes zero paid model requests. See the
-[A1 record](architecture/agent-editor-core-ui-a1.md) for current results and the bounded-gate decision.
+[A2 record](architecture/agent-editor-completion-a2.md) for current results and the Stable decision.
+
+`AgentEditorVerificationTests` exercises the real native proof publisher, exact receipt/version
+reconciliation, unsaved-before-Verify data, competing edits and read-only recovery. Template
+read-back must include the saved definition. `AgentMemoryReadLifetimeTests` and
+`AgentEditorAccessLifetimeTests` cover independent read and confirmation lifetimes;
+`AgentEditorMemoryRuntimeTests` verifies saved bindings through actual Memory policy/dispatch.
+Use build-backed discovery and the identical filter/configuration for execution. The complete
+owning editor selection includes retained capability/confirmation controls and the relocated
+RecordBrowsing widgets. Run actual StorageSelection, file/approval/download, Workflow/TestLab
+and neighboring shell journeys at 1920×1080 on the final source pair, with no paid requests.
 
 ## Broad Stable Gate
 
