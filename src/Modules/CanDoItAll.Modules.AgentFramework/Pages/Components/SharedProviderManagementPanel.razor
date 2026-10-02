@@ -10,7 +10,7 @@
         </Alert>
         <Button Text="Retry sharing read" Click="RetryAsync" Disabled="@isBusy" data-testid="shared-provider-retry" />
     }
-    @if (isLoading)
+    @if (isLoading && profileState is null)
     {
         <EmptyState Eyebrow="Loading"
                     Title="Loading sharing state"
@@ -33,15 +33,15 @@
         else if (profileState.Ownership == SharedProviderProfileOwnership.Local)
         {
             <SharedProviderLocalPublicationContent State="profileState"
-                                                   IsBusy="@(isBusy || hasPendingAttempt)"
+                                                   IsBusy="@(isBusy || isLoading || readFailed || hasPendingAttempt)"
                                                    Publish="PublishAsync"
                                                    Unpublish="OpenUnpublishConfirmation" />
         }
         else if (profileState.Ownership == SharedProviderProfileOwnership.Imported)
         {
-            <SharedProviderImportedProfileContent @key="(profileState.Import!.ImportId, profileState.Import.ImportConcurrencyToken)"
+            <SharedProviderImportedProfileContent @key="profileState.Import!.ImportId"
                                                   Import="profileState.Import!"
-                                                  IsBusy="@(isBusy || hasPendingAttempt)"
+                                                  IsBusy="@(isBusy || isLoading || readFailed || hasPendingAttempt)"
                                                   Save="SaveImportedProfileAsync"
                                                   Retire="OpenRetireConfirmation" />
         }

@@ -108,7 +108,8 @@ internal sealed class E2eOrchestrator(
             "shared-providers-e2e-client-a",
             "Shared providers E2E client A",
             ApiAccessScopeNames.ReadSharedProviderCatalog,
-            ApiAccessScopeNames.InvokeSharedProviders);
+            ApiAccessScopeNames.InvokeSharedProviders,
+            ApiAccessScopeNames.ExecuteAgents);
         await artifacts.WriteCredentialAsync(
             E2eFixtures.ClientAAccessCredentialFileName,
             clientToken.Token,
@@ -142,7 +143,8 @@ internal sealed class E2eOrchestrator(
             "shared-providers-e2e-client-b",
             "Shared providers E2E client B",
             ApiAccessScopeNames.ReadSharedProviderCatalog,
-            ApiAccessScopeNames.InvokeSharedProviders);
+            ApiAccessScopeNames.InvokeSharedProviders,
+            ApiAccessScopeNames.ExecuteAgents);
         await artifacts.WriteCredentialAsync(
             E2eFixtures.ClientBAccessCredentialFileName,
             token.Token,

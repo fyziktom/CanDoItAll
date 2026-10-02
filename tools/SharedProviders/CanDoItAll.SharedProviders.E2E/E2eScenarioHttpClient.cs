@@ -304,12 +304,13 @@ internal sealed class E2eScenarioHttpClient : IDisposable
 
             var data = line[6..];
             hasDone |= string.Equals(data, "[DONE]", StringComparison.Ordinal);
-            hasCompletedEvent |= string.Equals(
-                currentEvent,
-                "response.completed",
-                StringComparison.Ordinal) || data.Contains(
-                "\"type\":\"response.completed\"",
-                StringComparison.Ordinal);
+            if (data != "[DONE]") {
+                using var frame = JsonDocument.Parse(data);
+                hasCompletedEvent = currentEvent == "response.completed" &&
+                    frame.RootElement.TryGetProperty("type", out var type) && type.GetString() == "response.completed" &&
+                    frame.RootElement.TryGetProperty("response", out var completion) &&
+                    completion.TryGetProperty("status", out var status) && status.GetString() == "completed";
+            }
         }
 
         return new E2eSseObservation(

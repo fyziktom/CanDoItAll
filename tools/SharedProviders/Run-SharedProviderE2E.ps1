@@ -2,6 +2,18 @@
 
 [CmdletBinding()]
 param(
+    [ValidatePattern("^shared-providers-e2e(?:-[a-z0-9]+){0,8}$")]
+    [ValidateLength(20, 80)]
+    [string]$FixtureName = "shared-providers-e2e",
+    [ValidateRange(1024, 65531)]
+    [int]$PortBase = 5210,
+    [ValidateRange(1024, 65535)]
+    [int]$PostgresPort = 55432,
+    [ValidatePattern("^10\.[0-9]{1,3}\.[0-9]{1,3}$")]
+    [string]$IngressPrefix = "10.245.0",
+    [ValidatePattern("^[A-Za-z][A-Za-z0-9]*$")]
+    [string]$Configuration = "Release",
+    [switch]$ValidateOnly,
     [switch]$Reset,
     [switch]$SkipImageBuild,
     [ValidateSet(
@@ -21,7 +33,7 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 
 $RepositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
-$ArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot ".artifacts\shared-providers-e2e"))
+$ArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $RepositoryRoot ".artifacts") $FixtureName))
 $ToolStateRoot = Join-Path $ArtifactRoot "tool-state"
 $HandoffRoot = Join-Path $ToolStateRoot "handoff"
 $ScenarioResultsRoot = Join-Path $ToolStateRoot "scenario-results"
@@ -39,13 +51,13 @@ $ToolPublishRoot = Join-Path $ArtifactRoot "tool-publish"
 $ComposeFile = Join-Path $RepositoryRoot "compose.shared-providers.e2e.yaml"
 $ComposeEnvironmentFile = Join-Path $RepositoryRoot ".env.shared-providers.e2e.example"
 $ToolProject = Join-Path $RepositoryRoot "tools\SharedProviders\CanDoItAll.SharedProviders.E2E\CanDoItAll.SharedProviders.E2E.csproj"
-$ToolAssembly = Join-Path $RepositoryRoot "tools\SharedProviders\CanDoItAll.SharedProviders.E2E\bin\Release\net10.0\CanDoItAll.SharedProviders.E2E.dll"
+$ToolAssembly = Join-Path $RepositoryRoot "tools\SharedProviders\CanDoItAll.SharedProviders.E2E\bin\$Configuration\net10.0\CanDoItAll.SharedProviders.E2E.dll"
 $AppDockerfile = Join-Path $RepositoryRoot "src\App\CanDoItAll.Web\Dockerfile"
 $UpstreamRoot = Join-Path $RepositoryRoot "tests\Support\CanDoItAll.SharedProviders.TestUpstream"
 $UpstreamDockerfile = Join-Path $UpstreamRoot "Dockerfile"
 $ComponentsRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "..\CanDoItAll.Components"))
 $FileToolsRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot "..\CanDoItAll.FileTools"))
-$ComposeProjectName = "candoitall-shared-providers-e2e"
+$ComposeProjectName = "candoitall-$FixtureName"
 $AppImage = $null
 $UpstreamImage = $null
 $SourceFingerprint = $null
@@ -461,6 +473,23 @@ function Get-HostContainerIdentity {
     return [pscustomobject]@{ Uid = $uid; Gid = $gid }
 }
 
+$NetworkSubnetOffsets = @{
+    "app-mesh" = 1
+    "central-db" = 2
+    "client-a-db" = 3
+    "client-b-db" = 4
+    "upstream-data" = 5
+    "upstream-control" = 6
+    "client-a-personal" = 7
+    "personal-control" = 8
+}
+
+function Get-InternalNetworkSubnet {
+    param([string]$NetworkName)
+    $parts = $IngressPrefix.Split('.')
+    return "$($parts[0]).$($parts[1]).$([int]$parts[2] + $NetworkSubnetOffsets[$NetworkName]).0/24"
+}
+
 function Set-ChildEnvironmentAssignments {
     $script:ChildEnvironmentAssignments = @(
         "E2E_COMPOSE_PROJECT_NAME=$ComposeProjectName",
@@ -468,14 +497,14 @@ function Set-ChildEnvironmentAssignments {
         "E2E_APP_IMAGE=$AppImage",
         "E2E_UPSTREAM_IMAGE=$UpstreamImage",
         "E2E_RUN_MARKER=$RunMarker",
-        "E2E_CENTRAL_PORT=5210",
-        "E2E_CLIENT_A_PORT=5211",
-        "E2E_CLIENT_B_PORT=5212",
-        "E2E_UPSTREAM_PORT=5213",
-        "E2E_PERSONAL_UPSTREAM_PORT=5214",
-        "E2E_POSTGRES_PORT=55432",
-        "E2E_LOCAL_INGRESS_SUBNET=10.245.0.0/24",
-        "E2E_LOCAL_INGRESS_GATEWAY=10.245.0.1",
+        "E2E_CENTRAL_PORT=$PortBase",
+        "E2E_CLIENT_A_PORT=$($PortBase + 1)",
+        "E2E_CLIENT_B_PORT=$($PortBase + 2)",
+        "E2E_UPSTREAM_PORT=$($PortBase + 3)",
+        "E2E_PERSONAL_UPSTREAM_PORT=$($PortBase + 4)",
+        "E2E_POSTGRES_PORT=$PostgresPort",
+        "E2E_LOCAL_INGRESS_SUBNET=$IngressPrefix.0/24",
+        "E2E_LOCAL_INGRESS_GATEWAY=$IngressPrefix.1",
         "E2E_DB_ADMIN_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-admin-password')",
         "E2E_DB_CENTRAL_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-central-password')",
         "E2E_DB_CLIENT_A_PASSWORD_FILE=$(Join-Path $RuntimeSecretsRoot 'db-client-a-password')",
@@ -498,6 +527,10 @@ function Set-ChildEnvironmentAssignments {
         "POSTGRES_IMAGE_TAG=18.6-alpine",
         "BUSYBOX_VERSION=1.37.0-musl"
     )
+    foreach ($network in $NetworkSubnetOffsets.Keys) {
+        $variable = "E2E_$($network.Replace('-', '_').ToUpperInvariant())_SUBNET"
+        $script:ChildEnvironmentAssignments += "$variable=$(Get-InternalNetworkSubnet $network)"
+    }
 }
 
 function New-EmptyLogMarkerCounts {
@@ -549,6 +582,11 @@ function Write-HostRunMetadata {
 
     Write-JsonFile -Path $HostRunMetadataPath -Value ([ordered]@{
         schemaVersion = 1
+        composeProjectName = $ComposeProjectName
+        artifactRoot = $ArtifactRoot
+        portBase = $PortBase
+        postgresPort = $PostgresPort
+        ingressPrefix = $IngressPrefix
         sourceFingerprint = $SourceFingerprint
         runMarker = $RunMarker
         appImage = $AppImage
@@ -581,6 +619,11 @@ function Read-HostRunMarker {
     $actualCountKey = ($actualCountNames | Sort-Object) -join "`n"
     $expectedCountKey = ($expectedCounts.Keys | Sort-Object) -join "`n"
     if ($metadata.schemaVersion -ne 1 -or
+        $metadata.composeProjectName -cne $ComposeProjectName -or
+        (Get-CanonicalPathKey -Path $metadata.artifactRoot) -cne (Get-CanonicalPathKey -Path $ArtifactRoot) -or
+        $metadata.portBase -ne $PortBase -or
+        $metadata.postgresPort -ne $PostgresPort -or
+        $metadata.ingressPrefix -cne $IngressPrefix -or
         [string]$metadata.sourceFingerprint -cne $SourceFingerprint -or
         [string]$metadata.appImage -cne $AppImage -or
         [string]$metadata.upstreamImage -cne $UpstreamImage -or
@@ -727,6 +770,7 @@ function Write-AndValidateComposeConfig {
         "client-a-db",
         "client-a-personal",
         "client-b-db",
+        "local-ingress",
         "personal-control",
         "upstream-control",
         "upstream-data"
@@ -737,8 +781,22 @@ function Write-AndValidateComposeConfig {
         -Description "network set"
     foreach ($networkName in $expectedNetworkNames) {
         $network = $config.networks.PSObject.Properties[$networkName].Value
+        if ($networkName -eq "local-ingress") {
+            $addressing = @($network.ipam.config)
+            if ((Get-OptionalPropertyValue -InputObject $network -Name "internal") -eq $true -or
+                $addressing.Count -ne 1 -or
+                $addressing[0].subnet -cne "$IngressPrefix.0/24" -or
+                $addressing[0].gateway -cne "$IngressPrefix.1") {
+                throw "The local browser ingress does not use its exact fixture subnet and gateway."
+            }
+            continue
+        }
         if ((Get-OptionalPropertyValue -InputObject $network -Name "internal") -ne $true) {
-            throw "Every resolved proof network must remain internal."
+            throw "Every non-ingress proof network must remain internal."
+        }
+        $addressing = @($network.ipam.config)
+        if ($addressing.Count -ne 1 -or $addressing[0].subnet -cne (Get-InternalNetworkSubnet $networkName)) {
+            throw "An internal proof network does not use its exact fixture subnet."
         }
     }
 
@@ -765,18 +823,18 @@ function Write-AndValidateComposeConfig {
         "e2e-runner" = "mcr.microsoft.com/dotnet/aspnet:10.0.10"
     }
     $expectedPorts = @{
-        "central" = @(5210, 8080)
-        "client-a" = @(5211, 8080)
-        "client-b" = @(5212, 8080)
-        "db" = @(55432, 5432)
-        "deterministic-personal-upstream" = @(5214, 8080)
-        "deterministic-upstream" = @(5213, 8080)
+        "central" = @($PortBase, 8080)
+        "client-a" = @(($PortBase + 1), 8080)
+        "client-b" = @(($PortBase + 2), 8080)
+        "db" = @($PostgresPort, 5432)
+        "deterministic-personal-upstream" = @(($PortBase + 4), 8080)
+        "deterministic-upstream" = @(($PortBase + 3), 8080)
     }
     $expectedServiceNetworks = @{
         "artifact-permissions" = @()
-        "central" = @("app-mesh", "central-db", "upstream-data")
-        "client-a" = @("app-mesh", "client-a-db", "client-a-personal")
-        "client-b" = @("app-mesh", "client-b-db")
+        "central" = @("local-ingress", "app-mesh", "central-db", "upstream-data")
+        "client-a" = @("local-ingress", "app-mesh", "client-a-db", "client-a-personal")
+        "client-b" = @("local-ingress", "app-mesh", "client-b-db")
         "db" = @("central-db", "client-a-db", "client-b-db")
         "deterministic-personal-upstream" = @("client-a-personal", "personal-control")
         "deterministic-upstream" = @("upstream-control", "upstream-data")
@@ -1182,11 +1240,17 @@ function Assert-NoComposeOneOffContainers {
 }
 
 function Assert-ArtifactPermissionServiceStopped {
+    param([switch]$Wait)
+
     $containerId = Invoke-NativeText `
         -FilePath "docker" `
         -Arguments ($ComposeBaseArguments + @("ps", "--all", "--quiet", "artifact-permissions"))
     if ([string]::IsNullOrWhiteSpace($containerId)) {
         throw "The artifact-permission service container is missing."
+    }
+
+    if ($Wait) {
+        Invoke-NativeCommand -FilePath "docker" -Arguments @("wait", $containerId) | Out-Null
     }
 
     $state = Invoke-NativeText `
@@ -1277,31 +1341,21 @@ function Invoke-ComposeCommand {
 function Invoke-ToolService {
     param(
         [Parameter(Mandatory = $true)][string]$Service,
-        [Parameter(Mandatory = $true)][string]$Command,
-        [switch]$NoDependencies
+        [Parameter(Mandatory = $true)][string]$Command
     )
 
-    $arguments = @("run", "--rm")
-    if ($NoDependencies) {
-        $arguments += "--no-deps"
-    }
-
-    $arguments += @($Service, $Command)
+    Assert-ArtifactPermissionServiceStopped
+    $arguments = @("run", "--rm", "--no-deps", $Service, $Command)
     Invoke-ComposeCommand -CommandId "$Service-$Command" -Arguments $arguments
 }
 
 function Invoke-ScenarioPhase {
     param(
-        [Parameter(Mandatory = $true)][string]$Phase,
-        [switch]$NoDependencies
+        [Parameter(Mandatory = $true)][string]$Phase
     )
 
-    $arguments = @("run", "--rm")
-    if ($NoDependencies) {
-        $arguments += "--no-deps"
-    }
-
-    $arguments += @("e2e-runner", "run-scenarios", "--phase", $Phase)
+    Assert-ArtifactPermissionServiceStopped
+    $arguments = @("run", "--rm", "--no-deps", "e2e-runner", "run-scenarios", "--phase", $Phase)
     Invoke-ComposeCommand `
         -CommandId "e2e-runner-$Phase" `
         -Arguments $arguments
@@ -1521,6 +1575,16 @@ function Get-SafeTreeEntries {
 }
 
 function Assert-RepositoryLayout {
+    if ($PostgresPort -ge $PortBase -and $PostgresPort -le $PortBase + 4) {
+        throw "The database port must differ from every application and upstream port."
+    }
+    $ingressAddress = $null
+    if (-not [System.Net.IPAddress]::TryParse("$IngressPrefix.1", [ref]$ingressAddress) -or
+        $ingressAddress.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork -or
+        [int]$IngressPrefix.Split('.')[2] -gt 247) {
+        throw "The ingress prefix must identify an IPv4 /24 under 10.0.0.0/8 with room for eight following private networks."
+    }
+
     $requiredPaths = @(
         (Join-Path $RepositoryRoot ".git"),
         $ComposeFile,
@@ -1537,7 +1601,7 @@ function Assert-RepositoryLayout {
         }
     }
 
-    $expectedArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path $RepositoryRoot ".artifacts\shared-providers-e2e"))
+    $expectedArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path (Join-Path $RepositoryRoot ".artifacts") $FixtureName))
     if (-not [string]::Equals($expectedArtifactRoot, $ArtifactRoot, [StringComparison]::OrdinalIgnoreCase)) {
         throw "The E2E artifact root is not the exact repository-owned path."
     }
@@ -1873,7 +1937,8 @@ function Collect-Logs {
     }
     finally {
         $unpauseFailures = [System.Collections.Generic.List[string]]::new()
-        foreach ($service in @($pausedServices.ToArray() | Select-Object -Reverse)) {
+        for ($index = $pausedServices.Count - 1; $index -ge 0; $index--) {
+            $service = $pausedServices[$index]
             try {
                 Invoke-ComposeCommand `
                     -CommandId "unpause-$service-after-log-copy" `
@@ -2649,10 +2714,11 @@ function Write-StackHandoff {
 
 Status: PASS (19/19 backend checkpoint scenarios).
 
-- Central: http://127.0.0.1:5210
-- Client A: http://127.0.0.1:5211
-- Client B: http://127.0.0.1:5212
-- Artifact root: .artifacts/shared-providers-e2e
+- Central: http://127.0.0.1:$PortBase
+- Client A: http://127.0.0.1:$($PortBase + 1)
+- Client B: http://127.0.0.1:$($PortBase + 2)
+- Artifact root: .artifacts/$FixtureName
+- Compose project: $ComposeProjectName
 - The dedicated stack is intentionally left running.
 - Generated credentials remain only in the ignored, access-restricted artifact root and are not printed here.
 "@
@@ -2666,7 +2732,7 @@ function Build-E2eInputs {
         "build",
         $ToolProject,
         "--configuration",
-        "Release",
+        $Configuration,
         "--no-restore",
         "-m:1",
         "--nologo") `
@@ -2751,13 +2817,14 @@ function Prepare-FreshTopology {
         throw "Every governed fresh E2E proof requires the explicit -Reset switch."
     }
 
-    Write-Step "Stopping only the dedicated Compose project before credential reset."
+    Assert-OwnedComposeReset
+    Write-Step "Stopping only the verified owned Compose project before credential reset."
     Invoke-NativeCommand -FilePath "docker" -Arguments ($ComposeBaseArguments + @(
         "down",
         "--volumes",
         "--remove-orphans")) | Out-Null
     Assert-NoComposeOneOffContainers
-    foreach ($port in @(5210, 5211, 5212, 5213, 5214, 55432)) {
+    foreach ($port in @($PortBase, ($PortBase + 1), ($PortBase + 2), ($PortBase + 3), ($PortBase + 4), $PostgresPort)) {
         Assert-PortAvailable -Port $port
     }
 
@@ -2781,7 +2848,7 @@ function Prepare-FreshTopology {
         "publish",
         $ToolProject,
         "--configuration",
-        "Release",
+        $Configuration,
         "--no-build",
         "--output",
         $ToolPublishRoot,
@@ -2792,20 +2859,19 @@ function Prepare-FreshTopology {
         -MaximumStandardErrorBytes 4MB | Out-Null
     Write-AndValidateComposeConfig
     Import-BuildTranscripts
+    Write-HostRunMetadata
 
     Write-Step "Starting the isolated database and deterministic upstreams."
     Invoke-NativeCommand `
         -FilePath "docker" `
         -Arguments ($ComposeBaseArguments + @("up", "--detach", "artifact-permissions")) | Out-Null
-    Invoke-NativeCommand `
-        -FilePath "docker" `
-        -Arguments ($ComposeBaseArguments + @("wait", "artifact-permissions")) | Out-Null
-    Assert-ArtifactPermissionServiceStopped
+    Assert-ArtifactPermissionServiceStopped -Wait
     [void](Assert-PrivateHostCaptureTree)
     Write-HostRunMetadata
     Invoke-ComposeCommand -CommandId "up-dependencies" -Arguments @(
         "up",
         "--detach",
+        "--no-deps",
         "--wait",
         "--wait-timeout",
         "360",
@@ -2838,6 +2904,30 @@ function Prepare-FreshTopology {
         "client-b")
 }
 
+function Assert-OwnedComposeReset {
+    $resources = foreach ($resource in @("container", "network", "volume")) {
+        $arguments = @($resource, "ls", "--quiet", "--filter", "label=com.docker.compose.project=$ComposeProjectName")
+        if ($resource -eq "container") {
+            $arguments += "--all"
+        }
+        Invoke-NativeText -FilePath "docker" -Arguments $arguments
+    }
+    if (-not ($resources | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+        return
+    }
+
+    Assert-OwnedRegularFileTarget -Path $HostRunMetadataPath
+    if (-not (Test-Path -LiteralPath $HostRunMetadataPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $HostRunMetadataPath).Length -gt 32KB) {
+        throw "Reset refused: existing Compose resources have no bounded fixture ownership receipt."
+    }
+    $metadata = Get-Content -LiteralPath $HostRunMetadataPath -Raw | ConvertFrom-Json
+    if ((Get-OptionalPropertyValue $metadata "composeProjectName") -cne $ComposeProjectName -or
+        (Get-OptionalPropertyValue $metadata "artifactRoot") -cne $ArtifactRoot) {
+        throw "Reset refused: the Compose project and artifact root do not match the fixture ownership receipt."
+    }
+}
+
 function Prepare-ResumeTopology {
     if ($Reset) {
         throw "The -Reset switch is valid only when -StartAt is prepare."
@@ -2862,7 +2952,7 @@ function Prepare-ResumeTopology {
         "publish",
         $ToolProject,
         "--configuration",
-        "Release",
+        $Configuration,
         "--no-build",
         "--output",
         $ToolPublishRoot,
@@ -2893,8 +2983,8 @@ if ($SkipImageBuild) {
 $SourceState = Get-SourceState
 $SourceFingerprint = $SourceState.Fingerprint
 $imageTag = $SourceFingerprint.Substring(0, 12)
-$AppImage = "candoitall-shared-providers:$imageTag"
-$UpstreamImage = "candoitall-shared-providers-upstream:$imageTag"
+$AppImage = "candoitall-$FixtureName`:$imageTag"
+$UpstreamImage = "candoitall-$FixtureName-upstream:$imageTag"
 $containerIdentity = Get-HostContainerIdentity
 $AppUid = $containerIdentity.Uid
 $AppGid = $containerIdentity.Gid
@@ -2914,6 +3004,11 @@ Write-Step "Verifying Docker Engine and Compose."
 Assert-LocalDefaultDockerContext
 [void](Invoke-NativeText -FilePath "docker" -Arguments @("info", "--format", "{{.ServerVersion}}"))
 [void](Invoke-NativeText -FilePath "docker" -Arguments @("compose", "version", "--short"))
+if ($ValidateOnly) {
+    Write-AndValidateComposeConfig
+    Write-Step "PASS: resolved fixture configuration; no containers or credentials changed."
+    return
+}
 Build-E2eInputs -VerifyImagesOnly:($StartAt -ne "prepare")
 
 if (Test-PhaseEnabled -Phase "prepare") {
@@ -3004,14 +3099,14 @@ if (Test-PhaseEnabled -Phase "identity-restored") {
 if (Test-PhaseEnabled -Phase "outage") {
     Write-Step "Proving central outage behavior without dependency auto-start or personal fallback."
     Invoke-ComposeCommand -CommandId "stop-central" -Arguments @("stop", "central")
-    Invoke-ToolService -Service "e2e-client-a" -Command "sync-client-a-expect-offline" -NoDependencies
-    Invoke-ToolService -Service "e2e-client-b" -Command "sync-client-b-expect-offline" -NoDependencies
+    Invoke-ToolService -Service "e2e-client-a" -Command "sync-client-a-expect-offline"
+    Invoke-ToolService -Service "e2e-client-b" -Command "sync-client-b-expect-offline"
     Restart-AppServices -Services @("client-a", "client-b")
     Invoke-LogContinuityCheckpoint -Checkpoint "outage-before-scenarios" -ExpectedIncrements @{
         "client-a" = 1
         "client-b" = 1
     }
-    Invoke-ScenarioPhase -Phase "outage" -NoDependencies
+    Invoke-ScenarioPhase -Phase "outage"
     Invoke-LogContinuityCheckpoint -Checkpoint "outage-complete" -ExpectedIncrements @{}
 }
 

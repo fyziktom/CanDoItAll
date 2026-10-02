@@ -2,7 +2,8 @@
 
 <ProviderProfilesSurface View="this">
     <SharingSlot Context="slot">
-        <SharedProviderManagementPanel @key="slot.Target.Context" Revision="sharingRevision"
+        <SharedProviderManagementPanel @key="slot.Target.ProviderId" Revision="sharingRevision"
+                                       ProviderRevision="session.Draft.ExpectedConcurrencyToken"
                                        ProviderProfileId="slot.Target.ProviderId"
                                        ProvidersChanged="@(delivery => RefreshSharedAsync(slot.Target, delivery))" />
     </SharingSlot>

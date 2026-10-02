@@ -163,10 +163,13 @@ public sealed class ProviderProfilesSeamTests {
     [InlineData(true)]
     public async Task Secret_partial_failure_retains_saved_option_and_source_managed_actions(bool sourceManaged) {
         var reads = new Reads();
+        var revision = Guid.NewGuid();
         reads.Catalog = _ => Task.FromResult(new ProviderProfilesCatalog(
             [reads.First with { ConnectorPluginKey = sourceManaged ? ProviderConnectorKeys.SharedImport : string.Empty }],
-            new([], "Secret metadata offline")));
-        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, Name = "Saved", ApiKeyEnvironmentVariable = "secret:retained" });
+            new([], "Secret metadata offline")) {
+            Revisions = new Dictionary<Guid, CanDoItAll.AgentFramework.Core.ProviderConfigurationRevision> { [reads.First.Id] = new(revision) }
+        });
+        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, ExpectedConcurrencyToken = revision, Name = "Saved", ApiKeyEnvironmentVariable = "secret:retained" });
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-secret-warning']");

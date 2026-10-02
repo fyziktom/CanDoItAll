@@ -106,7 +106,7 @@
                 </Alert>
             }
                 <div class="agent-provider-editor-tabs-shell">
-                    <Tabs @key="View.Editor.Context" @bind-SelectedIndex="providerEditorTabIndex"
+                    <Tabs @key="(target.ProviderId, target.Activation)" @bind-SelectedIndex="providerEditorTabIndex"
                           RenderMode="TabRenderMode.Client"
                           Variant="TabsVariant.WorkspaceSecondary"
                           OverflowMode="TabsOverflowMode.Wrap"

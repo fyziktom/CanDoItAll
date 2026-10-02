@@ -10,15 +10,18 @@ public partial class SharedProviderManagementPanel : IDisposable {
     [Inject] public NotificationService NotificationService { get; set; } = default!;
     [Parameter] public Guid? ProviderProfileId { get; set; }
     [Parameter] public long Revision { get; set; }
+    [Parameter] public Guid? ProviderRevision { get; set; }
     [Parameter] public EventCallback<SharedProviderChangeDelivery> ProvidersChanged { get; set; }
 
     private SharedProviderProfileSharingSnapshot? profileState;
     private CancellationTokenSource? owner;
     private Guid? loadedProviderProfileId;
     private long loadedRevision = -1;
+    private Guid? loadedProviderRevision;
     private long generation;
     private bool disposed;
     private bool isLoading;
+    private bool readFailed;
     private bool isBusy;
     private bool hasPendingAttempt => Recovery.FindTarget(ProviderProfileId) is not null;
     private string? warning;
@@ -32,16 +35,20 @@ public partial class SharedProviderManagementPanel : IDisposable {
         if (disposed) {
             return;
         }
-        if (loadedProviderProfileId == ProviderProfileId && loadedRevision == Revision) {
+        if (loadedProviderProfileId == ProviderProfileId && loadedRevision == Revision && loadedProviderRevision == ProviderRevision) {
             return;
         }
+        var targetChanged = loadedProviderProfileId != ProviderProfileId;
         loadedProviderProfileId = ProviderProfileId;
         loadedRevision = Revision;
+        loadedProviderRevision = ProviderRevision;
         owner?.Cancel();
         owner?.Dispose();
         owner = new();
         generation++;
-        profileState = null;
+        if (targetChanged) {
+            profileState = null;
+        }
         isBusy = false;
         warning = Recovery.FindTarget(ProviderProfileId) is { } pending
             ? Recovery.PendingDelivery(pending.AttemptId) is null
@@ -61,6 +68,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         var targetId = ProviderProfileId;
         var unresolved = Recovery.FindTarget(targetId);
         isLoading = true;
+        readFailed = false;
         try {
             var state = targetId is { } id ? await ManagementService.GetProfileSharingAsync(id, token) : null;
             if (!IsCurrent(operation, token)) {
@@ -102,7 +110,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception) {
             if (IsCurrent(operation, token)) {
-                profileState = null;
+                readFailed = true;
                 warning = "Sharing state could not be read. Retry this target.";
             }
         } finally {
@@ -169,7 +177,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
 
     private async Task RunMutationAsync(Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation,
         string title, SharedProviderTargetMutationKind kind, SharedProviderImportedProfileUpdateRequest? request = null) {
-        if (disposed || owner is null || isBusy || isLoading || hasPendingAttempt ||
+        if (disposed || owner is null || isBusy || isLoading || readFailed || hasPendingAttempt ||
             profileState?.ProviderProfileId != ProviderProfileId) {
             return;
         }

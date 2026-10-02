@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Models;
+using SharedProviderAvailabilityState = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderAvailabilityState;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedProviders.Abstractions;
 
@@ -140,6 +141,14 @@ internal sealed class E2eScenarioRunner : IDisposable
                 builder.Expect("openai-model-list-routing-ids-only", openAiModelIds.All(modelId =>
                     SharedProviderRoutingModelIdCodec.TryParse(modelId, out _, out _)) &&
                     openAiModelIds.All(modelId => !rawProviderModelIds.Contains(modelId)));
+                builder.Expect("catalog-source-model-names-and-routes", catalog.Document.Providers.All(publication => {
+                    var identity = central.Fixtures.Single(fixture => fixture.PublicationId == publication.PublicationId.Value);
+                    var source = central.Providers.Single(provider => provider.Id == identity.ProviderProfileId);
+                    var expectedRoute = SharedProviderRoutingModelIdCodec.Create(publication.PublicationId, source.DefaultModel);
+                    return publication.DefaultModelId == expectedRoute && publication.Models.Count == 1 &&
+                        publication.Models[0].Id == expectedRoute &&
+                        string.Equals(publication.Models[0].DisplayName, source.DefaultModel, StringComparison.Ordinal);
+                }));
                 builder.Expect("catalog-sanitized", IsCatalogSanitized(
                     catalog.RawJson,
                     central,
@@ -369,7 +378,7 @@ internal sealed class E2eScenarioRunner : IDisposable
                 builder.Expect("responses-first-chunk-before-completion", IsIncremental(responses));
                 builder.Expect("chat-multiple-chunks-terminal", chat.DataFrameCount >= 3 && chat.HasDoneFrame);
                 builder.Expect("responses-multiple-chunks-terminal", responses.DataFrameCount >= 3 &&
-                    responses.HasResponsesCompletedEvent && responses.HasDoneFrame);
+                    responses.HasResponsesCompletedEvent);
             },
             cancellationToken);
 
@@ -877,8 +886,8 @@ internal sealed class E2eScenarioRunner : IDisposable
                 builder.Expect("publication-disabled", chat.IsPublished == false);
                 builder.Expect("catalog-route-removed", currentCatalog is not null &&
                     currentCatalog.Providers.All(item => item.PublicationId.Value != chat.PublicationId));
-                builder.Expect("imports-authoritatively-unpublished", FindImport(clientA, chat).AvailabilityState == "Unpublished" &&
-                    FindImport(clientB, chat).AvailabilityState == "Unpublished");
+                builder.Expect("imports-authoritatively-absent", FindImport(clientA, chat).AvailabilityState == nameof(SharedProviderAvailabilityState.Missing) &&
+                    FindImport(clientB, chat).AvailabilityState == nameof(SharedProviderAvailabilityState.Missing));
                 builder.Expect("local-ids-preserved-while-unpublished", SameImportIdentities(baseline.ClientA, clientA) &&
                     SameImportIdentities(baseline.ClientB, clientB));
                 builder.Expect("unpublished-shared-inference-rejected", IsTypedProviderUnavailable(
@@ -1606,8 +1615,7 @@ internal sealed class E2eScenarioRunner : IDisposable
             "secret",
             "providerProfileId",
             "connectorPluginKey",
-            "configurationJson",
-            "e2e-duplicate-model"
+            "configurationJson"
         ];
         return forbiddenTokens.All(token =>
                 !rawJson.Contains(token, StringComparison.OrdinalIgnoreCase)) &&

@@ -20,6 +20,11 @@ internal static class Program
         string? roleToken = null;
         try
         {
+            if (args is [E2eModelEvidence.Command]) {
+                commandToken = E2eModelEvidence.Command;
+                await E2eModelEvidence.ReadAsync(cancellation.Token);
+                return 0;
+            }
             if (E2ePreparationCommandLine.IsPrepareCommand(args))
             {
                 commandToken = "prepare";

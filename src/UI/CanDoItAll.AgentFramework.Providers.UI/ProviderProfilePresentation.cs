@@ -15,6 +15,6 @@ public static class ProviderProfilePresentation {
     }
 
     public static string BuildTreeTooltip(ProviderProfile provider) =>
-        $"{provider.Name}. {provider.Kind}, {provider.Transport}, {provider.DefaultModel}. {BuildEnabledBadge(provider).Text}. {NormalizeHealthStatus(provider.HealthStatus)}.";
+        $"{provider.Name}. {provider.Kind}, {provider.Transport}, {provider.GetModelDisplayName(provider.DefaultModel)}. {BuildEnabledBadge(provider).Text}. {NormalizeHealthStatus(provider.HealthStatus)}.";
     private static string NormalizeHealthStatus(string value) => string.IsNullOrWhiteSpace(value) ? "Not checked" : value.Trim();
 }

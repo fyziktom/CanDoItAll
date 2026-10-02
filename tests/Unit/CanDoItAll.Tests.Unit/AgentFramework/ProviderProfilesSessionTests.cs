@@ -292,9 +292,12 @@ public sealed class ProviderProfilesSessionTests {
     [Fact]
     public async Task Secret_partial_failure_preserves_saved_reference_and_source_managed_state() {
         var reads = new Reads();
+        var revision = Guid.NewGuid();
         var provider = reads.First with { ConnectorPluginKey = ProviderConnectorKeys.SharedImport };
-        reads.Catalog = _ => Task.FromResult(new ProviderProfilesCatalog([provider], new([], "Secrets unavailable")));
-        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, ApiKeyEnvironmentVariable = "secret:saved-reference" });
+        reads.Catalog = _ => Task.FromResult(new ProviderProfilesCatalog([provider], new([], "Secrets unavailable")) {
+            Revisions = new Dictionary<Guid, CanDoItAll.AgentFramework.Core.ProviderConfigurationRevision> { [provider.Id] = new(revision) }
+        });
+        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, ExpectedConcurrencyToken = revision, ApiKeyEnvironmentVariable = "secret:saved-reference" });
         using var session = new ProviderProfilesSession(reads);
         await session.RefreshAsync();
         Assert.True(session.CanEdit);

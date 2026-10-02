@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-02T11:56:08.884332+00:00",
+  "generated_utc": "2026-10-02T17:36:58.047496+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15247,
+  "allowance_count": 15252,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -78860,6 +78860,18 @@
       "count": 1
     },
     {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eModelEvidence.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a5da7c59c6c143607bafdbf998ccb73cc4ad82826df0e1662f14830fe3a15329",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eModelEvidence.cs",
+      "category": "windows-path",
+      "source_fingerprint": "b1ffdde22231d68c0be025b08612e47f449b310e3181a062480d966fc0e3efc9",
+      "count": 1
+    },
+    {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eOrchestrator.cs",
       "category": "secret-provider",
       "source_fingerprint": "0f9eede19047f4c2af3cbb24451f4d25c04558b6a00662a0bcfe28cb3dd079e6",
@@ -78904,13 +78916,25 @@
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "30ebd12758ab9d5fd8c0b8acb61f9eaec62e538e51d6ef3c0f0a56d1ab41434e",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "37111bc1340c04949190749fd4827699ea6555dbada2abc02fcbc3757e106aab",
-      "count": 3
+      "count": 2
     },
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "4460224a75552420c8ac5bd1bebab1c7a57e8cda61c5f01a06379e5fa3846659",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "45a584a785ece532b46332382a10678c9f2165023be066ee1b4700308e884537",
       "count": 1
     },
     {
@@ -78934,7 +78958,19 @@
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "5d4152d23f25b0334b5939da6c3a6e5b3b107c02b778a03a672ae1949969bfe7",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "61a022f821c59b5cadb3e3541a75759b2bc293532c89f8189f80e5f8d247eba2",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7bbd684ca6585c3db121a22c680a113cd8ce2bb54001ca6e0eee9c8757f2142e",
       "count": 1
     },
     {
@@ -78953,7 +78989,7 @@
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "992b1397e3a5c37aa291967014e9d23afaf9cf70c3c3a51cfd1b6dfcd3f5cd93",
-      "count": 8
+      "count": 7
     },
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
@@ -79138,12 +79174,6 @@
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "path-api",
-      "source_fingerprint": "13c88245d1ba1031db57124a038547922f2019c8bef452eaeaabcedefe671b02",
-      "count": 1
-    },
-    {
-      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
-      "category": "path-api",
       "source_fingerprint": "20b27a04c056937e84fa42d664178494888391c6e136196a9526dd6b93e594b2",
       "count": 1
     },
@@ -79157,6 +79187,12 @@
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
       "category": "path-api",
       "source_fingerprint": "3e538468547b0276ea666bb20ee1f3210bbdee6f1900550b325fa3928fabb2fd",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2ePreparation.cs",
+      "category": "path-api",
+      "source_fingerprint": "3f01d9e331ac5f113697e39868e34fef968b667e477aa70f80157b79638b7f91",
       "count": 1
     },
     {
@@ -80063,6 +80099,12 @@
       "path": "tools/SharedProviders/Set-ManualClientDataVolume.ps1",
       "category": "windows-path",
       "source_fingerprint": "923ee22cdfcf602633ea0ea762d627f02cec73b24b7716bee29de2c37f8e6469",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/Test-SharedProviderE2EIsolation.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "07589bc9a8a6a508f372055f0dfa5b21bdd4e40fe3dd11131e8de80e54fd64f4",
       "count": 1
     },
     {
