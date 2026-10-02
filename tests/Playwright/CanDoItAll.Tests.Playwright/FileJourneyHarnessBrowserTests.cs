@@ -2,6 +2,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -116,7 +120,8 @@ public sealed class FileJourneyHarnessBrowserTests {
             var oracle = CrmHrBrowserOracle.Attach(page);
             Guid projectId = await ProjectsPortfolioUiJourney.CreateAndEditAsync(host, page, oracle);
             var fixture = await CreateFileJourneyAsync(host, projectId);
-            await ConfigureScriptedAgentAsync(host, fixture.Agent.Id, wire.BaseUrl);
+            var provider = await ProviderProfilesUiJourney.CreateAsync(host, oracle, page, wire.BaseUrl);
+            evidence.Observations["provider-created-through-ui"] = provider;
             host.Watch(fixture.Agent.Id);
             var expected = new FileApprovalIntent(fixture.ProjectId, fixture.ParentId, "Exact fixture file",
                 "# Complete fixture\n" + Guid.NewGuid().ToString("D"), "roundtrip.md", "text/markdown", $"proof/{Guid.NewGuid():N}/roundtrip.md");
@@ -146,7 +151,7 @@ public sealed class FileJourneyHarnessBrowserTests {
                 }
             ];
             await GrantFileJourneyAsync(host, oracle, page, fixture);
-            var core = await AgentEditorCoreUiJourney.EditAsync(host, oracle, page, fixture.Agent.Id);
+            var core = await AgentEditorCoreUiJourney.EditAsync(host, oracle, page, fixture.Agent.Id, provider.Id);
             Assert.Equal(0, wire.Requests);
             wire.Steps = wire.Steps.Select(step => new Func<JsonElement, AgentResponseFixture.ScriptedTurn>(input => {
                 AgentEditorCoreUiJourney.AssertRequest(input, core);
@@ -184,6 +189,38 @@ public sealed class FileJourneyHarnessBrowserTests {
             Assert.Equal(6, wire.Requests);
             evidence.Observations["effects"] = new { file.Id, file.ParentId, writes = 1, attachments = 1, wire.Requests,
                 sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(expected.Content))) };
+            wire.Steps = [.. wire.Steps, input => {
+                Assert.Equal(provider.AlternateModel, input.GetProperty("model").GetString());
+                return new([], "PP1_CHAT_OK");
+            }];
+            await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(page, host.BaseUrl, provider.Name,
+                provider.Model, [provider.Model, provider.AlternateModel], provider.AlternateModel, host.ArtifactDirectory,
+                "pp1-consumer", "PP1_CHAT_OK", importedProvider: false, navigate: oracle.NavigateAsync);
+            var chatReceipt = await host.SeedAsync(async services => {
+                var definitions = await services.GetRequiredService<ILlmChatDefinitionApplicationService>().ListAsync(new(searchText: "UI shared catalog pp1-consumer"));
+                Assert.True(definitions.IsSuccess);
+                var definition = Assert.Single(definitions.Value!);
+                Assert.Equal(provider.Id, definition.Revision.ProviderProfileId);
+                Assert.Equal(provider.AlternateModel, definition.Revision.Model);
+                var conversations = services.GetRequiredService<ILlmChatConversationApplicationService>();
+                var listed = await conversations.ListAsync(new(definitionId: definition.Definition.Id));
+                Assert.True(listed.IsSuccess);
+                var detail = await conversations.GetAsync(Assert.Single(listed.Value!).Conversation.Id, new LlmChatTranscriptQuery());
+                Assert.True(detail.IsSuccess);
+                Assert.Equal(provider.Id, detail.Value!.ProviderModel.ProviderId);
+                var assistant = Assert.Single(detail.Value.TranscriptMessages, entry => entry.Role == LlmMessageRole.Assistant);
+                Assert.Equal("PP1_CHAT_OK", assistant.Text);
+                Assert.Equal(provider.AlternateModel, assistant.Model);
+                var operation = await services.GetRequiredService<ILlmChatOperationApplicationService>().GetAsync(new LlmChatOperationId(assistant.TurnId));
+                Assert.True(operation.IsSuccess);
+                Assert.Equal(LlmChatOperationStatus.Succeeded, operation.Value!.Operation.Status);
+                Assert.Equal(assistant.EntryId, operation.Value.AssistantMessage!.EntryId);
+                return new { definition.Definition.Id, ConversationId = detail.Value.Conversation.Id,
+                    OperationId = assistant.TurnId, ProviderId = provider.Id, assistant.Model,
+                    sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(assistant.Text))) };
+            });
+            evidence.Observations["simple-chat-native-receipt"] = chatReceipt;
+            Assert.Equal(7, wire.Requests);
             await AgentEditorCoreUiJourney.DeleteCompletedFixtureAsync(host, oracle, page, fixture.Agent.Id);
             Assert.Equal(expected.Content, await ReadFileContentAsync(host, fixture.ProjectId, file.Id));
             Assert.Equal(fixture.SiblingContent, await ReadFileContentAsync(host, fixture.SiblingId, fixture.SiblingAssetId));

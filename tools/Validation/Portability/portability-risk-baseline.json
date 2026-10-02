@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-02T02:34:10.218744+00:00",
+  "generated_utc": "2026-10-02T11:56:08.884332+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15246,
+  "allowance_count": 15247,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -43772,72 +43772,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1409a89f779aa5cfa65cc736e7598e95a063432fceb8fdddd45cce2e44cbc5bc",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1df3073244e121086b684aa2f376969b6bb2895f2a92ce9d92a9ba4f8f89ce8a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "42e56670bfd6c0cf36511aaf941b1e352b92712df47d4549f3cba776b7558444",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "74a75d6398032c99ed073ce92ea51d19ac155f5318a9b8c623fb796a5adb41ca",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "8133e71f6e56137c18c90ec4d02585f784c3e6fbce751e53650a59eb8b349fac",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "87dd87fcbd666e87aff39662bef8a61825abed51aaeb65ffb3f7a8a10d18ade2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c8b3f07debefdadd6c611648bdb3bf7f7e0022ba2381bd7b153710335b36e431",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "ce16909b3eb047bd5472d1cbf2206a6ec7f9bad7517e1014cc3ea423812af19b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "de43f3128459227edfb347668f47813a76714e3ef5251e7fa3719ea0279f6c68",
-      "count": 3
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e3bfce43f2784dca14186df80a5815a2475e949d49025984b4777f27c28326f5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "fef7539131a9ee1fd5601ce3d69bc91afa347863441b29c4462b7e5e330e155d",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamMembersDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "2172c9c4afabe6267a0aa96059645a42796f389cfd8bd73b0dcf57221f6b2a93",
@@ -45113,60 +45047,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "c88abe99a448469be0b0ca237186a1b4b9d887c269c54be1cbd991243e2b404a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "4e6b8a607b632db3cf6aacaf3c9a6b808c557ffc0a2b6a086b0371260746995b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9f6cb0df2b162d2d9b53d863e37f48afb7e8cf597810495b78ecc973831c7cb5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "2e44cb7610263759045a3010a78fee1b82da8ec2f3d1065038c9d1f64203504c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f23834da4df6c8528a2d5fdc5f4c2adc6d033942c7ca0905da9c858238488513",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "6f22305d37115fc0e1eb5ba9e002f2bad6c477093e772eb549cf42753a2218b2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "88557f50519c58c57816e593d367233582da1ff40b77fa297e28119e8cde4048",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "940b9b01baa8237f87ba407f67d1f8eeb70b2a249dc08b762dc80ab7fec5409d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "ba981f8c667da54b7a9b05f48d6db42ca71aefd8dc8fc21075c90c00b53b363e",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c8fa85b55aaabe58fea2d70216d912ef184a6db16a64fccecde71c597984f810",
       "count": 1
     },
     {
@@ -46703,6 +46583,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorOperations.cs",
       "category": "case-policy",
       "source_fingerprint": "ac0b6e18c55ba3230e90e8dabae3cebcf248932a18cb24e97e53f3d0e2f92f17",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorSubmission.cs",
+      "category": "case-policy",
+      "source_fingerprint": "354c49fd70b41aea0f98fa34f82b5e8c8ba615e2e8f95180a8690f9a2e936cce",
       "count": 1
     },
     {
@@ -72380,6 +72266,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "44c18034055a3026f994c93f9b9020af6652c2372cd670c27e365647ff116f6a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "3ce5560a6fc6a5b439afca21176df338ea786ff0c7b912181ba24895206f04b3",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CapabilitiesSandboxContext.cs",
       "category": "case-policy",
       "source_fingerprint": "8444188878b8b076eff35fb49602f743c7d0da549015195a4a7616a4bb8113a6",
@@ -73757,6 +73655,132 @@
       "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/README.md",
       "category": "windows-executable",
       "source_fingerprint": "0781feb7da8e9c41e548849e53fe5fd7c4ad7eef9c86c77ffbe1cc758fd6e06b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderEditorDraft.cs",
+      "category": "case-policy",
+      "source_fingerprint": "93ff7b216e6d5c164fd8f7622cb84ac23584e485f570dcfdd75b9b78327f2a47",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderModelPricingEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "0dce5d46f74e7f85218c952128973034d069948ab872feafa98701acf8cf9924",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderModelPricingEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "532457382a0bb72f9291f87b05e7f0fc7ac4bbac9eda18ba2d44a9556e8cb2cd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfileTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1384e21cdf9ff24daf609d21aa163a153da5e6e72b9ba08c553bd2af72f19f19",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfileTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4f83ca1d25f1b01f86472833d0403074b6b2cbacb55c621c01a095b76fa7831b",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfileTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e9c268ea27be4ad08e5b8186a24ee6b91c7157a9a5d3d61844a7841114c77817",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfileTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "eeea9f4cadf1a9a716b7af2ad46ee8a4886529355be3849f1d7fc6eeb66bee43",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfileTreeNodeBuilder.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f033d469bf2911b33d960ae6c9d6f55ed08eac1ed3bff481499ff2ae57a64b53",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0cf4285cef8994be39544cd605ba51512103443d70c691f0d88d63e758e4cd3c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "15f28bb8dd661d420d132ce756d97112759a496c193bc5d2fed51b406ed98072",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2b08b1c516eef7f885579868b26d9e31dcf8ee3ce2e5399f7a693c9e6a4895c2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3e8d52e1b319232e93ea7a396ec87ccdb75b9af11208ed60006f077d8437bae0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3e978c144a2c103b8985849c3e156fbda050984fd3a58d07edd1ed180d44f43b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "60d07dab90903ac6db7aa94ced450f674f7072caeff776aa05465abce26bc0d7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "69a87a303131d978e44483b88fedc4eadaa7c28d9e6d54b30eff0837fe751d84",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "83fe9bcd3981062767b2ecab0dc6a20c422e47a35ec6e3f93b828bbecdb62427",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a281bd28c2e93061ba45f3b14c3cbf0dbd48e36b133cb94ad9f8e7d680a352d3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c3a52ae73219a01d1a4e456864ab63147e0c71042846d04bd9c0c6aa205aa106",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ecdbde15e921f3eaddb4f429d4cbf2691ad0b56c95dfabe2288dfe03f18c4b65",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderThinkingSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "a31c471a6a515413eda9ad61882ce2abf48dd4d5872cc71f80cfa2711ef18a14",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderThinkingSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "cad1ba757fefdcece2e582b6741c39291d0d18e3919598029adc279d2bb85ccd",
       "count": 1
     },
     {

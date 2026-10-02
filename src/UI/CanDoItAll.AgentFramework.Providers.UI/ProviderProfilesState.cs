@@ -28,6 +28,16 @@ public static class ProviderEditorSections {
         new(ProviderEditorSection.History, "History", "history")
     ]);
 
+    public static string Token(ProviderEditorSection section) => section switch {
+        ProviderEditorSection.Connection => "connection",
+        ProviderEditorSection.Prices => "prices",
+        ProviderEditorSection.Runtime => "runtime",
+        ProviderEditorSection.Thinking => "thinking",
+        ProviderEditorSection.Sharing => "sharing",
+        ProviderEditorSection.History => "history",
+        _ => throw new ArgumentOutOfRangeException(nameof(section))
+    };
+
     public static int IndexOf(ProviderEditorSection section) {
         for (var index = 0; index < All.Count; index++) {
             if (All[index].Section == section) {

@@ -3,8 +3,7 @@ using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-internal static class ProviderProfileTreeNodeBuilder
-{
+internal static class ProviderProfileTreeNodeBuilder {
     private const string ProviderNodePrefix = "providers-provider:";
     private const string TagNodePrefix = "providers-tag:";
     private const string UntaggedTag = "uncategorized";
@@ -12,8 +11,7 @@ internal static class ProviderProfileTreeNodeBuilder
     public static IReadOnlyList<TreeViewNode> Build(
         IReadOnlyList<ProviderProfile> providers,
         Guid? selectedProviderId,
-        IReadOnlySet<string> expandedNodeIds)
-    {
+        IReadOnlySet<string> expandedNodeIds) {
         return providers
             .SelectMany(provider => ResolveTags(provider).Select(tag => new ProviderTagAssignment(tag, provider)))
             .GroupBy(item => item.Tag, StringComparer.OrdinalIgnoreCase)
@@ -30,11 +28,9 @@ internal static class ProviderProfileTreeNodeBuilder
             .Select(BuildTagNodeId)
             .ToArray();
 
-    public static bool TryReadProviderId(string nodeId, out Guid providerId)
-    {
+    public static bool TryReadProviderId(string nodeId, out Guid providerId) {
         providerId = Guid.Empty;
-        if (!nodeId.StartsWith(ProviderNodePrefix, StringComparison.Ordinal))
-        {
+        if (!nodeId.StartsWith(ProviderNodePrefix, StringComparison.Ordinal)) {
             return false;
         }
 
@@ -47,8 +43,7 @@ internal static class ProviderProfileTreeNodeBuilder
     private static TreeViewNode BuildTagNode(
         IGrouping<string, ProviderTagAssignment> group,
         Guid? selectedProviderId,
-        IReadOnlySet<string> expandedNodeIds)
-    {
+        IReadOnlySet<string> expandedNodeIds) {
         var providers = group
             .GroupBy(item => item.Provider.Id)
             .Select(item => item.First().Provider)
@@ -58,8 +53,7 @@ internal static class ProviderProfileTreeNodeBuilder
         var containsSelectedProvider = selectedProviderId.HasValue &&
                                        providers.Any(provider => provider.Id == selectedProviderId.Value);
 
-        return new TreeViewNode
-        {
+        return new TreeViewNode {
             Id = tagNodeId,
             Text = group.Key,
             Icon = ResolveTagIcon(group.Key),
@@ -76,22 +70,19 @@ internal static class ProviderProfileTreeNodeBuilder
     private static TreeViewNode BuildProviderNode(
         string tag,
         ProviderProfile provider,
-        Guid? selectedProviderId)
-    {
-        return new TreeViewNode
-        {
+        Guid? selectedProviderId) {
+        return new TreeViewNode {
             Id = BuildProviderNodeId(tag, provider.Id),
             Text = provider.Name,
             Icon = ResolveProviderIcon(provider),
-            Tooltip = ProviderProfileDisplayAdapter.BuildTreeTooltip(provider),
-            BadgeText = ProviderProfileDisplayAdapter.BuildEnabledBadge(provider).Text,
+            Tooltip = CanDoItAll.AgentFramework.Providers.UI.ProviderProfilePresentation.BuildTreeTooltip(provider),
+            BadgeText = CanDoItAll.AgentFramework.Providers.UI.ProviderProfilePresentation.BuildEnabledBadge(provider).Text,
             IsSelected = selectedProviderId == provider.Id,
             DataTestId = "providers-tree-provider"
         };
     }
 
-    private static IReadOnlyList<string> ResolveTags(ProviderProfile provider)
-    {
+    private static IReadOnlyList<string> ResolveTags(ProviderProfile provider) {
         var tags = provider.Tags
             .Select(NormalizeTag)
             .Where(tag => !string.IsNullOrWhiteSpace(tag))
@@ -113,12 +104,10 @@ internal static class ProviderProfileTreeNodeBuilder
             ? string.Empty
             : tag.Trim().TrimStart('#').ToLowerInvariant();
 
-    private static string NormalizeNodeToken(string value)
-    {
+    private static string NormalizeNodeToken(string value) {
         var normalized = NormalizeTag(value);
         var builder = new System.Text.StringBuilder(normalized.Length);
-        foreach (var character in normalized)
-        {
+        foreach (var character in normalized) {
             builder.Append(char.IsLetterOrDigit(character) ? character : '-');
         }
 
@@ -126,8 +115,7 @@ internal static class ProviderProfileTreeNodeBuilder
     }
 
     private static string ResolveTagIcon(string tag)
-        => tag switch
-        {
+        => tag switch {
             "local" => "dns",
             "remote" => "cloud_sync",
             "cloud" => "cloud",
@@ -140,8 +128,7 @@ internal static class ProviderProfileTreeNodeBuilder
         };
 
     private static string ResolveProviderIcon(ProviderProfile provider)
-        => provider.Kind switch
-        {
+        => provider.Kind switch {
             ProviderKind.Ollama => "memory",
             ProviderKind.ComfyUi => "image",
             ProviderKind.OpenAi or ProviderKind.AzureOpenAi => provider.Purpose == ProviderProfilePurpose.ImageGeneration

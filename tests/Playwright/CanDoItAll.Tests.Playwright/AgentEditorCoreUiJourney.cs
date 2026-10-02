@@ -10,12 +10,12 @@ namespace CanDoItAll.Tests.Playwright.Smoke;
 internal static class AgentEditorCoreUiJourney {
     internal sealed record SavedCore(Guid AgentId, Guid ProviderId, string Model, string Instructions);
 
-    internal static async Task<SavedCore> EditAsync(LiveUiHost host, CrmHrBrowserOracle oracle, IPage page, Guid agentId) {
+    internal static async Task<SavedCore> EditAsync(LiveUiHost host, CrmHrBrowserOracle oracle, IPage page, Guid agentId, Guid? selectedProviderId = null) {
         await page.SetViewportSizeAsync(1920, 1080);
         var baseline = await host.SeedAsync(async services => {
             var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
             var before = await workspace.GetAgentEditorAsync(agentId);
-            var provider = (await workspace.ListProvidersAsync()).Single(item => item.Id == before.ProviderProfileId);
+            var provider = (await workspace.ListProvidersAsync()).Single(item => item.Id == (selectedProviderId ?? before.ProviderProfileId));
             var other = (await workspace.ListAgentsAsync(false)).First(item => item.Id != agentId);
             return (Before: before, Provider: provider, Other: other.Id, OtherJson: JsonSerializer.Serialize(await workspace.GetAgentEditorAsync(other.Id)));
         });
@@ -54,7 +54,9 @@ internal static class AgentEditorCoreUiJourney {
         await Assertions.Expect(confirmation).ToBeVisibleAsync();
         await confirmation.GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
         await Assertions.Expect(dialog.GetByTestId("agents-catalog-auto-approval")).Not.ToBeCheckedAsync();
-        await Assertions.Expect(dialog.GetByTestId("agents-catalog-thinking-effort-support")).ToContainTextAsync("supports configurable thinking effort");
+        var thinking = AgentThinkingEffortPolicy.ResolveCapability(baseline.Provider, baseline.Provider.DefaultModel);
+        Assert.Equal(AgentThinkingEffortSupportStatus.Supported, thinking.Status);
+        await Assertions.Expect(dialog.GetByTestId("agents-catalog-thinking-effort-support")).ToContainTextAsync(thinking.Summary);
         await page.ScreenshotAsync(new() { Path = host.Artifact("agent-core-runtime.png") });
         await Tab("Images");
         await dialog.GetByTestId("agents-catalog-image-generation-project-assets").CheckAsync();

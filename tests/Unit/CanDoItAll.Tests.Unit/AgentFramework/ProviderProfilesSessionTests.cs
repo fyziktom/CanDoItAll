@@ -5,6 +5,75 @@ using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManageme
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderProfilesSessionTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Acquired_target_reselection_and_reference_refresh_preserve_the_editor(bool refresh) {
+        var reads = new Reads();
+        using var session = new ProviderProfilesSession(reads);
+        await session.RefreshAsync();
+        var context = session.EditContext;
+        var version = session.SelectionVersion;
+        var lifetime = session.TargetCancellationToken;
+        session.Draft.Name = "Keep my draft";
+        session.Draft.Tags = ["unfinished"];
+        session.Draft.SuggestedModels = ["local-model"];
+        session.SelectSection(ProviderEditorSection.Thinking);
+        reads.Editor = (_, _) => throw new InvalidOperationException("An acquired target must not be read again.");
+
+        if (refresh) {
+            await session.RefreshAsync();
+        } else {
+            await session.SelectAsync(reads.First.Id);
+        }
+
+        Assert.Same(context, session.EditContext);
+        Assert.Equal(version, session.SelectionVersion);
+        Assert.False(lifetime.IsCancellationRequested);
+        Assert.True(session.CanEdit);
+        Assert.Equal("Keep my draft", session.Draft.Name);
+        Assert.Equal(["unfinished"], session.Draft.Tags);
+        Assert.Equal(["local-model"], session.Draft.SuggestedModels);
+        Assert.Equal(ProviderEditorSection.Thinking, session.State.Section);
+    }
+
+    [Fact]
+    public async Task Reference_failure_keeps_acquired_editor_available_with_a_warning() {
+        var reads = new Reads();
+        using var session = new ProviderProfilesSession(reads);
+        await session.RefreshAsync();
+        var context = session.EditContext;
+        session.Draft.Name = "Retained";
+        reads.Catalog = _ => throw new InvalidOperationException("Reference read failed.");
+
+        Assert.False(await session.RefreshAsync());
+
+        Assert.True(session.CanEdit);
+        Assert.Same(context, session.EditContext);
+        Assert.Equal("Retained", session.Draft.Name);
+        Assert.NotNull(session.MetadataWarning);
+    }
+
+    [Fact]
+    public async Task Failed_same_target_acquisition_has_a_real_retry() {
+        var reads = new Reads();
+        using var session = new ProviderProfilesSession(reads);
+        reads.Editor = (_, _) => throw new InvalidOperationException("First acquisition failed.");
+        await session.RefreshAsync();
+        Assert.False(session.CanEdit);
+        var calls = 0;
+        reads.Editor = (id, _) => {
+            calls++;
+            return Task.FromResult(new ProviderProfileEditorModel { Id = id, Name = "Acquired" });
+        };
+
+        Assert.True(await session.SelectAsync(reads.First.Id));
+
+        Assert.Equal(1, calls);
+        Assert.True(session.CanEdit);
+        Assert.Equal("Acquired", session.Draft.Name);
+    }
+
     [Fact]
     public async Task Bootstrap_selects_first_provider_and_new_has_independent_defaults() {
         var reads = new Reads();
@@ -146,8 +215,8 @@ public sealed class ProviderProfilesSessionTests {
     public async Task Core_failure_retains_target_and_retry_loads_it(bool catalogFails) {
         var reads = new Reads();
         using var session = new ProviderProfilesSession(reads);
-        await session.RefreshAsync();
         if (catalogFails) {
+            await session.SelectAsync(reads.First.Id);
             reads.Catalog = _ => throw new InvalidOperationException("Catalog unavailable");
         } else {
             reads.Editor = (_, _) => throw new InvalidOperationException("Editor unavailable");

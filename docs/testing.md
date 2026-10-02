@@ -597,6 +597,31 @@ owning editor selection includes retained capability/confirmation controls and t
 RecordBrowsing widgets. Run actual StorageSelection, file/approval/download, Workflow/TestLab
 and neighboring shell journeys at 1920×1080 on the final source pair, with no paid requests.
 
+## Provider Profiles PP1
+
+The [Providers.UI light tests](../tests/Components/CanDoItAll.AgentFramework.Providers.UI.Tests/README.md)
+build the independent sandbox and actual catalog/Connection/Prices/Runtime/Thinking renderers.
+They are included in Components/Stable solutions and all three component CI lists. They check
+raw input and validation across tabs, price row identity, stale Thinking origins, separate
+editors and transitive/public dependency boundaries, including cycle and unresolved controls.
+
+Build the AgentFramework module directly, then discover the provider session, submission,
+operation, verification, reads, shared reconciliation, pricing/thinking and native mutation
+families. The module component selection also covers retained Sharing, source-dialog/delivery
+and request-History hosts. Use the same exact discovered filter for execution and an owned
+PostgreSQL 18 fixture for native tests. Reference refresh now preserves an acquired draft;
+initial acquisition failure and missing targets retain explicit retry coverage.
+
+`ProviderProfilesSandboxBrowserTests` validates source and standalone Production publish at
+1920×1080. The positive `FileJourneyHarnessBrowserTests` case creates its provider through the
+actual UI, reads all four sections back through native owners, then uses it in A2 and Simple
+Chat. Exact file approvals, committed IDs, terminal statuses, read-back/download hashes and
+unchanged siblings remain required. Workflow/TestLab accepted and incomplete-output cases
+exercise actual runtime paths with only external model output scripted; no paid calls occur.
+See [the PP1 record](architecture/provider-profiles-ui-pp1.md) for current results, provenance,
+graph/watch measurements and the bounded Stable decision. Final portability enforcement
+without `--write-baseline` remains mandatory.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

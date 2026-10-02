@@ -214,6 +214,7 @@ composition, focus and result adaptation, or a real route boundary.
 | [Resources](resources-ui-boundary.md) | Stable editor drafts, typed owner ports, independent browse/preview leases, exact effect receipts and a database-free host with real shared file components | Registry and Browse together; project admission, storage and file authority stay with their owners |
 | [Workspace Settings Core](workspace-settings-core-ui-boundary.md) | Four independent controllers, stable drafts, bounded redacted receipts, active deferred slots and real SecretField/history dialog controls | Shell, defaults, Secrets, Files and provider history; Data Sources, Storage and API Access remain production hosts |
 | [Workspace Storage catalog](workspace-storage-catalog-ui-boundary.md) | Exact editor acquisition, immutable submissions, field revisions and separately acknowledged catalog/routing/driver/Activity stages | Catalog administration only; Recovery is a captured host action, while picker and Data Sources owners remain separate |
+| [Provider Profiles PP1](provider-profiles-ui-pp1.md) | Complete catalog and four local editors, one canonical draft/context, field/row reconciliation and origin-bound Thinking dialog | Sharing, request History and source connections remain actual native host slots |
 | [Agent tool failure recovery](agent-tool-failure-recovery-boundary.md) | Effect ownership and recovery across an agent runtime boundary | Runtime effects, not form editing |
 
 ## Traps this product has actually hit

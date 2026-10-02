@@ -362,12 +362,7 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "SettingsPage.razor");
         var providerPanelMarkup = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "AgentProviderProfilesPanel.razor");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfilesSurface.razor");
         var providerExecutionSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -419,12 +414,7 @@ public sealed class ProviderFeatureMatrixTests
             "Components",
             "WorkflowImageGenerationSettingsRenderer.razor");
         var treeNodeBuilderSource = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "ProviderProfileTreeNodeBuilder.cs");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfileTreeNodeBuilder.cs");
         var voiceSettingsSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -467,12 +457,7 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "SettingsPage.razor");
         var providerPanelMarkup = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "AgentProviderProfilesPanel.razor");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfilesSurface.razor");
         var providerDispatchModels = ReadRepositoryFile(
             "src",
             "MAF",

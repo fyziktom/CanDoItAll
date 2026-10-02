@@ -758,9 +758,10 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await select.SelectOptionAsync(value);
     }
 
-    internal static async Task NavigateAsync(IPage page, string url)
-    {
-        var response = await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+    internal static async Task NavigateAsync(IPage page, string url, Func<string, Task<IResponse?>>? navigate = null) {
+        var response = navigate is null
+            ? await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded })
+            : await navigate(url);
         Assert.NotNull(response);
         Assert.True(response.Ok, $"Navigation to '{url}' returned HTTP {response.Status}.");
         await DismissStartupModalIfPresentAsync(page);

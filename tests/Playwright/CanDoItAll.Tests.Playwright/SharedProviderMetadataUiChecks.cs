@@ -107,14 +107,21 @@ internal static class SharedProviderMetadataUiChecks {
         await page.GetByText("Agent saved", new() { Exact = true }).WaitForAsync();
     }
 
-    internal static async Task OpenProviderAsync(IPage page, string baseUrl, string providerName) {
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{baseUrl}/agents?tab=providers");
+    internal static async Task OpenProviderAsync(IPage page, string baseUrl, string providerName,
+        Func<string, Task<IResponse?>>? navigate = null) {
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{baseUrl}/agents?tab=providers", navigate);
         var provider = page.GetByTestId("providers-tree-provider")
             .Filter(new() { HasTextString = providerName }).First;
         await provider.WaitForAsync();
+        var alreadySelected = await provider.GetAttributeAsync("aria-selected") == "true";
         var previousName = await page.GetByTestId("providers-name-input").ElementHandleAsync();
         await provider.ClickAsync();
-        await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
+        if (alreadySelected) {
+            Assert.True(await previousName!.EvaluateAsync<bool>("element => element.isConnected"));
+        } else {
+            await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
+        }
+        await Assertions.Expect(provider).ToHaveAttributeAsync("aria-selected", "true");
         await Assertions.Expect(page.GetByTestId("providers-name-input")).ToHaveValueAsync(providerName);
     }
 
@@ -138,10 +145,10 @@ internal static class SharedProviderMetadataUiChecks {
     public static async Task ExerciseSimpleChatAsync(IPage page, string baseUrl, string providerName,
         string defaultModel, IReadOnlyList<string> models, string selectedModel, string evidenceDirectory, string label,
         string expectedResponse = "deterministic fixture response", string? prompt = null,
-        Regex? responsePattern = null, bool importedProvider = true) {
+        Regex? responsePattern = null, bool importedProvider = true, Func<string, Task<IResponse?>>? navigate = null) {
         var definitionName = $"UI shared catalog {label}";
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page,
-            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=definitions");
+            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=definitions", navigate);
         var card = page.Locator("article[data-testid^='llm-chat-definition-']").Filter(new() { HasTextString = definitionName });
         if (await card.CountAsync() == 0) {
             await page.GetByTestId("llm-chat-definition-create").ClickAsync();
@@ -182,7 +189,7 @@ internal static class SharedProviderMetadataUiChecks {
         }
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page,
-            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=conversations");
+            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=conversations", navigate);
         await page.GetByTestId("llm-chat-new").ClickAsync();
         var start = page.GetByTestId("llm-chat-start-dialog");
         await start.GetByTestId("llm-chat-start-definition-search").FillAsync(definitionName);

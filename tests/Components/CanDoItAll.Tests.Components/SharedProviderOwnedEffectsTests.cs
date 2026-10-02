@@ -33,18 +33,18 @@ public sealed class SharedProviderOwnedEffectsTests {
         if (newDraft) {
             await cut.Find("[data-testid='providers-new']").ClickAsync();
         }
-        cut.Find("[data-testid='providers-name-input']").Change("Unsaved name");
+        cut.Find("[data-testid='providers-name-input']").Input("Unsaved name");
         await cut.FindAll("button[role='tab']").Single(x => x.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
         var raw = "first\n\n second \n first";
-        cut.Find("[data-testid='providers-suggested-models']").Change(raw);
-        cut.Find("[data-testid='providers-notes']").Change("Unsaved notes");
+        cut.Find("[data-testid='providers-suggested-models']").Input(raw);
+        cut.Find("[data-testid='providers-notes']").Input("Unsaved notes");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var count = reads.EditorReads;
         await cut.Find("[data-testid='providers-connections']").ClickAsync();
         await cut.WaitForElement("[data-testid='shared-provider-source-sync']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
-        Assert.Equal(raw, cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
+        Assert.Equal(raw, ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
         Assert.Equal("Unsaved notes", ((Editor)context.Model).Notes);
         Assert.Equal("Unsaved name", ((Editor)context.Model).Name);
         Assert.Equal(count, reads.EditorReads);

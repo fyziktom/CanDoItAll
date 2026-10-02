@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers.UI;
 using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
 using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components.Forms;
@@ -20,6 +21,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
     public ProviderProfilesState State { get; private set; } = new();
     public ProviderProfilesCatalog Catalog { get; private set; } = new([], new([]));
     public EditContext EditContext { get; private set; } = new(CreateNewProviderEditor());
+    public ProviderEditorDraft Editor => ProviderEditorDraft.For(EditContext);
     public ProviderProfileEditorModel Draft => (ProviderProfileEditorModel)EditContext.Model;
     public ProviderProfilesLoadState CatalogLoadState { get; private set; } = ProviderProfilesLoadState.Loading;
     public ProviderProfilesLoadState EditorLoadState { get; private set; } = ProviderProfilesLoadState.Loading;
@@ -54,10 +56,10 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         return State.ProviderId.HasValue && await SelectAsync(State.ProviderId);
     }
 
-    public Task<bool> RefreshCatalogAsync() => RefreshCatalogCoreAsync(preserveEditor: false);
-    public Task<bool> RefreshMetadataAsync(CancellationToken cancellationToken = default) => RefreshCatalogCoreAsync(preserveEditor: true, cancellationToken);
+    public Task<bool> RefreshCatalogAsync() => RefreshCatalogCoreAsync();
+    public Task<bool> RefreshMetadataAsync(CancellationToken cancellationToken = default) => RefreshCatalogCoreAsync(cancellationToken);
 
-    private async Task<bool> RefreshCatalogCoreAsync(bool preserveEditor, CancellationToken cancellationToken = default) {
+    private async Task<bool> RefreshCatalogCoreAsync(CancellationToken cancellationToken = default) {
         if (disposed) {
             return false;
         }
@@ -65,7 +67,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         catalogRead?.Cancel();
         using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         catalogRead = owner;
-        var retainReady = preserveEditor && CatalogLoadState == ProviderProfilesLoadState.Ready;
+        var retainReady = CatalogLoadState == ProviderProfilesLoadState.Ready;
         if (!retainReady) {
             CatalogLoadState = ProviderProfilesLoadState.Loading;
         }
@@ -102,9 +104,15 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         }
     }
 
-    public async Task<bool> SelectAsync(Guid? providerId) {
+    public Task<bool> SelectAsync(Guid? providerId) => AcquireAsync(providerId, replace: false);
+
+    private async Task<bool> AcquireAsync(Guid? providerId, bool replace) {
         if (disposed) {
             return false;
+        }
+        if (!replace && selectionVersion > 0 && State.ProviderId == providerId &&
+            EditorLoadState == ProviderProfilesLoadState.Ready && Draft.Id == providerId) {
+            return true;
         }
         var version = ++selectionVersion;
         targetLifetime.Cancel();
@@ -234,7 +242,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
             if (SelectedProvider is null) {
                 return new(true);
             }
-            var replaced = await SelectAsync(selectedId);
+            var replaced = await AcquireAsync(selectedId, replace: true);
             return new(replaced, replaced);
         }
         return new(true);
@@ -242,7 +250,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
 
     public async Task NewAsync() {
         SelectSection(ProviderEditorSection.Connection);
-        await SelectAsync(null);
+        await AcquireAsync(null, replace: true);
     }
 
     public void Dispose() {
