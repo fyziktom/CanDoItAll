@@ -1,7 +1,3 @@
-@using CanDoItAll.Components.BaseLib
-@using CanDoItAll.Modules.AgentFramework.ProviderManagement
-@using CanDoItAll.SharedProviders.Abstractions
-
 <FormSection Title="Share this provider"
              Description="Publish this local provider through the instance's sanitized catalog and OpenAI-compatible relay.">
     @if (State.Eligibility is { } eligibility)
@@ -95,7 +91,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public required SharedProviderProfileSharingSnapshot State { get; set; }
+    public required SharedProviderProfilePresentation State { get; set; }
 
     [Parameter]
     public bool IsBusy { get; set; }

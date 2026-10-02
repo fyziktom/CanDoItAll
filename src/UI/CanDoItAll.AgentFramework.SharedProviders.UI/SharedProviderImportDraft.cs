@@ -1,7 +1,7 @@
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.SharedProviders.UI;
 
 public sealed record SharedProviderLocalSettings(string LocalAlias, bool IsEnabled);
 

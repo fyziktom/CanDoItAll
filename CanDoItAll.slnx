@@ -53,6 +53,7 @@
     <Project Path="src/UI/CanDoItAll.Projects.Files.UI/CanDoItAll.Projects.Files.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.Providers.UI/CanDoItAll.AgentFramework.Providers.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.AgentFramework.SharedProviders.UI/CanDoItAll.AgentFramework.SharedProviders.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.ApiAccess.UI/CanDoItAll.Workspace.ApiAccess.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />

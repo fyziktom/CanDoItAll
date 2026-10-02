@@ -122,8 +122,36 @@ local-concurrency cases and 45 retained Sharing/source/recovery/PP1 component ca
 binding, fixture and compilation failures are retained separately. Production and owning test
 assemblies were rebuilt before discovery in `ProviderSharingPP2Proof`.
 
-The final-image two-circuit repetition remains required after extraction. This bounded repair
+The final-image two-circuit repetition remains required after extraction. The signed R1 checkpoint
+is `bfa934b26af61794118f249c31bc47da65a07ee3`, verified against the configured OpenPGP fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6` in the retained native session. This bounded repair
 does not close structural PP2 or its consumer campaign.
+
+### Sharing renderer checkpoint
+
+`CanDoItAll.AgentFramework.SharedProviders.UI` now contains the actual Sharing surface, local
+publication child, imported-profile child, local draft and confirmation rendering. Its references
+are BaseLib, Components.Web and the existing neutral SharedProviders abstractions. The native
+module maps safe presentation values and retains its management calls, recovery ledger, commit
+recording and acknowledged parent delivery. Existing PP1, A2 and their leaf graphs are unchanged.
+
+Rendered intents retain the view, activation, accepted snapshot and exact provider/publication/
+import/source identities and versions. Handler admission rejects stale callbacks, A-B-A returns,
+ineligible publication and replaced confirmations; an old cancel cannot close a newer confirmation.
+The imported facts use BaseLib FactTable/Grid, avoiding the module's inherited ReadOnlyFact helper.
+Sharing remains an inline editor; confirmation is compact, and the parent editor keeps scroll ownership.
+
+`sharing-leaf.trx` passes all 15 discovered independent renderer/graph/signature cases, including
+transitive forbidden references, missing edges and cycles. `sharing-native.trx` passes all 59
+discovered native host/PP1/recovery cases, including the ten PostgreSQL local-concurrency cases
+after the actual child move and four new rendered-origin cases. The leaf and production host build
+without warnings or errors; the owning native test assembly retains 15 unrelated existing warnings.
+The complete proposed-source static scan passes with 15,252 unchanged reviewed findings.
+
+Architecture review permits the Sources/refresh work to proceed: actual rendering has moved,
+the host is an effect owner, no runtime contracts or authority changed, and pure tests need no
+native module. Browser geometry, full sandbox closure and final-image consumers remain open and
+will validate the completed combined surface before PP2 is declared complete.
 
 Move actual Sharing children, source list/editor/discovery and refresh rendering into the new
 independent leaf, with safe projections and exact displayed origins. Management stays in

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.SharedProviders.UI;
 using CanDoItAll.Modules.AgentFramework;
 using System.Reflection;
 using Bunit;
@@ -94,7 +95,7 @@ public sealed class SharedProviderRecoveryTests {
         Assert.Equal(1, proxy.Writes);
         Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
         Assert.False(cut.Find("[data-testid='shared-provider-import-save']").HasAttribute("disabled"));
-        Assert.Equal(proxy.ImportToken, cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Import.ImportConcurrencyToken);
+        Assert.Equal(proxy.ImportToken, cut.FindComponent<SharedProviderImportedProfileContent>().Instance.Import.Baseline.ImportToken);
         Assert.Equal("Submitted alias", cut.Find("[data-testid='shared-provider-import-alias']").GetAttribute("value"));
     }
 
