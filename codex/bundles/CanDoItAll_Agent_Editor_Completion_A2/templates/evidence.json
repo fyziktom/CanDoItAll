@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "package_reference": "CDA-AGENT-EDITOR-COMPLETION-A2",
+  "instructions": "Copy outside the sealed package. Record actual attempts and exact sources. Package validation is not a runtime evidence validator.",
+  "agent_editor_a2_complete": false,
+  "application_tests_executed_by_package_author": false,
+  "application_release_ready": false,
+  "actual_application_sha": null,
+  "actual_components_sha": null,
+  "actual_filetools_sha": null,
+  "paid_requests_authorized": 0,
+  "paid_requests_executed": 0,
+  "historical_bundles_preserved": null,
+  "review_finding_status": {
+    "A2-R1": "NOT_RUN"
+  },
+  "groups": [
+    {
+      "id": "E0",
+      "requirement": "Actual source pair, preserved history and renderer/dependency census",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "S0",
+      "requirement": "A2-R1 unsaved-before-Verify reproduction and causal repair",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-01",
+      "requirement": "Single ten-section form, original lifetime and four A1 sections",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-02",
+      "requirement": "Project Structure permissions, explicit lists and native lifetime restrictions",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-03",
+      "requirement": "Memory eligibility, aliases, bindings, modes and removal invariants",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-04",
+      "requirement": "External roots: actual host normalization, protected bindings and neutral rendering",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-05",
+      "requirement": "Actual Storage picker: Apply versus Save, missing/restricted references",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-06",
+      "requirement": "Secrets: metadata-only selection, exact references and no credential disclosure",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-07",
+      "requirement": "Process access: flags, preserved IDs and existing unavailable selection",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-08",
+      "requirement": "Capability assignment: staged create versus existing-agent save and whole-draft semantics",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-09",
+      "requirement": "Native verification receipts, safe version reconciliation and read-only recovery",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-10",
+      "requirement": "Capability wizard handoff: committed ID before follow-up, exact assignment, no duplicate creation",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-11",
+      "requirement": "Real small confirmations: exact original editor, risk acknowledgement and cancel",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-12",
+      "requirement": "Independent read lanes, late completion, A-B-A and teardown",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-13",
+      "requirement": "Raw input, field state, dirty forms, section changes and validation",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-14",
+      "requirement": "All-section native round trip, templates, unknown extensions and optimistic conflicts",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-15",
+      "requirement": "Evaluated graph, public-signature guards and unchanged protected roots",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-16",
+      "requirement": "Complete deterministic ten-section sandbox and actual shared children",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-17",
+      "requirement": "Independent publish, served assets/fonts and supported desktop geometry",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-18",
+      "requirement": "Complete affected command/read/adapter owner selections",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-19",
+      "requirement": "UI-saved agent Project Structure/file write, attach, two read-backs and download",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-20",
+      "requirement": "Memory/CRM and project/storage positive and negative runtime permission paths",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-21",
+      "requirement": "Affected Workflow/TestLab consumer with real runtime and scripted external model",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-22",
+      "requirement": "Completed Workspace/Projects/Resources, catalog and Simple Chat neighbors",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-23",
+      "requirement": "Managed-agent refusal and completed-run agent deletion without sibling loss",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-24",
+      "requirement": "Restored desktop dotnet-watch probes and actual graph/watch observations",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "A2-25",
+      "requirement": "Private evidence isolation, secret/opaque-token scan and owned-resource disposition",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G1",
+      "requirement": "Final builds, no-write portability, documented Stable decision and honest closure",
+      "status": "NOT_RUN",
+      "evidence": [],
+      "notes": ""
+    }
+  ],
+  "attempts": [],
+  "retained_integrations": [],
+  "complex_findings": [],
+  "stable_decision": {
+    "required": null,
+    "named_trigger": null,
+    "rationale": null,
+    "checkpoint_sources": []
+  },
+  "source_census": null,
+  "closure_notes": ""
+}
