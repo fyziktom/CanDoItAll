@@ -1,0 +1,180 @@
+{
+  "reviewed_application": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+  "records": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "docs/architecture/provider-sharing-ui-pp2.md",
+      "blob_sha": "7f550d7dfbb0916b9f8d90600e550a4a122f1b54",
+      "read_coverage": "full",
+      "purpose": "S0 results and explicit pending PP2 scope",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/docs/architecture/provider-sharing-ui-pp2.md",
+      "citation": "turn1013file0"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": null,
+      "read_coverage": "comparison file stats and two-commit ancestry",
+      "purpose": "S0-only changed-file census; history separate",
+      "url": "https://github.com/fyziktom/CanDoItAll/compare/00c395ba0f4ce62c611c62718d8a510f9044f7b4...9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "citation": "compare response in this review"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": null,
+      "read_coverage": "three recent commit metadata",
+      "purpose": "Signed implementation vs preceding added-bundle commit",
+      "url": "https://github.com/fyziktom/CanDoItAll/commit/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "citation": "turn1014file0"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "blob_sha": "2ab2666f7c0aa0dba5edd73c932f9f6f61b709cf",
+      "read_coverage": "full",
+      "purpose": "Imported snapshot coherence; local draft and read lifetimes",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfilesSession.cs",
+      "citation": "turn1015file0"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "blob_sha": "28746d131e51886901a05abe8f0ef4e7ec87f931",
+      "read_coverage": "full",
+      "purpose": "Latest sharing state and local-setting request token source",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor.cs",
+      "citation": "turn1016file0"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "blob_sha": "888ffa4ecd98a7c4567342c69c139f6c1653fa3a",
+      "read_coverage": "full",
+      "purpose": "Child keyed by ImportId; preserved renderer during refresh",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderManagementPanel.razor",
+      "citation": "turn1017file0"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderImportedProfileContent.razor",
+      "blob_sha": "258342e51cad218ab771f488035abdbf73d812a6",
+      "read_coverage": "full",
+      "purpose": "Unchanged per-ImportId mutable local alias/enabled draft",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderImportedProfileContent.razor",
+      "citation": "turn1018file0"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProviderProfilesImportedRefreshTests.cs",
+      "blob_sha": "d7f51d4ac64b97e36aa058fd5e58f2022aba3e35",
+      "read_coverage": "full",
+      "purpose": "Remote-only draft retention, tooltips and complete imported revision tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/tests/Components/CanDoItAll.Tests.Components/ProviderProfilesImportedRefreshTests.cs",
+      "citation": "turn1019file0"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderNativeDefaultsUiTests.cs",
+      "blob_sha": "83ed82ed94c109b597772101f03a86afb8727ec1",
+      "read_coverage": "1-380 (complete file returned in two ranges)",
+      "purpose": "Native preset publication/import/UI/test-chat and marked fixture settings",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderNativeDefaultsUiTests.cs",
+      "citation": "turn1020file0;turn1027file0"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderProfilesReads.cs",
+      "blob_sha": "d97168470bf8388fd6a9b55f1f9b98403df935fb",
+      "read_coverage": "full",
+      "purpose": "Canonical configuration revisions from snapshot loader",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderProfilesReads.cs",
+      "citation": "turn1021file0"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "blob_sha": "c2d272cf359c3a8be90103bbe5e4437d8831023f",
+      "read_coverage": "150-335",
+      "purpose": "Native imported local settings token checks and write/read-back",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "citation": "turn1023file0"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderNativeRelayCompositionTests.cs",
+      "blob_sha": "f8d85afd30ce2863f5be0b7618d593feb89cd23a",
+      "read_coverage": "full",
+      "purpose": "Native save/publication/relay and exact model/credential/timeout tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/tests/Integration/CanDoItAll.Tests.Integration/SharedProviderNativeRelayCompositionTests.cs",
+      "citation": "turn1024file0"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs",
+      "blob_sha": "7e67e76458409106cbc7b0d6f2271c3d03692c8a",
+      "read_coverage": "1-240 and 260-360",
+      "purpose": "Relay authority/audit and canonical target configuration; not full file audit",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs",
+      "citation": "turn1025file0;turn1026file0"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "blob_sha": "1ad55bb193a29b66282511aab36b4bd270b71ce1",
+      "read_coverage": "1-240",
+      "purpose": "Retained backend-bound source host; initial read/editor/write/delivery paths",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
+      "citation": "turn1028file0"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "tools/SharedProviders/Run-SharedProviderE2E.ps1",
+      "blob_sha": "390225a00d3d26d0c4bb325ee8d6eebd4b9aabc9",
+      "read_coverage": "1-145",
+      "purpose": "New fixture parameters, root, topology/initial scenario declaration; not full harness audit",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/tools/SharedProviders/Run-SharedProviderE2E.ps1",
+      "citation": "turn1030file0"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+      "path": "docs/architecture/ui-component-seams.md",
+      "blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "read_coverage": "1-200",
+      "purpose": "Canonical UI/state/owner/asset/testing guidance",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9052b2a443a4fdce1ac24dd0ccfce236fd35ab74/docs/architecture/ui-component-seams.md",
+      "citation": "turn1029file0"
+    }
+  ],
+  "limits": "Source inspection only. Counts are implementer reports. Partial ranges are explicit."
+}

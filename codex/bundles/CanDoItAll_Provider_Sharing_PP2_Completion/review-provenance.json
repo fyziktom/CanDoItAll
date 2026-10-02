@@ -1,0 +1,16 @@
+{
+  "application_commit": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+  "bundle_only_parent": "df9b7c8e1b563d56fef762c38aad2a14089bd332",
+  "entry_branch": "components-decoupling",
+  "product_built": false,
+  "product_tests_run": false,
+  "docker_run": false,
+  "private_implementation_artifacts_available": false,
+  "finding_assurance": "source-derived; failing-first reproduction required",
+  "prior_work": "S0 completed per maintained report; structural PP2 pending",
+  "components_last_reported": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "shared_unchanged_files": 22,
+  "components_ref_verified": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "github_actions_runs_for_reviewed_head": 0,
+  "signature_metadata": "GitHub reports a valid signature on the reviewed product commit; not a local verification"
+}
