@@ -1,0 +1,39 @@
+{
+  "review_date": "2026-10-02",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "application_ref": "25ea60327ab572daee2728d6e86589f035942d94",
+  "parent_entry_ref": "bf6d15d3b6323a1fb187874afdeb78eb3a55170e",
+  "previous_review_ref": "0aad5360b4ac037ed4471ed44fc6083b7f09fb85",
+  "components_ref": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "filetools_recorded_ref": "3a080ecd31068a77c1e1bd639f7a78e21c93db85",
+  "filetools_ci_ref": "498b36825bd5a5222429972af120b04becf4b3f6",
+  "filetools_compare": {
+    "ahead_by": 2,
+    "behind_by": 0,
+    "changed_files": 0,
+    "interpretation": "Different commits, no source file delta in connected compare; not a local binary provenance claim"
+  },
+  "read_method": "Connected GitHub reads and explicit source ranges",
+  "reviewer_execution": {
+    "dotnet_available": false,
+    "product_build": "NOT_RUN",
+    "native_tests": "NOT_RUN",
+    "browser": "NOT_RUN",
+    "watch": "NOT_RUN"
+  },
+  "raw_a2_artifacts_available_to_reviewer": false,
+  "shared_input_archive": "CanDoItAll_Agent_Editor_Completion_A2_Codex_Max.zip",
+  "shared_input_archive_sha256": "26db165fc09221d47989da73ee7243c50d5b5e2f7c3cd45b80577b9756021f2f",
+  "primary_viewport": "1920x1080",
+  "no_new_paid_live_authorization": true,
+  "final_remote_checks": {
+    "date": "2026-10-02",
+    "application_branch_head": "25ea60327ab572daee2728d6e86589f035942d94",
+    "application_head_unchanged_during_review": true,
+    "components_development_head": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+    "github_actions_head_run_count": 0,
+    "actions_scope": "GET repository workflow runs filtered by head_sha; no event-only filter",
+    "interpretation": "Absence of remote runs is not proof of local test failure; local raw artifacts were not supplied."
+  }
+}

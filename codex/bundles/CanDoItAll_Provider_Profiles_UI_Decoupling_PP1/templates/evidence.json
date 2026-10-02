@@ -1,0 +1,211 @@
+{
+  "bundle_id": "CDA-PROVIDER-PROFILES-PP1",
+  "application_tests_executed_by_package_author": false,
+  "provider_profiles_pp1_complete": false,
+  "all_provider_ui_complete": false,
+  "application_release_ready": false,
+  "source_inputs": {},
+  "a2_entry_disposition": "NOT_REVIEWED_AT_EXECUTION",
+  "groups": [
+    {
+      "id": "PP1-01",
+      "title": "Current source/history/dependency entry and A2 preservation",
+      "layer": "source/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-02",
+      "title": "Complete renderer and caller census; four tabs and retained two-tab composition",
+      "layer": "source/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-03",
+      "title": "Evaluated graph, public signatures, forbidden/unresolved/cycle controls",
+      "layer": "build/unit",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-04",
+      "title": "Catalog/new/exact selection and same-target reselect preservation",
+      "layer": "unit/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-05",
+      "title": "Refresh, missing target and failed same-ID acquisition retry",
+      "layer": "unit/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-06",
+      "title": "Immediate text, raw JSON/numeric fields, tab/context lifetime",
+      "layer": "component/browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-07",
+      "title": "Independent secret metadata states, no value resolution",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-08",
+      "title": "Complete pricing dimensions, missing rates, row identity and private policy",
+      "layer": "component/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-09",
+      "title": "Thinking table/dialog, policy parity, Apply/Cancel and default/None",
+      "layer": "component/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-10",
+      "title": "Stale nested edits, target/kind/model/source revisions and two instances",
+      "layer": "unit/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-11",
+      "title": "Full captured Save, double admission, ID/token and later field reconciliation",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-12",
+      "title": "Known rejection/conflict/commit warning/unknown and exact recovery",
+      "layer": "native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-13",
+      "title": "Saved-target Health, diagnostic persistence, no retry replay",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-14",
+      "title": "Draft-only discovery, superseded result and no implicit save",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-15",
+      "title": "Delete/native blockers and safe post-commit reconciliation",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-16",
+      "title": "Source-managed read-only displays and native constrained identifiers",
+      "layer": "native/component",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-17",
+      "title": "Actual retained Sharing/source connections/History identities",
+      "layer": "component/browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-18",
+      "title": "Local provider created through UI and canonical round-trip",
+      "layer": "browser/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-19",
+      "title": "A2 agent and Simple Chat use real saved provider/model data",
+      "layer": "browser/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-20",
+      "title": "Agent Project Structure file approval/write/attach/read-back/download",
+      "layer": "browser/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-21",
+      "title": "Workflow/TestLab accepted output and negative output control",
+      "layer": "browser/native",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-22",
+      "title": "Independent realistic sandbox including true Pricing/Thinking children",
+      "layer": "component/browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-23",
+      "title": "Standalone Production publish and served assets",
+      "layer": "build/browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-24",
+      "title": "1920x1080 focus/scroll/footer/menus/dialogs and navigation",
+      "layer": "browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-25",
+      "title": "Before/after graph/watch and restored comparable edit probes",
+      "layer": "measurement",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-26",
+      "title": "Protected A2/Projects/Workspace/Resources neighboring families",
+      "layer": "native/browser",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-27",
+      "title": "Final portability/docs/secret-safe evidence gates and broad decision",
+      "layer": "static",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "PP1-28",
+      "title": "Final source/binary/attempt correspondence, resource cleanup and roadmap",
+      "layer": "closure",
+      "status": "NOT_RUN",
+      "evidence": []
+    }
+  ],
+  "attempts": [],
+  "blocked_prerequisites": [],
+  "broad_gate_decision": null,
+  "resource_disposition": null
+}
