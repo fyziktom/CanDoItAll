@@ -1,25 +1,13 @@
+@using CanDoItAll.AgentFramework.SharedProviders.UI
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.AgentFramework.ProviderManagement
 @using CanDoItAll.SharedProviders.Abstractions
 @inject ISharedProviderManagementService ManagementService
 @inject SharedProviderRecovery Recovery
 @implements IDisposable
+@implements ISharedProviderRefreshView
 
-<Stack GapScale="LayoutGap.Small">
-    <Cluster>
-        <Button Text="Refresh shared provider" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
-                IsBusy="busy" Disabled="@(busy || Recovery.Source is not null)" Click="RefreshAsync" data-testid="shared-provider-refresh-capabilities" />
-        @if (PendingDeliveryAttempt is not null) {
-            <Button Text="Retry workspace delivery" Disabled="@busy" Click="RetryDeliveryAsync" data-testid="shared-provider-refresh-delivery" />
-        }
-    </Cluster>
-    @if (Recovery.Source is not null) {
-        <Alert AlertStyle="AlertStyle.Warning">Resolve the pending source attempt in Shared provider connections before another refresh.</Alert>
-    }
-    @if (message is not null) {
-        <Alert AlertStyle="@(failed ? AlertStyle.Danger : AlertStyle.Success)" data-testid="shared-provider-refresh-result">@message</Alert>
-    }
-</Stack>
+<SharedProviderRefreshSurface View="this" />
 
 @code {
     [Parameter] public Guid ProviderId { get; set; }
@@ -31,6 +19,11 @@
     private bool busy;
     private bool failed;
     private string? message;
+    private readonly Guid viewId = Guid.NewGuid();
+    private long activation;
+    private SharedProviderRefreshOrigin Origin => new(viewId, activation, target);
+    public SharedProviderRefreshPresentation Presentation => new(Origin, busy, Recovery.Source is not null,
+        PendingDeliveryAttempt?.AttemptId, message, failed);
     private SharedProviderSourceMutationAttempt? PendingDeliveryAttempt => Recovery.Source is { } attempt &&
         attempt.Before?.Imports.Any(import => import.ProviderProfileId == target) == true &&
         Recovery.PendingDelivery(attempt.AttemptId) is not null ? attempt : null;
@@ -46,6 +39,7 @@
         owner.Dispose();
         owner = new();
         generation++;
+        activation++;
         target = ProviderId;
         busy = false;
         message = null;
@@ -54,8 +48,8 @@
     private bool IsCurrent(long operation, CancellationToken token) =>
         !disposed && operation == generation && !token.IsCancellationRequested;
 
-    private async Task RefreshAsync() {
-        if (disposed || busy || Recovery.Source is not null) {
+    public async Task RefreshAsync(SharedProviderRefreshOrigin origin) {
+        if (origin != Origin || disposed || busy || Recovery.Source is not null) {
             return;
         }
         var operation = ++generation;
@@ -117,8 +111,8 @@
         }
     }
 
-    private async Task RetryDeliveryAsync() {
-        if (disposed || busy || PendingDeliveryAttempt is not { } attempt) {
+    public async Task RetryDeliveryAsync(SharedProviderRefreshOrigin origin, Guid attemptId) {
+        if (origin != Origin || disposed || busy || PendingDeliveryAttempt is not { } attempt || attempt.AttemptId != attemptId) {
             return;
         }
         var operation = ++generation;

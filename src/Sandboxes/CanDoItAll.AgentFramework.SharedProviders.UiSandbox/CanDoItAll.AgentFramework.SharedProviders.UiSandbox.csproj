@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.SharedProviders.UI/CanDoItAll.AgentFramework.SharedProviders.UI.csproj" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RequireSharingParityTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. Run npm ci --prefix Tailwind, then npm run tailwind:build from the repository root." />
+  </Target>
+</Project>

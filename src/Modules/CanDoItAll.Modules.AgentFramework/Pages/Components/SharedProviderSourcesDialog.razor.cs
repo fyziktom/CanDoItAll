@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.SharedProviders.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-public partial class SharedProviderSourcesDialog : IDisposable {
+public partial class SharedProviderSourcesDialog : ISharedProviderSourcesView, IDisposable {
     [Inject]
     public ISharedProviderManagementService ManagementService { get; set; } = default!;
 
@@ -18,6 +19,8 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     [Parameter]
     public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
 
+    [Parameter] public string? SecretMetadataError { get; set; }
+
     [Parameter]
     public EventCallback<SharedProviderChangeDelivery> ProvidersChanged { get; set; }
 
@@ -25,24 +28,46 @@ public partial class SharedProviderSourcesDialog : IDisposable {
     public EventCallback OnClose { get; set; }
 
     private IReadOnlyList<SharedProviderSourceManagementSnapshot> sources = [];
-    private SharedProviderSourceEditorModel sourceEditor = new();
-    private IReadOnlyList<SharedProviderCatalogPublication> catalogPublications = [];
-    private readonly HashSet<SharedProviderPublicationId> selectedPublicationIds = [];
-    private Guid catalogSourceId;
-    private string catalogDialogSubtitle = string.Empty;
+    private SharedProviderSourceDraft? sourceEditor;
+    private SharedProviderCatalogSelection? catalog;
+    private SharedProviderSourceConfirmation? confirmation;
+    private readonly Guid viewId = Guid.NewGuid();
+    private Guid snapshotId = Guid.NewGuid();
+    private (SharedProviderSourceMutationAttempt Attempt, SharedProviderSourceDraft Draft, SharedProviderSourceSubmission Submission)? sourceSubmission;
+    private bool sourceWriteCommitted;
+    private (SharedProviderSourceMutationAttempt Attempt, SharedProviderCatalogSelection Dialog, SharedProviderCatalogSubmission Submission)? catalogSubmission;
+    private bool catalogWriteCommitted;
     private string sourceDialogError = string.Empty;
     private string loadError = string.Empty;
     private bool isLoading;
+    private bool readFailed;
     private bool operationBusy;
     private bool hasPendingAttempt => Recovery.Source is not null;
-    private bool isBusy => operationBusy || hasPendingAttempt;
+    private bool isBusy => operationBusy || hasPendingAttempt || readFailed || sourceWriteCommitted || catalogWriteCommitted;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationToken ownerToken;
     private long generation;
     private long readGeneration;
     private bool disposed;
     private bool sourceDialogOpen;
-    private bool catalogDialogOpen;
+
+    public SharedProviderSourcesPresentation Presentation => new(viewId,
+        sources.Select(item => SharedProviderPresentationMapper.Source(Origin(item.Source), item)).ToArray(),
+        Secrets.Select(secret => new SharedProviderCredentialChoice(secret.Id, secret.Name)).ToArray(), SecretMetadataError,
+        isLoading, operationBusy, isBusy || isLoading, loadError, sourceDialogOpen ? sourceEditor : null, sourceDialogError, catalog,
+        Recovery.Source is { } pending ? new(pending.AttemptId, pending.SourceId,
+            Recovery.PendingDelivery(pending.AttemptId) is not null, Recovery.SourceRetryAllowed) : null, confirmation);
+
+    private SharedProviderSourceOrigin Origin(SharedProviderSourceSnapshot source) => new(viewId, snapshotId, source.Id, source.ConcurrencyToken);
+
+    private SharedProviderSourceManagementSnapshot? Resolve(SharedProviderSourceOrigin origin) =>
+        !disposed && origin.ViewId == viewId && origin.SnapshotId == snapshotId
+            ? sources.SingleOrDefault(item => item.Source.Id == origin.SourceId && item.Source.ConcurrencyToken == origin.ConcurrencyToken) : null;
+
+    public Task RefreshAsync(Guid origin) => origin == viewId && !operationBusy ? LoadAsync() : Task.CompletedTask;
+    public Task CloseAsync(Guid origin) => origin == viewId && !disposed ? CloseOverlayAsync() : Task.CompletedTask;
+    public Task VerifyAsync(Guid attemptId) => Recovery.Source?.AttemptId == attemptId ? VerifySourceAsync() : Task.CompletedTask;
+    public Task RetryVerifiedAsync(Guid attemptId) => Recovery.Source?.AttemptId == attemptId ? RetryVerifiedSourceAsync() : Task.CompletedTask;
 
     protected override Task OnInitializedAsync() {
         ownerToken = lifetime.Token;
@@ -56,16 +81,22 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
         var read = ++readGeneration;
         isLoading = true;
+        readFailed = false;
         loadError = string.Empty;
         try {
             var result = await ManagementService.ListSourcesAsync(request.Token);
             if (!disposed && read == readGeneration) {
                 sources = result;
+                snapshotId = Guid.NewGuid();
+                confirmation = null;
+                ReconcileSourceDraft();
+                ReconcileCatalog();
             }
         } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
         } catch (Exception) {
             if (!disposed && read == readGeneration) {
                 loadError = "Shared-provider connections could not be loaded.";
+                readFailed = true;
             }
         } finally {
             if (!disposed && read == readGeneration) {
@@ -89,82 +120,127 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         lifetime.Cancel();
         lifetime.Dispose();
         sourceDialogOpen = false;
-        catalogDialogOpen = false;
+        catalog = null;
+        confirmation = null;
     }
 
-    private void OpenNewSourceDialog() {
-        if (isBusy || disposed) {
+    public void NewSource(Guid origin) {
+        if (origin != viewId || disposed || isBusy || isLoading) {
             return;
         }
-        sourceEditor = new SharedProviderSourceEditorModel {
-            Id = Guid.NewGuid(),
-            IsEnabled = true,
-            ApiTokenSecretId = Secrets.Count == 1 ? Secrets[0].Id : Guid.Empty
-        };
+        sourceEditor = new(Guid.NewGuid(), null, new(string.Empty, string.Empty,
+            SecretMetadataError is null && Secrets.Count == 1 ? Secrets[0].Id : Guid.Empty, true, false));
         sourceDialogError = string.Empty;
         sourceDialogOpen = true;
     }
 
     private void OpenEditSourceDialog(SharedProviderSourceSnapshot source) {
-        if (isBusy || disposed) {
+        if (disposed) {
             return;
         }
-        sourceEditor = new SharedProviderSourceEditorModel {
-            Id = source.Id,
-            ExpectedConcurrencyToken = source.ConcurrencyToken,
-            Name = source.Name,
-            BaseUri = source.BaseUri.AbsoluteUri,
-            ApiTokenSecretId = source.ApiTokenSecretId,
-            IsEnabled = source.IsEnabled,
-            AllowInsecurePrivateNetwork =
-                source.NetworkPolicy == SharedProviderSourceNetworkPolicy.AllowPrivateNetwork
-        };
+        sourceEditor = new(source.Id, source.ConcurrencyToken, SharedProviderPresentationMapper.SourceValues(source));
         sourceDialogError = string.Empty;
         sourceDialogOpen = true;
     }
 
-    private void CloseSourceDialog() {
+    public void CloseEditor(Guid draftId) {
+        if (sourceEditor?.Id != draftId) {
+            return;
+        }
         sourceDialogOpen = false;
         sourceDialogError = string.Empty;
     }
 
-    private async Task SaveSourceAsync() {
+    public async Task SaveAsync(SharedProviderSourceSubmission submission) {
+        if (disposed || isBusy || isLoading || !sourceDialogOpen || sourceEditor is not { } draft || !draft.CanSubmit(submission)) {
+            return;
+        }
         sourceDialogError = string.Empty;
-        if (string.IsNullOrWhiteSpace(sourceEditor.Name)) {
-            sourceDialogError = "Enter a source name.";
+        if (SecretMetadataError is not null || !Secrets.Any(secret => secret.Id == submission.Values.CredentialReference)) {
+            sourceDialogError = SecretMetadataError is not null ? "Credential metadata is unavailable. Refresh it before saving."
+                : "The stored credential reference is unavailable. Select an available credential.";
             return;
         }
-
-        if (!Uri.TryCreate(sourceEditor.BaseUri.Trim(), UriKind.Absolute, out var baseUri)) {
-            sourceDialogError = "Enter an absolute HTTP or HTTPS instance URL.";
-            return;
-        }
-
-        if (sourceEditor.ApiTokenSecretId == Guid.Empty) {
-            sourceDialogError = "Select a stored source credential.";
-            return;
-        }
-
+        var values = submission.Values;
         var request = new SharedProviderSourceEditorRequest(
-            sourceEditor.Id, sourceEditor.ExpectedConcurrencyToken, sourceEditor.Name, baseUri,
-            sourceEditor.ApiTokenSecretId, sourceEditor.IsEnabled, sourceEditor.AllowInsecurePrivateNetwork);
+            submission.SourceId, submission.ExpectedToken, values.Name, new Uri(values.BaseUri.Trim(), UriKind.Absolute),
+            values.CredentialReference, values.IsEnabled, values.AllowPrivateNetwork);
         var attempt = new SharedProviderSourceMutationAttempt(request.Id!.Value,
             request.ExpectedConcurrencyToken.HasValue ? SharedProviderSourceMutationKind.Update : SharedProviderSourceMutationKind.Create,
             sources.SingleOrDefault(source => source.Source.Id == request.Id), request);
+        sourceSubmission = (attempt, draft, submission);
+        sourceWriteCommitted = false;
         await SaveSourceAttemptAsync(attempt);
     }
 
     private Task SaveSourceAttemptAsync(SharedProviderSourceMutationAttempt attempt, bool controlledRetry = false) =>
         RunSourceMutationAsync(async token => {
             var result = await ManagementService.SaveSourceAsync(attempt.Request!, token);
-            if (!disposed) {
-                sourceEditor.Id = result.Id;
-                sourceEditor.ExpectedConcurrencyToken = result.ConcurrencyToken;
-                sourceDialogOpen = false;
-                sourceDialogError = string.Empty;
+            if (result.Id != attempt.SourceId) {
+                throw new InvalidOperationException("The source result has a different identity.");
+            }
+            if (sourceSubmission is { } submitted && submitted.Attempt.AttemptId == attempt.AttemptId) {
+                sourceWriteCommitted = true;
+                if (!disposed && ReferenceEquals(sourceEditor, submitted.Draft)) {
+                    submitted.Draft.AcceptIdentity(submitted.Submission, result.Id, result.ConcurrencyToken);
+                }
             }
             return result.Change;
         }, "Source saved", attempt, controlledRetry);
+
+    private void ReconcileSourceDraft() {
+        if (!sourceWriteCommitted || sourceSubmission is not { } submitted) {
+            return;
+        }
+        var accepted = sources.SingleOrDefault(item => item.Source.Id == submitted.Attempt.SourceId)?.Source;
+        if (ReferenceEquals(sourceEditor, submitted.Draft)) {
+            if (accepted is not null && SharedProviderSourceVerification.Matches(accepted, submitted.Attempt.Request!)) {
+                var unchanged = submitted.Draft.Accept(submitted.Submission, accepted.ConcurrencyToken,
+                    SharedProviderPresentationMapper.SourceValues(accepted));
+                sourceDialogOpen = sourceDialogOpen && !unchanged;
+                sourceDialogError = string.Empty;
+            } else {
+                submitted.Draft.ReadbackConflict = true;
+                sourceDialogError = "The source was saved, then its configuration changed or became unavailable. Your text is retained. Reopen the source to review its current state.";
+            }
+        }
+        sourceSubmission = null;
+        sourceWriteCommitted = false;
+    }
+
+    public Task ExecuteAsync(SharedProviderSourceIntent intent) {
+        if (Resolve(intent.Origin) is not { } source || (intent.Action != SharedProviderSourceAction.Edit && (isBusy || isLoading))) {
+            return Task.CompletedTask;
+        }
+        switch (intent.Action) {
+            case SharedProviderSourceAction.Edit:
+                OpenEditSourceDialog(source.Source);
+                return Task.CompletedTask;
+            case SharedProviderSourceAction.Test:
+                return TestSourceAsync(source.Source.Id);
+            case SharedProviderSourceAction.Discover when source.Source.IsEnabled:
+                return DiscoverSourceAsync(source);
+            case SharedProviderSourceAction.Synchronize when source.Source.IsEnabled && source.Imports.Count > 0:
+                return SynchronizeExistingAsync(source);
+            case SharedProviderSourceAction.ToggleEnabled:
+                return ToggleSourceAsync(source.Source);
+            case SharedProviderSourceAction.Delete when source.Imports.Count == 0:
+                confirmation = new(Guid.NewGuid(), intent.Origin, source.Source.Name);
+                return Task.CompletedTask;
+            default:
+                return Task.CompletedTask;
+        }
+    }
+
+    public Task ConfirmDeleteAsync(SharedProviderSourceConfirmation requested) => requested == confirmation &&
+        !isBusy && !isLoading && Resolve(requested.Origin) is { Imports.Count: 0 } source
+            ? DeleteSourceAsync(source.Source) : Task.CompletedTask;
+
+    public void CloseConfirmation(SharedProviderSourceConfirmation requested) {
+        if (requested == confirmation) {
+            confirmation = null;
+        }
+    }
 
     private Task ToggleSourceAsync(SharedProviderSourceSnapshot source) {
         var attempt = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Enablement,
@@ -264,21 +340,35 @@ public partial class SharedProviderSourcesDialog : IDisposable {
 
     private async Task HandleOperationFailureAsync(Exception exception, long operation, SharedProviderSourceMutationAttempt attempt) {
         if (exception is SharedProviderCommittedException committed) {
+            sourceWriteCommitted = sourceSubmission?.Attempt.AttemptId == attempt.AttemptId;
+            catalogWriteCommitted = catalogSubmission?.Attempt.AttemptId == attempt.AttemptId;
             Recovery.RecordCommit(attempt.AttemptId, committed.Change);
             Recovery.CompleteSource(attempt);
             loadError = committed.Change.Warning!;
             await PublishChangeAsync(committed.Change, operation, attempt.AttemptId);
+            if (IsCurrent(operation)) {
+                await LoadAsync();
+            }
             return;
         }
         var rejected = exception is SharedProviderSourceDeletionBlockedException or ArgumentException or KeyNotFoundException ||
             (exception is SharedProviderConcurrencyException && attempt.Kind != SharedProviderSourceMutationKind.Create);
         if (rejected) {
             Recovery.CompleteSource(attempt);
+            if (sourceSubmission?.Attempt.AttemptId == attempt.AttemptId) {
+                sourceWriteCommitted = false;
+            }
+            if (catalogSubmission?.Attempt.AttemptId == attempt.AttemptId) {
+                catalogSubmission = null;
+                catalogWriteCommitted = false;
+            }
         }
         var message = rejected ? "The source change was rejected. Reload current source state and correct the request."
             : "The source outcome is unconfirmed. Verify its state before repeating the operation.";
         loadError = message;
-        sourceDialogError = message;
+        if (sourceSubmission is { } submitted && submitted.Attempt.AttemptId == attempt.AttemptId && ReferenceEquals(sourceEditor, submitted.Draft)) {
+            sourceDialogError = message;
+        }
         NotificationService.Warning("Source change needs attention", message);
         if (!rejected) {
             await PublishChangeAsync(new(SharedProviderChangeKind.SourceAvailability, [],
@@ -314,14 +404,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             return;
         }
 
-        catalogSourceId = source.Source.Id;
-        catalogDialogSubtitle = $"{source.Source.Name} · {result.Catalog.Providers.Count} published provider(s)";
-        catalogPublications = result.Catalog.Providers;
-        selectedPublicationIds.Clear();
-        selectedPublicationIds.UnionWith(source.Imports
-            .Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
-            .Select(import => import.RemotePublicationId));
-        catalogDialogOpen = true;
+        if (readFailed || sources.SingleOrDefault(item => item.Source.Id == source.Source.Id) is not { } accepted) {
+            return;
+        }
+        catalog = new(Origin(accepted.Source), accepted.Source.Name, result.Catalog.Providers,
+            accepted.Imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
+                .Select(import => import.RemotePublicationId));
     }
 
     private async Task SynchronizeExistingAsync(SharedProviderSourceManagementSnapshot source) {
@@ -341,18 +429,18 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         }
     }
 
-    private async Task ApplyCatalogSelectionAsync() {
-        if (catalogSourceId == Guid.Empty) {
+    public async Task ApplyCatalogAsync(SharedProviderCatalogSubmission submission) {
+        if (isBusy || isLoading || catalog is not { } dialog || !dialog.IsCurrent(submission) ||
+            Resolve(submission.Origin) is not { Source.IsEnabled: true } source) {
             return;
         }
 
         var operation = generation + 1;
+        var attempt = new SharedProviderSourceMutationAttempt(submission.Origin.SourceId,
+            SharedProviderSourceMutationKind.Synchronize, source, selection: submission.Selection);
+        catalogSubmission = (attempt, dialog, submission);
         var result = await RunSourceOperationAsync(
-            token => ManagementService.SynchronizeSourceAsync(
-                catalogSourceId,
-                selectedPublicationIds.ToHashSet(), token),
-            new(catalogSourceId, SharedProviderSourceMutationKind.Synchronize,
-                sources.Single(item => item.Source.Id == catalogSourceId), selection: selectedPublicationIds));
+            token => ManagementService.SynchronizeSourceAsync(submission.Origin.SourceId, submission.Selection, token), attempt);
         if (!IsCurrent(operation)) {
             return;
         }
@@ -360,8 +448,26 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             return;
         }
 
-        catalogDialogOpen = false;
         NotificationService.Success("Shared providers imported", DescribeSourceOperation(result));
+    }
+
+    private void ReconcileCatalog() {
+        if (!catalogWriteCommitted || catalogSubmission is not { } submitted) {
+            return;
+        }
+        if (ReferenceEquals(catalog, submitted.Dialog)) {
+            var accepted = sources.SingleOrDefault(item => item.Source.Id == submitted.Attempt.SourceId);
+            if (accepted is not null && submitted.Submission.Selection.SetEquals(accepted.Imports
+                    .Where(item => item.SelectionState == SharedProviderSelectionState.Selected).Select(item => item.RemotePublicationId))) {
+                if (submitted.Dialog.Accept(submitted.Submission, Origin(accepted.Source))) {
+                    catalog = null;
+                }
+            } else {
+                submitted.Dialog.ReadbackConflict = true;
+            }
+        }
+        catalogSubmission = null;
+        catalogWriteCommitted = false;
     }
 
     private async Task<SharedProviderSourceOperationResult?> RunSourceOperationAsync(
@@ -377,6 +483,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         SharedProviderChange? committed = null;
         try {
             var result = await run(request.Token);
+            if (catalogSubmission?.Attempt.AttemptId == attempt.AttemptId) {
+                catalogWriteCommitted = result.IsSuccessful;
+                if (!result.IsSuccessful) {
+                    catalogSubmission = null;
+                }
+            }
             committed = result.Change;
             Recovery.RecordCommit(attempt.AttemptId, result.Change);
             if (!IsCurrent(operation)) {
@@ -429,8 +541,6 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         try {
             if (Recovery.PendingDelivery(attempt.AttemptId) is { } delivery) {
                 if (await PublishChangeAsync(delivery.Change, operation, attempt.AttemptId) && IsCurrent(operation)) {
-                    sourceDialogError = string.Empty;
-                    sourceDialogOpen = false;
                     await LoadAsync();
                 }
                 return;
@@ -440,12 +550,14 @@ public partial class SharedProviderSourcesDialog : IDisposable {
                 return;
             }
             sources = result.Sources;
+            snapshotId = Guid.NewGuid();
+            readFailed = false;
+            confirmation = null;
             if (result.Disposition == ProviderVerificationDisposition.StillUnconfirmed) {
                 loadError = "The exact source attempt is still unconfirmed. Verification did not repeat it. Retain this attempt and retry verification when canonical state is available.";
                 return;
             }
             loadError = string.Empty;
-            sourceDialogError = string.Empty;
             if (result.Disposition == ProviderVerificationDisposition.DefinitelyNotCommitted) {
                 Recovery.AllowSourceRetry(attempt);
                 return;
@@ -453,7 +565,10 @@ public partial class SharedProviderSourcesDialog : IDisposable {
             var change = result.Change;
             Recovery.RecordCommit(attempt.AttemptId, change);
             Recovery.CompleteSource(attempt);
-            sourceDialogOpen = false;
+            sourceWriteCommitted = sourceSubmission?.Attempt.AttemptId == attempt.AttemptId;
+            ReconcileSourceDraft();
+            catalogWriteCommitted = catalogSubmission?.Attempt.AttemptId == attempt.AttemptId;
+            ReconcileCatalog();
             await PublishChangeAsync(change, operation, attempt.AttemptId);
         } catch (OperationCanceledException) when (ownerToken.IsCancellationRequested) {
         } catch (Exception) {
@@ -498,22 +613,10 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         }
     }
 
-    private void SetPublicationSelected(
-        SharedProviderPublicationId publicationId,
-        ChangeEventArgs args) {
-        if (args.Value is true ||
-            bool.TryParse(args.Value?.ToString(), out var isSelected) && isSelected) {
-            selectedPublicationIds.Add(publicationId);
-        } else {
-            selectedPublicationIds.Remove(publicationId);
+    public void CloseCatalog(Guid dialogId) {
+        if (catalog?.Id == dialogId) {
+            catalog = null;
         }
-    }
-
-    private void CloseCatalogDialog() {
-        catalogDialogOpen = false;
-        catalogSourceId = Guid.Empty;
-        catalogPublications = [];
-        selectedPublicationIds.Clear();
     }
 
     private static string DescribeSourceOperation(SharedProviderSourceOperationResult result) {
@@ -524,41 +627,12 @@ public partial class SharedProviderSourcesDialog : IDisposable {
         return $"Updated {result.AffectedProviderProfileIds.Count} profile(s) and retired {result.RetiredProviderProfileIds.Count} profile(s).";
     }
 
-    private static string ResolveSourceTone(SharedProviderSourceStatus status) => status switch {
-        SharedProviderSourceStatus.Available => "success",
-        SharedProviderSourceStatus.NeverSynchronized => "neutral",
-        SharedProviderSourceStatus.SourceOffline => "warning",
-        _ => "danger"
-    };
-
-    private static string ResolveHealthTone(SharedProviderHealthState state) => state switch {
-        SharedProviderHealthState.Available => "success",
-        SharedProviderHealthState.Degraded => "warning",
-        _ => "danger"
-    };
-
     private static string FormatStatus<T>(T value) where T : struct, Enum {
         var text = value.ToString();
         return string.Concat(text.Select((character, index) =>
             index > 0 && char.IsUpper(character)
                 ? $" {char.ToLowerInvariant(character)}"
                 : char.ToLowerInvariant(character).ToString()));
-    }
-
-    private sealed class SharedProviderSourceEditorModel {
-        public Guid? Id { get; set; }
-
-        public Guid? ExpectedConcurrencyToken { get; set; }
-
-        public string Name { get; set; } = string.Empty;
-
-        public string BaseUri { get; set; } = string.Empty;
-
-        public Guid ApiTokenSecretId { get; set; }
-
-        public bool IsEnabled { get; set; }
-
-        public bool AllowInsecurePrivateNetwork { get; set; }
     }
 
 }

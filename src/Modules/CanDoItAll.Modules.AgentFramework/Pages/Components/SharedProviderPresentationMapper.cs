@@ -1,9 +1,26 @@
 using CanDoItAll.AgentFramework.SharedProviders.UI;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.SharedProviders.Abstractions;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 internal static class SharedProviderPresentationMapper {
+    public static SharedProviderSourceValues SourceValues(SharedProviderSourceSnapshot source) => new(source.Name,
+        source.BaseUri.AbsoluteUri, source.ApiTokenSecretId, source.IsEnabled,
+        source.NetworkPolicy == SharedProviderSourceNetworkPolicy.AllowPrivateNetwork);
+
+    public static SharedProviderSourcePresentation Source(SharedProviderSourceOrigin origin, SharedProviderSourceManagementSnapshot item) =>
+        new(origin, item.Source.Name, item.Source.BaseUri, item.Source.ApiTokenSecretId, item.Source.IsEnabled,
+            item.Source.NetworkPolicy == SharedProviderSourceNetworkPolicy.AllowPrivateNetwork, item.Source.Status switch {
+                SharedProviderSourceStatus.NeverSynchronized => SharedProviderSourceAvailability.NeverSynchronized,
+                SharedProviderSourceStatus.Available => SharedProviderSourceAvailability.Available,
+                SharedProviderSourceStatus.SourceOffline => SharedProviderSourceAvailability.SourceOffline,
+                SharedProviderSourceStatus.AuthorizationFailed => SharedProviderSourceAvailability.AuthorizationFailed,
+                SharedProviderSourceStatus.SourceIdentityMismatch => SharedProviderSourceAvailability.SourceIdentityMismatch,
+                SharedProviderSourceStatus.IncompatibleContract => SharedProviderSourceAvailability.IncompatibleContract,
+                _ => throw new ArgumentOutOfRangeException(nameof(item))
+            }, item.Source.LastStatusMessage, item.Imports.Count);
+
     public static SharedProviderImportBaseline Baseline(SharedProviderImportedProfileSnapshot import) =>
         new(import.ImportId, import.ProviderProfileId, import.SourceId, import.RemotePublicationId,
             import.ImportConcurrencyToken, import.ProviderConcurrencyToken, new(import.LocalAlias, import.IsEnabled));

@@ -1,5 +1,6 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.SharedProviders.UI;
+using CanDoItAll.AgentFramework.SharedProviders.UiSandbox;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Tests.Components.SharedProvidersUi;
@@ -8,6 +9,11 @@ public sealed class SharedProviderBoundaryTests {
     [Fact]
     public void Actual_leaf_transitive_closure_has_no_runtime_owners() =>
         Visit(typeof(SharedProviderSharingSurface).Assembly.GetName().Name!,
+            name => Assembly.Load(name).GetReferencedAssemblies().Select(reference => reference.Name!));
+
+    [Fact]
+    public void Actual_sandbox_transitive_closure_has_no_runtime_owners() =>
+        Visit(typeof(SharedProviderScenarioSession).Assembly.GetName().Name!,
             name => Assembly.Load(name).GetReferencedAssemblies().Select(reference => reference.Name!));
 
     [Theory]

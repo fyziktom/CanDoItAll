@@ -1,7 +1,8 @@
 # Provider Sharing PP2
 
 S0's container model-name/default/routing/security prerequisite passed on 2026-10-02.
-Structural Sharing/source extraction and the final consumer campaign are still pending.
+Sharing/source/refresh rendering and the independent sandbox are extracted. The final rebuilt-image
+consumer campaign and frozen Stable checkpoint remain open.
 The completed [PP1 boundary](provider-profiles-ui-pp1.md), A2 and historical bundles are retained.
 This record does not claim all provider UI is extracted or that the application is release-ready.
 
@@ -153,17 +154,70 @@ the host is an effect owner, no runtime contracts or authority changed, and pure
 native module. Browser geometry, full sandbox closure and final-image consumers remain open and
 will validate the completed combined surface before PP2 is declared complete.
 
-Move actual Sharing children, source list/editor/discovery and refresh rendering into the new
-independent leaf, with safe projections and exact displayed origins. Management stays in
+### Sources, discovery and refresh checkpoint
+
+The leaf now also renders the source list/editor, metadata-only credential choices, discovery
+catalog, enablement/delete confirmation and reusable refresh control. Sources is a wide dialog,
+its editor is medium, and confirmations are compact. Catalog scrolling is bounded to 52vh with
+the action footer outside the scroll region. Large-desktop inspection found and repaired intrinsic
+list sizing and Enter-to-save: an internal submit control reaches the same guarded handler as
+the visible footer. Refresh has intrinsic width (183.5px in the recorded 1920×1080 sandbox).
+
+Source drafts retain proposed/native identity, expected version, validation context and raw
+input. Save snapshots immutable values and field revisions before awaiting the owner. Canonical
+read-back normalizes unchanged fields and preserves later typing. A late result cannot close or
+write an error into a replacement editor. Missing credential metadata/references remain explicit;
+only identifiers and labels cross the renderer boundary. Delete confirmations retain the displayed
+source/version and unique confirmation identity.
+
+Native catalog tests reproduced stale dialog origins after failed read-back, delivery and lost
+acknowledgement (`catalog-recovery-before.trx`, three failures). The host now retains the original
+catalog submission until canonical reconciliation. It updates only that dialog's accepted origin,
+preserves later checkbox edits and performs no repeat synchronization during verification/delivery.
+A different canonical selection retains the draft with an explicit review requirement.
+
+`sources-native-final.trx` passes 32 of 33 selected cases, including all ten new PostgreSQL source
+and catalog cases. The remaining older test used an ambiguous button-text selector after the Enter
+fix added the hidden submit control; its corrected exact control selection passes in
+`source-selector-after.trx` (1/1). The earlier source selection passed 30/30 before the catalog
+recovery extension. Failed attempts are separate from the passing follow-up.
+
+The independent sandbox has 26 scenarios and a stored fixture separate from each editor draft.
+It includes local/imported/runtime-only, loading/failure, metadata/credential failures, retired/
+unavailable states, held/rejected/unknown writes, failed read-back/delivery, deliberate verified
+retry and 200 publications. Fifty-one independent renderer/state/closure tests pass in
+`sandbox-desktop-final.trx`; no database, module or external HTTP registration is involved. The evaluated
+graph is exactly five projects: sandbox, leaf, SharedProviders.Abstractions, BaseLib and Common.
+
+Source and independent Production-published browser scripts use 1920×1080 at scale 1, real controls,
+hit-tested footer geometry, keyboard Enter/Space/Escape, nested dialogs, two-editor conflict/merge,
+bounded catalog scroll, fonts and BaseLib interop. Their console/request error collections are empty.
+The final layout receipts are `sandbox-source-final.json` and `sandbox-published-final.json`
+under the completion evidence root. Both include the full-width catalog correction.
+
+The Sources architecture gate permits final-image validation: the actual markup and effects
+are separated, the sandbox graph is independent, canonical recovery preserves the original
+operation and native optimistic checks remain authoritative. Documentation validation passes
+345 maintained files. This stage does not close the final-image or native-consumer gates.
+
+The clean five-project sandbox did not reproduce PP1's second Razor-update failure. In
+`ProviderSharingWatchProof`, SDK 10.0.303, polling `dotnet watch` applied three Razor, three C# and
+three scoped-CSS probes with the same server PID. Visible latency was 0.49–2.32s for Razor,
+0.77–0.78s for C# and 0.47–0.89s for CSS. The first C# probe method clicked before compilation;
+those three timeouts are retained separately, and corrected bounded action polling observes the
+changed method. Startup build was 4.82s, graph load 1.3s, navigation 388ms and hydration 607ms.
+All three source hashes were restored. This is current-sandbox hot-reload proof, not a claimed
+universal speedup or a rewrite of the historical PP1 restart measurements.
+
+Management stays in
 ProviderManagement; mutation recovery, target verification and acknowledged parent delivery stay
 in their original AgentFramework service owners. Preserve request History and source consumers
 through their current host slots. CodeAnalytics, Components and dotnetwatch MCPs were unavailable;
 source inspection, native CLI and evaluated graph/browser proof are the fallback.
 
-Outstanding closure includes draft/confirmation edge cases, independent source/published sandbox,
-native custom prices/Thinking and saved-unavailable choices, image/vision bytes, credential rotation,
+Outstanding closure includes native custom prices/Thinking and saved-unavailable choices, image/vision bytes, credential rotation,
 actual Agent/Project Structure file approvals, Simple Chat transcript, Workflow/TestLab outcomes,
 retained History and neighboring boundaries. Repeat the protocol/UI/consumer campaign on final
-rebuilt images, diagnose the bounded hot-reload loop, and run one final frozen Stable checkpoint.
+rebuilt images and run one final frozen Stable checkpoint.
 Verify all coherent OpenPGP commits and clean only task-owned resources. Zero new paid calls,
 no push/merge, and no additional family are authorized.

@@ -72,8 +72,8 @@ public sealed class SharedProviderOwnedEffectsTests {
         Task running;
         if (action == SourceAction.Save) {
             await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
-            cut.Find("[data-testid='shared-provider-source-name']").Change("New source");
-            cut.Find("[data-testid='shared-provider-source-uri']").Change("https://source.example.test/");
+            cut.Find("[data-testid='shared-provider-source-name']").Input("New source");
+            cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
             running = cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
         } else {
             running = cut.WaitForElement(action == SourceAction.Test
@@ -180,11 +180,12 @@ public sealed class SharedProviderOwnedEffectsTests {
         public int Operations { get; private set; }
         public CancellationToken ReceivedToken { get; private set; }
         private readonly TaskCompletionSource<SharedProviderSourceWriteResult> write = new();
+        private Guid? proposedSourceId;
         private readonly TaskCompletionSource<SharedProviderSourceOperationResult> operation = new();
         private SharedProviderChange Change => new(SharedProviderChangeKind.Reconciliation, [ImportedId],
             remoteOwnedFieldsChanged: true, catalogMembershipMayHaveChanged: true);
         public void Complete() {
-            write.TrySetResult(new(SourceId, Guid.NewGuid()) { Change = Change });
+            write.TrySetResult(new(proposedSourceId ?? SourceId, Guid.NewGuid()) { Change = Change });
             operation.TrySetResult(Result());
         }
         private SharedProviderSourceOperationResult Result() => SharedProviderSourceOperationResult.NotModified(
@@ -204,6 +205,9 @@ public sealed class SharedProviderOwnedEffectsTests {
             }
             Operations++;
             ReceivedToken = (CancellationToken)args![^1]!;
+            if (method?.Name == nameof(ISharedProviderManagementService.SaveSourceAsync)) {
+                proposedSourceId = ((SharedProviderSourceEditorRequest)args[0]!).Id;
+            }
             return method?.Name switch {
                 nameof(ISharedProviderManagementService.SaveSourceAsync) => write.Task,
                 nameof(ISharedProviderManagementService.TestSourceAsync) or nameof(ISharedProviderManagementService.SynchronizeSourceAsync)

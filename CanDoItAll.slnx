@@ -2,6 +2,7 @@
   <Folder Name="/src/Sandboxes/">
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/CanDoItAll.AgentFramework.Providers.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/CanDoItAll.AgentFramework.SharedProviders.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Projects.UiSandbox/CanDoItAll.Projects.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj" />

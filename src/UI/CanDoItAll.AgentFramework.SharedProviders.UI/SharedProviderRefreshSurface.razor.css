@@ -1,0 +1,7 @@
+.shared-provider-refresh {
+    display: grid;
+    gap: var(--cad-space-compact-gap, 0.5rem);
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
+}
