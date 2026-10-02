@@ -14,6 +14,9 @@ public partial class SharedProviderManagementPanel : IDisposable {
     [Parameter] public EventCallback<SharedProviderChangeDelivery> ProvidersChanged { get; set; }
 
     private SharedProviderProfileSharingSnapshot? profileState;
+    private SharedProviderImportDraft? importDraft;
+    private (Guid AttemptId, SharedProviderImportSubmission Submission)? importAttempt;
+    private bool importCommitted;
     private CancellationTokenSource? owner;
     private Guid? loadedProviderProfileId;
     private long loadedRevision = -1;
@@ -48,6 +51,9 @@ public partial class SharedProviderManagementPanel : IDisposable {
         generation++;
         if (targetChanged) {
             profileState = null;
+            importDraft = null;
+            importAttempt = null;
+            importCommitted = false;
         }
         isBusy = false;
         warning = Recovery.FindTarget(ProviderProfileId) is { } pending
@@ -77,7 +83,10 @@ public partial class SharedProviderManagementPanel : IDisposable {
             if (state is not null && state.ProviderProfileId != targetId) {
                 throw new InvalidOperationException("The sharing response has a different provider identity.");
             }
-            profileState = state;
+            var verification = verify && unresolved is not null && state is not null
+                ? SharedProviderTargetVerification.Evaluate(unresolved, state) : null;
+            AcceptProfile(state, verification?.Disposition == SharedProviderTargetVerificationDisposition.Satisfied &&
+                importAttempt?.AttemptId == unresolved?.AttemptId ? importAttempt?.Submission : null);
             if (!verify || state is null) {
                 return;
             }
@@ -88,8 +97,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
             if (Recovery.FindTarget(targetId)?.AttemptId != unresolved.AttemptId) {
                 return;
             }
-            var verification = SharedProviderTargetVerification.Evaluate(unresolved, state);
-            switch (verification.Disposition) {
+            switch (verification!.Disposition) {
                 case SharedProviderTargetVerificationDisposition.Satisfied:
                     Recovery.RecordCommit(unresolved.AttemptId, verification.Change);
                     if (Recovery.PendingDelivery(unresolved.AttemptId) is not null) {
@@ -155,14 +163,37 @@ public partial class SharedProviderManagementPanel : IDisposable {
             action == SharedProviderPublicationAction.Publish ? SharedProviderTargetMutationKind.Publish : SharedProviderTargetMutationKind.Unpublish);
     }
 
-    private Task SaveImportedProfileAsync(SharedProviderImportedProfileEditModel model) {
-        if (profileState?.Import is not { } import) {
+    private Task SaveImportedProfileAsync(SharedProviderImportSubmission submission) {
+        if (profileState?.Import is not { } import || importDraft is null || !importDraft.CanSubmit(submission) ||
+            submission.Baseline.ImportId != import.ImportId || submission.Baseline.ProviderId != import.ProviderProfileId) {
             return Task.CompletedTask;
         }
         var request = new SharedProviderImportedProfileUpdateRequest(import.ImportId, import.ProviderProfileId,
-            model.LocalAlias, model.IsEnabled, import.ImportConcurrencyToken, import.ProviderConcurrencyToken);
+            submission.Settings.LocalAlias, submission.Settings.IsEnabled,
+            submission.Baseline.ImportToken, submission.Baseline.ProviderToken);
         return RunMutationAsync(token => ManagementService.UpdateImportedProfileAsync(request, token),
-            "Imported provider updated", SharedProviderTargetMutationKind.ImportedSettings, request);
+            "Imported provider updated", SharedProviderTargetMutationKind.ImportedSettings, request, submission);
+    }
+
+    private void AcceptProfile(SharedProviderProfileSharingSnapshot? state, SharedProviderImportSubmission? submission = null) {
+        profileState = state;
+        if (state?.Import is not { } import) {
+            return;
+        }
+        var baseline = new SharedProviderImportBaseline(import.ImportId, import.ProviderProfileId, import.SourceId,
+            import.RemotePublicationId, import.ImportConcurrencyToken, import.ProviderConcurrencyToken, new(import.LocalAlias, import.IsEnabled));
+        submission ??= importCommitted ? importAttempt?.Submission : null;
+        if (importDraft is null || importDraft.Baseline.ImportId != import.ImportId) {
+            importDraft = new(baseline);
+        } else if (submission is not null && submission.DraftId == importDraft.Id &&
+            SharedProviderLocalAliasPolicy.Normalize(submission.Settings.LocalAlias) == import.LocalAlias &&
+            submission.Settings.IsEnabled == import.IsEnabled) {
+            importDraft.Accept(submission, baseline);
+            importAttempt = null;
+            importCommitted = false;
+        } else {
+            importDraft.Reconcile(baseline);
+        }
     }
 
     private Task RetireImportedProfileAsync() {
@@ -176,7 +207,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
     }
 
     private async Task RunMutationAsync(Func<CancellationToken, Task<SharedProviderProfileSharingSnapshot>> mutation,
-        string title, SharedProviderTargetMutationKind kind, SharedProviderImportedProfileUpdateRequest? request = null) {
+        string title, SharedProviderTargetMutationKind kind, SharedProviderImportedProfileUpdateRequest? request = null,
+        SharedProviderImportSubmission? submission = null) {
         if (disposed || owner is null || isBusy || isLoading || readFailed || hasPendingAttempt ||
             profileState?.ProviderProfileId != ProviderProfileId) {
             return;
@@ -184,6 +216,8 @@ public partial class SharedProviderManagementPanel : IDisposable {
         SharedProviderTargetAttempt attempt;
         try {
             attempt = Recovery.BeginTarget(ProviderProfileId!.Value, kind, profileState!, request);
+            importAttempt = submission is null ? null : (attempt.AttemptId, submission);
+            importCommitted = false;
         } catch (ArgumentException) {
             warning = "The requested local settings are invalid. Correct the alias and retry.";
             return;
@@ -202,7 +236,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
             if (!IsCurrent(operation, token)) {
                 return;
             }
-            profileState = result;
+            AcceptProfile(result, submission);
             if (result.Change is null) {
                 Recovery.CompleteTarget(attempt);
             } else {
@@ -219,6 +253,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
         } catch (SharedProviderCommittedException exception) {
             Recovery.RecordCommit(attempt.AttemptId, exception.Change);
             if (IsCurrent(operation, token)) {
+                importCommitted = submission is not null;
                 profileState = null;
                 await DeliverAsync(attempt, operation, token);
                 if (IsCurrent(operation, token) && Recovery.FindTarget(ProviderProfileId) is null) {
@@ -233,6 +268,7 @@ public partial class SharedProviderManagementPanel : IDisposable {
                 Recovery.CompleteTarget(attempt);
             }
             if (IsCurrent(operation, token)) {
+                readFailed = rejected;
                 warning = rejected
                     ? "The sharing change was rejected. Retry loading the current state before another change."
                     : "The sharing write is unconfirmed. Verify the authoritative state before another change.";

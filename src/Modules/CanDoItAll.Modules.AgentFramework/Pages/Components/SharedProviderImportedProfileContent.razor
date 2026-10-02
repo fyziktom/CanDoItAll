@@ -1,6 +1,11 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.AgentFramework.ProviderManagement
 
+@{
+    var draft = Draft;
+    var reviewed = draft.Latest;
+}
+<EditForm EditContext="draft.Context" OnSubmit="@(() => SaveAsync(draft))">
 <FormSection Title="Imported shared provider"
              Description="Only the local alias and local enabled intent are editable. Remote-owned routing and capability fields follow the source catalog.">
     <Stack GapScale="LayoutGap.Medium">
@@ -14,17 +19,29 @@
         </Cluster>
 
         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-            <div>
-                <label class="cda-field-label">Local alias</label>
-                <InputText @bind-Value="editModel.LocalAlias"
-                           class="cda-input"
-                           data-testid="shared-provider-import-alias" />
-            </div>
+            <FormField Text="Local alias">
+                <TextBox Immediate="true" Value="@draft.LocalAlias" ValueChanged="@(value => draft.LocalAlias = value ?? string.Empty)"
+                         data-testid="shared-provider-import-alias" />
+                <ValidationMessage For="@(() => draft.LocalAlias)" />
+            </FormField>
             <label class="cda-inline-option self-end">
-                <InputCheckbox @bind-Value="editModel.IsEnabled" />
+                <InputCheckbox @bind-Value="draft.IsEnabled" data-testid="shared-provider-import-enabled" />
                 Enabled locally
             </label>
         </Grid>
+
+        @if (draft.HasConflict) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-import-conflict">
+                Another operator changed the local settings. Your edits are retained. Saved alias: @reviewed.Settings.LocalAlias;
+                enabled: @(reviewed.Settings.IsEnabled ? "yes" : "no"). Review before saving.
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Use saved settings" ButtonStyle="ButtonStyle.Light" Disabled="@IsBusy"
+                            Click="@(() => ResolveConflict(draft, reviewed, false))" data-testid="shared-provider-import-use-saved" />
+                    <Button Text="Keep my edited fields" Disabled="@IsBusy"
+                            Click="@(() => ResolveConflict(draft, reviewed, true))" data-testid="shared-provider-import-keep-edits" />
+                </Cluster>
+            </Alert>
+        }
 
         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
             <ReadOnlyFact Label="Source" Value="@Import.SourceName" />
@@ -37,9 +54,9 @@
 
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Save local settings"
-                    Disabled="@IsBusy"
+                    Disabled="@(IsBusy || draft.HasConflict)"
                     IsBusy="@IsBusy"
-                    Click="SaveAsync"
+                    Click="@(() => SaveAsync(draft))"
                     data-testid="shared-provider-import-save" />
             @if (Import.SelectionState == SharedProviderSelectionState.Selected)
             {
@@ -52,6 +69,7 @@
         </Cluster>
     </Stack>
 </FormSection>
+</EditForm>
 
 @code {
     [Parameter, EditorRequired]
@@ -61,31 +79,22 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
-    public EventCallback<SharedProviderImportedProfileEditModel> Save { get; set; }
+    public EventCallback<SharedProviderImportSubmission> Save { get; set; }
 
     [Parameter]
     public EventCallback Retire { get; set; }
 
-    private SharedProviderImportedProfileEditModel editModel = new();
-    private Guid loadedImportId;
+    [Parameter, EditorRequired]
+    public SharedProviderImportDraft Draft { get; set; } = default!;
 
-    protected override void OnParametersSet()
-    {
-        if (loadedImportId == Import.ImportId)
-        {
-            return;
+    private Task SaveAsync(SharedProviderImportDraft draft) => !IsBusy && ReferenceEquals(draft, Draft) &&
+        !draft.HasConflict && draft.Context.Validate() ? Save.InvokeAsync(draft.Capture()) : Task.CompletedTask;
+
+    private void ResolveConflict(SharedProviderImportDraft draft, SharedProviderImportBaseline reviewed, bool keepEdits) {
+        if (!IsBusy && ReferenceEquals(draft, Draft)) {
+            draft.ResolveConflict(reviewed, keepEdits);
         }
-
-        loadedImportId = Import.ImportId;
-        editModel = new SharedProviderImportedProfileEditModel
-        {
-            LocalAlias = Import.LocalAlias,
-            IsEnabled = Import.IsEnabled
-        };
     }
-
-    private Task SaveAsync()
-        => Save.InvokeAsync(editModel);
 
     private static string ResolveAvailabilityTone(SharedProviderAvailabilityState state) => state switch
     {

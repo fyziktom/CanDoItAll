@@ -41,6 +41,7 @@
         {
             <SharedProviderImportedProfileContent @key="profileState.Import!.ImportId"
                                                   Import="profileState.Import!"
+                                                  Draft="importDraft!"
                                                   IsBusy="@(isBusy || isLoading || readFailed || hasPendingAttempt)"
                                                   Save="SaveImportedProfileAsync"
                                                   Retire="OpenRetireConfirmation" />

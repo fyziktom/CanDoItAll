@@ -96,6 +96,35 @@ identity/start time and successful exit throughout runner 08.
 
 ## Remaining PP2 work
 
+### Completion entry and PP2C-R1
+
+The completion package entered at `eaa7404b6c16b7db6d75668b5b4dfa2a04a6ac9c`, preserving
+signed S0 `9052b2a443a4fdce1ac24dd0ccfce236fd35ab74`. PP2C-R1 was reproduced through the
+actual PP1 toolbar and Sharing child, with two native management owners and PostgreSQL:
+after B saved `Operations model` and disabled the import, A refreshed and saved the older
+`Team model` value. Native old-token refusal was independently verified.
+
+The Sharing draft now owns a distinct local baseline and token pair. A clean draft adopts
+fresh local settings. Dirty text survives metadata-only refresh when the accepted local
+settings still match its baseline. A concurrent local change retains the old baseline and
+shows explicit use-saved/keep-edited-fields choices; unchanged fields adopt the reviewed
+saved values. Save captures an immutable submission, and confirmed read-back merges accepted
+values by field revision, preserving later typing and the same EditContext. Native concurrency,
+commit recording and acknowledged recovery remain with their existing owners.
+
+Evidence is in `artifacts/provider-sharing-pp2-completion/20261002-eaa7404`. The original
+failure is `r1-before-02.trx`. The focused current-source selection discovered 55 cases:
+`r1-after-02.trx` passed 54, with one test incorrectly expecting immediate unlock after a
+parent refresh retired a delivery. The corrected assertion explicitly retries that original,
+already acknowledged delivery; `r1-delivery-after.trx` passes its one freshly discovered case,
+proving no repeated write and preservation of later input. Together these cover ten native
+local-concurrency cases and 45 retained Sharing/source/recovery/PP1 component cases. Earlier
+binding, fixture and compilation failures are retained separately. Production and owning test
+assemblies were rebuilt before discovery in `ProviderSharingPP2Proof`.
+
+The final-image two-circuit repetition remains required after extraction. This bounded repair
+does not close structural PP2 or its consumer campaign.
+
 Move actual Sharing children, source list/editor/discovery and refresh rendering into the new
 independent leaf, with safe projections and exact displayed origins. Management stays in
 ProviderManagement; mutation recovery, target verification and acknowledged parent delivery stay

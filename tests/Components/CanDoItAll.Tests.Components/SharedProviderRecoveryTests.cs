@@ -88,7 +88,7 @@ public sealed class SharedProviderRecoveryTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id)
             .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => Task.CompletedTask)));
-        cut.WaitForElement("[data-testid='shared-provider-import-alias']").Change("Submitted alias");
+        cut.WaitForElement("[data-testid='shared-provider-import-alias']").Input("Submitted alias");
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
         Assert.Equal(1, proxy.Writes);

@@ -32,7 +32,7 @@ public sealed class ProviderProfilesImportedRefreshTests {
         cut.WaitForElement("[data-testid='providers-name-input']");
         await Tab(cut, ProviderEditorSection.Sharing);
         var child = cut.FindComponent<SharedProviderImportedProfileContent>().Instance;
-        cut.Find("[data-testid='shared-provider-import-alias']").Change("Unsubmitted alias");
+        cut.Find("[data-testid='shared-provider-import-alias']").Input("Unsubmitted alias");
         reads.Advance();
         import = import with { RemoteDisplayName = "Remote V1", ImportConcurrencyToken = Guid.NewGuid(), ProviderConcurrencyToken = Guid.NewGuid() };
 
