@@ -1122,7 +1122,10 @@ public sealed class PersistentWorkflowCatalogService(
             provider.SupportsTools,
             featureMatrix?.SupportsStructuredOutput ?? true,
             featureMatrix?.SupportsVision ?? true,
-            provider.SupportsBackgroundResponses);
+            provider.SupportsBackgroundResponses) {
+            ModelCatalog = provider.ModelCatalog,
+            IsSourceManaged = provider.IsSourceManaged
+        };
     }
 
     private async Task<IReadOnlyList<LlmCallComponent>> ListReferencedComponentsAsync(

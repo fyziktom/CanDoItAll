@@ -408,7 +408,10 @@ public sealed record WorkflowProviderOption(
     bool SupportsTools,
     bool SupportsStructuredOutput,
     bool SupportsVision,
-    bool SupportsBackgroundResponses);
+    bool SupportsBackgroundResponses) {
+    public IReadOnlyList<ProviderModelDisplayMetadata> ModelCatalog { get; init; } = [];
+    public bool IsSourceManaged { get; init; }
+}
 
 /// <summary>
 /// Body of <c>POST /api/workflows/test-runs</c>: what to test and how. Identify the definition either with

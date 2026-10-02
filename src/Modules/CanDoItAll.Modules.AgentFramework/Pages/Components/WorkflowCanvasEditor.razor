@@ -203,7 +203,8 @@
                                         </select>
                                     </label>
                                 }
-                                <ProviderModelSelector ProviderName="@selectedNewComponentProvider?.Name"
+                                <ProviderModelSelector WorkflowProvider="@selectedNewComponentProvider"
+                                                       ProviderName="@selectedNewComponentProvider?.Name"
                                                        ProviderDefaultModel="@selectedNewComponentProvider?.DefaultModel"
                                                        ModelOptions="@selectedNewComponentProvider?.ModelOptions"
                                                        Value="@newComponentModel"
@@ -357,7 +358,8 @@
                                         }
                                     </select>
                                 </label>
-                                <ProviderModelSelector ProviderName="@selectedProvider?.Name"
+                                <ProviderModelSelector WorkflowProvider="@selectedProvider"
+                                                       ProviderName="@selectedProvider?.Name"
                                                        ProviderDefaultModel="@selectedProvider?.DefaultModel"
                                                        ModelOptions="@selectedProvider?.ModelOptions"
                                                        Value="@selected.Model"
@@ -1041,7 +1043,8 @@
                                         }
                                     </select>
                                 </label>
-                                <ProviderModelSelector ProviderName="@modalProvider?.Name"
+                                <ProviderModelSelector WorkflowProvider="@modalProvider"
+                                                       ProviderName="@modalProvider?.Name"
                                                        ProviderDefaultModel="@modalProvider?.DefaultModel"
                                                        ModelOptions="@modalProvider?.ModelOptions"
                                                        Value="@modalNode.Model"

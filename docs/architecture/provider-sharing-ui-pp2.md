@@ -221,3 +221,27 @@ retained History and neighboring boundaries. Repeat the protocol/UI/consumer cam
 rebuilt images and run one final frozen Stable checkpoint.
 Verify all coherent OpenPGP commits and clean only task-owned resources. Zero new paid calls,
 no push/merge, and no additional family are authorized.
+
+## Consumer follow-up before the final image
+
+The two-circuit import journey reproduced a committed write whose parent revision refresh
+cancelled its own delivery acknowledgement. Same-provider reads now wait until the active
+operation finishes; switching providers still retires that operation. The failing-first receipt
+is `ack-regression-before.trx`; the lifetime/recovery follow-up passes 26/26 in `ack-followup.trx`.
+
+Workflow's existing provider option projection omitted shared model names and ownership.
+The native browser displayed opaque route IDs and permitted a model override. Safe catalog
+metadata now travels through that existing projection to the existing selector. The two
+catalog implementations retain exact IDs, and the selector preserves published saved choices,
+explicit unavailable choices and source-managed override refusal. No provider authority,
+persistence schema, registration or dispatch policy changes. Direct Models, Workflow Core,
+Components, AgentFramework and Web builds pass; focused selector/acknowledgement tests pass
+14/14 and Workflow catalog tests pass 23/23. The native canvas also correctly refused a test
+model outside its immutable Prompt Gallery component's supported set; the consumer fixture
+must bind that component to the intended model instead of weakening compatibility checks.
+
+These are bounded consumer follow-ups to the frozen Stable outputs, with explicit owning-family
+tests and renewed container/browser validation. They do not change shared persistence, DI,
+root build configuration or test infrastructure. Earlier image receipts remain stage evidence:
+the acknowledgement and Workflow projection fixes require a new application image and repeated
+19-scenario, native-default and consumer campaign before final closure.

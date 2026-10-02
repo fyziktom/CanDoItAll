@@ -135,7 +135,7 @@ public sealed class SharedProviderSourceAndImportComponentTests
         });
     }
 
-    private static SharedProviderImportedProfileSnapshot CreateImport(Guid providerId)
+    internal static SharedProviderImportedProfileSnapshot CreateImport(Guid providerId)
     {
         var publicationId = new SharedProviderPublicationId(Guid.NewGuid());
         return new SharedProviderImportedProfileSnapshot(

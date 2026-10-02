@@ -51,6 +51,9 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             return;
         }
         var targetChanged = loadedProviderProfileId != ProviderProfileId;
+        if (!targetChanged && isBusy) {
+            return;
+        }
         loadedProviderProfileId = ProviderProfileId;
         loadedRevision = Revision;
         loadedProviderRevision = ProviderRevision;
@@ -155,6 +158,7 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             } finally {
                 if (IsCurrent(operation, token)) {
                     isBusy = false;
+                    await OnParametersSetAsync();
                 }
             }
         } else {
@@ -292,6 +296,7 @@ public partial class SharedProviderManagementPanel : ISharedProviderSharingView,
             if (IsCurrent(operation, token)) {
                 isBusy = false;
                 CloseConfirmationDialog();
+                await OnParametersSetAsync();
             }
         }
     }
