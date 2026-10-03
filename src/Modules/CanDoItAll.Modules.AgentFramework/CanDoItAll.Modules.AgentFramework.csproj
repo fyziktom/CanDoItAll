@@ -21,6 +21,7 @@
     <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.Providers.UI/CanDoItAll.AgentFramework.Providers.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.SharedProviders.UI/CanDoItAll.AgentFramework.SharedProviders.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageSelection.UI/CanDoItAll.Workspace.StorageSelection.UI.csproj" />

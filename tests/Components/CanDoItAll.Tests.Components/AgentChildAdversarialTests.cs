@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -154,6 +155,7 @@ public sealed class AgentChildAdversarialTests {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, ChildWorkspace>();
         workspace = (ChildWorkspace)(object)service;
         context.Services.AddSingleton(service);
@@ -183,6 +185,10 @@ public sealed class AgentChildAdversarialTests {
             if (method?.Name is nameof(IAgentFrameworkWorkspaceService.SaveCapabilityAsync) or nameof(IAgentFrameworkWorkspaceService.SaveAgentTeamAsync)) {
                 SaveCalls++;
                 return Task.FromException<Guid>(new IOException(Poison));
+            }
+            if (method?.Name == nameof(IAgentFrameworkWorkspaceService.SaveCapabilityEditorAsync)) {
+                SaveCalls++;
+                return Task.FromException<CapabilityEditorModel>(new IOException(Poison));
             }
             return method?.Name switch {
                 nameof(IAgentFrameworkWorkspaceService.GetCapabilityEditorAsync) => Delay ? capability.Task

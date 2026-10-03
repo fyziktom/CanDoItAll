@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.AgentFramework.Editor.UI.Tests/CanDoItAll.AgentFramework.Editor.UI.Tests.csproj" />

@@ -1,0 +1,94 @@
+@using CanDoItAll.AgentFramework.CapabilityAuthoring.UI
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Infrastructure.Persistence
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentFrameworkWorkspaceService Workspace
+@inject IAgentCapabilitySetupFlowService Setup
+@inject IDatabaseSwitchNotificationService ProfileChanges
+@inject ILogger<NativeCapabilityAuthoringHost> Logger
+
+<CapabilityAuthoringForm @ref="form" Operations="operations!" Mode="Mode" CapabilityId="CapabilityId" InitialKind="InitialKind"
+                         TagSuggestions="TagSuggestions" OwnerCancellationToken="ownerToken" Completed="CompleteAsync" Cancelled="CancelAsync" />
+
+@code {
+    [Parameter] public CapabilityAuthoringMode Mode { get; set; }
+    [Parameter] public Guid? CapabilityId { get; set; }
+    [Parameter] public CapabilityKind InitialKind { get; set; } = CapabilityKind.McpServer;
+    [Parameter] public IReadOnlyList<string> TagSuggestions { get; set; } = [];
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    private CapabilityAuthoringOperations? operations;
+    private CapabilityAuthoringForm? form;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? owner;
+    private CancellationToken ownerToken;
+    private CancellationToken previousOwner;
+    private bool disposed;
+
+    protected override void OnInitialized() {
+        ProfileChanges.Changed += ProfileChanged;
+        operations = new(
+            (id, token) => Workspace.GetCapabilityEditorAsync(id, token),
+            SaveAsync,
+            (submission, input, token) => Setup.TestToolSetupAsync(new() { Capability = submission.ToEditorModel(), JsonInput = input }, token),
+            (submission, token) => Setup.TestMcpSetupAsync(new() { Capability = submission.ToEditorModel() }, token),
+            new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer);
+    }
+
+    protected override void OnParametersSet() {
+        if (owner is not null && previousOwner == OwnerCancellationToken) {
+            return;
+        }
+        owner?.Cancel();
+        owner?.Dispose();
+        previousOwner = OwnerCancellationToken;
+        owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken);
+        ownerToken = owner.Token;
+    }
+
+    private async Task<CapabilityAuthoringSaveOutcome> SaveAsync(CapabilityAuthoringSubmission submission, CancellationToken token) {
+        if (disposed || ownerToken.IsCancellationRequested) {
+            return new CapabilityAuthoringSaveOutcome.Rejected(false);
+        }
+        try {
+            var accepted = await Workspace.SaveCapabilityEditorAsync(submission.ToEditorModel(), token);
+            return new CapabilityAuthoringSaveOutcome.Accepted(CapabilityAuthoringSubmission.Capture(accepted));
+        } catch (CapabilityCatalogRejectedException error) {
+            return new CapabilityAuthoringSaveOutcome.Rejected(error.IsConcurrencyConflict);
+        } catch (Exception error) {
+            Logger.LogWarning("Native capability save acknowledgement unavailable for {CapabilityId}: {FailureType}", submission.Id, error.GetType().Name);
+            return new CapabilityAuthoringSaveOutcome.Unknown();
+        }
+    }
+
+    private Task CompleteAsync(Guid id) => disposed || ownerToken.IsCancellationRequested
+        ? Task.CompletedTask : DialogReference?.CloseAsync(new CapabilityDetailsDialogResult(id)) ?? Task.CompletedTask;
+    private Task CancelAsync() => disposed ? Task.CompletedTask : DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private void ProfileChanged(object? sender, DatabaseProfileChangedNotification notification) {
+        if (disposed) {
+            return;
+        }
+        lifetime.Cancel();
+        _ = InvokeAsync(() => {
+            if (!disposed) {
+                StateHasChanged();
+            }
+        });
+    }
+
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        ProfileChanges.Changed -= ProfileChanged;
+        lifetime.Cancel();
+        form?.Dispose();
+        owner?.Dispose();
+        lifetime.Dispose();
+    }
+}

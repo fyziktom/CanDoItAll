@@ -90,6 +90,8 @@ internal sealed class AgentCapabilitiesHostFixture : IDisposable {
         Context.JSInterop.Mode = JSRuntimeMode.Loose;
         Context.Services.AddLogging();
         Context.Services.AddCanDoItAllBaseLib();
+        Context.Services.AddSingleton<CanDoItAll.Infrastructure.Persistence.IDatabaseSwitchNotificationService,
+            CanDoItAll.Infrastructure.Persistence.DatabaseSwitchNotificationService>();
         Context.Services.AddAgentFrameworkUi();
         var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, CapabilitiesWorkspaceProxy>();
         Workspace = (CapabilitiesWorkspaceProxy)(object)service;

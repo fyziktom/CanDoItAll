@@ -28,25 +28,24 @@ resume passed; neither a cause nor a clean original run was established. Any rel
 rerun must capture numeric elapsed values and terminal markers without changing the bound.
 Local receipts are retained under `artifacts/agent-authoring-ca1/20261003`.
 
-## Planned responsibility boundary
+## Capability responsibility boundary
 
-The module currently owns both capability dialog renderers, configuration parsing, setup
-invocation and workspace calls. Move the actual three-step wizard, three-tab details,
-shared typed configuration fields and CSS into `CanDoItAll.AgentFramework.CapabilityAuthoring.UI`.
+The actual three-step wizard, three-tab details, shared typed configuration fields,
+setup result presentation and CSS now live in `CanDoItAll.AgentFramework.CapabilityAuthoring.UI`.
 It owns a draft and edit context per acquired lifetime, raw parse-invalid values, presentation
 validation and immutable submissions. Native adapters remain in the module and call the
 existing catalog and setup owners. Process, HTTP, MCP, secret and trusted path effects remain
 outside the rendering graph. The leaf may depend on Models, light capability/MCP abstractions
 and neutral Components; Core, Persistence, runtime implementations and modules are forbidden.
 
-Use a small typed operation record with delegates for load, save and explicit setup. The
+The typed operation record has delegates for load, save and explicit setup. The
 native and independent scenario hosts supply separate implementations. A new general service
 framework or separate contracts assembly adds no boundary here. A bounded additive catalog
 save result must return the accepted identity and fingerprint from the coordinated write;
 legacy ID-returning callers retain their contract. Null ID still means create, and a supplied
 missing ID still rejects an update. Unknown acknowledgement prohibits blind retry.
 
-Keep teams in the existing AgentFramework.UI family with its real AgentSelectionCard and
+The next checkpoint keeps teams in the existing AgentFramework.UI family with its real AgentSelectionCard and
 Material icon catalog. Move metadata, icon and membership renderers there. The native owner
 gets an additive metadata-only operation under its existing catalog update coordination;
 membership is preserved from the record at that write. The legacy full-team upsert remains
@@ -56,6 +55,32 @@ an accepted mutation from a later refresh failure.
 The existing A2 definition/assignment/Verify composition remains native: existing-agent
 assignment can save the whole dirty agent draft, while new-agent assignment stages locally.
 Neither a setup diagnostic nor team grouping grants runtime tool authority.
+
+## Renderer and caller census
+
+| Surface | Rendering owner | Native host / operation owner |
+|---|---|---|
+| Wizard Identity, Configure, Review | CapabilityAuthoring.UI form and shared fields | Module CapabilitySetupWizardDialog → NativeCapabilityAuthoringHost |
+| Details Identity, Configuration, Raw | Same form and fields | Module CapabilityDetailsDialog → same native host |
+| MCP stdio/HTTP/SSE/logical | McpConfigurationFields and configuration codec | Native setup flow, compiler and registered MCP adapter |
+| Skill file/inline/upload/registered, resources | SkillConfigurationFields, draft and bounded upload | Native catalog and skill compilation/trust policy |
+| Tool process/HTTP, input/limits/side effects | ToolConfigurationFields and setup result panel | Native setup flow, tool compiler and process/HTTP implementations |
+| Global capability creation/details | Shared authoring form | AgentCapabilitiesPanel; origin cancellation retained |
+| Definition creation from existing/new agent | Shared authoring wizard | AgentDetailsDialog and A2 assignment/whole-draft owner |
+| Team metadata/icon/member selection | Module at this checkpoint | AgentCatalogHost and coordinated catalog owner; extraction follows |
+
+The old duplicated capability configuration support, wizard setup partial and dialog CSS
+are removed. Thin native dialog wrappers preserve callers and result identities. Models,
+light MCP/capability abstractions and BaseLib form the new rendering graph. Core and all
+effect owners remain outside it; no new general contracts framework was introduced.
+
+The first native checkpoint passes 31 catalog/portability unit cases, 43 native component
+cases (including all six real A2 composition cases), and 18 mutation/proof integration
+cases on an owned PostgreSQL 18.6 disk volume. Independent mode/upload/state/boundary
+coverage passes 54 cases after the browser and case-distinct JSON extension regressions. Real browser checks found and repaired numeric text
+loss across tabs and a missing parent refresh after asynchronous upload/setup. Their
+regressions and final frozen-suite results are recorded separately. Native setup effects,
+runtime consumers, teams and final source/published browser closure remain pending.
 
 ## Proof and checkpoints
 

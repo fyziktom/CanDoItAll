@@ -156,6 +156,11 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveCapabilityAsync(model, cancellationToken);
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(
+        CapabilityEditorModel model,
+        CancellationToken cancellationToken = default)
+        => catalogService.SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
 

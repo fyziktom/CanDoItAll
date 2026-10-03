@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/Sandboxes/">
+    <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/CanDoItAll.AgentFramework.Providers.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/CanDoItAll.AgentFramework.SharedProviders.UiSandbox.csproj" />
@@ -50,6 +51,7 @@
     <Project Path="src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj" />
   </Folder>
   <Folder Name="/src/UI/">
+    <Project Path="src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Projects.Files.UI/CanDoItAll.Projects.Files.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj" />

@@ -394,6 +394,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().SaveCapabilityAsync(model, cancellationToken);
     }
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
     {
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);

@@ -399,6 +399,37 @@ batches of at most 1,000, with positive progress and a two-minute cancellation g
 Use the opt-in `SharedProviderPremergePerformanceTests` for allocation and timing
 measurements; retain its bounded-cleanup and revocation checks.
 
+## Capability authoring CA1
+
+The independent capability authoring host renders both the creation wizard and details
+with the same production fields, setup presentation, bounded upload and assets. Generate
+production CSS before building or publishing. Use only 1920×1080 at scale 1 for this slice.
+
+```powershell
+npm run tailwind:build
+dotnet build src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox -c Release /m:1
+dotnet test tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests -c Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests -c Release --no-build --no-restore /m:1
+dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox run --no-launch-profile --urls http://127.0.0.1:58741
+dotnet publish src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox -c Release -o artifacts/capability-authoring-published /m:1
+```
+
+The fixture's setup responses are simulations. Native validation separately runs the
+catalog submission and MCP portability tests, `AgentChildAdversarialTests`,
+`CapabilityAuthoringRegressionTests`, `AgentEditorCapabilityCompositionTests`,
+`AgentCapabilitiesHostTests`, `AgentDetailsDialogCapabilityTests`,
+`CapabilitySetupFlowServiceTests`, `AgentCapabilitiesReadLifecycleTests`,
+`AgentCapabilityMutationBoundaryTests`, `CapabilityVerificationRaceIntegrationTests`
+and `CapabilityProofPublicationIntegrationTests`. Build production and discover the exact
+owning assembly/filter before each changed selection. Native harnesses require the isolated
+PostgreSQL setting below. A2 assignment still saves the entire dirty existing-agent draft;
+new-agent assignment stages locally. Explicit setup is separate from published proof.
+
+The [CA1 architecture record](architecture/agent-authoring-ui-ca1.md) records the current
+source pair, remaining native journeys and coherent checkpoint evidence. Native catalog
+owner changes require a final broad-scope decision after source freezes; independent
+rendering tests do not replace that decision or portability enforcement.
+
 ## PostgreSQL 18 migration and installer proof
 
 Set `CANDOITALL_TESTS_POSTGRES_CONNECTION` to a separately provisioned PostgreSQL 18

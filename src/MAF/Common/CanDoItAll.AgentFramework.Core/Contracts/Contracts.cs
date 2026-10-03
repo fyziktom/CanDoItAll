@@ -543,6 +543,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default);
+    Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not return accepted capability definitions.");
     Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default);
     Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
