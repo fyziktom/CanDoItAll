@@ -1,0 +1,249 @@
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject NotificationService Notifications
+@inject ILogger<TeamMetadataEditor> Logger
+
+@{
+    var owner = current;
+}
+<div class="agent-team-details-dialog" data-testid="agents-team-details-dialog-content">
+    @if (owner is not null) {
+        @if (!IsCurrent(owner)) {
+            <Alert AlertStyle="AlertStyle.Warning">This editor is no longer active. Reopen it in the current workspace.</Alert>
+        } else if (owner.Loading) {
+            <SurfaceCard Soft="true">
+                <p class="cda-eyebrow">Loading</p>
+                <h3 class="agent-team-details-dialog__title">Loading team details</h3>
+            </SurfaceCard>
+        } else if (owner.LoadFailed) {
+            <Alert AlertStyle="AlertStyle.Danger">Team details could not be loaded. Retry before editing this team.</Alert>
+            <Button Text="Retry" Click="() => LoadAsync(owner)" />
+            <Button Text="Close" Click="() => CancelAsync(owner)" />
+        } else {
+            <EditForm @key="owner" Model="owner.Model" OnSubmit="() => SaveAsync(owner)">
+                <Stack GapScale="LayoutGap.Medium">
+                    @if (owner.Status is not null) {
+                        <Alert AlertStyle="@(owner.Unknown ? AlertStyle.Danger : AlertStyle.Info)" data-testid="agents-team-status">@owner.Status</Alert>
+                    }
+                    <div class="grid gap-2">
+                        <span class="text-xs font-bold text-slate-600">Icon</span>
+                        <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                            <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700" data-testid="agents-team-selected-icon">
+                                <Icon Name="@AgentTeamIconCatalog.Normalize(owner.Model.Icon)" Class="text-2xl" />
+                            </span>
+                            <Button Text="Choose icon" Icon="widgets" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                    Disabled="@owner.ChoosingIcon" Click="() => ChooseIconAsync(owner)" data-testid="agents-team-choose-icon" />
+                        </Cluster>
+                    </div>
+                    <label class="agent-team-details-dialog__field">
+                        <span>Name</span>
+                        <input value="@owner.Model.Name" @oninput="args => Edit(owner, args, name: true)" class="cda-input agent-team-details-dialog__input" data-testid="agents-team-name" />
+                    </label>
+                    <label class="agent-team-details-dialog__field">
+                        <span>Description</span>
+                        <textarea value="@owner.Model.Description" @oninput="args => Edit(owner, args, name: false)" class="cda-input agent-team-details-dialog__textarea" data-testid="agents-team-description">@owner.Model.Description</textarea>
+                    </label>
+                    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                        <Button Text="Cancel" Icon="close" Variant="Variant.Outlined" Click="() => CancelAsync(owner)" />
+                        @if (owner.AcceptedId.HasValue) {
+                            <Button Text="Use saved team" Click="() => CompleteAsync(owner)" data-testid="agents-team-use-saved" />
+                        }
+                        <Button Text="Save team" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.Unknown)" IsBusy="@owner.Busy" data-testid="agents-team-save" />
+                    </Cluster>
+                </Stack>
+            </EditForm>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public Guid? TeamId { get; set; }
+    [Parameter, EditorRequired] public TeamMetadataOperations Operations { get; set; } = default!;
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public EventCallback<Guid> Completed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private Draft? current;
+    private TeamMetadataOperations? boundOperations;
+    private (Guid? Id, CancellationToken Token) target;
+    private bool disposed;
+
+    protected override async Task OnParametersSetAsync() {
+        var next = (TeamId, OwnerCancellationToken);
+        if (disposed || current is not null && target == next && ReferenceEquals(Operations, boundOperations)) {
+            return;
+        }
+        current?.Dispose();
+        target = next;
+        boundOperations = Operations;
+        var owner = new Draft(TeamId, OwnerCancellationToken, Operations);
+        current = owner;
+        await LoadAsync(owner);
+    }
+
+    private bool IsCurrent(Draft owner) => !disposed && ReferenceEquals(current, owner) && !owner.IsDisposed && !owner.Token.IsCancellationRequested;
+
+    private async Task LoadAsync(Draft owner) {
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        owner.Loading = true;
+        owner.LoadFailed = false;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        try {
+            var loaded = await owner.Operations.Load(owner.RequestedId, request.Token);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            if (loaded.Id != owner.RequestedId) {
+                throw new InvalidOperationException("The team owner returned a different identity.");
+            }
+            owner.Model = TeamMetadataSubmission.Capture(loaded).ToEditorModel();
+        } catch (Exception) when (!IsCurrent(owner)) {
+        } catch (Exception error) {
+            owner.LoadFailed = true;
+            Logger.LogWarning("Team editor acquisition failed for {TeamId}: {FailureType}", owner.RequestedId, error.GetType().Name);
+            Notifications.Error("Team details unavailable", "Team details could not be loaded. Retry before editing this team.");
+        } finally {
+            if (IsCurrent(owner)) {
+                owner.Loading = false;
+            }
+        }
+    }
+
+    private void Edit(Draft owner, ChangeEventArgs args, bool name) {
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        if (name) {
+            owner.Model.Name = args.Value?.ToString() ?? string.Empty;
+        } else {
+            owner.Model.Description = args.Value?.ToString() ?? string.Empty;
+        }
+        owner.Revision++;
+    }
+
+    private async Task SaveAsync(Draft owner) {
+        if (!IsCurrent(owner) || owner.Loading || owner.LoadFailed || owner.Busy || owner.Unknown) {
+            return;
+        }
+        var submission = TeamMetadataSubmission.Capture(owner.Model);
+        if (string.IsNullOrWhiteSpace(submission.Name)) {
+            owner.Status = "Name is required.";
+            return;
+        }
+        var revision = owner.Revision;
+        owner.Busy = true;
+        TeamMetadataOutcome outcome;
+        try {
+            outcome = await owner.Operations.Save(submission, CancellationToken.None);
+        } catch (Exception error) {
+            Logger.LogWarning("Team save acknowledgement unavailable for {TeamId}: {FailureType}", submission.Id, error.GetType().Name);
+            outcome = new TeamMetadataOutcome.Unknown();
+        }
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        owner.Busy = false;
+        switch (outcome) {
+            case TeamMetadataOutcome.Accepted accepted when accepted.TeamId != Guid.Empty
+                && (!submission.Id.HasValue || submission.Id == accepted.TeamId):
+                owner.AcceptedId = accepted.TeamId;
+                owner.Model.Id = accepted.TeamId;
+                owner.Status = revision == owner.Revision ? "Team saved." : "Team saved. Later draft edits remain unsaved.";
+                Notifications.Success("Team saved", "Agent team metadata was saved; membership is managed separately.");
+                if (revision == owner.Revision) {
+                    await CompleteAsync(owner);
+                }
+                break;
+            case TeamMetadataOutcome.Rejected:
+                owner.Status = "The owner rejected this save. The name must be unique and an existing team must still exist. Your draft is retained.";
+                Notifications.Warning("Team was not saved", owner.Status);
+                break;
+            default:
+                owner.Unknown = true;
+                owner.Status = "The save outcome is unknown. The request will not be repeated. Check the catalog before opening another editor.";
+                Notifications.Error("Team save failed", owner.Status);
+                break;
+        }
+    }
+
+    private async Task ChooseIconAsync(Draft owner) {
+        if (!IsCurrent(owner) || owner.Loading || owner.LoadFailed || owner.ChoosingIcon) {
+            return;
+        }
+        var revision = owner.Revision;
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(owner.Token);
+        owner.ChoosingIcon = true;
+        try {
+            var icon = await owner.Operations.ChooseIcon(owner.Model.Icon, request.Token);
+            if (IsCurrent(owner) && revision == owner.Revision && icon is not null) {
+                owner.Model.Icon = AgentTeamIconCatalog.Normalize(icon);
+                owner.Revision++;
+            }
+        } catch (Exception) when (!IsCurrent(owner)) {
+        } catch (Exception error) {
+            Logger.LogWarning("Team icon selection failed for {TeamId}: {FailureType}", owner.RequestedId, error.GetType().Name);
+            Notifications.Error("Icon selection failed", "The icon selection could not be completed.");
+        } finally {
+            if (IsCurrent(owner)) {
+                owner.ChoosingIcon = false;
+            }
+        }
+    }
+
+    private async Task CompleteAsync(Draft owner) {
+        if (!IsCurrent(owner) || owner.AcceptedId is not { } id) {
+            return;
+        }
+        try {
+            await Completed.InvokeAsync(id);
+        } catch (Exception error) when (IsCurrent(owner)) {
+            owner.Status = "The team was saved, but the parent could not refresh. Use the saved team to retry the read without creating it again.";
+            Logger.LogWarning("Team parent refresh failed after save {TeamId}: {FailureType}", id, error.GetType().Name);
+        }
+    }
+
+    private async Task CancelAsync(Draft owner) {
+        if (!IsCurrent(owner)) {
+            return;
+        }
+        owner.Dispose();
+        await Cancelled.InvokeAsync();
+    }
+
+    public void Dispose() {
+        disposed = true;
+        current?.Dispose();
+    }
+
+    private sealed class Draft : IDisposable {
+        private readonly CancellationTokenSource lifetime;
+        private bool disposed;
+        public Draft(Guid? requestedId, CancellationToken token, TeamMetadataOperations operations) {
+            lifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
+            Token = lifetime.Token;
+            RequestedId = requestedId;
+            Operations = operations;
+        }
+        public Guid? RequestedId { get; }
+        public CancellationToken Token { get; }
+        public TeamMetadataOperations Operations { get; }
+        public AgentTeamEditorModel Model { get; set; } = new();
+        public long Revision { get; set; }
+        public bool Loading { get; set; } = true;
+        public bool LoadFailed { get; set; }
+        public bool Busy { get; set; }
+        public bool ChoosingIcon { get; set; }
+        public bool Unknown { get; set; }
+        public string? Status { get; set; }
+        public Guid? AcceptedId { get; set; }
+        public bool IsDisposed => disposed;
+        public void Dispose() {
+            if (!disposed) {
+                disposed = true;
+                lifetime.Cancel();
+                lifetime.Dispose();
+            }
+        }
+    }
+}

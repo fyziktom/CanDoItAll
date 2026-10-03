@@ -187,7 +187,10 @@ public partial class AgentsHomePage : IDisposable {
     [Inject]
     private ILoggerFactory LoggerFactory { get; set; } = default!;
 
+    private long catalogScopeVersion;
+
     private void OnDatabaseChanged(object? sender, DatabaseProfileChangedNotification notification) {
+        catalogScopeVersion++;
         session.InvalidateContext();
         _ = InvokeAsync(() => {
             if (!disposed) {

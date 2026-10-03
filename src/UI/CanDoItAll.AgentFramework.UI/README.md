@@ -22,6 +22,17 @@ wiring remains covered by `ProviderRequestHistoryPanelTests`.
 
 ## Catalog and capabilities
 
+`Teams` owns the real technical-team metadata editor, Material icon picker and member selector.
+Metadata submissions contain only identity/name/description/icon. Native dialogs provide the
+coordinated metadata operation and keep persistence/profile authority in the module. Member
+selection returns an immutable set tied to its opening team; AgentCatalogHost performs the
+native update and separately reconciles catalog reads. Missing references remain visible until
+explicitly removed, and private-provider badges confer no permissions.
+
+The independent `/teams` sandbox includes new/existing/empty/missing-reference/large, rejected,
+unknown, deleted, failed-load and held-operation fixtures. Its stored records are separate from
+drafts and its two editors use the same real components. It registers no native effect services.
+
 This Razor class library owns the controlled AgentCatalogPanel, its snapshot/selection/intent contracts, the real AgentSelectionCard and the pure participant presentation mapper. The card and mapper retain their existing namespace for consumer compatibility; their assembly is this UI project.
 
 The capabilities boundary also owns the real AgentCapabilitiesSurface, AgentCapabilityList and immutable selection/load/access/intent/presentation contracts. AgentDetailsDialog and the standalone surface consume the same list. Application operation outcomes, recovery, sessions and Curator launch state remain in the module; the effect host maps them to presentation records.

@@ -69,6 +69,9 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveAgentTeamAsync(model, cancellationToken);
 
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentTeamMetadataAsync(model, cancellationToken);
+
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
         Guid teamId,
         IReadOnlyList<Guid> agentIds,

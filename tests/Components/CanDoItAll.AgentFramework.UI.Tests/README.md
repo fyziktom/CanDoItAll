@@ -5,11 +5,17 @@ Independent bUnit and state tests for the complete Request History workspace in
 sandbox and its narrow synthetic History reader. It does not boot the production
 module, database, provider runtime or authorization implementation.
 
-The selection currently contains 84 cases: query state, presentation seams, raw
+The History selection contains 84 cases: query state, presentation seams, raw
 filter validation, workspace/action retirement and all sandbox scenarios. Native
 authentication/profile wiring remains in `ProviderRequestHistoryPanelTests` in the
 main Components test project. Backend authorization and canonical-owner persistence
 remain in Integration; real producer/content proof remains in the native browser lane.
+
+`TeamAuthoringTests` adds 23 independent cases for the real metadata/icon/member family,
+immutable submissions, late callbacks, read-only recovery and all team sandbox scenarios.
+Use configuration `AgentAuthoringCa1` and `FullyQualifiedName~TeamAuthoringTests` for this
+bounded selection after directly building the UI and sandbox. Native team ownership and
+catalog integration remain in Unit and the main Components test project.
 
 Build the production UI and sandbox first, then discover and run this owning project:
 

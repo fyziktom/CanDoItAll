@@ -1,6 +1,16 @@
 @using Microsoft.AspNetCore.Components
 @implements IDisposable
+@using CanDoItAll.Infrastructure.Persistence
+@using Microsoft.Extensions.Logging
+@inject IDatabaseSwitchNotificationService ProfileChanges
+@inject ILogger<AgentCatalogHost> Logger
 
+@if (teamRecovery is { } recovery) {
+    <Alert AlertStyle="@(recovery.Confirmed ? AlertStyle.Warning : AlertStyle.Danger)" data-testid="agents-team-recovery">
+        @(recovery.Confirmed ? "The team change was saved, but the catalog could not refresh." : "The team change could not be confirmed. Check the current catalog before editing again.")
+        <Button Text="Reload catalog" Click="RetryTeamReadbackAsync" data-testid="agents-team-retry-read" />
+    </Alert>
+}
 <AgentCatalogPanel Snapshot="@snapshot"
                    Selection="@(new AgentCatalogSelection(selectedAgentId, selectedTeamId))"
                    IsLoading="@isLoading"
@@ -55,18 +65,23 @@
     private bool isDisposed;
     private long requestGeneration;
     private long catalogGeneration;
+    private long teamSelectionRevision;
+    private CancellationTokenSource? teamDialog;
+    private bool teamMutationBusy;
+    private TeamRecovery? teamRecovery;
 
     public void Dispose() {
         if (isDisposed) {
             return;
         }
         isDisposed = true;
+        ProfileChanges.Changed -= OnProfileChanged;
         lifetime.Cancel();
         lifetime.Dispose();
         editorTargets.Clear();
     }
 
-    private bool IsCurrentRequest(long generation) => !isDisposed && requestGeneration == generation;
+    private bool IsCurrentRequest(long generation) => !isDisposed && !lifetimeToken.IsCancellationRequested && requestGeneration == generation;
 
 
     private AgentCatalogSnapshot snapshot = AgentCatalogSnapshot.Empty;
@@ -102,6 +117,10 @@
     };
 
     private async Task SelectTeamAsync(Guid? teamId) {
+        if (selectedTeamId != teamId) {
+            teamSelectionRevision++;
+            InvalidateTeamDialog();
+        }
         selectedTeamId = teamId;
         await SelectedTeamChanged.InvokeAsync(SelectedTeam);
     }
@@ -113,6 +132,7 @@
 
     protected override async Task OnInitializedAsync() {
         lifetimeToken = lifetime.Token;
+        ProfileChanges.Changed += OnProfileChanged;
         await EnsureLoadedAsync();
     }
 
@@ -124,6 +144,8 @@
         var agentRequestChanged = !contextRequestApplied || previousAgentId != RequestedAgentId;
         var requestChanged = !contextRequestApplied || agentRequestChanged || contextRequestedTeamId != RequestedTeamId;
         if (requestChanged) {
+            InvalidateTeamDialog();
+            teamSelectionRevision++;
             requestGeneration++;
             contextRequestApplied = true;
             contextRequestedAgentId = RequestedAgentId;
@@ -424,152 +446,182 @@
         await RenderIfAliveAsync();
     }
 
-    private async Task OpenTeamDetailsDialogAsync(Guid? teamId) {
-        if (isDisposed) {
-            return;
-        }
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
-        if (isDisposed) {
-            return;
-        }
-        var generation = requestGeneration;
-        try {
-            var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(
-                teamId.HasValue ? "Edit agent team" : "New agent team",
-                new Dictionary<string, object?> {
-                    [nameof(AgentTeamDetailsDialog.TeamId)] = teamId
-                },
-                new DialogOptions {
-                    Eyebrow = "Technical team",
-                    Subtitle = "Create or rename an AgentFramework team for filtering and process delivery.",
-                    Size = ModalSize.Compact,
-                    AriaLabel = "Agent team editor",
-                    TestId = "agents-team-details-dialog-shell"
-                }, request.Token);
+    private bool CanStartTeamOperation => !isDisposed && !lifetimeToken.IsCancellationRequested && !teamMutationBusy && teamRecovery is null;
 
-            if (IsCurrentRequest(generation) && result is AgentTeamDetailsDialogResult teamResult) {
-                await ReloadCatalogAsync();
-                if (!IsCurrentRequest(generation)) {
-                    return;
-                }
-                selectedTeamId = teamResult.TeamId;
-                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
-                await RenderIfAliveAsync();
-            }
-        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
-        } catch (Exception) {
-            if (isDisposed) {
+    private CancellationTokenSource BeginTeamDialog() {
+        InvalidateTeamDialog();
+        teamDialog = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        return teamDialog;
+    }
+
+    private void InvalidateTeamDialog() {
+        teamDialog?.Cancel();
+        teamDialog = null;
+    }
+
+    private bool IsCurrentTeamDialog(long generation, CancellationTokenSource owner)
+        => IsCurrentRequest(generation) && ReferenceEquals(teamDialog, owner) && !owner.IsCancellationRequested;
+
+    private async Task OpenTeamDetailsDialogAsync(Guid? teamId) {
+        if (!CanStartTeamOperation) {
+            return;
+        }
+        using var request = BeginTeamDialog();
+        var generation = requestGeneration;
+        var selection = teamSelectionRevision;
+        try {
+            var result = await DialogService.OpenAsync<AgentTeamDetailsDialog>(teamId.HasValue ? "Edit agent team" : "New agent team",
+                new Dictionary<string, object?> {
+                    [nameof(AgentTeamDetailsDialog.TeamId)] = teamId,
+                    [nameof(AgentTeamDetailsDialog.OwnerCancellationToken)] = request.Token
+                }, new DialogOptions {
+                    Eyebrow = "Technical team", Subtitle = "Create or rename an AgentFramework team for filtering and process delivery.",
+                    Size = ModalSize.Compact, AriaLabel = "Agent team editor", TestId = "agents-team-details-dialog-shell"
+                }, request.Token);
+            if (!IsCurrentTeamDialog(generation, request) || result is not AgentTeamDetailsDialogResult saved
+                || teamId.HasValue && saved.TeamId != teamId.Value) {
                 return;
             }
+            await ReconcileTeamAsync(new(saved.TeamId, false, true, selection), generation);
+        } catch (Exception) when (!IsCurrentTeamDialog(generation, request)) {
+        } catch (Exception error) {
+            Logger.LogWarning("Team dialog failed for {TeamId}: {FailureType}", teamId, error.GetType().Name);
             NotificationService.Error("Team dialog failed", "The team editor could not be completed. Reload the catalog before continuing.");
+        } finally {
+            if (ReferenceEquals(teamDialog, request)) {
+                teamDialog = null;
+            }
         }
     }
 
     private async Task OpenTeamMembersDialogAsync() {
-        if (isDisposed) {
-            return;
-        }
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
-        var generation = requestGeneration;
         var team = SelectedTeam;
-        if (isDisposed || team is null) {
+        if (!CanStartTeamOperation || team is null) {
             return;
         }
-
+        using var request = BeginTeamDialog();
+        var generation = requestGeneration;
+        var selection = teamSelectionRevision;
         try {
-            var result = await DialogService.OpenAsync<AgentTeamMembersDialog>(
-                $"Add agents to {team.Name}",
+            var result = await DialogService.OpenAsync<AgentTeamMembersDialog>($"Add agents to {team.Name}",
                 new Dictionary<string, object?> {
-                    [nameof(AgentTeamMembersDialog.Team)] = team,
-                    [nameof(AgentTeamMembersDialog.Agents)] = agents,
-                    [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds()
-                },
-                new DialogOptions {
-                    Eyebrow = "Team membership",
-                    Subtitle = "Click agent cards to select multiple agents, then confirm the team membership.",
-                    Size = ModalSize.Wide,
-                    AriaLabel = "Add agents to team",
-                    TestId = "agents-team-members-dialog-shell"
+                    [nameof(AgentTeamMembersDialog.Team)] = team with { AgentIds = team.AgentIds.ToArray() },
+                    [nameof(AgentTeamMembersDialog.Agents)] = agents.ToArray(),
+                    [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds(),
+                    [nameof(AgentTeamMembersDialog.OwnerCancellationToken)] = request.Token
+                }, new DialogOptions {
+                    Eyebrow = "Team membership", Subtitle = "Click agent cards to select multiple agents, then confirm the team membership.",
+                    Size = ModalSize.Wide, AriaLabel = "Add agents to team", TestId = "agents-team-members-dialog-shell"
                 }, request.Token);
-
-            if (IsCurrentRequest(generation) && result is AgentTeamMembersDialogResult membersResult) {
-                await CatalogOperations.UpdateMembersAsync(
-                    membersResult.TeamId,
-                    membersResult.AgentIds,
-                    request.Token);
-                if (!IsCurrentRequest(generation)) {
-                    return;
-                }
-                await ReloadCatalogAsync();
-                if (!IsCurrentRequest(generation)) {
-                    return;
-                }
-                selectedTeamId = membersResult.TeamId;
-                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
-                if (!IsCurrentRequest(generation)) {
-                    return;
-                }
-                NotificationService.Success("Team updated", "Agent team membership was saved.");
-                await RenderIfAliveAsync();
-            }
-        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
-        } catch (Exception) {
-            if (isDisposed) {
+            if (!IsCurrentTeamDialog(generation, request) || result is not AgentTeamMembersDialogResult members || members.TeamId != team.Id) {
                 return;
             }
+            var intendedIds = members.AgentIds.ToArray();
+            teamMutationBusy = true;
+            await CatalogOperations.UpdateMembersAsync(team.Id, intendedIds, request.Token);
+            if (IsCurrentTeamDialog(generation, request)) {
+                await ReconcileTeamAsync(new(team.Id, false, true, selection), generation);
+            }
+        } catch (Exception) when (!IsCurrentTeamDialog(generation, request)) {
+        } catch (Exception error) {
+            Logger.LogWarning("Team membership acknowledgement unavailable for {TeamId}: {FailureType}", team.Id, error.GetType().Name);
+            teamRecovery = new(team.Id, false, false, selection);
             NotificationService.Error("Team membership failed", "The membership change could not be confirmed. Reload the team before retrying.");
+        } finally {
+            teamMutationBusy = false;
+            if (ReferenceEquals(teamDialog, request)) {
+                teamDialog = null;
+            }
+            await RenderIfAliveAsync();
         }
     }
 
     private async Task DeleteSelectedTeamAsync() {
-        if (isDisposed) {
+        var team = SelectedTeam;
+        if (!CanStartTeamOperation || team is null) {
             return;
         }
         using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         var generation = requestGeneration;
-        var team = SelectedTeam;
-        if (isDisposed || team is null) {
-            return;
-        }
-
+        var selection = teamSelectionRevision;
+        teamMutationBusy = true;
         try {
             await CatalogOperations.DeleteTeamAsync(team.Id, request.Token);
-            if (!IsCurrentRequest(generation)) {
-                return;
+            if (IsCurrentRequest(generation)) {
+                await ReconcileTeamAsync(new(team.Id, true, true, selection), generation);
             }
-            await ReloadCatalogAsync();
-            if (!IsCurrentRequest(generation)) {
-                return;
-            }
-            selectedTeamId = null;
-            await SelectedTeamChanged.InvokeAsync(null);
-            if (!IsCurrentRequest(generation)) {
-                return;
-            }
-            NotificationService.Success("Team deleted", $"Deleted {team.Name}.");
-            await RenderIfAliveAsync();
-        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
-        } catch (Exception) {
-            if (isDisposed) {
-                return;
-            }
+        } catch (Exception) when (!IsCurrentRequest(generation)) {
+        } catch (Exception error) {
+            Logger.LogWarning("Team deletion acknowledgement unavailable for {TeamId}: {FailureType}", team.Id, error.GetType().Name);
+            teamRecovery = new(team.Id, true, false, selection);
             NotificationService.Error("Team delete failed", "The deletion could not be confirmed. Reload the catalog before retrying.");
+        } finally {
+            teamMutationBusy = false;
+            await RenderIfAliveAsync();
         }
     }
 
-    private async Task ReloadCatalogAsync() {
+    private async Task ReconcileTeamAsync(TeamRecovery recovery, long generation) {
+        teamRecovery = recovery;
+        try {
+            var published = await ReloadCatalogAsync();
+            if (!published || !IsCurrentRequest(generation) || !ReferenceEquals(teamRecovery, recovery)) {
+                return;
+            }
+            if (recovery.SelectionRevision == teamSelectionRevision) {
+                selectedTeamId = !recovery.Deleted && teams.Any(team => team.Id == recovery.TeamId) ? recovery.TeamId : null;
+                await SelectedTeamChanged.InvokeAsync(SelectedTeam);
+            }
+            if (ReferenceEquals(teamRecovery, recovery)) {
+                teamRecovery = null;
+            }
+            if (IsCurrentRequest(generation)) {
+                NotificationService.Success(recovery.Confirmed ? recovery.Deleted ? "Team deleted" : "Team updated" : "Catalog reloaded",
+                    recovery.Confirmed ? "The saved team change is reflected in the catalog." : "Review the current team before making another change.");
+            }
+        } catch (Exception) when (!IsCurrentRequest(generation)) {
+        } catch (Exception error) {
+            Logger.LogWarning("Team catalog read-back failed for {TeamId}; confirmed={Confirmed}: {FailureType}", recovery.TeamId, recovery.Confirmed, error.GetType().Name);
+            NotificationService.Warning(recovery.Confirmed ? "Team saved; refresh failed" : "Team outcome needs review",
+                "Reload the catalog to read the current state. The team change will not be repeated.");
+        }
+        await RenderIfAliveAsync();
+    }
+
+    private Task RetryTeamReadbackAsync() => teamRecovery is { } recovery && IsCurrentRequest(requestGeneration)
+        ? ReconcileTeamAsync(recovery, requestGeneration) : Task.CompletedTask;
+
+    private void OnProfileChanged(object? sender, DatabaseProfileChangedNotification notification) {
         if (isDisposed) {
             return;
         }
+        requestGeneration++;
+        catalogGeneration++;
+        lifetime.Cancel();
+        _ = InvokeAsync(() => {
+            if (!isDisposed) {
+                snapshot = AgentCatalogSnapshot.Empty;
+                teamRecovery = null;
+                StateHasChanged();
+            }
+        });
+    }
+
+    private sealed record TeamRecovery(Guid TeamId, bool Deleted, bool Confirmed, long SelectionRevision);
+
+    private async Task<bool> ReloadCatalogAsync() {
+        if (isDisposed) {
+            return false;
+        }
         using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         if (isDisposed) {
-            return;
+            return false;
         }
         var generation = ++catalogGeneration;
         try {
             var loaded = await CatalogOperations.LoadAsync(new(Repair: false), request.Token);
-            if (isDisposed || generation != catalogGeneration) {
-                return;
+            if (isDisposed || request.IsCancellationRequested || generation != catalogGeneration) {
+                return false;
             }
             snapshot = loaded;
             hasLoaded = true;
@@ -579,7 +631,9 @@
             }
             await PublishAccessStateAsync(
                 HasValidRequestedSelection() ? AgentChatContextAccessState.Ready : AgentChatContextAccessState.Failed);
+            return !isDisposed && !request.IsCancellationRequested && generation == catalogGeneration;
         } catch (Exception) when (isDisposed || generation != catalogGeneration) {
+            return false;
         } finally {
             if (!isDisposed && generation == catalogGeneration) {
                 isLoading = false;

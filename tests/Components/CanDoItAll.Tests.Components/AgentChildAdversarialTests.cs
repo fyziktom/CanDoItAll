@@ -86,7 +86,7 @@ public sealed class AgentChildAdversarialTests {
         if (team) {
             var child = context.Render<AgentTeamDetailsDialog>();
             child.Find("[data-testid='agents-team-name']").Input("Retained team");
-            await child.Find("[data-testid='agents-team-save']").ClickAsync();
+            await child.Find("form").SubmitAsync();
         } else {
             var child = context.Render<CapabilityDetailsDialog>(parameters => parameters.Add(component => component.CapabilityId, Guid.NewGuid()));
             await child.Find("form").SubmitAsync();
@@ -190,6 +190,10 @@ public sealed class AgentChildAdversarialTests {
                 SaveCalls++;
                 return Task.FromException<CapabilityEditorModel>(new IOException(Poison));
             }
+            if (method?.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentTeamMetadataAsync)) {
+                SaveCalls++;
+                return Task.FromException<AgentTeamEditorModel>(new IOException(Poison));
+            }
             return method?.Name switch {
                 nameof(IAgentFrameworkWorkspaceService.GetCapabilityEditorAsync) => Delay ? capability.Task
                     : Fail ? Task.FromException<CapabilityEditorModel>(new IOException(Poison)) : Task.FromResult(new CapabilityEditorModel {
@@ -197,7 +201,7 @@ public sealed class AgentChildAdversarialTests {
                         ConfigurationJson = """{"transport":"logical","serverName":"fixture-server","allowedTools":["fixture"]}"""
                     }),
                 nameof(IAgentFrameworkWorkspaceService.GetAgentTeamEditorAsync) => Delay ? team.Task
-                    : Fail ? Task.FromException<AgentTeamEditorModel>(new IOException(Poison)) : Task.FromResult(new AgentTeamEditorModel()),
+                    : Fail ? Task.FromException<AgentTeamEditorModel>(new IOException(Poison)) : Task.FromResult(new AgentTeamEditorModel { Id = (Guid?)args![0] }),
                 _ => throw new InvalidOperationException("Unexpected child backend call.")
             };
         }

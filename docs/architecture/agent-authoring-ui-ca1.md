@@ -45,9 +45,9 @@ save result must return the accepted identity and fingerprint from the coordinat
 legacy ID-returning callers retain their contract. Null ID still means create, and a supplied
 missing ID still rejects an update. Unknown acknowledgement prohibits blind retry.
 
-The next checkpoint keeps teams in the existing AgentFramework.UI family with its real AgentSelectionCard and
-Material icon catalog. Move metadata, icon and membership renderers there. The native owner
-gets an additive metadata-only operation under its existing catalog update coordination;
+Teams now use the existing AgentFramework.UI family with its real AgentSelectionCard and
+Material icon catalog. Metadata, icon and membership renderers live under `Teams`. The native owner
+has an additive metadata-only operation under its existing catalog update coordination;
 membership is preserved from the record at that write. The legacy full-team upsert remains
 unchanged. Parent catalog operations retain profile and opening-team authority, and distinguish
 an accepted mutation from a later refresh failure.
@@ -67,7 +67,7 @@ Neither a setup diagnostic nor team grouping grants runtime tool authority.
 | Tool process/HTTP, input/limits/side effects | ToolConfigurationFields and setup result panel | Native setup flow, tool compiler and process/HTTP implementations |
 | Global capability creation/details | Shared authoring form | AgentCapabilitiesPanel; origin cancellation retained |
 | Definition creation from existing/new agent | Shared authoring wizard | AgentDetailsDialog and A2 assignment/whole-draft owner |
-| Team metadata/icon/member selection | Module at this checkpoint | AgentCatalogHost and coordinated catalog owner; extraction follows |
+| Team metadata/icon/member selection | AgentFramework.UI Teams family | Thin module dialogs, AgentCatalogHost and coordinated catalog owner |
 
 The old duplicated capability configuration support, wizard setup partial and dialog CSS
 are removed. Thin native dialog wrappers preserve callers and result identities. Models,
@@ -80,7 +80,32 @@ cases on an owned PostgreSQL 18.6 disk volume. Independent mode/upload/state/bou
 coverage passes 54 cases after the browser and case-distinct JSON extension regressions. Real browser checks found and repaired numeric text
 loss across tabs and a missing parent refresh after asynchronous upload/setup. Their
 regressions and final frozen-suite results are recorded separately. Native setup effects,
-runtime consumers, teams and final source/published browser closure remain pending.
+runtime consumers and final source/published browser closure remain pending.
+
+The team owner characterization first failed all three concrete cases: stale metadata replaced
+new membership, description/icon changed after dispatch, and a deleted target was recreated.
+The editor-specific coordinated metadata operation fixes those cases without changing the
+legacy full-team upsert. It rejects blank/duplicate names and missing updates; membership updates
+freeze their incoming IDs and retain the owner's missing-agent refusal. The focused owner suite
+now passes 10/10, including legacy compatibility and group deletion without deleting agents or
+a neighboring team. Independent team rendering passes 23/23. Its first run had 11 fixture-copy
+assertion mismatches and one icon-text selector mismatch; those original results remain recorded
+separately from the successful follow-up.
+
+The catalog host binds dialog results to the opening team, profile and acquisition. A confirmed
+mutation followed by a failed catalog read or selection callback retains a read-only recovery
+action; it cannot repeat the mutation. A profile change retires owned dialogs and recreates the
+catalog context. The metadata draft does not contain membership; icon results, reads and saves
+from retired acquisitions cannot change a replacement. Team grouping grants no authority.
+
+The native team/catalog/icon/child/Overview lifecycle selection passes 93/93 after fresh
+discovery. The first 47-case attempt passed 43 and failed four new tests whose empty-agent
+fixtures rendered the catalog's empty state; the corrected fixtures supply a real agent.
+Large-desktop browser evidence confirms 90 real cards in a bounded scrolling picker, a
+keyboard-confirmed nested icon, and one metadata write preserving the separate member write.
+The C2 full scan covers 8,328 files and 33,908 findings. Nine added/nine stale case-policy
+findings were reviewed as name uniqueness, label filtering/sorting and moved renderers;
+final no-write enforcement passes with 15,193 allowances. Documentation passes 351 files.
 
 ## Proof and checkpoints
 

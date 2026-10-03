@@ -66,6 +66,16 @@ Loading, empty and card states use the same components. Avatar fallback demonstr
 
 See the [rendering UI boundary](../../UI/CanDoItAll.AgentFramework.UI/README.md) for current ownership and [Testing](../../../docs/testing.md) for maintained validation commands. Historical Catalog extraction and direct-watch reports are not included in this checkout. For new timing evidence, separate SDK update time from local edit-to-visible latency and retain failures. A small project graph or reduced CSS size alone is not a performance result.
 
+## Technical team authoring
+
+Open `/teams` or `/teams/Large` for the complete technical-team metadata, nested icon and
+membership family. The selector includes new, existing, empty, missing references, failed
+load, rejection, unknown acknowledgement, held load/save and deleted-target cases. Release
+held operations explicitly; open the second metadata editor to check draft isolation. The
+fixture has independent stored records and separate metadata/member counters. This is simulated
+catalog behavior, not native authority or persistence proof. New CA1 checks use only
+1920×1080 at scale 1.
+
 ## Request History specimen
 
 Open `/agents?specimen=history&scenario=normal` for the full production History workspace,

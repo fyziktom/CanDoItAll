@@ -240,6 +240,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().SaveAgentTeamAsync(model, cancellationToken);
     }
 
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveAgentTeamMetadataAsync(model, cancellationToken);
+
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
     {
         return ResolveService().UpdateAgentTeamMembersAsync(teamId, agentIds, cancellationToken);

@@ -119,7 +119,7 @@
         }
         else if (string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
         {
-            <AgentCatalogHost RequestedAgentId="@effectiveRequestedAgentId"
+            <AgentCatalogHost @key="catalogScopeVersion" RequestedAgentId="@effectiveRequestedAgentId"
                                RequestedTeamId="@effectiveRequestedTeamId"
                                SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                SelectedTeamChanged="HandleSelectedTeamChangedAsync"

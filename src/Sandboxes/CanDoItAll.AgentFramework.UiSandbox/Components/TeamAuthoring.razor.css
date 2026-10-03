@@ -1,0 +1,7 @@
+.team-authoring-sandbox {
+    margin: 1rem auto;
+    max-width: 108rem;
+    width: calc(100vw - 4rem);
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+}
