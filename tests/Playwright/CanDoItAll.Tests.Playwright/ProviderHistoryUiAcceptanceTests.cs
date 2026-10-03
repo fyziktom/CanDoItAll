@@ -49,6 +49,10 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chrome" });
         await using var sourceContext = await browser.NewContextAsync(ContextOptions());
         await using var clientContext = await browser.NewContextAsync(ContextOptions());
+        var browserErrors = new List<string>();
+        var requestFailures = new List<string>();
+        sourceContext.Page += (_, page) => Observe(page);
+        clientContext.Page += (_, page) => Observe(page);
         var source = await sourceContext.NewPageAsync();
         var client = await clientContext.NewPageAsync();
         source.SetDefaultTimeout(30_000);
@@ -114,7 +118,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             Assert.DoesNotContain(expectedKeyLabels[0], relayText, StringComparison.OrdinalIgnoreCase);
             Assert.Single(Regex.Matches(relayText, Regex.Escape(subject), RegexOptions.IgnoreCase));
             await ScreenshotAsync(source, settings, "5210-relay-key-provider-history.png");
-            await AssertPagingAndDeniedAuthorityAsync(browser, source, settings, issued, publisherProvider, relayProvider);
+            await AssertPagingAndDeniedAuthorityAsync(browser, source, settings, issued, publisherProvider, relayProvider, Observe);
             await File.WriteAllTextAsync(Path.Combine(settings.EvidenceDirectory, "history-attempt-identities.json"),
                 System.Text.Json.JsonSerializer.Serialize(new {
                     ClientGlobal = clientGlobal,
@@ -169,6 +173,13 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await CaptureCleanupAsync(
             () => DeleteCredentialsByPrefixAsync(cleanupSource, settings.SharedUrl, TokenNamePrefix),
             cleanupFailures);
+        await File.WriteAllTextAsync(Path.Combine(settings.EvidenceDirectory, "history-browser-checks.json"),
+            System.Text.Json.JsonSerializer.Serialize(new { BrowserErrors = browserErrors, RequestFailures = requestFailures }));
+        await CaptureCleanupAsync(() => {
+            Assert.Empty(browserErrors);
+            Assert.Empty(requestFailures);
+            return Task.CompletedTask;
+        }, cleanupFailures);
 
         if (failure is not null && cleanupFailures.Count > 0) {
             throw new AggregateException(
@@ -180,6 +191,16 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         }
         if (failure is not null) {
             ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+
+        void Observe(IPage page) {
+            page.PageError += (_, error) => browserErrors.Add(error);
+            page.Console += (_, message) => {
+                if (message.Type == "error") {
+                    browserErrors.Add(message.Text);
+                }
+            };
+            page.RequestFailed += (_, request) => requestFailures.Add(new Uri(request.Url).AbsolutePath + ": " + request.Failure);
         }
     }
 
@@ -389,7 +410,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     }
 
     private static async Task AssertPagingAndDeniedAuthorityAsync(IBrowser browser, IPage source, AcceptanceSettings settings,
-        IReadOnlyList<IssuedCredential> credentials, IReadOnlyList<Guid> agentIds, IReadOnlyList<Guid> relayIds) {
+        IReadOnlyList<IssuedCredential> credentials, IReadOnlyList<Guid> agentIds, IReadOnlyList<Guid> relayIds, Action<IPage> observe) {
         if (!await source.GetByTestId("history-page-size").IsVisibleAsync()) {
             await source.GetByTestId("history-more-filters").ClickAsync();
         }
@@ -416,6 +437,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await using var deniedContext = await browser.NewContextAsync(ContextOptions());
         await deniedContext.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {credentials[0].Token}" });
         var denied = await deniedContext.NewPageAsync();
+        observe(denied);
         await NavigateAsync(denied, settings.SharedUrl + "/agents?tab=request-history");
         await denied.GetByTestId("history-search").ClickAsync();
         await Assertions.Expect(denied.GetByTestId("history-error"))

@@ -56,7 +56,10 @@
                 </DataGridColumn>
                 <DataGridColumn TItem="HistoryEntry" Title="Evidence">
                     <Template Context="entry">
-                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(renderedOrigin, entry.Id)))" data-testid="history-details" />
+                        @{
+                            var rowOrigin = Presentation.Origin;
+                        }
+                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(rowOrigin, entry.Id)))" data-testid="history-details" />
                     </Template>
                 </DataGridColumn>
             </Columns>

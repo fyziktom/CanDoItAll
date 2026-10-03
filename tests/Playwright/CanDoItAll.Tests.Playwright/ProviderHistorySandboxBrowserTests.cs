@@ -145,6 +145,15 @@ public sealed class ProviderHistorySandboxBrowserTests {
                 await page.Keyboard.PressAsync("Escape");
                 await Assertions.Expect(page.GetByTestId("history-detail-dialog")).ToHaveCountAsync(0);
                 await Assertions.Expect(workspace.GetByTestId("history-details").First).ToBeFocusedAsync();
+                if (option.Value == HistoryScenario.Normal) {
+                    foreach (var row in new[] { 1, 0 }) {
+                        await workspace.GetByTestId("history-details").Nth(row).ClickAsync();
+                        await page.GetByTestId("history-detail-dialog").GetByText("Entry / provider", new() { Exact = true }).WaitForAsync();
+                        await page.GetByTestId("history-detail-close").ClickAsync();
+                        await Assertions.Expect(page.GetByTestId("history-detail-dialog")).ToHaveCountAsync(0);
+                    }
+                    await Assertions.Expect(workspace.GetByTestId("sandbox-history-read-counts")).ToContainTextAsync("Metadata: 3 · Content: 1");
+                }
             }
             Assert.Empty(errors);
             Assert.Contains(assets, path => path.Contains("CanDoItAll.Components.BaseLib", StringComparison.Ordinal) && path.Contains(".css", StringComparison.Ordinal));

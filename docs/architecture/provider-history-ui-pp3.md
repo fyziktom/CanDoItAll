@@ -1,8 +1,9 @@
 # Provider Request History PP3
 
-Execution is in progress. The complete UI family has moved and its focused component checks pass;
-source/publish browser and development-loop checks passed. Native three-instance and final closure
-gates are still being collected. This record does not claim application release readiness or remote dependency delivery.
+Execution is in progress. The complete UI family has moved. The first native campaign exposed two
+bounded defects, now repaired with failing-first regressions and source/publish browser proof.
+A fresh final image campaign and the one frozen Stable checkpoint remain in progress. This record
+does not claim application release readiness or remote dependency delivery.
 
 ## Boundary and behavior
 
@@ -70,6 +71,36 @@ route. One C# observation expired before the orchestration tool delivered its ed
 consecutive three-sample series above followed it. No pre-extraction warm-edit timing was measured,
 so these numbers do not claim a before/after speedup. This slice owns no JavaScript edit.
 
+## Native findings and bounded repairs
+
+The first signed application checkpoint is `5e53e5aaea2f3411cdc1f59eaccc52924f68f382`.
+Its fresh three-instance backend vector passed 19/19 and its native default/import setup passed 1/1.
+The consumer union passed media/vision but failed four History assertions: Agent/files and Simple
+Chat could leave visible Details actions stale; both Workflow variants returned `Unavailable` after
+an authorized content request. These results are retained as failures, not credited to the repaired image.
+
+The DataGrid renders cells through registered column templates. Capturing the History origin outside
+that deferred template could retain the preceding render's identity. Each row now captures its origin
+when its cell is rendered. Old callbacks still retain their original identity and are rejected; the
+visible row can open details after a prior dialog closes. Real source and published reopen regressions
+first failed 0/2, then passed 2/2. No shared DataGrid or Components change was required.
+
+The existing owner contract permits linked Workflow `PrimaryEvidence` content. The final persistence
+recheck incorrectly required `ContentOwner` for every source. It now uses `CanReadContent` and requires
+the exact same role to remain stored. This preserves the authorization policy and refuses lineage,
+non-Workflow primary evidence and a changed role. Five native SQL regression cases first passed 4/5,
+isolating Workflow primary evidence. There is no schema, HTTP or permission-policy change.
+
+The frozen Stable Components assembly found 12 policy-panel test setup failures because the neutral
+History fixture no longer registers the production profile notification service. The policy test host
+now registers that service explicitly. The 13 policy and 26 context cases passed together, and again
+after the production corrections. The broad run remains the original frozen attempt; it is not restarted.
+
+Direct repaired UI, persistence, Web and sandbox builds passed without warnings. The independent
+History family passed 84/84 after the fixes. The exact native authorization/source/recheck selection
+discovered and passed 50 cases, including all five owner-role regressions. The rebuilt image campaign
+is still required before closure.
+
 ## Current attempts
 
 Ignored working evidence is under `artifacts/provider-history-pp3/20261003`. Private database
@@ -89,6 +120,14 @@ All browser evidence uses synthetic content at 1920×1080 and scale 1.
 | Production context host | 26/26 | Includes nine profile/auth/scope × pending/displayed evidence cases |
 | Initial source/published browser union | 4/4 | Two complete History scenarios cases and two retained PP1 editor cases |
 | Final History source/publish | 2/2 | Rebuilt after the two-workspace action whitespace correction |
+| First native backend/defaults | 19/19 and 1/1 | Signed initial image pair; separate selections |
+| First native consumer union | 1/5 | Media/vision passed; four History assertions failed as described above |
+| Native owner-role reproduction | 4/5 | Existing Workflow readable role failed the final SQL recheck |
+| Source/publish reopen reproduction | 0/2 | Real deferred-template callback defect |
+| Repaired independent History | 84/84 | Same stale-intent and retirement controls retained |
+| Repaired production policy/context hosts | 39/39 | Includes all 12 failed policy setups and their native Settings host case |
+| Repaired source/publish History | 2/2 | Includes repeated row reopen and all 17 scenarios |
+| Repaired native authorization/source/recheck | 50/50 | Existing authorization and deletion controls plus five exact readable-role cases |
 
 The final browser selection discovers 11 cases: two History sandbox and nine native three-instance
 cases. The native consumer cases now assert canonical owner references, exact global/provider attempt
