@@ -123,3 +123,36 @@ runtime allow/deny, files/History and shared-provider Workflow/TestLab journeys 
 source pair and unique owned fixtures. Shared catalog changes trigger one final frozen Stable
 decision and checkpoint. This record will be updated with actual closure results; the plan is
 not evidence that those obligations have passed.
+
+The C3 independent browser selection passes all four source/published cases at 1920×1080,
+scale 1. It traverses all 24 capability scenarios, actual skill upload and three-step creation,
+invalid numeric input across tabs, two drafts, nested icons, keyboard submission, and 90-member
+scrolling. Held-load routes initially stalled in server prerender; both scenario hosts now
+start their interactive routes without prerender. This keeps held operations controllable.
+Original timeouts and the later harness text-assertion correction remain in the receipts.
+
+The evaluated final production closure is 169 projects; the capability rendering leaf has ten
+and its sandbox eleven. The team/History sandbox stays at sixteen. Protected PP1/PP2/A2,
+Workspace and Projects closures remain 10/5/18/8/6, with no unresolved references or cycles.
+Nine visible development-loop probes use sandbox PID 73488 throughout. Razor application
+times were 1841/422/384 ms, C# 144/30/21 ms, and CSS 600/413/299 ms. C# probes reacquired the
+scenario after application; two browser observation upper bounds include orchestration delay.
+All three probe sources were restored byte-for-byte and the owned watch process was stopped.
+These are local small-host observations, not a general Web performance claim.
+
+The native team browser journey passes canonical create/reopen/icon/member/deletion checks,
+including a second native owner changing membership while metadata remains open. Agent models
+and the neighboring group remain identical. The early test attempted editing before database
+startup context initialization finished; waiting for the existing readiness signal resolves
+the canceled-dialog attempt without weakening profile cancellation. Native setup/parent/runtime,
+fresh multi-instance consumers and the triggered final Stable campaign remain separate gates.
+
+The actual remote MCP approval journey exposed a pre-existing checkpoint gap after one real
+invocation: the installed MCP SDK returns AI content with native raw representations, while the
+MAF protocol codec supported only OpenAI and Ollama raw models. The bounded codec addition uses
+the MCP serializer for its content/resource types and records their installed package version.
+Unknown raw objects, foreign shapes and incompatible versions still require explicit recovery;
+existing OpenAI/Ollama checkpoint fingerprints remain readable. No admission or approval policy
+was broadened. The owned runtime fixture uses the existing `mcp_` classification family; its
+original unclassified name was truthfully denied before dispatch. The original native failure,
+including its single external effect and reconciliation requirement, remains retained separately.

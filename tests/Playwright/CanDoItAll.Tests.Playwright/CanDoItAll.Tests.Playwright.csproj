@@ -22,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
+    <ProjectReference Include="../../Support/CanDoItAll.McpTestHost/CanDoItAll.McpTestHost.csproj" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/CanDoItAll.AgentFramework.Providers.UiSandbox.csproj" ReferenceOutputAssembly="false" />

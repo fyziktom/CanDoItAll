@@ -43,6 +43,7 @@ internal sealed class LiveUiHost : IAsyncDisposable {
     }
 
     internal string BaseUrl => fixture.BaseUrl;
+    internal string OwnedWorkspaceRoot => fixture.StorageWorkspaceRoot ?? throw new InvalidOperationException("The host must own its workspace.");
 
     internal bool SpendBoundExceeded { get; private set; }
     internal int ProviderJournalRequests { get; private set; }
@@ -72,7 +73,7 @@ internal sealed class LiveUiHost : IAsyncDisposable {
     }
 
     internal async Task<IPage> NewPageAsync() {
-        context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+        context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
         var page = await context.NewPageAsync();
         page.SetDefaultTimeout(45_000);
         return page;

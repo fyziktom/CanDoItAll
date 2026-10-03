@@ -266,6 +266,7 @@ internal sealed class E2eScenarioHttpClient : IDisposable
             MaximumSseLineBytes,
             MaximumSseBytes);
         TimeSpan? firstDataAt = null;
+        TimeSpan? terminalAt = null;
         var frameCount = 0;
         var lineCount = 0;
         var hasDone = false;
@@ -311,6 +312,9 @@ internal sealed class E2eScenarioHttpClient : IDisposable
                     frame.RootElement.TryGetProperty("response", out var completion) &&
                     completion.TryGetProperty("status", out var status) && status.GetString() == "completed";
             }
+            if (hasDone || hasCompletedEvent) {
+                terminalAt ??= stopwatch.Elapsed;
+            }
         }
 
         return new E2eSseObservation(
@@ -320,7 +324,8 @@ internal sealed class E2eScenarioHttpClient : IDisposable
             stopwatch.Elapsed,
             frameCount,
             hasDone,
-            hasCompletedEvent);
+            hasCompletedEvent,
+            terminalAt);
     }
 
     public async Task<E2eCancellationObservation> CancelAfterFirstSseDataAsync(
@@ -547,7 +552,8 @@ internal sealed record E2eSseObservation(
     TimeSpan CompletedAt,
     int DataFrameCount,
     bool HasDoneFrame,
-    bool HasResponsesCompletedEvent);
+    bool HasResponsesCompletedEvent,
+    TimeSpan? TerminalAt = null);
 
 internal sealed record E2eCancellationObservation(
     HttpStatusCode StatusCode,

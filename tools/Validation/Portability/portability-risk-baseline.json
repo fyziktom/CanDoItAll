@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-03T20:15:17.347501+00:00",
+  "generated_utc": "2026-10-03T21:45:01.001823+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15193,
+  "allowance_count": 15204,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -26243,6 +26243,72 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafNativeToolContracts.cs",
       "category": "mcp",
       "source_fingerprint": "ed29c567420a2b360bcc1dc28a661aee9e4f1c1e0427ec97ce4114ad08352311",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "126d43a6bfb629a6b7b93e59e0709751f1b132bc2a353e52e081b88444dcb8d6",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "18bb288e33d525736ab30c758d92f96e53ce5276354cb044ddf7d30b433eac37",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "1c30ffe0675fa6ead028c62d723cd9f1f0b1710bb4b58ee5de021f0771124ae7",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "5e69fc93d05d728cfc88b1df7f9c1fab3e27647b7ae34cf4502e28cecba5acb5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "65b9ab6f1f621799419f3e8200e17569aaaa6e299bc3d72e31df9685fbe2f312",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "73b51cde69d73a9083ae0ed4c8ec236415b95e0ce6c69202279becbc1dae835e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "90c4e746191add76a4fc18ba106e04a05dda0ef066f82cc5a7d5014f7ed28bf3",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "b48795fa64ccf7029e73f2aa9511bb1855e57a9ff6634400fc11bf5c401ad7c5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "b572acdd357073670d0ff3adc2dde46619ead49557fe96e7b845ca266273973e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "b69124802287eb545913e730c2ea250b95f27c629784ba9d4f3eaa82c0139957",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "category": "mcp",
+      "source_fingerprint": "da2aef107b3757faffa7a4d1bdfb6d49f644f3a7a320649d0bd4065a7942cf74",
       "count": 1
     },
     {

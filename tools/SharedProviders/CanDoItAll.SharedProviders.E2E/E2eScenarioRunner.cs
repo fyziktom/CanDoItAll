@@ -374,8 +374,8 @@ internal sealed class E2eScenarioRunner : IDisposable
                         FindModel(catalog.Document, central, E2eFixtures.Responses).Value,
                         stream: true),
                     cancellationToken);
-                builder.Expect("chat-first-chunk-before-completion", IsIncremental(chat));
-                builder.Expect("responses-first-chunk-before-completion", IsIncremental(responses));
+                builder.Expect("chat-first-chunk-before-completion", IsIncremental(chat), E2eStreamingTiming.From(chat));
+                builder.Expect("responses-first-chunk-before-completion", IsIncremental(responses), E2eStreamingTiming.From(responses));
                 builder.Expect("chat-multiple-chunks-terminal", chat.DataFrameCount >= 3 && chat.HasDoneFrame);
                 builder.Expect("responses-multiple-chunks-terminal", responses.DataFrameCount >= 3 &&
                     responses.HasResponsesCompletedEvent);
