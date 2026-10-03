@@ -119,6 +119,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
         }
         await fixture.AssertScriptCompleteAsync(1);
         await AssertRoutedAsync(fixture, profile, alternate.Id, marker);
+        await AssertCanonicalHistoryAsync(fixture, profile, alternate.Id, CanDoItAll.AgentFramework.ProviderHistory.HistorySourceKind.Workflow,
+            runId, runId.ToString("D"), "workflow-" + (incomplete ? "incomplete" : "accepted"));
         await fixture.EvidenceAsync("consumer-workflow-" + (incomplete ? "incomplete" : "accepted"), new {
             saved.Id, saved.VersionId, RunId = runId, ProjectId = projectId, ProviderId = profile.Id, Route = alternate.Id,
             ModelSettings = component.ModelSettings, Input = input, Incomplete = incomplete,

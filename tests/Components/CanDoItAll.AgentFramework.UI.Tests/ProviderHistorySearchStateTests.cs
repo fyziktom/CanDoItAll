@@ -1,7 +1,6 @@
 using CanDoItAll.AgentFramework.UI.History;
 using System.ComponentModel.DataAnnotations;
 using CanDoItAll.AgentFramework.ProviderHistory;
-using CanDoItAll.Modules.AgentFramework.Pages.Components.History;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;

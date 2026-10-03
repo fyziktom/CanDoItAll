@@ -8,10 +8,13 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Playwright;
 
-internal sealed class ProviderProfilesSandboxHost : IAsyncDisposable {
-    private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("provider-profiles-sandbox");
+internal enum ProviderSandboxKind { Profiles, History }
+
+internal sealed class IndependentProviderSandboxHost(ProviderSandboxKind kind) : IAsyncDisposable {
+    private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("provider-ui-sandbox");
     private readonly ConcurrentQueue<string> logs = new();
-    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "provider-profiles-pp1", "sandbox-hosts", Guid.NewGuid().ToString("N"));
+    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts",
+        kind == ProviderSandboxKind.History ? "provider-history-pp3" : "provider-profiles-pp1", "sandbox-hosts", Guid.NewGuid().ToString("N"));
     private Process? process;
     private bool publishedHost;
     private Task[] pumps = [];
@@ -20,7 +23,15 @@ internal sealed class ProviderProfilesSandboxHost : IAsyncDisposable {
 
     public async Task StartAsync(bool published) {
         publishedHost = published;
-        var root = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "Sandboxes", "CanDoItAll.AgentFramework.Providers.UiSandbox");
+        var projectName = kind switch {
+            ProviderSandboxKind.Profiles => "CanDoItAll.AgentFramework.Providers.UiSandbox",
+            ProviderSandboxKind.History => "CanDoItAll.AgentFramework.UiSandbox",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+        var root = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "Sandboxes", projectName);
+        var sourceBinaryRoot = kind == ProviderSandboxKind.History
+            ? Path.Combine(root, "bin", "Parity", PlaywrightTestHostPaths.BuildConfiguration, "net10.0")
+            : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0");
         var directory = published ? Path.Combine(environment.RootPath, "publish") : root;
         if (published) {
             var publish = StartInfo(root);
@@ -36,7 +47,7 @@ internal sealed class ProviderProfilesSandboxHost : IAsyncDisposable {
             await File.WriteAllTextAsync(Path.Combine(evidence, "sandbox-publish.log"), text);
             Assert.Equal(0, publishing.ExitCode);
         }
-        var binaryRoot = published ? directory : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0");
+        var binaryRoot = published ? directory : sourceBinaryRoot;
         var hashes = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(binaryRoot, "*", SearchOption.AllDirectories)
                      .Where(file => Path.GetExtension(file) is ".dll" or ".pdb" or ".css" or ".woff2")) {
@@ -52,14 +63,13 @@ internal sealed class ProviderProfilesSandboxHost : IAsyncDisposable {
         BaseUrl = $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}";
         listener.Stop();
         var start = StartInfo(directory);
-        start.ArgumentList.Add(published ? Path.Combine(directory, "CanDoItAll.AgentFramework.Providers.UiSandbox.dll")
-            : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", "CanDoItAll.AgentFramework.Providers.UiSandbox.dll"));
+        start.ArgumentList.Add(Path.Combine(binaryRoot, projectName + ".dll"));
         start.ArgumentList.Add("--urls");
         start.ArgumentList.Add(BaseUrl);
         start.Environment["ASPNETCORE_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment["DOTNET_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment.Remove("CANDOITALL_TESTS_POSTGRES_CONNECTION");
-        process = Process.Start(start) ?? throw new InvalidOperationException("Owned Provider profiles sandbox did not start.");
+        process = Process.Start(start) ?? throw new InvalidOperationException("Owned provider sandbox did not start.");
         logs.Enqueue($"Owned sandbox PID={process.Id}; published={published}; URL={BaseUrl}");
         pumps = [PumpAsync(process.StandardOutput), PumpAsync(process.StandardError)];
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };

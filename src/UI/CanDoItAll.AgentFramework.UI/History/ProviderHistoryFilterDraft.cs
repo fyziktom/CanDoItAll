@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CanDoItAll.AgentFramework.ProviderHistory;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components.History;
+namespace CanDoItAll.AgentFramework.UI.History;
 
 public enum ProviderHistoryRange { Last24Hours, Last7Days, Custom }
 

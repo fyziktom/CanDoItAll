@@ -4,7 +4,6 @@ using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.AgentFramework.UiSandbox;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Modules.AgentFramework.Pages.Components.History;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
@@ -48,7 +47,7 @@ public sealed class ProviderHistorySeamTests {
         var intents = new List<HistoryResultsIntent>();
         var cut = context.Render<ProviderHistoryResultsSurface>(p => p.Add(x => x.Presentation, presentation).Add(x => x.OnIntent, intents.Add));
         await cut.Find("[data-testid='history-details']").ClickAsync();
-        Assert.Equal(new HistoryResultsIntent.Details(HistorySandboxFixture.Entry.Id), Assert.Single(intents));
+        Assert.Equal(new HistoryResultsIntent.Details(presentation.Origin, HistorySandboxFixture.Entry.Id), Assert.Single(intents));
         Assert.Same(presentation, cut.Instance.Presentation);
     }
 
@@ -73,7 +72,7 @@ public sealed class ProviderHistorySeamTests {
         }
         using var context = backend.CreateContext();
         var cut = context.Render<DynamicComponent>(p => p.Add(x => x.Type, typeof(ProviderHistoryDetailsDialog))
-            .Add(x => x.Parameters, new Dictionary<string, object> { [nameof(ProviderHistoryDetailsDialog.EntryId)] = backend.Entry.Id }));
+            .Add(x => x.Parameters, new Dictionary<string, object> { [nameof(ProviderHistoryDetailsDialog.EntryId)] = backend.Entry.Id, [nameof(ProviderHistoryDetailsDialog.History)] = backend }));
         var operation = content ? cut.Find("[data-testid='history-load-content']").ClickAsync() : Task.CompletedTask;
         cut.Render(p => p.Add(x => x.Type, typeof(ProviderHistoryResultsSurface))
             .Add(x => x.Parameters, new Dictionary<string, object> { [nameof(ProviderHistoryResultsSurface.Presentation)] = HistoryResultsPresentation.Initial }));
@@ -98,7 +97,7 @@ public sealed class ProviderHistorySeamTests {
         var pending = new TaskCompletionSource<HistoryMetadata?>();
         backend.Metadata = (id, _) => id == first.Id ? pending.Task : Task.FromResult<HistoryMetadata?>(new(backend.Entry, []));
         using var context = backend.CreateContext();
-        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.EntryId, first.Id));
+        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.History, backend).Add(x => x.EntryId, first.Id));
         backend.Entry = first with { Id = HistoryEntryId.New(), Provider = first.Provider with { Name = "New target" } };
         cut.Render(p => p.Add(x => x.EntryId, backend.Entry.Id));
         cut.WaitForAssertion(() => Assert.Contains("New target", cut.Markup));
@@ -122,7 +121,7 @@ public sealed class ProviderHistorySeamTests {
     public void Typed_errors_are_distinct_without_key_or_infrastructure_payload(HistoryFailure failure) {
         var backend = new ProviderHistoryUiFixture { Metadata = (_, _) => throw new ProviderHistoryException(failure, "history-api-key-sentinel") };
         using var context = backend.CreateContext();
-        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.EntryId, backend.Entry.Id));
+        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.History, backend).Add(x => x.EntryId, backend.Entry.Id));
         Assert.Contains(HistoryPublicErrors.Message(failure), cut.Find("[data-testid='history-detail-error']").TextContent);
         Assert.DoesNotContain("history-api-key-sentinel", cut.Markup);
         Assert.Empty(backend.ContentReads);

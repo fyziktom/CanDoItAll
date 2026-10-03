@@ -48,6 +48,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
             Assert.All(operation.GetProperty("invocationAttempts").EnumerateArray(), attempt => Assert.Equal(route, attempt.GetProperty("model").GetString()));
             await fixture.AssertScriptCompleteAsync(1);
             await AssertRoutedAsync(fixture, profile, route, marker);
+            await AssertCanonicalHistoryAsync(fixture, profile, route, CanDoItAll.AgentFramework.ProviderHistory.HistorySourceKind.SimpleChat,
+                assistant.GetProperty("turnId").GetGuid(), answer, "simple-chat-" + suffix);
             await fixture.EvidenceAsync("consumer-simple-chat-" + suffix, new {
                 ProviderId = profile.Id, Route = route, UpstreamModel = profile.GetModelDisplayName(route),
                 DefinitionId = definition.GetProperty("id").GetGuid(), ConversationId = conversation.GetProperty("id").GetGuid(),
@@ -114,6 +116,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.DoesNotContain((await TreeAsync(fixture, projectId)).Nodes, node => node.Title == denied.Title);
         await PreviewAndDownloadAsync(fixture, projectId, projectName, created, expected.Content);
         await AssertRoutedAsync(fixture, profile, alternate.Id, marker);
+        await AssertCanonicalHistoryAsync(fixture, profile, alternate.Id, CanDoItAll.AgentFramework.ProviderHistory.HistorySourceKind.AgentConversation,
+            readback.GetProperty("runId").GetGuid(), expected.Content, "agent-files");
         await fixture.EvidenceAsync("consumer-files", new {
             projectId, parent.Id, AgentId = agentId, ProviderId = profile.Id, Route = alternate.Id, UpstreamModel = alternate.DisplayName,
             CreatedNodeId = created.Id, stored.MediaRelativePath, Sha256 = SharedProviderConsumerFixture.Hash(expected.Content),

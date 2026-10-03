@@ -1,3 +1,4 @@
+@using CanDoItAll.AgentFramework.ProviderHistory
 <FormStack>
     <FormRow Split="true">
         <FormField Text="Time range">
@@ -39,7 +40,7 @@
     }
     <Button Text="@(advanced ? "Fewer filters" : "More filters")" ButtonStyle="ButtonStyle.Light"
             Click="@(() => advanced = !advanced)" aria-expanded="@advanced" data-testid="history-more-filters" />
-    @if (advanced) {
+    <FormStack hidden="@(!advanced)" Style="@(advanced ? null : "display:none")" data-testid="history-advanced-filters">
         <FormRow Split="true">
             <FormField Text="Workload">
                 <DropDown TValue="HistoryWorkload?" Data="Workloads" AllowClear="true" Placeholder="All workloads"
@@ -91,7 +92,7 @@
         <FormField Text="Correlation ID">
             <TextBox @bind-Value="Draft.CorrelationId" @bind-Value:after="OnChangedAsync" aria-label="Correlation ID" />
         </FormField>
-    }
+    </FormStack>
 </FormStack>
 
 @code {

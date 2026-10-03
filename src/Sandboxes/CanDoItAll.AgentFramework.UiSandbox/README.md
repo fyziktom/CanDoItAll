@@ -66,7 +66,32 @@ Loading, empty and card states use the same components. Avatar fallback demonstr
 
 See the [rendering UI boundary](../../UI/CanDoItAll.AgentFramework.UI/README.md) for current ownership and [Testing](../../../docs/testing.md) for maintained validation commands. Historical Catalog extraction and direct-watch reports are not included in this checkout. For new timing evidence, separate SDK update time from local edit-to-visible latency and retain failures. A small project graph or reduced CSS size alone is not a performance result.
 
-## Reload context
+## Request History specimen
+
+Open `/agents?specimen=history&scenario=normal` for the full production History workspace,
+including filters, paging, metadata and the separate content dialog. Use the scenario selector
+for large/empty/incomplete results, exact canonical owners, denied reads, expired/pending/redacted/
+unavailable content, controlled delays and two independent workspaces. All data is synthetic.
+These scenarios do not claim native provider or authorization proof.
+
+Each workspace owns a narrow fixture reader and reports separate search, metadata, content,
+pending and canceled read counters. Mounting, editing or changing scope leaves the counters at
+zero. Search reads one bounded page; choosing a row reads metadata; explicit content requests
+carry the exact owner. Fixture cursors are bound to the submitted query. Fixed provider scope
+and global scope use the same renderer.
+
+Delayed reads complete after three seconds, deliberately including a late response after
+cancellation. Retire or close the workspace while waiting to inspect the publication fence.
+The page-level completion/failure controls can finish pending reads sooner. Retiring one
+workspace leaves its neighbor active. This host registers no production History, runtime,
+database, vault or HTTP service.
+
+New PP3 browser checks use 1920×1080 at scale 1. `ProviderHistorySandboxBrowserTests` runs both
+source and independent published Parity hosts, with actual fonts, scoped CSS and dialog assets.
+The [boundary record](../../../docs/architecture/provider-history-ui-pp3.md) records results and
+measured development-loop evidence separately from the historical catalog measurements.
+
+## Catalog reload context
 
 The development specimen accepts `scenario=normal|loading|empty|card-states|avatar-fallback`, `layout=matched|flexible`, and optional `agentId`/`teamId` query values on `/agents`. IDs must exist in the embedded fixture. Invalid values normalize to Normal/Matched or no selection. Controls replace the current history entry; a browser reload restores that context. Search text, favorite toggles and recorded intent text remain transient.
 

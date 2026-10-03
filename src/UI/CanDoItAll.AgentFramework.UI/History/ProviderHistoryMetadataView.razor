@@ -1,4 +1,5 @@
 @namespace CanDoItAll.AgentFramework.UI.History
+@implements IDisposable
 @using CanDoItAll.AgentFramework.ProviderHistory
 <FormStack>
     <FormRow Split="true">
@@ -56,4 +57,5 @@
 
 @code {
     [Parameter, EditorRequired] public HistoryEntry Entry { get; set; } = default!;
+    public void Dispose() => Entry = null!;
 }

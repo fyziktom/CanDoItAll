@@ -35,15 +35,29 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         Settings = settings;
         Page = page;
         Api = api;
-        Page.PageError += (_, error) => browserErrors.Add(error);
-        Page.Console += (_, message) => {
+        Observe(page);
+    }
+
+    private void Observe(IPage page) {
+        page.PageError += (_, error) => browserErrors.Add(error);
+        page.Console += (_, message) => {
             if (message.Type == "error") {
                 browserErrors.Add(message.Text);
             }
         };
-        Page.RequestFailed += (_, request) => requestFailures.Add(new {
+        page.RequestFailed += (_, request) => requestFailures.Add(new {
             Path = new Uri(request.Url).AbsolutePath, request.Method, request.ResourceType, request.Failure
         });
+    }
+
+    public async Task<IPage> OpenLocalOperatorPageAsync() {
+        var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
+        var authority = new Uri(Settings.Clients[0]).Authority;
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == authority
+            ? route.ContinueAsync() : route.AbortAsync());
+        var page = await context.NewPageAsync();
+        Observe(page);
+        return page;
     }
 
     public static async Task<SharedProviderConsumerFixture> StartAsync() {

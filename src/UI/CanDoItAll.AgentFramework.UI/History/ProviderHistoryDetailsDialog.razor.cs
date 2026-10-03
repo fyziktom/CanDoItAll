@@ -1,19 +1,22 @@
 using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.ProviderHistory;
-using CanDoItAll.AgentFramework.UI.History;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components.History;
+namespace CanDoItAll.AgentFramework.UI.History;
 
 public partial class ProviderHistoryDetailsDialog : IDisposable {
     [Parameter, EditorRequired] public HistoryEntryId EntryId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-    [Inject] public IProviderRequestHistory History { get; set; } = default!;
+    [Parameter, EditorRequired] public IProviderRequestHistory History { get; set; } = default!;
     [Inject] public ILogger<ProviderHistoryDetailsDialog> Logger { get; set; } = default!;
 
     private CancellationTokenSource? active;
     private HistoryEntryId? desiredEntry;
+    private IProviderRequestHistory? previousHistory;
+    private HistoryViewOrigin origin = HistoryViewOrigin.New();
+    private ProviderHistoryContentDialog? contentDialog;
+    private ProviderHistoryMetadataView? metadataView;
     private HistoryMetadata? metadata;
     private HistoryDetail? detail;
     private string? error;
@@ -22,12 +25,14 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
     private bool closed;
 
     protected override Task OnParametersSetAsync() {
-        if (disposed || closed || desiredEntry == EntryId) {
+        if (disposed || closed || desiredEntry == EntryId && ReferenceEquals(previousHistory, History)) {
             return Task.CompletedTask;
         }
         desiredEntry = EntryId;
-        metadata = null;
-        detail = null;
+        previousHistory = History;
+        origin = HistoryViewOrigin.New();
+        ClearMetadata();
+        ClearContent();
         var target = EntryId;
         return ReadAsync(token => History.GetMetadataAsync(target, token), value => {
             if (value is not null && value.Entry.Id != target) {
@@ -37,11 +42,16 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
         });
     }
 
-    private Task LoadContentAsync(CanonicalEvidenceReference? owner) {
-        if (isLoading || metadata is null) {
+    private Task LoadContentAsync(HistoryViewOrigin renderedOrigin, HistoryMetadata renderedMetadata, CanonicalEvidenceReference? owner) {
+        if (disposed || closed || isLoading || renderedOrigin != origin || !ReferenceEquals(metadata, renderedMetadata)) {
             return Task.CompletedTask;
         }
-        detail = null;
+        if (owner is null ? renderedMetadata.Entry.MetadataAuthority != HistoryMetadataAuthority.Standalone
+            : !renderedMetadata.Owners.Any(link => link.Source == owner && link.CanReadContent)) {
+            return Task.CompletedTask;
+        }
+        ClearContent();
+        origin = HistoryViewOrigin.New();
         var target = EntryId;
         return ReadAsync(token => History.GetDetailAsync(target, owner, token), value => {
             if (value.EntryId != target) {
@@ -51,7 +61,23 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
         });
     }
 
-    private void CloseContent() => detail = null;
+    private void CloseContent(HistoryViewOrigin renderedOrigin, HistoryDetail content) {
+        if (renderedOrigin == origin && ReferenceEquals(detail, content)) {
+            ClearContent();
+        }
+    }
+
+    private void ClearContent() {
+        contentDialog?.Dispose();
+        contentDialog = null;
+        detail = null;
+    }
+
+    private void ClearMetadata() {
+        metadataView?.Dispose();
+        metadataView = null;
+        metadata = null;
+    }
 
     private async Task ReadAsync<T>(Func<CancellationToken, Task<T>> read, Action<T> publish) {
         if (disposed || closed) {
@@ -80,8 +106,8 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
                 Logger.LogWarning("History evidence read rejected with {Failure}.", exception.Failure);
                 error = HistoryPublicErrors.Message(exception.Failure);
                 if (exception.Failure is HistoryFailure.Denied or HistoryFailure.StaleContext) {
-                    metadata = null;
-                    detail = null;
+                    ClearMetadata();
+                    ClearContent();
                 }
             }
         } catch (Exception exception) {
@@ -107,15 +133,17 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
         owner?.Cancel();
     }
 
-    private async Task CloseAsync() {
-        if (closed || disposed) {
+    private async Task CloseAsync(HistoryViewOrigin renderedOrigin) {
+        if (closed || disposed || renderedOrigin != origin) {
             return;
         }
         closed = true;
         Cancel();
-        metadata = null;
-        detail = null;
-        await OnClose.InvokeAsync();
+        ClearMetadata();
+        ClearContent();
+        var callback = OnClose;
+        OnClose = default;
+        await callback.InvokeAsync();
     }
 
     public void Dispose() {
@@ -124,5 +152,12 @@ public partial class ProviderHistoryDetailsDialog : IDisposable {
         }
         disposed = true;
         Cancel();
+        ClearMetadata();
+        ClearContent();
+        desiredEntry = null;
+        previousHistory = null;
+        History = null!;
+        OnClose = default;
+        error = null;
     }
 }

@@ -1,7 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
@@ -31,7 +30,6 @@ internal sealed class ProviderHistoryUiFixture : IProviderRequestHistory {
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(TimeProvider.System);
         context.Services.AddSingleton<IProviderRequestHistory>(this);
-        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         return context;
     }
 

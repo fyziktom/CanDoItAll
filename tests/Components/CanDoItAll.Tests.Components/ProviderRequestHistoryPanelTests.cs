@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.History;
 using Bunit;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using CanDoItAll.Infrastructure.Persistence;
@@ -7,7 +8,88 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ProviderRequestHistoryPanelTests {
+    private static BunitContext CreateHostContext(ProviderHistoryUiFixture backend) {
+        var context = backend.CreateContext();
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
+        return context;
+    }
+
     public enum Replacement { Search, Clear, Profile, Scope, Authentication }
+    public enum EvidenceStage { MetadataPending, ContentPending, ContentShown }
+
+    [Theory]
+    [InlineData(Replacement.Profile, EvidenceStage.MetadataPending)]
+    [InlineData(Replacement.Profile, EvidenceStage.ContentPending)]
+    [InlineData(Replacement.Profile, EvidenceStage.ContentShown)]
+    [InlineData(Replacement.Scope, EvidenceStage.MetadataPending)]
+    [InlineData(Replacement.Scope, EvidenceStage.ContentPending)]
+    [InlineData(Replacement.Scope, EvidenceStage.ContentShown)]
+    [InlineData(Replacement.Authentication, EvidenceStage.MetadataPending)]
+    [InlineData(Replacement.Authentication, EvidenceStage.ContentPending)]
+    [InlineData(Replacement.Authentication, EvidenceStage.ContentShown)]
+    public async Task Context_retirement_clears_pending_and_disclosed_evidence_without_reload(Replacement replacement, EvidenceStage stage) {
+        var backend = new ProviderHistoryUiFixture();
+        var metadata = new TaskCompletionSource<HistoryMetadata?>();
+        var content = new TaskCompletionSource<HistoryDetail>();
+        CancellationToken pendingToken = default;
+        if (stage == EvidenceStage.MetadataPending) {
+            backend.Metadata = (_, token) => {
+                pendingToken = token;
+                return metadata.Task;
+            };
+        }
+        if (stage == EvidenceStage.ContentPending) {
+            backend.Content = token => {
+                pendingToken = token;
+                return content.Task;
+            };
+        }
+        using var context = CreateHostContext(backend);
+        var authorization = context.AddAuthorization();
+        authorization.SetAuthorized("operator");
+        var host = context.Render<Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>(p =>
+            p.AddChildContent<ProviderRequestHistoryPanel>(child => child.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized())));
+        var cut = host.FindComponent<ProviderRequestHistoryPanel>();
+        cut.Find("[data-testid='history-search-form']").Submit();
+        var opening = cut.Find("[data-testid='history-details']").ClickAsync();
+        var loading = stage == EvidenceStage.MetadataPending ? Task.CompletedTask
+            : cut.WaitForElement("[data-testid='history-load-content']").ClickAsync();
+        var retired = cut.FindComponent<ProviderHistoryWorkspace>().Instance;
+        var detail = cut.FindComponent<ProviderHistoryDetailsDialog>().Instance;
+        var displayed = stage == EvidenceStage.ContentShown ? cut.FindComponent<ProviderHistoryContentDialog>().Instance : null;
+        switch (replacement) {
+            case Replacement.Profile:
+                await cut.InvokeAsync(() => context.Services.GetRequiredService<IDatabaseSwitchNotificationService>()
+                    .Publish(new(null, null, Guid.NewGuid(), "replacement-profile", 2)));
+                break;
+            case Replacement.Scope:
+                cut.Render(p => p.Add(x => x.Scope, new HistoryProviderScope.SingleProvider(new(Guid.NewGuid()))));
+                break;
+            case Replacement.Authentication:
+                authorization.SetNotAuthorized();
+                break;
+        }
+        cut.WaitForAssertion(() => Assert.Null(retired.History));
+        Assert.Null(detail.History);
+        Assert.False(detail.OnClose.HasDelegate);
+        if (displayed is not null) {
+            Assert.Null(displayed.Content);
+            Assert.False(displayed.OnClose.HasDelegate);
+        } else {
+            Assert.True(pendingToken.IsCancellationRequested);
+            Assert.True(pendingToken.WaitHandle.WaitOne(0));
+        }
+        await cut.InvokeAsync(() => {
+            metadata.TrySetResult(new(backend.Entry, []));
+            content.TrySetResult(new(backend.Entry.Id, HistoryDetailState.Captured, new("late synthetic content", 22, 22, HistoryDetailFlags.None)));
+        });
+        await opening;
+        await loading;
+        Assert.Contains("History not requested", cut.Markup);
+        Assert.DoesNotContain("late synthetic content", cut.Markup);
+        Assert.Empty(cut.FindAll("[data-testid='history-detail-dialog'],[data-testid='history-content-dialog']"));
+        Assert.Single(backend.Queries);
+    }
 
     [Theory]
     [InlineData(Replacement.Search)]
@@ -23,7 +105,7 @@ public sealed class ProviderRequestHistoryPanelTests {
             observed = token;
             return pending.Task;
         };
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var authorization = context.AddAuthorization();
         authorization.SetAuthorized("operator");
         var host = context.Render<Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>(p =>
@@ -67,7 +149,7 @@ public sealed class ProviderRequestHistoryPanelTests {
     [Fact]
     public void Render_filter_edits_and_controls_do_not_read_until_form_submission() {
         var backend = new ProviderHistoryUiFixture();
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         Assert.Contains("History not requested", cut.Markup);
         Assert.Equal(["Last 24 hours", "Last 7 days", "Custom"], cut.FindAll("[data-testid='history-range'] option").Select(x => x.TextContent));
@@ -101,7 +183,7 @@ public sealed class ProviderRequestHistoryPanelTests {
     [InlineData("invalid")]
     public void Invalid_page_size_does_not_search_or_silently_clamp(string value) {
         var backend = new ProviderHistoryUiFixture();
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         cut.Find("[data-testid='history-more-filters']").Click();
         cut.Find("[data-testid='history-page-size']").Change(value);
@@ -113,7 +195,7 @@ public sealed class ProviderRequestHistoryPanelTests {
     [Fact]
     public void Provider_scope_changes_clear_rows_and_details_without_another_query() {
         var backend = new ProviderHistoryUiFixture();
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var first = new HistoryProviderScope.SingleProvider(new(Guid.NewGuid()));
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, first));
         Assert.Empty(cut.FindAll("[data-testid='history-provider']"));
@@ -135,7 +217,7 @@ public sealed class ProviderRequestHistoryPanelTests {
             observed = token;
             return pending.Task;
         };
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         var submitted = cut.Find("[data-testid='history-search-form']").SubmitAsync();
         cut.WaitForElement("[data-testid='history-cancel']");
@@ -155,7 +237,7 @@ public sealed class ProviderRequestHistoryPanelTests {
             Usage = new(HistoryUsageState.Partial, 10, 5, CachedInputTokens: 0),
             ExternalReference = new("company-project-42", "erp.company-project")
         };
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         cut.Find("[data-testid='history-search-form']").Submit();
         cut.WaitForElement("[data-testid='history-details']").Click();
@@ -181,7 +263,7 @@ public sealed class ProviderRequestHistoryPanelTests {
     [Fact]
     public void Authentication_change_clears_rows_without_automatic_reload() {
         var backend = new ProviderHistoryUiFixture();
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var authorization = context.AddAuthorization();
         authorization.SetAuthorized("operator");
         var cut = context.Render<Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>(p =>
@@ -202,7 +284,7 @@ public sealed class ProviderRequestHistoryPanelTests {
             observed = token;
             return content.Task;
         };
-        using var context = backend.CreateContext();
+        using var context = CreateHostContext(backend);
         var cut = context.Render<ProviderRequestHistoryPanel>(p => p.Add(x => x.Scope, new HistoryProviderScope.AllAuthorized()));
         cut.Find("[data-testid='history-search-form']").Submit();
         cut.WaitForElement("[data-testid='history-details']").Click();
@@ -226,8 +308,8 @@ public sealed class ProviderRequestHistoryPanelTests {
         backend.Entry = backend.Entry with { MetadataAuthority = HistoryMetadataAuthority.CanonicalProjection, DetailState = HistoryDetailState.Canonical };
         backend.Owners = [new(backend.Entry.Id, owner, new(1), role, HistoryOwnerState.Linked)];
         backend.Content = _ => throw new ProviderHistoryException(HistoryFailure.Denied, "Content access denied.");
-        using var context = backend.CreateContext();
-        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.EntryId, backend.Entry.Id));
+        using var context = CreateHostContext(backend);
+        var cut = context.Render<ProviderHistoryDetailsDialog>(p => p.Add(x => x.History, backend).Add(x => x.EntryId, backend.Entry.Id));
         cut.WaitForElement("[data-testid='history-owner-content']");
         Assert.Empty(cut.FindAll("[data-testid='history-load-content']"));
         cut.Find("[data-testid='history-owner-content']").Click();

@@ -1,5 +1,27 @@
 # AgentFramework rendering UI
 
+## Request History
+
+`History` owns the complete `ProviderHistoryWorkspace`: raw filter draft and validation,
+immutable applied queries and cursor trail, results, metadata and separate read-only content
+dialogs. Both production entry points render this workspace. `IProviderRequestHistory` is the
+only read port; the UI neither constructs access contexts nor decides canonical-owner permission.
+The production `ProviderRequestHistoryPanel` retains service resolution, authentication/profile
+notifications and activation retirement. The authorized application service remains unchanged.
+
+Every rendered result action captures a `HistoryViewOrigin`. Search, paging, cancellation,
+clearing and detail activation invalidate earlier actions. Metadata/content callbacks also retain
+their exact activation and owner reference. Disposal clears owned data and callbacks; request
+tokens are disposed only after their reads unwind. Collapsing advanced filters keeps raw input
+validation mounted. Opening or editing the workspace never reads history.
+
+The [History boundary record](../../../docs/architecture/provider-history-ui-pp3.md) maps ownership
+and proof. The existing sandbox renders these exact controls with layered synthetic reads.
+Independent tests live in `tests/Components/CanDoItAll.AgentFramework.UI.Tests`; production context
+wiring remains covered by `ProviderRequestHistoryPanelTests`.
+
+## Catalog and capabilities
+
 This Razor class library owns the controlled AgentCatalogPanel, its snapshot/selection/intent contracts, the real AgentSelectionCard and the pure participant presentation mapper. The card and mapper retain their existing namespace for consumer compatibility; their assembly is this UI project.
 
 The capabilities boundary also owns the real AgentCapabilitiesSurface, AgentCapabilityList and immutable selection/load/access/intent/presentation contracts. AgentDetailsDialog and the standalone surface consume the same list. Application operation outcomes, recovery, sessions and Curator launch state remain in the module; the effect host maps them to presentation records.

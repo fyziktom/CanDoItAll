@@ -1,9 +1,8 @@
 using System.Collections.Immutable;
-using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.AgentFramework.ProviderHistory;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components.History;
+namespace CanDoItAll.AgentFramework.UI.History;
 
 public sealed class ProviderHistorySearchState(IProviderRequestHistory history, ILogger<ProviderHistorySearchState> logger) : IDisposable {
     private const int MaximumPreviousPages = 32;
@@ -13,6 +12,16 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
     private bool disposed;
 
     public event Action? Changed;
+
+    public HistoryViewOrigin Origin { get; private set; } = HistoryViewOrigin.New();
+    public bool IsCurrent(HistoryViewOrigin origin) => !disposed && Origin == origin;
+
+    public void InvalidateIntents() {
+        if (!disposed) {
+            Origin = HistoryViewOrigin.New();
+            Changed?.Invoke();
+        }
+    }
 
     public ProviderRequestHistoryQuery? AppliedQuery { get; private set; }
     public HistoryPage? Page { get; private set; }
@@ -66,6 +75,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
             return;
         }
         StopRequest();
+        Origin = HistoryViewOrigin.New();
         WasCanceled = true;
         Changed?.Invoke();
     }
@@ -85,6 +95,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
 
     private void ResetCore() {
         StopRequest();
+        Origin = HistoryViewOrigin.New();
         AppliedQuery = null;
         Page = null;
         Error = null;
@@ -101,6 +112,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         StopRequest();
         using var cancellation = new CancellationTokenSource();
         active = cancellation;
+        Origin = HistoryViewOrigin.New();
         IsLoading = true;
         WasCanceled = false;
         Page = null;
@@ -130,6 +142,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         } finally {
             if (ReferenceEquals(active, cancellation)) {
                 active = null;
+                Origin = HistoryViewOrigin.New();
                 IsLoading = false;
                 Changed?.Invoke();
             }
@@ -140,7 +153,7 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         IsLoading ? HistorySearchPhase.Loading : Error is not null ? HistorySearchPhase.Failed
             : WasCanceled ? HistorySearchPhase.Canceled : Page is not null ? HistorySearchPhase.Ready : HistorySearchPhase.NotRequested,
         AppliedQuery, draftChanged, Failure, Page?.Entries.ToImmutableArray() ?? [], Page?.Coverage, Page?.QueriedAtUtc,
-        PageNumber, CanPrevious, CanNext, HasEarlierPages);
+        PageNumber, CanPrevious, CanNext, HasEarlierPages) { Origin = Origin };
 
     public void Dispose() {
         if (disposed) {
@@ -148,6 +161,6 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
         }
         disposed = true;
         Changed = null;
-        StopRequest();
+        ResetCore();
     }
 }

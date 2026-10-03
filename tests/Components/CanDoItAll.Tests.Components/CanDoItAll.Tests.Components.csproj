@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="../CanDoItAll.AgentFramework.UI.Tests/ProviderHistoryUiFixture.cs" Link="ProviderHistoryUiFixture.cs" />
+  </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

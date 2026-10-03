@@ -10,7 +10,7 @@ public sealed class ProviderProfilesSandboxBrowserTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Full_provider_renderer_and_assets_work_independently_on_large_desktop(bool published) {
-        await using var host = new ProviderProfilesSandboxHost();
+        await using var host = new IndependentProviderSandboxHost(ProviderSandboxKind.Profiles);
         await host.StartAsync(published);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });

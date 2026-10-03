@@ -622,6 +622,22 @@ See [the PP1 record](architecture/provider-profiles-ui-pp1.md) for current resul
 graph/watch measurements and the bounded Stable decision. Final portability enforcement
 without `--write-baseline` remains mandatory.
 
+## Request History PP3
+
+The complete Request History UI is exercised independently in
+`tests/Components/CanDoItAll.AgentFramework.UI.Tests`. The existing `ProviderHistorySearchStateTests`
+and `ProviderHistorySeamTests` moved into that project; they are not also executed from Unit or the
+broad component assembly. The bounded `FullyQualifiedName~ProviderHistory` filter covers search,
+filters, stale rendered callbacks, sensitive-reference retirement and all sandbox scenarios.
+`ProviderRequestHistoryPanelTests` remains in the broad component project for native host context
+notifications. Discover current theory counts before each changed selection.
+
+`ProviderHistorySandboxBrowserTests` runs source and independently published Parity hosts at
+1920×1080, scale 1. Its shared host helper also serves `ProviderProfilesSandboxBrowserTests`, so
+select both when changing that helper. Native three-instance History and canonical-owner journeys
+remain separate from synthetic sandbox checks. See the [PP3 record](architecture/provider-history-ui-pp3.md)
+for source/dependency provenance, retained attempts and closure status.
+
 ## Broad Stable Gate
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit

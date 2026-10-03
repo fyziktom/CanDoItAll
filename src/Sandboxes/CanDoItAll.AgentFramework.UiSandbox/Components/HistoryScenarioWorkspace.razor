@@ -1,0 +1,59 @@
+@using CanDoItAll.AgentFramework.ProviderHistory
+@using CanDoItAll.AgentFramework.UI.History
+@implements IDisposable
+
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="sandbox-history-workspace">
+    <Cluster Gap="LayoutGap.Small">
+        <Button Text="@(mounted ? "Retire workspace" : "Open new workspace")" Click="ToggleMount" data-testid="sandbox-history-retire" />
+        <Button Text="@(fixedProvider ? "Use global scope" : "Use fixed provider")" Click="ToggleScope" data-testid="sandbox-history-scope" />
+        <Button Text="Complete pending" Disabled="@(reader.PendingReads == 0)" Click="@(() => reader.CompletePending())" data-testid="sandbox-history-complete" />
+        <Button Text="Fail pending" Disabled="@(reader.PendingReads == 0)" Click="@(() => reader.CompletePending(true))" data-testid="sandbox-history-fail" />
+    </Cluster>
+    <output aria-live="polite" data-testid="sandbox-history-read-counts">Search: @reader.Queries.Count · Metadata: @reader.MetadataReads.Count · Content: @reader.ContentReads.Count · Pending: @reader.PendingReads · Canceled: @reader.CanceledReads</output>
+    @if (Scenario is HistoryScenario.DelayedSearch or HistoryScenario.DelayedMetadata or HistoryScenario.DelayedContent && CompleteAutomatically) {
+        <p>Delayed reads complete after three seconds. Close or retire the workspace while waiting to discard the response.</p>
+    }
+    @if (mounted) {
+        <ProviderHistoryWorkspace @ref="workspace" History="reader" Scope="scope" Clock="HistoryScenarioReader.Clock" />
+    }
+</Stack>
+
+@code {
+    [Parameter] public HistoryScenario Scenario { get; set; }
+    [Parameter] public bool CompleteAutomatically { get; set; } = true;
+    private HistoryScenarioReader reader = default!;
+    private ProviderHistoryWorkspace? workspace;
+    private HistoryProviderScope scope = new HistoryProviderScope.AllAuthorized();
+    private bool mounted = true;
+    private bool fixedProvider;
+    private bool disposed;
+
+    protected override void OnInitialized() {
+        reader = new(Scenario, CompleteAutomatically ? TimeSpan.FromSeconds(3) : null);
+        reader.Changed += Render;
+    }
+
+    private void ToggleMount() {
+        workspace?.Dispose();
+        workspace = null;
+        mounted = !mounted;
+    }
+
+    private void ToggleScope() {
+        fixedProvider = !fixedProvider;
+        scope = fixedProvider ? new HistoryProviderScope.SingleProvider(HistoryScenarioReader.Provider) : new HistoryProviderScope.AllAuthorized();
+    }
+
+    private void Render() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
+        }
+    });
+
+    public void Dispose() {
+        disposed = true;
+        workspace?.Dispose();
+        workspace = null;
+        reader.Dispose();
+    }
+}
