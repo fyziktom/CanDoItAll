@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-AGENT-AUTHORING-CA1-TEAMS",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Source pair, signed baseline and ownership",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "PP3 bounded carry-over",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Current renderer and caller census",
+      "phase": "Entry/final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Capability dependency boundary",
+      "phase": "C1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "Complete wizard and detail rendering",
+      "phase": "C1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Typed/raw configuration preservation",
+      "phase": "C1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Bounded skill upload",
+      "phase": "C1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Setup effect origins and lifetimes",
+      "phase": "C1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Native MCP and tool setup",
+      "phase": "C1/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Capability native commit and conflicts",
+      "phase": "C1/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "A2 and catalog integration",
+      "phase": "C1/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Verify remains separate",
+      "phase": "C1/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Team rendering and icon lifetime",
+      "phase": "C2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Native team ownership and concurrency",
+      "phase": "C2/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Team membership and catalog consumer",
+      "phase": "C2/native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Complete independent scenario hosts",
+      "phase": "C1/C2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Source and published large-desktop browser",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Repeated development loop",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Native capability-to-agent runtime",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Project Structure files and History",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Shared provider and Workflow/TestLab",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Static gates, docs and safe export",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Final test-scope decision and execution",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Signed delivery and bounded cleanup",
+      "phase": "Final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "capability_authoring_ui_complete": false,
+    "team_ui_complete": false,
+    "native_consumer_campaign_passed": false,
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "signed_commits": [],
+    "unresolved_findings": [],
+    "paid_model_calls": 0,
+    "release_ready": false,
+    "observations": [],
+    "ready_for_next_development_slice": false
+  }
+}

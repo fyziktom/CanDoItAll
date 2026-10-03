@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-03",
+  "main_repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "reviewed_head": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+  "entry_before_pp3": "643a295e112ca29835323501907bf1d8920a5945",
+  "main_head_message": "docs(history): close PP3 with qualified Stable and native evidence",
+  "main_remote_signature": "valid",
+  "components_remote_development": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "reported_tested_components": "b495d4c4a28f0a6588ba10bfaa7be6e8409eae18",
+  "reported_tested_components_remotely_available": false,
+  "reported_filetools": "3a080ecd31068a77c1e1bd639f7a78e21c93db85",
+  "product_build_executed_by_reviewer": false,
+  "product_tests_executed_by_reviewer": false,
+  "private_test_artifacts_available": false,
+  "public_repo_connector_used": true,
+  "notes": [
+    "No forced execution checkout.",
+    "Some detailed findings are source-derived characterizations for the next slice, not reproduced PP3 regressions."
+  ],
+  "final_main_ref_recheck_unchanged": true,
+  "final_components_development_recheck_unchanged": true
+}
