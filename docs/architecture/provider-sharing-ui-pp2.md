@@ -1,8 +1,8 @@
 # Provider Sharing PP2
 
-S0's container model-name/default/routing/security prerequisite passed on 2026-10-02.
-Sharing/source/refresh rendering and the independent sandbox are extracted. The final rebuilt-image
-consumer campaign and frozen Stable checkpoint remain open.
+Provider Sharing PP2 is complete, including PP2C-R1, Sharing/source/refresh rendering,
+the independent sandbox and the final rebuilt-image campaign. S0's 2026-10-02 prerequisite
+is preserved. Qualified frozen Stable results and retained log limitations are recorded below.
 The completed [PP1 boundary](provider-profiles-ui-pp1.md), A2 and historical bundles are retained.
 This record does not claim all provider UI is extracted or that the application is release-ready.
 
@@ -54,8 +54,8 @@ All three applications reused image
 `sha256:60cdd5b711958ac230a27c9f902be32fb5ac1e1c93fe49b6bca19b5f33dce4e1`.
 The separate deterministic upstreams reused
 `sha256:4b5fed3ec1eba8770348fbe48467ff418e0aca488c157a5228b754d35d15991b`.
-Source files were frozen throughout the complete runner. This documentation is a subsequent
-non-executable addition; the final post-extraction image must be rebuilt from signed sources.
+Source files were frozen throughout the S0 runner. Its image is historical; the final
+post-extraction image and its signed production source are recorded below.
 
 Private evidence lives under `artifacts/provider-sharing-pp2/20261002-df9b7c8`; credentials and
 raw runtime material remain in the distinct marked `.artifacts` fixture. Failed attempts are
@@ -95,7 +95,7 @@ allowances. Documentation and secret-artifact checks also passed; the latter inc
 reports, with no unreadable or omitted text files. The image permission helper retained its exact
 identity/start time and successful exit throughout runner 08.
 
-## Remaining PP2 work
+## Completion execution
 
 ### Completion entry and PP2C-R1
 
@@ -123,7 +123,7 @@ local-concurrency cases and 45 retained Sharing/source/recovery/PP1 component ca
 binding, fixture and compilation failures are retained separately. Production and owning test
 assemblies were rebuilt before discovery in `ProviderSharingPP2Proof`.
 
-The final-image two-circuit repetition remains required after extraction. The signed R1 checkpoint
+The final-image two-circuit repetition passes in `final-native-consumers-11.trx`. The signed R1 checkpoint
 is `bfa934b26af61794118f249c31bc47da65a07ee3`, verified against the configured OpenPGP fingerprint
 `96E836FAA8854EE98ABC10903C206549E1D7EAD6` in the retained native session. This bounded repair
 does not close structural PP2 or its consumer campaign.
@@ -149,10 +149,9 @@ after the actual child move and four new rendered-origin cases. The leaf and pro
 without warnings or errors; the owning native test assembly retains 15 unrelated existing warnings.
 The complete proposed-source static scan passes with 15,252 unchanged reviewed findings.
 
-Architecture review permits the Sources/refresh work to proceed: actual rendering has moved,
+Architecture review permitted the Sources/refresh work to proceed: actual rendering has moved,
 the host is an effect owner, no runtime contracts or authority changed, and pure tests need no
-native module. Browser geometry, full sandbox closure and final-image consumers remain open and
-will validate the completed combined surface before PP2 is declared complete.
+native module. The later sandbox and final-image sections record the combined surface proof.
 
 ### Sources, discovery and refresh checkpoint
 
@@ -215,12 +214,9 @@ in their original AgentFramework service owners. Preserve request History and so
 through their current host slots. CodeAnalytics, Components and dotnetwatch MCPs were unavailable;
 source inspection, native CLI and evaluated graph/browser proof are the fallback.
 
-Outstanding closure includes native custom prices/Thinking and saved-unavailable choices, image/vision bytes, credential rotation,
-actual Agent/Project Structure file approvals, Simple Chat transcript, Workflow/TestLab outcomes,
-retained History and neighboring boundaries. Repeat the protocol/UI/consumer campaign on final
-rebuilt images and run one final frozen Stable checkpoint.
-Verify all coherent OpenPGP commits and clean only task-owned resources. Zero new paid calls,
-no push/merge, and no additional family are authorized.
+At this checkpoint the remaining work was the final rebuilt-image protocol/UI/consumer campaign
+and requested frozen Stable checkpoint. Their results follow. The task stays within PP2, uses
+zero paid calls and does not push, merge or begin another family.
 
 ## Consumer follow-up before the final image
 
@@ -245,3 +241,140 @@ tests and renewed container/browser validation. They do not change shared persis
 root build configuration or test infrastructure. Earlier image receipts remain stage evidence:
 the acknowledgement and Workflow projection fixes require a new application image and repeated
 19-scenario, native-default and consumer campaign before final closure.
+
+### Final image and native fixture ownership
+
+Runner 05 rebuilt the final application from `ddba548adf7eda1e5e07bf6aa69428320aa7bee4`
+plus the recorded consumer harness. Application image
+`sha256:2dcab864af44102998dfc08265badb883194bf8ce36b4e211f70228cc876f94e`
+and deterministic upstream image
+`sha256:a996db3d5cf31890794a36e6f9bcc81fb3e19a940714a0afb135035f0492c91d`
+passed all 19 protocol scenarios. `final-source-inputs05.json` records every source input;
+`final-image-source-equivalence.json` identifies subsequent test/documentation changes and their hashes.
+No production, upstream, runner, configuration or dependency input changed after this build.
+
+The native-default fixture now captures untouched bootstrap presets, creates independent
+operator-owned profiles through the actual editor, and verifies that all seed identities and
+metadata remain unchanged. Earlier stage 10 renamed a reserved seed and reproduced the native
+bootstrap ownership refusal on restart. That failure remains in `stage-fixture04` and
+`stage-native-consumers-10`; the correction is fixture ownership, not a change to bootstrap
+authority. Resetting catalog prices is also not a copy operation: the preset retains older
+price rows. The fixture therefore copies its exact price values through the native price editor.
+
+`final-native-defaults-05.trx` passes its freshly discovered case on both clients, including
+OpenAI Responses/Chat/Image, saved native Ollama, runtime-only publication refusal, complete
+catalog/price/Thinking parity and separate-circuit refresh. The independent wire oracle verifies
+exactly 12 upstream calls across six opaque routes with the expected source model names.
+Earlier setup/readiness/price assertion failures remain separate. The native consumer
+journeys are reconciled by exact test identity in `final-native-consumers-reconciliation.json`.
+
+### Frozen Stable reconciliation
+
+The requested checkpoint froze `6a266e6686264076f5ff1c7c98aa06b4439b7010` outputs in
+`ProviderSharingPP2Stable`; later builds used the separate proof configuration. All 24 assemblies
+executed, with 16,104 discovered rows expanding to 16,159 runtime cases. The original result is
+16,144 passed, 15 failed, zero skipped. `stable/final-reconciliation.json` records each output
+hash, actual count, theory expansion and original failure. This is a qualified checkpoint, not
+an unfiltered green result.
+
+Ten Integration failures occurred when the owned one-gigabyte PostgreSQL tmpfs filled. The
+same frozen assembly passed all 102 selected History/Workflow delivery cases on a separate owned
+PostgreSQL 18.6 instance with eight gigabytes of tmpfs. The exact ten failed rows are included in
+that passing follow-up. Original database logs and the first unreachable-network retry remain
+separate; no ordinary database or retained application was used.
+
+Three Unit guards matched `Providers.UI` as if it were the forbidden `Providers` runtime
+project. Their assertions now name the runtime `.csproj` explicitly. Host classification also
+identified three native tests using secret protection without `HostPlatform`; those class tags
+are now present. The four original failing checks pass in `stable-guard-followup.trx`. These
+test-only corrections require owning follow-ups, not another whole Stable sweep or image rebuild.
+
+The source-secret check read actively written logs and synthetic key samples exported in
+security-theory names, including two historical A2 reports. The historical reports remain
+byte-for-byte unchanged and every match was verified as the generated security fixture. The
+identical frozen scanner passes against a hash-verified copy of all 8,276 current source inputs.
+That source-only follow-up is qualified separately from the original checkout scan; it does not
+claim to have scanned ignored historical artifacts. Current exported discovery/TRX samples are
+redacted with exact originals and hashes retained privately. Safe artifact-export scanning is a
+separate closure check, and scanner rules are unchanged.
+
+### Native consumer reconciliation
+
+The initial nine-case run is `final-native-consumers-11.trx`. Six cases passed, and its three
+failures remain visible alongside exact follow-ups. All executions use the same final05
+application/upstream images, separate owned stores and 1920×1080 at 100% scale.
+
+| Journey | Passing receipt | Native evidence |
+|---|---|---|
+| Custom catalog, default, prices, Thinking, restart and missing saved choice | `final-native-consumers-11.trx` | Independent source/client metadata; saved Agent/Simple Chat/Workflow choices and explicit refusal |
+| Two-circuit local import conflict and explicit merge | `final-native-consumers-11.trx` | Old draft cannot overwrite another operator; reviewed merge and original state restoration |
+| Disable, HTTP-policy refusal, retire and reimport | `final-native-consumers-11.trx` | Native refused dispatch, original import identity and restored source |
+| Simple Chat default/non-default selection | `final-native-consumers-11.trx` | UI save/reopen, native completed message/transcript and exact upstream model |
+| Accepted Workflow and TestLab | `final-native-consumers-11.trx` | Matching immutable input/version, completed output and stored native artifact |
+| Incomplete Workflow response | `final-native-consumers-11.trx` | HTTP-success response refused by output validation; no accepted artifact |
+| Lazy History and credential rotation | `final-native-consumers-12.trx` | Identity-keyed reads, pagination, public denial, revoked 401 and successful rotated credential |
+| Agent/Project Structure file journey | `final-native-consumers-15.trx` | Hidden canary, exact approvals, explicit denial, native create/attach/read-back, preview and browser download |
+| Image generation, attachment and vision | `final-native-consumers-18.trx` | Actual PNG, stable native identity/hash, loaded preview, authorized content download, UI attachment and exact decoded upstream bytes/model |
+
+The file journey matches all nine upstream requests to the exact source model, preserves
+unrelated content, and compares the stored/downloaded bytes and hash. Approval evidence is saved
+before each decision with a unique native run identity. All nine distinct journeys pass after
+the recorded focused follow-ups; the initial nine-case result is not described as green.
+
+Bounded browser corrections retain their failed runs: use the public safe History denial,
+allow a native approved effect to finish within the eight-minute test deadline, avoid reading
+the expensive native owner while no undecided approval is visible, select the actual stored
+download filename, open the authorized image preview, wait for the attachment input to become
+enabled, and decode complete JSON string tokens inside a truthfully truncated capture selected
+by the current run's unique marker. The vision PNG contains a base64 `+` serialized as
+`\u002B`; raw JSON substring comparison was an incorrect oracle. Neither capture limits nor
+production timeouts were changed.
+
+Project Files remains text-file-only. Image bytes are downloaded through the existing authorized
+Project Structure content API after proving the actual image preview loaded. Those downloaded
+bytes are attached through the real chat UI and sent through the supported vision path. The file
+journey separately proves the browser download action. The fixture serves a valid 68-byte PNG,
+not a three-byte transport placeholder; all model responses remain deterministic local fixtures.
+
+The later host-classification selections pass five Integration cases and twenty Component cases
+(nineteen initially, then one corrected acknowledged-delivery expectation). Current source-only
+secret scanning uses the identical frozen Unit assembly. These exact follow-ups account for the
+original Stable failures and post-checkpoint changes; no second unfiltered Stable sweep is claimed.
+
+### Log and delivery qualifications
+
+`final-server-log-origin.json` records the actual final container IDs, image digests, PIDs,
+start times, working directories and log hashes. `final-server-log-review.json` accounts for
+protocol/permission denials, incomplete Workflow output and the saved-unavailable refusal.
+The required browser error collections are empty. Server logs are not represented as clean:
+unchanged framework mapping/query warnings and background History maintenance budget retries
+remain visible. Two tooltip-disposal cancellations from detached circuits occurred around failed
+attempts (02:06:37 and 02:55:52 UTC), outside the passing file/image journey intervals;
+the unchanged sibling catches disconnect/disposal exceptions but not this canceled interop call.
+A pre-campaign undecryptable antiforgery cookie was rejected; its original caller is unestablished,
+and it did not recur during the passing native-default/authentication campaigns. These bounded
+observations do not establish an application-wide performance or lifecycle release gate.
+
+The final no-write portability gate retains 15,254 reviewed allowances, including two reviewed
+FileTools namespace false positives in the native evidence helper. Scanner rules are unchanged.
+`final-portability-scan06.json`, `final-portability-no-write07.txt`, `final-docs03.txt` and
+`final-safe-export.json` are the final complete-source, documentation and strict export receipts.
+The export scan includes oversized reports and exact text copies of script extensions outside
+the scanner's default suffix list; generated published build trees and binary images are separate
+build/visual/content proof. There are no secret findings or unreadable/oversized text omissions.
+
+Six coherent local checkpoints cover R1, Sharing, Sources/sandbox, the bounded consumer fixes,
+Stable guard/classification repairs and final validation. `all-delivery-signatures.json` records
+each SHA and native OpenPGP verification against fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6`; `final-validation-commit.json` identifies the final
+checkpoint without embedding a self-referential commit ID here. The working tree and both source
+siblings are clean, and `final-image-source-equivalence.json` proves the final image inputs still
+match executable production/upstream/runner sources.
+
+`final-owned-cleanup.json` records shutdown of the six completion fixture services and its
+separate capacity-retry database by verified container ID. Persistent fixture data and all evidence
+are retained; stopping the disposable retry database releases its temporary in-memory data.
+Source/published/watch sandbox hosts are stopped. S0, the earlier test database, ordinary hosts
+and the retained real-provider pair are preserved. The completion package and historical bundles
+are unchanged; `evidence.json` and the package's final consistency check close all 39 PP2 groups.
+No paid call, push, merge or later provider family was performed.

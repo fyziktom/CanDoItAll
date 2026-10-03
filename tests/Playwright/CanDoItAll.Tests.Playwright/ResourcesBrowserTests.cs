@@ -41,6 +41,7 @@ public sealed class ResourcesBrowserTests(PlaywrightAppFixture fixture) {
         try {
             await page.GotoAsync(fixture.BaseUrl + $"/resources?projectId={project.Value:D}");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+            await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
             await page.GetByTestId("resource-plugin-select").SelectOptionAsync(ResourceConnectorPluginKeys.WebLink);
             await Assertions.Expect(page.GetByTestId($"resource-config-{ResourceConnectorFieldKeys.UrlTitleHint}")).ToBeVisibleAsync();
             await page.GetByTestId("resource-name-input").FillAsync("Browser created resource");

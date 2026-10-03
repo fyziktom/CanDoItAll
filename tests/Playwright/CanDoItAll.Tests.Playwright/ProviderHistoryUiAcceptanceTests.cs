@@ -10,9 +10,10 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     private const string SharedUrlVariable = "CANDOITALL_SHARED_UI_SHARED_URL";
     private const string ClientUrlVariable = "CANDOITALL_SHARED_UI_CLIENT_URL";
     private const string EvidenceDirectoryVariable = "CANDOITALL_SHARED_UI_EVIDENCE_DIRECTORY";
-    private const string SourceSecretName = "UI shared instance JWT";
-    private const string SourceName = "UI shared instance";
-    private const string ProviderName = "UI Shared Ollama";
+    private readonly string SourceSecretName = "UI shared instance JWT";
+    private readonly string SourceName = "UI shared instance";
+    private readonly string ProviderName = "UI Shared Ollama";
+    private readonly AcceptanceSettings? fixtureSettings;
     private const string AcceptanceAgentName = "Provider history acceptance agent";
     private const string TokenNamePrefix = "History acceptance";
     private const string CredentialScopes =
@@ -21,10 +22,20 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     private static readonly string[] LegacySecretNames =
         ["History source A a5416ad7", "History source B a5416ad7"];
 
+    public ProviderHistoryUiAcceptanceTests() { }
+
+    internal ProviderHistoryUiAcceptanceTests(SharedProviderNativeDefaultsUiTests.Settings settings,
+        string sourceSecretName, string sourceName, string providerName) {
+        fixtureSettings = new(settings.Central, settings.Clients[0], settings.Evidence);
+        SourceSecretName = sourceSecretName;
+        SourceName = sourceName;
+        ProviderName = providerName;
+    }
+
     [Fact]
     [Trait("Category", "ExternalSharedProviderUi")]
     public async Task Provider_and_global_history_are_lazy_and_filter_the_same_attempts() {
-        var settings = LoadSettings();
+        var settings = fixtureSettings ?? LoadSettings();
         Directory.CreateDirectory(settings.EvidenceDirectory);
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var subject = $"{Subject}-{suffix}";
@@ -103,6 +114,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             Assert.DoesNotContain(expectedKeyLabels[0], relayText, StringComparison.OrdinalIgnoreCase);
             Assert.Single(Regex.Matches(relayText, Regex.Escape(subject), RegexOptions.IgnoreCase));
             await ScreenshotAsync(source, settings, "5210-relay-key-provider-history.png");
+            await AssertPagingAndDeniedAuthorityAsync(browser, source, settings, issued, publisherProvider, relayProvider);
             await File.WriteAllTextAsync(Path.Combine(settings.EvidenceDirectory, "history-attempt-identities.json"),
                 System.Text.Json.JsonSerializer.Serialize(new {
                     ClientGlobal = clientGlobal,
@@ -111,6 +123,22 @@ public sealed class ProviderHistoryUiAcceptanceTests {
                     PublisherProvider = publisherProvider,
                     RelayGlobal = relayGlobal,
                     RelayProvider = relayProvider
+                }));
+            await DeleteCredentialsByPrefixAsync(source, settings.SharedUrl, tokenNames[0]);
+            var revoked = await sourceContext.APIRequest.GetAsync(settings.SharedUrl + SharedProviderRoutes.Catalog,
+                new() { Headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {issued[0].Token}" } });
+            Assert.Equal(401, revoked.Status);
+            await SharedProviderTwoInstanceUiAcceptanceTests.CreateSecretAsync(client, settings.ClientUrl, SourceSecretName, issued[1].Token);
+            await TestSourceAsync(client, settings.ClientUrl);
+            await InvokeAgentAsync(client, settings.ClientUrl, AcceptanceAgentName, ["SHARED_HISTORY_ROTATED_KEY_B"]);
+            var rotated = await SearchProviderAsync(source, settings.SharedUrl, ProviderName, issued[1].Id);
+            Assert.Contains(relayProvider[0], rotated);
+            Assert.NotEmpty(rotated.Except(relayProvider));
+            await ScreenshotAsync(source, settings, "history-rotated-credential.png");
+            await File.WriteAllTextAsync(Path.Combine(settings.EvidenceDirectory, "history-credential-rotation.json"),
+                System.Text.Json.JsonSerializer.Serialize(new {
+                    RevokedCredentialId = issued[0].Id, ReplacementCredentialId = issued[1].Id,
+                    RevokedStatus = revoked.Status, RotatedAttemptIds = rotated, NativeTurnCompleted = true
                 }));
         } catch (Exception exception) {
             failure = exception;
@@ -196,7 +224,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         return value;
     }
 
-    private static async Task TestSourceAsync(IPage page, string baseUrl) {
+    private async Task TestSourceAsync(IPage page, string baseUrl) {
         await NavigateAsync(page, $"{baseUrl}/agents?tab=providers");
         await page.GetByTestId("agents-provider-profiles-panel").WaitForAsync();
         await page.GetByTestId("providers-connections").ClickAsync();
@@ -209,7 +237,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             .WaitForAsync(new() { Timeout = 60_000 });
     }
 
-    private static async Task CreateAgentAsync(IPage page, string baseUrl, string agentName) {
+    private async Task CreateAgentAsync(IPage page, string baseUrl, string agentName) {
         await OpenAgentCatalogAsync(page, baseUrl);
         await page.GetByTestId("agents-catalog-new").ClickAsync();
         var dialog = page.GetByTestId("agents-details-dialog");
@@ -300,8 +328,12 @@ public sealed class ProviderHistoryUiAcceptanceTests {
     }
 
     private static async Task<IReadOnlyList<Guid>> SearchGlobalAsync(IPage page, string baseUrl, string providerName, Guid? credentialId = null, int minimumAttempts = 2) {
+        await SharedProviderMetadataUiChecks.OpenProviderAsync(page, baseUrl, providerName);
+        var treeId = await page.GetByTestId("providers-tree-provider").Filter(new() { HasTextString = providerName }).First.GetAttributeAsync("id");
+        var match = Regex.Match(treeId!, "[0-9a-f]{32}$", RegexOptions.CultureInvariant);
+        Assert.True(match.Success, "The selected native provider must expose its exact tree identity.");
         await NavigateAsync(page, $"{baseUrl}/agents?tab=request-history");
-        return await SearchAndReadIdsAsync(page, providerName, credentialId, minimumAttempts);
+        return await SearchAndReadIdsAsync(page, providerName, credentialId, minimumAttempts, Guid.ParseExact(match.Value, "N"));
     }
 
     private static async Task<IReadOnlyList<Guid>> SearchProviderAsync(IPage page, string baseUrl, string providerName, Guid? credentialId = null, int minimumAttempts = 2) {
@@ -310,11 +342,17 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         return await SearchAndReadIdsAsync(page, providerName, credentialId, minimumAttempts);
     }
 
-    private static async Task<IReadOnlyList<Guid>> SearchAndReadIdsAsync(IPage page, string providerName, Guid? credentialId, int minimumAttempts) {
+    private static async Task<IReadOnlyList<Guid>> SearchAndReadIdsAsync(IPage page, string providerName, Guid? credentialId, int minimumAttempts, Guid? providerId = null) {
         var panel = page.GetByTestId("provider-request-history");
         await panel.WaitForAsync();
         await panel.GetByText("History not requested", new() { Exact = true }).WaitForAsync();
         Assert.Equal(0, await panel.GetByTestId("history-results").CountAsync());
+        if (providerId.HasValue) {
+            await panel.GetByTestId("history-provider").FillAsync(providerId.Value.ToString("D"));
+        }
+        await panel.GetByTestId("history-more-filters").ClickAsync();
+        await panel.GetByTestId("history-page-size").FillAsync("20");
+        await panel.GetByTestId("history-page-size").PressAsync("Tab");
         if (credentialId.HasValue) {
             await panel.GetByTestId("history-credential").FillAsync(credentialId.Value.ToString("D"));
         }
@@ -326,6 +364,11 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         var available = await details.CountAsync();
         Assert.InRange(available, minimumAttempts, 20);
         var readCount = credentialId.HasValue ? available : minimumAttempts;
+        return await ReadVisibleIdsAsync(page, readCount);
+    }
+
+    private static async Task<IReadOnlyList<Guid>> ReadVisibleIdsAsync(IPage page, int readCount) {
+        var details = page.GetByTestId("history-results").GetByTestId("history-details");
         var ids = new List<Guid>();
         for (var index = 0; index < readCount; index++) {
             await details.Nth(index).ClickAsync();
@@ -343,6 +386,43 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         }
         return ids;
+    }
+
+    private static async Task AssertPagingAndDeniedAuthorityAsync(IBrowser browser, IPage source, AcceptanceSettings settings,
+        IReadOnlyList<IssuedCredential> credentials, IReadOnlyList<Guid> agentIds, IReadOnlyList<Guid> relayIds) {
+        if (!await source.GetByTestId("history-page-size").IsVisibleAsync()) {
+            await source.GetByTestId("history-more-filters").ClickAsync();
+        }
+        await source.GetByTestId("history-page-size").FillAsync("1");
+        await source.GetByTestId("history-page-size").PressAsync("Tab");
+        await source.GetByTestId("history-credential").FillAsync(credentials[0].Id.ToString("D"));
+        await source.GetByTestId("history-search").ClickAsync();
+        await Assertions.Expect(source.GetByTestId("history-details")).ToHaveCountAsync(1);
+        var pagedIds = new List<Guid>();
+        for (var index = 0; index < agentIds.Count; index++) {
+            await Assertions.Expect(source.GetByTestId("history-results")).ToContainTextAsync($"Page {index + 1} · 1 rows.");
+            pagedIds.Add(Assert.Single(await ReadVisibleIdsAsync(source, 1)));
+            if (index + 1 < agentIds.Count) {
+                await source.GetByTestId("history-next").ClickAsync();
+            }
+        }
+        Assert.Equal(agentIds.Order(), pagedIds.Order());
+        Assert.Equal(pagedIds.Count, pagedIds.Distinct().Count());
+        await source.GetByTestId("history-credential").FillAsync(credentials[1].Id.ToString("D"));
+        await source.GetByTestId("history-search").ClickAsync();
+        await Assertions.Expect(source.GetByTestId("history-previous")).ToBeDisabledAsync();
+        Assert.Equal(relayIds, await ReadVisibleIdsAsync(source, 1));
+        await ScreenshotAsync(source, settings, "history-pagination-credential-change.png");
+        await using var deniedContext = await browser.NewContextAsync(ContextOptions());
+        await deniedContext.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {credentials[0].Token}" });
+        var denied = await deniedContext.NewPageAsync();
+        await NavigateAsync(denied, settings.SharedUrl + "/agents?tab=request-history");
+        await denied.GetByTestId("history-search").ClickAsync();
+        await Assertions.Expect(denied.GetByTestId("history-error"))
+            .ToHaveTextAsync("Denied: Access denied. This evidence is not available to the current identity.");
+        Assert.Empty(await denied.GetByTestId("history-details").AllAsync());
+        Assert.Empty(await denied.GetByTestId("history-content-text").AllAsync());
+        await ScreenshotAsync(denied, settings, "history-authority-denied.png");
     }
 
     private static async Task DeleteSecretAsync(IPage page, string baseUrl, string name) {

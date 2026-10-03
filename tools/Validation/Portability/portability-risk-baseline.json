@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-02T17:36:58.047496+00:00",
+  "generated_utc": "2026-10-02T23:30:44.661245+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15252,
+  "allowance_count": 15254,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -78857,6 +78857,18 @@
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eCommandLine.cs",
       "category": "path-api",
       "source_fingerprint": "53b686c290939742f55565e8a86efeb8b345a7b3df103433a556174f51edc74d",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eConsumerEvidence.cs",
+      "category": "external-tool",
+      "source_fingerprint": "3f6df36422b87d4fdc1cdc45d38b88e8f917e5ddde73d22be2cb08f2307a45ad",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eConsumerEvidence.cs",
+      "category": "external-tool",
+      "source_fingerprint": "7c97a8fbbcd2dd01736279553272094abfcc8d50f235e77528572dcacb923d31",
       "count": 1
     },
     {

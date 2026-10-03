@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -34,8 +35,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         var sourceToken = await IssueTokenAsync(central, settings.Central, shared: true);
         using var centralApi = Api(settings.Central, sourceToken);
         var sourceProfiles = await ProfilesAsync(centralApi);
-        var native = Presets.Select(name => Assert.Single(sourceProfiles, profile => profile.Name ==
-            (settings.Resume && sourceProfiles.Any(item => item.Name == "PP2 " + name) ? "PP2 " + name : name))).ToArray();
+        var native = Presets.Select(name => Assert.Single(sourceProfiles, profile => profile.Name == name)).ToArray();
         await EvidenceAsync(settings, "source-defaults-before", native.Select(SafeProfile).ToArray());
         var savedNative = new List<ProviderProfile>();
         foreach (var source in native) {
@@ -47,16 +47,32 @@ public sealed class SharedProviderNativeDefaultsUiTests {
                 await central.GetByTestId("provider-editor-tab-sharing").ClickAsync();
                 await central.GetByText("This provider is not persisted", new() { Exact = true }).WaitForAsync();
                 Assert.True(await central.GetByTestId("shared-provider-publish").CountAsync() == 0);
-                await central.GetByTestId("providers-new").ClickAsync();
-                await central.GetByTestId("providers-kind-select").SelectOptionAsync("Ollama");
-                await Assertions.Expect(central.GetByTestId("providers-kind-select")).ToHaveValueAsync("Ollama");
-                await central.GetByTestId("providers-model-input").FillAsync(source.DefaultModel);
-                await central.GetByTestId("provider-editor-tab-runtime").ClickAsync();
-                await central.GetByTestId("providers-suggested-models").FillAsync(string.Join('\n', source.SuggestedModels));
-                await central.GetByTestId("providers-config-json").FillAsync(source.ConfigurationJson);
             }
+            var savedName = "PP2 " + source.Name;
+            var existing = sourceProfiles.SingleOrDefault(profile => profile.Name == savedName);
+            Assert.True(existing is null || settings.Resume, "An owned profile already exists; explicitly resume the fixture.");
+            if (existing is null) {
+                await central.GetByTestId("providers-new").ClickAsync();
+                await Assertions.Expect(central.GetByTestId("providers-name-input")).ToHaveValueAsync("New OpenAI provider");
+            } else {
+                await OpenAsync(central, settings.Central, savedName);
+            }
+            await central.GetByTestId("providers-kind-select").SelectOptionAsync(source.Kind.ToString());
+            await Assertions.Expect(central.GetByTestId("providers-kind-select")).ToHaveValueAsync(source.Kind.ToString());
+            await central.GetByTestId("providers-purpose-select").SelectOptionAsync(source.Purpose.ToString());
+            await central.GetByTestId("providers-model-input").FillAsync(source.DefaultModel);
+            await central.GetByTestId("providers-model-input").PressAsync("Tab");
+            await central.GetByTestId("provider-editor-tab-runtime").ClickAsync();
+            await central.GetByTestId("providers-transport-select").SelectOptionAsync(source.Transport.ToString());
+            await central.GetByTestId("providers-suggested-models").FillAsync(string.Join('\n', source.SuggestedModels));
+            await central.GetByTestId("providers-config-json").FillAsync(source.ConfigurationJson);
+            await central.GetByLabel("Streaming", new() { Exact = true }).SetCheckedAsync(source.SupportsStreaming);
+            await central.GetByLabel("Tool calling", new() { Exact = true }).SetCheckedAsync(source.SupportsTools);
+            await central.GetByLabel("Framework-managed history", new() { Exact = true }).SetCheckedAsync(source.PreferFrameworkManagedChatHistory);
+            await central.GetByLabel("Background responses", new() { Exact = true }).SetCheckedAsync(source.SupportsBackgroundResponses);
+            await central.GetByTestId("provider-editor-tab-prices").ClickAsync();
+            await CopyPricesAsync(central, source.ModelPrices);
             await central.GetByTestId("provider-editor-tab-connection").ClickAsync();
-            var savedName = source.Name.StartsWith("PP2 ", StringComparison.Ordinal) ? source.Name : "PP2 " + source.Name;
             await central.GetByTestId("providers-name-input").FillAsync(savedName);
             await central.GetByTestId("providers-base-url-input").FillAsync(source.Kind == ProviderKind.Ollama
                 ? "http://deterministic-upstream:8080" : "http://deterministic-upstream:8080/v1");
@@ -64,6 +80,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
             await central.GetByTestId("providers-save").ClickAsync();
             await central.GetByText("Provider saved", new() { Exact = true }).WaitForAsync();
             var saved = Assert.Single(await ProfilesAsync(centralApi), profile => profile.Name == savedName);
+            Assert.NotEqual(source.Id, saved.Id);
             Assert.Equal(source.DefaultModel, saved.DefaultModel);
             Assert.Equal(source.SuggestedModels, saved.SuggestedModels);
             Assert.Equal(source.Transport, saved.Transport);
@@ -78,6 +95,11 @@ public sealed class SharedProviderNativeDefaultsUiTests {
             }
             await Assertions.Expect(central.GetByTestId("shared-provider-publication-status")).ToContainTextAsync("Published");
         }
+
+        var retained = await ProfilesAsync(centralApi);
+        Assert.Equal(JsonSerializer.Serialize(native.Select(SafeProfile), Json), JsonSerializer.Serialize(
+            native.Select(original => SafeProfile(Assert.Single(retained, profile => profile.Id == original.Id))), Json));
+        await EvidenceAsync(settings, "native-seed-identities-retained", native.Select(profile => new { profile.Id, profile.Name }));
 
         var catalog = SharedProviderProtocolJson.DeserializeCatalog(await centralApi.GetStringAsync(SharedProviderRoutes.Catalog));
         foreach (var source in savedNative) {
@@ -196,7 +218,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         Assert.Equal(profile.SuggestedModels.Select(profile.GetModelDisplayName).Order(StringComparer.Ordinal), models.Order(StringComparer.Ordinal));
     }
 
-    private static async Task AssertPriceParityAsync(IPage central, IPage client, string sourceUrl, string clientUrl,
+    internal static async Task AssertPriceParityAsync(IPage central, IPage client, string sourceUrl, string clientUrl,
         ProviderProfile source, ProviderProfile target) {
         await OpenAsync(central, sourceUrl, source.Name);
         await central.GetByTestId("provider-editor-tab-prices").ClickAsync();
@@ -215,6 +237,30 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         Assert.All(actual.Keys, name => Assert.Contains(target.ModelCatalog, model => model.DisplayName == name));
     }
 
+    private static async Task CopyPricesAsync(IPage page, IReadOnlyList<ProviderModelTokenPrice> prices) {
+        var rows = page.Locator("[data-testid^='provider-pricing-row-']");
+        for (var remaining = await rows.CountAsync(); remaining > 0; remaining--) {
+            await rows.First.GetByRole(AriaRole.Button, new() { Name = "Remove", Exact = true }).ClickAsync();
+            await Assertions.Expect(rows).ToHaveCountAsync(remaining - 1);
+        }
+        for (var row = 0; row < prices.Count; row++) {
+            var price = prices[row];
+            await page.GetByTestId("provider-pricing-add-button").ClickAsync();
+            await Assertions.Expect(rows).ToHaveCountAsync(row + 1);
+            await page.GetByTestId($"provider-pricing-model-{row}").FillAsync(price.Model);
+            decimal?[] values = [price.InputPerMillionTokensUsd, price.CachedInputPerMillionTokensUsd,
+                price.CacheWritePerMillionTokensUsd, price.OutputPerMillionTokensUsd, price.ImageInputPerMillionTokensUsd,
+                price.CachedImageInputPerMillionTokensUsd, price.LongContextThresholdTokens,
+                price.LongContextInputPerMillionTokensUsd, price.LongContextCachedInputPerMillionTokensUsd,
+                price.LongContextCacheWritePerMillionTokensUsd, price.LongContextOutputPerMillionTokensUsd];
+            for (var field = 0; field < PriceFields.Length; field++) {
+                await page.GetByTestId($"provider-pricing-{PriceFields[field]}-{row}")
+                    .FillAsync(values[field]?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
+            }
+            await page.GetByTestId($"provider-pricing-{PriceFields[^1]}-{row}").PressAsync("Tab");
+        }
+    }
+
     private static async Task<Dictionary<string, string[]>> PricesAsync(IPage page) {
         var prices = new Dictionary<string, string[]>(StringComparer.Ordinal);
         var count = await page.Locator("[data-testid^='provider-pricing-row-']").CountAsync();
@@ -229,7 +275,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         return prices;
     }
 
-    private static async Task AssertThinkingParityAsync(IPage central, IPage client, string sourceUrl, string clientUrl,
+    internal static async Task AssertThinkingParityAsync(IPage central, IPage client, string sourceUrl, string clientUrl,
         ProviderProfile source, ProviderProfile target) {
         await OpenAsync(central, sourceUrl, source.Name);
         await central.GetByTestId("provider-editor-tab-thinking").ClickAsync();
@@ -279,7 +325,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         await page.GetByTestId("shared-provider-connections-close").ClickAsync();
     }
 
-    private static async Task SyncAsync(IPage page, string address) {
+    internal static async Task SyncAsync(IPage page, string address) {
         await NavigateAsync(page, address + "/agents?tab=providers");
         await page.GetByTestId("providers-connections").ClickAsync();
         await page.GetByTestId("shared-provider-source-card").Filter(new() { HasTextString = SourceName })
@@ -288,7 +334,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         await page.GetByTestId("shared-provider-connections-close").ClickAsync();
     }
 
-    private static async Task<string> IssueTokenAsync(IPage page, string address, bool shared) {
+    internal static async Task<string> IssueTokenAsync(IPage page, string address, bool shared, IEnumerable<string>? additionalScopes = null) {
         await NavigateAsync(page, address + "/settings?tab=api-access");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("pp2-native-ui");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("PP2 native UI verification");
@@ -299,6 +345,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         if (shared) {
             scopes.AddRange([ApiAccessScopeNames.ReadSharedProviderCatalog, ApiAccessScopeNames.InvokeSharedProviders]);
         }
+        scopes.AddRange(additionalScopes ?? []);
         await page.GetByTestId("api-token-scopes").FillAsync(string.Join(' ', scopes));
         await page.GetByTestId("api-token-scopes").PressAsync("Tab");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
@@ -310,7 +357,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         return token;
     }
 
-    private static HttpClient Api(string address, string token) {
+    internal static HttpClient Api(string address, string token) {
         var client = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, UseProxy = false }) {
             BaseAddress = new(address + "/"), Timeout = TimeSpan.FromSeconds(60)
         };
@@ -318,7 +365,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         return client;
     }
 
-    private static async Task<ProviderProfile[]> ProfilesAsync(HttpClient api) =>
+    internal static async Task<ProviderProfile[]> ProfilesAsync(HttpClient api) =>
         await api.GetFromJsonAsync<ProviderProfile[]>("api/agents/providers", Json) ?? throw new InvalidOperationException("Provider read returned no document.");
     private static Task<IBrowserContext> DesktopAsync(IBrowser browser) => browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
     private static Task OpenAsync(IPage page, string address, string name) => SharedProviderMetadataUiChecks.OpenProviderAsync(page, address, name);
@@ -330,7 +377,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
     private static Task ScreenshotAsync(IPage page, Settings settings, string name) =>
         page.ScreenshotAsync(new() { Path = Path.Combine(settings.Evidence, name + ".png"), FullPage = false });
 
-    private sealed record Settings(string Central, string[] Clients, string Evidence, bool Resume) {
+    internal sealed record Settings(string Central, string[] Clients, string Evidence, bool Resume) {
         public static Settings Load() {
             if (Environment.GetEnvironmentVariable("CANDOITALL_ALLOW_SHARED_PROVIDER_FIXTURE_WRITES") != "1") {
                 throw new InvalidOperationException("Owned fixture writes require explicit opt-in.");

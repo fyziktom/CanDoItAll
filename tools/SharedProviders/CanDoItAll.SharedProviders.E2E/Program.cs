@@ -20,6 +20,16 @@ internal static class Program
         string? roleToken = null;
         try
         {
+            if (args is [E2eConsumerUpstream.Command, ..]) {
+                commandToken = E2eConsumerUpstream.Command;
+                await E2eConsumerUpstream.ExecuteAsync(args, cancellation.Token);
+                return 0;
+            }
+            if (args is [E2eConsumerEvidence.Command, ..]) {
+                commandToken = E2eConsumerEvidence.Command;
+                await E2eConsumerEvidence.ReadAsync(args, cancellation.Token);
+                return 0;
+            }
             if (args is [E2eModelEvidence.Command]) {
                 commandToken = E2eModelEvidence.Command;
                 await E2eModelEvidence.ReadAsync(cancellation.Token);
