@@ -49,10 +49,20 @@ public sealed class SharedProviderCustomMetadataTests {
         string[] models = [CustomDefault, UnknownModel, DatedModel, "gpt-4.1", OpenAiModelIds.Gpt54Mini];
         await SharedProviderMetadataUiChecks.ConfigureAsync(central, fixture.Settings.Central, ProviderName,
             CustomDefault, false, 0.00012345m, models[1..]);
+        await SharedProviderMetadataUiChecks.OpenProviderAsync(central, fixture.Settings.Central, ProviderName);
+        await central.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
+        await Assertions.Expect(central.GetByTestId("providers-save")).ToBeEnabledAsync();
+        await Assertions.Expect(central.GetByTestId("providers-model-input")).ToHaveValueAsync(CustomDefault);
         await central.GetByTestId("provider-editor-tab-thinking").ClickAsync();
         await central.GetByTestId("provider-thinking-search").FillAsync(CustomDefault);
         await central.GetByRole(AriaRole.Button, new() { Name = "Edit thinking for " + CustomDefault, Exact = true }).ClickAsync();
-        await central.GetByTestId("thinking-automatic").UncheckAsync();
+        try {
+            await central.GetByTestId("thinking-automatic").UncheckAsync();
+        } catch {
+            await central.ScreenshotAsync(new() { Path = Path.Combine(fixture.Settings.Evidence, "custom-thinking-failure.png") });
+            await File.WriteAllTextAsync(Path.Combine(fixture.Settings.Evidence, "custom-thinking-failure.txt"), await central.Locator("body").InnerTextAsync());
+            throw;
+        }
         await central.GetByTestId("thinking-supported").CheckAsync();
         foreach (var effort in Enum.GetValues<AgentReasoningEffortLevel>()) {
             await central.GetByTestId("thinking-allow-" + effort).SetCheckedAsync(effort is AgentReasoningEffortLevel.None or AgentReasoningEffortLevel.High);

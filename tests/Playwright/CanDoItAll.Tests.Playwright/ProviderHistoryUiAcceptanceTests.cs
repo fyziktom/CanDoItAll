@@ -128,7 +128,8 @@ public sealed class ProviderHistoryUiAcceptanceTests {
                     RelayGlobal = relayGlobal,
                     RelayProvider = relayProvider
                 }));
-            await DeleteCredentialsByPrefixAsync(source, settings.SharedUrl, tokenNames[0]);
+            var deletedCredentials = await DeleteCredentialsByPrefixAsync(source, settings.SharedUrl, tokenNames[0]);
+            Assert.Equal(1, deletedCredentials);
             var revoked = await sourceContext.APIRequest.GetAsync(settings.SharedUrl + SharedProviderRoutes.Catalog,
                 new() { Headers = new Dictionary<string, string> { ["Authorization"] = $"Bearer {issued[0].Token}" } });
             Assert.Equal(401, revoked.Status);
@@ -461,7 +462,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await page.GetByTestId("settings-operation").First.GetByText("DeleteSecret: Committed", new() { Exact = true }).WaitForAsync();
     }
 
-    private static async Task DeleteCredentialsByPrefixAsync(IPage page, string baseUrl, string displayNamePrefix) {
+    private static async Task<int> DeleteCredentialsByPrefixAsync(IPage page, string baseUrl, string displayNamePrefix) {
         const int cleanupLimit = 25;
         for (var deleted = 0; deleted < cleanupLimit; deleted++) {
             await NavigateAsync(page, $"{baseUrl}/settings?tab=api-access");
@@ -471,13 +472,13 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             await dialog.GetByTestId("api-tokens-search").FillAsync(displayNamePrefix);
             var search = dialog.GetByTestId("api-tokens-search-submit");
             await search.ClickAsync();
-            await Assertions.Expect(search).ToBeEnabledAsync();
-            await page.WaitForTimeoutAsync(500);
+            await Assertions.Expect(dialog.GetByTestId("api-tokens-page")).ToContainTextAsync($"Search “{displayNamePrefix}”");
+            await Assertions.Expect(dialog.GetByTestId("api-tokens-stale")).ToHaveCountAsync(0);
             var row = dialog.Locator("tbody tr")
                 .Filter(new() { HasTextString = displayNamePrefix })
                 .First;
             if (await row.CountAsync() == 0) {
-                return;
+                return deleted;
             }
             var delete = row.GetByTestId("api-token-delete");
             await Assertions.Expect(delete).ToBeEnabledAsync();
@@ -486,6 +487,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
             await confirmation.WaitForAsync();
             await page.GetByTestId("api-token-confirm").ClickAsync();
             await confirmation.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+            await Assertions.Expect(dialog.GetByTestId("api-tokens-outcome")).ToHaveTextAsync("The change was saved.");
         }
         throw new InvalidOperationException(
             $"More than {cleanupLimit} token records matched '{displayNamePrefix}'.");
