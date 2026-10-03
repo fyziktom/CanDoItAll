@@ -1,10 +1,10 @@
 # Provider Request History PP3
 
-The complete UI family has moved. The first native campaign exposed two bounded defects, repaired
-with failing-first regressions and source/publish browser proof. Rebuilt native images now have
-passing attempts for the backend vector and all nine native browser journeys, including canonical
-content, denial and credential rotation. The one frozen Stable checkpoint remains in progress.
-This record does not claim application release readiness or remote dependency delivery.
+PP3 and the bounded Tooltip prerequisite are complete. The full History UI family is independent,
+and rebuilt native images have passing attempts for the backend vector and all nine native browser
+journeys, including canonical content, denial and credential rotation. Failed attempts and the
+qualified frozen Stable result remain recorded below. Dependency delivery is verified locally;
+whole-application release readiness and remote dependency publication are not established.
 
 ## Boundary and behavior
 
@@ -95,7 +95,7 @@ isolating Workflow primary evidence. There is no schema, HTTP or permission-poli
 The frozen Stable Components assembly found 12 policy-panel test setup failures because the neutral
 History fixture no longer registers the production profile notification service. The policy test host
 now registers that service explicitly. The 13 policy and 26 context cases passed together, and again
-after the production corrections. The broad run remains the original frozen attempt; it is not restarted.
+after the production corrections. The broad run remains the original frozen attempt; it was not restarted.
 
 Direct repaired UI, persistence, Web and sandbox builds passed without warnings. The independent
 History family passed 84/84 after the fixes. The exact native authorization/source/recheck selection
@@ -161,6 +161,8 @@ All browser evidence uses synthetic content at 1920×1080 and scale 1.
 | Final image initial final UI | 2/3 | PP2 concurrency/source lifecycle passed; History caller-page handoff timed out |
 | Final image synchronized paging/denial/rotation | 1/1 | Exact caller rows, pagination, limited denial, revoked-key 401 and replacement native turn |
 | Anonymous native History | Passed | Actual startup confirmation, lazy mount, explicit denial, zero rows/details/content |
+| Frozen Stable, original attempt | 16,197 passed / 14 failed / 0 skipped | 25 assemblies; 16,156 listed cases expand to 16,211; exact qualifications below |
+| Frozen scanner, source-only follow-up | 1/1 | Hash-verified 8,341 source inputs; two historical synthetic matches reviewed separately |
 
 The full browser selection discovers 11 cases: two History sandbox and nine native three-instance
 cases. Every distinct native case has a passing final-image attempt: defaults 1, media 1, canonical
@@ -204,8 +206,9 @@ The immutable app image is
 `sha256:1467d0b4e03b3c1cf5cf1f62438d6e1d1837381feef6d55bb78f41f53c8ad40c`;
 scripted external upstream is
 `sha256:c1ab43e00468a481fd4c4fc27121776e2577628113989bb0d28148e8c78275f7`.
-The fixture uses host SDK 10.0.303, Docker SDK 10.0.302/runtime 10.0.10 and configuration
-`HistoryPp3Native`; browser follow-ups use `HistoryPp3Followup`. Later changes are confined to two
+The fixture uses host SDK 10.0.303 and Docker SDK 10.0.302/runtime 10.0.10. The application image
+is published in `Release`; the native runner uses `HistoryPp3Native` and browser follow-ups use
+`HistoryPp3Followup`. Later changes are confined to two
 browser-test files and this report. Their source diffs and exact rebuilt test DLL hashes
 are recorded separately; the unchanged production image is not relabelled with a later commit.
 
@@ -234,24 +237,53 @@ cross-database permission denials are classified against fresh startup and the i
 Exact counts, times, container/image IDs and private log hashes are in `native-final-log-review.json`
 and `native-final-server-log-receipts.json`. No unrelated server log was treated as current proof.
 
-## Remaining closure
+## Delivery and qualified Stable closure
 
 Final native work is complete on rebuilt central/client-a/client-b images from the source pair above.
 Historical PP2 native and qualified Stable results remain historical, including 16,144/16,159.
 All seven exact owned native containers are stopped; volumes, images, networks and private evidence
 are retained. The three owned public-denial relays were removed and the measured watcher was stopped.
-Ordinary retained instances were untouched. The separate owned Stable database is still needed.
+Ordinary retained instances were untouched. The exact separate Stable PostgreSQL container is also
+stopped, with its volume and logs retained. It had approximately 774 GiB free at closure.
 
-One final frozen Stable checkpoint is selected because the shared BaseLib lifecycle change affects
-consumer teardown and this slice changes test aggregate/CI ownership. It is not repeated at each
-stage. The owned PostgreSQL 18.6 test fixture uses disk-backed storage with measured headroom;
-the previous one-GiB tmpfs fixture is not reused. Portability delta review, no-write enforcement,
-documentation/evidence checks, safe export, verified signed application checkpoints and exact
-owned-resource cleanup remain required before final closure.
+One frozen Stable checkpoint was selected because the shared BaseLib lifecycle change affects
+consumer teardown and this slice changes test aggregate/CI ownership. It completed in 3 h 2 m 42 s
+using `HistoryPp3Proof` binaries from `5e53e5aaea2f3411cdc1f59eaccc52924f68f382` and signed Components
+`b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`. All 25 assemblies ran. The 55-case runtime expansion is
+reconciled by method against discovery and original TRX. No second broad sweep or retrospective
+green result is claimed. The owned PostgreSQL 18.6 fixture used disk-backed storage with measured
+headroom; the old one-GiB tmpfs fixture was not reused.
 
-The ongoing frozen run has also found one pre-entry Workflow OpenAPI documentation gap: descriptions
+Twelve original failures were policy-panel test-host setup errors, repaired and covered by the
+39/39 current policy/context follow-up. One failure is a pre-entry Workflow OpenAPI gap: descriptions
 are missing for `WorkflowProviderOption.modelCatalog` and `isSourceManaged`. Those fields were added
 in `ddba548adf` before PP3 entry. Git blob comparison confirms their model, route, documentation
 transformers and coverage fixture are unchanged. This actual failure remains an independent
 Workflow documentation follow-up; no coverage assertion or owner source is changed to make it pass.
-It does not invalidate the History UI proof and does preclude describing the broad run as all green.
+It does not invalidate the History UI proof and precludes describing the broad run as all green.
+
+The last original failure is the source-secret scanner reading the exact generated scanner sample
+in two ignored historical A2 JSON reports. Both values were matched by hash and construction to the
+security test fixture; the historical files were preserved. The identical frozen scanner passes on
+a hash-verified copy of all 8,341 tracked/nonignored source inputs. This qualified source-only result
+does not claim ignored evidence was scanned. Its first copy attempt hit Windows path length limits;
+an owned shorter snapshot path resolved the setup issue without changing scanner rules. The separate
+safe-export scan covers only the current reviewed export, with no unreadable/oversized omissions.
+
+Final portability scans cover 8,231 files and 33,838 findings. Enforcement passes with all 15,254
+reviewed executable-source findings unchanged and no baseline write. Maintained documentation
+validation passes for 347 files; documentation-evidence tests pass 9/9, and portability/secret scanner
+self-tests pass 6/6 and 4/4. The sealed 51-file package and its historical inputs are unchanged.
+
+Signed application checkpoints are the UI extraction `5e53e5aaea2f3411cdc1f59eaccc52924f68f382`, the
+bounded native repairs `17452fc2c892de1edb62cbdbb284b5a44b4536b2`, and native proof/test synchronization
+`25b5262d7ed1f21ec4bdf6ee36b51ad1f0f31beb`, all verified with the fingerprint above. Final report-only
+closure is recorded in the delivery receipt. Later test/documentation commits have no production
+source delta from the tested image pair. No paid provider calls or changes to the exhausted live
+journal were made.
+
+Local evidence is in `artifacts/provider-history-pp3/20261003`: `evidence.json` maps every required
+group and attempt, `stable/reconciled.json` retains the original broad outcome, and `shareable` holds
+reviewed metadata, hashes and denial images. Raw owner payloads, transcripts, credentials, server
+logs and native content screenshots stay private under `.artifacts`. The evidence checker validates
+structure/integrity only; actual execution rests on the retained logs, TRX, image and binary receipts.
