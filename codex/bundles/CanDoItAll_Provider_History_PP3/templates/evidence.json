@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-PROVIDER-HISTORY-PP3",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Entry, source drift and signed-key preflight",
+      "layer": "source",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "Tooltip canceled disposal and negative active failures",
+      "layer": "unit",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Tooltip delayed import/queued calls/two owners",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Exact sibling delivery and real teardown",
+      "layer": "browser",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "PP2 local baseline/acknowledged delivery retained",
+      "layer": "native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Complete History boundary and evaluated dependencies",
+      "layer": "architecture",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Mount/filter/details/content lazy read separation",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "UTC and raw filter validation/exact IDs",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Frozen applied query/cursors/pagination",
+      "layer": "native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Request replacement and stale rendered intent fences",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Exact metadata/detail identity and cancellation",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Canonical owner and content authorization",
+      "layer": "native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Profile/auth/scope/credential retirement",
+      "layer": "native",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Sensitive reference disposal and encoded content",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Coverage/expiry/truncation/usage-price semantics",
+      "layer": "component",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Independent full sandbox scenarios and read counters",
+      "layer": "sandbox",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Source sandbox large-desktop behavior",
+      "layer": "browser",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Independent publish/assets/desktop behavior",
+      "layer": "browser",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Three-instance default/non-default model parity",
+      "layer": "multi-instance",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Global/provider/caller page and attempt agreement",
+      "layer": "multi-instance",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Public/limited refusal and credential rotation",
+      "layer": "multi-instance",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Actual Agent/Project Structure file History linkage",
+      "layer": "journey",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Actual Simple Chat transcript History linkage",
+      "layer": "journey",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Workflow/TestLab accepted and incomplete output",
+      "layer": "journey",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "PP1/PP2/Workspace/Projects nested UI regression",
+      "layer": "browser",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Final targeted families and broad-checkpoint decision",
+      "layer": "validation",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Repeat measured watch loop and restored sources",
+      "layer": "measurement",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Portability/docs/safe-export closure",
+      "layer": "static",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Verified signed commits and source/image/dependency pair",
+      "layer": "delivery",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "title": "Owned cleanup, preserved historical inputs and limits",
+      "layer": "closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "history_ui_complete": false,
+    "tooltip_followup_complete": false,
+    "native_history_campaign_passed": false,
+    "dependency_delivery": "NOT_VERIFIED",
+    "application_release_ready": false,
+    "unresolved_findings": [],
+    "signed_commits": []
+  }
+}

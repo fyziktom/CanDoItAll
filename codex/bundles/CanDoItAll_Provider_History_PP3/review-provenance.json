@@ -1,0 +1,14 @@
+{
+  "reviewed_on": "2026-10-03",
+  "main_repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "reviewed_head": "643a295e112ca29835323501907bf1d8920a5945",
+  "previous_reviewed_head": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+  "components_repository": "fyziktom/CanDoItAll.Components",
+  "components_branch": "development",
+  "components_head": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "product_tests_run_by_reviewer": false,
+  "private_artifacts_available": false,
+  "review_method": "Connected GitHub source/test-report inspection; local package validation only.",
+  "new_work": "Bounded Tooltip lifecycle fix followed by complete Provider Request History PP3."
+}

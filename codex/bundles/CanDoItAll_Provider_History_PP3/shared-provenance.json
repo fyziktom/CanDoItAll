@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "origin_archive": "CanDoItAll_Provider_Sharing_PP2_Completion_Codex_Max.zip",
+  "origin_archive_sha256": "776bf1f0d1a4cdb2d02df2f2ed90ce29d43ab04db5713b63a3b5b7736c0599a1",
+  "shared_id": "CDA-UI-DECOUPLING-SHARED-v3",
+  "files": [
+    {
+      "path": "shared/MANIFEST.sha256",
+      "sha256": "257a95547137626e7dcca85284e7aafe7323cb79a706f38a662a0bdd7047b8c5"
+    },
+    {
+      "path": "shared/README.cs.md",
+      "sha256": "007b77ca9877383b14aef55f49c0deba4e10371cf1153015be2b43693f97490c"
+    },
+    {
+      "path": "shared/README.md",
+      "sha256": "8ce532eb577ed43cc630f2d14d59e2706950563438c3331d45c4a4a37c2605fe"
+    },
+    {
+      "path": "shared/VALIDATION.md",
+      "sha256": "af499bfd35fb498114931f2f891a10916b7cda90311c224bcf5f27ba4989c25b"
+    },
+    {
+      "path": "shared/architecture/01-boundaries.md",
+      "sha256": "cd6c856a43d73ee0b36e33e74c2c357056ff0d4b9a74d7a8745d55266809dbb3"
+    },
+    {
+      "path": "shared/architecture/02-state-and-effects.md",
+      "sha256": "3f2a7c3d08ed30d6722350468042dad3589f28d2d9f3274902eee34726b780ab"
+    },
+    {
+      "path": "shared/architecture/03-sandboxes-and-dev-loop.md",
+      "sha256": "2645afef9168526abbe3d5b7288bb4d19fce1acde66fefd0a93300b906b57bd8"
+    },
+    {
+      "path": "shared/architecture/04-domain-safeguards.md",
+      "sha256": "f87f8ac63080cc383e18ca0a35c95d81eb47d97de4210eb916bbfe82c037193b"
+    },
+    {
+      "path": "shared/audit/REVIEW.md",
+      "sha256": "802fa604cbc5a1123bfcccacb9caf4984ce10029dea03913ca3a6396327d7814"
+    },
+    {
+      "path": "shared/audit/input-provenance.json",
+      "sha256": "b79ca9c12b926f42feac376d4cae53dd15891dde97d2d278ffd26d62e80302a7"
+    },
+    {
+      "path": "shared/audit/input-reconciliation.md",
+      "sha256": "4d3542b50bbd6cd653e1083b209934971198dedf09c4d7ca5b6b905c7236bc1c"
+    },
+    {
+      "path": "shared/audit/module-map.md",
+      "sha256": "e9089cfb5c1179c7fccb0eb3951f3a6dfda28014531566246e6a665e1ae36aa9"
+    },
+    {
+      "path": "shared/audit/package-validation.md",
+      "sha256": "783f7356b3f00100481e3da6f0e347322c10c3734efa5a8836c59aed35c3af6e"
+    },
+    {
+      "path": "shared/audit/source-register.json",
+      "sha256": "8a42b28d30348db8ffcacdf5de88ab060b7b5d787542afa7ede5e0279eec3fb3"
+    },
+    {
+      "path": "shared/audit/source-register.md",
+      "sha256": "e200326e3989750c158ac0d4644d16ef7264ca4640f580c458f1fd9c11fc9b2d"
+    },
+    {
+      "path": "shared/bundle.json",
+      "sha256": "96afd1cba336158f8d5c6397f2265d5d6474d84a35ed3ef5b07212becc0414c4"
+    },
+    {
+      "path": "shared/prompt.md",
+      "sha256": "69127f0558545168fc015da250c110f1cdecadedd92cfe592eb042c25812cb9f"
+    },
+    {
+      "path": "shared/templates/evidence.md",
+      "sha256": "a92a7e20835213056b803fe65726ec084d6c01ddd314173e8b67f5e0b6b3f9e1"
+    },
+    {
+      "path": "shared/templates/module-slice.md",
+      "sha256": "0c8e28c0ac22eca3744341baa0d266f3b4c99d2d57ac421a704b1292e7c38d01"
+    },
+    {
+      "path": "shared/tools/check_review_drift.py",
+      "sha256": "e1857c15b3aab92a7bd271b66c780930e088e9aec0ccb5f80529ff8c0d8f43cd"
+    },
+    {
+      "path": "shared/tools/test_tooling.py",
+      "sha256": "f3b18769e41a26f7b335ae90d34460ed34e26ab85583e850dc29c9d4e323037c"
+    },
+    {
+      "path": "shared/tools/validate_bundle.py",
+      "sha256": "9b963d43b89274090a16db21bd8ba0438f8362d744aa5cfd37de1143b0d85372"
+    }
+  ]
+}
