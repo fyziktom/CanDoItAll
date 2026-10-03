@@ -1,9 +1,10 @@
 # Provider Request History PP3
 
-Execution is in progress. The complete UI family has moved. The first native campaign exposed two
-bounded defects, now repaired with failing-first regressions and source/publish browser proof.
-A fresh final image campaign and the one frozen Stable checkpoint remain in progress. This record
-does not claim application release readiness or remote dependency delivery.
+The complete UI family has moved. The first native campaign exposed two bounded defects, repaired
+with failing-first regressions and source/publish browser proof. Rebuilt native images now have
+passing attempts for the backend vector and all nine native browser journeys, including canonical
+content, denial and credential rotation. The one frozen Stable checkpoint remains in progress.
+This record does not claim application release readiness or remote dependency delivery.
 
 ## Boundary and behavior
 
@@ -98,8 +99,32 @@ after the production corrections. The broad run remains the original frozen atte
 
 Direct repaired UI, persistence, Web and sandbox builds passed without warnings. The independent
 History family passed 84/84 after the fixes. The exact native authorization/source/recheck selection
-discovered and passed 50 cases, including all five owner-role regressions. The rebuilt image campaign
-is still required before closure.
+discovered and passed 50 cases, including all five owner-role regressions.
+
+The final application image was rebuilt from signed application
+`17452fc2c892de1edb62cbdbb284b5a44b4536b2` and Components
+`b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`. Its first backend attempt failed the existing Responses
+first-data-to-completion interval check; multiple frames and the terminal event were present. The
+harness retained only the Boolean result, so the numeric latency and cause are unproven. Its supported
+resume verified unchanged frozen inputs and images and passed all 19 scenarios. Neither timeouts nor
+the oracle changed. The first attempt remains a failure.
+
+The rebuilt image's first five-consumer run passed Agent/files, accepted Workflow and media/vision;
+Simple Chat and incomplete Workflow timed out opening metadata after projection polling. The helper
+could accept the previous table and enabled Search before the replacement query reached the browser.
+A controlled native check queued Search and an old row together: all three old actions were correctly
+refused, while settled actions and three explicit-clear controls opened. The ordinary warm sequence
+also passed three times, so the evidence does not claim every unsynchronized sequence fails. The
+test now observes Clear completion before polling again and observes metadata closure. All four
+canonical consumer cases then passed on the unchanged production image.
+
+The final three-case UI run passed PP2 two-circuit conflict/merge and source disable/retire/reimport.
+History paging exposed the same test assumption: the previous caller's one-row page already satisfied
+the next caller's page-count assertion. A native control confirmed both captions were identical and
+that the old queued action was refused while the requested caller opened normally. Two assertions now
+wait for the replacement caller row. Search replacement and cursor-reset assertions remain intact;
+the one affected History paging/denial/rotation case then passed separately. These synchronization edits
+change test code only; they do not invalidate production images or unrelated passing journeys.
 
 ## Current attempts
 
@@ -128,12 +153,21 @@ All browser evidence uses synthetic content at 1920×1080 and scale 1.
 | Repaired production policy/context hosts | 39/39 | Includes all 12 failed policy setups and their native Settings host case |
 | Repaired source/publish History | 2/2 | Includes repeated row reopen and all 17 scenarios |
 | Repaired native authorization/source/recheck | 50/50 | Existing authorization and deletion controls plus five exact readable-role cases |
+| Final image backend, first attempt | 14 passed / 1 failed / 4 pending | Existing Responses timing threshold; numeric cause not recorded |
+| Final image backend, same-image resume | 19/19 | Native runner verified all frozen image/source reuse; original failure retained |
+| Final image native defaults | 1/1 | Exact default/non-default imported identities and routing |
+| Final image initial consumers | 3/5 | Agent/files, accepted Workflow, media/vision passed; two metadata polling timeouts |
+| Final image synchronized canonical consumers | 4/4 | Agent/files, Simple Chat default/non-default, accepted and incomplete Workflow |
+| Final image initial final UI | 2/3 | PP2 concurrency/source lifecycle passed; History caller-page handoff timed out |
+| Final image synchronized paging/denial/rotation | 1/1 | Exact caller rows, pagination, limited denial, revoked-key 401 and replacement native turn |
+| Anonymous native History | Passed | Actual startup confirmation, lazy mount, explicit denial, zero rows/details/content |
 
-The final browser selection discovers 11 cases: two History sandbox and nine native three-instance
-cases. The native consumer cases now assert canonical owner references, exact global/provider attempt
-identity and explicit content. Managed credentials remain refused Agent/Workflow content; their
-authorized reads use the native local operator circuit. Production UI, module, Web and sandbox
-builds passed. Components, CodeAnalytics and dotnetwatch
+The full browser selection discovers 11 cases: two History sandbox and nine native three-instance
+cases. Every distinct native case has a passing final-image attempt: defaults 1, media 1, canonical
+consumers 4, PP2 concurrency/source lifecycle 2 and History paging 1. This is a reviewed union of
+attempts, not a claimed single 9/9 run; overlapping attempts are not added together. Managed
+credentials remain refused Agent/Workflow content; their authorized reads use the native local
+operator circuit. Production UI, module, Web and sandbox builds passed. Components, CodeAnalytics and dotnetwatch
 MCPs are unavailable in this session; evaluated MSBuild, inspected source, CLI discovery and real
 browser evidence provide the available proof.
 
@@ -153,12 +187,60 @@ content footer visible. Long read-only text scrolls inside its text area. The tw
 case exposed Details wrapping onto two lines; scoped button whitespace now keeps the action intact
 (38 px high). Source/publish browser checks passed again after that bounded CSS correction.
 
+Five final native canonical content screenshots were inspected: Agent/files, both Simple Chat
+model choices and both Workflow outcomes. Their metadata and content labels retain the distinction
+between exact request identity and bounded conversation/run context. All content footers are visible.
+Six further native screenshots cover paging, limited denial, rotation, PP2 conflict, source refusal
+and disabled source state. All contexts are 1920×1080 at scale 1; taller screenshots are full-page
+captures of that viewport, not another responsive target.
+
+## Final source and native runtime
+
+The final executable application source is `17452fc2c892de1edb62cbdbb284b5a44b4536b2`, Components is
+`b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`, and unchanged FileTools is
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`. The source fingerprint is
+`d7f2f5e983c3829dbcfe992af5695ab04040febbabd070398674fb4874ba72d9`.
+The immutable app image is
+`sha256:1467d0b4e03b3c1cf5cf1f62438d6e1d1837381feef6d55bb78f41f53c8ad40c`;
+scripted external upstream is
+`sha256:c1ab43e00468a481fd4c4fc27121776e2577628113989bb0d28148e8c78275f7`.
+The fixture uses host SDK 10.0.303, Docker SDK 10.0.302/runtime 10.0.10 and configuration
+`HistoryPp3Native`; browser follow-ups use `HistoryPp3Followup`. Later changes are confined to two
+browser-test files and this report. Their source diffs and exact rebuilt test DLL hashes
+are recorded separately; the unchanged production image is not relabelled with a later commit.
+
+`native-final-binaries/loaded-binaries.json` records the BaseLib, UI and persistence hashes copied
+from the exact running central container. Docker assembly versions omit Git suffixes, so provenance
+comes from the frozen build inputs, immutable image and observed binary hashes. The local Web build's
+BaseLib version contains the signed Components revision. No remote publication, push or merge occurred.
+
+## Native log qualifications
+
+The final seven-container capture has no CircuitHost, RemoteRenderer or unhandled-exception signal.
+It is not an error-free log claim. Protocol refusals, incomplete Responses and explicit History
+denials match exercised negative cases. Two fail-closed token-validation cancellations at
+15:17:00 UTC match the limited credential immediately after its denied browser context closed;
+the source uses request cancellation. Context shutdown is an inference: those records contain no
+circuit ID. Browser/request oracles remain empty and explicit revocation/rotation assertions pass.
+
+Client-a also emitted 30 retryable AgentConversation maintenance warnings and 24 canceled
+ReadJournal/acknowledgement stage warnings. This existing bounded maintenance limitation was also
+observed on the first image and is not repaired or suppressed here. Partial coverage remains visible;
+the native consumers eventually verify the exact expected identities and content. Existing EF
+mapped-then-ignored PromptArtifact/PromptVersion warnings and unordered row-limit warnings remain;
+the latter have no recorded query/circuit attribution. DevelopmentOnly vault warnings qualify the
+owned development fixture. PostgreSQL's six initial migration-history probes and twelve deliberate
+cross-database permission denials are classified against fresh startup and the isolation checks.
+Exact counts, times, container/image IDs and private log hashes are in `native-final-log-review.json`
+and `native-final-server-log-receipts.json`. No unrelated server log was treated as current proof.
+
 ## Remaining closure
 
-Final native work must use rebuilt central/client-a/client-b images from the final source pair and
-cover exact default/non-default routing, History identities and content, public/limited denial,
-credential rotation, canonical Agent/files, Simple Chat and Workflow/TestLab evidence. Historical
-PP2 native and qualified Stable results remain historical, including the 16,144/16,159 checkpoint.
+Final native work is complete on rebuilt central/client-a/client-b images from the source pair above.
+Historical PP2 native and qualified Stable results remain historical, including 16,144/16,159.
+All seven exact owned native containers are stopped; volumes, images, networks and private evidence
+are retained. The three owned public-denial relays were removed and the measured watcher was stopped.
+Ordinary retained instances were untouched. The separate owned Stable database is still needed.
 
 One final frozen Stable checkpoint is selected because the shared BaseLib lifecycle change affects
 consumer teardown and this slice changes test aggregate/CI ownership. It is not repeated at each
@@ -166,3 +248,10 @@ stage. The owned PostgreSQL 18.6 test fixture uses disk-backed storage with meas
 the previous one-GiB tmpfs fixture is not reused. Portability delta review, no-write enforcement,
 documentation/evidence checks, safe export, verified signed application checkpoints and exact
 owned-resource cleanup remain required before final closure.
+
+The ongoing frozen run has also found one pre-entry Workflow OpenAPI documentation gap: descriptions
+are missing for `WorkflowProviderOption.modelCatalog` and `isSourceManaged`. Those fields were added
+in `ddba548adf` before PP3 entry. Git blob comparison confirms their model, route, documentation
+transformers and coverage fixture are unchanged. This actual failure remains an independent
+Workflow documentation follow-up; no coverage assertion or owner source is changed to make it pass.
+It does not invalidate the History UI proof and does preclude describing the broad run as all green.

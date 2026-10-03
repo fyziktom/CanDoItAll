@@ -85,6 +85,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         string model, HistorySourceKind kind, Guid owner) {
         var timer = Stopwatch.StartNew();
         while (timer.Elapsed < TimeSpan.FromSeconds(60)) {
+            if (await page.GetByTestId("history-results").CountAsync() > 0) {
+                await page.GetByTestId("history-clear").ClickAsync();
+                await page.GetByText("History not requested", new() { Exact = true }).WaitForAsync();
+            }
             await page.GetByTestId("history-search").ClickAsync();
             await Assertions.Expect(page.GetByTestId("history-search")).ToBeEnabledAsync();
             await page.GetByTestId("history-results").WaitForAsync();
@@ -107,6 +111,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
                     return new(Guid.Parse(identityText[..36]), Guid.Parse(ids[0].Value), Guid.Parse(ids[1].Value), reference);
                 }
                 await detail.GetByTestId("history-detail-close").ClickAsync();
+                await detail.WaitForAsync(new() { State = WaitForSelectorState.Detached });
             }
             await Task.Delay(250);
         }

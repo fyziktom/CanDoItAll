@@ -418,6 +418,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         await source.GetByTestId("history-page-size").PressAsync("Tab");
         await source.GetByTestId("history-credential").FillAsync(credentials[0].Id.ToString("D"));
         await source.GetByTestId("history-search").ClickAsync();
+        await Assertions.Expect(source.GetByTestId("history-results")).ToContainTextAsync($"Key {credentials[0].Id:N}"[..12]);
         await Assertions.Expect(source.GetByTestId("history-details")).ToHaveCountAsync(1);
         var pagedIds = new List<Guid>();
         for (var index = 0; index < agentIds.Count; index++) {
@@ -431,6 +432,7 @@ public sealed class ProviderHistoryUiAcceptanceTests {
         Assert.Equal(pagedIds.Count, pagedIds.Distinct().Count());
         await source.GetByTestId("history-credential").FillAsync(credentials[1].Id.ToString("D"));
         await source.GetByTestId("history-search").ClickAsync();
+        await Assertions.Expect(source.GetByTestId("history-results")).ToContainTextAsync($"Key {credentials[1].Id:N}"[..12]);
         await Assertions.Expect(source.GetByTestId("history-previous")).ToBeDisabledAsync();
         Assert.Equal(relayIds, await ReadVisibleIdsAsync(source, 1));
         await ScreenshotAsync(source, settings, "history-pagination-credential-change.png");
