@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderLocalConcurrencyTests {
     [Fact]
     public async Task Clean_sharing_refresh_and_save_cannot_revert_another_native_owners_local_settings() {
@@ -174,9 +175,7 @@ public sealed class SharedProviderLocalConcurrencyTests {
         Assert.Equal("Accepted alias", (await proxy.Owner.GetProfileSharingAsync(seed.ProviderId)).Import!.LocalAlias);
         proxy.HoldUpdate = false;
         var recovery = harness.Context.Services.GetRequiredService<SharedProviderRecovery>();
-        var pending = Assert.IsType<SharedProviderTargetAttempt>(recovery.FindTarget(seed.ProviderId));
-        Assert.True(recovery.PendingDelivery(pending.AttemptId)!.IsAcknowledged);
-        await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
+        Assert.Null(recovery.FindTarget(seed.ProviderId));
         Assert.Single(proxy.Updates);
         Assert.Equal("Later typing without blur", child.Draft.LocalAlias);
         cut.WaitForAssertion(() => Assert.False(child.IsBusy));

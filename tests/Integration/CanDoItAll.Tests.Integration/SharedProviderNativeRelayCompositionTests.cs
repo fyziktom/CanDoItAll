@@ -13,6 +13,7 @@ using ProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProf
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderNativeRelayCompositionTests {
     [Fact]
     public async Task Native_administration_save_preserves_relay_dispatch_and_canonical_timeout() {

@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class SharedProviderSourceSeamTests {
     [Theory]
     [InlineData(CatalogRecovery.Readback)]
