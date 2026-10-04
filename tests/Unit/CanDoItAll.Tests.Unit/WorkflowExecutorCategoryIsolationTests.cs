@@ -139,7 +139,7 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.AgentFramework.Workflows.Definitions"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj",
@@ -147,7 +147,7 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.SharedKernel"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.AgentFramework.Workflows.Definitions", "CanDoItAll.SharedKernel"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         var httpDependencies = typeof(HttpFetchWorkflowExecutor).GetConstructors()
             .SelectMany(constructor => constructor.GetParameters()).Select(parameter => parameter.ParameterType).ToArray();
@@ -163,7 +163,7 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.SharedKernel"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.AgentFramework.Workflows.Definitions", "CanDoItAll.SharedKernel"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
     }
 

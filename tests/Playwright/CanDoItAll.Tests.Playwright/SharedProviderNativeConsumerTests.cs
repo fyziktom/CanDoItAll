@@ -323,10 +323,13 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await Assertions.Expect(fixture.Page.GetByRole(AriaRole.Dialog, new() { Name = "roundtrip.md file interaction", Exact = true })).ToContainTextAsync(expected.TrimStart('#', ' '));
         await fixture.ScreenshotAsync("consumer-file-preview");
         await fixture.NavigateAsync("/projects");
+        await Assertions.Expect(fixture.Page.GetByTestId("projects-workspace")).ToHaveAttributeAsync("data-interactive", "true");
         await fixture.Page.GetByTestId("projects-search-input").FillAsync(projectName);
+        await Assertions.Expect(fixture.Page.GetByTestId("project-card")).ToHaveCountAsync(1);
         var card = fixture.Page.GetByTestId("project-card").Filter(new() { Has = fixture.Page.GetByText(projectName, new() { Exact = true }) });
         await card.GetByTestId("project-card-files-button").ClickAsync();
         var dialog = fixture.Page.GetByTestId("project-files-dialog");
+        await Assertions.Expect(dialog).ToBeVisibleAsync();
         var storedName = Path.GetFileName(node.MediaRelativePath.Replace('\\', '/'));
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Actions for " + storedName, Exact = true }).ClickAsync();
         var menu = dialog.GetByRole(AriaRole.Group, new() { Name = "Actions for " + storedName, Exact = true });

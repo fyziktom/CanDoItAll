@@ -60,7 +60,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         return page;
     }
 
-    public static async Task<SharedProviderConsumerFixture> StartAsync() {
+    public static async Task<SharedProviderConsumerFixture> StartAsync(params string[] additionalScopes) {
         var settings = SharedProviderNativeDefaultsUiTests.Settings.Load();
         var root = Path.GetFullPath(Environment.GetEnvironmentVariable("CANDOITALL_SHARED_PP2_FIXTURE_ROOT")!);
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "host-run-metadata.json")));
@@ -71,7 +71,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, settings.Clients[0], false, [
             ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects, ApiAccessScopeNames.WriteProjectStructure,
             ApiAccessScopeNames.WriteAgents, ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows,
-            ApiAccessScopeNames.ExecuteWorkflows
+            ApiAccessScopeNames.ExecuteWorkflows, .. additionalScopes
         ]);
         var api = SharedProviderNativeDefaultsUiTests.Api(settings.Clients[0], token);
         var authority = new Uri(settings.Clients[0]).Authority;

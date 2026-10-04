@@ -2,17 +2,20 @@
 
 Execution of `codex/bundles/CanDoItAll_Workflow_Authoring_WF1/prompt.md` on the
 existing `components-decoupling` branch. The sealed package and historical bundles
-are unchanged. This is an in-progress implementation record, not family closure.
+are unchanged. The full selected rendering family and native Workflow consumers
+are implemented and proved, including final History. Frozen Stable accounting is
+still running; final signed closure is pending. Earlier stage notes below retain the
+state and limitations of their original checkpoints.
 
 ## Entry and progression
 
-| Stage | State | Next concrete work |
+| Stage | State | Evidence / remaining closure |
 |---|---|---|
-| S0 | CA1-R1 reproduced, repaired and signed as `ccd18f6a1`; focused checks pass | Final source campaign |
-| W1 | Initial lossless repair signed as `4df9f9339`; full matrix under validation | Exact native unchanged/node-edit/conflict and acceptance checks |
-| W2 | Canvas, windows and actual inspector/settings children extracted | Final native/desktop consumer proof |
-| W3 | Template, preview-input, run/event dialogs composed through shared renderers | Expanded native ownership checks and checkpoint gates |
-| W4 | Pending | Native consumers, source/publish desktop, final images and closure gates |
+| S0 | CA1-R1 complete; signed `ccd18f6a1` | Original 6/12 failures retained; repaired 28/28, later capability assembly 68/68 and native host follow-up 4/4 |
+| W1 | Lossless definition and accepted identity complete; signed `4df9f9339`, extended in `ac0e2e231` | Six real native round-trip cases plus controlled save/conflict/retirement cases |
+| W2 | Complete canvas, windows, inspectors and actual settings; signed `ac0e2e231` | Independent 30/30; real gestures, exact Gallery version and saved coordinate proof |
+| W3 | Complete template, preview-input, run/event dialogs and native composition | Native 146/146; late image read 4/4; library acquisition repair `950704afc` passes affected 95/95 |
+| W4 | Source/publish, measured edit loop, final-image Workflow consumers and History proved | The single broad Stable checkpoint remains in progress; final gates/signing follow |
 
 Entry source pair: main `28ca64aaf0a2e3f65ee44feae2d931852bd18611`, Components
 `b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`, FileTools
@@ -28,7 +31,9 @@ query still reports development `4a858412d2c2a3f6123bf23d8c4584f05b47627d`.
 The fix is local-only; no remote delivery is claimed. The freshly built capability
 sandbox's BaseLib assembly matches the sibling output byte-for-byte, SHA-256
 `4e6717da01f99be459f414a65567b2e0e3777699061038fdeaf4269472f85acb`.
-Final loaded-browser asset verification remains part of W4.
+W4 confirms the loaded source, published and native Canvas asset bytes. Components
+also contains the signed read-only drag repair `2eccdddd05a9b1b0c90935ddee49dc559fd5eec1`;
+both fixes remain local-only, with remote development unchanged.
 
 CodeAnalytics, Components and dotnetwatch MCP methods are unavailable in this
 session. The authorized fallback is current source search, evaluated MSBuild
@@ -77,7 +82,7 @@ TRX/logs, signing probe, evaluated references and the complete scan. Historical 
 mixed Stable results and subsequent focused dispositions retain their original scope;
 the S0 checks do not reinterpret them as a clean broad run.
 
-## Planned boundary and validation
+## Initial boundary and validation decisions
 
 The primary authoring surface remains the actual CanvasWorkbench with its three
 floating windows and nested inspectors. Supporting information stays in its existing
@@ -231,3 +236,253 @@ The isolated source/two-client preflight passed for the fresh
 PostgreSQL 62545, disk-backed PostgreSQL 18). Preflight changed no containers or
 credentials. The historical stacks remain untouched; the final image campaign has
 not yet run at this checkpoint.
+
+## W4 results and retained attempts
+
+The protocol checkpoint uses the owned
+`shared-providers-e2e-pp2-wf1-9188e9a3-r2` fixture on loopback ports 62640–62642,
+with disk-backed PostgreSQL 18 on 62645. Source inputs are main
+`ac0e2e2319572f464d9b19e2ef7442c11954e294`, Components
+`2eccdddd05a9b1b0c90935ddee49dc559fd5eec1` and the entry FileTools revision.
+The initial native Workflow authoring browser test was untracked at image build.
+The exact image input fingerprint is
+`2341c4ead70a577b4f83391e24f43017847846cc8880802caa551eeee012e432`.
+The application image ID is
+`sha256:cfdebbf133af60e5fbc5d494cbca8d581439ba0f80e0292a34dfd92a05c36925`;
+the deterministic upstream image ID is
+`sha256:379e2164a53bada49ba3cc38c95d8ad8325e8d20447211c33aea9e4a56bbe3ce`.
+
+The protocol checkpoint passes 19/19. Chat streaming first data arrived at
+853.863 ms and completed at 1081.0631 ms (227.2001 ms incremental interval);
+Responses first data arrived at 430.0121 ms and completed at 972.9213 ms
+(542.9092 ms interval). Both exceed the unchanged minimum 50 ms incremental
+interval. Original attempts remain: missing explicit reset authorization for an
+otherwise new fixture, then an overlapping Docker network. The successful fresh
+fixture uses independently verified unused networks; no historical resource was
+reset or removed. The final source-default/custom-model publication, import and
+refresh journey passes 1/1 across source and both clients.
+
+The first stable-image native consumer selection passes 5/7: Simple Chat default
+and nondefault transcripts, real PNG generation/attachment/download/vision,
+incomplete Workflow output refusal, held human continuation and actual Quartz
+delivery pass. The original failures are retained. The accepted-output helper
+expected an unadorned default model label; the real selector displays
+`Provider default (source name)`. The file helper clicked before waiting for the
+interactive Projects owner and applied search. Its earlier native mutations,
+hidden-canary read, approval, denial and preview had already succeeded. A read-only
+continuation downloaded the same stored file with matching bytes and hash, without
+replaying those mutations. Focused corrections and the graph/Gallery journey are
+recorded separately from that mixed attempt.
+
+### Native library acquisition repair and replacement image
+
+The corrected native consumer selection passed the entire file/approval/download
+journey and both accepted/incomplete Workflow/TestLab cases (3 passed), while its
+new graph/Gallery case failed before adding the first node. A readiness correction
+waits for the new canvas dependency identity. The next graph attempt exposed a
+real page-owner race: New draft canceled an in-flight component-library read, then
+failed to start a read for its new owner. Three controlled component cases first
+failed for late success, failure and cancellation. `StartCanvasDraftAsync` now
+awaits the existing library acquisition after retiring the previous selection.
+All 95 freshly discovered WorkflowsPage/WorkflowOwnership cases pass, zero skipped.
+This repair is signed and verified as `950704afc6e387f7844e3492fd2084ef0a12aa7d`.
+
+The new application image was built from the prior commit plus the exact repair,
+with input fingerprint
+`031cdb6a632b6a3cf34764d9c37cbd7104ed255cf71880ca54eca064e4bc4716`
+and image ID
+`sha256:d250d0ef00f9e5a4b6acabb737e592ff26f2173edc8c0d7b45bb1002535de91f`.
+Its revision label remains the actual build base `ac0e2e2`; it is not relabeled
+with a later commit. Only central/client-a/client-b were replaced. Their mounts,
+the database/upstream container IDs, credentials and native receipts are retained.
+The resolved Compose comparison changes only the application image. The original
+19-case protocol metadata is retained separately; affected Workflow and History
+journeys run on the replacement image without a second protocol vector.
+
+The first replacement startup exposed an adjacent Scheduler runtime defect:
+reprojecting an enabled fixed-date CRON whose sole occurrence already completed
+throws Quartz's "will never fire" exception and stops host startup. The retained
+original consumer receipt identifies plan `dd42dedf-6b26-4eb7-90c0-f86808776560`,
+Workflow `a3726147-5b0c-41c2-9c8f-9589d27a57d5`, immutable version
+`ef7e9c9d-3889-40b2-9bdf-a4bfd7e22c59`, and completed run
+`b7451640-899a-49bf-893e-df4e62c0b02b`. With the host unavailable, task-owned
+fixture cleanup used one guarded SQL update matching that exact plan, name,
+target/version, CRON and completed/no-next-fire state to pause it; only one row
+changed. No definition, run, receipt, file or historical fixture was deleted.
+The same client container then started healthy. Subsequent Scheduler proof pauses
+its completed plan through the native UI. This cleanup does not repair Scheduler:
+a separate runtime change should classify exhausted schedules before trigger
+projection, retain their terminal history and prove restart plus future/misfire
+behavior. No Scheduler production source was changed in WF1.
+
+The repaired image's graph journey passed provider loading, exact Gallery binding,
+node creation/deletion and route editing before a test-only Playwright result
+conversion failed (a positional record has no parameterless constructor).
+Coordinate observations now use JSON deserialization into that typed record;
+the original attempt remains retained.
+
+### Long route labels and final application image
+
+Native desktop inspection reproduced route rows expanding to 1,981 pixels inside
+a 357-pixel inspector when a node name contains 200 unbroken characters. The
+renderer now permits wrapping and gives the text column a shrinkable basis.
+Source, independently published Parity and the native final image each measure
+357-pixel client/scroll width, with 326-pixel rows and reachable Edit controls at
+1920×1080, scale 1. The seven-line CSS repair is signed and verified as
+`a60d4cb76c678713ec344609edbe41aa2e71cd41`.
+
+The final application input fingerprint is
+`21a8d30b6cb73c073b028803ffa31cf3bbc833d2978e1295ff3896aae8a30895`,
+with image ID
+`sha256:85459b7a67e1324bd16cae58f4b8b0b9b5c1eac093d32327c680d875dcf90610`.
+Its revision label is the actual production checkpoint `a60d4cb76`. The same
+three application roles were replaced with this image; the database, upstreams
+and mounts were again unchanged. The earlier library/protocol input receipts are
+preserved. Subsequent changes are consumer-test observation/cleanup and evidence.
+
+The graph test's retained pointer observations distinguish UI actionability from
+native persistence: a success notification initially intercepted the node drag.
+The test waits for the node point to belong to the canvas. On the successful
+gesture, the scene moves by (70, 35); the transient manual-position map can already
+be empty because the native node-moved callback has adopted the coordinates.
+The final proof therefore compares actual saved versions before/after dragging,
+and separately compares the graph after a fresh native read. It does not require
+an internal transient map to remain populated.
+
+The final-image six-case attempt retains five passing consumers and one failing
+graph test. Accepted and incomplete Workflow/TestLab output, exact Agent/Project
+file approvals and download, held human continuation and actual Quartz delivery
+all pass. The graph test had already saved three versions and completed its native
+run; its final assertion incorrectly expected payload text inside the metadata
+API response. The actual authorized run-detail dialog displayed the output.
+After changing that assertion to the real dialog and checking the API's exact run
+identity, fresh discovery and execution pass the one graph case in 30 seconds.
+The original 5/1 attempt remains a failed attempt; it is not relabeled 6/6.
+
+The passing graph journey proves native UI node creation/deletion, protected Start,
+route label edit/removal and physical port reconnection; the next Save preserves
+the workflow identity, creates a new version and persists both moved coordinates.
+A fresh native read compares the entire graph. Gallery binding creates one native
+component with the exact original Prompt/version/model route. After advancing the
+Gallery head, a saved Workflow run dispatches once with the original instructions,
+never the successor text, and renders the accepted original output. The retained
+component still names the original immutable version. These checks use the final
+`85459b7` image, not the earlier protocol image.
+
+The final three History/circuit/source cases pass 3/3, zero skipped, in 5 min 10 s.
+Global and provider History return matching native attempt identities with lazy
+authorized content reads; limited credentials are denied and rotation retains the
+exact caller identity. Two circuits preserve concurrent local settings until an
+explicit merge of only the edited field. A disabled source returns 503 without an
+upstream request; retirement and reimport preserve the local provider identity.
+An invalid HTTP/private-network policy edit is refused and leaves its original
+source state intact. Browser error/request-failure arrays are empty.
+
+A final separately discovered native navigation case passes 1/1 in 43 seconds.
+It keeps an unsaved name across Dashboard, Workflows, History and Analytics, then
+changes to a different Workflow. Browser Back and Forward restore each exact saved
+definition; the old unsaved draft does not cross the target change. Native version
+IDs remain unchanged throughout navigation. This closes actual browser-history
+proof in addition to the controlled route/profile/Curator owner tests. The same
+final image was restarted for this bounded check and stopped again afterward;
+no preview, scheduled delivery or provider inference was dispatched by this check.
+
+Final source/client-a/client-b container logs were retained and classified. Expected
+incomplete Responses, History access denials and canceled validation of the exact
+rotated credential remain visible. Existing development-vault, EF mapping/query
+and retryable History maintenance cancellation warnings remain qualified. None of
+the three logs contains an unhandled exception, rendering error or disposed-token
+marker. This is a bounded campaign review, not a claim that all logs are clean.
+
+The six verified final fixture containers and three partial first-attempt containers
+are stopped; their volumes, images, credentials and original receipts are retained.
+Source/Parity/Fast watcher processes and the task browser are stopped. The separate
+isolated PostgreSQL test container remains running only for the frozen Stable lane.
+
+### Independent desktop and development loop
+
+Both independently published Fast and Parity hosts use the actual canvas assets,
+four canvas layers and 1920×1080 at scale 1. The Parity source/publish checks cover
+the 82-node graph, 1,200-character input, raw invalid JSON refusal, unavailable
+dependencies, held/unknown preview, owner replacement, Gallery presentation, all
+eight image fields, template/catalogue and run/event dialogs. Two editors retain
+different dependency IDs; disposing one leaves the other able to save. IF,
+SWITCH/default and fan-out inspectors render actual route fields. Invalid fan-out
+index text remains visible and cannot commit. Modal footers and radial menu bounds
+remain inside the large desktop; focus returns to CanvasWorkbench. Physical route
+handles reconnect an edge. Window drag changes its position by (120, 30), and
+minimize/expand restores its size. Middle-button pan changes the viewport by
+(80, 50); zoom and focus-start operate on the actual canvas.
+
+Physical template dragging exposed an existing shared CanvasLib defect: read-only
+nodes were still admitted into drag operations. Four failing-first JavaScript
+cases cover direct, mixed-selection, frame and dependency drag. The shared guard
+now excludes missing/read-only nodes. The signed Components commit above passes
+`assets:verify`; source and independent publish retain six template nodes, empty
+manual positions and identical coordinates after physical drag and Delete.
+The served JavaScript is 64,632 bytes with SHA-256
+`71cc087022f1619a990bb4856c74df4e9a92fb40f2a9d2eebfce59ae0c04741d`.
+Both Components fixes remain local-only; no remote delivery is implied.
+
+| Visible edit | Three edit-to-observation samples | Activation / restart |
+|---|---|---|
+| Razor heading | 3,999 / 2,405 / 1,822 ms | Same rendered component, PID 17072 |
+| C# presentation constructor | 1,443 / 1,325 / 1,161 ms | New component activation, same PID |
+| Scoped CSS border | 8,530 / 7,815 / 7,902 ms | Actual computed border, same PID |
+| Owned JavaScript zoom | 2,272 / 1,684 / 1,660 ms | Browser reload, same PID; rendered node width 369.6 / 403.2 / 436.8 px |
+
+All four probe files match their original SHA-256 hashes byte-for-byte. No warm
+sample restarted the application. The fresh-process cold attempt built in 28.12 s
+and loaded 19 watch projects in 6.5 s. Its 30-second HTTP probe expired during
+startup; the eventual verified browser observation was 66.862 s after dispatch,
+including orchestration gaps, with new PID 60132 and six visible nodes. This is an
+upper-bound cold observation, not a hot-reload timing. Earlier refused-connection
+and observation-script failures remain retained. Watch paths reduce from 4,681
+for Web to 768 for the sandbox on SDK 10.0.303. Evaluated final graph counts are
+shell 4, authoring 17, sandbox 19, prior sandbox 16 and native module 135 (entry 133).
+The shell's exact project path set is unchanged.
+
+### Frozen Stable accounting
+
+The public contracts, native preview boundary and new test/CI selection justified
+one deliberate final Stable checkpoint. The solution does not define configuration
+WF1, so that original rejected solution command is retained. Each of its exact
+27 project entries was then built, discovered and executed once with the current
+Stable exclusion filter against the isolated disk-backed PostgreSQL 18 fixture.
+The campaign is not a clean broad PASS.
+
+Unit results are 9,430 executed, 9,425 passed, 5 failed, zero skipped. Discovery
+lists 9,396 cases: three nonserializable theories expand from 1 to 8, 1 to 8 and
+1 to 21 at execution, accounting for all 34 additional cases. Four failures are
+stale expected dependency/presentation ownership assertions; their corrected
+36-case focused selection passes. The fifth detects preserved synthetic historical
+scanner artifacts from A2/CA1. Those originals were not deleted or hidden.
+
+Native component results are 2,503 executed, 2,501 passed, 2 failed, zero skipped.
+The two failures expected the old setup-error notification in the surviving
+capability details/wizard hosts. The corrected four-case selection passes and
+still verifies unknown acknowledgement, no extra setup admission, private-error
+redaction and disposed-token lifetime. Within the original frozen component run,
+all 147 selected Workflow/Prompt/provider/image cases pass; this is an extracted
+result set from that broad attempt, not another execution or a claim that the
+entire component assembly passed.
+
+### Final renderer and caller census
+
+| Surface | Reusable rendering | Native owner retained |
+|---|---|---|
+| Canvas and all three floating windows | `WorkflowCanvasSurface`, neutral CanvasWorkbench/OverlayToolbox/Canvas floating windows | Routed `WorkflowsPage` and small `WorkflowCanvasEditor` composition |
+| Definition, node, edge and decision editing | Canvas surface, `WorkflowRouteFields`, `WorkflowExecutionPolicyEditor` | Native definition/version semantics and runtime/compiler validation |
+| Provider/model and immutable Prompt binding | `WorkflowProviderModelSelector`, actual Prompts.UI picker through its typed slot | `WorkflowPromptBindingOwner`, Prompt Gallery and component library |
+| Generic and image executor configuration | Actual configuration composition and `WorkflowImageGenerationSettingsSurface` | Vetted renderer key, owner/trust/schema checks, provider reads and secret-reference metadata |
+| Both preview-input paths and result presentation | `WorkflowPreviewInputDialog`, shared existing result surface | `WorkflowPreviewOwner`, immutable submission, native authority, admission and recovery identity |
+| Template catalogue and read-only canvas | `WorkflowTemplateCatalogDialog`, `WorkflowTemplatePreviewDialog` | Template pack reads and native Add-to-drafts receipt/provenance |
+| Run and event details | `WorkflowRunDetailDialog`, `WorkflowEventDetailDialog` | Lazy owner reads, bounded safe formatting, original run/attempt and canonical History identity |
+| Five-tab shell, catalog, History, overview and analytics | Existing Workflows.UI surfaces retained | Query validation, Curator/context readiness, database profile and route lifetime |
+
+No page-owned presentation in the selected Workflow family is deferred to another
+slice. Native hosts still own reads, writes, authority and accepted receipts; those
+integrations are intentional remaining callers. Residual global Agent chat/usage,
+Voice and provider/runtime dialogs remain in their existing owners. Workbench and
+Processes have not been started. The standalone authoring sandbox has no production
+module, database, provider runtime or Web assembly edge.

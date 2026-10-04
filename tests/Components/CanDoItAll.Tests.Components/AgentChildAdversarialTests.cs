@@ -74,7 +74,9 @@ public sealed class AgentChildAdversarialTests {
             Assert.Empty(notifications);
             Assert.Throws<ObjectDisposedException>(() => setup.Token.WaitHandle);
         } else {
-            Assert.Contains(notifications, message => message.Summary == "Setup test failed");
+            Assert.Contains(notifications, message => message.Summary == "Setup acknowledgement unavailable");
+            Assert.Contains("The setup outcome is unknown", markup(), StringComparison.Ordinal);
+            Assert.Equal(1, setup.SetupCalls);
         }
     }
 

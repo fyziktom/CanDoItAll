@@ -21,7 +21,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         var sharedOption = Assert.Single(options!, option => option.ProviderProfileId == profile.Id);
         Assert.True(sharedOption.IsSourceManaged);
         Assert.Equal(profile.ModelCatalog, sharedOption.ModelCatalog);
-        var alternate = profile.ModelCatalog.First(model => model.Id != profile.DefaultModel && profile.SuggestedModels.Contains(model.Id));
+        var alternate = incomplete
+            ? profile.ModelCatalog.First(model => model.Id != profile.DefaultModel && profile.SuggestedModels.Contains(model.Id))
+            : profile.ModelCatalog.Single(model => model.Id == profile.DefaultModel);
         var marker = "PP2C_WORKFLOW_" + Guid.NewGuid().ToString("N");
         var projectName = "PP2C workflow " + marker;
         var projectId = await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName });
@@ -65,7 +67,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await page.GetByTestId("workflow-canvas-select-node").Filter(new() { HasTextString = "model" }).ClickAsync();
         await page.GetByTestId("workflow-canvas-open-selected-node-details").ClickAsync();
         await page.GetByTestId("workflow-canvas-node-modal-provider").SelectOptionAsync(profile.Id.ToString("D"));
-        await page.GetByTestId("workflow-canvas-node-modal-model").SelectOptionAsync(new SelectOptionValue { Label = alternate.DisplayName });
+        await page.GetByTestId("workflow-canvas-node-modal-model").SelectOptionAsync(new SelectOptionValue {
+            Label = incomplete ? alternate.DisplayName : $"Provider default ({alternate.DisplayName})"
+        });
         Assert.DoesNotContain("sp1.", await page.GetByTestId("workflow-canvas-node-modal-model").InnerTextAsync(), StringComparison.Ordinal);
         await Assertions.Expect(page.GetByTestId("workflow-canvas-node-modal-model-override")).ToHaveCountAsync(0);
         await page.GetByTestId("workflow-canvas-node-modal-close").ClickAsync();

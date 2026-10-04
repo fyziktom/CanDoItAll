@@ -415,6 +415,8 @@ public sealed class ProviderFeatureMatrixTests
             "WorkflowImageGenerationSettingsRenderer.razor");
         var treeNodeBuilderSource = ReadRepositoryFile(
             "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfileTreeNodeBuilder.cs");
+        var workflowSettingsSource = ReadRepositoryFile(
+            "src", "UI", "CanDoItAll.AgentFramework.WorkflowAuthoring.UI", "WorkflowImageGenerationSettingsSurface.razor");
         var voiceSettingsSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -439,8 +441,9 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
 
         Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowRendererSource, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@(!provider.IsEnabled)\"", workflowRendererSource, StringComparison.Ordinal);
-        Assert.Contains("not an available image-generation provider", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("WorkflowImageGenerationSettingsSurface", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!provider.IsEnabled)\"", workflowSettingsSource, StringComparison.Ordinal);
+        Assert.Contains("not an available image-generation provider", workflowSettingsSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProviderProfilePurpose.Chat", workflowRendererSource, StringComparison.Ordinal);
         Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
         Assert.Contains("ProviderAudioCapabilityPolicy.IsAvailable(provider)", voiceSettingsSource, StringComparison.Ordinal);
