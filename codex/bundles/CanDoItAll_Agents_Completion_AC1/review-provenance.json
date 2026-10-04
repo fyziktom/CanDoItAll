@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-04",
+  "main_repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "main_head": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+  "previous_review": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+  "components_repository": "fyziktom/CanDoItAll.Components",
+  "components_branch": "development",
+  "components_head": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+  "components_parent": "b495d4c4a28f0a6588ba10bfaa7be6e8409eae18",
+  "method": "Connected GitHub pinned-source review, maintained report and caller/tree inspection; installed Quartz primary source consultation",
+  "product_execution_performed": false,
+  "limitations": [
+    "No dotnet or Docker in reviewer environment",
+    "Private raw TRX/logs/media were not supplied",
+    "Residual candidates identified from exact tree are explicitly distinguished from inspected bodies",
+    "No claim of exhaustive runtime verification or product-wide release readiness"
+  ],
+  "findings": [
+    "SCH-R1 observed in prior native campaign and source-confirmed startup propagation",
+    "WF1-R1 source-derived cross-attempt reserved preview identity leak; reproduce first"
+  ]
+}

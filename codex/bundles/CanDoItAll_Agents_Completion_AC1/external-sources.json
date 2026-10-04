@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "Q1",
+      "url": "https://raw.githubusercontent.com/quartznet/quartznet/v3.13.1/src/Quartz/Core/QuartzScheduler.cs",
+      "purpose": "Installed-version primary source: ScheduleJob computes first fire and rejects a trigger without one before storing it."
+    },
+    {
+      "id": "Q2",
+      "url": "https://raw.githubusercontent.com/quartznet/quartznet/v3.13.1/src/Quartz/Impl/Triggers/CronTriggerImpl.cs",
+      "purpose": "Installed-version primary source: first-fire computation uses StartTimeUtc and calendar; do not inspect an uninitialized next-fire field as an exhaustion oracle."
+    }
+  ]
+}

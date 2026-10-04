@@ -1,0 +1,22 @@
+{
+  "scope": "Package integrity and evidence-structure tests only; no product execution.",
+  "product_tests_executed_by_reviewer": false,
+  "retained_shared_files": 22,
+  "checks": {
+    "manifest": "PASS",
+    "links": "PASS",
+    "tool_tests": "PASS",
+    "shared_manifest": "PASS",
+    "unexecuted_evidence_rejected": "PASS",
+    "fresh_zip_extract": "PASS"
+  },
+  "file_count": 57,
+  "source_records": 32,
+  "local_links": 52,
+  "required_groups": 30,
+  "tool_tests": 41,
+  "test_counts_by_family": [
+    27,
+    14
+  ]
+}

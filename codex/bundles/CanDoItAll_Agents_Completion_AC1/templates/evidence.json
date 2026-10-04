@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-AGENTS-COMPLETION-AC1",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Actual source pair, published Components, signing and fixture ownership",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "Exhausted enabled schedule reproduces and native startup is repaired",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Scheduler completed-plan repeated restart and neighbor future fire",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Scheduler misfire/timezone/bounds and unresolved-admission matrix",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "WF1 sequential preview result identity regression",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Complete tracked renderer/caller/asset census and disposition",
+      "phase": "A1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Protected evaluated dependency graph and negative guards",
+      "phase": "A1/A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Actual Agents shell header/tab presentation and native routing",
+      "phase": "A2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Complete consumer/provider/model Usage renderers",
+      "phase": "A2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Usage query scope, partial/unknown cost and lazy read ownership",
+      "phase": "A2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Actual runtime and execution-log renderers with safe copy",
+      "phase": "A3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Floating context/affinity and close-choice renderers",
+      "phase": "A3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Active switch/thread/attachment/confirmation residuals closed",
+      "phase": "A3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Conversation/activity/dialog scope and late completion isolation",
+      "phase": "A3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Existing Voice settings and deterministic audio lifecycle",
+      "phase": "A4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Existing Floating settings and native coordinator outcomes",
+      "phase": "A4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "SimpleChats and provider selector integration census/proof",
+      "phase": "A4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Source and independently published actual sandbox",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Large desktop geometry, focus, assets and two independent views",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Repeated visible dotnet watch and restored probe files",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Native Agents standard/floating transcript and cancellation",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Real Project Structure approval/denial and file bytes",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "A2/CA1/capability/team unchanged-data owner regressions",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Workflow round-trip, accepted/incomplete output and preview paths",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "Final-image three-instance models/routing/no-fallback consumers",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Real Usage and separately authorized History identities/content",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Workspace/Projects/Resources/TestLab neighbor integration",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Fresh owning-family tests and qualified frozen Stable disposition",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Mandatory portability, CI selection, scoped secret scan and docs",
+      "phase": "A5",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "title": "Complete maintained census, blocker disposition and signed delivery",
+      "phase": "Delivery",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "agents_ui_boundary_complete": false,
+    "scheduler_restart_fixed": false,
+    "preview_attempt_identity_fixed": false,
+    "native_consumer_campaign_passed": false,
+    "ready_for_next_module": false,
+    "release_ready": false,
+    "unresolved_blocking_findings": [],
+    "nonblocking_qualifications": [],
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "paid_model_calls": 0,
+    "signed_commits": []
+  }
+}
