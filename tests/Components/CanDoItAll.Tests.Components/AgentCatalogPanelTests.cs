@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
@@ -321,6 +322,7 @@ public sealed class AgentCatalogPanelTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddAgentFrameworkUi();
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(
             workspaceService ??

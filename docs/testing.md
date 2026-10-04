@@ -425,10 +425,26 @@ owning assembly/filter before each changed selection. Native harnesses require t
 PostgreSQL setting below. A2 assignment still saves the entire dirty existing-agent draft;
 new-agent assignment stages locally. Explicit setup is separate from published proof.
 
-The [CA1 architecture record](architecture/agent-authoring-ui-ca1.md) records the current
-source pair, remaining native journeys and coherent checkpoint evidence. Native catalog
-owner changes require a final broad-scope decision after source freezes; independent
-rendering tests do not replace that decision or portability enforcement.
+The lightweight capability tests belong to Components/Stable solutions and all three CI
+component project lists. `TeamAuthoringTests` in AgentFramework.UI.Tests covers the actual
+metadata/member/icon renderers; native `TeamMetadataOwnershipTests` covers coordinated writes.
+Discover `FullyQualifiedName~AgentAuthoring` in the Playwright project for the independent
+source/published sandbox and native definition, parent and team journeys. They use the
+final production controls at 1920×1080, scale 1.
+
+The shared consumer campaign separately selects `SharedProviderNativeDefaultsUiTests`,
+`SharedProviderNativeConsumerTests`, `SharedProviderCustomMetadataTests` and
+`SharedProviderFinalUiTests`. Its owned fixture name must use the existing
+`shared-providers-e2e-pp2-` prefix and matching marker, metadata root and Compose project.
+Provision a fresh unique root using the native runbook; never reset a retained fixture to
+satisfy that guard. Native helpers wait for accepted searches and confirmed mutations.
+
+The [CA1 architecture record](architecture/agent-authoring-ui-ca1.md) records the final
+source pair, original/follow-up attempts and signed checkpoints. Shared catalog/Core changes
+triggered one final broad Stable run. Isolated configurations keep ordinary application
+outputs untouched; a temporary solution must declare its custom configuration and preserve
+the exact Stable project set. Short configuration names avoid Windows copy path limits.
+Independent rendering tests do not replace that scope decision or portability enforcement.
 
 ## PostgreSQL 18 migration and installer proof
 

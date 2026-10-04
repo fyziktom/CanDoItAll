@@ -25,11 +25,20 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 The [complete Agent editor renderer](../../UI/CanDoItAll.AgentFramework.Editor.UI/README.md)
 owns the form shell, all ten sections, Memory/root child rendering and small confirmations. `AgentDetailsDialog` retains
 the single editor session and whole-agent commands, all authority and reconciliation,
-Memory eligibility, root binding resolution, AvatarPicker integration, the capability-definition wizard and shared-provider refresh. Refresh
+Memory eligibility, root binding resolution, AvatarPicker integration, native capability-definition operations and shared-provider refresh. Refresh
 publication is fenced by both editor origin and provider selection revision, including
 A→B→A. Verification uses native proof receipts independently of whole-agent Save and retains
 the unsaved draft. The [A2 record](../../../docs/architecture/agent-editor-completion-a2.md) documents the
 selected boundary and validation; it does not declare every AgentFramework surface complete.
+
+The [capability authoring renderer](../../UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/README.md)
+owns all wizard steps, details tabs, typed MCP/Skill/Tool fields, bounded upload, raw metadata
+and setup-result presentation. Thin native dialogs retain setup effects, save fingerprints and
+accepted identities; existing-agent assignment still saves the whole dirty agent draft.
+Technical-team metadata, icon and member views use AgentFramework.UI. The catalog host and
+coordinated owner retain exact-team/profile writes, membership preservation and postcommit
+read recovery. Grouping grants no runtime or storage authority. See the
+[CA1 record](../../../docs/architecture/agent-authoring-ui-ca1.md) for final independent and native proof.
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 

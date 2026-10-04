@@ -86,6 +86,8 @@ their owners. The boundary records distinguish completed rendering from applicat
 | Provider Profiles PP1 | Existing provider models and narrow read ports | `CanDoItAll.AgentFramework.Providers.UI` | `CanDoItAll.AgentFramework.Providers.UiSandbox` |
 | Provider Sharing PP2 | `CanDoItAll.SharedProviders.Abstractions` and existing provider models | `CanDoItAll.AgentFramework.SharedProviders.UI` | `CanDoItAll.AgentFramework.SharedProviders.UiSandbox` |
 | Request History PP3 | `CanDoItAll.AgentFramework.ProviderHistory.Abstractions` | History family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| Capability authoring CA1 | Existing Models and light capability/MCP abstractions | `CanDoItAll.AgentFramework.CapabilityAuthoring.UI` | `CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox` |
+| Technical teams CA1 | Existing Agent models and origin-bound presentation | Teams family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
 
 The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
 schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
@@ -97,8 +99,11 @@ AgentFramework is partially extracted: its [UI library](../../src/UI/CanDoItAll.
 and sandbox cover the catalog, capabilities and Overview. [Editor A2](agent-editor-completion-a2.md)
 completes all ten technical editor sections, actual Memory/root children and small confirmations.
 The actual capability list and Storage picker are composed through narrow slots; native Memory
-eligibility, root binding resolution, avatar generation and capability-definition authoring
-remain host integrations. [PP1](provider-profiles-ui-pp1.md) completes the provider catalog and
+eligibility, root binding resolution, avatar generation and capability-definition operations
+remain host integrations. [CA1](agent-authoring-ui-ca1.md) completes the capability wizard/details
+renderers in their own light leaf and technical-team metadata/icons/members in AgentFramework.UI.
+Explicit setup effects, coordinated catalog writes, whole-agent assignment and authority remain
+with native owners. [PP1](provider-profiles-ui-pp1.md) completes the provider catalog and
 Connection, Prices, Runtime and Thinking editors. [PP2](provider-sharing-ui-pp2.md) completes
 Sharing, source connections and shared-provider refresh presentation while native delivery and
 reconciliation remain with their owners. [PP3](provider-history-ui-pp3.md) completes global and
@@ -168,7 +173,7 @@ caller, descendant, asset and evaluated-dependency census precedes that assignme
 | Order | Family and current source | Proposed scope | Effort / provisional slices |
 |---|---|---|---|
 | 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): P1 / Files P2 complete | Portfolio, hierarchy inspection, overview, editor and both Files renderers are extracted. File authorization, coordinators and content leases retain their original owners; see the P1 and P2 validation records | Completed selected surfaces; actual file owners retained |
-| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): catalog/capabilities/Overview, ten-section Editor A2 and provider PP1/PP2/PP3 | Capability-definition authoring, team dialogs and residual chat/usage or provider/runtime surfaces remain; preserve whole-agent data and authority and confirm actual live callers | Selected editor/provider rendering complete; definition/team authoring 3–4/5; later slices require review |
+| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): catalog/capabilities/Overview, ten-section Editor A2, provider PP1/PP2/PP3 and capability/team CA1 | Residual chat/usage or provider/runtime surfaces require a current caller census; preserve whole-agent data, explicit effects and authority | Selected editor/provider/definition/team rendering complete; later slices require separate review |
 | 3 | [Workflow authoring](../../src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor): substantial canvas/toolbox/inspector markup remains despite the existing light Workflows.UI project | Reuse Workflows.UI; separate catalog/run views, canvas/inspector and settings/admission dialogs while retaining immutable version/input and launch authority | 4/5; 2–4 slices |
 | 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |
 | 5 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md): thin routes still compose implementation-bound rendering and runtime services | Catalog/read panels, editor/configuration, launch/approval, monitoring/recovery and final integration; preserve SSE, claims, snapshots and receipts | 5/5; 4–6 slices; last major family |

@@ -255,12 +255,14 @@ green result is claimed. The owned PostgreSQL 18.6 fixture used disk-backed stor
 headroom; the old one-GiB tmpfs fixture was not reused.
 
 Twelve original failures were policy-panel test-host setup errors, repaired and covered by the
-39/39 current policy/context follow-up. One failure is a pre-entry Workflow OpenAPI gap: descriptions
-are missing for `WorkflowProviderOption.modelCatalog` and `isSourceManaged`. Those fields were added
-in `ddba548adf` before PP3 entry. Git blob comparison confirms their model, route, documentation
-transformers and coverage fixture are unchanged. This actual failure remains an independent
-Workflow documentation follow-up; no coverage assertion or owner source is changed to make it pass.
-It does not invalidate the History UI proof and precludes describing the broad run as all green.
+39/39 current policy/context follow-up. One failure at PP3 closure was a pre-entry Workflow
+OpenAPI gap: descriptions were missing for `WorkflowProviderOption.modelCatalog` and
+`isSourceManaged`. Those fields were added in `ddba548adf` before PP3 entry; their model,
+route, documentation transformers and coverage fixture were unchanged in PP3. The original
+broad run remains mixed. [CA1 S0](agent-authoring-ui-ca1.md) subsequently reproduced the exact
+22-pass/one-failure family, added canonical property descriptions and passed 23/23 without
+changing wire fields or coverage assertions. It also reverified the existing local signed
+Components Tooltip fix and retained the separate remote-delivery qualification.
 
 The last original failure is the source-secret scanner reading the exact generated scanner sample
 in two ignored historical A2 JSON reports. Both values were matched by hash and construction to the
