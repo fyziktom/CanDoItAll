@@ -3,8 +3,9 @@
 Execution of `codex/bundles/CanDoItAll_Workflow_Authoring_WF1/prompt.md` on the
 existing `components-decoupling` branch. The sealed package and historical bundles
 are unchanged. The full selected rendering family and native Workflow consumers
-are implemented and proved, including final History. Frozen Stable accounting is
-still running; final signed closure is pending. Earlier stage notes below retain the
+are implemented and proved, including final History and browser navigation. All
+27 frozen Stable assemblies and their qualified accounting are complete. Signed
+checkpoints and final validation are recorded in the external evidence. Earlier stage notes below retain the
 state and limitations of their original checkpoints.
 
 ## Entry and progression
@@ -15,7 +16,7 @@ state and limitations of their original checkpoints.
 | W1 | Lossless definition and accepted identity complete; signed `4df9f9339`, extended in `ac0e2e231` | Six real native round-trip cases plus controlled save/conflict/retirement cases |
 | W2 | Complete canvas, windows, inspectors and actual settings; signed `ac0e2e231` | Independent 30/30; real gestures, exact Gallery version and saved coordinate proof |
 | W3 | Complete template, preview-input, run/event dialogs and native composition | Native 146/146; late image read 4/4; library acquisition repair `950704afc` passes affected 95/95 |
-| W4 | Source/publish, measured edit loop, final-image Workflow consumers and History proved | The single broad Stable checkpoint remains in progress; final gates/signing follow |
+| W4 | Source/publish, measured edit loop, final-image consumers, History and navigation proved | Single Stable run accounted for: 16,375 passed, 7 failed, zero skipped; focused repairs and final gates pass; signed closure complete |
 
 Entry source pair: main `28ca64aaf0a2e3f65ee44feae2d931852bd18611`, Components
 `b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`, FileTools
@@ -396,8 +397,10 @@ marker. This is a bounded campaign review, not a claim that all logs are clean.
 
 The six verified final fixture containers and three partial first-attempt containers
 are stopped; their volumes, images, credentials and original receipts are retained.
-Source/Parity/Fast watcher processes and the task browser are stopped. The separate
-isolated PostgreSQL test container remains running only for the frozen Stable lane.
+Source/Parity/Fast watcher processes and the task browser are stopped. After all
+27 Stable assemblies completed, the separate PostgreSQL test container was also
+stopped after verifying its exact container, owner label, image, loopback port and
+named volume. No task data volume or historical fixture was deleted.
 
 ### Independent desktop and development loop
 
@@ -431,7 +434,8 @@ Both Components fixes remain local-only; no remote delivery is implied.
 | Scoped CSS border | 8,530 / 7,815 / 7,902 ms | Actual computed border, same PID |
 | Owned JavaScript zoom | 2,272 / 1,684 / 1,660 ms | Browser reload, same PID; rendered node width 369.6 / 403.2 / 436.8 px |
 
-All four probe files match their original SHA-256 hashes byte-for-byte. No warm
+All four probe files were restored byte-for-byte before the subsequent route-label
+CSS repair. No warm
 sample restarted the application. The fresh-process cold attempt built in 28.12 s
 and loaded 19 watch projects in 6.5 s. Its 30-second HTTP probe expired during
 startup; the eventual verified browser observation was 66.862 s after dispatch,
@@ -449,7 +453,28 @@ one deliberate final Stable checkpoint. The solution does not define configurati
 WF1, so that original rejected solution command is retained. Each of its exact
 27 project entries was then built, discovered and executed once with the current
 Stable exclusion filter against the isolated disk-backed PostgreSQL 18 fixture.
-The campaign is not a clean broad PASS.
+The campaign is complete and is not a clean broad PASS. Its frozen production
+state is main `ac0e2e231`, Components `2eccdddd0`, FileTools `3a080ecd3`.
+The later library acquisition repair has fresh 95/95 affected-case proof; the
+later route-label repair has source, independent publish and final native proof.
+Neither later repair relabels the earlier binaries or triggers a second broad run.
+
+| Scope | Discovered | Executed | Passed | Failed | Skipped |
+|---|---:|---:|---:|---:|---:|
+| Unit | 9,396 | 9,430 | 9,425 | 5 | 0 |
+| Native Components | 2,503 | 2,503 | 2,501 | 2 | 0 |
+| Integration | 3,279 | 3,284 | 3,284 | 0 | 0 |
+| Memory | 187 | 203 | 203 | 0 | 0 |
+| Remaining 23 assemblies | 962 | 962 | 962 | 0 | 0 |
+| All 27 assemblies | 16,327 | 16,382 | 16,375 | 7 | 0 |
+
+Twenty-five assemblies pass their complete selection. The original Unit and
+Components attempts remain failed, with each failure and focused disposition
+preserved. Every discovery difference is accounted for by exact nonserializable
+theory identities: three Unit expansions add 34 cases, the Integration plugin
+simulation theory expands from one to six, and three Memory ownership/capability
+theories expand from one to five, one to five and one to nine. Those seven groups
+account for all 55 extra executed cases; no skipped or missing case is hidden.
 
 Unit results are 9,430 executed, 9,425 passed, 5 failed, zero skipped. Discovery
 lists 9,396 cases: three nonserializable theories expand from 1 to 8, 1 to 8 and
@@ -466,6 +491,37 @@ redaction and disposed-token lifetime. Within the original frozen component run,
 all 147 selected Workflow/Prompt/provider/image cases pass; this is an extracted
 result set from that broad attempt, not another execution or a claim that the
 entire component assembly passed.
+
+### Final validation and delivery state
+
+The complete protected portability scan covers 8,444 files without truncation.
+Final enforcement passes with all 15,206 reviewed
+executable-source findings unchanged and without baseline-write mode. The
+documentation validator passes 356 maintained Markdown files. The sealed package
+remains unchanged; its validator's 22 self-tests pass with explicit UTF-8 after
+retaining the original Windows default-encoding failure.
+
+The full modified-file secret scan retains exactly the same 20 existing CI
+findings as the entry versions, including multiplicity: zero added or removed.
+Changed-line and reviewed safe-export scans pass. The three historical synthetic
+A2/CA1 controls remain intact and hash-verified. This is scoped delta evidence,
+not a whole-worktree secret-scan PASS. Private receipts, credentials, logs, TRX,
+screenshots and the external evidence ledger remain outside staged source.
+
+The five main implementation checkpoints through `a60d4cb76`, native regression
+checkpoint `dd2814130` and Components fixes `b495d4c4a` and `2eccdddd0` have
+verified signatures. This final documentation checkpoint completes the signed
+delivery; its exact identity and verification are retained in the external
+evidence. The expired key unlock required native Pinentry before the regression
+commit could finish. No unsigned fallback or signing-policy change was used.
+Changes after the final production image are tests and documentation only.
+Both Components fixes remain local-only. No push, merge or release was performed.
+
+The external evidence ledger records all 32 acceptance groups and verified signed
+closure. The original
+mixed regression, historical scanner qualification and adjacent exhausted-CRON
+Scheduler defect retain the exact scopes described above. All task-owned runtime
+resources are stopped and their data retained.
 
 ### Final renderer and caller census
 
