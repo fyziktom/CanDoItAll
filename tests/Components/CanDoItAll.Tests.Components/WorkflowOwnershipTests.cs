@@ -163,6 +163,49 @@ public sealed class WorkflowOwnershipTests {
         Assert.DoesNotContain("private admission failure", fixture.Cut.Markup);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Preview_followup_unknown_does_not_adopt_previous_run_identity(bool canvas) {
+        await using var fixture = await Fixture.CreateAsync();
+        var calls = 0;
+        fixture.Probe.Test = _ => {
+            if (++calls == 1) {
+                return Task.FromResult(Result() with { Run = fixture.FirstRun });
+            }
+            throw new IOException("The second admission acknowledgement was lost.");
+        };
+        await fixture.Tab(canvas ? WorkflowTab.Editor : WorkflowTab.History);
+        if (canvas) {
+            fixture.Cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+        }
+        async Task PreviewAsync() {
+            if (canvas) {
+                await fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
+            } else {
+                await fixture.Emit(WorkflowAction.RunTest);
+            }
+        }
+        await PreviewAsync();
+        Assert.Equal(fixture.FirstRun.RunId, canvas
+            ? fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.PreviewOwner.Accepted?.RunId
+            : fixture.Cut.Instance.AcceptedPreviewRun?.RunId);
+        await PreviewAsync();
+        Assert.Equal(2, calls);
+        Assert.Null(canvas
+            ? fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.PreviewOwner.ReservedRunId
+            : fixture.Cut.Instance.UnconfirmedPreviewRunId);
+        Assert.Equal(fixture.FirstRun.RunId, canvas
+            ? fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.PreviewOwner.Accepted?.RunId
+            : fixture.Cut.Instance.AcceptedPreviewRun?.RunId);
+        Assert.NotNull(await fixture.Store.GetRunAsync(fixture.FirstRun.RunId));
+        Assert.True(canvas
+            ? fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").HasAttribute("disabled")
+            : !fixture.Surface.History.CanTest);
+        await PreviewAsync();
+        Assert.Equal(2, calls);
+    }
+
     public enum DelayedReadOutcome { Success, Failure, Cancellation }
 
     public enum DelayedReadLane { Catalog, Definition, RunPage, RunDetail }
@@ -590,7 +633,7 @@ public sealed class WorkflowOwnershipTests {
     private static WorkflowExternalRequestRecord Request(WorkflowRunId runId)
         => new(new(Guid.NewGuid()), runId, WorkflowExternalRequestKind.HumanInput, new("review"), "review", "{}", "", DateTimeOffset.UtcNow, null);
 
-    private sealed class Fixture : IAsyncDisposable {
+    internal sealed class Fixture : IAsyncDisposable {
         public required CanDoItAllTestEnvironment Environment { get; init; }
         public required ComponentTestHarness Harness { get; init; }
         public required IRenderedComponent<WorkflowsPage> Cut { get; init; }

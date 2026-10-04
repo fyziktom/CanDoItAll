@@ -27,6 +27,7 @@ public sealed class WorkflowPreviewOwner(IWorkflowTestRunner runner, IWorkflowSt
             return new WorkflowPreviewOutcome.Unknown(ReservedRunId);
         }
         pending = true;
+        ReservedRunId = null;
         var dispatched = false;
         try {
             var captured = await authority.CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface, owner);
