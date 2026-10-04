@@ -176,10 +176,12 @@ public sealed class CapabilityAuthoringSession : IDisposable {
             SetupUnknown = true;
             setupRevision = revision;
             setupSucceeded = null;
+            setupDiagnostics = [];
+            setupTools = [];
             Status = "The setup outcome is unknown and may have produced an effect. Review the native result before starting another test.";
             logger.LogWarning("Capability setup acknowledgement unavailable for {CapabilityId}: {FailureType}", submission.Id, error.GetType().Name);
             if (revision == Draft.Revision) {
-                notifications.Error("Setup test failed", "The setup test could not be completed. Review the configuration before trying again.");
+                notifications.Error("Setup acknowledgement unavailable", Status);
             }
         } finally {
             if (IsCurrent) {
