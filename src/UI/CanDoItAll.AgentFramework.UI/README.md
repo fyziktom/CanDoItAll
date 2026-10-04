@@ -76,4 +76,28 @@ not used as a profile or actor authority token. A failed read retains Close and 
 same-window Retry. No runtime service is registered in this UI library.
 
 The independent `/completion` sandbox uses these same surfaces. The [AC1 record](../../../docs/architecture/agents-completion-ac1.md)
-tracks native and browser proof separately from the remaining runtime/floating completion.
+tracks native and browser proof separately from final native consumer delivery.
+
+## Runtime and conversation adjuncts
+
+`Runtime` owns the actual selected-run details, compatibility facts, timeline/metrics and
+execution log with exact highlight/run identities and safe copy. Native adapters sanitize
+and bound strings before creating immutable presentation. Runtime objects and redaction
+policy never enter this library.
+
+`Chat` also renders context/affinity, close choices, typed activity status, recovery/runtime
+actions and the keyboard-accessible image input. Intents retain the rendered generation,
+conversation, run or operation identity. The product still owns context bindings, stream
+readers, durable approval decisions, cancellation and attachment staging. Stopping a floating
+handle does not reject its durable pending approval.
+
+`Avatars/AvatarPickerSurface` renders the complete picker and owns its form/request lifetime.
+Three typed operations provide source lookup, image generation and validated upload. Native
+hosts retain image policy, credentials and notifications. Closing/reopening or retiring the
+editor cancels the old request; late callbacks cannot update another activation. Existing
+public avatar value types retain their namespace and native assembly type forwarders.
+
+The independent `/adjuncts` specimen renders these same components. Its file input reads
+owned bytes and displays their hash; its avatar upload uses the shared Models image policy.
+It does not stage native attachments, admit runs or call a paid image service. Native and
+independent tests exercise separate ownership responsibilities.

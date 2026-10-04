@@ -14,7 +14,7 @@
     </Cluster>
     <output aria-live="polite" data-testid="completion-intent">@intentText</output>
     <AgentsShellSurface State="shell" Intent="ShellIntent">
-        <SecondaryTabs Items="DetailTabs" SelectedKey="detail" SelectedKeyChanged="@(key => detail = key)" />
+        <SecondaryTabs Items="DetailTabs" SelectedKey="@detail" SelectedKeyChanged="@(key => detail = key)" />
         @switch (detail) {
             case "consumers":
                 <AgentUsageSurface State="state" Intent="UsageIntent" />

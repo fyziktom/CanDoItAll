@@ -109,7 +109,7 @@ public sealed class AgentConversationShellContributor(
 
             throw new InvalidOperationException($"Unsupported Agent participant action '{request.ActionKey.Value}'.");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || lifetime.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -298,10 +298,12 @@ public sealed class AgentConversationShellContributor(
 
     private async Task OpenHistoryAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
+        using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
         var workspace = await workspaceService.GetChatAgentWorkspaceAsync(
             agent.Id,
             preferredSessionId: null,
-            cancellationToken);
+            owner.Token);
+        owner.Token.ThrowIfCancellationRequested();
         var sessions = workspace.Sessions
             .Take(AgentThreadHistoryDialog.MaxThreadCount)
             .ToArray();
@@ -324,14 +326,19 @@ public sealed class AgentConversationShellContributor(
                 DenseChrome = true,
                 TestId = "floating-agent-chat-history-dialog",
                 AriaLabel = "Agent thread history"
-            });
-        if (result is not Guid sessionId)
+            }, owner.Token);
+        if (owner.IsCancellationRequested || Volatile.Read(ref disposed) != 0 || result is not Guid sessionId)
         {
             return;
         }
+        if (!sessions.Any(session => session.Id == sessionId)) {
+            throw new InvalidOperationException("The selected thread was not part of the opening Agent history.");
+        }
 
-        var chat = await coordinator.OpenChatAsync(agent.Id, sessionId, cancellationToken);
-        shell.FocusWindow(SourceIdentifier, BuildWindowId(chat.HandleId));
+        var chat = await coordinator.OpenChatAsync(agent.Id, sessionId, owner.Token);
+        if (!owner.IsCancellationRequested && Volatile.Read(ref disposed) == 0) {
+            shell.FocusWindow(SourceIdentifier, BuildWindowId(chat.HandleId));
+        }
     }
 
     private async Task RequestCloseAsync(
@@ -347,21 +354,28 @@ public sealed class AgentConversationShellContributor(
             return;
         }
 
-        var result = await dialogService.OpenAsync<FloatingAgentChatCloseDialog>(
-            "Close active chat",
-            new Dictionary<string, object?>
-            {
-                [nameof(FloatingAgentChatCloseDialog.Chat)] = chat
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Floating agent chat",
-                Subtitle = chat.Agent.Name,
-                Size = ModalSize.Compact,
-                DenseChrome = true,
-                TestId = "floating-agent-chat-close-confirmation",
-                AriaLabel = "Close active agent chat"
-            });
+        using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+        object? result;
+        try {
+            result = await dialogService.OpenAsync<FloatingAgentChatCloseDialog>(
+                "Close active chat",
+                new Dictionary<string, object?> {
+                    [nameof(FloatingAgentChatCloseDialog.Chat)] = chat
+                },
+                new DialogOptions {
+                    Eyebrow = "Floating agent chat",
+                    Subtitle = chat.Agent.Name,
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    TestId = "floating-agent-chat-close-confirmation",
+                    AriaLabel = "Close active agent chat"
+                }, owner.Token);
+        } catch (OperationCanceledException) when (owner.IsCancellationRequested) {
+            return;
+        }
+        if (owner.IsCancellationRequested || Volatile.Read(ref disposed) != 0) {
+            return;
+        }
         if (result is not FloatingAgentChatCloseDecision decision ||
             decision == FloatingAgentChatCloseDecision.Cancel)
         {

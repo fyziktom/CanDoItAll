@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-04T19:29:29.233773+00:00",
+  "generated_utc": "2026-10-04T20:14:58.228066+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -16397,18 +16397,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentConversationPresentationMapper.cs",
       "category": "case-policy",
       "source_fingerprint": "5d7c8f0090cbe11b91ba84967fd2d0ddbb7a240560df9a01c89f7d8c3969ab24",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AvatarPicker.razor",
-      "category": "case-policy",
-      "source_fingerprint": "102e4ca5dd299c6fad81a08a7b997058a4c885162fb5e7f7b25f93f38208f977",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AvatarPicker.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f393758eb120d774bba8f3c1db08a17fc6f8d5031cda97a69579f4d0bd210b81",
       "count": 1
     },
     {
@@ -73271,6 +73259,18 @@
       "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderThinkingSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "cad1ba757fefdcece2e582b6741c39291d0d18e3919598029adc279d2bb85ccd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Avatars/AvatarPickerSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "387cda00d4d0e241c96e928a2fec5f287b9124e3ec901f1da0ae57eadbf5f1e9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Avatars/AvatarPickerSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "39118142f9345aa53ed4801291b0ed7e44fd34349c0b2c98589d91673cbb79c0",
       "count": 1
     },
     {

@@ -1239,13 +1239,33 @@ public partial class AgentChatPanel : IAsyncDisposable {
             ?? throw new InvalidOperationException("Agent was not found after saving favorite state.");
     }
 
+    private AgentChatActionOrigin ActionOrigin => new(chatSession.Generation, selectedAgentId, selectedSessionId, workspace?.SelectedRun?.Id);
+
+    private AgentChatActionState ActionPresentation => new(ActionOrigin, sessionStartRejection?.Message,
+        CanShowRunRecovery, CanShowRunRecovery && IsRunRecoveryBlocked,
+        workspace?.SelectedRun is { PendingApprovals.Count: > 0, CompletedAtUtc: null },
+        IsChatInteractionBusy, IsFocusedFloating, isBusy || selectedAgentId is null, CanOpenRuntimeDetails);
+
+    private Task HandleActionIntentAsync(AgentChatActionIntent intent) {
+        if (isDisposed || intent.Origin != ActionOrigin) {
+            return Task.CompletedTask;
+        }
+        return intent.Action switch {
+            AgentChatAction.RecoverOriginalRun => StartRunRecoveryAsync(),
+            AgentChatAction.CancelPendingRun => CancelPendingApprovalsAsync(),
+            AgentChatAction.NewThread => CreateThreadAsync(),
+            AgentChatAction.OpenRuntime => OpenRuntimeDetailsDialogAsync(),
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
+    }
+
     private Task OpenRuntimeDetailsDialogAsync() {
         if (!CanOpenRuntimeDetails) {
             SetMessage("Heads up", "warning", "Send a prompt first so runtime evidence can be opened.");
             return Task.CompletedTask;
         }
 
-        _ = DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
+        _ = ObserveRuntimeDialogAsync(DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
             "Runtime details",
             new Dictionary<string, object?> {
                 [nameof(AgentRuntimeDetailsDialog.Run)] = workspace?.SelectedRun,
@@ -1262,9 +1282,19 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 TestId = "agent-runtime-details-dialog",
                 AriaLabel = "Agent runtime details",
                 Style = "max-height:calc(100vh - 2rem);"
-            }, chatSession.TargetCancellation);
+            }, chatSession.TargetCancellation), chatSession.TargetCancellation, ActionOrigin);
 
         return Task.CompletedTask;
+    }
+
+    private async Task ObserveRuntimeDialogAsync(Task<object?> opening, CancellationToken token, AgentChatActionOrigin origin) {
+        try {
+            await opening;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("Runtime detail dialog failed ({FailureType}); agent {AgentId}, session {SessionId}, run {RunId}.",
+                exception.GetType().Name, origin.AgentId, origin.SessionId, origin.RunId);
+        }
     }
 
     private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry) {

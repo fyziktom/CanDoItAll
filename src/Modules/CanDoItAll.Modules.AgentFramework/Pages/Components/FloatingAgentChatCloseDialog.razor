@@ -1,58 +1,28 @@
-@inject DialogService DialogService
+@using CanDoItAll.AgentFramework.UI.Chat
 
-<Stack GapScale="LayoutGap.Medium"
-       AlignItems="AlignItems.Stretch"
-       data-testid="floating-agent-chat-close-dialog">
-    <TextBlock TextStyle="TextStyle.Body1"
-               Value="@BuildDescription()" />
-
-    @if (!Chat.CanStop)
-    {
-        <Alert AlertStyle="AlertStyle.Warning">
-            This chat is still working. Keep it active now; it can be stopped after the current model call completes.
-        </Alert>
-    }
-    else if (Chat.RunState == ActiveAgentChatRunState.AwaitingApproval)
-    {
-        <Alert AlertStyle="AlertStyle.Warning">
-            Stopping removes the quick-access handle, but does not reject the durable pending approval. Reopen the saved thread from history to decide it later.
-        </Alert>
-    }
-
-    <Cluster Gap="LayoutGap.Small"
-             Wrap="FlexWrap.Wrap"
-             JustifyContent="JustifyContent.End">
-        <Button Text="Cancel"
-                ButtonStyle="ButtonStyle.Light"
-                Click="CancelAsync"
-                data-testid="floating-agent-chat-cancel-close" />
-        <Button Text="Keep active"
-                Icon="schedule"
-                ButtonStyle="ButtonStyle.Light"
-                Click="KeepActiveAsync"
-                data-testid="floating-agent-chat-keep-active" />
-        <Button Text="Stop chat"
-                Icon="stop_circle"
-                ButtonStyle="ButtonStyle.Danger"
-                Disabled="@(!Chat.CanStop)"
-                Click="StopAsync"
-                data-testid="floating-agent-chat-stop" />
-    </Cluster>
-</Stack>
+<AgentFloatingCloseSurface State="state" Intent="DecideAsync" />
 
 @code {
-    [Parameter, EditorRequired]
-    public ActiveAgentChat Chat { get; set; } = default!;
+    [Parameter, EditorRequired] public ActiveAgentChat Chat { get; set; } = default!;
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    private AgentFloatingCloseState state = default!;
 
-    private string BuildDescription()
-        => $"Keep {Chat.Agent.Name}'s chat ready for another action, or stop its active handle now. The saved conversation remains in chat history.";
+    protected override void OnParametersSet() {
+        state = new(state?.HandleId == Chat.HandleId ? state.Origin : Guid.NewGuid(), Chat.HandleId,
+            Chat.Agent.Name, Chat.CanStop, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval);
+    }
 
-    private Task CancelAsync()
-        => DialogService.CloseAsync(FloatingAgentChatCloseDecision.Cancel);
-
-    private Task KeepActiveAsync()
-        => DialogService.CloseAsync(FloatingAgentChatCloseDecision.KeepActive);
-
-    private Task StopAsync()
-        => DialogService.CloseAsync(FloatingAgentChatCloseDecision.Stop);
+    private Task DecideAsync(AgentFloatingCloseIntent intent) {
+        if (intent.Origin != state.Origin || intent.HandleId != Chat.HandleId
+            || intent.Choice == AgentFloatingCloseChoice.Stop && !Chat.CanStop) {
+            return Task.CompletedTask;
+        }
+        var decision = intent.Choice switch {
+            AgentFloatingCloseChoice.Cancel => FloatingAgentChatCloseDecision.Cancel,
+            AgentFloatingCloseChoice.KeepActive => FloatingAgentChatCloseDecision.KeepActive,
+            AgentFloatingCloseChoice.Stop => FloatingAgentChatCloseDecision.Stop,
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
+        return DialogReference?.CloseAsync(decision) ?? Task.CompletedTask;
+    }
 }

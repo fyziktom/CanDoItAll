@@ -7,7 +7,7 @@
 <AgentEditorCoreSurface State="@CreateCoreState(renderedSession)">
     <AvatarActions Context="slot">
         @if (IsCurrent(renderedSession) && slot.Origin == renderedSession.Origin) {
-            <AvatarPicker Value="@slot.Draft.AvatarImageUrl"
+            <AvatarPicker @key="renderedSession.Origin" OwnerLifetime="renderedSession.CancellationToken" Value="@slot.Draft.AvatarImageUrl"
                           ValueChanged="value => HandleAvatarChangedAsync(renderedSession, value)"
                           EntityName="@slot.Draft.Name"
                           EntityDescription="@slot.Draft.RoleTitle"

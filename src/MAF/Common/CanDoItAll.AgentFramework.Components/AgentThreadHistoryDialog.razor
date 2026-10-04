@@ -1,13 +1,17 @@
-@inject DialogService DialogService
+@implements IDisposable
+@{ var renderedGeneration = generation; }
 
 <ConversationThreadHistoryList Threads="@visibleSessions"
                                MaxItems="@MaxThreadCount"
                                ContextLabel="@ResolveAgentName()"
                                EmptyDescription="This agent does not have saved chat threads yet."
-                               Selected="SelectSessionAsync" />
+                               Selected="@(key => SelectSessionAsync(key, renderedGeneration))" />
 
 @code {
     public const int MaxThreadCount = 25;
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    private long generation;
+    private bool disposed;
 
     [Parameter]
     public AgentDefinition? Agent { get; set; }
@@ -25,22 +29,27 @@
 
     protected override void OnParametersSet()
     {
+        generation++;
         var items = SessionSummaries.Count > 0
             ? SessionSummaries.Select(session => AgentThreadHistoryPresentationMapper.Map(session, SelectedSessionId))
             : Sessions.Select(session => AgentThreadHistoryPresentationMapper.Map(session, SelectedSessionId));
         visibleSessions = items.ToArray();
     }
 
-    private Task SelectSessionAsync(ConversationPresentationKey key)
-    {
+    private Task SelectSessionAsync(ConversationPresentationKey key, long renderedGeneration) {
+        if (disposed || renderedGeneration != generation) {
+            return Task.CompletedTask;
+        }
         if (!AgentThreadHistoryPresentationMapper.TryResolveSessionId(key, out var sessionId))
         {
             throw new InvalidOperationException(
                 $"Conversation thread key '{key.Value}' is not an Agent session key.");
         }
 
-        return DialogService.CloseAsync(sessionId);
+        return DialogReference?.CloseAsync(sessionId) ?? Task.CompletedTask;
     }
+
+    public void Dispose() => disposed = true;
 
     private string? ResolveAgentName()
         => Agent is null

@@ -140,3 +140,16 @@ The scenario selector covers initial loading/failure, stale Overview, empty/read
 Both modes use the actual Charts components, Apex chart JavaScript/static assets, isolated Overview CSS, real consumer avatars, icons and tooltips. The Overview controls reserve the observed full-app top offset so its 1600x1000 comparison uses the same rendered chart frame. Small viewports and long labels are separate browser checks.
 
 Record new Overview direct-watch measurements against this specimen, including exact probes and source restoration. The historical Overview evidence is not included in this checkout. Catalog/Capabilities timings are not Overview measurements.
+# Runtime and conversation adjunct specimen
+
+`/adjuncts` uses the actual runtime/log, context, close-choice, activity, chat-action,
+attachment and avatar renderers from the light UI library. It covers waiting, streaming,
+completed, failure, unknown, partial and long-line presentation, and an independent second
+run. The sample reads selected image bytes with an explicit limit and displays their SHA-256;
+avatar upload validates the same Models image policy. No provider, paid generation, native
+staging, admission, approval or persistence service is registered.
+
+AC1 source browser proof uses only 1920×1080 at scale 1. Test the real file chooser, decoded
+avatar image, modal footer/focus, run highlight/copy, Detach/Follow and independent close.
+Published assets and final native consumer proof are recorded separately in
+[the current completion record](../../../docs/architecture/agents-completion-ac1.md).

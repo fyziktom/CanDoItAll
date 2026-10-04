@@ -9,53 +9,6 @@
     white-space: nowrap;
 }
 
-.chat-attachment-file-input {
-    display: none;
-    height: 1px;
-    opacity: 0;
-    overflow: hidden;
-    pointer-events: none;
-    position: absolute;
-    width: 1px;
-}
-
-.chat-attachment-upload-button {
-    align-items: center;
-    background: rgb(248 250 252);
-    border: 1px solid rgb(203 213 225);
-    border-radius: 0.65rem;
-    color: rgb(51 65 85);
-    cursor: pointer;
-    display: inline-flex;
-    height: 2.125rem;
-    justify-content: center;
-    min-width: 2.5rem;
-    transition:
-        background-color 140ms ease,
-        border-color 140ms ease,
-        color 140ms ease,
-        box-shadow 140ms ease;
-    width: 2.5rem;
-}
-
-.chat-attachment-upload-button:hover {
-    background: rgb(240 249 255);
-    border-color: rgb(125 211 252);
-    box-shadow: 0 8px 20px rgb(15 23 42 / 0.08);
-    color: rgb(14 116 144);
-}
-
-.chat-attachment-upload-button:focus-visible {
-    outline: 2px solid rgb(14 165 233);
-    outline-offset: 2px;
-}
-
-.chat-attachment-upload-button--disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-    pointer-events: none;
-}
-
 .chat-thread-title-edit ::deep .cda-editable__row {
     align-items: center;
     gap: 0.35rem;

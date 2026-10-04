@@ -152,9 +152,57 @@ component pair for a single read lifetime, not a partial runtime-service split.
 Independent leaf tests require no product host/database; native ownership tests
 exercise real composition. A2 may proceed to runtime/floating completion.
 
-Eight remaining renderer owners in the current census, the preserved
-Voice/SimpleChats consumer audit, final published sandbox and measured edit loop,
-native/two-client campaign, final static gates and signed delivery remain in
-progress. No complete Agents presentation boundary, next-module readiness or
-product release readiness is claimed. Workbench and Processes extraction are
-outside AC1.
+### A3 runtime, floating and active adjunct completion
+
+The eight residual renderer owners now compose actual light surfaces: runtime details,
+execution log, context/affinity, floating close choices, projected activity, chat actions,
+image attachment input and the complete avatar picker. Native adapters keep policy
+redaction, typed stream subscriptions, staging/grants, durable approvals, context bindings
+and execution. Runtime/log states are immutable safe values; copying uses the displayed
+sanitized message. Context projection captures one binding for both revision and display.
+
+The avatar form uses typed source/generation/validated-upload operations. Each operation
+captures its source, request, callback and cancellation scope. Close/reopen and parent
+retirement suppress late success and notification. The native Agent editor keys the picker
+to its edit session; SimpleChats retains its existing editor-generation key. Native image
+validation and paid-provider authority stay outside the renderer. No paid requests ran.
+
+The active Agent switch and thread-history adapters already used neutral renderers, but
+their global dialog close was defective under stacking. Two failing-first cases showed
+that selecting the first dialog completed the unrelated top dialog. Both now close their
+own DialogReference. Stale selection/favorite callbacks retain their original generation;
+late favorite readback cannot replace a successor picker. Floating history/close callers
+carry their own lifetime through dialog selection. Closing a handle still does not decide
+a durable pending approval.
+
+Fresh native production build passed with zero warnings. The final focused native assembly
+passed 103 discovered cases, including the existing HostPlatform UTC/poison tests, real
+image formatter, standard/floating recovery, activity-stream retirement, stacked dialogs
+and new A-B-A context/attachment guards. The independent leaf passed 32 discovered cases
+(10 adjunct and 22 shell/Usage). Both runs had zero skips. The first native build failed on
+a test dictionary target type and was repaired. The failing-first six-case run retained
+three passes, the two product dialog failures and one missing test service registration;
+the later pass does not relabel that attempt.
+
+Source Parity browser proof at 1920×1080 scale 1 exercised all seven runtime scenarios,
+highlighted original entry, independent views, context changes, close choices and native
+InputFile. The actual 645-byte owned JPEG passed through the attachment chooser with
+SHA-256 `94C4B46CD9E21BCC89373E6DB3ABDB9EEB2DF66B05DC6E35001FD7B8210530FB`
+and decoded at 32×32 in the avatar preview. Bundled avatar assets and both modal actions
+rendered correctly; no fresh browser console error occurred. An early scenario assertion
+ran before the Blazor state update; it is retained and the corrected helper waits for
+accepted rendered state. Browser fixture actions are not native persistence proof.
+
+### C# Architecture Gate Result at A3
+
+Status: Pass for the presentation extraction and bounded native dialog fixes. The existing
+UI leaf and sandbox project references are unchanged. New surfaces inject no native
+service and do not reference Core/runtime/persistence. Value types retain public
+compatibility; typed operation delegates cross only the actual avatar effect boundary.
+No generic service bag, schema, admission protocol, copied shared component or new
+project was introduced. Existing conversation renderers and native services remain owners.
+
+The preserved Voice/SimpleChats audit, final published sandbox and measured edit loop,
+native/two-client campaign, final static gates and signed delivery remain in progress.
+No final Agents readiness or product release readiness is claimed. Workbench and Processes
+extraction remain outside AC1.

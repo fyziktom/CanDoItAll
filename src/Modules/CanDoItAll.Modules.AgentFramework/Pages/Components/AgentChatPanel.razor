@@ -1,13 +1,6 @@
 @using CanDoItAll.Modules.Prompts.Components
-@if (sessionStartRejection is not null) {
-    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-start-rejected">
-        @sessionStartRejection.Message
-        @if (CanShowRunRecovery) {
-            <Button Text="Recover original run" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
-                    Disabled="@IsRunRecoveryBlocked" Click="StartRunRecoveryAsync" data-testid="agents-chat-recover-original-run" />
-        }
-    </Alert>
-}
+@using CanDoItAll.AgentFramework.UI.Chat
+<AgentChatRecoverySurface State="ActionPresentation" Intent="HandleActionIntentAsync" />
         <ChatWorkspacePanel Navigation="@NavigationPresentation" NavigationIntent="HandleNavigationIntentAsync" SelectionGeneration="@chatSession.Generation" Agent="@selectedAgent"
                             Session="@workspace?.SelectedSession"
                             ActiveRun="@workspace?.SelectedRun"
@@ -46,26 +39,6 @@
                                                  ContentSelected="@(content => InsertPromptGalleryContentAsync(content, composerOwner))" />
             </ComposerActions>
             <HeaderActions>
-                @if (workspace?.SelectedRun is { PendingApprovals.Count: > 0, CompletedAtUtc: null }) {
-                    <Button Icon="cancel" Text="Cancel pending run" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                            Disabled="@IsChatInteractionBusy" Click="CancelPendingApprovalsAsync"
-                            data-testid="agents-chat-cancel-pending-run" />
-                }
-                @if (IsFocusedFloating) {
-                    <Button Icon="add_comment"
-                            Text="New thread"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@(isBusy || selectedAgentId is null)"
-                            Click="CreateThreadAsync"
-                            data-testid="agents-chat-focused-new-thread" />
-                }
-                <Button Icon="runtime"
-                        Text="Runtime details"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Disabled="@(!CanOpenRuntimeDetails)"
-                        Click="OpenRuntimeDetailsDialogAsync"
-                        data-testid="agents-chat-open-runtime-details" />
+                <AgentChatActionsSurface State="ActionPresentation" Intent="HandleActionIntentAsync" />
             </HeaderActions>
         </ChatWorkspacePanel>

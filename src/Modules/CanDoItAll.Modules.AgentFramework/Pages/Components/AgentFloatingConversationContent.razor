@@ -1,52 +1,25 @@
+@using CanDoItAll.AgentFramework.UI.Chat
+@using Microsoft.Extensions.Logging
+@inject ILogger<AgentFloatingConversationContent> Logger
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @implements IDisposable
 @inject IAgentChatContextRegistry ContextRegistry
 @inject IAgentConversationContextService ConversationContextService
 
-<div class="agent-floating-conversation-content" data-testid="floating-agent-chat-content">
-    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-        @if (currentContext is { } activeContext)
-        {
-            <StatusBadge Tone="info" Text="@activeContext.Scope.DisplayName" />
-            <StatusBadge Tone="@(activeContext.CanRead(Chat.Agent.AgentId) ? "success" : "warning")"
-                         Text="@(activeContext.CanRead(Chat.Agent.AgentId) ? "Context access allowed" : "Context access blocked")" />
-        }
-        else
-        {
-            <StatusBadge Tone="neutral" Text="No module context" />
-        }
-        <StatusBadge Tone="@(IsDetached ? "warning" : "neutral")"
-                     Text="@ResolveAffinityStatus()"
-                     data-testid="floating-agent-chat-affinity-status" />
-        @if (HasPendingContextChange())
-        {
-            <StatusBadge Tone="info"
-                         Text="@ResolvePendingContextText()"
-                         data-testid="floating-agent-chat-pending-context" />
-        }
-        <Button Icon="@(IsDetached ? "link" : "link_off")"
-                Text="@(IsDetached ? "Follow context" : "Detach")"
-                ButtonStyle="ButtonStyle.Light"
-                Size="ButtonSize.Small"
-                Click="ToggleConversationContextMode"
-                data-testid="floating-agent-chat-affinity-toggle" />
-    </Cluster>
-    @if (Chat.ChatSessionId is { } sessionId)
-    {
+<AgentConversationContextSurface State="Presentation" Intent="HandleContextIntent">
+    @if (Chat.ChatSessionId is { } sessionId) {
         <AgentChatPanel PreferredAgentId="@Chat.Agent.AgentId"
                         PreferredAgent="@PreferredAgent"
                         PreferredSessionId="@sessionId"
                         ActiveChatHandleId="@Chat.HandleId"
                         PersistedActiveChatRunState="@Chat.RunState"
                         DisplayMode="AgentChatPanelDisplayMode.FocusedFloating" />
-    }
-    else
-    {
+    } else {
         <LoadingState Title="Preparing chat"
                       Description="Reserving the agent and creating a durable conversation." />
     }
-</div>
+</AgentConversationContextSurface>
 
 @code {
     [Parameter, EditorRequired]
@@ -56,11 +29,35 @@
     public AgentDefinition? PreferredAgent { get; set; }
 
     private AgentChatContextSnapshot? currentContext;
+    private Guid activation = Guid.NewGuid();
+    private AgentConversationKey? observedKey;
+    private bool disposed;
 
-    private AgentConversationContextBinding? Binding
-    {
-        get
-        {
+    private AgentConversationKey ConversationKey => Chat.ChatSessionId is { } sessionId
+        ? AgentConversationKey.ForSession(sessionId) : AgentConversationKey.ForHandle(Chat.HandleId);
+
+    private AgentConversationContextOrigin CaptureOrigin(AgentConversationContextBinding? binding)
+        => new(activation, Chat.HandleId, Chat.ChatSessionId, binding?.ContextEpochId, binding?.Revision);
+
+    private AgentConversationContextState Presentation {
+        get {
+            var binding = Binding;
+            return new(CaptureOrigin(binding), currentContext?.Scope.DisplayName,
+                currentContext?.CanRead(Chat.Agent.AgentId) == true,
+                binding is { Mode: AgentConversationContextMode.Detached }, ResolveAffinityStatus(binding),
+                HasPendingContextChange(binding) ? ResolvePendingContextText() : null);
+        }
+    }
+
+    protected override void OnParametersSet() {
+        if (observedKey != ConversationKey) {
+            activation = Guid.NewGuid();
+            observedKey = ConversationKey;
+        }
+    }
+
+    private AgentConversationContextBinding? Binding {
+        get {
             var key = Chat.ChatSessionId is { } sessionId
                 ? AgentConversationKey.ForSession(sessionId)
                 : AgentConversationKey.ForHandle(Chat.HandleId);
@@ -68,30 +65,33 @@
         }
     }
 
-    private bool IsDetached => Binding is { Mode: AgentConversationContextMode.Detached };
-
-    protected override void OnInitialized()
-    {
+    protected override void OnInitialized() {
         ContextRegistry.Changed += HandleChanged;
         ConversationContextService.Changed += HandleChanged;
         currentContext = ContextRegistry.Capture();
     }
 
-    private void HandleChanged(object? sender, EventArgs eventArgs)
-    {
-        currentContext = ContextRegistry.Capture();
-        _ = InvokeAsync(StateHasChanged);
+    private async void HandleChanged(object? sender, EventArgs eventArgs) {
+        try {
+            await InvokeAsync(() => {
+                if (!disposed) {
+                    currentContext = ContextRegistry.Capture();
+                    StateHasChanged();
+                }
+            });
+        } catch (Exception exception) {
+            if (!disposed) {
+                Logger.LogWarning("Floating context refresh failed ({FailureType}); handle {HandleId}.", exception.GetType().Name, Chat.HandleId);
+            }
+        }
     }
 
-    private string ResolveAffinityStatus()
-    {
-        if (Binding is { Mode: AgentConversationContextMode.Detached })
-        {
+    private static string ResolveAffinityStatus(AgentConversationContextBinding? binding) {
+        if (binding is { Mode: AgentConversationContextMode.Detached }) {
             return "Detached from application context";
         }
 
-        if (Binding is { IsFollowing: true } binding)
-        {
+        if (binding is { IsFollowing: true }) {
             var view = string.IsNullOrWhiteSpace(binding.LastView) ? string.Empty : $" / {binding.LastView}";
             return $"Following: {binding.DisplayName}{view}";
         }
@@ -99,12 +99,10 @@
         return "Following: current surface";
     }
 
-    private bool HasPendingContextChange()
-    {
-        if (Binding is not { IsFollowing: true } binding ||
+    private bool HasPendingContextChange(AgentConversationContextBinding? binding) {
+        if (binding is not { IsFollowing: true } ||
             binding.Mode == AgentConversationContextMode.Detached ||
-            currentContext is not { } context)
-        {
+            currentContext is not { } context) {
             return false;
         }
 
@@ -119,23 +117,25 @@
             ? $"Next turn: {context.Scope.DisplayName}{(string.IsNullOrWhiteSpace(context.Scope.SurfacePosition?.View) ? string.Empty : $" / {context.Scope.SurfacePosition!.View}")}"
             : "Next turn: no module context";
 
-    private void ToggleConversationContextMode()
-    {
-        var key = Chat.ChatSessionId is { } sessionId
-            ? AgentConversationKey.ForSession(sessionId)
-            : AgentConversationKey.ForHandle(Chat.HandleId);
-        if (ConversationContextService.GetOrCreateBinding(key).Mode == AgentConversationContextMode.Detached)
-        {
-            ConversationContextService.FollowCurrentSurface(key);
+    private void HandleContextIntent(AgentConversationContextIntent intent) {
+        if (disposed || intent.Origin != CaptureOrigin(Binding)) {
+            return;
         }
-        else
-        {
-            ConversationContextService.Detach(key);
+        var key = ConversationKey;
+        switch (intent.Mode) {
+            case AgentConversationContextMode.FollowCurrentSurface:
+                ConversationContextService.FollowCurrentSurface(key);
+                break;
+            case AgentConversationContextMode.Detached:
+                ConversationContextService.Detach(key);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(intent));
         }
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
+        disposed = true;
         ContextRegistry.Changed -= HandleChanged;
         ConversationContextService.Changed -= HandleChanged;
     }

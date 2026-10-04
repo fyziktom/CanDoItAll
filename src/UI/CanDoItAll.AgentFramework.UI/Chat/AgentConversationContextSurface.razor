@@ -1,0 +1,29 @@
+@{ var rendered = State; }
+
+<div class="agent-floating-conversation-content" data-testid="floating-agent-chat-content">
+    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+        @if (rendered.ContextLabel is not null) {
+            <StatusBadge Tone="info" Text="@rendered.ContextLabel" />
+            <StatusBadge Tone="@(rendered.ContextAllowed ? "success" : "warning")"
+                         Text="@(rendered.ContextAllowed ? "Context access allowed" : "Context access blocked")" />
+        } else {
+            <StatusBadge Tone="neutral" Text="No module context" />
+        }
+        <StatusBadge Tone="@(rendered.Detached ? "warning" : "neutral")" Text="@rendered.Affinity"
+                     data-testid="floating-agent-chat-affinity-status" />
+        @if (rendered.PendingContext is not null) {
+            <StatusBadge Tone="info" Text="@rendered.PendingContext" data-testid="floating-agent-chat-pending-context" />
+        }
+        <Button Icon="@(rendered.Detached ? "link" : "link_off")" Text="@(rendered.Detached ? "Follow context" : "Detach")"
+                ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.Detached ? AgentConversationContextMode.FollowCurrentSurface : AgentConversationContextMode.Detached)))"
+                data-testid="floating-agent-chat-affinity-toggle" />
+    </Cluster>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AgentConversationContextState State { get; set; } = default!;
+    [Parameter] public EventCallback<AgentConversationContextIntent> Intent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
