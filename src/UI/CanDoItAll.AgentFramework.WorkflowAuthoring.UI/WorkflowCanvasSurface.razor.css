@@ -248,10 +248,17 @@
     background: #fff;
 }
 
+.workflow-canvas-edge-row {
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
 .workflow-canvas-edge-row__main {
     display: grid;
+    flex: 1 1 10rem;
     gap: 0.2rem;
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .workflow-canvas-edge-row__main span {
