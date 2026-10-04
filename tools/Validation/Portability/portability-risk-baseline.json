@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-04T02:20:06.077697+00:00",
+  "generated_utc": "2026-10-04T12:48:34.635532+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15205,
+  "allowance_count": 15206,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -44007,243 +44007,21 @@
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "07811180170dd7789a3cf3e5e4b469b6acbf7d36a221938f7284b0ce6a06882e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1018c6fef459427b2f405e58d86d38c0f979756485bed3141fd30c46f48f11b8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "18d470548b3a1ae819fb70ef1d841b8f68fb6c1df12a27be3658bd30ccede33d",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "5dfd46228ab7558737e3a81636496c171e7e36d8b9a760d6edee0528efe6e64c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "7bb5f72609bd8e3f284ae9b69f4ec89a4b036f072346a36aadf006b0a2f1712d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "91a15b2a62ae63169848da247e6607f900ce3d8e5ee33b10553e89ad89c37ef6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "97c37d84d3508725bd540eccccfe92be7f03d40efa2e73ba5328a2c7740660b4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a079cb1e973c29f86fce5dc33bc7218ac0a59bee9045e5cdd3219ef978f22862",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "cb6d1c04d9c9f59fae8916805c5b96daab9b8435c2bf12dfc8d01ceeb8d9a0ba",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "cf35afe0511553409e1beb0f4149ba39a73eea780f0a4453cb0b938f50b2dd5a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e12a01682a327c9d2e2353b4eac724d87946ae971c2c7e76f7d500d1eac81262",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f491df59f5928ee583519cffe20623f55eaa640ca519f6274b28af38bf535192",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f6f9c1a03a75c4a1fdcccaf9e7831b1a62816710508db389f4f364b065c35b0d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "case-policy",
-      "source_fingerprint": "fcf7b09401548fa256d2decebec4cd62622958c5ccda814f22236ea8f2760bd9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "2212039c43ab1d489b16692b8a0cbb6eb0e207d1a98f4e5c06c41092ad96232a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "2c02ea5e217bc4ef358b97c339e41abb225a9b6c8b6bbdb224078cf3dd23ab50",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "5d84d43d5134cbb4013a723c7421415f2c3ac8409f54082bdc09f1e9134b4f7e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "89ed7ea0a0faf56678bd479df230f0c41a32bf4a73a127cf4821ee4ff5e6c8e8",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "link-reparse",
-      "source_fingerprint": "e119a76b90735fbb219359af0f93d9875368555e147a10ebee898fc551c92727",
+      "category": "secret-provider",
+      "source_fingerprint": "b921d8dabfb2111f7f3b23cf85db4f4ccbe4d9a8bb89b9ac67cdfb796b54d66d",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
       "category": "secret-provider",
-      "source_fingerprint": "924ee85488dc9344edffa8e65250113bdc78311295e99e39d821d70e2452bcc2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "category": "secret-provider",
-      "source_fingerprint": "e96a14f817f1b0b7ac67fc6b92e76c8bb2f7975a18220077312745c4b5c5b6d9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "4111e1f3966b4ae88333fd155a60c80ff149a364ed3ca5a48c151c45752a8b8b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "50a4b55ea0d77b3621c0a9456f309416a13bb6f21b03b9b7dd58884fb40c7732",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "9558186c1a8a23c5bcd43d9ca1c218e95d3658a19ed249dd17f5036039a6c551",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "97f9bfd48e4d6cf58dadaff12fdb2ad7a4a37385b872577627da66afbd9b8142",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "mcp",
-      "source_fingerprint": "9171c2cc8321c5cecbe93a2b1b7359eb16f000535b3e784e75401b40b9de5772",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
-      "category": "permissions",
-      "source_fingerprint": "529ce595ea4bfaedad790945280fe42839276de64b583bc869e1d46866138c1a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "0b5a45545d2845b45f019b671117b3814bb952a5de43368fbcf2bdb1034d02d0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "139b932220ee2b6919e513319b2d39d10e75f32f891545c6c7bd9bc4142d3085",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "28d237a50f2f064fb1449f9373aebc17714315d544f387a717647c70b9c5c0e1",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "462d550e12edb356afefd808533c50c5c1a05dbeccf675c685a4a0fea0fd5c21",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs",
-      "category": "case-policy",
-      "source_fingerprint": "9bb7d0ddd657ca6712e018575045ff5935beaace254aeedad949777cef8eff97",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorConfigurationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "14a3fe9c10755a8a3915d13b8fe7f43fbe733bc37a63bdd0dcfbb29b2607c688",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorConfigurationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "7a309b9ac30e501e707c15659f315598226bf2cb4771c676ce76402548444af2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorConfigurationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "88dddff90586193d99113b844a7988328653cc12f75bf037abbc5fb59e2b45ff",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorConfigurationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c76a476a552d4d44af9b279e6cf5c7a579cb21dde8cd43b5c27ed417a5ccc02e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorConfigurationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e6b4c3adb72f95411b7ce4daac43128b5ae93e16c65e4c0d26e844d2b7d9c00c",
+      "source_fingerprint": "c43aea5920edda296422fcc4e24f5af515b55ac0915aa4a45eeebc433cf03abb",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
       "category": "case-policy",
-      "source_fingerprint": "126e86347f9013e8e27362962e0d1170b77bf80e4b91e9750d69005b55814a16",
+      "source_fingerprint": "af143c0c3bf0aee2547386bd5b759cd15b4eb428539d3279df4b52567a8f6b5a",
       "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
-      "category": "case-policy",
-      "source_fingerprint": "4563551b38a460facd83b99a2e491a641e039e3603a2691ea09b66714a2e2c43",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
-      "category": "case-policy",
-      "source_fingerprint": "b2223b766343d8a6ea7ddd3d3896a3e5931cd8a526241bd360d3f5776554bed5",
-      "count": 3
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowDefinitionTreeNodeBuilder.cs",
@@ -44273,12 +44051,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowEventPresentationPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "f35c63947afff1fecc271b6375b5d1f3e94fe84baa5fc3d76a8538323b145ba9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowPreviewInputSupport.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c95620804c3c07439c29994f1295a37bb73d8e895e3185a325dcd85a1b89a69e",
       "count": 1
     },
     {
@@ -71864,6 +71636,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "e6fe155f5c42a09b6e8de398b9d959ae1ac3b8d7bee8518693ff1b3f708767cd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "2992082888713c1db3d168a3e5c0f8b0a204e9bbc93c12f8f16e55775a001851",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
       "category": "process-domain",
       "source_fingerprint": "3092abca48f5287f6d8f5c9aa194bf9ac987d7d837169274688b770bb2415152",
@@ -73820,6 +73604,240 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6a92a1755ffe4e677e59ca05ddc509443adfb64c628e8d11dd5c6b244746aa6a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7b602d5978d19c43072cf68c67668ea94fc038f9b42ee31dd64c454b72082ad1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d02ae66ff85220c07db67e3f27931400b3701d52f0df721ff9aedf95cf95cbf5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "df0d5611ff620cae1785113eda671cadabd75b5d306054a4ec75c4abc714b2f3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "mcp",
+      "source_fingerprint": "2510f25f1da13513c4c20deb64f1e50d7351dd5fbe8a2d50692ae2b02880cf61",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasModels.cs",
+      "category": "permissions",
+      "source_fingerprint": "dce8e845c049cf047f1c3f89ee86b91b36383b63441353a158531242375d2b84",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0c595effc54faf728a7c7ea542c1e4b066539767ba1810903ffaeaf817a5fb92",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "23e43fceeb6a81677e993076cfe34b0b089c88229d8fbedca2ee00fdbc36fe93",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "28f19ff8a7039186ef3dd83bf0401a68ccb4b9af6c5864f0d4ccd7d29ac6f28a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "38785425fb2f54f411448eba012e2eba1b797d3f649fbbab38fb676102998534",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "48fec82b697ed6dd5fa07524cb6747a7812e6d86afaaa52e888622e88b7e0969",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7aa294bcc6c85c8be124f0bfb49e1c5e6e89b428b8a058b510a7156589bed151",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7d7b45a0e23e139354fd2fe9e996a58f25bbfb414071c264919b04cb2bb300a1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "8a41b5c2fa2dfbfa66e549d968d68fa5eec6abe76f47f61952dd86cd5e6bda12",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "93be54243327672ba582b64b8d1a6adcf9b0eb26b9eb3d44c81058c6489baef3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bac1fa1c640eb4ace4347bb18da43f95770cb00fb481bb797b91daf1992260dc",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cc0b8838f64d8f2f510c3453ab1d4a9956248f0597a0ace602c49ca42539525d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cd011378313533417f2f69cb7449a392d57938d81f17539868881f64d8b63f1c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f58947991072ce79a4268593d2dc708d5328c7cd92007bde988e06cf6d75b4e7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "28946dd04229d655548f3986be21fad5539340d50cffb5b129712934b4283007",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "46c172bf94e6a026506942e229d00fbee2c6d6adf808e447f9c7ae963b4f1b6b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "4f0bd94967179344d3fda3e6e69b9d7267cc017e2db07750eac404be6e711ea3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "9e9ee46133b18592d8a75bad3dcac9d4575143f5da30c9221d5ffc09dcbebb2b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "a9b7524da628ef00372c08877d1e532aba820cbee383637546b19109535dc8a5",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "b4cf0774ca5d15771c6a9130e54ad40f2a74bcc1e9fd98ae6c6635fa224e999b",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorCanvasCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3b52b80de8b4b559cc70ac2863e2ebd0b1e1efdd26364e94fa63eb41da907ea1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorCanvasCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "49aa12838daf8bd41ab023647c59eb889d675daa0b9236b97764114d8d5b4613",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorCanvasCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b74200fb749f5e30b2c93338f4042ba4b5c719465b6526f7bc76e4b5014e7895",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorCanvasCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b88cee6435a145d34471196f691ee3bc3568d6e7514d1d506d1a9d94412560a2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorCanvasCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fb76ad7c5fcd2d1c80e1d67fb3fac4eff5969c55423e7b3ba0e2e9ed94cd7b0a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "1f8e0c94b71af00a32934a058c38b24a2e56128a0c1826bd03958406287a1bc0",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "51d79e165ed8577b1cb7a2a6d67ce422b2587ca4a0ed0c5cc26fca53c2ca1d05",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b37896086249f90c0ac1997bfeb07533a4dfbc4108aff00742bf8f45d63509d2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cd44998e82ad139b6c4762b7cd0a804c0fc74d2efc323b48b393cc18335ed67c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d4f5cdc414fc2bacffb1096e57167ec84d9b68b8abc512ee416cb402f5f7c220",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d79982a91d188fcdfb4133f2890a330ccc7f2ae7e80f4fd3fd6d0b60e3ab4569",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowExecutorConfigurationMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "de46ad5b5100b271961937f1ad2802ed85c2f1e06176138ef1f382b8263e4d28",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowImageGenerationSettingsSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "133f95032b8e3c0fc783b2ca73434a93cc890292a170f9ad6be0884f3e2ac126",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowImageGenerationSettingsSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "c398cce2b1b09fa7a392396442c037e09231d56febb9a93f238887d5b1dddd87",
+      "count": 3
+    },
+    {
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor",
       "category": "case-policy",
       "source_fingerprint": "17a9f2e7cb4d5dce9bc7ea96a8e82387a758315946892bc9e5c3ee9ae26bad0b",
@@ -74572,25 +74590,13 @@
     {
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor",
       "category": "case-policy",
-      "source_fingerprint": "9a3c46abceafc76d12bc7e5a67f132ca8361ef97695bcf9af0e6418ecae65568",
+      "source_fingerprint": "2125daa36364c136caa4ca19780450cfc9afe3a93c82b18d2074510ea7352fca",
       "count": 1
     },
     {
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor",
       "category": "case-policy",
-      "source_fingerprint": "b3534a4269409af1e4e8074c5db0bc5af68ad0de9b5d8bd31428ee974be2c08b",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor",
-      "category": "case-policy",
-      "source_fingerprint": "c8e8eab75b9c0bc090a59fb54127624e95d66ead689b4317a4291fbfbd5d6403",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor",
-      "category": "case-policy",
-      "source_fingerprint": "cd0efc0114cc757374b42be023b50069111a34176dbe2e83836e5f23572dab34",
+      "source_fingerprint": "d559df39b61a2227b37f99ee34c3da510f1af7245c57d8fe07fbaee0fccb5c85",
       "count": 1
     },
     {

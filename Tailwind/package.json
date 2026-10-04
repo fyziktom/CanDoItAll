@@ -6,6 +6,8 @@
     "tailwindcss": "^4.1.7"
   },
   "scripts": {
+    "workflow-authoring:build": "tailwindcss -i ./workflow-authoring-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/wwwroot/css/workflow-authoring-fast.css",
+    "workflow-authoring:watch": "tailwindcss -i ./workflow-authoring-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/wwwroot/css/workflow-authoring-fast.css --watch",
     "build": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css",
     "watch": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css --watch",
     "catalog:build": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",

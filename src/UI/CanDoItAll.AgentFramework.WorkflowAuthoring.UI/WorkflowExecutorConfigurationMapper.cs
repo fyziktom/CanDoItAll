@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 
 public static class WorkflowExecutorConfigurationMapper
 {
@@ -36,13 +36,20 @@ public static class WorkflowExecutorConfigurationMapper
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var property in document.RootElement.EnumerateObject())
             {
+                var field = schema.Fields.SingleOrDefault(item => string.Equals(item.Key, property.Name, StringComparison.OrdinalIgnoreCase));
+                if (field is null) {
+                    continue;
+                }
+                if (values.ContainsKey(field.Key)) {
+                    throw new InvalidOperationException("Multiple settings properties map to the same schema field. Edit the original JSON to resolve the ambiguity.");
+                }
                 var value = property.Value.ValueKind switch
                 {
                     JsonValueKind.String => property.Value.GetString() ?? string.Empty,
                     JsonValueKind.Null => string.Empty,
                     _ => property.Value.GetRawText()
                 };
-                values[property.Name] = NormalizeSelectValue(property.Name, value, schema);
+                values[field.Key] = NormalizeSelectValue(field.Key, value, schema);
             }
 
             return new ConfigurationState(values);
@@ -62,6 +69,40 @@ public static class WorkflowExecutorConfigurationMapper
         ConfigurationSchema schema,
         ConfigurationState state)
         => SerializeState(schema, state, requireCompleteConfiguration: true);
+
+    public static string MergeState(string originalJson, ConfigurationSchema schema, ConfigurationState state) {
+        var original = string.IsNullOrWhiteSpace(originalJson) ? "{}" : originalJson;
+        var before = ReadState(original, schema);
+        _ = SerializeState(schema, state);
+        var changed = schema.Fields.Where(field => !string.Equals(before.GetText(field.Key), state.GetText(field.Key), StringComparison.Ordinal))
+            .ToDictionary(field => field.Key, StringComparer.OrdinalIgnoreCase);
+        if (changed.Count == 0) {
+            return originalJson;
+        }
+        using var source = JsonDocument.Parse(original);
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream)) {
+            writer.WriteStartObject();
+            foreach (var property in source.RootElement.EnumerateObject()) {
+                if (!changed.Remove(property.Name, out var field)) {
+                    property.WriteTo(writer);
+                    continue;
+                }
+                var value = state.GetText(field.Key);
+                if (!string.IsNullOrWhiteSpace(value)) {
+                    WriteValue(writer, property.Name, value, field);
+                }
+            }
+            foreach (var field in changed.Values) {
+                var value = state.GetText(field.Key);
+                if (!string.IsNullOrWhiteSpace(value)) {
+                    WriteValue(writer, field.Key, value, field);
+                }
+            }
+            writer.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
 
     private static string SerializeState(
         ConfigurationSchema schema,

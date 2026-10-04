@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
+    <SupportedPlatform Include="browser" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Definitions/CanDoItAll.AgentFramework.Workflows.Definitions.csproj" />
+    <ProjectReference Include="../../Modules/CanDoItAll.Modules.Prompts.Contracts/CanDoItAll.Modules.Prompts.Contracts.csproj" />
+    <ProjectReference Include="../CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj" />
+    <ProjectReference Include="../CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
+  </ItemGroup>
+</Project>

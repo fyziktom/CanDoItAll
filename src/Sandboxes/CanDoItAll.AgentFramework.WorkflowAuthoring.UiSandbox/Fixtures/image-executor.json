@@ -1,0 +1,174 @@
+{
+  "id": "image.generate",
+  "name": "Image generation",
+  "description": "Prepares image generation through configured image providers and managed workspace output.",
+  "category": 3,
+  "iconName": "image",
+  "setupRendererKey": "builtin.image-generation",
+  "inputShape": {
+    "kind": 0,
+    "schemaJson": "",
+    "description": "Plain text"
+  },
+  "resultShape": {
+    "kind": 1,
+    "schemaJson": "{}",
+    "description": "JSON payload"
+  },
+  "settingsSchemaJson": "{\u0022type\u0022:\u0022object\u0022}",
+  "defaultSettingsJson": "{\u0022operation\u0022:\u0022Generate\u0022,\u0022prompt\u0022:\u0022\u0022,\u0022providerProfileId\u0022:null,\u0022model\u0022:\u0022\u0022,\u0022size\u0022:\u00221024x1024\u0022,\u0022quality\u0022:\u0022low\u0022,\u0022outputFormat\u0022:\u0022png\u0022,\u0022outputWorkspacePath\u0022:\u0022\u0022}",
+  "defaultPolicy": {
+    "timeoutSeconds": 120,
+    "maxRetryAttempts": 0,
+    "retryDelayMilliseconds": 250,
+    "captureOutputArtifact": true
+  },
+  "isImplemented": true,
+  "source": {
+    "kind": 0,
+    "sourceId": "candoitall.builtins",
+    "sourceVersion": "1.0.0.0",
+    "pluginId": "",
+    "packageId": "",
+    "trustLevel": 0,
+    "displayName": "Built-in",
+    "icon": {
+      "kind": 0,
+      "value": "bolt",
+      "packageId": "",
+      "label": "Built-in executor"
+    }
+  },
+  "availability": {
+    "kind": 0,
+    "isRunnable": true,
+    "reasonCode": "",
+    "message": "Executor is available."
+  },
+  "settingsSchema": {
+    "kind": 1,
+    "version": "1.0",
+    "schemaJson": "{\u0022type\u0022:\u0022object\u0022}",
+    "hasSchema": true
+  },
+  "configurationSchema": {
+    "version": "1.0",
+    "fields": [
+      {
+        "key": "operation",
+        "label": "Operation",
+        "fieldType": 6,
+        "isRequired": false,
+        "helpText": "",
+        "options": [
+          {
+            "value": "Generate",
+            "label": "Generate",
+            "acceptedValues": [
+              "0"
+            ]
+          },
+          {
+            "value": "Edit",
+            "label": "Edit",
+            "acceptedValues": [
+              "1"
+            ]
+          }
+        ],
+        "numberKind": 0
+      },
+      {
+        "key": "prompt",
+        "label": "Prompt",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "providerProfileId",
+        "label": "ProviderProfileId",
+        "fieldType": 8,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "model",
+        "label": "Model",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "size",
+        "label": "Size",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "quality",
+        "label": "Quality",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "outputFormat",
+        "label": "OutputFormat",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      },
+      {
+        "key": "outputWorkspacePath",
+        "label": "OutputWorkspacePath",
+        "fieldType": 0,
+        "isRequired": false,
+        "helpText": "",
+        "options": [],
+        "numberKind": 0
+      }
+    ]
+  },
+  "settingsPresentationMode": 1,
+  "simulation": {
+    "supportsPreviewSimulation": false,
+    "outputTemplateJson": "",
+    "description": ""
+  },
+  "permissionPolicy": {
+    "requiredCapabilities": 150,
+    "approvalRequirement": 1,
+    "requiresApproval": true
+  },
+  "sideEffects": {
+    "kind": 0,
+    "externalMutationKind": 0,
+    "supportsPreview": false,
+    "supportsDryRun": false,
+    "supportsCommit": false,
+    "requiresCommitIdempotencyKey": false,
+    "allowsIdempotentRetry": false,
+    "idempotencyKeyJsonPath": "",
+    "receiptSchema": "",
+    "writesExternalState": false
+  },
+  "deterministicTestMode": {
+    "isSupported": false,
+    "description": ""
+  },
+  "canExecute": true
+}

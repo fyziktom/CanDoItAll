@@ -1,0 +1,45 @@
+@implements IDisposable
+<Button Text="@Context.Text" Icon="library_books" Disabled="Context.Disabled" Click="Open" data-testid="prompt-gallery-picker-button" />
+@if (open) {
+    <Dialog IsOpen="true" Title="Prompt Gallery fixture" Size="ModalSize.Wide" OnClose="Close" TestId="prompt-gallery-picker-dialog">
+        <PromptGallerySearchSurface Presentation="presentation" AllowEdit="false" Intent="HandleIntentAsync" />
+    </Dialog>
+}
+@code {
+    [Parameter, EditorRequired] public WorkflowPromptPickerContext Context { get; set; } = default!;
+    private readonly Guid artifact = Guid.NewGuid();
+    private readonly Guid version = Guid.NewGuid();
+    private bool open;
+    private object? target;
+    private PromptGallerySearchPresentation presentation = PromptGallerySearchPresentation.Initial;
+    protected override void OnParametersSet() {
+        if (target is not null && !ReferenceEquals(target, Context.TargetKey)) {
+            open = false;
+        }
+        target = Context.TargetKey;
+    }
+    private void Open() {
+        presentation = PromptGallerySearchPresentation.Initial with {
+            IsLoading = false, TotalCount = 1, TotalPages = 1,
+            Items = [new(artifact, "Pinned fixture prompt", "Immutable selection fixture", "Summarize the input.",
+                PromptGalleryItemKind.FullPrompt, "Review", PromptArtifactStatus.Final, false, null, ["workflow"], [], new(), 1, DateTimeOffset.UtcNow)]
+        };
+        open = true;
+    }
+    private void Close() {
+        open = false;
+    }
+    private async Task HandleIntentAsync(PromptGallerySearchIntent intent) {
+        if (intent is PromptGallerySearchIntent.ChangeFilters filter) {
+            presentation = presentation with { Filters = filter.Filters };
+        }
+        if (intent is PromptGallerySearchIntent.Select selection) {
+            open = false;
+            await Context.Selected.InvokeAsync(new(artifact, version, 1, selection.Item.Title, selection.Item.Summary,
+                selection.Item.Kind, "Summarize the input.", selection.Item.Tags, [], new()));
+        }
+    }
+    public void Dispose() {
+        open = false;
+    }
+}

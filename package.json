@@ -4,6 +4,8 @@
   "private": true,
   "description": "Private repository tooling for building CanDoItAll application Tailwind assets.",
   "scripts": {
+    "workflow-authoring:css:build": "npm --prefix Tailwind run workflow-authoring:build",
+    "workflow-authoring:css:watch": "npm --prefix Tailwind run workflow-authoring:watch",
     "tailwind:build": "npm --prefix Tailwind run build",
     "tailwind:watch": "npm --prefix Tailwind run watch",
     "watch": "dotnet watch --project ./src/App/CanDoItAll.Web",

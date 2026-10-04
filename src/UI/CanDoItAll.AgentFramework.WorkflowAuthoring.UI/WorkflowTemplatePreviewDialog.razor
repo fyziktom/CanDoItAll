@@ -1,0 +1,150 @@
+<HeadContent><link rel="stylesheet" href="_content/CanDoItAll.AgentFramework.Workflows.UI/workflows.css" /></HeadContent>
+                <Dialog IsOpen="true"
+                        Title="@Template.Name"
+                        Eyebrow="Template preview"
+                        Subtitle="Read-only workflow canvas preview."
+                        Size="ModalSize.Full"
+                        DenseChrome="true"
+                        OnClose="Closed"
+                        TestId="workflows-template-preview-dialog">
+                    <ChildContent>
+                        <div class="workflows-template-preview-dialog">
+                            <aside class="workflows-template-preview-rail">
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template" />
+                                    <h2 class="workflows-card-title">@Template.Name</h2>
+                                    <p class="workflows-muted mt-3">@Template.Description</p>
+                                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
+                                        <StatusBadge Tone="info" Text="@($"{Definition.Graph.Nodes.Count} node(s)")" />
+                                        <StatusBadge Tone="secondary" Text="@($"{Definition.Graph.Edges.Count} edge(s)")" />
+                                        <StatusBadge Tone="accent" Text="@($"{Definition.InputParameters.Count} input(s)")" />
+                                    </Cluster>
+                                </SurfaceCard>
+
+                                <SurfaceCard Soft="true">
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
+                                    @if (SelectedNode is null) {
+                                        <p class="workflows-muted">Select a node on the canvas to inspect it.</p>
+                                    } else {
+                                        <h2 class="workflows-card-title">@SelectedNode.Name</h2>
+                                        <p class="workflows-muted mt-3">@SelectedNode.Settings.Instructions</p>
+                                        <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-4">
+                                            <div class="workflows-fact">
+                                                <span>Kind</span>
+                                                <strong>@SelectedNode.Kind</strong>
+                                            </div>
+                                            <div class="workflows-fact">
+                                                <span>Node id</span>
+                                                <strong>@SelectedNode.Id.Value</strong>
+                                            </div>
+                                        </Grid>
+                                    }
+                                </SurfaceCard>
+
+                                @if (Definition.InputParameters.Count > 0) {
+                                    <SurfaceCard Soft="true">
+                                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Inputs" />
+                                        <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                            @foreach (var parameter in Definition.InputParameters.Take(4)) {
+                                                <div class="workflows-artifact">
+                                                    <strong>@parameter.Label</strong>
+                                                    <span>@parameter.Description</span>
+                                                    <small>@parameter.Key · @(parameter.IsRequired ? "Required" : "Optional")</small>
+                                                </div>
+                                            }
+                                        </Stack>
+                                    </SurfaceCard>
+                                }
+                            </aside>
+
+                            <section class="workflows-template-preview-stage"
+                                     data-testid="workflows-template-preview-canvas">
+                                @if (!string.IsNullOrWhiteSpace(Error)) {
+                                    <p class="workflows-error-note">@Error</p>
+                                } else if (Surface is null) {
+                                    <EmptyState Eyebrow="Preview unavailable"
+                                                Title="Canvas preview could not be prepared"
+                                                Description="Close the dialog and open the template preview again." />
+                                } else {
+                                    <CanvasWorkbenchStage Eyebrow=""
+                                                          Title="@Definition.Name"
+                                                          Description=""
+                                                          Stats="Stats">
+                                        <Canvas>
+                                            <CanvasWorkbench Surface="Surface"
+                                                             SelectionChanged="SelectionChanged"
+                                                             StateChanged="StateChanged" />
+                                        </Canvas>
+                                    </CanvasWorkbenchStage>
+                                }
+                            </section>
+                        </div>
+                    </ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Close"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="Closed"
+                                    data-testid="workflows-template-preview-close" />
+                            <Button Text="Add to my drafts"
+                                    Icon="add"
+                                    Click="AddDraft"
+                                    Disabled="@Busy"
+                                    IsBusy="@Busy"
+                                    data-testid="workflows-template-add-draft" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+@code {
+    [Parameter, EditorRequired] public WorkflowTemplatePreviewHeader Template { get; set; } = default!;
+    [Parameter, EditorRequired] public WorkflowDefinition Definition { get; set; } = default!;
+    [Parameter] public LlmCallComponent? Component { get; set; }
+    [Parameter] public IReadOnlyList<WorkflowExecutorDescriptor> Executors { get; set; } = [];
+    [Parameter] public string Error { get; set; } = string.Empty;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback AddDraft { get; set; }
+    private readonly string instanceId = $"workflow-template-{Guid.NewGuid():N}";
+    private WorkflowDefinition? loaded;
+    private CanvasWorkbenchUiState state = new();
+    private string? selected;
+    private WorkflowNode? SelectedNode => Definition.Graph.Nodes.FirstOrDefault(node => node.Id.Value == selected);
+    private IReadOnlyList<CanvasWorkbenchStat> Stats => [
+        new() { Label = "Nodes", Value = Definition.Graph.Nodes.Count.ToString(), Tone = "info" },
+        new() { Label = "Edges", Value = Definition.Graph.Edges.Count.ToString(), Tone = "secondary" },
+        new() { Label = "Inputs", Value = Definition.InputParameters.Count.ToString(), Tone = "accent" }
+    ];
+    private CanvasWorkbenchSurface? Surface {
+        get {
+            if (Component is null) {
+                return null;
+            }
+            var document = WorkflowCanvasDefinitionMapper.FromDefinition(Definition, [Component]);
+            var surface = WorkflowCanvasDefinitionMapper.BuildSurface(document, [Component], Executors,
+                [], [], state, selected, instanceId);
+            surface.Chrome.HintText = "Read-only workflow template preview.";
+            surface.Chrome.ShowQuickCreateRail = false;
+            surface.Chrome.QuickCreateActions.Clear();
+            surface.Chrome.GroupContextActions.Clear();
+            foreach (var node in surface.Nodes) {
+                node.IsReadOnly = true;
+                node.ContextActions.Clear();
+            }
+            return surface;
+        }
+    }
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(loaded, Definition)) {
+            return;
+        }
+        loaded = Definition;
+        selected = Definition.Graph.StartNodeId.Value;
+        state = new() { ActiveInspectorTab = "workflow", Zoom = .48, PanX = 144, PanY = 88, SelectedNodeIds = [selected] };
+    }
+    private void SelectionChanged(CanvasWorkbenchSelectionChangedEventArgs args) {
+        selected = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
+    }
+    private void StateChanged(string json) {
+        state = CanvasWorkbenchUiState.Parse(json);
+    }
+}

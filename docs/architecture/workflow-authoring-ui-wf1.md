@@ -9,9 +9,9 @@ are unchanged. This is an in-progress implementation record, not family closure.
 | Stage | State | Next concrete work |
 |---|---|---|
 | S0 | CA1-R1 reproduced, repaired and signed as `ccd18f6a1`; focused checks pass | Final source campaign |
-| W1 | Source census in progress | Native lossless document reproduction and state boundary |
-| W2 | Pending | Complete actual canvas, floating windows, inspectors and settings |
-| W3 | Pending | Template, both preview inputs, run/event dialogs and native composition |
+| W1 | Initial lossless repair signed as `4df9f9339`; full matrix under validation | Exact native unchanged/node-edit/conflict and acceptance checks |
+| W2 | Canvas, windows and actual inspector/settings children extracted | Final native/desktop consumer proof |
+| W3 | Template, preview-input, run/event dialogs composed through shared renderers | Expanded native ownership checks and checkpoint gates |
 | W4 | Pending | Native consumers, source/publish desktop, final images and closure gates |
 
 Entry source pair: main `28ca64aaf0a2e3f65ee44feae2d931852bd18611`, Components
@@ -140,3 +140,94 @@ that original 27/2 result is retained. The affected module direct build passed.
 This proves the title-edit baseline slice, not the full round-trip matrix, held-save
 reconciliation or completed authoring family. The fresh portability scan passed
 with 15,205 reviewed executable-source findings unchanged and no baseline write.
+
+## W2/W3 implementation checkpoint — in progress
+
+The actual canvas and all three floating windows now live in
+`CanDoItAll.AgentFramework.WorkflowAuthoring.UI`. Shared route fields, execution
+policy, exact provider/model selection and the full eight-field image form are
+real child renderers. Both preview-input paths, template catalogue/read-only canvas,
+run detail and event detail are extracted. The native page is composition, and
+ordinary shell tab changes retain its mounted editor. Native adapters retain
+catalog writes, exact Prompt compatibility/component creation, trusted settings
+resolution and preview authority/admission. No Workbench or Processes extraction
+has started.
+
+Evaluated WF1 sibling-source graphs: old shell 4 projects (same paths as entry),
+authoring UI 17, new sandbox 19, prior catalog sandbox 16. None of those evaluated
+closures imports the AgentFramework implementation module, Web, Workflow Core or
+persistence. Pure routing validation and execution-policy limits now belong to the
+neutral Workflows.Definitions project; native runtime/compiler behavior delegates
+to those rules. The native module retains runtime evaluation and effects.
+
+The new independent component assembly passed its initial 19 cases, then 21 after
+failing-first validation/preparation read errors. The original two failures are
+retained. A later three-case Prompt lifetime selection reproduced one stale
+new-node callback crossing into a replacement document (2 pass / 1 fail). The
+callback now captures its originating document, while accepted components remain
+available after callback failure or retirement. Expanded final focused results
+will be recorded before checkpoint signing.
+
+Native composition passed 67/67 with no skips. Expanded native round-trip and
+ownership selection discovered 54 cases (6 round-trip; 48 ownership). Its original
+53/1 result is retained: the one failure was the new node-edit test's tab locator,
+corrected to click the actual tab button. Authority capture canceled by target
+retirement dispatched zero runs; known acceptance and unknown reserved identities
+survived their respective lifetimes in both preview entry paths. Native follow-up
+and the remaining final campaign are still required.
+
+Source desktop inspection at 1920×1080, scale 1 exposed missing Canvas assets and
+an incomplete image descriptor fixture. Both were repaired using the actual neutral
+asset components and a native descriptor snapshot. The current source sandbox
+renders the actual canvas, two independent editors, Gallery picker and full image
+settings without browser console errors. Original failed captures/logs remain
+private. Published, Fast/Parity and repeated edit measurements are pending.
+
+One deliberate final Stable run is required by the public boundary, native preview
+admission handling and new test/CI wiring. No broad result is claimed yet. Required
+native Web, deterministic source/two-client images, file approvals, human response,
+Scheduler, History and accepted/incomplete output journeys remain open. Private
+logs/TRX/fixture credentials stay under the task-owned artifact roots; only reviewed
+metadata is exported here.
+
+### Rendering/composition checkpoint results
+
+The final expanded independent selection passes 30/30, zero skipped. Rich-port
+projection, port-schema preservation during a node value-shape edit and chosen
+connection endpoints first failed 3/3; the repaired native projection preserves
+names, IDs and required flags. Insertion and single-path reconnection carry the
+unchanged outer port endpoints. Invalid fan-out text remains visible and is refused
+when applying a route. The three Prompt lifetime cases now pass, including the
+original stale-callback reproduction and accepted-before-refresh retention.
+
+Fresh native discovery and execution passed 146/146, zero skipped: WorkflowsPage
+44, ownership 48, round-trip 6, executor catalog 12, executor display 2, image
+settings 3, provider/model selector 11, Gallery picker 6 and lightweight Workflow
+surfaces 14. A subsequent image-read lifetime test first reproduced disposal of a
+still-pending read token (0/1); a linked read lease repaired it, and the complete
+four-case image renderer class then passed 4/4. These overlapping selections are
+reported separately. All 15 changed production project owners built directly;
+authoring UI, native module and sandbox were rebuilt for their final source deltas.
+
+Portability self-tests passed (6 baseline; 4 scanner). The complete tracked scan
+contains 8,442 scanned files and 34,108 findings, with no truncation. All 46 added
+and 45 stale baseline entries were reviewed: moved presentation code, retained
+native secret-reference metadata reads, case policy, canvas link fields and the
+sandbox README's shell fence. Source routes use ordinal identity; display search
+and GUID/schema protocol matching retain their intended comparison rules. The
+reviewed baseline moves from 15,205 to 15,206 allowances; final enforcement passes
+without baseline-write mode. Documentation validation passes for 356 maintained
+Markdown files.
+
+The full modified-file text export's secret scan retains 20 findings in the existing
+CI fixture configuration. A separately scanned HEAD copy matches every rule,
+fingerprint and multiplicity; none is introduced by the three new project-list
+entries. Original failed scans are retained, not suppressed. Changed-line and safe
+metadata export results are recorded separately from this qualified whole-file
+result; no whole-worktree secret-scan PASS is claimed.
+
+The isolated source/two-client preflight passed for the fresh
+`shared-providers-e2e-pp2-wf1-9188e9a3` fixture (loopback ports 62540–62542;
+PostgreSQL 62545, disk-backed PostgreSQL 18). Preflight changed no containers or
+credentials. The historical stacks remain untouched; the final image campaign has
+not yet run at this checkpoint.

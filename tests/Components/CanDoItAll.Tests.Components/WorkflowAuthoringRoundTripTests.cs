@@ -3,12 +3,87 @@ using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
+using CanDoItAll.Modules.AgentFramework.Pages.Authoring;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 [Trait("Category", "HostPlatform")]
 public sealed class WorkflowAuthoringRoundTripTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_unchanged_and_node_name_edits_preserve_the_complete_supported_document(bool editNode) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var original = await SaveAndReadAsync(catalog, CreateRequest());
+        WorkflowDefinition? accepted = null;
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original)
+            .Add(x => x.DefinitionSaved, value => accepted = value));
+        cut.WaitForElement("[data-testid='workflow-canvas-save']", TimeSpan.FromSeconds(10));
+        if (editNode) {
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-tab-node']").ClickAsync());
+            await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-node-name']").Change("Edited start"));
+        }
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        var receipt = Assert.IsType<WorkflowDefinition>(accepted);
+        await using var scope = harness.Context.Services.CreateAsyncScope();
+        var actual = Assert.IsType<WorkflowDefinitionDetail>(await scope.ServiceProvider.GetRequiredService<IWorkflowCatalogService>()
+            .GetDefinitionAsync(receipt.Id, receipt.VersionId)).Definition;
+        var expected = original with { VersionId = actual.VersionId, UpdatedAtUtc = actual.UpdatedAtUtc,
+            CreatedAtUtc = ToPostgreSqlPrecision(original.CreatedAtUtc), Graph = original.Graph with {
+                Nodes = original.Graph.Nodes.Select(node => editNode && node.Id == original.Graph.StartNodeId
+                    ? node with { Name = "Edited start" } : node).ToArray()
+            } };
+        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(actual));
+        Assert.Equal(JsonSerializer.Serialize(original), JsonSerializer.Serialize(
+            Assert.IsType<WorkflowDefinitionDetail>(await catalog.GetDefinitionAsync(original.Id, original.VersionId)).Definition));
+    }
+
+    [Fact]
+    public async Task Native_competing_save_rejects_the_exact_stale_version_and_retains_the_losing_draft() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var original = await SaveAndReadAsync(catalog, CreateRequest());
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original));
+        cut.WaitForElement("[data-testid='workflow-canvas-save']", TimeSpan.FromSeconds(10));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-name']").Change("Losing local draft"));
+        var document = WorkflowCanvasDefinitionMapper.ToDefinition(WorkflowCanvasDefinitionMapper.FromDefinition(original, []));
+        var competing = new WorkflowDocumentOwner(catalog, NullLogger.Instance);
+        var receipt = Assert.IsType<WorkflowDefinitionSaveOutcome.Accepted>(await competing.Operations.Save(
+            new(original.Id, original.VersionId, "Winner", original.Description, original.Status, document.Graph, document.RuntimePolicy) {
+                InputParameters = original.InputParameters, ExternalNamespace = original.ExternalNamespace, ExternalKey = original.ExternalKey
+            }, CancellationToken.None));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        Assert.Null(cut.Instance.DocumentOwner.Accepted);
+        Assert.Contains("The saved workflow changed", cut.Markup);
+        Assert.Equal("Losing local draft", cut.Find("[data-testid='workflow-canvas-name']").GetAttribute("value"));
+        Assert.Equal(receipt.Definition.VersionId, Assert.IsType<WorkflowDefinitionDetail>(await catalog.GetDefinitionAsync(original.Id)).Definition.VersionId);
+    }
+
+    [Fact]
+    public async Task Native_save_receipt_survives_a_failed_parent_callback_without_a_second_version() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var original = await SaveAndReadAsync(catalog, CreateRequest());
+        var callbacks = 0;
+        var cut = harness.Context.Render<WorkflowCanvasEditor>(p => p.Add(x => x.Definition, original)
+            .Add(x => x.DefinitionSaved, _ => {
+                callbacks++;
+                throw new InvalidOperationException("private post-commit failure");
+            }));
+        cut.WaitForElement("[data-testid='workflow-canvas-save']", TimeSpan.FromSeconds(10));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-save']").ClickAsync());
+        var receipt = Assert.IsType<WorkflowDefinition>(cut.Instance.DocumentOwner.Accepted);
+        Assert.Equal(1, callbacks);
+        Assert.Equal(receipt.VersionId, cut.FindComponent<WorkflowCanvasSurface>().Instance.AcceptedDefinition?.VersionId);
+        Assert.Contains("Workflow saved. Catalog refresh is unavailable", cut.Markup);
+        Assert.DoesNotContain("private post-commit failure", cut.Markup);
+        Assert.Equal(receipt.VersionId, Assert.IsType<WorkflowDefinitionDetail>(await catalog.GetDefinitionAsync(original.Id)).Definition.VersionId);
+    }
+
     [Fact]
     public async Task Native_title_edit_preserves_parameter_descriptors_and_stable_provenance() {
         await using var harness = await ComponentTestHarness.CreateAsync();

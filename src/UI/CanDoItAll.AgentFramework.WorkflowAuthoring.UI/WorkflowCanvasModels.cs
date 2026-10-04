@@ -1,11 +1,11 @@
-using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.SharedKernel.Configuration;
+using CanDoItAll.AgentFramework.Workflows.Definitions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
-using CanDoItAll.Modules.Security;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 
-internal sealed class WorkflowCanvasDocument
+public sealed class WorkflowCanvasDocument
 {
     public WorkflowDefinition? Baseline { get; set; }
 
@@ -32,7 +32,9 @@ internal sealed class WorkflowCanvasDocument
     public List<WorkflowCanvasEdgeDraft> Edges { get; } = [];
 }
 
-internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind kind)
+public enum WorkflowNodeInputField { AgentId, SubworkflowId, TimeoutSeconds, RetryAttempts, RetryDelay }
+
+public sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind kind)
 {
     public WorkflowNode? Baseline { get; set; }
 
@@ -58,6 +60,16 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
 
     public string ExecutorSettingsJson { get; set; } = string.Empty;
 
+    public ConfigurationState? PendingConfiguration { get; set; }
+
+    public string SettingsError { get; set; } = string.Empty;
+
+    public Dictionary<WorkflowNodeInputField, string> RawInputs { get; } = [];
+
+    public HashSet<WorkflowNodeInputField> InvalidInputs { get; } = [];
+
+    public string ReadInput(WorkflowNodeInputField field, string value) => RawInputs.GetValueOrDefault(field, value);
+
     public WorkflowExecutorExecutionPolicy? ExecutionPolicy { get; set; }
 
     public string Instructions { get; set; } = WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind);
@@ -69,7 +81,7 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
     public WorkflowValueShapeKind InputShapeKind {
         get => InputShape?.Kind ?? WorkflowValueShapeKind.Text;
         set {
-            if (value != InputShapeKind) {
+            if (value != InputShape?.Kind) {
                 InputShape = new(value, string.Empty, value.ToString());
             }
         }
@@ -78,7 +90,7 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
     public WorkflowValueShapeKind ResultShapeKind {
         get => ResultShape?.Kind ?? WorkflowValueShapeKind.Text;
         set {
-            if (value != ResultShapeKind) {
+            if (value != ResultShape?.Kind) {
                 ResultShape = new(value, string.Empty, value.ToString());
             }
         }
@@ -89,7 +101,7 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
     public double CanvasY { get; set; }
 }
 
-internal sealed class WorkflowCanvasEdgeDraft(
+public sealed class WorkflowCanvasEdgeDraft(
     WorkflowEdgeId id,
     WorkflowNodeId sourceNodeId,
     WorkflowNodeId targetNodeId)
@@ -113,7 +125,7 @@ internal sealed class WorkflowCanvasEdgeDraft(
     public WorkflowEdgeRouting Routing { get; set; } = WorkflowEdgeRouting.Always;
 }
 
-internal static class WorkflowCanvasDefinitionMapper
+public static class WorkflowCanvasDefinitionMapper
 {
     public const string InputPortId = "workflow:input";
     public const string OutputPortId = "workflow:output";
@@ -307,10 +319,11 @@ internal static class WorkflowCanvasDefinitionMapper
         WorkflowCanvasDocument document,
         IReadOnlyList<LlmCallComponent> components,
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
-        IReadOnlyList<SecretListItem> secrets,
+        IReadOnlyList<WorkflowSecretOption> secrets,
         IReadOnlyList<WorkflowValidationIssue> validationIssues,
         CanvasWorkbenchUiState uiState,
-        string? selectedNodeId)
+        string? selectedNodeId,
+        string? instanceId = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(components);
@@ -366,9 +379,9 @@ internal static class WorkflowCanvasDefinitionMapper
             .Select(edge => new CanvasWorkbenchLink
             {
                 SourceId = edge.SourceNodeId.Value,
-                SourcePortId = OutputPortId,
+                SourcePortId = edge.SourcePortId?.Value ?? string.Empty,
                 TargetId = edge.TargetNodeId.Value,
-                TargetPortId = InputPortId,
+                TargetPortId = edge.TargetPortId?.Value ?? string.Empty,
                 Kind = edge.Routing.Kind.ToString(),
                 Label = ResolveRouteLabel(edge),
                 Summary = BuildRouteSummary(edge),
@@ -388,9 +401,9 @@ internal static class WorkflowCanvasDefinitionMapper
 
         return new CanvasWorkbenchSurface
         {
-            SurfaceId = document.DefinitionId?.ToString() ?? "workflow-canvas-draft",
+            SurfaceId = instanceId ?? document.DefinitionId?.ToString() ?? "workflow-canvas-draft",
             Mode = CanvasWorkbenchModes.Authoring,
-            DependencySourceId = document.VersionId?.ToString() ?? "draft",
+            DependencySourceId = instanceId ?? document.VersionId?.ToString() ?? "draft",
             Nodes = nodes,
             Links = links,
             UiState = resolvedUiState,
@@ -654,7 +667,7 @@ internal static class WorkflowCanvasDefinitionMapper
 
     private static CanvasWorkbenchChrome BuildChrome(
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
     {
         return new CanvasWorkbenchChrome
         {
@@ -857,8 +870,8 @@ internal static class WorkflowCanvasDefinitionMapper
                     Tone = "danger"
                 }
             ],
-            InputPorts = node.Kind == WorkflowNodeKind.Start ? [] : [BuildInputPort(node)],
-            OutputPorts = node.Kind == WorkflowNodeKind.End ? [] : [BuildOutputPort(node)]
+            InputPorts = node.Kind == WorkflowNodeKind.Start ? [] : BuildCanvasPorts(node, WorkflowPortDirection.Input),
+            OutputPorts = node.Kind == WorkflowNodeKind.End ? [] : BuildCanvasPorts(node, WorkflowPortDirection.Output)
         };
     }
 
@@ -1008,14 +1021,39 @@ internal static class WorkflowCanvasDefinitionMapper
         };
     }
 
+    private static List<CanvasWorkbenchPort> BuildCanvasPorts(WorkflowCanvasNodeDraft node, WorkflowPortDirection direction) {
+        var native = BuildPorts(node).Where(port => port.Direction == direction).ToArray();
+        if (native.Length == 0) {
+            return [direction == WorkflowPortDirection.Input ? BuildInputPort(node) : BuildOutputPort(node)];
+        }
+        return native.Select(port => new CanvasWorkbenchPort {
+            Id = port.Id.Value,
+            Label = port.Name,
+            Side = direction == WorkflowPortDirection.Input ? "left" : "right",
+            Tone = direction == WorkflowPortDirection.Input ? "neutral" : "info",
+            Kind = port.Shape.Kind.ToString(),
+            IsRequired = port.Required
+        }).ToList();
+    }
+
+    public static bool TryResolveConnectionPort(WorkflowCanvasNodeDraft node, string? renderedPortId,
+        WorkflowPortDirection direction, out WorkflowPortId? portId) {
+        portId = null;
+        if (string.IsNullOrEmpty(renderedPortId)) {
+            return true;
+        }
+        var ports = BuildPorts(node).Where(port => port.Direction == direction).ToArray();
+        if (ports.FirstOrDefault(port => port.Id.Value == renderedPortId) is { } selected) {
+            portId = selected.Id;
+            return true;
+        }
+        return ports.Length == 0 && renderedPortId == (direction == WorkflowPortDirection.Input ? InputPortId : OutputPortId);
+    }
+
     private static IReadOnlyList<WorkflowPort> BuildPorts(WorkflowCanvasNodeDraft node)
     {
         if (node.Baseline is { } original) {
-            return original.Ports.Select(port => port.Direction switch {
-                WorkflowPortDirection.Input when node.InputShape != original.Settings.InputShape && node.InputShape is { } input => port with { Shape = input },
-                WorkflowPortDirection.Output when node.ResultShape != original.Settings.ResultShape && node.ResultShape is { } output => port with { Shape = output },
-                _ => port
-            }).ToArray();
+            return original.Ports;
         }
 
         var ports = new List<WorkflowPort>();

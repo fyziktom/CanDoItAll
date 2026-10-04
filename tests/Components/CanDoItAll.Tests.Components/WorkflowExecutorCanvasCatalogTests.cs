@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -272,19 +273,15 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         var razorSource = File.ReadAllText(Path.Combine(
             root,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "WorkflowCanvasEditor.razor"));
+            "UI",
+            "CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+            "WorkflowCanvasSurface.razor"));
         var codeBehindSource = File.ReadAllText(Path.Combine(
             root,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "WorkflowCanvasEditor.razor.cs"));
+            "UI",
+            "CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+            "WorkflowCanvasSurface.razor.cs"));
         var forbiddenExecutorIds = new[]
         {
             nameof(WorkflowExecutorIds.StorageFile),
@@ -294,7 +291,7 @@ public sealed class WorkflowExecutorCanvasCatalogTests
             nameof(WorkflowExecutorIds.ImageGeneration)
         };
 
-        Assert.Contains(nameof(SettingsRendererHost), razorSource, StringComparison.Ordinal);
+        Assert.Contains("SettingsRenderer?.Invoke", razorSource, StringComparison.Ordinal);
         Assert.Contains("ShouldRenderSettingsRenderer(descriptor)", razorSource, StringComparison.Ordinal);
         Assert.Contains(nameof(WorkflowExecutorSettingsPresentationMode.CustomRenderer), codeBehindSource, StringComparison.Ordinal);
         foreach (var executorId in forbiddenExecutorIds)
@@ -319,19 +316,15 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         var razorSource = File.ReadAllText(Path.Combine(
             root,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "WorkflowCanvasEditor.razor"));
+            "UI",
+            "CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+            "WorkflowCanvasSurface.razor"));
         var codeBehindSource = File.ReadAllText(Path.Combine(
             root,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "WorkflowCanvasEditor.razor.cs"));
+            "UI",
+            "CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+            "WorkflowCanvasSurface.razor.cs"));
 
         Assert.DoesNotContain("data-testid=\"workflow-canvas-node-component\"", razorSource, StringComparison.Ordinal);
         Assert.DoesNotContain("data-testid=\"workflow-canvas-node-modal-component\"", razorSource, StringComparison.Ordinal);
@@ -354,9 +347,9 @@ public sealed class WorkflowExecutorCanvasCatalogTests
             "Preferred provider",
             ProviderKind.AzureOpenAi,
             "preferred-model");
-        var editor = new WorkflowCanvasEditor();
-        typeof(WorkflowCanvasEditor)
-            .GetProperty(nameof(WorkflowCanvasEditor.ProviderOptions))!
+        var editor = new WorkflowCanvasSurface();
+        typeof(WorkflowCanvasSurface)
+            .GetProperty(nameof(WorkflowCanvasSurface.ProviderOptions))!
             .SetValue(editor, new WorkflowProviderOption[] { currentProvider, preferredProvider });
         SetPrivateField(editor, "newComponentProviderProfileId", currentProvider.ProviderProfileId.ToString("D"));
         SetPrivateField(editor, "newComponentModel", currentProvider.DefaultModel);
@@ -415,10 +408,10 @@ public sealed class WorkflowExecutorCanvasCatalogTests
             SupportsBackgroundResponses: true);
 
     private static (WorkflowProviderOption Provider, string Model) ResolveExecutionPair(
-        WorkflowCanvasEditor editor,
+        WorkflowCanvasSurface editor,
         PromptGallerySelection selection)
     {
-        var method = typeof(WorkflowCanvasEditor).GetMethod(
+        var method = typeof(WorkflowCanvasSurface).GetMethod(
             "ResolvePromptBindingExecutionPair",
             BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Workflow Gallery execution-pair resolver was not found.");
@@ -432,9 +425,9 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         return (provider, model);
     }
 
-    private static void SetPrivateField(WorkflowCanvasEditor editor, string name, object value)
+    private static void SetPrivateField(WorkflowCanvasSurface editor, string name, object value)
     {
-        var field = typeof(WorkflowCanvasEditor).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
+        var field = typeof(WorkflowCanvasSurface).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException($"Workflow canvas field '{name}' was not found.");
         field.SetValue(editor, value);
     }

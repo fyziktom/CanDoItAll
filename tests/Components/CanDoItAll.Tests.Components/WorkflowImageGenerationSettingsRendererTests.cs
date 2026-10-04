@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -12,6 +13,30 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowImageGenerationSettingsRendererTests
 {
+    [Fact]
+    [Trait("Category", "HostPlatform")]
+    public async Task A_retired_image_renderer_keeps_its_canceled_read_token_alive_until_the_read_finishes() {
+        await using var context = new BunitContext();
+        context.Services.AddLogging();
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observed = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Services.AddSingleton<IWorkflowComponentLibraryService>(new ProviderComponentLibrary(async token => {
+            entered.SetResult(token);
+            await release.Task;
+            observed.SetResult(Record.Exception(() => Assert.True(token.WaitHandle.WaitOne(0))));
+            return [];
+        }));
+        var descriptor = BuiltInWorkflowExecutorDescriptors.ImageGeneration;
+        var cut = context.Render<WorkflowImageGenerationSettingsRenderer>(p => p.Add(x => x.Schema, descriptor.ConfigurationSchema)
+            .Add(x => x.State, WorkflowExecutorConfigurationMapper.ReadState(descriptor.DefaultSettingsJson, descriptor.ConfigurationSchema)));
+        var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await cut.InvokeAsync(async () => await cut.Instance.DisposeAsync());
+        Assert.True(token.IsCancellationRequested);
+        release.SetResult();
+        Assert.Null(await observed.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
     [Fact]
     public void Trusted_image_renderer_edits_every_schema_field_and_filters_provider_capability()
     {

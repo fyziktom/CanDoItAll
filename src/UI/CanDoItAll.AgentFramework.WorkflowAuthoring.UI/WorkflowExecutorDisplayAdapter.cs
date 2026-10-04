@@ -1,7 +1,7 @@
-using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Workflows.Definitions;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 
 public sealed record WorkflowExecutorDisplayBadge(string Text, string Tone);
 
@@ -37,7 +37,7 @@ public static class WorkflowExecutorDisplayAdapter
             return null;
         }
 
-        return WorkflowExecutorSideEffectPolicy.IsRetryPolicySafe(descriptor, policy)
+        return WorkflowExecutionPolicyRules.IsRetryPolicySafe(descriptor, policy)
             ? new WorkflowExecutorDisplayBadge("Retry safe", "success")
             : new WorkflowExecutorDisplayBadge("Unsafe retries", "danger");
     }
@@ -137,7 +137,7 @@ public static class WorkflowExecutorDisplayAdapter
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(policy);
 
-        if (WorkflowExecutorSideEffectPolicy.IsRetryPolicySafe(descriptor, policy))
+        if (WorkflowExecutionPolicyRules.IsRetryPolicySafe(descriptor, policy))
         {
             return policy.MaxRetryAttempts == 0
                 ? "Retries are disabled for this executor policy."

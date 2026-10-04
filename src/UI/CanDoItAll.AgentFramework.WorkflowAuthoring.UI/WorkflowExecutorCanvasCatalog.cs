@@ -1,9 +1,8 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.CanvasLib;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
+namespace CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 
 public static class WorkflowExecutorCanvasCatalog
 {
@@ -11,7 +10,7 @@ public static class WorkflowExecutorCanvasCatalog
     private const string PluginExecutorsActionId = "workflow-executor:plugins";
     public static IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions(
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
     {
         var implemented = executors
             .Where(executor => executor.CanExecute)
@@ -49,7 +48,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     public static CanvasWorkbenchAction BuildCreateAction(
         WorkflowExecutorDescriptor descriptor,
-        IReadOnlyList<SecretListItem>? secrets = null)
+        IReadOnlyList<WorkflowSecretOption>? secrets = null)
     {
         var defaultInputValues = BuildDefaultInputValues(descriptor);
         var inputFields = BuildInputFields(descriptor, secrets ?? []);
@@ -161,7 +160,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     private static CanvasWorkbenchAction? BuildPluginExecutorsAction(
         IReadOnlyList<WorkflowExecutorDescriptor> executors,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
     {
         var pluginGroups = executors
             .Where(IsPluginExecutor)
@@ -266,7 +265,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     private static List<CanvasWorkbenchInputField> BuildInputFields(
         WorkflowExecutorDescriptor descriptor,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
     {
         var fields = new List<CanvasWorkbenchInputField>();
         if (descriptor.ConfigurationSchema.Fields.Count > 0)
@@ -293,7 +292,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     private static CanvasWorkbenchInputField BuildConfigurationField(
         ConfigurationFieldDescriptor field,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
     {
         var key = WorkflowExecutorConfigurationMapper.BuildInputKey(field.Key);
         return new CanvasWorkbenchInputField
@@ -322,7 +321,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     private static List<CanvasWorkbenchInputOption> BuildConfigurationFieldOptions(
         ConfigurationFieldDescriptor field,
-        IReadOnlyList<SecretListItem> secrets)
+        IReadOnlyList<WorkflowSecretOption> secrets)
         => field.FieldType switch
         {
             ConfigurationFieldType.Boolean =>

@@ -72,4 +72,7 @@
     <ProjectReference Include="..\..\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.csproj" />
+  </ItemGroup>
 </Project>

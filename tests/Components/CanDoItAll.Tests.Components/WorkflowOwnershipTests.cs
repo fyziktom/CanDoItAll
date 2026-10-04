@@ -8,6 +8,8 @@ using CanDoItAll.AgentFramework.Workflows.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +19,104 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 [Trait("Category", "HostPlatform")]
 public sealed class WorkflowOwnershipTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Preview_authority_capture_cannot_dispatch_after_the_original_target_retires(bool canvas) {
+        await using var fixture = await Fixture.CreateAsync();
+        var authority = await fixture.Harness.Context.Services.GetRequiredService<IWorkflowStructureAuthorityFactory>()
+            .CaptureLocalOperatorAsync(WorkflowStructureOperatorSurface.UserInterface);
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<WorkflowStructureAuthority>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Probe.Authority = token => {
+            entered.SetResult(token);
+            return release.Task;
+        };
+        var calls = 0;
+        fixture.Probe.Test = _ => {
+            calls++;
+            return Task.FromResult(Result());
+        };
+        await fixture.Tab(canvas ? WorkflowTab.Editor : WorkflowTab.History);
+        if (canvas) {
+            fixture.Cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+        }
+        var operation = canvas
+            ? fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync())
+            : fixture.Emit(WorkflowAction.RunTest);
+        var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await fixture.Select(fixture.Second);
+        Assert.True(token.IsCancellationRequested);
+        release.SetResult(authority);
+        await operation;
+        Assert.Equal(0, calls);
+        Assert.Equal(fixture.Second.Id.Value, fixture.Surface.Catalog.Definition!.Id);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Accepted_preview_identity_survives_target_retirement_without_reopening_its_view(bool canvas) {
+        await using var fixture = await Fixture.CreateAsync();
+        var entered = new TaskCompletionSource<WorkflowTestRunRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<WorkflowTestRunResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Probe.Test = request => {
+            entered.SetResult(request);
+            return release.Task;
+        };
+        await fixture.Tab(canvas ? WorkflowTab.Editor : WorkflowTab.History);
+        WorkflowCanvasEditor? editor = null;
+        if (canvas) {
+            fixture.Cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+            editor = fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance;
+        }
+        var operation = canvas
+            ? fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync())
+            : fixture.Emit(WorkflowAction.RunTest);
+        var request = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.NotNull(request.StructureAuthority);
+        if (canvas) {
+            Assert.Equal(fixture.First.Id, request.DraftDefinition!.Id);
+            Assert.NotEqual(fixture.First.VersionId, request.DraftDefinition.VersionId);
+        } else {
+            Assert.Equal(fixture.First.VersionId, request.VersionId);
+        }
+        await fixture.Select(fixture.Second);
+        release.SetResult(Result() with { Run = fixture.FirstRun, DetailsComplete = false });
+        await operation;
+        Assert.Equal(fixture.FirstRun.RunId, canvas ? editor!.PreviewOwner.Accepted?.RunId : fixture.Cut.Instance.AcceptedPreviewRun?.RunId);
+        Assert.Equal(fixture.Second.Id.Value, fixture.Surface.Catalog.Definition!.Id);
+        Assert.Empty(fixture.Cut.FindAll("[data-testid='workflows-run-detail-dialog']"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unknown_native_preview_admission_retains_the_reserved_run_and_blocks_replay(bool canvas) {
+        await using var fixture = await Fixture.CreateAsync();
+        var calls = 0;
+        var reserved = WorkflowRunId.New();
+        fixture.Probe.Test = _ => {
+            calls++;
+            throw new WorkflowLaunchAdmissionObservationException(reserved, new InvalidOperationException("private admission failure"),
+                new InvalidOperationException("private observation failure"));
+        };
+        await fixture.Tab(canvas ? WorkflowTab.Editor : WorkflowTab.History);
+        if (canvas) {
+            fixture.Cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
+            await fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").ClickAsync());
+            Assert.Equal(reserved, fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.PreviewOwner.ReservedRunId);
+            Assert.True(fixture.Cut.Find("[data-testid='workflow-canvas-run-preview']").HasAttribute("disabled"));
+        } else {
+            await fixture.Emit(WorkflowAction.RunTest);
+            await fixture.Emit(WorkflowAction.RunTest);
+            Assert.Equal(reserved, fixture.Cut.Instance.UnconfirmedPreviewRunId);
+            Assert.False(fixture.Surface.History.CanTest);
+        }
+        Assert.Equal(1, calls);
+        Assert.DoesNotContain("private admission failure", fixture.Cut.Markup);
+    }
+
     public enum DelayedReadOutcome { Success, Failure, Cancellation }
 
     public enum DelayedReadLane { Catalog, Definition, RunPage, RunDetail }
@@ -464,6 +564,7 @@ public sealed class WorkflowOwnershipTests {
                 Decorate<IWorkflowRunStore>(services, probe);
                 Decorate<IWorkflowRuntimeManager>(services, probe);
                 Decorate<IWorkflowTestRunner>(services, probe);
+                Decorate<IWorkflowStructureAuthorityFactory>(services, probe);
                 Decorate<IWorkflowExternalResponseService>(services, probe);
                 Decorate<IAgentChatLauncher>(services, probe);
             });
@@ -512,6 +613,7 @@ public sealed class WorkflowOwnershipTests {
     }
 
     public sealed class Probe {
+        public Func<CancellationToken, Task<WorkflowStructureAuthority>>? Authority { get; set; }
         public Func<CancellationToken, Task<IReadOnlyList<WorkflowCatalogItem>>>? Catalog { get; set; }
         public Func<WorkflowId, CancellationToken, Task<WorkflowDefinitionDetail?>>? Definition { get; set; }
         public Func<Guid, Task<ActiveAgentChat>>? Launch { get; set; }
@@ -530,6 +632,7 @@ public sealed class WorkflowOwnershipTests {
             var method = targetMethod ?? throw new InvalidOperationException("Missing workflow method.");
             var args = arguments ?? [];
             return method.Name switch {
+                nameof(IWorkflowStructureAuthorityFactory.CaptureLocalOperatorAsync) when Probe.Authority is { } authority => authority(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowCatalogService.ListDefinitionsAsync) when Probe.Catalog is { } catalog => catalog(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowCatalogService.GetDefinitionAsync) when Probe.Definition is { } definition => definition((WorkflowId)args[0]!, args.OfType<CancellationToken>().Single()),
                 nameof(IAgentChatLauncher.StartNewChatAsync) when Probe.Launch is { } launch => launch((Guid)args[0]!),
