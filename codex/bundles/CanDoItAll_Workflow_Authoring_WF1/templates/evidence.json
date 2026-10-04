@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKFLOW-AUTHORING-WF1",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Actual source pair, signing and fixture ownership",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "CA1-R1 setup evidence attribution",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Components delivery and retained CA1 fixes",
+      "phase": "S0/final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Current renderer/caller/asset census",
+      "phase": "W1/final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "Protected dependency closures",
+      "phase": "W1/final",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Definition input and hidden-field round-trip",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Graph shapes, ports, routes and coordinates",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Raw input and document lifetime",
+      "phase": "W1/W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Save admission, receipts and optimistic conflict",
+      "phase": "W1/W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Parent save/version remount reconciliation",
+      "phase": "W1/W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Actual canvas and graph editing",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Floating windows and two canvases",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Complete inspectors and supported node kinds",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Trusted generic and custom executor settings",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Prompt selection and accepted component identity",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Provider names, route IDs and immutable bindings",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Validation and stale async metadata",
+      "phase": "W2/W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Preview input and admission",
+      "phase": "W2/W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Preview progress and completion",
+      "phase": "W2/W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Templates and read-only preview",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Run and event dialogs",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Route, profile and curator composition",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Independent sandbox scenarios",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Source and standalone published desktop",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "Repeated measured development loop",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Native authored workflow and immutable output",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Project Structure file and approvals",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Human response, Scheduler and TestLab consumers",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Final-image multi-instance campaign",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "title": "History and adjacent completed families",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G30",
+      "title": "Final regression checkpoint accounting",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G31",
+      "title": "Portability, docs, scans and signed closure",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "workflow_authoring_ui_complete": false,
+    "lossless_native_roundtrip_passed": false,
+    "native_consumer_campaign_passed": false,
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "paid_model_calls": 0,
+    "signed_commits": [],
+    "unresolved_findings": [],
+    "historical_qualifications": [],
+    "regression_decision": null
+  }
+}

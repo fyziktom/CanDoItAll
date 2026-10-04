@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "note": "Unexecuted semantic preservation checklist, not a replacement Workflow schema.",
+  "families": [
+    {
+      "name": "definition identity and version",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "input parameters",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "graph node/edge identity",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "port and shape schemas",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "node hidden settings",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "immutable component/prompt snapshots",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "routes",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "zero and moved coordinates",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "JSON extensions and raw invalid input",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    },
+    {
+      "name": "unaffected neighboring aggregates",
+      "status": "NOT_RUN",
+      "native_fixture_ref": null,
+      "assertion_refs": [],
+      "allowed_native_changes": []
+    }
+  ]
+}
