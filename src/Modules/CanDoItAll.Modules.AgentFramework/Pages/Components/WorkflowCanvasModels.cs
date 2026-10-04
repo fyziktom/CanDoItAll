@@ -7,6 +7,8 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 internal sealed class WorkflowCanvasDocument
 {
+    public WorkflowDefinition? Baseline { get; set; }
+
     public WorkflowId? DefinitionId { get; set; }
 
     public WorkflowVersionId? VersionId { get; set; }
@@ -32,6 +34,8 @@ internal sealed class WorkflowCanvasDocument
 
 internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKind kind)
 {
+    public WorkflowNode? Baseline { get; set; }
+
     public WorkflowNodeId Id { get; set; } = id;
 
     public WorkflowNodeKind Kind { get; set; } = kind;
@@ -58,9 +62,27 @@ internal sealed class WorkflowCanvasNodeDraft(WorkflowNodeId id, WorkflowNodeKin
 
     public string Instructions { get; set; } = WorkflowCanvasDefinitionMapper.ResolveDefaultInstructions(kind);
 
-    public WorkflowValueShapeKind InputShapeKind { get; set; } = WorkflowValueShapeKind.Text;
+    public WorkflowValueShape? InputShape { get; set; } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
 
-    public WorkflowValueShapeKind ResultShapeKind { get; set; } = WorkflowValueShapeKind.Text;
+    public WorkflowValueShape? ResultShape { get; set; } = new(WorkflowValueShapeKind.Text, string.Empty, "Text");
+
+    public WorkflowValueShapeKind InputShapeKind {
+        get => InputShape?.Kind ?? WorkflowValueShapeKind.Text;
+        set {
+            if (value != InputShapeKind) {
+                InputShape = new(value, string.Empty, value.ToString());
+            }
+        }
+    }
+
+    public WorkflowValueShapeKind ResultShapeKind {
+        get => ResultShape?.Kind ?? WorkflowValueShapeKind.Text;
+        set {
+            if (value != ResultShapeKind) {
+                ResultShape = new(value, string.Empty, value.ToString());
+            }
+        }
+    }
 
     public double CanvasX { get; set; }
 
@@ -72,11 +94,17 @@ internal sealed class WorkflowCanvasEdgeDraft(
     WorkflowNodeId sourceNodeId,
     WorkflowNodeId targetNodeId)
 {
+    public WorkflowEdge? Baseline { get; set; }
+
     public WorkflowEdgeId Id { get; set; } = id;
 
     public WorkflowNodeId SourceNodeId { get; set; } = sourceNodeId;
 
     public WorkflowNodeId TargetNodeId { get; set; } = targetNodeId;
+
+    public WorkflowPortId? SourcePortId { get; set; } = new(WorkflowCanvasDefinitionMapper.OutputPortId);
+
+    public WorkflowPortId? TargetPortId { get; set; } = new(WorkflowCanvasDefinitionMapper.InputPortId);
 
     public WorkflowEdgeKind Kind { get; set; } = WorkflowEdgeKind.Direct;
 
@@ -169,6 +197,7 @@ internal static class WorkflowCanvasDefinitionMapper
 
         var document = new WorkflowCanvasDocument
         {
+            Baseline = definition,
             DefinitionId = definition.Id,
             VersionId = definition.VersionId,
             Name = definition.Name,
@@ -183,17 +212,13 @@ internal static class WorkflowCanvasDefinitionMapper
         for (var index = 0; index < definition.Graph.Nodes.Count; index++)
         {
             var node = definition.Graph.Nodes[index];
-            var component = node.Settings.ComponentId is { } componentId
-                ? components.FirstOrDefault(item => item.Id == componentId)
-                : null;
             var draft = new WorkflowCanvasNodeDraft(node.Id, node.Kind)
             {
+                Baseline = node,
                 Name = node.Name,
                 ComponentId = node.Settings.ComponentId,
-                ProviderProfileId = node.Settings.ProviderProfileId ?? component?.ProviderProfileId,
-                Model = string.IsNullOrWhiteSpace(node.Settings.Model)
-                    ? component?.Model ?? string.Empty
-                    : node.Settings.Model,
+                ProviderProfileId = node.Settings.ProviderProfileId,
+                Model = node.Settings.Model,
                 AgentId = node.Settings.AgentId,
                 SubworkflowId = node.Settings.SubworkflowId,
                 ExternalRequestKind = node.Settings.ExternalRequestKind,
@@ -201,10 +226,10 @@ internal static class WorkflowCanvasDefinitionMapper
                 ExecutorSettingsJson = node.Settings.ExecutorSettingsJson,
                 ExecutionPolicy = node.Settings.ExecutionPolicy,
                 Instructions = node.Settings.Instructions,
-                InputShapeKind = ResolveInputShapeKind(node, components),
-                ResultShapeKind = ResolveResultShapeKind(node, components),
-                CanvasX = node.CanvasX != 0 ? node.CanvasX : 120 + (index * 280),
-                CanvasY = node.CanvasY != 0 ? node.CanvasY : 220
+                InputShape = node.Settings.InputShape,
+                ResultShape = node.Settings.ResultShape,
+                CanvasX = node.CanvasX,
+                CanvasY = node.CanvasY
             };
             document.Nodes.Add(draft);
         }
@@ -213,13 +238,15 @@ internal static class WorkflowCanvasDefinitionMapper
         {
             document.Edges.Add(new WorkflowCanvasEdgeDraft(edge.Id, edge.SourceNodeId, edge.TargetNodeId)
             {
+                Baseline = edge,
+                SourcePortId = edge.SourcePortId,
+                TargetPortId = edge.TargetPortId,
                 Kind = edge.Kind,
                 ConditionExpression = edge.ConditionExpression,
-                Routing = edge.Routing ?? WorkflowEdgeRouting.Always
+                Routing = edge.Routing
             });
         }
 
-        EnsureStartAndEnd(document, components);
         return document;
     }
 
@@ -227,55 +254,53 @@ internal static class WorkflowCanvasDefinitionMapper
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        EnsureStartAndEnd(document, []);
         var nodes = document.Nodes
-            .Select(node => new WorkflowNode(
-                node.Id,
-                node.Kind,
-                string.IsNullOrWhiteSpace(node.Name) ? ResolveDefaultNodeName(node.Kind) : node.Name.Trim(),
-                BuildPorts(node),
-                new WorkflowNodeSettings(
-                    node.ComponentId,
-                    node.AgentId,
-                    node.SubworkflowId,
-                    node.ExternalRequestKind,
-                    node.Instructions.Trim(),
-                    CreateShape(node.InputShapeKind),
-                    CreateShape(node.ResultShapeKind))
-                {
+            .Select(node => (node.Baseline ?? new WorkflowNode(node.Id, node.Kind, node.Name, [],
+                new(null, null, null, null, string.Empty, null, null), node.CanvasX, node.CanvasY)) with {
+                Id = node.Id,
+                Kind = node.Kind,
+                Name = node.Name,
+                Ports = BuildPorts(node),
+                Settings = (node.Baseline?.Settings ?? new(null, null, null, null, string.Empty, null, null)) with {
+                    ComponentId = node.ComponentId,
+                    AgentId = node.AgentId,
+                    SubworkflowId = node.SubworkflowId,
+                    ExternalRequestKind = node.ExternalRequestKind,
+                    Instructions = node.Instructions,
+                    InputShape = node.InputShape,
+                    ResultShape = node.ResultShape,
                     ProviderProfileId = node.ProviderProfileId,
-                    Model = node.Model.Trim(),
+                    Model = node.Model,
                     ExecutorId = node.ExecutorId,
-                    ExecutorSettingsJson = node.ExecutorSettingsJson.Trim(),
+                    ExecutorSettingsJson = node.ExecutorSettingsJson,
                     ExecutionPolicy = node.ExecutionPolicy
                 },
-                node.CanvasX,
-                node.CanvasY))
+                CanvasX = node.CanvasX,
+                CanvasY = node.CanvasY
+            })
             .ToArray();
         var edges = document.Edges
-            .Select(edge => new WorkflowEdge(
-                edge.Id,
-                edge.SourceNodeId,
-                new WorkflowPortId(OutputPortId),
-                edge.TargetNodeId,
-                new WorkflowPortId(InputPortId),
-                edge.Kind,
-                edge.ConditionExpression.Trim())
-            {
+            .Select(edge => (edge.Baseline ?? new WorkflowEdge(edge.Id, edge.SourceNodeId, edge.SourcePortId,
+                edge.TargetNodeId, edge.TargetPortId, edge.Kind, edge.ConditionExpression)) with {
+                Id = edge.Id,
+                SourceNodeId = edge.SourceNodeId,
+                SourcePortId = edge.SourcePortId,
+                TargetNodeId = edge.TargetNodeId,
+                TargetPortId = edge.TargetPortId,
+                Kind = edge.Kind,
+                ConditionExpression = edge.ConditionExpression,
                 Routing = edge.Routing
             })
             .ToArray();
-        var now = DateTimeOffset.UtcNow;
-        return new WorkflowDefinition(
-            document.DefinitionId ?? WorkflowId.New(),
-            document.VersionId ?? WorkflowVersionId.New(),
-            string.IsNullOrWhiteSpace(document.Name) ? "Canvas workflow" : document.Name.Trim(),
-            document.Description.Trim(),
-            document.Status,
-            new WorkflowGraph(document.StartNodeId, nodes, edges),
-            document.RuntimePolicy,
-            document.CreatedAtUtc,
-            now);
+        return (document.Baseline ?? new WorkflowDefinition(document.DefinitionId ?? WorkflowId.New(),
+            document.VersionId ?? WorkflowVersionId.New(), document.Name, document.Description, document.Status,
+            new(document.StartNodeId, [], []), document.RuntimePolicy, document.CreatedAtUtc, document.UpdatedAtUtc)) with {
+            Name = document.Name,
+            Description = document.Description,
+            Status = document.Status,
+            Graph = new(document.StartNodeId, nodes, edges),
+            RuntimePolicy = document.RuntimePolicy
+        };
     }
 
     public static CanvasWorkbenchSurface BuildSurface(
@@ -408,8 +433,8 @@ internal static class WorkflowCanvasDefinitionMapper
         node.ComponentId = component.Id;
         node.ProviderProfileId = component.ProviderProfileId;
         node.Model = component.Model;
-        node.InputShapeKind = component.InputShape.Kind;
-        node.ResultShapeKind = component.ResultShape.Kind;
+        node.InputShape = component.InputShape;
+        node.ResultShape = component.ResultShape;
         if (string.IsNullOrWhiteSpace(node.Instructions) ||
             string.Equals(node.Instructions, ResolveDefaultInstructions(node.Kind), StringComparison.Ordinal))
         {
@@ -426,8 +451,8 @@ internal static class WorkflowCanvasDefinitionMapper
         node.ExecutorId = descriptor.Id;
         node.ExecutorSettingsJson = descriptor.DefaultSettingsJson;
         node.ExecutionPolicy = descriptor.DefaultPolicy;
-        node.InputShapeKind = descriptor.InputShape.Kind;
-        node.ResultShapeKind = descriptor.ResultShape.Kind;
+        node.InputShape = descriptor.InputShape;
+        node.ResultShape = descriptor.ResultShape;
         if (string.IsNullOrWhiteSpace(node.Name) ||
             string.Equals(node.Name, ResolveDefaultNodeName(WorkflowNodeKind.Executor), StringComparison.Ordinal))
         {
@@ -624,28 +649,6 @@ internal static class WorkflowCanvasDefinitionMapper
             {
                 return new WorkflowNodeId(candidate);
             }
-        }
-    }
-
-    private static void EnsureStartAndEnd(
-        WorkflowCanvasDocument document,
-        IReadOnlyList<LlmCallComponent> components)
-    {
-        if (!document.Nodes.Any(node => node.Kind == WorkflowNodeKind.Start))
-        {
-            var start = CreateNode(WorkflowNodeKind.Start, document.Nodes, components, 120, 220);
-            document.Nodes.Insert(0, start);
-            document.StartNodeId = start.Id;
-        }
-
-        if (!document.Nodes.Any(node => node.Id == document.StartNodeId))
-        {
-            document.StartNodeId = document.Nodes.First(node => node.Kind == WorkflowNodeKind.Start).Id;
-        }
-
-        if (!document.Nodes.Any(node => node.Kind == WorkflowNodeKind.End))
-        {
-            document.Nodes.Add(CreateNode(WorkflowNodeKind.End, document.Nodes, components, 760, 220));
         }
     }
 
@@ -1007,6 +1010,14 @@ internal static class WorkflowCanvasDefinitionMapper
 
     private static IReadOnlyList<WorkflowPort> BuildPorts(WorkflowCanvasNodeDraft node)
     {
+        if (node.Baseline is { } original) {
+            return original.Ports.Select(port => port.Direction switch {
+                WorkflowPortDirection.Input when node.InputShape != original.Settings.InputShape && node.InputShape is { } input => port with { Shape = input },
+                WorkflowPortDirection.Output when node.ResultShape != original.Settings.ResultShape && node.ResultShape is { } output => port with { Shape = output },
+                _ => port
+            }).ToArray();
+        }
+
         var ports = new List<WorkflowPort>();
         if (node.Kind != WorkflowNodeKind.Start)
         {
@@ -1034,34 +1045,6 @@ internal static class WorkflowCanvasDefinitionMapper
     private static WorkflowValueShape CreateShape(WorkflowValueShapeKind kind)
     {
         return new WorkflowValueShape(kind, string.Empty, kind.ToString());
-    }
-
-    private static WorkflowValueShapeKind ResolveInputShapeKind(
-        WorkflowNode node,
-        IReadOnlyList<LlmCallComponent> components)
-    {
-        if (node.Kind == WorkflowNodeKind.LlmCall &&
-            node.Settings.ComponentId is { } componentId &&
-            components.FirstOrDefault(component => component.Id == componentId) is { } component)
-        {
-            return component.InputShape.Kind;
-        }
-
-        return node.Settings.InputShape?.Kind ?? WorkflowValueShapeKind.Text;
-    }
-
-    private static WorkflowValueShapeKind ResolveResultShapeKind(
-        WorkflowNode node,
-        IReadOnlyList<LlmCallComponent> components)
-    {
-        if (node.Kind == WorkflowNodeKind.LlmCall &&
-            node.Settings.ComponentId is { } componentId &&
-            components.FirstOrDefault(component => component.Id == componentId) is { } component)
-        {
-            return component.ResultShape.Kind;
-        }
-
-        return node.Settings.ResultShape?.Kind ?? WorkflowValueShapeKind.Text;
     }
 
     private static string ResolveSubtitle(

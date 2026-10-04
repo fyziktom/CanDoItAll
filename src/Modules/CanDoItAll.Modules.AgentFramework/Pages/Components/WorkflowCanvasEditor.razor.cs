@@ -828,7 +828,11 @@ public partial class WorkflowCanvasEditor
                 definition.Description,
                 definition.Status,
                 definition.Graph,
-                definition.RuntimePolicy));
+                definition.RuntimePolicy) {
+                InputParameters = definition.InputParameters,
+                ExternalNamespace = definition.ExternalNamespace,
+                ExternalKey = definition.ExternalKey
+            });
             document = WorkflowCanvasDefinitionMapper.FromDefinition(saved, componentOptions);
             loadedDefinitionKey = $"{saved.Id}:{saved.VersionId}";
             await SelectNodeAsync(document.StartNodeId.Value);

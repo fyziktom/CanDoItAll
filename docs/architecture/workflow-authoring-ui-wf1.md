@@ -8,7 +8,7 @@ are unchanged. This is an in-progress implementation record, not family closure.
 
 | Stage | State | Next concrete work |
 |---|---|---|
-| S0 | CA1-R1 reproduced and repaired; focused checks pass | Signed checkpoint |
+| S0 | CA1-R1 reproduced, repaired and signed as `ccd18f6a1`; focused checks pass | Final source campaign |
 | W1 | Source census in progress | Native lossless document reproduction and state boundary |
 | W2 | Pending | Complete actual canvas, floating windows, inspectors and settings |
 | W3 | Pending | Template, both preview inputs, run/event dialogs and native composition |
@@ -99,3 +99,44 @@ registration changes invalidate the prior aggregate. No broad S0 run is justifie
 Native PostgreSQL, source/two-client images, file approvals, Scheduler, held responses,
 accepted/incomplete LLM output and History journeys remain pending. Existing retained
 containers and ordinary port 5032 are outside this task's fixture ownership.
+
+### Responsibility decisions
+
+This is a project-boundary extraction with native adapters, using the architecture
+governor, modular-refactoring and project-boundary-extraction skills. Before-state:
+the module's `WorkflowCanvasEditor` mixes local editing, native effects, metadata
+reads and 1,500 lines of actual markup; `WorkflowsPage` also renders its overlays.
+The implementation is staged so each accepted checkpoint remains runnable.
+
+| Responsibility | Target owner | Independent proof / principal risk |
+|---|---|---|
+| Lossless whole-document baseline and edited node/edge projection | Authoring UI document model | Native exact-version title-edit comparison; hidden fields and null semantics |
+| Canvas, toolbox, floating windows, inspector and nested node/route forms | Authoring UI components with local typed edit state | Isolated real-component sandbox; occurrence identity and raw edits |
+| Save admission and accepted identity reconciliation | Authoring session with a narrow native save callback | Held completion, accepted-before-refresh and foreign-conflict tests |
+| Prompt compatibility and component creation | Native binding adapter; leaf renders Prompt UI through an explicit selection seam | Exact prompt/version/provider pair, committed component survives callback failure |
+| Preview authority, admission and progress | Native preview adapter; leaf submits immutable graph/input and receives attributed results | Retired owner prevents new dispatch, progress belongs to its originating occurrence |
+| Schema settings, image settings and secret metadata | Actual authoring/settings renderers; native trusted host selects allowed implementations | Schema/raw JSON retention, denied trust cannot acquire a renderer |
+| Template/preview/run/event dialogs | Authoring overlay renderers; page retains authorized reads and writes | Real native callbacks plus isolated open/close/late-read cases |
+| Built-in route syntax/value rules | Cohesive neutral Workflow definitions code shared by runtime and authoring | Runtime route tests and direct editor tests; no runtime implementation dependency |
+
+The old module canvas becomes a native composition host. The extracted components
+must render independently of that host; neither service-location nor another native
+partial is the boundary. A single broad service bag was rejected because it would
+leave effect authority and lifetimes inside the renderer. New settings implementations
+use the existing trusted registry rather than adding executor-ID branches.
+
+W1's first two native reproductions failed (2/2, no skips): a valid title save drops
+all input descriptors, and a rich graph with nullable shapes is rejected after mapper
+reconstruction. After retaining the baseline, both reach acceptance and graph/input
+comparisons pass; a subsequent full-record assertion exposed PostgreSQL timestamp
+precision: immutable definition JSON retains 100 ns ticks, while the owner uses the
+microsecond-precision creation column when creating the next version. The fixture
+reads the original exact stored version and allows only that specific creation-time
+truncation, name, new version and update time. Original attempts remain in private
+artifacts; the first expanded selection was 27 passed / 2 timestamp assertions failed,
+0 skipped. The amended two-case native round-trip selection passed 2/2, 0 skipped,
+with freshly built binaries. The other 27 cases passed in the expanded attempt;
+that original 27/2 result is retained. The affected module direct build passed.
+This proves the title-edit baseline slice, not the full round-trip matrix, held-save
+reconciliation or completed authoring family. The fresh portability scan passed
+with 15,205 reviewed executable-source findings unchanged and no baseline write.
