@@ -342,32 +342,34 @@ public sealed class LlmChatConversationShellContributor(
         ShowConversation(result.Value.Conversation);
     }
 
-    private async Task OpenHistoryAsync(Guid definitionId, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
+    private async Task OpenHistoryAsync(Guid definitionId, CancellationToken cancellationToken) {
+        using var operation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retirement.Token);
+        operation.Token.ThrowIfCancellationRequested();
         var definition = activeDefinitions.Single(item => item.DefinitionId == definitionId);
         var matchingConversations = conversationHistory
             .Where(item => item.DefinitionId == definitionId)
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ToArray();
-        var result = await dialogService.OpenAsync<LlmChatFloatingHistoryDialog>(
-            "Simple Chat history",
-            new Dictionary<string, object?>
-            {
-                [nameof(LlmChatFloatingHistoryDialog.Definition)] = definition,
-                [nameof(LlmChatFloatingHistoryDialog.Conversations)] = matchingConversations
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Floating Simple Chat",
-                Subtitle = definition.Name,
-                Size = ModalSize.Wide,
-                DenseChrome = true,
-                TestId = "floating-simple-chat-history-dialog",
-                AriaLabel = "Simple Chat conversation history"
-            });
-        if (IsRetired || result is not Guid conversationId)
-        {
+        object? result;
+        try {
+            result = await dialogService.OpenAsync<LlmChatFloatingHistoryDialog>(
+                "Simple Chat history",
+                new Dictionary<string, object?> {
+                    [nameof(LlmChatFloatingHistoryDialog.Definition)] = definition,
+                    [nameof(LlmChatFloatingHistoryDialog.Conversations)] = matchingConversations
+                },
+                new DialogOptions {
+                    Eyebrow = "Floating Simple Chat",
+                    Subtitle = definition.Name,
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = "floating-simple-chat-history-dialog",
+                    AriaLabel = "Simple Chat conversation history"
+                }, operation.Token);
+        } catch (OperationCanceledException) when (operation.IsCancellationRequested) {
+            return;
+        }
+        if (IsRetired || operation.IsCancellationRequested || result is not Guid conversationId) {
             return;
         }
 
@@ -377,37 +379,39 @@ public sealed class LlmChatConversationShellContributor(
 
     private async Task ArchiveConversationAsync(
         LlmChatConversationListItem conversation,
-        CancellationToken cancellationToken)
-    {
-        var confirmed = await dialogService.OpenAsync<LlmChatFloatingArchiveDialog>(
-            "Archive Simple Chat",
-            new Dictionary<string, object?>
-            {
-                [nameof(LlmChatFloatingArchiveDialog.Conversation)] = conversation
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Floating Simple Chat",
-                Subtitle = conversation.Title,
-                Size = ModalSize.Compact,
-                DenseChrome = true,
-                TestId = "floating-simple-chat-archive-dialog",
-                AriaLabel = "Archive Simple Chat conversation"
-            });
-        if (IsRetired || confirmed is not true)
-        {
+        CancellationToken cancellationToken) {
+        using var operation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retirement.Token);
+        operation.Token.ThrowIfCancellationRequested();
+        object? confirmed;
+        try {
+            confirmed = await dialogService.OpenAsync<LlmChatFloatingArchiveDialog>(
+                "Archive Simple Chat",
+                new Dictionary<string, object?> {
+                    [nameof(LlmChatFloatingArchiveDialog.Conversation)] = conversation
+                },
+                new DialogOptions {
+                    Eyebrow = "Floating Simple Chat",
+                    Subtitle = conversation.Title,
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    TestId = "floating-simple-chat-archive-dialog",
+                    AriaLabel = "Archive Simple Chat conversation"
+                }, operation.Token);
+        } catch (OperationCanceledException) when (operation.IsCancellationRequested) {
+            return;
+        }
+        if (IsRetired || operation.IsCancellationRequested || confirmed is not true) {
             return;
         }
 
         var result = await conversations.ArchiveAsync(
             conversation.ConversationId,
             conversation.ConcurrencyToken,
-            cancellationToken);
+            operation.Token);
         if (IsRetired) {
             return;
         }
-        if (!result.IsSuccess || result.Value is null)
-        {
+        if (!result.IsSuccess || result.Value is null) {
             NotifyFailure("Unable to archive Simple Chat", result.Failures);
             return;
         }

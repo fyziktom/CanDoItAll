@@ -202,7 +202,51 @@ compatibility; typed operation delegates cross only the actual avatar effect bou
 No generic service bag, schema, admission protocol, copied shared component or new
 project was introduced. Existing conversation renderers and native services remain owners.
 
-The preserved Voice/SimpleChats audit, final published sandbox and measured edit loop,
-native/two-client campaign, final static gates and signed delivery remain in progress.
+### A4 preserved Voice, Floating and SimpleChats owners
+
+Voice and Floating Settings remain installation-scoped through the canonical runtime
+Workflow database. A selected business database is not their persistence owner. The audit
+retains existing provider eligibility, immutable submissions, single-flight controls and
+the separate Save, synthesis and playback outcomes. No speech capability was added.
+
+A failing-first native test showed that two Voice settings hosts shared the legacy browser
+playback owner. Each host now uses its own existing JavaScript owner identifier and disposes
+only that owner's playback after retiring the session. A late synthesis result cannot start
+audio. Actual production voice.js was also exercised in an isolated large-desktop browser:
+two real Audio objects played independently, retiring one left the other playing, natural
+completion released all three created object URLs, and recording permission denial and
+unsupported MediaRecorder produced explicit failures. No physical microphone or paid
+synthesis was used. Early permission-fixture/CDP errors remain failed setup attempts;
+the corrected proof uses an independent browser context with an explicit empty permission
+grant. This browser asset proof complements native session/host tests; it does not claim
+that the standalone media fixture persisted application settings.
+
+The existing SimpleChat archive and floating-history renderers remain neutral shared
+components. Two failing-first native tests reproduced the same stacked-dialog defect as
+the Agent adapters: a selection completed an unrelated top dialog. Their native hosts now
+close the exact DialogReference, fence queued callbacks across A-B-A parameter changes and
+disposal, and bind open dialogs to the contributor lifetime. Retirement closes only its
+own dialog, with no archive or focus effect. Domain persistence and operation scopes are
+unchanged. The current census contains 245 entries: 116 already isolated renderers,
+57 legitimate native hosts, 20 neutral shared entries, 38 developer surfaces and 14
+retained unreachable legacy components; none remains classified as a renderer to extract.
+
+The native Voice/settings/SimpleChats selection discovered and passed 76 cases with no
+skips after fresh production and test builds. Earlier Voice/model/boundary unit proof
+passed 50 cases, and the existing JavaScript lifecycle suite passed three. The two product
+dialog failures and earlier test-build errors remain separate attempts. The native hosts
+retained in SimpleChats are definition/conversation workspaces, profile/authorization
+adapters, floating content/contributor and exact dialog hosts; they compose the existing
+SimpleChats UI, neutral Conversations and extracted avatar form.
+
+### C# Architecture Gate Result at A4
+
+Status: Pass. Changes are bounded lifetime corrections at existing native ownership
+points. No new renderer, dependency, service bag, persistence scope, provider protocol
+or implicit business-profile subscription was introduced. Source and published browser
+consumer validation remain separate proof layers.
+
+The final published sandbox and measured edit loop, native/two-client campaign, final
+static gates and signed delivery remain in progress.
 No final Agents readiness or product release readiness is claimed. Workbench and Processes
 extraction remain outside AC1.

@@ -15,6 +15,45 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 
 public sealed class LlmChatConversationShellContributorTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retiring_a_contributor_cancels_only_its_open_dialog_without_archiving_or_focusing(bool archive) {
+        var definition = new LlmChatDefinitionListItem(Guid.NewGuid(), "Same name", string.Empty, string.Empty,
+            LlmChatDefinitionStatus.Active, 1, 1, DateTimeOffset.UnixEpoch, []);
+        var conversation = new LlmChatConversationListItem(Guid.NewGuid(), definition.DefinitionId, 1, "Same name", definition.Name,
+            new LlmConversationProviderSnapshot(Guid.NewGuid(), "Pinned", ProviderKind.OpenAi, "model"),
+            LlmChatConversationStatus.Active, LlmChatConversationOrigin.Application, 1, 0, null, DateTimeOffset.UnixEpoch);
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
+        var dialogs = context.Services.GetRequiredService<DialogService>();
+        var shell = context.Services.GetRequiredService<IConversationShellCoordinator>();
+        await using var contributor = new LlmChatConversationShellContributor(new StubDefinitionGateway(definition),
+            new StubConversationGateway(conversation), new AllowAllAuthorization(), new LlmChatDefinitionCatalogInvalidationHub(),
+            shell, dialogs, context.Services.GetRequiredService<NotificationService>(), NullLogger<LlmChatConversationShellContributor>.Instance);
+        await contributor.InitializeAsync();
+        var participant = Assert.Single(contributor.Snapshot().Available).Presentation;
+        await contributor.HandleParticipantActionAsync(new(participant.Participant.Key,
+            participant.Actions.Single(action => action.Key.Value == "new-chat").Key));
+        var active = Assert.Single(contributor.Snapshot().Active).Presentation;
+        await contributor.HandleWindowCloseAsync(Assert.Single(contributor.Snapshot().Windows).Key.WindowId);
+        var actionTask = archive
+            ? contributor.HandleActiveActionAsync(new(active.Key, active.Actions.Single(action => action.Key.Value == "archive").Key))
+            : contributor.HandleParticipantActionAsync(new(participant.Participant.Key,
+                participant.Actions.Single(action => action.Key.Value == "history").Key));
+        Assert.Single(dialogs.Dialogs);
+        var second = dialogs.OpenAsync<LlmChatFloatingHistoryDialog>("Unrelated");
+        await contributor.DisposeAsync();
+        await actionTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Null(shell.Snapshot().FocusedWindow);
+        Assert.Single(dialogs.Dialogs);
+        Assert.False(second.IsCompleted);
+        await dialogs.Dialogs.Single().CloseAsync();
+        await second;
+    }
+
     [Fact]
     public async Task Retired_contributor_does_not_start_the_second_catalog_read_or_publish_late_definitions() {
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
