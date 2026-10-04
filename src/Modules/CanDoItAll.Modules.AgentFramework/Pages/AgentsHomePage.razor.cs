@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.UI.Shell;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
@@ -13,9 +14,6 @@ using CanDoItAll.Infrastructure.Persistence;
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
 public partial class AgentsHomePage : IDisposable {
-    private const string AgentFrameworkShellHelpText =
-        "This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.";
-
     [Inject]
     public NavigationManager Navigation { get; set; } = default!;
 
@@ -75,6 +73,44 @@ public partial class AgentsHomePage : IDisposable {
     private readonly HashSet<AgentsOverviewDetail> openDetails = [];
     private long dialogGeneration;
     private IDisposable? samePageDialogs;
+
+    private AgentsShellState ShellPresentation => new(new(catalogScopeVersion, selectedTab),
+        ResolveSummaryValue(technicalAgentCount), ResolveSummaryValue(providerCount), BoundResourceValue,
+        ResolveSummaryValue(capabilityCount), ResolveSummaryValue(activeRunCount), ResolveSummaryValue(failedRunCount),
+        HasHeaderFailure ? HeaderFailureText : null, session.HeaderLoading,
+        HrAgentDisplayName, HrAgentAvatarImageUrl, IsHrReady, isOpeningHrAgent,
+        Tabs, isConfirmingDefaults, isFeedingDefaults);
+
+    private async Task HandleShellIntentAsync(AgentsShellIntent intent) {
+        if (disposed || intent.Origin != new AgentsShellOrigin(catalogScopeVersion, selectedTab)) {
+            return;
+        }
+        switch (intent) {
+            case AgentsShellIntent.SelectTab tab:
+                await HandleTabChangedAsync(tab.Key);
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.RetryHeader }:
+                await RetryHeaderAsync();
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.OpenHrAgent }:
+                await OpenHrAgentAsync();
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.FeedDefaults }:
+                await FeedDefaultsAsync();
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.OpenCrmHrAgents }:
+                OpenCrmHrAgents();
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.OpenWorkflows }:
+                OpenWorkflows();
+                break;
+            case AgentsShellIntent.Command { Action: AgentsShellCommand.OpenProcesses }:
+                OpenProcesses();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(intent));
+        }
+    }
 
     private AgentsOverviewState OverviewPresentation => AgentsOverviewPresentation.Create(
         session.Overview, session.AcceptedUsage, usageSelection, isOverviewLoading, isUsageLoading,
@@ -485,7 +521,7 @@ public partial class AgentsHomePage : IDisposable {
         var generation = dialogGeneration;
         try {
             await DialogService.OpenAsync(title, component,
-                new Dictionary<string, object?> { [nameof(AgentUsageDialog.Query)] = query },
+                new Dictionary<string, object?> { [nameof(AgentUsageDialog.Query)] = query, [nameof(AgentUsageDialog.OwnerLifetime)] = token },
                 new DialogOptions {
                     Eyebrow = "Usage analytics",
                     Subtitle = $"{query.Selection} · {query.Period.Label()} · {query.Window.FromUtc:u} ≤ usage < {query.Window.ToUtc:u}. {subtitle}",

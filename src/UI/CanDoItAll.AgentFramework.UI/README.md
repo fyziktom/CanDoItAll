@@ -47,8 +47,33 @@ The [catalog sandbox](../../Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README
 
 ## Overview boundary
 
-The real AgentsOverviewSurface, immutable AgentsOverviewState/intents, pure presentation mapper/options, ProviderUsageConsumerList and AgentUsageDisplay live in `Overview`. The formatting helper is public because the retained Module usage dialogs and AgentOverviewUsageList consume this same implementation. No wrapper or second renderer remains in Module.
+The real AgentsOverviewSurface, immutable AgentsOverviewState/intents, pure presentation mapper/options, ProviderUsageConsumerList and AgentUsageDisplay live in `Overview`. The formatting helper is shared with the complete Usage detail family. The retained legacy AgentOverviewUsageList has no current product caller; see the [current census](../../../docs/architecture/agents-renderer-census.csv).
 
 AgentsHomePage owns the page-lifetime session, independent Header/Overview/Usage reads, route state, HR/defaults/team effects and its three usage-dialog lifetimes. The UI library registers no application queries, usage projection sources, persistence or runtime effects. Existing application snapshot types remain in Models/Usage and are copied into immutable presentation at the effect boundary.
 
-The existing sandbox has an Overview specimen with actual Charts registration/assets and controlled state. Long model labels belong to the retained ModelUsageDialog: the Overview dashboard itself does not render model rows. Browser validation covers that real dialog rather than adding a different model renderer to the sandbox.
+The existing sandbox has an Overview specimen with actual Charts registration/assets and controlled state. Model rows remain lazy detail content rather than dashboard content.
+
+## Shell and Usage detail family
+
+`Shell/AgentsShellSurface` renders the native page's header, independent readiness/counts,
+help, exact tab items and typed commands, with a slot for native tab content. Every command
+captures its rendered scope and tab. Route parsing, HR launch, default feeding and context
+publication remain in AgentsHomePage. `AgentDefaultsConfirmation` returns only the explicit
+decision; the native dialog closes its own reference.
+
+`Usage` owns the actual consumer/provider/model metric cards, charts, paged grids and
+Close/Retry frame. It consumes the accepted ProviderUsageQuery and ProviderUsageSnapshot
+without re-resolving time or querying during paging. Cell templates capture their rendered
+snapshot and share denominator, including while the original view retires. Duplicate
+display labels never merge identity-bearing rows. Unknown/unpriced/partial evidence stays
+distinct from empty data.
+
+The public native dialog adapters compose UsageDetailHost. That host owns one bounded read,
+query equality, frozen collections, cancellation and safe errors. A parent cancellation,
+profile notification or changed authentication cascade retires the original view and clears
+its data. Late reads cannot publish or retry against a replacement owner. Query equality is
+not used as a profile or actor authority token. A failed read retains Close and an explicit
+same-window Retry. No runtime service is registered in this UI library.
+
+The independent `/completion` sandbox uses these same surfaces. The [AC1 record](../../../docs/architecture/agents-completion-ac1.md)
+tracks native and browser proof separately from the remaining runtime/floating completion.

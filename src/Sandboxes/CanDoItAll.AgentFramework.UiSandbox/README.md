@@ -66,6 +66,16 @@ Loading, empty and card states use the same components. Avatar fallback demonstr
 
 See the [rendering UI boundary](../../UI/CanDoItAll.AgentFramework.UI/README.md) for current ownership and [Testing](../../../docs/testing.md) for maintained validation commands. Historical Catalog extraction and direct-watch reports are not included in this checkout. For new timing evidence, separate SDK update time from local edit-to-visible latency and retain failures. A small project graph or reduced CSS size alone is not a performance result.
 
+## Agents shell and Usage completion
+
+Open `/completion?detail=consumers`, `detail=providers` or `detail=models` for the actual
+shared shell and all three Usage renderers. Ready, loading, error, empty, partial, unknown,
+long-content and retired states are deterministic. The second instance holds an independent
+fourteen-day Simple Chat interval; closing or retrying the first view does not retarget it.
+Shell commands and default confirmation only update the sample intent log. These fixtures do
+not certify native reads, writes or authorization. AC1 evidence uses the flexible page at
+1920×1080, scale 1; it does not run a smaller viewport campaign.
+
 ## Technical team authoring
 
 Open `/teams` or `/teams/Large` for the complete technical-team metadata, nested icon and

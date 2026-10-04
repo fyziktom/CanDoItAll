@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-04T12:48:34.635532+00:00",
+  "generated_utc": "2026-10-04T19:29:29.233773+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -43712,12 +43712,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
-      "category": "mcp",
-      "source_fingerprint": "b3c01a5468dc012871c18e7358adc6db518775a91f463c808ed3876e85652d6c",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "8dcb422d576e7fecdcd269c8d94a31fa25243a127990cef100215f7216ec8047",
@@ -43850,12 +43844,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a124d2c48d1fb9ff79f1f220fc7b33686a26966dfc20414e9974760eb50126d7",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsPanel.razor",
       "category": "case-policy",
       "source_fingerprint": "6aac7ba4c96021978f37031831c9d07449bde6fe8e2694f505c1020ca6215d6e",
@@ -43922,18 +43910,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "767317f9ce3a11350eac33282d3a1496ddffdaccd1cac998e6707e369aef0c50",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "c88abe99a448469be0b0ca237186a1b4b9d887c269c54be1cbd991243e2b404a",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/NativeCapabilityAuthoringHost.razor",
       "category": "mcp",
       "source_fingerprint": "ccf3eaecbd706fc800d282edeffe12972c7590098d0f9b5702a0975f620208dc",
@@ -43943,12 +43919,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/NativeCapabilityAuthoringHost.razor",
       "category": "mcp",
       "source_fingerprint": "eaa9147406325c72c29718310f50135e395b8c44d2324728a11796c4d61fa3d4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a6603ed7f800da2ec8fa55886d47d2566e262fcfe4aaf091d2402bbe2d4431ff",
       "count": 1
     },
     {
@@ -73568,6 +73538,12 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Shell/AgentsShellSurface.razor",
+      "category": "mcp",
+      "source_fingerprint": "601815a76f9ca4522f86ff8433f5062413e8a45016276972dbef268b04fb8273",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamIconPicker.razor",
       "category": "case-policy",
       "source_fingerprint": "41dda602d698ca1808171e05facef8f73cec91c27d350240ff6707ec846954f3",
@@ -73601,6 +73577,30 @@
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
       "category": "case-policy",
       "source_fingerprint": "70bc7ebcc5de1d8205ad42a256c4cd32ceb9f98a7726d87b0617e307064395e2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Usage/AgentUsageSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "ce9de8332860a09535f481b090fa39726772a7b5140ad5aa8eacbdb898dc4b36",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Usage/ModelUsageSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "0a44dcbb4e37b571ccaae49390de29cb54fefa7954a1c814042aa0812cf34442",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Usage/ModelUsageSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "9e0658d80ca49e186e0651a04c541784c827e9a344d416378dab53e39fc1016a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Usage/ProviderUsageSurface.razor",
+      "category": "case-policy",
+      "source_fingerprint": "f7f3d82b2aa80daca389512cdc3762c2a02dcc9f82f66faf6f723f409b1048c5",
       "count": 1
     },
     {

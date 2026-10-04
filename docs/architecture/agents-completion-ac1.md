@@ -71,9 +71,90 @@ session; current source, evaluated MSBuild, CLI and Playwright are the fallback.
 
 ## Remaining AC1 stages
 
-The current renderer/caller/asset census, Agents shell and all Usage renderers,
-runtime/floating adjuncts, preserved Voice/SimpleChats consumer audit, independent
-source/published sandbox and measured edit loop, final native and two-client
-campaign, final static gates and signed delivery remain in progress. No Agents
-presentation completion, next-module readiness or product release readiness is
-claimed at this checkpoint. Workbench and Processes extraction are outside AC1.
+### A1 baseline and current reachability
+
+The maintained [renderer census](agents-renderer-census.csv) starts with 227 current
+component entries, including shell contributions, dynamic dialog callers, routes,
+descendants and scoped assets. Fourteen retained public or legacy components have
+no current product caller. In particular, `ScenarioHarnessPanel` is not made
+reachable by the separately active backend ScenarioHarness APIs;
+`AgentOverviewUsageList` has test callers only. The current floating contribution
+uses `AgentFloatingConversationContent`, not `ContextualAgentWorkspaceWindows`.
+The compatibility `/chats` route remains reachable through routing even though it
+has no lexical component caller. No dormant public type has been deleted.
+
+The census found the active `AvatarPicker` descendant in both the Agent editor and
+Simple Chat definition editor. It belongs to the remaining renderer work; its
+upload and generation callbacks require their original editor lifetime. Already
+isolated Voice, Floating Settings, provider, definition, conversation and Workflow
+surfaces remain the product rendering paths.
+
+Before edits, evaluated restore graphs were captured for 19 protected roots. The
+Agents UI closure contains 13 projects and its independent sandbox 16. The source
+sandbox was exercised at 1920×1080, scale 1. Three successful existing-page probes
+per owned Razor, C# and CSS file were measured: Razor 1652/517/259 ms, C#
+350/338/341 ms and CSS 1236/853/955 ms. These are end-to-end edit-to-visible
+observations including browser handoff. One earlier C# probe became visible but
+its restoration encountered a mapped-file lock; that attempt remains failed and
+was followed by byte-exact atomic restoration and three successful probes. A
+fresh watch process with warm build outputs reached runtime readiness in 15830 ms.
+There is no owned JavaScript in this sandbox/RCL to probe. Final comparative
+measurements and published assets remain pending.
+
+### A2 shell and complete Usage family
+
+The actual header/statistics/navigation and explicit defaults confirmation now live
+in the existing Agents UI leaf. AgentsHomePage retains exact route tokens, native
+tab composition, HR/default-feeding effects and context publication. Shell intents
+carry the rendered profile generation and tab; stale commands cannot navigate a
+replacement selection. No project reference or application service was added to
+the rendering leaf.
+
+All three Usage dialogs now render through the same leaf. Their native public
+adapters compose one bounded UsageDetailHost, which owns query equality, frozen
+snapshots, error handling and cancellation after reads unwind. Parent lifetime,
+profile notifications and authentication-cascade replacement retire the view.
+Close works during loading and errors; Retry uses the original resolved interval.
+Shared snapshots preserve consumer/provider/model identities and partial, unknown
+and unpriced distinctions. Paging and chart construction perform no native read.
+
+The independent `/completion` specimen uses these actual surfaces and production
+Parity assets. Large-desktop inspection found and repaired two issues before this
+checkpoint: the outer stacks needed explicit stretch alignment, and queued Share
+cell templates could read a cleared snapshot while a view retired. All template
+values now capture the rendered snapshot, including the denominator. The failed
+browser circuit is retained. The repeated two-instance journey passes: closing
+the model view leaves the separate provider grid and charts usable; loading Close
+and error Retry remain usable with the original accepted window.
+
+Fresh builds passed for the UI, native module and independent sandbox/test owners.
+The initial native run passed 101 of 107 cases; six new actor-change harness cases
+incorrectly omitted CascadingValue child content on replacement. The corrected
+107-case run passed, with no skips. After the browser-derived template repair,
+22 independent leaf cases (including both queued-template regressions) and 22
+native ownership cases passed on fresh assemblies. Earlier broad topic proof is
+retained with its source fingerprint; it is not relabeled as the later source.
+The frozen final Stable checkpoint remains pending.
+
+### C# Architecture Gate Result at A2
+
+Status: Pass.
+
+| Severity | Finding | Evidence | Required action |
+|---|---|---|---|
+| Closed | Deferred cell render could observe a retired snapshot | Failing browser circuit, two retained-template regressions, repeated two-instance browser pass | Keep snapshots captured in render fragments |
+| Informational | Native ownership remains outside UI | One per-instance UsageDetailHost and existing AgentsHomePage; no injected services in the new surfaces | Final native consumer campaign remains required |
+
+Dependency direction is unchanged: native hosts consume the existing light UI,
+Models/Usage values and shared components. No service bag, locator, new project,
+schema or protocol was introduced. The new code-behind is the normal Razor
+component pair for a single read lifetime, not a partial runtime-service split.
+Independent leaf tests require no product host/database; native ownership tests
+exercise real composition. A2 may proceed to runtime/floating completion.
+
+Eight remaining renderer owners in the current census, the preserved
+Voice/SimpleChats consumer audit, final published sandbox and measured edit loop,
+native/two-client campaign, final static gates and signed delivery remain in
+progress. No complete Agents presentation boundary, next-module readiness or
+product release readiness is claimed. Workbench and Processes extraction are
+outside AC1.

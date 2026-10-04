@@ -1,0 +1,15 @@
+@using CanDoItAll.AgentFramework.UI.Usage
+
+@if (state is not null) {
+    @switch (Detail) {
+        case AgentsOverviewDetail.Consumers:
+            <AgentUsageSurface State="state" Intent="HandleIntentAsync" />
+            break;
+        case AgentsOverviewDetail.Providers:
+            <ProviderUsageSurface State="state" Intent="HandleIntentAsync" />
+            break;
+        case AgentsOverviewDetail.Models:
+            <ModelUsageSurface State="state" Intent="HandleIntentAsync" />
+            break;
+    }
+}
