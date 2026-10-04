@@ -20,6 +20,52 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 [Trait("Category", "HostPlatform")]
 public sealed class WorkflowOwnershipTests {
     [Theory]
+    [InlineData(DelayedReadOutcome.Success)]
+    [InlineData(DelayedReadOutcome.Failure)]
+    [InlineData(DelayedReadOutcome.Cancellation)]
+    public async Task New_draft_restarts_pending_library_acquisition_and_rejects_the_retired_read(DelayedReadOutcome outcome) {
+        await using var fixture = await Fixture.CreateAsync();
+        var library = fixture.Harness.Context.Services.GetRequiredService<IWorkflowComponentLibraryService>();
+        var providers = await library.ListProviderOptionsAsync();
+        Assert.NotEmpty(providers);
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<IReadOnlyList<LlmCallComponent>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        fixture.Probe.Components = token => {
+            if (++calls != 1) {
+                return Task.FromResult<IReadOnlyList<LlmCallComponent>>([]);
+            }
+            entered.SetResult(token);
+            return release.Task;
+        };
+        fixture.Probe.Providers = token => Task.FromResult<IReadOnlyList<WorkflowProviderOption>>(token.IsCancellationRequested ? [] : providers);
+        var previous = fixture.Tab(WorkflowTab.Editor);
+        var cancellation = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try {
+            fixture.Cut.WaitForElement("[data-testid='workflow-canvas-new-draft']");
+            await fixture.Cut.InvokeAsync(() => fixture.Cut.Find("[data-testid='workflow-canvas-new-draft']").ClickAsync());
+            Assert.True(cancellation.IsCancellationRequested);
+            fixture.Cut.WaitForAssertion(() => {
+                Assert.Equal(2, calls);
+                Assert.Equal(providers, fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.ProviderOptions);
+                Assert.Null(fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.Definition);
+            });
+        } finally {
+            if (outcome == DelayedReadOutcome.Failure) {
+                release.SetException(new InvalidOperationException("Retired library read failed."));
+            } else if (outcome == DelayedReadOutcome.Cancellation) {
+                release.SetCanceled(cancellation);
+            } else {
+                release.SetResult([]);
+            }
+            await previous;
+        }
+        Assert.Equal(providers, fixture.Cut.FindComponent<WorkflowCanvasEditor>().Instance.ProviderOptions);
+        Assert.DoesNotContain(fixture.Harness.Context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary == "Workflow library failed");
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Preview_authority_capture_cannot_dispatch_after_the_original_target_retires(bool canvas) {
@@ -567,6 +613,7 @@ public sealed class WorkflowOwnershipTests {
                 Decorate<IWorkflowStructureAuthorityFactory>(services, probe);
                 Decorate<IWorkflowExternalResponseService>(services, probe);
                 Decorate<IAgentChatLauncher>(services, probe);
+                Decorate<IWorkflowComponentLibraryService>(services, probe);
             });
             var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
             var first = await WorkflowsPageTests.CreateHistoryDefinitionAsync(catalog);
@@ -613,6 +660,8 @@ public sealed class WorkflowOwnershipTests {
     }
 
     public sealed class Probe {
+        public Func<CancellationToken, Task<IReadOnlyList<LlmCallComponent>>>? Components { get; set; }
+        public Func<CancellationToken, Task<IReadOnlyList<WorkflowProviderOption>>>? Providers { get; set; }
         public Func<CancellationToken, Task<WorkflowStructureAuthority>>? Authority { get; set; }
         public Func<CancellationToken, Task<IReadOnlyList<WorkflowCatalogItem>>>? Catalog { get; set; }
         public Func<WorkflowId, CancellationToken, Task<WorkflowDefinitionDetail?>>? Definition { get; set; }
@@ -632,6 +681,8 @@ public sealed class WorkflowOwnershipTests {
             var method = targetMethod ?? throw new InvalidOperationException("Missing workflow method.");
             var args = arguments ?? [];
             return method.Name switch {
+                nameof(IWorkflowComponentLibraryService.ListComponentsAsync) when Probe.Components is { } components => components(args.OfType<CancellationToken>().Single()),
+                nameof(IWorkflowComponentLibraryService.ListProviderOptionsAsync) when Probe.Providers is { } providers => providers(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowStructureAuthorityFactory.CaptureLocalOperatorAsync) when Probe.Authority is { } authority => authority(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowCatalogService.ListDefinitionsAsync) when Probe.Catalog is { } catalog => catalog(args.OfType<CancellationToken>().Single()),
                 nameof(IWorkflowCatalogService.GetDefinitionAsync) when Probe.Definition is { } definition => definition((WorkflowId)args[0]!, args.OfType<CancellationToken>().Single()),

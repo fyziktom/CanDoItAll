@@ -1554,11 +1554,11 @@ public partial class WorkflowsPage : IDisposable {
         }
     }
 
-    private Task StartCanvasDraftAsync() {
+    private async Task StartCanvasDraftAsync() {
         ClearSelectedDefinitionState();
         ClearHistoryState(markLoaded: false);
         activeWorkflowTabIndex = EditorTabIndex;
-        return Task.CompletedTask;
+        await EnsureComponentLibraryLoadedAsync();
     }
 
     private async Task HandleCanvasPreviewRunCompletedAsync(WorkflowRunSnapshot run) {
