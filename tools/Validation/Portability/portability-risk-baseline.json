@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-04T20:14:58.228066+00:00",
+  "generated_utc": "2026-10-05T06:26:57.831936+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15206,
+  "allowance_count": 15213,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -58346,6 +58346,12 @@
       "count": 2
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Calendar/ProjectCalendarPresentationAdapter.cs",
+      "category": "case-policy",
+      "source_fingerprint": "09037a5b1cf54222f54987c7c4efcbb0849d587f6a20e2d7243b8c3b953354bd",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
       "category": "external-tool",
       "source_fingerprint": "1ab9c03bdf66ce0ed2ac267a4942cabda5f526bf36d06004679a77fc913ee843",
@@ -59420,9 +59426,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor",
-      "category": "case-policy",
-      "source_fingerprint": "c1713a73ea85a3c40632ec4bf1348d93ceb744d1f833650ce18adc7a3c918168",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor.cs",
+      "category": "windows-path",
+      "source_fingerprint": "a82b6acec9fc3178df655829b1e68cb46badd45f25f1522088d5ea43573a4d12",
       "count": 1
     },
     {
@@ -72185,6 +72191,42 @@
       "path": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md",
       "category": "windows-executable",
       "source_fingerprint": "8616b50fd4ea73d8ef6a8b4361b399008b4b1ce9b9c60d3c8fc27f0ac9af94f0",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/PlanningWatchState.cs",
+      "category": "environment",
+      "source_fingerprint": "e70516ffebc43968fb472a8fcc0ac8dd7d0136f8a2516443e97b0def8f94ba9d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/PlanningWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "0ecc6f30b04601fc5a4f66aeb24740cfccf67f5d19dc3be511a211db8a68d2da",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/PlanningWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "2486ca50f58427618a0e8cd628664649a26beed21a0e732167cdb4915b4108fa",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/PlanningWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "d5c4b94613d19f4a82f3b50f37bcf6d7f42fc73a28d330fe4abe4feeaa4a80b8",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "6342e5bb96cacc667ef4dd0cdc83788f63a687b9687531e6f7add6381db75174",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "5851fb9950d4c01634bd9922ba550fd1245a96d7ff764515a3f24d2221073f65",
       "count": 1
     },
     {

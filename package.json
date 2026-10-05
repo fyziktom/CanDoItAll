@@ -20,7 +20,8 @@
     "crmhr:css:build": "npm --prefix Tailwind run crmhr:build",
     "crmhr:css:watch": "npm --prefix Tailwind run crmhr:watch",
     "crmhr:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox\" --property:CrmHrAssetMode=Parity",
-    "crmhr:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox Fast\" --property:CrmHrAssetMode=Fast"
+    "crmhr:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox Fast\" --property:CrmHrAssetMode=Fast",
+    "planning:css:build": "npm run planning:build --prefix Tailwind"
   },
   "repository": {
     "type": "git",

@@ -46,11 +46,42 @@ package-authorized fallback. Full artifacts, test filters, discovery counts,
 source fingerprints and failed attempts are private under
 `artifacts/workbench-planning-wb1/evidence.json`.
 
+## W1: Calendar boundary
+
+`CanDoItAll.Workbench.Planning.UI` owns the complete Calendar rendering, normalized
+view-state parser, timezone display and visible-list CSV/XLSX export. It depends
+only on neutral BaseLib and CanvasLib (five projects in its evaluated closure).
+The native page retains route admission, database reads, project-lifetime checks,
+ordered state writes, linked-artifact navigation and Agent context. Its Razor
+code-behind is the existing route host, not a second rendering implementation.
+
+Each renderer callback captures its original presentation identity and receiver.
+Superseded reads and queued writes cannot affect a successor view. Same-owner
+writes remain ordered; accepted writes can finish after navigation. A failed
+acknowledgement is shown as unconfirmed and recovery reads durable state without
+replaying the write. Stale facts cannot authorize editing or artifact navigation.
+
+The independent planning sandbox has six projects in its closure and owns the
+synthetic Calendar specimens removed from the production route. It mounts actual
+shared Calendar controls, including independent instances and failure states.
+Its Parity and Fast asset modes follow the existing sandbox host convention.
+The 19 protected renderer closures are unchanged; Workbench adds only the new
+planning library. Calendar's former public parser type is forwarded for compatibility.
+
+Proof includes 24 independent presentation/export cases and 15 native Calendar
+cases, including real PostgreSQL ordering, rejected lifetimes and lost commit
+acknowledgement. Large-desktop browser checks exercised all five views, saved-view
+reload, separate display and browser timezones, the DST fall-back interval, and
+decoded CSV/XLSX downloads. Export rows are resolved against the accepted event
+snapshot; caller-supplied field values cannot replace those facts. The native
+calendar remains read-only. Independent published-host and final consumer proof
+will be completed with the full planning family in W4.
+
 ## Remaining WB1 work
 
-Calendar extraction, the complete Gantt renderer, both task form families, the
-independent sandbox and all final operator/Agent/Workflow/multi-instance journeys
-are pending. Large-desktop validation uses 1920 by 1080 at scale 1. Final closure
+The complete Gantt renderer, both task form families, the rest of the independent
+sandbox and all final operator/Agent/Workflow/multi-instance journeys are pending.
+Large-desktop validation uses 1920 by 1080 at scale 1. Final closure
 requires a current caller/asset census, repeated watch measurements, native
 partial-commit proof, the settled Stable decision and final static enforcement.
 Neither the full planning boundary nor release readiness is claimed here.

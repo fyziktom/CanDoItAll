@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Components.CanvasLib;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -56,6 +57,23 @@ public static class ProjectCalendarStateParser
             null,
             args.Timezone,
             args.SelectedEventId);
+
+    public static string Serialize(ProjectCalendarViewState state, string stateJson) {
+        var value = JsonNode.Parse(stateJson) as JsonObject
+            ?? throw new JsonException("Calendar view state must be an object.");
+        value["view"] = state.View;
+        value["scope"] = state.Scope;
+        value["selectedDate"] = state.SelectedDate;
+        value["timezone"] = state.Timezone;
+        value["selectedEventId"] = state.SelectedEventId?.ToString("D");
+        if (value.ContainsKey("preferredView")) {
+            value["preferredView"] = state.View;
+        }
+        if (value.ContainsKey("selectedDateKey")) {
+            value["selectedDateKey"] = state.SelectedDate;
+        }
+        return value.ToJsonString(SerializerOptions);
+    }
 
     private static ProjectCalendarViewState BuildState(
         string? view,

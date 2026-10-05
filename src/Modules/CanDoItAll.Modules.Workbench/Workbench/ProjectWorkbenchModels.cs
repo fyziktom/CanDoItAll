@@ -2063,6 +2063,17 @@ public sealed partial class ProjectWorkbenchService(
         ProjectAgentMutationAdmission? agentMutationAdmission = null)
         => (await UpdateObjectPriorityDetailedAsync(projectId, nodeKeys, priority, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
 
+    public async Task SaveCalendarViewStateAsync(ProjectWriteAdmission admission, string stateJson, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(admission);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var scope = await mutationScopes.BeginAsync(dbContext,
+            ProjectStructureSerializableMutationScope.ForProject(admission.ProjectId), cancellationToken, [admission]);
+        await UpsertViewStateAsync(dbContext, admission.ProjectId, "calendar", stateJson, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await scope.CommitAsync(cancellationToken);
+    }
+
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

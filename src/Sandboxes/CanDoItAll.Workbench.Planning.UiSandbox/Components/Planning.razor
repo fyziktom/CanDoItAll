@@ -1,0 +1,36 @@
+@page "/"
+<PageTitle>Workbench planning sandbox</PageTitle>
+<main class="planning-sandbox">
+    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+        <PageHeader Eyebrow="Independent sandbox" Title="Workbench planning" Description="Synthetic planning scenarios. This host has no database, application backend or native write authority." />
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            @foreach (var state in Enum.GetValues<PlanningReadState>()) {
+                <Button Text="@state.ToString()" Click="@(() => first.State = state)" />
+            }
+            <Button Text="Toggle independent calendar" Click="@(() => showSecond = !showSecond)" />
+            <Button Text="Synthetic specimens" Click="@(() => showSpecimens = !showSpecimens)" />
+        </Cluster>
+        <PlanningCalendarSurface Presentation="@first.Presentation" SelectionChanged="first.Select" StateChanged="first.ChangeState"
+                                 OpenRequested="first.Open" RetryRequested="first.Retry" ProjectsRequested="first.Retry" />
+        @if (first.LastAction is not null) {
+            <TextBlock Value="@first.LastAction" />
+        }
+        @if (showSecond) {
+            <PlanningCalendarSurface Presentation="@second.Presentation" SelectionChanged="second.Select" StateChanged="second.ChangeState"
+                                     OpenRequested="second.Open" RetryRequested="second.Retry" ProjectsRequested="second.Retry" />
+        }
+        @if (showSpecimens) {
+            <CalendarSpecimens canvasSurface="@first.Presentation.Calendar" />
+        }
+    </Stack>
+    <DialogHost />
+    <Tooltip />
+    <Notification />
+</main>
+
+@code {
+    private readonly CalendarScenario first = new("Planning specimen A");
+    private readonly CalendarScenario second = new("Planning specimen B");
+    private bool showSecond;
+    private bool showSpecimens;
+}
