@@ -1121,3 +1121,73 @@ and provider/runtime implementations stay unchanged. `LiveRequestBudgetTests` ve
 concurrent and persisted admission without sending model requests. Evidence separately
 records outbound reservations, HTTP success and actual provider-history journal rows;
 tool-admission batches are no longer represented as request counts.
+
+## Agents completion proof
+
+[AC1](architecture/agents-completion-ac1.md) records the shell, complete Usage family,
+runtime/log, floating context/close and avatar presentation boundaries. The independent
+`CanDoItAll.AgentFramework.UI.Tests` suite exercises the actual light components; native
+`AgentsShellTests`, Usage lifetime tests, conversation/dialog tests and Voice/SimpleChats
+tests remain in their owning assemblies. Scheduler projection/startup and Workflow preview
+identity repairs additionally require native PostgreSQL integration tests. Discover each
+focused selection from freshly built binaries and retain its TRX and exact source state.
+
+The Simple Chat dialog family uses `ConversationDialogSurfaceTests` in the
+light AgentFramework.UI.Tests project and `LlmChatConversationWorkspaceTests` in native
+Components. After changing that leaf, also run the three
+`LlmChatUiRegistrationAndArchitectureTests` in Unit against the final source; their
+forbidden-service/reference scan must include newly added files. The native browser
+Simple Chat case separately proves create/send/rename/archive/reload with accepted
+conversation identities and definition revisions.
+
+The final external-fixture browser selection includes `SharedProviderNativeDefaultsUiTests`,
+`SharedProviderNativeConsumerTests`, `SharedProviderCustomMetadataTests` and
+`SharedProviderFinalUiTests`. These require the owned three-instance runner's explicit
+write gate and fixture/evidence directories. They script only the remote model response;
+native definitions, chats, approvals, files, usage and History use real owners. Run these
+sequentially because they share the deterministic upstream script. A failed setup is not
+permission to replay it: inspect committed identities and effects before any correction.
+Use unique attempt directories and preserve the first failure.
+
+The consumer fixture retains an unconfirmed deterministic response plan when a browser
+assertion or native continuation fails. It clears only its own confirmed completed plan
+at disposal and refuses an unconfirmed replacement. Inspect the original native run and
+script progress before another campaign changes the upstream. Clearing a response plan
+while an approval continuation is still preparing changes that run's eventual input.
+`SharedProviderConsumerFixtureTests` exercises this cleanup boundary against the actual
+owned control endpoint without dispatching an Agent run.
+
+The AC1 Scheduler case leaves its completed finite plan enabled through two restarts on
+the same store, compares original run/detail records, and then fires a separate future
+plan. The older WF1 Quartz browser case pauses its own plan for cleanup; it does not prove
+the AC1 restart requirement. Settings reloads use the full shared navigation helper,
+including the interactive-render barrier after the startup prompt has been dismissed.
+
+New AC1 browser validation uses only 1920×1080 at scale 1. The source and independently
+published `/completion`, `/adjuncts` and `/simple-chat-dialogs` specimens exercise real Charts, Dialog, CopyButton,
+InputFile and avatar assets, independent views, footer/focus and error/retry states. Voice
+media lifecycle proof uses owned audio bytes and actual browser Audio/object URLs, with
+no paid synthesis. Controlled specimens do not substitute for native effect proof.
+
+One final frozen Stable checkpoint is justified by the startup-owner correction and public
+presentation boundary. Do not rerun the broad suite after each dialog. Keep original full
+run failures and later focused qualifications separate, account for nonserializable theory
+expansion, and compare measured elapsed time with current CI budgets. The portability
+gate, source/delta secret-scan coverage and documentation validation remain mandatory.
+
+AC1 freezes Stable at signed `f9dd2b02`. Its later bounded SimpleChat dialog delta
+is qualified by seven fresh owning builds, the 20/5/3 native/leaf/boundary selections,
+source/published specimens and the exact-source native image. No composition, root-build,
+schema, persistence, project-reference or shared Stable-infrastructure change follows
+that checkpoint. The separate external-browser fixture cleanup fix has its own
+failing-first native control-endpoint regression. Preserve the original Stable failure
+and per-assembly results; a scoped secret-scan pass does not turn the full run green.
+
+Native Usage proof must inspect source coverage before interpreting totals. A fresh
+file-backed Agent workspace can require explicit initialization through the existing
+`tools/UsageIndex` maintenance executable; Overview/API reads do not backfill history.
+Use the actual owned workspace root and organization scope. Preserve the original
+partial snapshot, run the resumable command without rebuild/migration flags unless
+independently required, and verify canonical execution/observation payloads are unchanged.
+Then compare real Agent and SimpleChat aggregate totals with all three native dialogs,
+retaining the accepted workload and UTC interval and the independent dialog lifetimes.

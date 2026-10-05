@@ -101,3 +101,9 @@ The independent `/adjuncts` specimen renders these same components. Its file inp
 owned bytes and displays their hash; its avatar upload uses the shared Models image policy.
 It does not stage native attachments, admit runs or call a paid image service. Native and
 independent tests exercise separate ownership responsibilities.
+
+The [renderer/caller census](../../../docs/architecture/agents-renderer-census.csv) names
+all current destinations and retained native responsibilities. Its [asset closure](../../../docs/architecture/agents-renderer-assets.md)
+traces shared fonts/theme, Charts, dialogs/copy, floating windows, avatars and native
+voice/download modules. Published source equivalence and real native consumers are
+recorded separately in AC1; a sandbox callback is never persistence or authorization proof.

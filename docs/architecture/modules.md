@@ -88,6 +88,9 @@ their owners. The boundary records distinguish completed rendering from applicat
 | Request History PP3 | `CanDoItAll.AgentFramework.ProviderHistory.Abstractions` | History family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
 | Capability authoring CA1 | Existing Models and light capability/MCP abstractions | `CanDoItAll.AgentFramework.CapabilityAuthoring.UI` | `CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox` |
 | Technical teams CA1 | Existing Agent models and origin-bound presentation | Teams family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| Workflow authoring WF1 | Existing Workflow models and controlled authoring operations | `CanDoItAll.AgentFramework.WorkflowAuthoring.UI` | `CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox` |
+| Agents completion AC1 | Existing Models/Usage values and identity-bound presentation | Shell, Usage, Runtime, Chat and Avatars in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| SimpleChats residual dialogs AC1 | Existing definition/conversation values and exact opening intents | Start/Rename/Archive in existing `CanDoItAll.AgentFramework.Llm.SimpleChats.UI` | `/simple-chat-dialogs` in `CanDoItAll.AgentFramework.UiSandbox` |
 
 The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
 schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
@@ -95,7 +98,7 @@ and adaptation remain production composition. The [Workspace census](workspace-c
 classifies its remaining wrappers and external render consumers; a retained Razor host is not
 automatically unfinished rendering work. See the [Workspace completion record](workspace-completion-ui-boundaries.md).
 
-AgentFramework is partially extracted: its [UI library](../../src/UI/CanDoItAll.AgentFramework.UI/README.md)
+AgentFramework's [UI library](../../src/UI/CanDoItAll.AgentFramework.UI/README.md)
 and sandbox cover the catalog, capabilities and Overview. [Editor A2](agent-editor-completion-a2.md)
 completes all ten technical editor sections, actual Memory/root children and small confirmations.
 The actual capability list and Storage picker are composed through narrow slots; native Memory
@@ -107,10 +110,18 @@ with native owners. [PP1](provider-profiles-ui-pp1.md) completes the provider ca
 Connection, Prices, Runtime and Thinking editors. [PP2](provider-sharing-ui-pp2.md) completes
 Sharing, source connections and shared-provider refresh presentation while native delivery and
 reconciliation remain with their owners. [PP3](provider-history-ui-pp3.md) completes global and
-single-provider History filters, results, metadata and separately authorized content. Other
-provider/runtime dialogs still require a current caller and renderer census. Existing
-Simple Chats and Workflows UI libraries under `src/MAF` are additional foundations, not evidence
-that every Agent or Workflow authoring surface has moved.
+single-provider History filters, results, metadata and separately authorized content.
+[AC1](agents-completion-ac1.md) completes the remaining shell, Usage trio, runtime/log,
+floating context/close, attachment and avatar presentation. Its [current census](agents-renderer-census.csv)
+tracks 245 components, including the final inline SimpleChat dialog family being closed at A5, and its
+[asset closure](agents-renderer-assets.md) follows shared and native scripts, fonts and CSS.
+Native hosts retain routes, queries, safe projection, operations and original dialog/context
+lifetimes. Existing SimpleChats, Voice, provider and Workflow surfaces remain the product
+renderers. Completion and delivery evidence are separate from product-wide release readiness.
+
+The next large UI family is Workbench, beginning with bounded calendar/task/read views,
+then Structure and its cross-owner integrations. Processes remains last because its claims,
+streaming, admission and recovery boundaries require their own campaign. AC1 starts neither.
 
 `CanDoItAll.Modules.Projects.Contracts` lets renderers and other modules name portfolio/editor
 data, project write admissions and assignment queries without referencing the implementation.
@@ -173,13 +184,13 @@ caller, descendant, asset and evaluated-dependency census precedes that assignme
 | Order | Family and current source | Proposed scope | Effort / provisional slices |
 |---|---|---|---|
 | 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): P1 / Files P2 complete | Portfolio, hierarchy inspection, overview, editor and both Files renderers are extracted. File authorization, coordinators and content leases retain their original owners; see the P1 and P2 validation records | Completed selected surfaces; actual file owners retained |
-| 2 | [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md): catalog/capabilities/Overview, ten-section Editor A2, provider PP1/PP2/PP3 and capability/team CA1 | Residual chat/usage or provider/runtime surfaces require a current caller census; preserve whole-agent data, explicit effects and authority | Selected editor/provider/definition/team rendering complete; later slices require separate review |
+| 2 | [AgentFramework AC1](agents-completion-ac1.md): shell, complete Usage, runtime/floating adjuncts and SimpleChat dialogs join the existing A2/CA1/PP boundaries | The 247-entry current caller/renderer/asset census has no remaining product renderer; native routes, queries, context, approval, grants and durable operations retain their owners | Presentation complete; AC1 records native consumer, frozen regression and signed-delivery disposition separately |
 | 3 | [Workflow authoring WF1](workflow-authoring-ui-wf1.md): canvas, floating windows, inspectors, settings and page dialogs render through WorkflowAuthoring.UI | Native module retains catalog, Prompt/component persistence, trusted renderer selection, profile ownership and launch authority; the four-project Workflows.UI shell is unchanged | Complete: rendering, native consumers, independent publish, multi-instance proof, qualified frozen regression accounting and verified signed closure |
 | 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |
 | 5 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md): thin routes still compose implementation-bound rendering and runtime services | Catalog/read panels, editor/configuration, launch/approval, monitoring/recovery and final integration; preserve SSE, claims, snapshots and receipts | 5/5; 4–6 slices; last major family |
 
-Simple Chats needs a bounded residual-renderer, adapter and scenario audit around its existing
-UI library (roughly 2/5), not a replacement domain module. Web Home/dashboard and runtime
+AC1 completes the bounded SimpleChats residual-dialog, adapter and scenario audit in its
+existing UI library; its domain and persistence owners are unchanged. Web Home/dashboard and runtime
 capability pages are composition surfaces; assess reusable rendering after the major feature
 cuts (2–3/5, roughly 1–2 possible slices). Security has no separate extraction assignment
 without an actual remaining screen: Secrets and API administration already belong to Workspace.

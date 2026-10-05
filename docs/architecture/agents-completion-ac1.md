@@ -1,10 +1,32 @@
 # Agents presentation completion AC1
 
+AC1 completes the scoped Agents presentation boundary. SCH-R1 and WF1-R1 are
+repaired, the final native consumer campaign passes, and the current census has
+no remaining product renderer. Workbench and Processes extraction has not started.
+
+| Closure field | Result |
+|---|---|
+| `agents_ui_boundary_complete` | `true` |
+| `scheduler_restart_fixed` | `true` |
+| `preview_attempt_identity_fixed` | `true` |
+| `native_consumer_campaign_passed` | `true` |
+| `ready_for_next_module` | `true` |
+| `release_ready` | `false` |
+
+The frozen Stable run remains **failed: 16,489 passed, one failed, zero skipped**.
+Its single retained historical synthetic-key finding is classified below; it is
+not an unresolved product blocker or a green full-suite claim. Source, task-delta
+and full-worktree secret scans retain their distinct scopes and dispositions.
+
 Current work executes the sealed AC1 package on `components-decoupling`. The entry
 main is `dba71b3db4a2ae99b5d837e8df2c9df37dc4af4a`. Components local and remote
 development both resolve to `2eccdddd05a9b1b0c90935ddee49dc559fd5eec1`, including
-the Tooltip and read-only Canvas repairs. FileTools local is
-`3a080ecd31068a77c1e1bd639f7a78e21c93db85`; the independent CI pin is unchanged.
+the Tooltip and read-only Canvas repairs. FileTools local and remote main are
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`. The unchanged CI pin
+`498b36825bd5a5222429972af120b04becf4b3f6` is an ancestor with the identical tree
+`6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d`. SSH remote inspection was refused by
+public-key authentication; a normal HTTPS read of the same configured repository
+verified the remote ref. No dependency branch, CI pin or remote was changed.
 The earlier WF1 report's local-only dependency statements describe its historical
 checkpoint. AC1 does not replay or modify those historical fixtures.
 
@@ -69,7 +91,7 @@ Quartz independently of the host; PostgreSQL tests prove native composition.
 CodeAnalytics, Components and dotnetwatch MCP methods are unavailable in this
 session; current source, evaluated MSBuild, CLI and Playwright are the fallback.
 
-## Remaining AC1 stages
+## AC1 presentation stages
 
 ### A1 baseline and current reachability
 
@@ -227,9 +249,10 @@ the Agent adapters: a selection completed an unrelated top dialog. Their native 
 close the exact DialogReference, fence queued callbacks across A-B-A parameter changes and
 disposal, and bind open dialogs to the contributor lifetime. Retirement closes only its
 own dialog, with no archive or focus effect. Domain persistence and operation scopes are
-unchanged. The current census contains 245 entries: 116 already isolated renderers,
-57 legitimate native hosts, 20 neutral shared entries, 38 developer surfaces and 14
-retained unreachable legacy components; none remains classified as a renderer to extract.
+unchanged. The A4 census contained 245 entries, but its classification of the
+conversation workspace was incomplete: three inline dialogs remained. The A5 audit
+below corrects that finding; A4's passing lifetime tests did not prove that every
+reachable form had crossed the presentation boundary.
 
 The native Voice/settings/SimpleChats selection discovered and passed 76 cases with no
 skips after fresh production and test builds. Earlier Voice/model/boundary unit proof
@@ -246,7 +269,193 @@ points. No new renderer, dependency, service bag, persistence scope, provider pr
 or implicit business-profile subscription was introduced. Source and published browser
 consumer validation remain separate proof layers.
 
-The final published sandbox and measured edit loop, native/two-client campaign, final
-static gates and signed delivery remain in progress.
-No final Agents readiness or product release readiness is claimed. Workbench and Processes
-extraction remain outside AC1.
+### A5 residual dialogs and complete census
+
+The final form audit corrected the A4 classification of
+`LlmChatConversationWorkspace`: its Start and Rename forms and Archive wrapper
+were still inline. All three now use `LlmChatConversationDialogSurface` in the
+existing SimpleChats UI leaf. The native workspace retains authorization, revision
+pinning, persistence, concurrency and operation following. Typed intents capture
+the opening generation, dialog kind and conversation identity. Two failing-first
+native cases reproduced a queued title callback changing a reopened dialog; both
+now pass. Retired callbacks cannot update a replacement opening or disposed view.
+
+The source was prepared and tested in an exact private snapshot while the primary
+checkout and Release binaries remained frozen for Stable. After Stable ended,
+the six reviewed production, specimen and test files were applied by verified
+hash. Four new test clicks and one disposal call were then aligned with the
+repository's asynchronous bUnit conventions. All seven owning production/test
+projects built, and fresh primary discovery/execution passed 20 native workspace,
+five dialog leaf and three source-boundary cases. The initial post-test binary
+collector assumed the sandbox's generic output directory; evaluating its actual
+Parity/AC1 `TargetPath` repaired that evidence lookup without rerunning tests.
+
+The [census](agents-renderer-census.csv) now records 247 components: 117 isolated
+renderers, 57 intentional native hosts, 20 neutral primitives, 39 developer
+surfaces and 14 retained legacy components. No remaining product renderer is
+classified as an effect host. The native form audit leaves only the catalog
+host's bounded failed-load Retry action. Routes, generic dialog callers, dynamic
+contributions, descendants and [shared assets](agents-renderer-assets.md) are
+explicitly traced. Dormant public types remain intact.
+
+Nineteen evaluated dependency graphs retain their original edges, with no cycle
+or unresolved project. Agents UI has 13 projects in its closure and its sandbox
+16; SimpleChats UI has five. WorkflowAuthoring UI/sandbox remain 17/19 and the
+light Workflows UI shell remains four. No project reference, composition/DI,
+schema, persistence, runtime or provider protocol change accompanies the dialogs.
+The final C# architecture gate passes for this bounded presentation seam.
+
+### A5 source, assets and development loop
+
+The final candidate image is
+`sha256:c58c8923054c23284d9b642efcd536e45fb3c5dc66336d725095f8d37c63da36`,
+built from signed `f9dd2b02` plus immutable input fingerprint
+`e63526eba98ce8b5e643c035dc419acd9cda4087b234b40fa1a467aadb691839`.
+It retains those original labels. A comparison of all 5,508 production,
+native-runner and dependency inputs proves equality with the applied source,
+with CRLF-only differences recorded explicitly. Only the four intended dialog
+production/specimen files differ from frozen `f9dd2b02`.
+
+The three owned apps use the same candidate image and seven matching native DLLs.
+Seventeen served assets match their source bytes on all three apps. The image
+upgrade recreated only those apps and retained the database, deterministic
+upstreams, histories and admissions. Existing 19-case provider protocol, default
+catalog and six-case Workflow proof retains its original image/source labels;
+its reuse is justified by unchanged protocol, Workflow, build and dependency
+inputs. Changed consumers and repeated Scheduler restarts have separate candidate
+proof.
+
+Source Parity, independent published Parity and Fast specimens use the actual
+renderers, shared Charts, Dialog, CopyButton, font, avatar and media assets. The
+new `/simple-chat-dialogs` route passes seven source and seven published scenarios,
+including focus, footer reachability, busy/empty states and independent Start and
+Archive openings. All new browser contexts use 1920×1080 at scale 1.
+
+Final edit-to-visible samples are Razor 1869/617/462 ms, C# 329/252/272 ms and CSS
+1416/805/797 ms. Warm-output runtime readiness changed from 15830 to 17472 ms;
+this is not an improvement claim. The added dialog specimen's Razor probes were
+1802/456/286 ms, with one unchanged watch process and no full reload. Its Fast
+host initially lacked generated shared CSS; the original failure remains and
+the actual CSS build repaired the prerequisite. Every probe file was restored
+byte-for-byte. There is no owned JavaScript file in these rendering leaves to
+probe; actual native voice and shared browser assets have separate lifecycle proof.
+
+### A5 frozen regression disposition
+
+The frozen Release run at `f9dd2b02` executed all 27 Stable assemblies in
+3 h 47 m 38 s: **16,489 passed, one failed, zero skipped**. Fresh discovery listed
+16,435 cases; 55 additional executions come from seven unchanged nonserializable
+theory groups. All 27 owning Release DLLs remained unchanged through completion.
+The run remains failed. Its single failure,
+`Repository_contains_no_realistic_provider_keys`, found the exact synthetic
+security-test key in four retained historical WF1/A2/CA1 evidence files. Each
+match was compared to the source negative control and its adjacent test identity;
+no historical artifact or scanner rule was changed.
+
+All 3,287 Integration cases passed. The explicit continuity audit identifies 114
+editor/capability/team cases and 129 Workspace/Projects/Resources/TestLab owner
+cases, all passing. Final dialog proof is the separate fresh 28-case selection
+above. The bounded delta introduces none of the current composition, root-build,
+persistence or shared Stable-infrastructure invalidation triggers; no automatic
+second broad run was launched. The browser fixture repair is outside Stable.
+The local serial run overlaps native/browser work and is not a CI timing pass:
+current CI uses separate 90/120/180-minute budgets rather than this one local job.
+
+Portability enforcement passes with 15,206 reviewed executable-source findings
+unchanged, without baseline-write mode. The five static/documentation/package
+tooling families passed 46 self-tests. Source and task-delta secret scanning and
+the broader private-artifact scan are reported separately; the full worktree is
+not declared secret-free.
+
+### A5 native campaign closure
+
+Candidate native SimpleChat create/send/rename/archive/reload, all shell tabs and
+Voice/Floating settings persistence, source-and-two-client custom metadata,
+two-circuit local-setting conflicts and source disable/retire/reimport have
+passed. Scheduler proof created a finite enabled plan in the native UI, observed
+its real run, restarted all three apps twice without changing plan/run/history/
+admission identities, and observed a separate future fire exactly once.
+
+The final floating journey passed all original 60-second assertions in 5 m 56 s:
+detach/follow and next-turn context, same-session adoption, independent handles,
+Stop preserving a durable pending approval, history reopen and explicit rejection
+on that original run. Agent configurations were unchanged. Final standard chat
+also passed: the saved nondefault opaque model, original prompt/answer and session
+survive reopen; runtime/log details target the original run, and cancellation
+terminates the separate pending run without a file write.
+
+The final file journey passed hidden-canary reading, two exact native write and
+attachment approvals, explicit rejection, unchanged sibling bytes and native
+readback/download of the 57-byte result. Final media proof passed real generation,
+attachment, authorized preview/download and vision of the same 68-byte PNG. Only
+the external model responses were scripted; native effects, approvals and bytes
+were real. No paid provider request ran.
+
+Final History proof passed lazy query, global/scoped exact attempt identities,
+distinct caller keys, denied content, committed credential deletion, HTTP 401 for
+the revoked key and a new native turn under the replacement. The original client
+source secret was restored. Canonical Agent, Workflow and SimpleChat content has
+separate owner authorization proof; metadata access does not grant content access.
+
+The Usage audit first preserved a partial native snapshot: four SimpleChat
+observations were visible while Agent indexing was incomplete. The existing
+resumable maintenance executable initialized only the owned client's derived
+index, without rebuild/migration flags or new calls. All 945 canonical JSON
+payloads remained byte-for-byte unchanged. Its read-only inventory initially hit
+Windows long-path handling; extended-length reads repaired that helper before
+any maintenance effect.
+
+After the final calls, 56 canonical Agent observations plus four SimpleChat
+observations agree with the API and all three native dialog metrics: 60 total,
+58 known, two unknown, zero unpriced, 1,102 tokens and $0.005887 known cost. The
+dialogs display $0.0059 using their existing rounding. Nonzero unpriced rendering
+retains focused owner/leaf proof; this native fixture does not invent an unpriced
+charge. The accepted seven-day UTC interval stays pinned across all details. An
+independent fourteen-day Agent view cannot change or close the first view. Native
+reads on the source and second client retain explicit partial coverage and contain
+none of the first client's consumer identities. No browser circuit error occurred.
+
+An earlier floating rejection exceeded the unchanged
+60-second browser assertion while Stable was running. Fixture disposal then
+cleared its still-needed response plan, so the original continuation received
+the deterministic default response and eventually failed. The failing attempt
+and exact rejection/run identities remain. A failing-first fixture test now
+proves that disposal retains an unconfirmed response plan; no approval was
+replayed and no timeout was increased.
+
+The first final-image standard turn was refused after its owned source credential
+expired at 01:14:34 UTC, three seconds before the prompt. Its original run is
+terminal Failed, with no approvals or receipts and zero response-plan consumption.
+The operator renewed only the existing secret on both owned clients through the
+native API Access/Secret vault UI, retaining subject, scopes and the 240-minute
+lifetime. Both source connection tests and secret readbacks passed. The unused
+response plan was explicitly retired after inspection; no original turn or setup
+was replayed. This prerequisite failure remains separate from the fresh verification.
+The fresh standard verification passed after that renewal. All required native
+journeys are complete, with original failed attempts and their disposition retained.
+
+### Delivery and qualification
+
+The main implementation checkpoints are `44730fc9` (S0), `f62d6c8f` (shell/Usage),
+`ccc53578` (runtime/floating), `f9dd2b02` (preserved integrations and frozen Stable)
+and `00dada9f` (residual dialogs and consumer fixture retention). The sixth
+checkpoint closes the census, documentation and final evidence. Each is signed
+and verified with OpenPGP fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6`; exact SHAs, source fingerprints,
+artifact hashes, TRX counts and signature receipts remain in the private external
+AC1 evidence ledger. Delivery is local: no push, merge or release was performed.
+
+Final source secret scanning covers 6,710 text files and one explicit binary
+exclusion. All 306 findings on 111 paths match the reviewed entry content (four
+paths differ only by CRLF); no new source secret finding is introduced. The final
+changed-file scan is separately recorded. The earlier full-worktree scan remains
+failed over retained private/historical artifacts and synthetic controls; its
+coverage and exclusions are retained, and it is not called clean.
+
+All new browser contexts use 1920×1080 at scale 1. The final PNG inventory
+distinguishes 181 viewport captures, six full-page captures at the same desktop
+width and two actual one-pixel generated content files. Owned watch/sandbox
+processes and the seven exact native/Stable containers are stopped after proof;
+their data, containers and private logs are retained. Historical fixtures and
+port 5032 remain untouched. Workbench is the next extraction family, followed
+by its cross-owner Structure work and then Processes; none was started in AC1.

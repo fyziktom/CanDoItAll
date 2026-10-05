@@ -40,6 +40,21 @@ coordinated owner retain exact-team/profile writes, membership preservation and 
 read recovery. Grouping grants no runtime or storage authority. See the
 [CA1 record](../../../docs/architecture/agent-authoring-ui-ca1.md) for final independent and native proof.
 
+The [AC1 boundary](../../../docs/architecture/agents-completion-ac1.md) adds the native
+Agents shell, complete Usage detail family, runtime/log, context/close, attachment and
+avatar renderers to the existing light UI. This module retains route/read/default-feed
+orchestration, safe runtime projection, original dialog references, context leases,
+durable approvals and cancellation. Usage queries retain their accepted UTC window and
+opening profile/actor lifetime; a later read cannot publish into a successor view.
+Voice and Floating Settings still use the canonical installation settings owner. Voice
+playback and SimpleChat floating dialogs retire only their own activation. The
+Simple Chat workspace composes the existing SimpleChats UI leaf's complete
+Start/Rename/Archive forms while retaining authorization, revision pinning and persistence.
+The
+[current census](../../../docs/architecture/agents-renderer-census.csv) and
+[asset closure](../../../docs/architecture/agents-renderer-assets.md) distinguish these
+intentional adapters from renderers and retained unreachable public components.
+
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
 The module adapts the generic activity/preparation contracts to the current database
