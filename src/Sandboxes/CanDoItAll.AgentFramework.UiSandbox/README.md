@@ -153,3 +153,31 @@ AC1 source browser proof uses only 1920×1080 at scale 1. Test the real file cho
 avatar image, modal footer/focus, run highlight/copy, Detach/Follow and independent close.
 Published assets and final native consumer proof are recorded separately in
 [the current completion record](../../../docs/architecture/agents-completion-ac1.md).
+
+## Shell and Usage specimen
+
+`/completion?detail=consumers` renders `AgentsShellSurface` and the complete consumer,
+provider and model Usage surfaces. The specimen controls expose Loading, Ready, Empty,
+Partial, Error, Unknown, Long and Retired, explicit same-view Retry/Close and an independent second
+view. Queries and snapshots are fixed controlled values; paging does not read native
+history. The actual Charts components and shared assets are used in Fast, Parity and an
+independent Production publish. AC1 validates these modes at 1920×1080 scale 1.
+
+The adjacent Voice and Floating settings specimens remain the existing light components.
+Their Save and secondary-failure displays are fixture outcomes; native save/readback,
+coordinator outcomes and real Audio lifecycle are separate proof. See the maintained
+[asset and activation closure](../../../docs/architecture/agents-renderer-assets.md).
+
+## Simple Chat conversation dialogs
+
+`/simple-chat-dialogs?scenario=Start` uses the real SimpleChats UI dialog renderer.
+The named scenarios are Start, Empty, Loading, Busy, Rename, Archive and Independent.
+They cover the actual definition picker/filter, Load more intent, title input, busy
+controls, exact archive confirmation and two independent dialog owners. The specimen
+changes only local immutable presentation and its intent log; it has no authorization,
+conversation store or runtime service.
+
+Use source Fast/Parity and independent Production publish at 1920×1080, scale 1.
+Wait for the actual open HTML `dialog` and its rendered state before interaction.
+An unreferenced button has no guaranteed Blazor `_bl_` marker and is not a valid readiness
+barrier. Native persistence and old-opening callback isolation have separate owning tests.

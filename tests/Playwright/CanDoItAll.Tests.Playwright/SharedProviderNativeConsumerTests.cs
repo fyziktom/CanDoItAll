@@ -56,6 +56,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
                 OperationId = assistant.GetProperty("turnId").GetGuid(), EntryId = assistant.GetProperty("entryId").GetGuid(),
                 Sha256 = SharedProviderConsumerFixture.Hash(answer)
             });
+            await RenameAndArchiveSimpleChatAsync(fixture, detail, marker, suffix);
         }
     }
 

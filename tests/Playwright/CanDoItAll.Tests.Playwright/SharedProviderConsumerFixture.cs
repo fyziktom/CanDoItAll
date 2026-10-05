@@ -22,6 +22,8 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     private readonly List<string> browserErrors = [];
     private readonly List<object> requestFailures = [];
     private readonly string traceId = Guid.NewGuid().ToString("N");
+    private ResponsePlanState responsePlanState;
+    private enum ResponsePlanState { None, Unconfirmed, Completed }
     public SharedProviderNativeDefaultsUiTests.Settings Settings { get; }
     public IPage Page { get; }
     public HttpClient Api { get; }
@@ -99,21 +101,34 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     }
 
     public async Task ScriptAsync(string sourceModel, string marker, params object[] steps) {
+        if (responsePlanState == ResponsePlanState.Unconfirmed) {
+            throw new InvalidOperationException("Inspect the unconfirmed response plan before replacing it.");
+        }
+        responsePlanState = ResponsePlanState.Unconfirmed;
         await RunOracleAsync("e2e-runner", ["consumer-upstream", "script"], JsonSerializer.Serialize(new { model = sourceModel, marker, steps }, Json));
     }
 
     public async Task AssertScriptCompleteAsync(int expected) {
-        var progress = await RunOracleAsync("e2e-runner", ["consumer-upstream", "progress"]);
+        var progress = await ReadScriptProgressAsync();
         Assert.Equal(expected, progress.GetProperty("total").GetInt32());
         Assert.Equal(expected, progress.GetProperty("consumed").GetInt32());
+        responsePlanState = ResponsePlanState.Completed;
     }
 
     public Task<JsonElement> ReadCapturesAsync() => RunOracleAsync("e2e-runner", ["consumer-upstream", "captures"]);
-    public Task<JsonElement> ClearScriptAsync() => RunOracleAsync("e2e-runner", ["consumer-upstream", "clear"]);
+    public Task<JsonElement> ReadScriptProgressAsync() => RunOracleAsync("e2e-runner", ["consumer-upstream", "progress"]);
+    public async Task<JsonElement> ClearScriptAsync() {
+        if (responsePlanState == ResponsePlanState.Unconfirmed) {
+            throw new InvalidOperationException("An unconfirmed native response plan must remain available for its original attempt.");
+        }
+        var result = await RunOracleAsync("e2e-runner", ["consumer-upstream", "clear"]);
+        responsePlanState = ResponsePlanState.None;
+        return result;
+    }
 
     public Task<JsonElement> ReadAgentAsync(Guid agentId) => RunOracleAsync("e2e-client-a", ["read-consumer-agent", agentId.ToString("D"), "--role", "client-a"]);
 
-    public async Task RestartOwnedAppsAsync() {
+    public async Task RestartOwnedAppsAsync(string evidenceName = "custom-restart-containers") {
         var project = metadata.GetProperty("composeProjectName").GetString()!;
         using var images = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "tool-state", "handoff", "image-reuse.json")));
         var expectedImage = images.RootElement.GetProperty("appImageId").GetString();
@@ -138,7 +153,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
             Assert.True(current.StartedAt > previous.StartedAt);
             after.Add(current);
         }
-        await EvidenceAsync("custom-restart-containers", new { Before = before, After = after });
+        await EvidenceAsync(evidenceName, new { Before = before, After = after });
 
         async Task<AppContainer> InspectAsync(string id) {
             var fields = (await DockerAsync("inspect", "--format",
@@ -221,7 +236,11 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         try {
             await ScreenshotAsync("consumer-final-" + traceId);
             await EvidenceAsync("consumer-final-text-" + traceId, await Page.Locator("body").InnerTextAsync());
-            await ClearScriptAsync();
+            if (responsePlanState == ResponsePlanState.Completed) {
+                await ClearScriptAsync();
+            } else if (responsePlanState == ResponsePlanState.Unconfirmed) {
+                await EvidenceAsync("consumer-response-plan-retained-" + traceId, new { Reason = "Native completion was not confirmed; inspect the original attempt before replacing its response plan." });
+            }
             await EvidenceAsync("consumer-browser-" + traceId, new { Errors = browserErrors, RequestFailures = requestFailures });
         } finally {
             Api.Dispose();

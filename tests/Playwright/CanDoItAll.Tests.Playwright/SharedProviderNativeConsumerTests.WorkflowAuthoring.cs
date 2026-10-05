@@ -94,10 +94,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await page.GetByTestId("scheduler-target-search").PressAsync("Tab");
         await page.GetByTestId("scheduler-target-card").Filter(new() { HasTextString = published.Name }).ClickAsync();
         await Assertions.Expect(page.GetByTestId("scheduler-target-selected")).ToContainTextAsync(published.Name);
-        await page.GetByTestId("scheduler-input-message").FillAsync("WF1 scheduled input");
-        await page.GetByTestId("scheduler-timezone").FillAsync("UTC");
-        var fireAt = DateTimeOffset.UtcNow.AddSeconds(45);
-        await page.GetByTestId("scheduler-cron").FillAsync($"{fireAt.Second} {fireAt.Minute} {fireAt.Hour} {fireAt.Day} {fireAt.Month} ? {fireAt.Year}");
+        await Assertions.Expect(page.GetByTestId("scheduler-typed-inputs").GetByRole(AriaRole.Heading,
+            new() { Name = published.Name, Exact = true })).ToBeVisibleAsync();
+        var (fireAt, _) = await SetFiniteScheduleInputAsync(page, "WF1 scheduled input");
         await page.GetByTestId("scheduler-save").ClickAsync();
         await Assertions.Expect(page.GetByTestId("scheduler-draft-receipt")).ToContainTextAsync("Committed");
         var receipt = await page.GetByTestId("scheduler-draft-receipt").InnerTextAsync();
