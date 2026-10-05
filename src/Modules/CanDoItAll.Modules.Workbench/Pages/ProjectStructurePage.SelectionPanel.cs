@@ -361,6 +361,7 @@ public partial class ProjectStructurePage
         if (blockMutationDialog is not null)
         {
             builder.Append("|block:")
+                .Append(blockMutationDialog.OpeningId).Append(':').Append(blockMutationDialog.IsBusy).Append(':').Append(blockMutationDialog.RequiresObservation).Append(':')
                 .Append(blockMutationDialog.Mode)
                 .Append(':')
                 .Append(blockMutationDialog.NodeId)
@@ -377,6 +378,7 @@ public partial class ProjectStructurePage
         if (subprojectTransferDialog is not null)
         {
             builder.Append("|subproject:")
+                .Append(subprojectTransferDialog.OpeningId).Append(':').Append(subprojectTransferDialog.IsBusy).Append(':').Append(subprojectTransferDialog.RequiresObservation).Append(':')
                 .Append(subprojectTransferDialog.SourceNodeId)
                 .Append(':')
                 .Append(subprojectTransferDialog.ProjectName)
@@ -697,6 +699,7 @@ public partial class ProjectStructurePage
         }
 
         builder.Append("hierarchy:")
+            .Append(projectHierarchyDialog.OpeningId).Append(':').Append(projectHierarchyDialog.IsBusy).Append(':').Append(projectHierarchyDialog.RequiresObservation).Append(':')
             .Append(projectHierarchyDialog.Mode)
             .Append(':')
             .Append(projectHierarchyDialog.SubjectProjectId)

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-05T16:16:35.872235+00:00",
+  "generated_utc": "2026-10-05T22:59:34.228248+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15231,
+  "allowance_count": 15229,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59816,21 +59816,9 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectCreation.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1a3eac6d130c2d8e7cb0abb66f65a800f615283a53fc4100ba8f40bee53e112e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectCreation.cs",
-      "category": "case-policy",
-      "source_fingerprint": "455b08dd4d8ac80eaa4688530b7a570313407dcda83aaec62fd11da9647da72b",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
       "category": "case-policy",
-      "source_fingerprint": "6b96e09f49d9124cbeee9450360eca45afd56ed47e3f0d43de430f5bad4ebb7d",
+      "source_fingerprint": "a9e58263d1dea11f0eeb189533c3f02ce93e79df8b15453db795ad6a82fbfdcc",
       "count": 1
     },
     {

@@ -23,6 +23,11 @@ public sealed record ProjectStructureProjectHierarchyDialogState(
     Guid? SelectedProjectId,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+    internal IReadOnlyDictionary<Guid, ProjectWriteAdmission> Admissions { get; init; } = new Dictionary<Guid, ProjectWriteAdmission>();
+
     public string Title => Mode switch
     {
         ProjectStructureProjectHierarchyDialogMode.AddSubproject => $"Add subproject under {SubjectProjectTitle}",
@@ -57,6 +62,10 @@ public sealed record ProjectStructureBlockMutationDialogState(
     string SelectedActionId,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+
     public string Title => Mode switch
     {
         ProjectStructureBlockMutationDialogMode.ChangeBlockType => $"Change block type for {NodeTitle}",
@@ -91,6 +100,10 @@ public sealed record ProjectStructureSubprojectTransferDialogState(
     string ProjectName,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+
     public string Title => $"Move descendants from {SourceNodeTitle}";
 
     public string Copy => DescendantCount == 1

@@ -37,7 +37,9 @@ internal sealed class ProjectStructureProjectionLayoutRecordConfiguration : IEnt
 
 public sealed record ProjectStructureAssemblySnapshot(
     IReadOnlyList<ProjectObjectRecord> Nodes,
-    IReadOnlyList<ProjectObjectLinkRecord> Links);
+    IReadOnlyList<ProjectObjectLinkRecord> Links) {
+    internal IReadOnlyDictionary<Guid, Guid> ProjectLifetimes { get; init; } = new Dictionary<Guid, Guid>();
+}
 
 public interface IProjectStructureProjectionContributor
 {
@@ -56,6 +58,11 @@ public sealed class ProjectStructureProjectionContext(
 
     public IReadOnlyList<ProjectObjectLinkRecord> CanonicalLinks => canonicalLinks ?? [];
     private ProjectStructureProjectFacts? projectFacts;
+
+    internal IReadOnlyDictionary<Guid, Guid> ProjectLifetimes => projectFacts is null
+        ? new Dictionary<Guid, Guid>()
+        : projectFacts.Projects.Prepend(projectFacts.Project).DistinctBy(project => project.Id)
+            .ToDictionary(project => project.Id, project => project.LifetimeId);
 
     internal async Task<ProjectStructureProjectFacts> GetProjectFactsAsync(ProjectStructureProjectionQueryService projects,
         CancellationToken cancellationToken) {
@@ -224,7 +231,7 @@ public sealed class ProjectStructureAssemblyService(
             .ThenBy(item => item.TargetNodeKey)
             .ToList();
 
-        return new ProjectStructureAssemblySnapshot(nodes, links);
+        return new ProjectStructureAssemblySnapshot(nodes, links) { ProjectLifetimes = context.ProjectLifetimes };
     }
 
     internal async Task<ProjectObjectRecord?> FindNodeAsync(

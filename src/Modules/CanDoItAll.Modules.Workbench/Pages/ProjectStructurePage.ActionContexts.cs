@@ -10,6 +10,98 @@ public partial class ProjectStructurePage {
     private ProjectStructureActionContext? summaryActionContext;
     private ProjectStructureActionContext? transcriptActionContext;
     private ProjectStructureActionContext? secretReferenceActionContext;
+    private readonly Queue<ProjectStructureAuthoringOutcome> authoringOutcomes = new();
+    private readonly HashSet<Task> authoringOperations = [];
+
+    internal IReadOnlyList<ProjectStructureAuthoringOutcome> AuthoringOutcomes => authoringOutcomes.ToArray();
+
+    private sealed class ProjectStructureAuthoringOpening(ProjectStructureActionContext context, ProjectStructureNode node) {
+        public Guid Id { get; } = Guid.NewGuid();
+        public ProjectStructureActionContext Context { get; } = context;
+        public ProjectStructureNode Node { get; } = node;
+        public bool IsBusy { get; set; }
+        public bool RequiresObservation { get; set; }
+    }
+
+    private bool IsCurrentAuthoring(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOpening? current)
+        => ReferenceEquals(opening, current) && IsCurrentAction(opening.Context);
+
+    private async Task DispatchAuthoringDialogAsync(ProjectStructureAuthoringOpening? receiver,
+        ProjectStructureAuthoringOpening? current, Func<Task> action) {
+        if (receiver is null || !IsCurrentAuthoring(receiver, current)) {
+            return;
+        }
+        var operation = action();
+        authoringOperations.Add(operation);
+        try {
+            await operation;
+        } finally {
+            authoringOperations.Remove(operation);
+        }
+    }
+
+    private void ChangeAuthoringDialog(ProjectStructureAuthoringOpening? receiver,
+        ProjectStructureAuthoringOpening? current, Action action) {
+        if (receiver is not null && IsCurrentAuthoring(receiver, current)) {
+            action();
+        }
+    }
+
+    private bool TryBeginAuthoring(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOpening? current) {
+        if (!IsCurrentAuthoring(opening, current) || opening.IsBusy || opening.RequiresObservation) {
+            return false;
+        }
+        opening.IsBusy = true;
+        return true;
+    }
+
+    private void RecordAuthoringOutcome(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOutcome outcome) {
+        authoringOutcomes.Enqueue(outcome);
+        while (authoringOutcomes.Count > 16) {
+            authoringOutcomes.Dequeue();
+        }
+        if (outcome.Failure is { } failure) {
+            Logger.LogWarning(failure, "Structure {Operation} for project {ProjectId}, lifetime {LifetimeId}, opening {OpeningId}, submission {SubmissionId}: {Outcome}.",
+                outcome.Operation, outcome.Project.ProjectId, outcome.Project.LifetimeId, outcome.OpeningId, outcome.SubmissionId, outcome.Kind);
+        }
+        if (!deferredCompletionCts.IsCancellationRequested && ReferenceEquals(opening.Context.Actor, InsightsAuthentication) &&
+            surface?.ExpectedProjectAdmission?.DatabaseProfileId == outcome.Project.DatabaseProfileId) {
+            ReportActionResult(opening.Context, outcome.Message,
+                outcome.Kind == ProjectStructureAuthoringResultKind.Committed ? "mint" : "warn");
+        }
+    }
+
+    private Task RenderAuthoringOutcomeAsync()
+        => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+
+    private void RetireInactiveAuthoring() {
+        if (hierarchyOpening is { } hierarchy && !IsCurrentAction(hierarchy.Context)) {
+            CloseProjectHierarchyDialog();
+        }
+        if (blockOpening is { } block && !IsCurrentAction(block.Context)) {
+            CloseBlockMutationDialog();
+        }
+        if (transferOpening is { } transfer && !IsCurrentAction(transfer.Context)) {
+            CloseSubprojectTransferDialog();
+        }
+        if (projectCreateOpening is { } creation && (!IsCurrentAction(creation.Context) || !ReferenceEquals(projectCreateParentOpening, hierarchyOpening))) {
+            projectCreateOpening = null;
+            projectHierarchyDialogBeforeCreate = null;
+            showProjectCreateModal = false;
+        }
+    }
+
+    private async Task RefreshAuthoringSurfaceAsync(ProjectStructureAuthoringOpening opening,
+        ProjectStructureAuthoringOutcome outcome, string selection, Func<bool> canPublish) {
+        try {
+            await ReloadSurfaceAsync(selection, () => IsCurrentAction(opening.Context) && canPublish());
+        } catch (Exception exception) {
+            RecordAuthoringOutcome(opening, outcome with {
+                Message = $"{outcome.Message} The accepted change could not be refreshed. Reload the original project; do not repeat the write.",
+                Failure = exception
+            });
+        }
+    }
 
     private sealed record ProjectStructureActionContext(
         ProjectStructureSurface Surface,

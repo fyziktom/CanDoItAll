@@ -20,6 +20,7 @@
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
                     data-testid="project-structure-hierarchy-create-project"
+                    Disabled="@(hierarchyDialog.IsBusy || hierarchyDialog.RequiresObservation)"
                     Click="OpenProjectCreateDialog" />
             <Button Text="Cancel"
                     Variant="Variant.Text"
@@ -28,7 +29,7 @@
             <Button Text="@hierarchyDialog.SubmitLabel"
                     ButtonStyle="ButtonStyle.Info"
                     data-testid="project-structure-hierarchy-submit"
-                    Disabled="@(hierarchyDialog.AvailableProjects.Count == 0)"
+                    Disabled="@(hierarchyDialog.AvailableProjects.Count == 0 || hierarchyDialog.IsBusy || hierarchyDialog.RequiresObservation)"
                     Click="ExecuteProjectHierarchyCommand" />
         </Actions>
         <Body>
@@ -48,6 +49,7 @@
                         <TextBlock TextStyle="TextStyle.Footer" Value="Project" Class="cw-panel-copy" />
                         <select class="cw-context-toolbox__search"
                                 data-testid="project-structure-hierarchy-project-select"
+                                disabled="@(hierarchyDialog.IsBusy || hierarchyDialog.RequiresObservation)"
                                 value="@(hierarchyDialog.SelectedProjectId?.ToString() ?? string.Empty)"
                                 @onchange="ProjectHierarchySelectionChanged">
                             <option value="">Select a project</option>
@@ -91,6 +93,7 @@
             <Button Text="@blockDialog.SubmitLabel"
                     ButtonStyle="ButtonStyle.Info"
                     data-testid="project-structure-block-mutation-submit"
+                    Disabled="@(blockDialog.IsBusy || blockDialog.RequiresObservation)"
                     Click="ExecuteBlockMutation" />
         </Actions>
         <Body>
@@ -100,6 +103,7 @@
                         <TextBlock TextStyle="TextStyle.Footer" Value="@blockDialog.SelectionLabel" Class="cw-panel-copy" />
                         <select class="cw-context-toolbox__search"
                                 data-testid="project-structure-block-mutation-select"
+                                disabled="@(blockDialog.IsBusy || blockDialog.RequiresObservation)"
                                 value="@blockDialog.SelectedActionId"
                                 @onchange="BlockMutationSelectionChanged">
                             @foreach (var option in blockDialog.Options)
@@ -155,6 +159,7 @@
             <Button Text="@transferDialog.SubmitLabel"
                     ButtonStyle="ButtonStyle.Info"
                     data-testid="project-structure-subproject-transfer-submit"
+                    Disabled="@(transferDialog.IsBusy || transferDialog.RequiresObservation)"
                     Click="ExecuteSubprojectTransfer" />
         </Actions>
         <Body>
@@ -165,6 +170,7 @@
                         <input class="cw-context-toolbox__search"
                                type="text"
                                data-testid="project-structure-subproject-transfer-name"
+                               disabled="@(transferDialog.IsBusy || transferDialog.RequiresObservation)"
                                value="@transferDialog.ProjectName"
                                @oninput="SubprojectTransferNameChanged" />
                     </Stack>

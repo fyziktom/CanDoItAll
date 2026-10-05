@@ -258,20 +258,25 @@ else
                                 Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip" />
                         }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
+                            @{
+                                var hierarchyReceiver = hierarchyOpening;
+                                var blockReceiver = blockOpening;
+                                var transferReceiver = transferOpening;
+                            }
                             <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
                                                            RenderProcessStartDialog="false"
-                                                           CloseProjectHierarchy="CloseProjectHierarchyDialog"
-                                                           ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
-                                                           ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
+                                                           CloseProjectHierarchy="@(() => ChangeAuthoringDialog(hierarchyReceiver, hierarchyOpening, CloseProjectHierarchyDialog))"
+                                                           ProjectHierarchySelectionChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(hierarchyReceiver, hierarchyOpening, () => HandleProjectHierarchySelectionChanged(args)))"
+                                                           ExecuteProjectHierarchyCommand="@(() => DispatchAuthoringDialogAsync(hierarchyReceiver, hierarchyOpening, ExecuteProjectHierarchyCommandAsync))"
                                                            BlockMutationDialog="@blockMutationDialog"
-                                                           CloseBlockMutation="CloseBlockMutationDialog"
-                                                           BlockMutationSelectionChanged="HandleBlockMutationSelectionChanged"
-                                                           ExecuteBlockMutation="ExecuteBlockMutationAsync"
+                                                           CloseBlockMutation="@(() => ChangeAuthoringDialog(blockReceiver, blockOpening, CloseBlockMutationDialog))"
+                                                           BlockMutationSelectionChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(blockReceiver, blockOpening, () => HandleBlockMutationSelectionChanged(args)))"
+                                                           ExecuteBlockMutation="@(() => DispatchAuthoringDialogAsync(blockReceiver, blockOpening, ExecuteBlockMutationAsync))"
                                                            SubprojectTransferDialog="@subprojectTransferDialog"
-                                                           CloseSubprojectTransfer="CloseSubprojectTransferDialog"
-                                                           SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
-                                                           ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
-                                                           OpenProjectCreateDialog="OpenProjectCreateDialogAsync"
+                                                           CloseSubprojectTransfer="@(() => ChangeAuthoringDialog(transferReceiver, transferOpening, CloseSubprojectTransferDialog))"
+                                                           SubprojectTransferNameChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(transferReceiver, transferOpening, () => HandleSubprojectTransferNameChanged(args)))"
+                                                           ExecuteSubprojectTransfer="@(() => DispatchAuthoringDialogAsync(transferReceiver, transferOpening, ExecuteSubprojectTransferAsync))"
+                                                           OpenProjectCreateDialog="@(() => DispatchAuthoringDialogAsync(hierarchyReceiver, hierarchyOpening, OpenProjectCreateDialogAsync))"
                                                            ProcessLinkDialog="@processLinkDialog"
                                                            CloseProcessLink="CloseProcessLinkDialog"
                                                            ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
@@ -705,6 +710,10 @@ else
     </ProjectStructureOverlayDialog>
 }
 
+@{
+    var creatingOpening = projectCreateOpening;
+    var creatingDraft = projectCreateDraft;
+}
 <ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
                   IsEditorMode="true"
                   Draft="@projectCreateDraft"
@@ -715,7 +724,7 @@ else
                   WizardTabs="@ProjectCreateWizardTabs"
                   Message="@projectCreateMessage"
                   IsErrorMessage="@IsProjectCreateErrorMessage"
-                  Close="CloseProjectCreateDialogAsync"
+                  Close="@(() => CloseProjectCreateDialogAsync(creatingOpening))"
                   SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
                   SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
                   WizardTabChanged="HandleProjectCreateWizardTabChangedAsync"
@@ -725,8 +734,8 @@ else
                   RemoveStarterObject="RemoveProjectCreateStarterObject"
                   PreviousStep="PreviousProjectCreateStep"
                   NextStep="NextProjectCreateStep"
-                  Save="SaveProjectCreateAsync"
-                  SaveAndOpenStructure="SaveProjectCreateAndOpenStructureAsync"
+                  Save="@((ProjectEditorSubmission submitted) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => SaveProjectCreateAsync(creatingOpening, creatingDraft, submitted)))"
+                  SaveAndOpenStructure="@((ProjectEditorSubmission submitted) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => SaveProjectCreateAsync(creatingOpening, creatingDraft, submitted, true)))"
                   Delete="DeleteProjectCreateAsync"
                   OpenProjectDashboard="OpenProjectCreateDashboardAsync"
                   OpenStructure="OpenStructure"
@@ -950,6 +959,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         ApplyRequestedStructureView();
+        RetireInactiveAuthoring();
 
         var processNavigation = AgentChatNavigationFence;
         if (loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation) {
@@ -961,6 +971,12 @@ else
             CloseSummary();
             CancelTranscriptAction();
             CloseSecretReferenceDialog();
+            CloseProjectHierarchyDialog();
+            CloseBlockMutationDialog();
+            CloseSubprojectTransferDialog();
+            projectHierarchyDialogBeforeCreate = null;
+            projectCreateOpening = null;
+            showProjectCreateModal = false;
         }
 
         if (loadedProjectId != ProjectId)
@@ -1018,15 +1034,17 @@ else
 
     private readonly record struct StructureViewNavigationIdentity(Guid ProjectId, StructureView View);
 
-    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null)
     {
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
             ? selectedNodeIds.ToArray()
             : null;
         var request = new SurfaceReloadRequest(
             ProjectId,
-            Interlocked.Increment(ref surfaceReloadGeneration));
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            Interlocked.Increment(ref surfaceReloadGeneration), canPublish);
+        if (canPublish is null) {
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        }
         try
         {
             CancelPendingCanvasViewStatePersistence();
@@ -1091,6 +1109,7 @@ else
                 storageCatalog = nextStorageCatalog;
                 unavailableState = loadResult.UnavailableState;
                 surface = null;
+                RetireInactiveAuthoring();
                 canvasSurface = null;
                 clipboardState = null;
                 quickActionDialog = null;
@@ -1187,6 +1206,7 @@ else
             selectedNodeIds = nextSelectedNodeIds;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
             surface = nextSurface;
+            RetireInactiveAuthoring();
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();
             InvalidateClipboardStateForCurrentSurface();
@@ -1210,11 +1230,13 @@ else
 
     private bool IsCurrentSurfaceReload(SurfaceReloadRequest request)
         => request.ProjectId == ProjectId &&
-           request.Generation == Volatile.Read(ref surfaceReloadGeneration);
+           request.Generation == Volatile.Read(ref surfaceReloadGeneration) &&
+           (request.CanPublish?.Invoke() ?? true);
 
     private readonly record struct SurfaceReloadRequest(
         Guid ProjectId,
-        long Generation);
+        long Generation,
+        Func<bool>? CanPublish = null);
 
     private Task OpenUnavailableRouteAsync()
     {
@@ -3108,7 +3130,6 @@ else
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
         deferredCompletionCts.Cancel();
-        deferredCompletionCts.Dispose();
         nodeMoveCommitGate.Dispose();
     }
 
@@ -3116,10 +3137,14 @@ else
     {
         DisposeAgentWindowState();
         DisposeSynchronousState();
-        if (previewInteractionSlot is not null)
-        {
-            await previewInteractionSlot.DisposeAsync();
-            previewInteractionSlot = null;
+        try {
+            await Task.WhenAll(authoringOperations.ToArray());
+            if (previewInteractionSlot is not null) {
+                await previewInteractionSlot.DisposeAsync();
+                previewInteractionSlot = null;
+            }
+        } finally {
+            deferredCompletionCts.Dispose();
         }
     }
 

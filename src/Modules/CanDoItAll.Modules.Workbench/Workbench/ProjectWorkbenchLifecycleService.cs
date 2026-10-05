@@ -31,6 +31,10 @@ public sealed class ProjectWorkbenchLifecycleService(
         {
             return null;
         }
+        if (request.ExpectedObjectType is { } expectedType &&
+            (node.ObjectType != expectedType || !string.Equals(node.ObjectSubtype, request.ExpectedObjectSubtype, StringComparison.Ordinal))) {
+            return null;
+        }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
 

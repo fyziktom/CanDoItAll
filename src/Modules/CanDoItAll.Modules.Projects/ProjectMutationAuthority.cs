@@ -47,12 +47,19 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
         IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
-        CancellationToken cancellationToken, ProjectCreationReservation? reservation = null, Guid? requesterId = null) {
+        CancellationToken cancellationToken, ProjectCreationReservation? reservation = null, Guid? requesterId = null,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null) {
         IProjectMutationSourceLease? source = null;
         SerializableMutationScope? mutation = null;
         IDbContextTransaction? transaction = null;
-        var expected = authorization?.ExpectedProjects ?? [];
-        if (authorization is not null && !existingProjectIds.ToHashSet().SetEquals(expected.Select(project => project.ProjectId))) {
+        var expected = expectedProjectAdmissions?.ToImmutableArray() ?? authorization?.ExpectedProjects ?? [];
+        if (authorization is not null && expectedProjectAdmissions is not null &&
+            !authorization.ExpectedProjects.ToHashSet().SetEquals(expected)) {
+            throw new ArgumentException("The editor and source authority must identify the same original project lifetimes.", nameof(expectedProjectAdmissions));
+        }
+        if ((authorization is not null || expectedProjectAdmissions is not null) &&
+            (expected.Select(project => project.ProjectId).Distinct().Count() != expected.Length ||
+             !existingProjectIds.ToHashSet().SetEquals(expected.Select(project => project.ProjectId)))) {
             throw new ArgumentException("The captured admissions must cover exactly the existing projects affected by this owner operation.", nameof(authorization));
         }
         if (context.Database.CurrentTransaction is not null) {

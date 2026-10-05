@@ -9,6 +9,7 @@ public partial class ProjectStructurePage
     private const string ProjectChildNodePrefix = "project-child:";
 
     private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialog;
+    private ProjectStructureAuthoringOpening? hierarchyOpening;
 
     private async Task OpenAddSubprojectDialogAsync(ProjectStructureNode node)
         => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.AddSubproject);
@@ -16,12 +17,14 @@ public partial class ProjectStructurePage
     private async Task OpenReconnectSubprojectDialogAsync(ProjectStructureNode node)
         => await OpenProjectHierarchyDialogAsync(node, ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject);
 
-    private void CloseProjectHierarchyDialog()
-        => projectHierarchyDialog = null;
+    private void CloseProjectHierarchyDialog() {
+        hierarchyOpening = null;
+        projectHierarchyDialog = null;
+    }
 
     private void HandleProjectHierarchySelectionChanged(ChangeEventArgs args)
     {
-        if (projectHierarchyDialog is null)
+        if (projectHierarchyDialog is null || projectHierarchyDialog.IsBusy || projectHierarchyDialog.RequiresObservation)
         {
             return;
         }
@@ -36,58 +39,72 @@ public partial class ProjectStructurePage
         };
     }
 
-    private async Task ExecuteProjectHierarchyCommandAsync()
-    {
-        if (projectHierarchyDialog is null)
-        {
+    private async Task ExecuteProjectHierarchyCommandAsync() {
+        var dialog = projectHierarchyDialog;
+        var opening = hierarchyOpening;
+        if (dialog is null || opening is null || !IsCurrentAuthoring(opening, hierarchyOpening)) {
             return;
         }
-
-        if (!projectHierarchyDialog.SelectedProjectId.HasValue)
-        {
-            projectHierarchyDialog = projectHierarchyDialog with { Error = "Select a project before continuing." };
+        if (dialog.SelectedProjectId is not { } selectedId ||
+            dialog.AvailableProjects.FirstOrDefault(project => project.Id == selectedId) is not { } selected) {
+            projectHierarchyDialog = dialog with { Error = "Select a project before continuing." };
             return;
         }
-
-        var selectedProject = projectHierarchyDialog.AvailableProjects
-            .FirstOrDefault(project => project.Id == projectHierarchyDialog.SelectedProjectId.Value);
-        var result = projectHierarchyDialog.Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject => await ProjectsService.AddSubprojectAsync(
-                projectHierarchyDialog.SubjectProjectId,
-                projectHierarchyDialog.SelectedProjectId.Value),
-            ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject when projectHierarchyDialog.CurrentParentProjectId.HasValue =>
-                await ProjectsService.ReconnectSubprojectAsync(
-                    projectHierarchyDialog.SubjectProjectId,
-                    projectHierarchyDialog.CurrentParentProjectId.Value,
-                    projectHierarchyDialog.SelectedProjectId.Value),
-            _ => Result.Failure(Error.Validation("The selected hierarchy action is no longer valid."))
-        };
-        if (result.IsFailure)
-        {
-            projectHierarchyDialog = projectHierarchyDialog with
-            {
-                Error = result.Errors.FirstOrDefault()?.Message ?? "The project hierarchy could not be updated."
+        if (!TryBeginAuthoring(opening, hierarchyOpening)) {
+            return;
+        }
+        projectHierarchyDialog = dialog with { IsBusy = true, Error = string.Empty };
+        var submissionId = Guid.NewGuid();
+        var operation = dialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
+            ? ProjectStructureAuthoringOperation.AddSubproject : ProjectStructureAuthoringOperation.ReconnectSubproject;
+        var participants = new[] { dialog.SubjectProjectId, dialog.CurrentParentProjectId, selectedId }
+            .OfType<Guid>().Distinct().Select(id => dialog.Admissions[id]).ToArray();
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, submissionId, opening.Context.Admission,
+            operation, ProjectStructureAuthoringResultKind.Unconfirmed,
+            $"The hierarchy result for project {dialog.SubjectProjectId:D} and project {selectedId:D} was not confirmed. Inspect the original hierarchy before retrying.") {
+                HierarchyProjects = participants, TargetProjectId = selectedId
             };
-            return;
+        try {
+            var result = dialog.Mode switch {
+                ProjectStructureProjectHierarchyDialogMode.AddSubproject => await ProjectsService.AddSubprojectAsync(
+                    dialog.SubjectProjectId, selectedId, expectedProjectAdmissions: participants),
+                ProjectStructureProjectHierarchyDialogMode.ReconnectSubproject when dialog.CurrentParentProjectId is { } parentId =>
+                    await ProjectsService.ReconnectSubprojectAsync(dialog.SubjectProjectId, parentId, selectedId,
+                        expectedProjectAdmissions: participants),
+                _ => Result.Failure(Error.Validation("The selected hierarchy action is no longer valid."))
+            };
+            if (result.IsFailure) {
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected,
+                    Message = string.Join(" ", result.Errors.Select(error => error.Message)) };
+            } else {
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
+                    Message = dialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
+                        ? $"{selected.Name} is now visible under {dialog.SubjectProjectTitle}."
+                        : $"{dialog.SubjectProjectTitle} now belongs to {selected.Name}." };
+            }
+        } catch (ProjectWriteAdmissionRejectedException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
+        } catch (Exception exception) {
+            opening.RequiresObservation = true;
+            outcome = outcome with { Failure = exception };
+        } finally {
+            opening.IsBusy = false;
         }
-
-        var selectionNodeId = projectHierarchyDialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
-            ? BuildProjectChildNodeKey(projectHierarchyDialog.SelectedProjectId.Value)
-            : BuildProjectChildNodeKey(projectHierarchyDialog.SubjectProjectId);
-        var successMessage = projectHierarchyDialog.Mode switch
-        {
-            ProjectStructureProjectHierarchyDialogMode.AddSubproject =>
-                $"{selectedProject?.Name ?? "The selected project"} is now visible under {projectHierarchyDialog.SubjectProjectTitle}.",
-            _ =>
-                $"{projectHierarchyDialog.SubjectProjectTitle} now belongs to {selectedProject?.Name ?? "the selected parent project"}."
-        };
-
-        projectHierarchyDialog = null;
-        await ReloadSurfaceAsync(selectionNodeId);
-        workflowFeedback = successMessage;
-        workflowFeedbackTone = "mint";
-        await InvokeAsync(StateHasChanged);
+        RecordAuthoringOutcome(opening, outcome);
+        if (IsCurrentAuthoring(opening, hierarchyOpening)) {
+            if (outcome.Kind == ProjectStructureAuthoringResultKind.Committed) {
+                projectHierarchyDialog = null;
+                var selection = BuildProjectChildNodeKey(dialog.Mode == ProjectStructureProjectHierarchyDialogMode.AddSubproject
+                    ? selectedId : dialog.SubjectProjectId);
+                await RefreshAuthoringSurfaceAsync(opening, outcome, selection, () => ReferenceEquals(opening, hierarchyOpening));
+                if (ReferenceEquals(opening, hierarchyOpening)) {
+                    hierarchyOpening = null;
+                }
+            } else {
+                projectHierarchyDialog = dialog with { Error = outcome.Message, RequiresObservation = opening.RequiresObservation };
+            }
+        }
+        await RenderAuthoringOutcomeAsync();
     }
 
     private async Task OpenProjectStructureInNewTabAsync(ProjectStructureNode node)
@@ -126,17 +143,33 @@ public partial class ProjectStructurePage
             currentParentProjectTitle = ResolveProjectTitle(currentParentProjectId.Value);
         }
 
-        projectHierarchyDialog = await BuildProjectHierarchyDialogStateAsync(
-            mode,
-            subjectProjectId,
-            node.Title,
-            currentParentProjectId,
-            currentParentProjectTitle,
-            null);
-        await InvokeAsync(StateHasChanged);
+        var opening = new ProjectStructureAuthoringOpening(CaptureActionContext(), node);
+        hierarchyOpening = opening;
+        projectHierarchyDialog = new(mode, subjectProjectId, node.Title, currentParentProjectId,
+            currentParentProjectTitle, [], null, string.Empty) { OpeningId = opening.Id, IsBusy = true };
+        await RenderAuthoringOutcomeAsync();
+        try {
+            var dialog = await BuildProjectHierarchyDialogStateAsync(opening, mode, subjectProjectId,
+                node.Title, currentParentProjectId, currentParentProjectTitle, null);
+            if (IsCurrentAuthoring(opening, hierarchyOpening)) {
+                projectHierarchyDialog = dialog;
+                await RenderAuthoringOutcomeAsync();
+            }
+        } catch (Exception exception) {
+            if (IsCurrentAuthoring(opening, hierarchyOpening)) {
+                if (exception is ProjectWriteAdmissionRejectedException) {
+                    CloseProjectHierarchyDialog();
+                } else {
+                    projectHierarchyDialog = projectHierarchyDialog! with { IsBusy = false, Error = exception.Message };
+                }
+                ReportActionFailure(opening.Context, exception);
+                await RenderAuthoringOutcomeAsync();
+            }
+        }
     }
 
     private async Task<ProjectStructureProjectHierarchyDialogState> BuildProjectHierarchyDialogStateAsync(
+        ProjectStructureAuthoringOpening opening,
         ProjectStructureProjectHierarchyDialogMode mode,
         Guid subjectProjectId,
         string subjectProjectTitle,
@@ -144,7 +177,19 @@ public partial class ProjectStructurePage
         string currentParentProjectTitle,
         Guid? selectedProjectId)
     {
-        var availableProjects = await LoadProjectHierarchyAvailableProjectsAsync(mode, subjectProjectId, currentParentProjectId);
+        var projects = await ProjectsService.ListAsync();
+        var hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
+        var admissions = projects.Where(project => project.ExpectedProjectAdmission is not null)
+            .ToDictionary(project => project.Id, project => project.ExpectedProjectAdmission!);
+        foreach (var original in opening.Context.Surface.HierarchyAdmissions.Values.Append(opening.Context.Admission)) {
+            admissions[original.ProjectId] = original;
+        }
+        var availableProjects = projects
+            .Where(project => CanSelectHierarchyProject(project.Id, mode, subjectProjectId, currentParentProjectId, hierarchyLinks))
+            .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase).ThenBy(project => project.Id).ToArray();
+        await InsightsAdmissions.RequireManyCurrentAsync(admissions.Values.Where(admission =>
+            admission.ProjectId == subjectProjectId || admission.ProjectId == currentParentProjectId ||
+            admission.ProjectId == opening.Context.Admission.ProjectId).ToArray());
         if (selectedProjectId.HasValue &&
             availableProjects.All(project => project.Id != selectedProjectId.Value))
         {
@@ -159,33 +204,17 @@ public partial class ProjectStructurePage
             currentParentProjectTitle,
             availableProjects,
             selectedProjectId,
-            string.Empty);
+            string.Empty) { OpeningId = opening.Id, Admissions = admissions };
     }
 
     private async Task<ProjectStructureProjectHierarchyDialogState> RefreshProjectHierarchyDialogAsync(
+        ProjectStructureAuthoringOpening opening,
         ProjectStructureProjectHierarchyDialogState dialogState,
-        Guid? selectedProjectId = null)
-        => await BuildProjectHierarchyDialogStateAsync(
-            dialogState.Mode,
-            dialogState.SubjectProjectId,
-            dialogState.SubjectProjectTitle,
-            dialogState.CurrentParentProjectId,
-            dialogState.CurrentParentProjectTitle,
+        Guid? selectedProjectId = null) {
+        return await BuildProjectHierarchyDialogStateAsync(opening,
+            dialogState.Mode, dialogState.SubjectProjectId, dialogState.SubjectProjectTitle,
+            dialogState.CurrentParentProjectId, dialogState.CurrentParentProjectTitle,
             selectedProjectId ?? dialogState.SelectedProjectId);
-
-    private async Task<IReadOnlyList<ProjectSummary>> LoadProjectHierarchyAvailableProjectsAsync(
-        ProjectStructureProjectHierarchyDialogMode mode,
-        Guid subjectProjectId,
-        Guid? currentParentProjectId)
-    {
-        var projects = await ProjectsService.ListAsync();
-        var hierarchyLinks = await ProjectsService.ListHierarchyLinksAsync();
-
-        return projects
-            .Where(project => CanSelectHierarchyProject(project.Id, mode, subjectProjectId, currentParentProjectId, hierarchyLinks))
-            .OrderBy(project => project.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(project => project.Id)
-            .ToList();
     }
 
     private static bool CanSelectHierarchyProject(

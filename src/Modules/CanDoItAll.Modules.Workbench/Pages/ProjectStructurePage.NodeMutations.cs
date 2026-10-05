@@ -9,6 +9,8 @@ public partial class ProjectStructurePage
 {
     private ProjectStructureBlockMutationDialogState? blockMutationDialog;
     private ProjectStructureSubprojectTransferDialogState? subprojectTransferDialog;
+    private ProjectStructureAuthoringOpening? blockOpening;
+    private ProjectStructureAuthoringOpening? transferOpening;
 
     private Task OpenChangeBlockTypeDialogAsync(ProjectStructureNode node)
         => OpenBlockMutationDialogAsync(node, ProjectStructureBlockMutationDialogMode.ChangeBlockType);
@@ -58,22 +60,25 @@ public partial class ProjectStructurePage
         var selectedActionId = mode == ProjectStructureBlockMutationDialogMode.ChangeBlockType
             ? options.FirstOrDefault(option => string.Equals(option.ObjectSubtype, node.ObjectSubtype, StringComparison.OrdinalIgnoreCase))?.ActionId ?? options[0].ActionId
             : options[0].ActionId;
+        blockOpening = new(CaptureActionContext(), node);
         blockMutationDialog = new ProjectStructureBlockMutationDialogState(
             mode,
             node.Id,
             node.Title,
             options,
             selectedActionId,
-            string.Empty);
+            string.Empty) { OpeningId = blockOpening.Id };
         await InvokeAsync(StateHasChanged);
     }
 
-    private void CloseBlockMutationDialog()
-        => blockMutationDialog = null;
+    private void CloseBlockMutationDialog() {
+        blockOpening = null;
+        blockMutationDialog = null;
+    }
 
     private void HandleBlockMutationSelectionChanged(ChangeEventArgs args)
     {
-        if (blockMutationDialog is null)
+        if (blockMutationDialog is null || blockMutationDialog.IsBusy || blockMutationDialog.RequiresObservation)
         {
             return;
         }
@@ -85,66 +90,64 @@ public partial class ProjectStructurePage
         };
     }
 
-    private async Task ExecuteBlockMutationAsync()
-    {
-        if (blockMutationDialog is null)
-        {
+    private async Task ExecuteBlockMutationAsync() {
+        var dialog = blockMutationDialog;
+        var opening = blockOpening;
+        if (dialog is null || opening is null || !IsCurrentAuthoring(opening, blockOpening)) {
             return;
         }
-
-        if (string.IsNullOrWhiteSpace(blockMutationDialog.SelectedActionId) ||
-            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(blockMutationDialog.SelectedActionId, out var definition))
-        {
-            blockMutationDialog = blockMutationDialog with { Error = "Choose a block type before continuing." };
+        if (!dialog.Options.Any(option => option.ActionId == dialog.SelectedActionId) ||
+            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(dialog.SelectedActionId, out var definition)) {
+            blockMutationDialog = dialog with { Error = "Choose a block type before continuing." };
             return;
         }
-
-        var node = ResolveNode(blockMutationDialog.NodeId);
-        if (node is null)
-        {
-            blockMutationDialog = null;
-            workflowFeedback = "The selected node is no longer available.";
-            workflowFeedbackTone = "warn";
-            await InvokeAsync(StateHasChanged);
+        if (!TryBeginAuthoring(opening, blockOpening)) {
             return;
         }
-
-        var reclassificationRequest = blockMutationDialog.Mode switch
-        {
-            ProjectStructureBlockMutationDialogMode.ChangeBlockType => new ProjectObjectReclassificationRequest(
-                ProjectObjectType.ProjectBlock,
-                definition.ObjectSubtype,
-                node.Title,
-                node.Subtitle,
-                node.Notes,
-                "{}"),
-            _ => new ProjectObjectReclassificationRequest(
-                definition.ObjectType,
-                definition.ObjectSubtype,
-                ProjectStructureNodeHelpers.BuildSimpleNoteTitle(string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes),
-                string.Empty,
-                string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes,
-                "{}")
-        };
-
-        var updatedNode = await ProjectWorkbenchService.ReclassifyObjectAsync(ProjectId, node.Id, reclassificationRequest);
-        if (updatedNode is null)
-        {
-            blockMutationDialog = blockMutationDialog with
-            {
-                Error = "The selected node could not be changed to the requested block type."
+        blockMutationDialog = dialog with { IsBusy = true, Error = string.Empty };
+        var node = opening.Node;
+        var wasBlockTypeChange = dialog.Mode == ProjectStructureBlockMutationDialogMode.ChangeBlockType;
+        var notes = string.IsNullOrWhiteSpace(node.Notes) ? node.Title : node.Notes;
+        var request = new ProjectObjectReclassificationRequest(
+            wasBlockTypeChange ? ProjectObjectType.ProjectBlock : definition.ObjectType,
+            definition.ObjectSubtype,
+            wasBlockTypeChange ? node.Title : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(notes),
+            wasBlockTypeChange ? node.Subtitle : string.Empty,
+            wasBlockTypeChange ? node.Notes : notes) {
+                ExpectedProjectAdmission = opening.Context.Admission,
+                ExpectedObjectType = node.ObjectType,
+                ExpectedObjectSubtype = node.ObjectSubtype
             };
-            return;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), opening.Context.Admission,
+            ProjectStructureAuthoringOperation.ConvertNode, ProjectStructureAuthoringResultKind.Unconfirmed,
+            $"The conversion result for node {node.Id} was not confirmed. Inspect the original node before retrying.") { SourceNodeId = node.Id };
+        try {
+            var updated = await ProjectWorkbenchService.ReclassifyObjectAsync(opening.Context.Surface.ProjectId, node.Id, request);
+            outcome = updated is null
+                ? outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = "The original node is unavailable or can no longer be changed to the requested type." }
+                : outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = updated,
+                    Message = $"{updated.Title} was {(wasBlockTypeChange ? "changed" : "converted")} to {ProjectStructureCanvasCatalog.ResolveNodeLabel(updated).ToLowerInvariant()}." };
+        } catch (ProjectWriteAdmissionRejectedException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
+        } catch (Exception exception) {
+            opening.RequiresObservation = true;
+            outcome = outcome with { Failure = exception };
+        } finally {
+            opening.IsBusy = false;
         }
-
-        var wasBlockTypeChange = blockMutationDialog.Mode == ProjectStructureBlockMutationDialogMode.ChangeBlockType;
-        blockMutationDialog = null;
-        await ApplySurfaceNodeUpdatesAsync([updatedNode]);
-        workflowFeedback = wasBlockTypeChange
-            ? $"{updatedNode.Title} was changed to {ProjectStructureCanvasCatalog.ResolveNodeLabel(updatedNode).ToLowerInvariant()}."
-            : $"{updatedNode.Title} was converted to {ProjectStructureCanvasCatalog.ResolveNodeLabel(updatedNode).ToLowerInvariant()}.";
-        workflowFeedbackTone = "mint";
-        await InvokeAsync(StateHasChanged);
+        RecordAuthoringOutcome(opening, outcome);
+        if (IsCurrentAuthoring(opening, blockOpening)) {
+            if (outcome.Kind == ProjectStructureAuthoringResultKind.Committed) {
+                blockMutationDialog = null;
+                await RefreshAuthoringSurfaceAsync(opening, outcome, node.Id, () => ReferenceEquals(opening, blockOpening));
+                if (ReferenceEquals(opening, blockOpening)) {
+                    blockOpening = null;
+                }
+            } else {
+                blockMutationDialog = dialog with { Error = outcome.Message, RequiresObservation = opening.RequiresObservation };
+            }
+        }
+        await RenderAuthoringOutcomeAsync();
     }
 
     private async Task OpenMoveDescendantsToSubprojectDialogAsync(ProjectStructureNode node)
@@ -158,21 +161,24 @@ public partial class ProjectStructurePage
             return;
         }
 
+        transferOpening = new(CaptureActionContext(), node);
         subprojectTransferDialog = new ProjectStructureSubprojectTransferDialogState(
             node.Id,
             node.Title,
             descendantCount,
             $"{node.Title} subproject",
-            string.Empty);
+            string.Empty) { OpeningId = transferOpening.Id };
         await InvokeAsync(StateHasChanged);
     }
 
-    private void CloseSubprojectTransferDialog()
-        => subprojectTransferDialog = null;
+    private void CloseSubprojectTransferDialog() {
+        transferOpening = null;
+        subprojectTransferDialog = null;
+    }
 
     private void HandleSubprojectTransferNameChanged(ChangeEventArgs args)
     {
-        if (subprojectTransferDialog is null)
+        if (subprojectTransferDialog is null || subprojectTransferDialog.IsBusy || subprojectTransferDialog.RequiresObservation)
         {
             return;
         }
@@ -184,130 +190,87 @@ public partial class ProjectStructurePage
         };
     }
 
-    private async Task ExecuteSubprojectTransferAsync()
-    {
-        var transferDialog = subprojectTransferDialog;
-        if (transferDialog is null)
-        {
+    private async Task ExecuteSubprojectTransferAsync() {
+        var dialog = subprojectTransferDialog;
+        var opening = transferOpening;
+        if (dialog is null || opening is null || !IsCurrentAuthoring(opening, transferOpening)) {
             return;
         }
-
-        var projectName = transferDialog.ProjectName?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(projectName))
-        {
-            subprojectTransferDialog = transferDialog with { Error = "Enter a subproject name before continuing." };
+        var projectName = dialog.ProjectName.Trim();
+        if (string.IsNullOrWhiteSpace(projectName)) {
+            subprojectTransferDialog = dialog with { Error = "Enter a subproject name before continuing." };
             return;
         }
-
-        var sourceNode = ResolveNode(transferDialog.SourceNodeId);
-        if (sourceNode is null)
-        {
-            subprojectTransferDialog = null;
-            workflowFeedback = "The selected source node is no longer available.";
-            workflowFeedbackTone = "warn";
-            await InvokeAsync(StateHasChanged);
+        if (!TryBeginAuthoring(opening, transferOpening)) {
             return;
         }
-
-        var sourceProject = await ProjectsService.GetAsync(ProjectId);
-        var editor = await ProjectsService.GetAsync(null);
-        editor.Name = projectName;
-        editor.Description = $"Extracted from {sourceNode.Title} in {surface?.ProjectName ?? sourceProject.Name}.";
-        editor.Objective = string.IsNullOrWhiteSpace(sourceNode.Notes)
-            ? sourceNode.Title
-            : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(sourceNode.Notes);
-        editor.CurrentPhase = string.IsNullOrWhiteSpace(sourceProject.CurrentPhase)
-            ? "Discovery"
-            : sourceProject.CurrentPhase;
-        editor.Status = sourceProject.Status;
-
-        try
-        {
+        subprojectTransferDialog = dialog with { IsBusy = true, Error = string.Empty };
+        var source = opening.Context;
+        var sourceNode = opening.Node;
+        var targetId = Guid.NewGuid();
+        var submissionId = Guid.NewGuid();
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, submissionId, source.Admission,
+            ProjectStructureAuthoringOperation.TransferDescendants, ProjectStructureAuthoringResultKind.Unconfirmed,
+            $"The transfer result for target project {targetId:D} was not confirmed. Inspect that target and the original source before retrying.") {
+                TargetProjectId = targetId,
+                SourceNodeId = sourceNode.Id
+            };
+        try {
+            var reservation = await InsightsAdmissions.ReserveCreationAsync(targetId, opening.Id, submissionId,
+                source.Surface.ProjectId, expectedParentAdmission: source.Admission);
+            var sourceProject = await ProjectsService.GetAsync(source.Surface.ProjectId);
+            var editor = await ProjectsService.GetAsync(null);
+            editor.Name = projectName;
+            editor.Description = $"Extracted from {sourceNode.Title} in {source.Surface.ProjectName}.";
+            editor.Objective = string.IsNullOrWhiteSpace(sourceNode.Notes) ? sourceNode.Title : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(sourceNode.Notes);
+            editor.CurrentPhase = string.IsNullOrWhiteSpace(sourceProject.CurrentPhase) ? "Discovery" : sourceProject.CurrentPhase;
+            editor.Status = sourceProject.Status;
+            var owner = CreateProjectStructureUiAgentContext(source.Surface.ProjectId) with { ExpectedProjectAdmission = source.Admission };
             var result = await SubprojectTransferCoordinator.MoveDescendantsToNewSubprojectAsync(
-                ProjectId,
-                editor,
-                sourceNode.Id);
-
-            subprojectTransferDialog = null;
-            await ReloadSurfaceAsync($"project-child:{result.TargetProjectId}");
-            workflowFeedback = result.Transfer.MovedNodeCount == 1
-                ? $"Created {projectName} and moved 1 descendant into it."
-                : $"Created {projectName} and moved {result.Transfer.MovedNodeCount} descendants into it.";
-            workflowFeedbackTone = "mint";
-        }
-        catch (ProjectStructureCompensatedSubprojectTransferException exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Subproject transfer failed and removed empty child {TargetProjectId} for source project {SourceProjectId} and source node {SourceNodeId}.",
-                exception.RemovedProjectId,
-                ProjectId,
-                sourceNode.Id);
-            subprojectTransferDialog = transferDialog with
-            {
-                Error = "The transfer failed. The empty child project was removed, and the source structure was left unchanged."
-            };
-        }
-        catch (ProjectStructureTransferPartialCommitException exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Subproject transfer retained child {TargetProjectId} after a partial commit for source project {SourceProjectId} and source node {SourceNodeId}. Durable mutation {DurableMutationId} has status {DurableMutationStatus}.",
-                exception.Recovery.TargetProjectId,
-                ProjectId,
-                sourceNode.Id,
-                exception.Recovery.DurableMutationId,
-                exception.Recovery.DurableMutationStatus);
-            subprojectTransferDialog = null;
-            await ReloadSurfaceAsync($"project-child:{exception.Recovery.TargetProjectId}");
-            workflowFeedback = $"Created {projectName} and moved its descendants, but assignment reconciliation still requires recovery. {exception.Recovery.RetryGuidance}";
-            workflowFeedbackTone = "warn";
-        }
-        catch (ProjectStructureProjectCreationRejectedException exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Subproject creation was rejected for source project {SourceProjectId} and source node {SourceNodeId} with {ErrorCount} validation error(s).",
-                ProjectId,
-                sourceNode.Id,
-                exception.Errors.Count);
-            subprojectTransferDialog = transferDialog with
-            {
-                Error = exception.Message
-            };
-        }
-        catch (ProjectStructureTransferRejectedException exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Subproject transfer was rejected for source project {SourceProjectId} and source node {SourceNodeId} with reason {RejectionReason}.",
-                ProjectId,
-                sourceNode.Id,
-                exception.Reason);
-            subprojectTransferDialog = transferDialog with
-            {
-                Error = exception.Reason == ProjectStructureTransferRejectionReason.TargetProjectMismatch
+                source.Surface.ProjectId, reservation, editor, sourceNode.Id, mutationOwner: owner);
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Transfer = result, Creation = result.CreationReceipt,
+                Message = result.Transfer.MovedNodeCount == 1
+                    ? $"Created {projectName} and moved 1 descendant into it."
+                    : $"Created {projectName} and moved {result.Transfer.MovedNodeCount} descendants into it." };
+        } catch (ProjectWriteAdmissionRejectedException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
+        } catch (ProjectStructureCompensatedSubprojectTransferException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Compensated, Failure = exception, Creation = exception.CreationReceipt,
+                TargetProjectId = exception.RemovedProjectId,
+                Message = "The transfer failed. The empty child project was removed, and the source structure was left unchanged." };
+        } catch (ProjectStructureTransferPartialCommitException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit, Failure = exception, Creation = exception.CreationReceipt,
+                TargetProjectId = exception.Recovery.TargetProjectId,
+                Message = $"Created {projectName} and moved its descendants, but assignment reconciliation still requires recovery. {exception.Recovery.RetryGuidance}" };
+        } catch (ProjectStructureProjectCreationRejectedException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
+        } catch (ProjectStructureTransferRejectedException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Failure = exception,
+                Message = exception.Reason == ProjectStructureTransferRejectionReason.TargetProjectMismatch
                     ? "The subproject transfer returned inconsistent target information. Review the logs before retrying."
-                    : exception.Message
-            };
+                    : exception.Message };
+        } catch (ProjectStructureAgentException exception) when (exception.Details is ProjectCreationPartialCompletion partial) {
+            opening.RequiresObservation = true;
+            outcome = outcome with { Failure = exception, Message = exception.SafeMessage, Creation = partial.CreationReceipt };
+        } catch (Exception exception) {
+            opening.RequiresObservation = true;
+            outcome = outcome with { Failure = exception };
+        } finally {
+            opening.IsBusy = false;
         }
-        catch (ProjectStructureAgentException exception) when (exception.Details is ProjectCreationPartialCompletion) {
-            Logger.LogWarning(exception, "Subproject creation or transfer requires observation for source project {SourceProjectId}.", ProjectId);
-            subprojectTransferDialog = transferDialog with { Error = exception.SafeMessage };
+        RecordAuthoringOutcome(opening, outcome);
+        if (IsCurrentAuthoring(opening, transferOpening)) {
+            if (outcome.Kind is ProjectStructureAuthoringResultKind.Committed or ProjectStructureAuthoringResultKind.PartialCommit) {
+                subprojectTransferDialog = null;
+                await RefreshAuthoringSurfaceAsync(opening, outcome, BuildProjectChildNodeKey(outcome.TargetProjectId!.Value),
+                    () => ReferenceEquals(opening, transferOpening));
+                if (ReferenceEquals(opening, transferOpening)) {
+                    transferOpening = null;
+                }
+            } else {
+                subprojectTransferDialog = dialog with { Error = outcome.Message, RequiresObservation = opening.RequiresObservation };
+            }
         }
-        catch (Exception exception)
-        {
-            Logger.LogError(
-                exception,
-                "Subproject transfer failed unexpectedly for source project {SourceProjectId} and source node {SourceNodeId}.",
-                ProjectId,
-                sourceNode.Id);
-            subprojectTransferDialog = transferDialog with
-            {
-                Error = "The subproject transfer failed unexpectedly. Review the logs before retrying."
-            };
-        }
-
-        await InvokeAsync(StateHasChanged);
+        await RenderAuthoringOutcomeAsync();
     }
 }

@@ -261,7 +261,8 @@ public sealed partial class ProjectsService(
         Guid parentProjectId,
         Guid childProjectId,
         CancellationToken cancellationToken = default,
-        ProjectMutationAuthorization? authorization = null)
+        ProjectMutationAuthorization? authorization = null,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
     {
         if (parentProjectId == childProjectId)
         {
@@ -275,7 +276,7 @@ public sealed partial class ProjectsService(
                 parentProjectId,
                 childProjectId),
             ProjectMutationPurpose.HierarchyWrite, childProjectId, [parentProjectId, childProjectId], authorization,
-            writeAdmissionService, coordinatedTransaction, cancellationToken);
+            writeAdmissionService, coordinatedTransaction, cancellationToken, expectedProjectAdmissions: expectedProjectAdmissions);
         var projects = await dbContext.Set<Project>()
             .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
             .ToDictionaryAsync(project => project.Id, cancellationToken);
@@ -386,7 +387,8 @@ public sealed partial class ProjectsService(
         Guid currentParentProjectId,
         Guid newParentProjectId,
         CancellationToken cancellationToken = default,
-        ProjectMutationAuthorization? authorization = null)
+        ProjectMutationAuthorization? authorization = null,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
     {
         if (currentParentProjectId == newParentProjectId)
         {
@@ -401,7 +403,7 @@ public sealed partial class ProjectsService(
                 currentParentProjectId,
                 newParentProjectId),
             ProjectMutationPurpose.HierarchyWrite, childProjectId, [childProjectId, currentParentProjectId, newParentProjectId], authorization,
-            writeAdmissionService, coordinatedTransaction, cancellationToken);
+            writeAdmissionService, coordinatedTransaction, cancellationToken, expectedProjectAdmissions: expectedProjectAdmissions);
         var currentLink = await dbContext.Set<ProjectHierarchyLink>()
             .FirstOrDefaultAsync(
                 link => link.ParentProjectId == currentParentProjectId && link.ChildProjectId == childProjectId,
@@ -571,6 +573,17 @@ public sealed partial class ProjectsService(
             return Task.FromResult(Result<Guid>.Failure(Error.Validation("A new project cannot use an existing project id.")));
         }
         return SaveCoreAsync(model, parentProjectId: null, reservation.ProjectId, cancellationToken, reservation);
+    }
+
+    public async Task<Result<ProjectEditorAcknowledgement>> CreateEditorAsync(ProjectCreationReservation reservation,
+        ProjectEditorModel model, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        if (model.Id.HasValue || reservation.ParentProjectId.HasValue) {
+            return Result<ProjectEditorAcknowledgement>.Failure(Error.Validation("A new project editor requires its own root creation reservation."));
+        }
+        var result = await SaveWithReceiptCoreAsync(model, null, reservation.ProjectId, cancellationToken, reservation);
+        return result.IsSuccess ? Result<ProjectEditorAcknowledgement>.Success(result.Value!.Editor)
+            : Result<ProjectEditorAcknowledgement>.Failure(result.Errors);
     }
 
     public Task<Result<Guid>> CreateSubprojectAsync(Guid parentProjectId, ProjectCreationReservation reservation,

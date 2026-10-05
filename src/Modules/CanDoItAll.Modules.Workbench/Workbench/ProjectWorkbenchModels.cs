@@ -224,6 +224,7 @@ public sealed record ProjectStructureSurface(
     IReadOnlyList<ProjectStructureLink> Links,
     string? ViewStateJson) {
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+    internal IReadOnlyDictionary<Guid, ProjectWriteAdmission> HierarchyAdmissions { get; init; } = new Dictionary<Guid, ProjectWriteAdmission>();
 }
 
 public sealed record ProjectCalendarEvent(
@@ -336,6 +337,12 @@ public sealed record ProjectObjectReclassificationRequest(
     DateTimeOffset? EndUtc = null,
     int? DurationSeconds = null,
     bool UpdateTiming = false) {
+    [JsonIgnore]
+    public ProjectObjectType? ExpectedObjectType { get; init; }
+
+    [JsonIgnore]
+    public string? ExpectedObjectSubtype { get; init; }
+
     [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
@@ -589,6 +596,10 @@ public sealed partial class ProjectWorkbenchService(
         var assembly = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
         var viewState = await LoadViewStateAsync(dbContext, projectId, "structure", cancellationToken);
         var mappedNodes = ProjectWorkbenchNodeMapper.MapStructureNodes(assembly.Nodes, assembly.Links);
+        var admission = mutationScopes.BindSnapshot(project);
+        if (assembly.ProjectLifetimes.TryGetValue(projectId, out var projectedLifetime) && projectedLifetime != admission.LifetimeId) {
+            throw new ProjectWriteAdmissionRejectedException(admission);
+        }
 
         return new ProjectStructureLoadResult(
             new ProjectStructureSurface(
@@ -596,7 +607,11 @@ public sealed partial class ProjectWorkbenchService(
                 project.Name,
                 mappedNodes,
                 assembly.Links.Select(link => new ProjectStructureLink(link.SourceNodeKey, link.TargetNodeKey, link.LinkKind, !link.IsSystemManaged, link.Id)).ToList(),
-                viewState) { ExpectedProjectAdmission = mutationScopes.BindSnapshot(project) },
+                viewState) {
+                    ExpectedProjectAdmission = admission,
+                    HierarchyAdmissions = assembly.ProjectLifetimes.ToDictionary(pair => pair.Key,
+                        pair => new ProjectWriteAdmission(admission.DatabaseProfileId, pair.Key, pair.Value))
+                },
             null);
     }
 
