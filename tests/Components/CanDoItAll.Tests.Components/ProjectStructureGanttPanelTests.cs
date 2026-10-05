@@ -483,6 +483,7 @@ public sealed class ProjectStructureGanttPanelTests
             ProgressPercent = 40,
             MetadataJson = metadata
         };
+        await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))
@@ -522,6 +523,7 @@ public sealed class ProjectStructureGanttPanelTests
         using var context = CreateContext([agent, primaryPerson]);
         var dialogHost = context.Render<DialogHost>();
         var task = CreateTask("task-a", "Customer acceptance");
+        await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))

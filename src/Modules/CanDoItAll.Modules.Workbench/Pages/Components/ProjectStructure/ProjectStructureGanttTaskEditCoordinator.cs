@@ -32,6 +32,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(reloadAuthoritativeProject);
+        var admission = ProjectAssignmentAdmission.Require(context.ProjectId, context.MutationOwner.ExpectedProjectAdmission);
 
         var projectedTask = context.Projection.Tasks.FirstOrDefault(task => task.Id == taskId);
         var taskNode = context.Surface.Nodes.FirstOrDefault(node =>
@@ -94,6 +95,10 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             new Dictionary<string, object?>
             {
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = context.ProjectId,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    admission.DatabaseProfileId,
+                    admission.LifetimeId,
+                    Guid.NewGuid()),
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = projectedTask.Start,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = projectedTask.End,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = currencyFormatter.CurrencyCode,

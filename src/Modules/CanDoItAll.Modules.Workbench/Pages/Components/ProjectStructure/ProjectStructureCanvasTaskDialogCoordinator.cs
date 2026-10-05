@@ -65,6 +65,10 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             new Dictionary<string, object?>
             {
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
+                [nameof(ProjectStructureTaskCreateDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    context.MutationOwner.ExpectedProjectAdmission!.DatabaseProfileId,
+                    context.MutationOwner.ExpectedProjectAdmission.LifetimeId,
+                    Guid.NewGuid()),
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = createRequest,
                 [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = context.RepositoryOptions,
                 [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = assigneeOptions,
@@ -170,6 +174,10 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             new Dictionary<string, object?>
             {
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
+                [nameof(ProjectStructureTaskCreateDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    context.MutationOwner.ExpectedProjectAdmission!.DatabaseProfileId,
+                    context.MutationOwner.ExpectedProjectAdmission.LifetimeId,
+                    Guid.NewGuid()),
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = editRequest,
                 [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = context.RepositoryOptions,
                 [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = resourceOptions,

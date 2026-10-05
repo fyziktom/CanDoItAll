@@ -139,6 +139,7 @@
 
         <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
                                                    ProjectId="@ProjectId"
+                                                   Context="@QuoteContext"
                                                    SelectedResource="@selectedResource"
                                                    Estimate="@estimate"
                                                    EstimateChanged="HandleEstimateChangedAsync"
@@ -225,6 +226,9 @@
 
     [Parameter, EditorRequired]
     public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public ProjectTaskQuoteContext QuoteContext { get; set; } = new(Guid.Empty, Guid.Empty, Guid.NewGuid());
 
     [Parameter]
     public bool IsEditMode { get; set; }

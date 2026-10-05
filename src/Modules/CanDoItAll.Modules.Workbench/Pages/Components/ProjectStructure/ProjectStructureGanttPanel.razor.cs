@@ -420,6 +420,8 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             new Dictionary<string, object?>
             {
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = openedProjectId,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    openedAdmission.DatabaseProfileId, openedAdmission.LifetimeId, Guid.NewGuid()),
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = normalizedStart,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = normalizedStart + DefaultTaskDuration,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEstimate)] = new ProjectTaskEstimate(
