@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "package_files": 55,
+  "source_records": 31,
+  "local_links": 51,
+  "required_product_groups": 33,
+  "shared_files_unchanged": 22,
+  "handoff_tool_tests_passed": 28,
+  "shared_tool_tests_passed": 14,
+  "total_tool_tests_passed": 42,
+  "product_tests_executed": false,
+  "unexecuted_template_rejected_as_complete": true,
+  "original_shared_archive_bytes_compared": true,
+  "utf8_and_markdown_fences_checked": true,
+  "zip_crc_and_fresh_extraction": "verified after packaging by this script",
+  "disclaimer": "These checks validate the handoff package, not CanDoItAll execution or private evidence authenticity."
+}

@@ -1,0 +1,419 @@
+{
+  "schema_version": 1,
+  "review_main_ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+  "review_components_ref": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll/git/ref/heads/components-decoupling",
+      "blob_sha": null,
+      "reviewed_scope": "Remote branch identity; not a required execution checkout.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/ref/heads/components-decoupling",
+      "connector_citations": [
+        "turn1216file0",
+        "turn1262file0"
+      ],
+      "evidence_kind": "metadata"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/ref/heads/development",
+      "blob_sha": null,
+      "reviewed_scope": "Published Components branch identity.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/ref/heads/development",
+      "connector_citations": [
+        "turn1217file0",
+        "turn1263file0"
+      ],
+      "evidence_kind": "metadata"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "AGENTS.md",
+      "blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/AGENTS.md",
+      "connector_citations": [
+        "turn1251file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": ".github/copilot-instructions.md",
+      "blob_sha": "dde5c2fdbcb56b7b5f48dfa17ed74fda238c2e1a",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/.github/copilot-instructions.md",
+      "connector_citations": [
+        "turn1258file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "docs/testing.md",
+      "blob_sha": "f5ca92c16d64af67665e4ad29ca8e1703272371c",
+      "reviewed_scope": "Lines 1–155; final executor must read current complete policy and CI.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/docs/testing.md",
+      "connector_citations": [
+        "turn1260file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "docs/architecture/agents-completion-ac1.md",
+      "blob_sha": "9f8e01c2da9b96783255ea8239918343630f0d8e",
+      "reviewed_scope": "Whole 461-line execution record; reported results were not re-executed in this review.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/docs/architecture/agents-completion-ac1.md",
+      "connector_citations": [
+        "turn1219file0",
+        "turn1220file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "docs/architecture/agents-renderer-assets.md",
+      "blob_sha": "b72e98d901e1993296211b3d22b09f0e1b92c104",
+      "reviewed_scope": "Whole file; links to maintained 247-entry census.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/docs/architecture/agents-renderer-assets.md",
+      "connector_citations": [
+        "turn1241file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlanProjection.cs",
+      "blob_sha": "a8c65c4725b85a374eeba98686ee3c8c7d358548",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlanProjection.cs",
+      "connector_citations": [
+        "turn1221file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs",
+      "blob_sha": "8c92f68b6151ebd174d576bf86e91ef121501e09",
+      "reviewed_scope": "Lines 1–220, including projection before job removal.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs",
+      "connector_citations": [
+        "turn1222file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SchedulerProjectionRestartTests.cs",
+      "blob_sha": "b38babd63a635cc02d5926fe9fd9e26fd4365844",
+      "reviewed_scope": "Whole file, actual owner and replacement-host tests.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/tests/Integration/CanDoItAll.Tests.Integration/SchedulerProjectionRestartTests.cs",
+      "connector_citations": [
+        "turn1227file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowPreviewOwner.cs",
+      "blob_sha": "555fa07b99c80805a96e08a579d763857efd65ff",
+      "reviewed_scope": "Whole file; per-attempt reservation reset.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowPreviewOwner.cs",
+      "connector_citations": [
+        "turn1224file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/UsageDetailHost.razor.cs",
+      "blob_sha": "9eea904585a773f77bfcc8b9bd88ee64468133fd",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/UsageDetailHost.razor.cs",
+      "connector_citations": [
+        "turn1225file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatConversationDialogSurface.razor",
+      "blob_sha": "ca1cd20476f21f50db7c7ff58c9b70a620eeaf4c",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatConversationDialogSurface.razor",
+      "connector_citations": [
+        "turn1240file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Avatars/AvatarPickerSurface.razor",
+      "blob_sha": "b01b86e1340576155f4944f21cc9ee0e4bb79a5a",
+      "reviewed_scope": "Lines 150–374, operation and disposal lifetimes.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/UI/CanDoItAll.AgentFramework.UI/Avatars/AvatarPickerSurface.razor",
+      "connector_citations": [
+        "turn1226file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/README.md",
+      "blob_sha": null,
+      "reviewed_scope": "Owner, assignment, canonical-profile, transaction and admission sections; long returned content is not claimed as a complete behavioral audit.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/README.md",
+      "connector_citations": [
+        "turn1242file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor",
+      "blob_sha": "4d0810011a681aff5ed6a49bc41977690052b504",
+      "reviewed_scope": "Whole file across two ranges.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor",
+      "connector_citations": [
+        "turn1231file0",
+        "turn1232file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Calendar/ProjectCalendarAdapter.cs",
+      "blob_sha": "3b80681cc1a7b4fd74fb242fa1da9c5093bc2acf",
+      "reviewed_scope": "Whole file; actual calendar is read-only, list export enabled.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Calendar/ProjectCalendarAdapter.cs",
+      "connector_citations": [
+        "turn1255file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs",
+      "blob_sha": "38d4329207008d1cda0ca4dd85e66eca6b599a2d",
+      "reviewed_scope": "Lines 1–530 and 535–730: mixed EF types, DTOs and real calendar/structure reads; not the entire large file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs",
+      "connector_citations": [
+        "turn1244file0",
+        "turn1245file0",
+        "turn1246file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor",
+      "blob_sha": "5d35abfbe325c69fd56674363e9c9784e1ac893e",
+      "reviewed_scope": "Whole renderer.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor",
+      "connector_citations": [
+        "turn1250file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
+      "blob_sha": "d2467db1b9750ec56794c2e0056a5debdafb3094",
+      "reviewed_scope": "Whole host across 1–300, 285–585 and 580–end.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
+      "connector_citations": [
+        "turn1235file0",
+        "turn1236file0",
+        "turn1237file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttTaskDialog.razor",
+      "blob_sha": "895263dbb8d3d5ac2f33bad286518fceb878051c",
+      "reviewed_scope": "Whole form/state across two ranges.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttTaskDialog.razor",
+      "connector_citations": [
+        "turn1238file0",
+        "turn1257file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
+      "blob_sha": "ca7322c08a5010e5f87afd3daa24acedbed6317f",
+      "reviewed_scope": "Lines 1–205: full markup and beginning of state; complete state must be traced during execution.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
+      "connector_citations": [
+        "turn1248file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskResourceCostEstimator.razor",
+      "blob_sha": "a1cc391284fb206eff5e079fdbdf23b0134251ea",
+      "reviewed_scope": "Whole file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskResourceCostEstimator.razor",
+      "connector_citations": [
+        "turn1249file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectStructureTaskResourceCostEstimatorTests.cs",
+      "blob_sha": "ca31f59671ec5808f88568a3b2c289f29059b27b",
+      "reviewed_scope": "Whole file: existing laziness/cache/manual-edit/started-before-request tests.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/tests/Components/CanDoItAll.Tests.Components/ProjectStructureTaskResourceCostEstimatorTests.cs",
+      "connector_citations": [
+        "turn1256file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttTaskEditCoordinator.cs",
+      "blob_sha": "7415eda11d1b702c6e078da83fdbd6124adfd73b",
+      "reviewed_scope": "Lines 1–310: prepare, native task update, separate resource attachment, partial outcome.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttTaskEditCoordinator.cs",
+      "connector_citations": [
+        "turn1247file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S26",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureGanttMutationService.cs",
+      "blob_sha": "5645fce1a9e6aa2cdd027a9b6917fcde776aade2",
+      "reviewed_scope": "Lines 1–250: exact title, schedule/task expected fields and native mutation paths.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureGanttMutationService.cs",
+      "connector_citations": [
+        "turn1253file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S27",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskApplicationService.cs",
+      "blob_sha": "6c27b8aee0ffc994b20fea2e10f1b6c5ea9a340c",
+      "reviewed_scope": "Lines 1–250: create/assignment compensation and edit pricing/assignment checks.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/9969913fe653500a59d24af06482f48b758a5ca6/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskApplicationService.cs",
+      "connector_citations": [
+        "turn1259file0"
+      ],
+      "evidence_kind": "file"
+    },
+    {
+      "id": "S28",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/d761cc494ba5f3b9c09cd5e932560a1d5b9df13e",
+      "blob_sha": null,
+      "reviewed_scope": "Pinned Workbench Pages inventory; not a behavioral review of all Structure files.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/d761cc494ba5f3b9c09cd5e932560a1d5b9df13e",
+      "connector_citations": [
+        "turn1229file0"
+      ],
+      "evidence_kind": "tree"
+    },
+    {
+      "id": "S29",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/4959ac3a3abb18925ccff628771cabdf2f769c85?recursive=1",
+      "blob_sha": null,
+      "reviewed_scope": "Pinned root components inventory, including legacy ProjectEventsCalendar.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/4959ac3a3abb18925ccff628771cabdf2f769c85?recursive=1",
+      "connector_citations": [
+        "turn1230file0"
+      ],
+      "evidence_kind": "tree"
+    },
+    {
+      "id": "S30",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/d761cc494ba5f3b9c09cd5e932560a1d5b9df13e?recursive=1",
+      "blob_sha": null,
+      "reviewed_scope": "Pinned descendant inventory used to bound WB1; large response not a line-by-line review of every file.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/d761cc494ba5f3b9c09cd5e932560a1d5b9df13e?recursive=1",
+      "connector_citations": [
+        "turn1228file0"
+      ],
+      "evidence_kind": "tree"
+    },
+    {
+      "id": "S31",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+      "path": "https://api.github.com/repos/fyziktom/CanDoItAll/git/commits/9969913fe653500a59d24af06482f48b758a5ca6",
+      "blob_sha": null,
+      "reviewed_scope": "Current commit title, parent and verified signature metadata.",
+      "url": "https://github.com/fyziktom/CanDoItAll/commit/9969913fe653500a59d24af06482f48b758a5ca6",
+      "connector_citations": [
+        "turn1261file0"
+      ],
+      "evidence_kind": "metadata"
+    }
+  ]
+}

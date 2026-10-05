@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "review_main_ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+  "review_components_ref": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+  "base_main_ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+  "review_mode": "Connected GitHub source and reported evidence review",
+  "product_execution_by_reviewer": false,
+  "tools_unavailable": [
+    "dotnet",
+    "docker"
+  ],
+  "prior_private_artifacts_available": false,
+  "source_register": "sources.json",
+  "inherited_workbench_finding": "WB1-Q1 is source-derived; reproduce before claiming a runtime result.",
+  "no_new_confirmed_ac1_blocker": true,
+  "final_main_ref": "9969913fe653500a59d24af06482f48b758a5ca6",
+  "final_components_ref": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+  "branches_unchanged_at_final_recheck": true,
+  "main_commit_message": "Close Agents presentation census and final native validation",
+  "github_signature_verified": true
+}
