@@ -353,7 +353,7 @@ else
                                             ObservationChanged="HandleGanttObservationChanged" />
             </TabsItem>
             <TabsItem Text="Manager Summary" Icon="monitoring">
-                <ProjectManagerSummaryPanel ProjectId="@ProjectId" />
+                <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
             </TabsItem>
         </Tabs>
 

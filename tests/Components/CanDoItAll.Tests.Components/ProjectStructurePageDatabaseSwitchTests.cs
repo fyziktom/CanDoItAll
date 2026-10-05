@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -44,6 +45,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var stateStore = harness.Context.Services.GetRequiredService<ProjectManagerSummaryStateStore>();
         var projectId = await CreateProjectAsync(projectsService, "Retained manager summary project");
+        await BindRetainedReportAsync(harness, projectId);
         var options = new ProjectManagerSummaryOptions();
         stateStore.GetOrCreate(projectId).Snapshot = CreateManagerSummarySnapshot(
             projectId,
@@ -135,6 +137,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var stateStore = harness.Context.Services.GetRequiredService<ProjectManagerSummaryStateStore>();
         var projectId = await CreateProjectAsync(projectsService, "Lazy activity dialog project");
+        await BindRetainedReportAsync(harness, projectId);
         stateStore.GetOrCreate(projectId).Snapshot = CreateManagerSummarySnapshot(
             projectId,
             "Lazy activity dialog project",
@@ -187,6 +190,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var stateStore = harness.Context.Services.GetRequiredService<ProjectManagerSummaryStateStore>();
         var projectId = await CreateProjectAsync(projectsService, "Manager summary warning project");
+        await BindRetainedReportAsync(harness, projectId);
         var snapshot = CreateManagerSummarySnapshot(
             projectId,
             "Manager summary warning project",
@@ -497,6 +501,16 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             [],
             [],
             []);
+    }
+
+    private static async Task BindRetainedReportAsync(ComponentTestHarness harness, Guid projectId) {
+        var admissions = harness.Context.Services.GetRequiredService<ProjectWriteAdmissionService>();
+        var admission = await admissions.CaptureAsync(projectId);
+        var actor = await harness.Context.Services.GetRequiredService<AuthenticationStateProvider>().GetAuthenticationStateAsync();
+        var retained = harness.Context.Services.GetRequiredService<ProjectManagerSummaryStateStore>().GetOrCreate(projectId);
+        retained.LifetimeId = admission!.LifetimeId;
+        retained.ActorStamp = ProjectManagerSummarySource.ActorStamp(actor.User);
+        retained.ScopeAdmissions = [admission];
     }
 
     private static void RegisterDelayedDbContextFactory(IServiceCollection services)

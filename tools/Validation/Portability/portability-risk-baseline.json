@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-05T10:13:14.628741+00:00",
+  "generated_utc": "2026-10-05T15:25:51.779002+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15227,
+  "allowance_count": 15233,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -72227,6 +72227,42 @@
       "path": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md",
       "category": "windows-executable",
       "source_fingerprint": "8616b50fd4ea73d8ef6a8b4361b399008b4b1ce9b9c60d3c8fc27f0ac9af94f0",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/InsightsWatchState.cs",
+      "category": "environment",
+      "source_fingerprint": "18fa21947ac68fbce62dd9a92537f0914f6e7d7fc46351505ca2013e0998442f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/InsightsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "1119666995b7f6bf0abd0274a11c6ab184be2a0f39bc93f4e3cd1329f4beb965",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/InsightsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "259ca99b03a8e9d9c3da0f25f8184a8c3be228bd4ae7828c4fda706b11780916",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/InsightsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "80431c1309c6b8a4c9003de262f2d15561859ca96a4d74dfbe518d9c440e8db6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "4be73605dd5d16c0b8468c84e75739a18742b50eef1647ce68febbf9b8b3ec05",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "101e7b6b624f0b2bf25fbc5b757bf208f99f45795978ee57e81c4273fc870076",
       "count": 1
     },
     {

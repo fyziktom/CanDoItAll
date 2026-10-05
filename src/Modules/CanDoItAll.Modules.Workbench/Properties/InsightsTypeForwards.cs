@@ -1,0 +1,20 @@
+using System.Runtime.CompilerServices;
+using CanDoItAll.Modules.Workbench;
+
+[assembly: TypeForwardedTo(typeof(ProjectManagerSummaryTimeRange))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerSummaryContentMode))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerSummaryScope))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerCostCategory))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivityKind))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivityStatus))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivityStatusFilter))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerSummaryOptions))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerSummaryLoadProgress))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerTaskSchedule))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerCostBreakdown))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerCurrencyCostTotal))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerCostTotals))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerExpensePoint))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivityId))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivity))]
+[assembly: TypeForwardedTo(typeof(ProjectManagerActivityAggregate))]

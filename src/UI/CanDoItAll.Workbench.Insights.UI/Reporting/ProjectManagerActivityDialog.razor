@@ -1,18 +1,26 @@
+@namespace CanDoItAll.Workbench.Insights.UI
 @using System.Globalization
-@using CanDoItAll.Processes.Projections
-@using Microsoft.Extensions.Logging
 @implements IDisposable
-@inject ProjectManagerSummaryQueryService SummaryQueryService
-@inject ILogger<ProjectManagerActivityDialog> Logger
 
-<Dialog IsOpen="@IsOpen"
+@{
+    var view = Session;
+    var query = view.Query;
+    var page = view.Page;
+    var isLoading = view.IsLoading;
+    var loadError = view.Error;
+    var canMovePrevious = view.CanMovePrevious;
+    var canMoveNext = view.CanMoveNext;
+    var pageDescription = page is null ? "No accepted page" : page.TotalCount == 0 ? "No results"
+        : $"Page {page.PageIndex + 1:N0} · showing {page.Items.Count:N0} of {page.TotalCount:N0}";
+}
+<Dialog IsOpen="true"
         Eyebrow="Manager Summary"
         Title="Project activity"
         Subtitle="Filtered totals cover every matching run. Page payloads load only while this dialog is open."
         Size="ModalSize.Wide"
         DenseChrome="true"
         TestId="manager-summary-activity-dialog"
-        OnClose="CloseAsync">
+        OnClose="Closed">
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             <Grid Gap="LayoutGap.Medium"
@@ -22,8 +30,9 @@
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Activity type" />
                     <InputSelect TValue="ProjectManagerActivityKind"
-                                 @bind-Value="activityKind"
-                                 @bind-Value:after="ResetAndLoadAsync"
+                                 Value="@query.Kind"
+                                 ValueExpression="@(() => query.Kind)"
+                                 ValueChanged="@(value => view.SetKindAsync(query, value))"
                                  class="cda-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-kind">
@@ -36,8 +45,9 @@
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Outcome" />
                     <InputSelect TValue="ProjectManagerActivityStatusFilter"
-                                 @bind-Value="statusFilter"
-                                 @bind-Value:after="ResetAndLoadAsync"
+                                 Value="@query.Status"
+                                 ValueExpression="@(() => query.Status)"
+                                 ValueChanged="@(value => view.SetStatusAsync(query, value))"
                                  class="cda-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-status">
@@ -49,20 +59,24 @@
                     </InputSelect>
                 </Stack>
                 <MetricCard Label="Matching runs"
-                            Value="@FormatCount(page?.TotalCount ?? 0)" />
+                            Value="@(page is null ? "—" : FormatCount(page.TotalCount))" />
                 <MetricCard Label="Total length"
-                            Value="@FormatDuration(page?.TotalDurationMilliseconds ?? 0L)" />
+                            Value="@(page is null ? "—" : FormatDuration(page.TotalDurationMilliseconds))" />
             </Grid>
 
             <Grid Gap="LayoutGap.Medium"
                   ColumnTemplateMd="repeat(3,minmax(0,1fr))">
                 <MetricCard Label="Known cost"
-                            Value="@FormatUsd(page?.Totals.HistoricalKnownUsd ?? 0m)" />
+                            Value="@(page is null ? "—" : FormatUsd(page.Totals.HistoricalKnownUsd))" />
                 <MetricCard Label="Recorded estimate"
-                            Value="@FormatUsd(page?.Totals.HistoricalEstimatedUsd ?? 0m)" />
+                            Value="@(page is null ? "—" : FormatUsd(page.Totals.HistoricalEstimatedUsd))" />
                 <MetricCard Label="Unknown-cost runs"
-                            Value="@FormatCount(page?.Totals.UnknownHistoricalCostCount ?? 0)" />
+                            Value="@(page is null ? "—" : FormatCount(page.Totals.UnknownHistoricalCostCount))" />
             </Grid>
+
+            @if (page is not null && (isLoading || loadError is not null)) {
+                <StatusBadge Tone="warning" Text="Last accepted page totals shown" />
+            }
 
             @if (isLoading)
             {
@@ -84,7 +98,7 @@
                         <Button Text="Retry"
                                 Icon="refresh"
                                 Variant="Variant.Outlined"
-                                Click="LoadPageAsync" />
+                                Click="@(() => view.LoadAsync())" />
                     </Cluster>
                 </Alert>
             }
@@ -159,19 +173,19 @@
                      Gap="LayoutGap.Medium"
                      Wrap="FlexWrap.Wrap">
                 <TextBlock TextStyle="TextStyle.Caption"
-                           Value="@PageDescription" />
+                           Value="@pageDescription" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Previous"
                             Icon="chevron_left"
                             Variant="Variant.Outlined"
-                            Disabled="@(!CanMovePrevious || isLoading)"
-                            Click="MovePreviousAsync"
+                            Disabled="@(!canMovePrevious || isLoading)"
+                            Click="@(() => view.PreviousAsync(query))"
                             data-testid="manager-activity-previous" />
                     <Button Text="Next"
                             Icon="chevron_right"
                             Variant="Variant.Outlined"
-                            Disabled="@(!CanMoveNext || isLoading)"
-                            Click="MoveNextAsync"
+                            Disabled="@(!canMoveNext || isLoading)"
+                            Click="@(() => view.NextAsync(query))"
                             data-testid="manager-activity-next" />
                 </Cluster>
             </Cluster>
@@ -180,178 +194,32 @@
 </Dialog>
 
 @code {
-    private const int PageSize = 20;
-    private readonly List<ProcessRunRecordCursor?> processPageCursors = [null];
-    private readonly Dictionary<
-        (ProjectManagerActivityKind Kind, ProjectManagerActivityStatusFilter Status),
-        ProjectManagerActivityAggregate> aggregates = [];
-    private CancellationTokenSource? loadCancellation;
-    private ProjectManagerActivityPage? page;
-    private ProjectManagerActivityKind activityKind = ProjectManagerActivityKind.Conversation;
-    private ProjectManagerActivityStatusFilter statusFilter = ProjectManagerActivityStatusFilter.All;
-    private int pageIndex;
-    private bool initialized;
-    private bool isLoading;
-    private string loadError = string.Empty;
-
-    [Parameter, EditorRequired]
-    public ProjectManagerSummarySnapshot Summary { get; set; } = default!;
-
-    [Parameter]
-    public bool IsOpen { get; set; }
-
-    [Parameter]
-    public EventCallback<bool> IsOpenChanged { get; set; }
-
-    private bool CanMovePrevious => pageIndex > 0;
-
-    private bool CanMoveNext
-        => page is not null &&
-           (activityKind == ProjectManagerActivityKind.Process
-               ? page.NextProcessCursor is not null
-               : checked((pageIndex + 1) * PageSize) < page.TotalCount);
-
-    private string PageDescription
-        => page is null || page.TotalCount == 0
-            ? "No results"
-            : $"Page {pageIndex + 1:N0} Â· showing {page.Items.Count:N0} of {page.TotalCount:N0}";
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!IsOpen || initialized)
-        {
+    [Parameter, EditorRequired] public ManagerActivitySession Session { get; set; } = default!;
+    [Parameter] public EventCallback Closed { get; set; }
+    private ManagerActivitySession? subscribed;
+    private bool disposed;
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(Session, subscribed)) {
             return;
         }
-
-        initialized = true;
-        await LoadPageAsync();
+        if (subscribed is not null) {
+            subscribed.Changed -= Refresh;
+        }
+        subscribed = Session;
+        subscribed.Changed += Refresh;
     }
 
-    public void Dispose()
-    {
-        loadCancellation?.Cancel();
-        loadCancellation?.Dispose();
-        GC.SuppressFinalize(this);
-    }
-
-    private async Task ResetAndLoadAsync()
-    {
-        pageIndex = 0;
-        processPageCursors.Clear();
-        processPageCursors.Add(null);
-        await LoadPageAsync();
-    }
-
-    private async Task MovePreviousAsync()
-    {
-        if (!CanMovePrevious)
-        {
-            return;
+    private void Refresh() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
         }
+    });
 
-        pageIndex--;
-        await LoadPageAsync();
-    }
-
-    private async Task MoveNextAsync()
-    {
-        if (!CanMoveNext || page is null)
-        {
-            return;
+    public void Dispose() {
+        disposed = true;
+        if (subscribed is not null) {
+            subscribed.Changed -= Refresh;
         }
-
-        if (activityKind == ProjectManagerActivityKind.Process)
-        {
-            var nextCursor = page.NextProcessCursor;
-            if (nextCursor is null)
-            {
-                return;
-            }
-
-            var nextPageIndex = pageIndex + 1;
-            if (processPageCursors.Count == nextPageIndex)
-            {
-                processPageCursors.Add(nextCursor);
-            }
-            else
-            {
-                processPageCursors[nextPageIndex] = nextCursor;
-            }
-        }
-
-        pageIndex++;
-        await LoadPageAsync();
-    }
-
-    private async Task LoadPageAsync()
-    {
-        var cancellation = BeginLoad();
-        try
-        {
-            var cursor = activityKind == ProjectManagerActivityKind.Process
-                ? processPageCursors[pageIndex]
-                : null;
-            page = await SummaryQueryService.QueryActivityPageAsync(
-                new ProjectManagerActivityPageRequest(
-                    Summary,
-                    activityKind,
-                    statusFilter,
-                    pageIndex,
-                    PageSize)
-                {
-                    ProcessCursor = cursor,
-                    KnownAggregate = aggregates.GetValueOrDefault(
-                        (activityKind, statusFilter))
-                },
-                cancellation.Token);
-            aggregates[(activityKind, statusFilter)] = page.Aggregate;
-            loadError = string.Empty;
-        }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            loadError = "The filtered activity page could not be loaded.";
-            Logger.LogError(
-                exception,
-                "Manager activity load failed for project {ProjectId}, activity kind {ActivityKind}, status {StatusFilter}, and page {PageIndex}.",
-                Summary.ProjectId,
-                activityKind,
-                statusFilter,
-                pageIndex);
-        }
-        finally
-        {
-            CompleteLoad(cancellation);
-        }
-    }
-
-    private CancellationTokenSource BeginLoad()
-    {
-        var cancellation = new CancellationTokenSource();
-        var previousCancellation = Interlocked.Exchange(ref loadCancellation, cancellation);
-        previousCancellation?.Cancel();
-        loadError = string.Empty;
-        isLoading = true;
-        return cancellation;
-    }
-
-    private void CompleteLoad(CancellationTokenSource cancellation)
-    {
-        if (ReferenceEquals(loadCancellation, cancellation))
-        {
-            isLoading = false;
-            Interlocked.CompareExchange(ref loadCancellation, null, cancellation);
-        }
-
-        cancellation.Dispose();
-    }
-
-    private async Task CloseAsync()
-    {
-        loadCancellation?.Cancel();
-        await IsOpenChanged.InvokeAsync(false);
     }
 
     private static string FormatCount(int value)

@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/Sandboxes/">
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/CanDoItAll.Workbench.Planning.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/CanDoItAll.Workbench.Insights.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" />
@@ -54,6 +55,7 @@
   </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj" />
@@ -186,6 +188,7 @@
     <Project Path="src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.Workbench.Insights.Contracts/CanDoItAll.Modules.Workbench.Insights.Contracts.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
   </Folder>
