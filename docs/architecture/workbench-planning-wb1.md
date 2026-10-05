@@ -322,21 +322,59 @@ was performed there merely to produce complete badges. The original failed nativ
 run remains represented in Usage. No paid calls were made, and the unchanged full
 19-vector shared-provider protocol campaign was neither replayed nor claimed.
 
+The subsequent API coverage check found three additional omissions in the new
+attachment identity fields. The first 23-case follow-up retains its failure;
+three `Description` attributes now describe `resourceNodeId`,
+`resourceLinkTargetNodeId` and `linkTargetNodeId`. Fresh Workbench, Web and isolated
+Integration builds pass, followed by all 32 unchanged API pipeline and coverage
+cases. No serialization, mutation, assignment or pricing logic changed.
+
+That metadata-only follow-up has its own final image,
+`a00017cc5712446b7a4c935d7668715eb9a55d8f3b0a069774cc138d6bf5a8f7`, with source
+fingerprint `b6066ef7c302` (the full fingerprint is retained in private evidence).
+Both document routes on all three instances describe the repaired fields.
+Planning UI, Contracts, Gantt and owned JavaScript remain byte-identical; all 753
+previously audited native assets match. All 1,023 retained data JSON files remain
+unchanged across replacement and native reads. The nine-case consumer campaign
+remains attributed to image `b58ca3d2`; it is not relabeled as execution on this
+later image. The final metadata delta has the separate affected proof above.
+
 ## Regression and delivery
 
 New shared contracts, native recovery behavior and test/CI registration justified
-one frozen Stable checkpoint. It is still running; later repairs have separate
-fresh proof and do not rewrite its results. In addition to the API documentation
-repair, the old Workspace status test clicked a handler retired by startup reads.
-It now waits for both native reads to settle before clicking; its exact two-case
-selection passes with unchanged lazy-read and reopening assertions.
+one frozen Stable checkpoint: 16,629 passed, four failed and zero skipped across
+28 assemblies. The 16,578 discovered cases expand to 16,633 executions in seven
+deferred theory groups (55 additional cases). The original run remains failed.
+
+Three failures have current passing repairs: both API documentation failures are
+covered by the 32-case result above; the Workspace status test now waits for both
+startup reads to settle before clicking its handler, and its exact two-case
+selection passes with unchanged lazy-read and reopening assertions. The fourth
+failure matches the same synthetic negative control in four retained historical
+JSON artifacts. Their complete file hashes and exact control fingerprint match
+AC1; neither those artifacts nor the scanner were changed.
+
+Pre-run source hashes were captured for the frozen checkpoint. A complete pre-run
+assembly-hash manifest was not captured. Later DLL observations are recorded as
+later observations, and the isolated repair assemblies and native images have
+their own exact hashes. This limits provenance; it does not turn the failed
+checkpoint into a passing full suite.
 
 Final portability enforcement passes without baseline-write mode: all 15,227
 reviewed executable-source findings match. The sole W4 baseline delta is the
 reviewed evidence-reader condition fingerprint, with no allowance-count change.
 The portability, secret-tooling and package contract tools pass 38 self-tests.
-Final documentation/secret-delta closure and signed delivery remain pending the
-frozen regression disposition. All browser validation uses 1920 by 1080 at scale 1.
+The final source and task-delta secret review retains existing reviewed matches
+and reports no new findings; it does not declare the full worktree secret-free.
+Maintained documentation and the complete external evidence structure are checked
+separately. All browser validation uses 1920 by 1080 at scale 1.
+
+WB1 is complete for this bounded slice, with no unresolved blocking product
+finding. Delivery uses verified signed checkpoints. Components
+`dc573e2b438621599401a28968acef3682d14e63` is a required local signed sibling
+revision; it has not been pushed or published. FileTools remains at
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`. Owned app, sandbox, watch and test
+database resources are stopped, with retained containers, volumes and data.
 
 Remaining Workbench cuts are PM/read panels, the main Structure canvas and
 inspectors, assignment/runtime/files and Processes. None is started by WB1.

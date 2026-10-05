@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -61,8 +62,10 @@ public sealed record ProjectStructureTaskCreateResult(
     string BacklogNodeId,
     ProjectStructureTaskResourceSelection? AttachedResource,
     ProjectStructureTaskEstimateRefreshResult Pricing) {
+    [Description("Identifier of the resource node created under the task for a Workflow attachment; omitted when no resource node was created.")]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ResourceNodeId { get; init; }
+    [Description("Identifier of the existing Process definition node linked to the task; omitted when no resource link was created.")]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ResourceLinkTargetNodeId { get; init; }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using System.Text.Json.Serialization;
@@ -46,6 +47,7 @@ public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
     ProjectStructureTaskEstimateRefreshResult Pricing,
     string? CreatedNodeId = null) {
+    [Description("Identifier of the existing Process definition node linked to the task; omitted for a Workflow attachment, whose new node is identified by createdNodeId.")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LinkTargetNodeId { get; init; }
 }
