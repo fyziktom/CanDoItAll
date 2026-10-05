@@ -48,4 +48,3 @@ public sealed record ProjectStructureTaskResourceOption(
     string Description,
     bool IsFavorite,
     bool IsSensitive);
-

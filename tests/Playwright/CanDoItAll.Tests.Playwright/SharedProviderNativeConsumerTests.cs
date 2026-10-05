@@ -62,21 +62,28 @@ public sealed partial class SharedProviderNativeConsumerTests {
 
     [Fact]
     [Trait("Category", "ExternalSharedProviderUi")]
-    public async Task Final_image_agent_reads_hidden_content_and_creates_attaches_reads_downloads_with_exact_approvals() {
+    public Task Final_image_agent_reads_hidden_content_and_creates_attaches_reads_downloads_with_exact_approvals() =>
+        RunFileConsumerAsync(planning: false);
+
+    private static async Task RunFileConsumerAsync(bool planning) {
         await using var fixture = await SharedProviderConsumerFixture.StartAsync();
         var profile = await ImportedResponsesAsync(fixture);
         var marker = "PP2C_FILES_" + Guid.NewGuid().ToString("N");
         var projectName = "PP2C files " + marker;
-        var projectId = await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName });
+        var projectId = planning
+            ? await CreatePlanningProjectAsync(fixture, projectName)
+            : await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName });
         var siblingId = await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = "PP2C untouched " + marker });
-        var parent = await fixture.PostAsync<ProjectStructureNodeSummary>($"api/project-structure/projects/{projectId:D}/nodes",
-            new ProjectStructureNodeCreateInput(ProjectObjectType.ProjectBlock, "Selected files", "", "", $"project:{projectId:D}", X: 450, Y: 220));
+        var parent = planning
+            ? await CreatePlanningTaskAsync(fixture, projectId)
+            : await fixture.PostAsync<ProjectStructureNodeSummary>($"api/project-structure/projects/{projectId:D}/nodes",
+                new ProjectStructureNodeCreateInput(ProjectObjectType.ProjectBlock, "Selected files", "", "", $"project:{projectId:D}", X: 450, Y: 220));
         var hiddenContent = "Hidden file canary " + Guid.NewGuid().ToString("N");
         var siblingContent = "Unchanged sibling " + Guid.NewGuid().ToString("N");
         var seed = await SeedAssetAsync(fixture, projectId, parent.Id, "seed.txt", hiddenContent);
         var sibling = await SeedAssetAsync(fixture, siblingId, $"project:{siblingId:D}", "canary.txt", siblingContent);
         var alternate = profile.ModelCatalog.First(model => model.Id != profile.DefaultModel && profile.SuggestedModels.Contains(model.Id));
-        var agentId = await CreateFileAgentAsync(fixture, profile, alternate.Id, marker, projectId, projectName);
+        var agentId = await CreateFileAgentAsync(fixture, profile, alternate.Id, marker, projectId, projectName, planning: planning);
         await fixture.NavigateAsync($"/projects/{projectId:D}/structure");
         await ReadyFileCanvasAsync(fixture.Page);
         await SelectFileNodeAsync(fixture.Page, parent.Id, parent.Title);
@@ -108,6 +115,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.Equal(expected.Content, await ContentAsync(fixture, projectId, created.Id));
         Assert.Equal(hiddenContent, await ContentAsync(fixture, projectId, seed.Id));
         Assert.Equal(siblingContent, await ContentAsync(fixture, siblingId, sibling.Id));
+        if (planning) {
+            await UpdatePlanningTaskAsync(fixture, chat, profile, alternate.Id, marker, agentId, projectId, parent);
+        }
         var denied = expected with { Title = "PP2C explicitly denied attachment" };
         await fixture.ScriptAsync(alternate.DisplayName, marker, ToolsStep(AttachCall(denied)), TextStep("The proposed attachment was denied."));
         var denial = await FileTurnAsync(fixture, chat, agentId, projectId, parent.Id, "Propose the second attachment for an explicit operator denial.", denied, reject: true);
@@ -116,6 +126,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
             item.GetProperty("approvalStatus") is { ValueKind: JsonValueKind.Number } status && status.GetInt32() == (int)ExecutionApprovalStatus.Rejected);
         Assert.DoesNotContain((await TreeAsync(fixture, projectId)).Nodes, node => node.Title == denied.Title);
         await PreviewAndDownloadAsync(fixture, projectId, projectName, created, expected.Content);
+        if (planning) {
+            await AssertPlanningConsumersAsync(fixture, projectId, parent);
+            Assert.Equal(siblingContent, await ContentAsync(fixture, siblingId, sibling.Id));
+        }
         await AssertRoutedAsync(fixture, profile, alternate.Id, marker);
         await AssertCanonicalHistoryAsync(fixture, profile, alternate.Id, CanDoItAll.AgentFramework.ProviderHistory.HistorySourceKind.AgentConversation,
             readback.GetProperty("runId").GetGuid(), expected.Content, "agent-files");
@@ -146,8 +160,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
             media = new { fileName = name, contentType = "text/plain", base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(content)) }
         });
 
-    private static Task<ProjectStructureReadResponse> TreeAsync(SharedProviderConsumerFixture fixture, Guid projectId) =>
-        fixture.PostAsync<ProjectStructureReadResponse>($"api/project-structure/projects/{projectId:D}/structure/read", new { includeAssets = true });
+    private static Task<ProjectStructureReadResponse> TreeAsync(SharedProviderConsumerFixture fixture, Guid projectId, bool includeMetadata = false) =>
+        fixture.PostAsync<ProjectStructureReadResponse>($"api/project-structure/projects/{projectId:D}/structure/read", new { includeAssets = true, includeMetadata });
 
     private static async Task<string> ContentAsync(SharedProviderConsumerFixture fixture, Guid projectId, string nodeId) {
         var content = await fixture.GetAsync($"api/project-structure/projects/{projectId:D}/assets/{Uri.EscapeDataString(nodeId)}/content");
@@ -170,7 +184,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
     }
 
     private static async Task<Guid> CreateFileAgentAsync(SharedProviderConsumerFixture fixture, ProviderProfile profile, string alternate,
-        string marker, Guid projectId, string projectName, ProviderProfile? imageProvider = null) {
+        string marker, Guid projectId, string projectName, ProviderProfile? imageProvider = null, bool planning = false) {
         await fixture.NavigateAsync("/agents?tab=agents");
         await fixture.Page.GetByTestId("agents-catalog-new").ClickAsync();
         var dialog = fixture.Page.GetByTestId("agents-details-dialog").Last;
@@ -189,6 +203,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await dialog.GetByRole(AriaRole.Tab, new() { Name = "Project Structure Access", Exact = true }).ClickAsync();
         await dialog.GetByTestId("agents-catalog-project-structure-read").CheckAsync();
         await dialog.GetByTestId("agents-catalog-project-structure-non-task-write").CheckAsync();
+        if (planning) {
+            await dialog.GetByTestId("agents-catalog-project-structure-task-write").CheckAsync();
+        }
         await dialog.GetByTestId("agents-catalog-project-structure-projects").GetByLabel(projectName, new() { Exact = true }).CheckAsync();
         await Assertions.Expect(dialog.GetByTestId("agents-catalog-project-structure-all")).Not.ToBeCheckedAsync();
         await dialog.GetByRole(AriaRole.Tab, new() { Name = "Workspace Tools", Exact = true }).ClickAsync();
@@ -239,7 +256,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
 
     private static async Task<JsonElement> FileTurnAsync(SharedProviderConsumerFixture fixture, ILocator chat, Guid agentId,
         Guid projectId, string parentId, string prompt, FileApprovalIntent? expected = null, bool reject = false,
-        Func<AgentToolPreparedPayload, IReadOnlySet<string>, FileProposalRefusal>? validate = null) {
+        Func<AgentToolPreparedPayload, IReadOnlySet<string>, FileProposalRefusal>? validate = null, bool planning = false) {
         var previous = (await fixture.GetAsync($"api/agents/{agentId:D}/execution-runs")).EnumerateArray().Select(run => run.GetProperty("id").GetGuid()).ToHashSet();
         await SendAsync(chat, prompt);
         var accepted = new HashSet<string>(StringComparer.Ordinal);
@@ -263,7 +280,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
                     await Task.Delay(200);
                     continue;
                 }
-                var owner = await fixture.ReadAgentAsync(agentId);
+                var owner = await fixture.ReadAgentAsync(agentId, planning);
                 Assert.Equal(runId, owner.GetProperty("runId").GetGuid());
                 Assert.Equal(AgentChatTrustedSourceKinds.ProjectStructure, owner.GetProperty("sourceKind").GetString());
                 Assert.Equal(projectId.ToString("D"), owner.GetProperty("sourceId").GetString());
@@ -297,7 +314,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
                 }
             }
             if (state is ExecutionState.Completed or ExecutionState.Failed) {
-                var owner = await fixture.ReadAgentAsync(agentId);
+                var owner = await fixture.ReadAgentAsync(agentId, planning);
                 Assert.Equal(runId, owner.GetProperty("runId").GetGuid());
                 await fixture.EvidenceAsync("consumer-run-" + runId, owner);
                 Assert.Equal(ExecutionState.Completed, state);
@@ -305,7 +322,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             }
             await Task.Delay(200);
         }
-        var finalOwner = await fixture.ReadAgentAsync(agentId);
+        var finalOwner = await fixture.ReadAgentAsync(agentId, planning);
         Assert.Equal(runId, finalOwner.GetProperty("runId").GetGuid());
         if (finalOwner.GetProperty("state").GetInt32() == (int)ExecutionState.Completed) {
             await fixture.EvidenceAsync("consumer-run-" + runId, finalOwner);

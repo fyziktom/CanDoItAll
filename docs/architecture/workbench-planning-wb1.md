@@ -3,7 +3,8 @@
 WB1 covers the project Calendar, complete Gantt surface and both native task form
 families. The Structure canvas, PM panels, runtime/files surfaces and Processes
 remain with their current owners. The [UI seam rules](ui-component-seams.md) govern
-the extraction. This is a staged implementation record, not a completed boundary.
+the extraction. The sections below distinguish the extracted boundary from its
+native owners and record each validation checkpoint.
 
 ## S0: inherited quote lifetime
 
@@ -171,16 +172,172 @@ by the owned app's locked output files remain separate failed evidence. Current
 source and delta secret matches are reviewed against entry; private credentials,
 TRX, screenshots and full logs are excluded from tracked delivery.
 
-## Remaining WB1 work
+## W4: independent hosts and current census
 
-The final W4 operator/Agent/Workflow/multi-instance campaign, independently published
-Parity/Fast sandbox and repeated development-loop measurements remain pending.
-Large-desktop validation uses 1920 by 1080 at scale 1. New shared contracts, owner
-recovery behavior and test/CI registration justify one frozen Stable checkpoint after
-the final source is settled. Later changes require explicit affected proof. The
-historical AC1 Stable failure remains a historical failure, never a fresh pass.
+The current caller census is bounded by behavior, including the native adapters
+that intentionally remain in Workbench:
 
-Final closure also requires refreshed static/docs/secret gates and final image/asset
-fingerprints. Remaining Workbench cuts are PM/read panels, the main Structure canvas
-and inspectors, assignment/runtime/files and Processes. None is started by WB1.
+| Presentation | Production caller and retained owner |
+|---|---|
+| `PlanningCalendarSurface`, time display, parser and list export | `ProjectCalendarPage` retains route admission, canonical event reads, ordered view-state writes, linked-artifact navigation and Agent context. The obsolete `ProjectEventsCalendar` compatibility wrapper has no new active caller. |
+| `PlanningGanttSurface` and Mermaid export | `ProjectStructureGanttPanel` retains canonical projection, mutation admission, original schedules, accepted identities, row ordering and Agent observations. It is still mounted by the native Structure host. |
+| `PlanningGanttTaskEditor` | The existing `ProjectStructureGanttTaskDialog` adapts create from the Gantt panel and edit from `ProjectStructureGanttTaskEditCoordinator`. |
+| `PlanningStructureTaskEditor` | The existing `ProjectStructureTaskCreateDialog` adapts general create and edit from `ProjectStructureCanvasTaskDialogCoordinator`. |
+| Estimate, execution, resource picker, quote preview and save outcomes | Both extracted forms use the actual shared children. Native callbacks retain assignment revisions, rate/history reads, attachments, compensation and readback. |
+| Synthetic specimens | The independent sandbox mounts these same controls and forms with explicit synthetic owners. Calendar boundary demonstrations remain separate from production capability. |
+
+The leaf owns its scoped form/Gantt styles and `planning-download.js`. Shared
+CanvasCalendar, Gantt, Mermaid, dialogs and inputs retain their Components owners.
+Final evaluated graphs still contain nine renderer projects and ten sandbox
+projects; all 19 protected closures match entry exactly. No backend or database
+services are registered by the independent sandbox.
+
+Separately published Fast and Parity hosts both passed the 1920 by 1080, scale-one
+browser campaign. This includes both form families, raw invalid input, long titles,
+keyboard-accessible footers, independent stacked openings, held quotes, historical
+zero cost, partial/unknown/refused results, explicit readback, Calendar failure and
+stale states, and two independent calendars/Gantts. Physical Gantt title, move,
+both resizes, dependency add/remove/reconnect, insertion, ordering, double-click
+and disposal/remount gestures passed on both hosts. UTC and Asia/Kathmandu display
+state remained independent of the browser's America/Los_Angeles timezone.
+
+CSV and XLSX contain the accepted visible rows. The actual Mermaid copy/download
+matches the preview source; SVG rendering and decoded PNG exports passed. All 507
+published shared assets match between hosts, including 166 files compared directly
+with their source owner. Planning/Contracts/Gantt/Calendar/Mermaid assembly bytes
+also match between the two publications. No browser errors or missing assets were
+observed. Earlier selector, clipboard-permission, drag-coordinate and overlong-title
+test failures remain separate evidence; the real validation rejection was preserved.
+
+Three measured edits of each kind used the actual `dotnet watch` process:
+
+| Edit | Observed milliseconds to visible result | Observation |
+|---|---|---|
+| Razor | 915, 925, 913 | Automatic browser navigation; same server process. |
+| C# | 530, 467, 428 | Automatic navigation and a newly opened Mermaid preview; same server process. |
+| CSS | 822, 685, 705 | Computed border changed in place, without navigation. |
+| JavaScript | 318, 711, 834 | Actual Calendar download filename changed after automatic navigation. |
+
+Every probe was restored byte-for-byte, including a final ordinary download after
+JavaScript restoration. Initial incomplete instrumentation and file-sharing delays
+are retained separately. The custom watch configuration does not define `DEBUG`,
+so its generation counter is not evidence against hot reload. Baseline native-app
+and independent-host paths differ; these observations do not establish a controlled
+speedup. The warm sandbox build took 6.45 seconds and startup 12.428 seconds.
+
+The native campaign uses a newly owned source/two-client topology and durable
+PostgreSQL 18 storage. No retained AC1 fixture, ordinary application or historical
+setup was reset. The first image, `bbd64e4f66fa388767b706756676d7486f37ee60cd45972c387305314f4bd7ac`,
+contains the W3 source plus the recorded five end-of-file cleanups and Components
+`dc573e2b438621599401a28968acef3682d14e63`. It retains its original input label and
+all first-image evidence. The later API documentation repair described below has
+its own fresh image and consumer campaign.
+
+Source and both clients use the same image and relevant assembly/JavaScript bytes.
+Across Linux image and Windows publications, 332 assets are byte-identical and 160
+compression variants decode identically. Fifteen generated CSS variants differ
+only in line endings and a verified one-to-one scope mapping; the native DOM uses
+the matching scopes. Generated application CSS matches source and Parity exactly.
+
+The first-image operator/Agent journey passed through Projects UI, Gantt creation,
+exact task-update approval, native file write/attachment/readback/download and an
+explicit denied attachment. The canary was read from storage, never supplied in
+the prompt. Canonical reads retain the task identity, exact schedule/decimal
+metadata and unchanged neighbors. Refreshed Gantt and persisted Calendar List show
+the accepted title; the actual CSV contains both the task and dated meeting.
+Resources independently lists the same project file, and Workspace API status
+remains lazy. Both clients also exercised default and nondefault published routes
+through native provider controls with separate local identities.
+
+The first planning browser attempts retained a start/end update race and a missing
+metadata-read option in the harness. A later attempt stopped at the file-only
+evidence reader before approval. Its exact pending proposal was reviewed and
+approved once; native schema validation then refused numeric enum arguments with
+a `NotCommitted` receipt. The final test uses named enum arguments and passes
+without weakening target, approval, receipt or canonical-data assertions. An
+explicit evidence-reader option adds only task-update inspection for an owned
+single-project task grant; its default file allowlist still refuses that tool.
+
+Both first-image saved Workflow cases pass: accepted output creates the exact native artifact,
+while known-incomplete output cannot reach the asset executor. The finite enabled
+Scheduler plan survives two native application restarts with identical run/history;
+the future plan fires once and the completed plan remains enabled. Original image,
+container, database and accepted version identities are retained throughout.
+
+The frozen Stable checkpoint found a real extraction regression: the moved
+`ProjectTaskEstimate` XML comments were intact, but the new contracts project did
+not emit its documentation file. Enabling the same documentation output as the
+original Workbench assembly restores the generated API descriptions. A fresh Web
+build and isolated `WB1Docs` Integration build pass; all nine unchanged API
+documentation pipeline tests pass, including the failing cross-assembly case.
+The frozen run and its old output files remain separate evidence.
+
+The replacement image is
+`b58ca3d21e219d5355d2feae017d789afe63bc727f1662e7ea20caac37e917e7`, with exact input
+fingerprint `8f6b6249f1a57f1277a915e6b0b0cb85dc793f76b43ff36fe9814ff97fde07ab`.
+Only the three owned app containers were replaced. Database and upstream container
+identities, data mounts and saved fixtures were retained. Of 4,588 frozen production
+files, the sole later change enables XML output in Planning.Contracts. The native
+Workbench, Planning, Contracts and Gantt DLLs and their JavaScript remain byte-identical;
+the Web DLL changes for generated API documentation. Fresh Fast and Parity publications
+each retain all 556 previously tested files byte-for-byte and add only the XML file.
+
+The native Runtime/Usage attempt first reached the intended partial state: this
+fresh profile required explicit usage-index initialization. The existing maintenance
+command initialized its derived index, without migration/rebuild flags or model
+calls. All 394 canonical JSON payloads stayed byte-identical. The original failed
+grid assertion is retained; it was not weakened to accept an empty view.
+
+Resuming the provider journey exposed a browser helper's substring selection:
+it selected the saved `PP2 OpenAI image generation` profile when the original
+`OpenAI image generation` was requested. The helper now matches the name exactly
+while retaining the first occurrence among the tree's legitimate tag duplicates.
+The failed substring attempt, over-strict single-occurrence assertion and native
+DOM evidence remain recorded. Native provider identities/defaults assertions stay
+unchanged. These test-only deltas are outside the application Docker input.
+
+All nine final-image native cases pass with fresh exact discovery: source/two-client
+provider defaults and routes; Runtime/Usage cancellation and reopening; floating
+chat detach/follow/close; History request identity and content authorization; the
+original file journey; the planning operator/Agent journey; two accepted/incomplete
+Workflow cases; and finite enabled Scheduler restart. The planning journey creates
+its project through Projects UI, preserves the exact task schedule and decimals,
+approves the exact task-update payload, and observes the accepted title and progress
+through native Gantt, Calendar, CSV and persisted List view. File read/write/attach,
+canonical content readback, denial and actual download retain their exact receipts.
+The two file journeys report no browser errors or failed requests.
+
+The final Scheduler plan stays enabled through two application restarts with the
+same accepted version, single run and complete detail. A future neighbor fires
+once, with no duplicate run or provider dispatch. A separate read-only check also
+confirms that the first-image completed plan survived the image replacement and
+these additional restarts: its original run and detail remain identical.
+
+Final client-A Usage is complete: 50 canonical observations across eight Agents
+match the API and all three native detail dialogs, including 900 tokens and the
+recorded decimal cost. All 50 observation files remain unchanged. The accepted
+seven-day window, independent fourteen-day view and independent dialog closing
+pass. Source and client B retain honest empty, partial indexes; no initialization
+was performed there merely to produce complete badges. The original failed native
+run remains represented in Usage. No paid calls were made, and the unchanged full
+19-vector shared-provider protocol campaign was neither replayed nor claimed.
+
+## Regression and delivery
+
+New shared contracts, native recovery behavior and test/CI registration justified
+one frozen Stable checkpoint. It is still running; later repairs have separate
+fresh proof and do not rewrite its results. In addition to the API documentation
+repair, the old Workspace status test clicked a handler retired by startup reads.
+It now waits for both native reads to settle before clicking; its exact two-case
+selection passes with unchanged lazy-read and reopening assertions.
+
+Final portability enforcement passes without baseline-write mode: all 15,227
+reviewed executable-source findings match. The sole W4 baseline delta is the
+reviewed evidence-reader condition fingerprint, with no allowance-count change.
+The portability, secret-tooling and package contract tools pass 38 self-tests.
+Final documentation/secret-delta closure and signed delivery remain pending the
+frozen regression disposition. All browser validation uses 1920 by 1080 at scale 1.
+
+Remaining Workbench cuts are PM/read panels, the main Structure canvas and
+inspectors, assignment/runtime/files and Processes. None is started by WB1.
 Release readiness is outside this assignment.

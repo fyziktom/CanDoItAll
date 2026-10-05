@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-05T08:47:36.029881+00:00",
+  "generated_utc": "2026-10-05T10:13:14.628741+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -78748,7 +78748,7 @@
     {
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eConsumerEvidence.cs",
       "category": "external-tool",
-      "source_fingerprint": "3f6df36422b87d4fdc1cdc45d38b88e8f917e5ddde73d22be2cb08f2307a45ad",
+      "source_fingerprint": "269baa205849925dcf50bd7ffd887fdd29a79ded44484dab00a78277c18eb448",
       "count": 1
     },
     {

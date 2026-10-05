@@ -120,7 +120,9 @@ events so the real AgentFramework adapter can consume them.
 
 `read-consumer-agent <id> --role client-a` reads the latest run through the native workspace
 owner. It requires the owned completion-agent naming convention and refuses tools outside the
-file/image journey's explicit allowlist. Its JSON contains exact admission, proposal and receipt
+file/image journey's explicit allowlist. The optional `--planning` flag additionally permits
+inspection of `project_task_update` for an owned agent with a single-project task-write grant;
+the default file allowlist is unchanged. Its JSON contains exact admission, proposal and receipt
 identities for the browser's approval checks; it performs no mutation. These explicit consumer
 commands can return generated fixture content and tool arguments. Capture their output only in
 the ignored task evidence directory, review it and scan it before export. Credentials remain in

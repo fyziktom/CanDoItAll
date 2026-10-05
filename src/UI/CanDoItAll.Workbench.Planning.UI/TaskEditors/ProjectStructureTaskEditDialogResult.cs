@@ -13,4 +13,3 @@ public sealed record ProjectStructureTaskEditDialogResult(
     ProjectStructureTaskResourceSelection? Assignee,
     ProjectStructureTaskResourceSelection? ResourceToAttach = null,
     ProjectTaskExecutionSnapshot? Execution = null);
-

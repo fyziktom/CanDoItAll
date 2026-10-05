@@ -10,6 +10,7 @@ namespace CanDoItAll.SharedProviders.E2E;
 
 internal static class E2eConsumerEvidence {
     public const string Command = "read-consumer-agent";
+    private const string PlanningOption = "--planning";
     private static readonly HashSet<string> FileTools = [
         ToolContractCatalog.WorkspaceWriteFile,
         ProjectStructureToolPolicy.ProjectStructureAssetCreate,
@@ -19,9 +20,11 @@ internal static class E2eConsumerEvidence {
     ];
 
     public static async Task ReadAsync(string[] args, CancellationToken cancellationToken) {
-        if (args.Length != 4 || !Guid.TryParse(args[1], out var agentId) || agentId == Guid.Empty || args[2] != "--role") {
+        if (args.Length is not (4 or 5) || args.Length == 5 && args[4] != PlanningOption ||
+            !Guid.TryParse(args[1], out var agentId) || agentId == Guid.Empty || args[2] != "--role") {
             throw new E2eSafeException("Consumer evidence requires an exact fixture agent and role.");
         }
+        var planning = args.Length == 5;
         var invocation = E2eCommandLine.Parse(["snapshot", "--role", args[3]]);
         await using var host = await E2eServiceHost.CreateAsync(invocation.Options, cancellationToken);
         await using var scope = host.Services.CreateAsyncScope();
@@ -30,6 +33,10 @@ internal static class E2eConsumerEvidence {
         var agent = await workspace.GetAgentEditorAsync(agentId, cancellationToken);
         if (agent.Id != agentId || !agent.Name.StartsWith("PP2C file agent ", StringComparison.Ordinal)) {
             throw new E2eSafeException("Only the owned PP2 completion file agent may be inspected.");
+        }
+        if (planning && (!agent.ProjectStructureAccess.CanWriteTasks || agent.ProjectStructureAccess.AllowAllProjects ||
+            agent.ProjectStructureAccess.AllowedProjectIds.Count != 1)) {
+            throw new E2eSafeException("Planning evidence requires the owned agent's single-project task grant.");
         }
         var latest = (await workspace.ListExecutionRunsAsync(new(AgentId: agentId), cancellationToken))
             .OrderByDescending(run => run.CreatedAtUtc).FirstOrDefault();
@@ -40,7 +47,8 @@ internal static class E2eConsumerEvidence {
         var detail = await workspace.GetExecutionRunDetailAsync(latest.Id, cancellationToken);
         var admission = detail.Run.ToolAdmission;
         var proposals = admission?.Batches.SelectMany(batch => batch.Proposals).ToArray() ?? [];
-        if (proposals.Any(proposal => !FileTools.Contains(proposal.Payload.ToolName))) {
+        if (proposals.Any(proposal => !FileTools.Contains(proposal.Payload.ToolName) &&
+            !(planning && proposal.Payload.ToolName == ProjectStructureToolPolicy.ProjectTaskUpdate))) {
             throw new E2eSafeException("The file fixture proposed an unexpected tool; consumer evidence was refused.");
         }
         var attachments = admission?.RuntimeContext is { } saved

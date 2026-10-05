@@ -100,4 +100,3 @@ public sealed record ProjectStructureTaskResourceCostQuote(
             calculatedAtUtc,
             sourceKind);
 }
-

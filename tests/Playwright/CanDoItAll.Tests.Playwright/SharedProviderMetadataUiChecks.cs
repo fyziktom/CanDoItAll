@@ -111,7 +111,7 @@ internal static class SharedProviderMetadataUiChecks {
         Func<string, Task<IResponse?>>? navigate = null) {
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{baseUrl}/agents?tab=providers", navigate);
         var provider = page.GetByTestId("providers-tree-provider")
-            .Filter(new() { HasTextString = providerName }).First;
+            .Filter(new() { Has = page.GetByText(providerName, new() { Exact = true }) }).First;
         await provider.WaitForAsync();
         var alreadySelected = await provider.GetAttributeAsync("aria-selected") == "true";
         var previousName = await page.GetByTestId("providers-name-input").ElementHandleAsync();

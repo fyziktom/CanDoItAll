@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages;
+using CanDoItAll.Workspace.UI;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Shell;
@@ -14,6 +15,12 @@ public sealed class WorkspaceApiStatusTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IApiTokenService>(tokens));
         var cut = harness.Context.Render<SettingsPage>();
         cut.WaitForElement("[data-testid='defaults-name']");
+        cut.WaitForAssertion(() => {
+            var state = cut.FindComponent<WorkspaceSettingsSurface>().Instance;
+            Assert.False(state.Defaults.IsLoading);
+            Assert.False(state.Secrets.IsLoading);
+            Assert.True(state.Defaults.CanSave);
+        });
         Assert.Equal(0, tokens.Reads);
         Assert.Contains("Not loaded", ApiTab().TextContent);
 

@@ -14,4 +14,3 @@ public enum ProjectTaskExecutionState
     Completed,
     Cancelled
 }
-

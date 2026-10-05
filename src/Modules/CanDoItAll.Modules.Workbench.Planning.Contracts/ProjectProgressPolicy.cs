@@ -9,4 +9,3 @@ public static class ProjectProgressPolicy
         return value is >= 0 and <= 100;
     }
 }
-
