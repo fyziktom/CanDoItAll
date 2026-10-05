@@ -72,39 +72,46 @@
     </ProjectStructureOverlayDialog>
 }
 
-@if (PendingDeletePrompt is not null)
+@if (PendingDeletePrompt is { } deletePrompt)
 {
-    <ProjectStructureOverlayDialog AriaLabel="@ResolveDeletePromptAriaLabel(PendingDeletePrompt)"
-                                   Kicker="@(PendingDeletePrompt.IsBulk ? "Delete selection" : "Delete node")"
-                                   Title="@PendingDeletePrompt.Title"
-                                   Summary="@PendingDeletePrompt.ImpactCopy"
+    var confirmDelete = ConfirmDelete;
+    var cancelDelete = CancelDelete;
+    <ProjectStructureOverlayDialog AriaLabel="@ResolveDeletePromptAriaLabel(deletePrompt)"
+                                   Kicker="@(deletePrompt.IsBulk ? "Delete selection" : "Delete node")"
+                                   Title="@deletePrompt.Title"
+                                   Summary="@deletePrompt.ImpactCopy"
                                    DialogClass="project-structure-summary-dialog"
-                                   Close="CancelDelete">
+                                   Close="@(() => cancelDelete.InvokeAsync(deletePrompt))">
+        <Body>
+            @if (!string.IsNullOrWhiteSpace(DeleteFailure)) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="project-structure-delete-failure">@DeleteFailure</Alert>
+            }
+        </Body>
         <Actions>
-            @if (PendingDeletePrompt.ManagedAttachmentCount > 0)
+            @if (deletePrompt.ManagedAttachmentCount > 0)
             {
-                var deletesMultipleNodes = PendingDeletePrompt.IsBulk || PendingDeletePrompt.DescendantCount > 0;
+                var deletesMultipleNodes = deletePrompt.IsBulk || deletePrompt.DescendantCount > 0;
                 <Button Text="@(deletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
                         ButtonStyle="ButtonStyle.Base"
-                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.RetainManagedFiles))" />
+                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.RetainManagedFiles)))" />
                 <Button Text="@(deletesMultipleNodes
                     ? "Delete nodes and files"
-                    : PendingDeletePrompt.ManagedAttachmentCount > 1
+                    : deletePrompt.ManagedAttachmentCount > 1
                         ? "Delete node and files"
                         : "Delete node and file")"
                         ButtonStyle="ButtonStyle.Danger"
-                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
+                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)))" />
             }
             else
             {
-                <Button Text="@(PendingDeletePrompt.IsBulk ? "Delete selected" : "Delete")"
+                <Button Text="@(deletePrompt.IsBulk ? "Delete selected" : "Delete")"
                         ButtonStyle="ButtonStyle.Danger"
-                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
+                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)))" />
             }
             <Button Text="Cancel"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
-                    Click="CancelDelete" />
+                    Click="@(() => cancelDelete.InvokeAsync(deletePrompt))" />
         </Actions>
     </ProjectStructureOverlayDialog>
 }
@@ -234,10 +241,13 @@
     public ProjectStructureDeletePrompt? PendingDeletePrompt { get; set; }
 
     [Parameter]
-    public EventCallback<ProjectStructureManagedStorageDisposition> ConfirmDelete { get; set; }
+    public string? DeleteFailure { get; set; }
 
     [Parameter]
-    public EventCallback CancelDelete { get; set; }
+    public EventCallback<ProjectStructureDeleteConfirmation> ConfirmDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectStructureDeletePrompt> CancelDelete { get; set; }
 
     [Parameter]
     public ProjectStructureTranscriptActionDialogState? PendingTranscriptAction { get; set; }

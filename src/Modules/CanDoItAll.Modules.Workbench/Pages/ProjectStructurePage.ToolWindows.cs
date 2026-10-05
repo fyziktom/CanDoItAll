@@ -59,9 +59,6 @@ public partial class ProjectStructurePage
     private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(ToolboxWindowKey, state);
 
-    private Task HandleObjectIndexWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(ObjectIndexWindowKey, state);
-
     private Task HandleFileBrowserWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(FileBrowserWindowKey, state);
 
@@ -70,11 +67,6 @@ public partial class ProjectStructurePage
             ? OpenAttachmentLocallyAsync(node)
             : Task.CompletedTask;
 
-    private Task HandleObjectIndexSearchTextChangedAsync(string value)
-    {
-        objectIndexSearchText = value;
-        return Task.CompletedTask;
-    }
 
     private async Task OpenToolboxAsync()
     {

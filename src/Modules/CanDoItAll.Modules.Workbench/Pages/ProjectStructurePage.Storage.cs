@@ -70,7 +70,7 @@ public partial class ProjectStructurePage
             [
                 new StorageSummaryFact("Purpose", ResolveStoragePurposeLabel(metadata.Infrastructure.StoragePurpose)),
                 new StorageSummaryFact("Path prefix", string.IsNullOrWhiteSpace(metadata.Infrastructure.StoragePathPrefix) ? "Not set" : metadata.Infrastructure.StoragePathPrefix),
-                new StorageSummaryFact("Endpoint", storage?.EndpointOrRoot ?? "Catalog entry unavailable"),
+                new StorageSummaryFact("Connection", storage is null ? "Catalog entry unavailable" : "Configured in workspace storage"),
                 new StorageSummaryFact("Reference", string.IsNullOrWhiteSpace(metadata.Infrastructure.ConnectionReference) ? "Not set" : metadata.Infrastructure.ConnectionReference)
             ],
             Footnote = string.IsNullOrWhiteSpace(storage?.LastHealthMessage)

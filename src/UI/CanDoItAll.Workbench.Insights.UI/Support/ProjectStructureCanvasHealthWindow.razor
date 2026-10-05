@@ -3,6 +3,15 @@
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Modules.Workbench.CanvasAdapters
 
+<div class="workbench-insights-health">
+@{
+    var origin = Origin;
+    var summary = SummaryState;
+    var canValidate = CanValidateSelected;
+    var targets = SelectedNodeIds.ToArray();
+    var windowReceiver = StateChanged;
+    var actionReceiver = ValidateSelected;
+}
 <CanvasFloatingWindow WindowId="@WindowId"
                       TestId="@TestId"
                       AriaLabel="@AriaLabel"
@@ -15,7 +24,7 @@
                       MinWidth="280"
                       MinHeight="220"
                       State="@State"
-                      StateChanged="StateChanged">
+                      StateChanged="@(state => windowReceiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.Health, state)))">
     <Stack GapScale="LayoutGap.Medium"
            Class="project-structure-validation-overlay"
            aria-label="Project structure validation overlay"
@@ -30,19 +39,19 @@
         </Stack>
 
         <CompactStatStrip Class="project-structure-validation-overlay__metrics">
-            <CompactStat Label="blocked" Value="@SummaryState.BlockedCount.ToString()" TooltipText="Blocked project structure issues." Tone="danger" />
-            <CompactStat Label="review" Value="@SummaryState.ReviewCount.ToString()" TooltipText="Project structure issues needing review." Tone="warning" />
-            <CompactStat Label="priority" Value="@SummaryState.PriorityCount.ToString()" TooltipText="Priority project structure issues." Tone="info" />
-            <CompactStat Label="selected issues" Value="@SummaryState.SelectedIssueCount.ToString()" TooltipText="Issues linked to the current selection." />
+            <CompactStat Label="blocked" Value="@summary.BlockedCount.ToString()" TooltipText="Blocked project structure issues." Tone="danger" />
+            <CompactStat Label="review" Value="@summary.ReviewCount.ToString()" TooltipText="Project structure issues needing review." Tone="warning" />
+            <CompactStat Label="priority" Value="@summary.PriorityCount.ToString()" TooltipText="Priority project structure issues." Tone="info" />
+            <CompactStat Label="selected issues" Value="@summary.SelectedIssueCount.ToString()" TooltipText="Issues linked to the current selection." />
         </CompactStatStrip>
 
-        @if (SummaryState.SpotlightNodes.Count > 0)
+        @if (summary.SpotlightNodes.Count > 0)
         {
             <PanelCard Class="project-structure-validation-overlay__spotlight">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Spotlight" />
                     <Stack GapScale="LayoutGap.Tiny">
-                        @foreach (var nodeTitle in SummaryState.SpotlightNodes)
+                        @foreach (var nodeTitle in summary.SpotlightNodes)
                         {
                             <TextBlock TextStyle="TextStyle.Note" Value="@nodeTitle" />
                         }
@@ -51,18 +60,23 @@
             </PanelCard>
         }
 
-        @if (CanValidateSelected)
+        @if (canValidate)
         {
             <Cluster Class="project-structure-validation-overlay__actions">
                 <Button Text="Validate selected"
                         ButtonStyle="ButtonStyle.Info"
-                        Click="ValidateSelected" />
+                        Click="@(() => actionReceiver.InvokeAsync(new InsightsValidateIntent(origin, targets)))" />
             </Cluster>
         }
     </Stack>
 </CanvasFloatingWindow>
 
+</div>
+
 @code {
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+    [Parameter] public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -76,7 +90,7 @@
     public CanvasWorkbenchWindowState State { get; set; } = default!;
 
     [Parameter, EditorRequired]
-    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+    public EventCallback<InsightsWindowIntent> StateChanged { get; set; }
 
     [Parameter, EditorRequired]
     public ProjectStructureValidationOverlaySummary SummaryState { get; set; } = default!;
@@ -85,5 +99,5 @@
     public bool CanValidateSelected { get; set; }
 
     [Parameter]
-    public EventCallback ValidateSelected { get; set; }
+    public EventCallback<InsightsValidateIntent> ValidateSelected { get; set; }
 }

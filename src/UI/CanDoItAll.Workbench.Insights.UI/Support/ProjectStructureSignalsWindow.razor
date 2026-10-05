@@ -2,6 +2,16 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 
+@{
+    var origin = Origin;
+    var sections = Sections;
+    var canApply = CanApplySignals;
+    var label = SelectionLabel;
+    var hint = SelectionHint;
+    var targets = SelectedNodeIds.ToArray();
+    var windowReceiver = StateChanged;
+    var actionReceiver = OnApplyAction;
+}
 <CanvasFloatingWindow WindowId="@WindowId"
                       TestId="@TestId"
                       AriaLabel="@AriaLabel"
@@ -17,15 +27,15 @@
                       MaxWidth="520"
                       MaxHeight="620"
                       State="@State"
-                      StateChanged="StateChanged">
+                      StateChanged="@(state => windowReceiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.Signals, state)))">
     <div class="project-structure-signals-window"
          data-testid="project-structure-signals-toolbox">
         <div class="project-structure-signals-window__header">
-            <Pill Tone="PillTone.Info" Text="@SelectionLabel" />
-            <Pill Tone="PillTone.Label" Text="@SelectionHint" />
+            <Pill Tone="PillTone.Info" Text="@label" />
+            <Pill Tone="PillTone.Label" Text="@hint" />
         </div>
 
-        @if (!CanApplySignals)
+        @if (!canApply)
         {
             <PanelCard Class="project-structure-signals-window__empty">
                 <Stack GapScale="LayoutGap.Tiny">
@@ -37,7 +47,7 @@
         else
         {
             <div class="project-structure-signals-window__sections">
-                @foreach (var signalSection in Sections)
+                @foreach (var signalSection in sections)
                 {
                     <section class="project-structure-signals-window__section"
                              data-testid="@($"project-structure-signals-section-{signalSection.Key}")">
@@ -54,7 +64,7 @@
                                         data-testid="@ResolveActionTestId(action)"
                                         aria-pressed="@action.IsActive"
                                         title="@action.Description"
-                                        @onclick="@(() => OnApplyAction.InvokeAsync(action.ActionId))">
+                                        @onclick="@(() => actionReceiver.InvokeAsync(new InsightsSignalIntent(origin, targets, action.ActionId)))">
                                     <span class="project-structure-signal-tile__badge" aria-hidden="true">@action.Glyph</span>
                                     <span class="project-structure-signal-tile__label">@action.Label</span>
                                 </button>
@@ -68,6 +78,9 @@
 </CanvasFloatingWindow>
 
 @code {
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+    [Parameter] public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 
@@ -90,7 +103,7 @@
     public CanvasWorkbenchWindowState State { get; set; } = default!;
 
     [Parameter, EditorRequired]
-    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+    public EventCallback<InsightsWindowIntent> StateChanged { get; set; }
 
     [Parameter, EditorRequired]
     public IReadOnlyList<ProjectStructureSignalSection> Sections { get; set; } = [];
@@ -108,7 +121,7 @@
     public double DefaultWidth { get; set; }
 
     [Parameter, EditorRequired]
-    public EventCallback<string> OnApplyAction { get; set; }
+    public EventCallback<InsightsSignalIntent> OnApplyAction { get; set; }
 
     private static string ResolveActionTestId(ProjectStructureSignalActionTile action)
         => $"project-structure-signals-action-{action.ActionId.Replace(":", "-", StringComparison.Ordinal)}";

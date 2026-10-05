@@ -208,6 +208,9 @@ public partial class ProjectStructurePage
 
     private async Task OpenStartWorkflowDialogAsync(ProjectStructureNode node)
     {
+        var actionContext = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
+        bool IsCurrent() => IsCurrentAction(actionContext) && insightsSelectionRevision == selectionRevision;
         var openedSurface = surface ?? throw new InvalidOperationException("Reload the project before starting a Workflow.");
         var projectId = ProjectId;
         var mutationOwner = CreateProjectStructureUiAgentContext(projectId) with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
@@ -222,6 +225,9 @@ public partial class ProjectStructurePage
         }
 
         var status = await TryRefreshWorkflowStatusAsync(node.Id, reloadSurface: false);
+        if (!IsCurrent()) {
+            return;
+        }
         ProjectStructureWorkflowStartOptionsResult? startOptions = null;
         var error = string.Empty;
         try
@@ -233,7 +239,7 @@ public partial class ProjectStructurePage
             error = FormatWorkflowUiException(exception);
         }
 
-        if (projectId != ProjectId) {
+        if (!IsCurrent()) {
             return;
         }
 
@@ -374,9 +380,17 @@ public partial class ProjectStructurePage
             return null;
         }
 
+        var context = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
+        bool IsCurrent() => IsCurrentAction(context) && insightsSelectionRevision == selectionRevision;
         try
         {
-            var status = await WorkflowNodeService.GetStatusAsync(ProjectId, nodeId);
+            await InsightsAdmissions.RequireCurrentAsync(context.Admission, deferredCompletionCts.Token);
+            var status = await WorkflowNodeService.GetStatusAsync(context.Surface.ProjectId, nodeId);
+            await InsightsAdmissions.RequireCurrentAsync(context.Admission, deferredCompletionCts.Token);
+            if (!IsCurrent()) {
+                return status;
+            }
             if (selectedNodeIds.Contains(nodeId, StringComparer.Ordinal))
             {
                 selectedWorkflowStatus = status;
@@ -389,15 +403,20 @@ public partial class ProjectStructurePage
 
             return status;
         }
+        catch (OperationCanceledException) when (!IsCurrent()) {
+            return null;
+        }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {
-            selectedWorkflowStatus = null;
-            workflowFeedback = FormatWorkflowUiException(exception);
-            workflowFeedbackTone = "warn";
+            if (IsCurrent()) {
+                selectedWorkflowStatus = null;
+                workflowFeedback = FormatWorkflowUiException(exception);
+                workflowFeedbackTone = "warn";
+            }
             Logger.LogWarning(
                 exception,
                 "Project structure workflow status refresh failed. ProjectId={ProjectId} NodeId={NodeId}",
-                ProjectId,
+                context.Surface.ProjectId,
                 nodeId);
             return null;
         }

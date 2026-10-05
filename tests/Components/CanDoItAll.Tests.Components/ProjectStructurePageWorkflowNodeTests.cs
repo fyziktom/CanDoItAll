@@ -10,6 +10,8 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -192,9 +194,62 @@ public sealed class ProjectStructurePageWorkflowNodeTests
         return result.Value;
     }
 
-    private static Task<ComponentTestHarness> CreateHarnessAsync()
-        => ComponentTestHarness.CreateAsync(services =>
-            services.Replace(ServiceDescriptor.Singleton<ISecretVault>(new InMemorySecretVault())));
+    [Fact]
+    public async Task Delayed_workflow_status_cannot_reload_the_canvas_after_selection_A_B_A() {
+        var gate = new WorkflowReadGate();
+        await using var harness = await CreateHarnessAsync(services => services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider =>
+            new HeldWorkbenchFactory(new PooledDbContextFactory<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>()), gate)));
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>(), "Insights delayed workflow status");
+        var workflow = await CreateWorkflowAsync(services.GetRequiredService<IWorkflowCatalogService>(), "Original status workflow");
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var neighbor = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.Note, "Neighbor", "", "", $"project:{projectId}"));
+        var cut = harness.Context.Render<ProjectStructurePage>(p => p.Add(page => page.ProjectId, projectId));
+        await AddWorkflowAsync(cut, WaitForCanvasWorkbench(cut), $"project:{projectId}", workflow);
+        var node = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, candidate => candidate.ObjectType == ProjectObjectType.WorkflowDefinition);
+        gate.Armed = true;
+        var pending = SelectAsync(node.Id);
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await SelectAsync(neighbor.Id);
+            await SelectAsync(node.Id);
+            var accepted = WaitForCanvasWorkbench(cut).Instance.Surface;
+            gate.Release.TrySetResult();
+            await pending;
+            Assert.Same(accepted, WaitForCanvasWorkbench(cut).Instance.Surface);
+            Assert.Equal([node.Id], accepted.UiState.SelectedNodeIds);
+        } finally {
+            gate.Release.TrySetResult();
+            await pending;
+        }
+
+        Task SelectAsync(string id) => cut.InvokeAsync(() => WaitForCanvasWorkbench(cut).Instance.OnSelectionChanged(id, JsonSerializer.Serialize(new[] { id })));
+    }
+
+    private sealed class WorkflowReadGate {
+        public bool Armed { get; set; }
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class HeldWorkbenchFactory(IDbContextFactory<WorkbenchDbContext> inner, WorkflowReadGate gate) : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => inner.CreateDbContext();
+
+        public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            if (gate.Armed) {
+                gate.Armed = false;
+                gate.Entered.TrySetResult();
+                await gate.Release.Task.WaitAsync(cancellationToken);
+            }
+            return await inner.CreateDbContextAsync(cancellationToken);
+        }
+    }
+
+    private static Task<ComponentTestHarness> CreateHarnessAsync(Action<IServiceCollection>? configure = null)
+        => ComponentTestHarness.CreateAsync(services => {
+            services.Replace(ServiceDescriptor.Singleton<ISecretVault>(new InMemorySecretVault()));
+            configure?.Invoke(services);
+        });
 
     private static Task<WorkflowDefinition> CreateWorkflowAsync(
         IWorkflowCatalogService workflowCatalogService,

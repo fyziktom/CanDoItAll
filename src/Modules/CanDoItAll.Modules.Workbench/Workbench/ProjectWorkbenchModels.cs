@@ -2064,6 +2064,17 @@ public sealed partial class ProjectWorkbenchService(
         await scope.CommitAsync(cancellationToken);
     }
 
+    public async Task SaveViewStateAsync(ProjectWriteAdmission admission, string surfaceKind, string stateJson, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(admission);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+        await using var scope = await mutationScopes.BeginAsync(dbContext,
+            ProjectStructureSerializableMutationScope.ForProject(admission.ProjectId), cancellationToken, [admission]);
+        await UpsertViewStateAsync(dbContext, admission.ProjectId, surfaceKind, stateJson, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await scope.CommitAsync(cancellationToken);
+    }
+
     public async Task SaveViewStateAsync(Guid projectId, string surfaceKind, string stateJson, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

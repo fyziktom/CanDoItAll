@@ -1,5 +1,4 @@
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 

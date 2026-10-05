@@ -6,6 +6,8 @@
     <Stack GapScale="LayoutGap.Large">
         <TextBlock TextStyle="TextStyle.H3" Value="Workbench Insights" />
         <TextBlock Value="Independent renderer scenarios. Each report has its own draft, reads, dialogs and accepted snapshot." />
+        <SupportSpecimen Name="Left" />
+        <SupportSpecimen Name="Right" />
         <Cluster Gap="LayoutGap.Small">
             @foreach (var scenario in Enum.GetValues<ReportScenarioKind>()) {
                 <Button Text="@scenario.ToString()" Click="@(() => SetScenario(scenario))" data-testid="@($"scenario-{scenario}")" />

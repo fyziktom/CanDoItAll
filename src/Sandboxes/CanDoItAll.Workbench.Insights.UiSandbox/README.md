@@ -17,6 +17,13 @@ theme. The default is Parity. Both modes have separate output/intermediate paths
 missing assets or a mismatched requested mode fail explicitly. Publishing uses the
 same mode property and copies the selected stylesheet into the standalone output.
 
+The selection/support controls are also the production renderers, including the
+detail child, TreeView and real floating windows. Each support instance has its own
+origin, selected IDs, placements and menu acknowledgement. Exercise no/single/multi
+selection, advanced attachment/Workflow display, markers, borders, Health, menu
+replacement and a delayed menu. Native task/file/runtime actions produce explicit
+controlled feedback here; their owners are exercised in the application.
+
 The report controls are the production renderers. Scenario controls affect the left
 source; the right view has independent state. Delayed reads intentionally complete
 after cancellation when released, so replacement and late-result behavior can be

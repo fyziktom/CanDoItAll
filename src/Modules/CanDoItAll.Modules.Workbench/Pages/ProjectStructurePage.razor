@@ -196,15 +196,16 @@ else
                                                                Title="Project object index"
                                                                Summary="@ObjectIndexWindowSummary"
                                                                State="@ObjectIndexWindowState"
-                                                               StateChanged="HandleObjectIndexWindowStateChangedAsync"
+                                                               Origin="@CurrentInsights.Origin"
+                                                               StateChanged="HandleInsightsWindowAsync"
                                                                IsLoaded="@IsObjectIndexWindowLoaded"
-                                                               Nodes="@ObjectIndexWindowNodes"
+                                                               Nodes="@ObjectIndexWindowNodes.Select(PresentOutlineNode).ToArray()"
                                                                SelectedNodeIds="@selectedNodeIds"
                                                                SearchText="@objectIndexSearchText"
-                                                               SearchTextChanged="HandleObjectIndexSearchTextChangedAsync"
-                                                               OnSelectNode="SelectNodeAsync"
-                                                               ResolveContextActions="ResolveSupportPanelContextActions"
-                                                               OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
+                                                               SearchTextChanged="HandleInsightsSearchAsync"
+                                                               OnSelectNode="HandleInsightsFocusAsync"
+                                                               OpenMenu="OpenInsightsMenuAsync"
+                                                               OnExecuteNodeContextAction="ExecuteInsightsMenuAsync"
                                                                DefaultWidth="@ObjectIndexWindowDefaultWidth" />
                         }
                         @if (FileBrowserWindowState.IsVisible)
@@ -222,10 +223,11 @@ else
                                                                 TestId="project-structure-validation-window"
                                                                 AriaLabel="Project structure canvas health"
                                                                 State="@HealthWindowState"
-                                                                StateChanged="HandleHealthWindowStateChangedAsync"
+                                                                Origin="@CurrentInsights.Origin"
+                                                                SelectedNodeIds="@selectedNodeIds.ToArray()"
+                                                                StateChanged="HandleInsightsWindowAsync"
                                                                 SummaryState="@canvasValidationOverlay"
-                                                                CanValidateSelected="false"
-                                                                ValidateSelected="RunSelectedValidationAsync" />
+                                                                CanValidateSelected="false" />
                         }
                         @if (SignalsWindowState.IsVisible)
                         {
@@ -236,48 +238,24 @@ else
                                                            Title="Signals toolbox"
                                                            Summary="Keep markers, progress, and priority close to the current selection without reopening the right-click menu every time."
                                                            State="@SignalsWindowState"
-                                                           StateChanged="HandleSignalsWindowStateChangedAsync"
-                                                           Sections="@SignalsWindowSections"
+                                                           Origin="@CurrentInsights.Origin"
+                                                           SelectedNodeIds="@selectedNodeIds.ToArray()"
+                                                           StateChanged="HandleInsightsWindowAsync"
+                                                           Sections="@CurrentInsights.Signals"
                                                            CanApplySignals="@CanApplySignals"
                                                            SelectionLabel="@SignalsSelectionLabel"
                                                            SelectionHint="@SignalsSelectionHint"
                                                            DefaultWidth="@SignalsWindowDefaultWidth"
-                                                           OnApplyAction="HandleSignalsToolboxActionAsync" />
+                                                           OnApplyAction="HandleInsightsSignalAsync" />
                         }
                         @if (SelectionWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@SelectionWindowKey"
-                                                  TestId="project-structure-selection-window"
-                                                  AriaLabel="Project structure selection panel"
-                                                  Kicker="Selection panel"
-                                                  Title="@SelectionWindowTitle"
-                                                  Summary="@SelectionWindowSummary"
-                                                  DefaultPlacement="top-right"
-                                                  DefaultWidth="360"
-                                                  DefaultHeight="360"
-                                                  MinWidth="320"
-                                                  MinHeight="240"
-                                                  MaxWidth="520"
-                                                  State="@SelectionWindowState"
-                                                  StateChanged="HandleSelectionWindowStateChangedAsync">
-                                <ProjectStructureSelectionPanel State="@SelectionPanelState"
-                                                               ClearSelectionAsync="ClearSelectionAsync"
-                                                               SelectNodeAsync="SelectNodeAsync"
-                                                               ApplySelectionStatusAsync="ApplySelectionStatusAsync"
-                                                               ApplySelectionProgressAsync="ApplySelectionProgressAsync"
-                                                               ApplySelectionMarkerAsync="ApplySelectionMarkerAsync"
-                                                               ApplySelectionPriorityAsync="ApplySelectionPriorityAsync"
-                                                               SelectionBorderNameChangedAsync="UpdateSelectionBorderNameAsync"
-                                                               CreateSelectionBorderAsync="CreateSelectionBorderAsync"
-                                                               ClearSelectionBordersAsync="ClearSelectionBordersAsync"
-                                                               ExecuteInspectorActionAsync="ExecuteSelectedInspectorActionAsync"
-                                                               OpenToolboxAsync="OpenToolboxAsync"
-                                                               OpenAttachmentLocallyAsync="OpenSelectedAttachmentLocallyAsync"
-                                                               OpenAttachmentPreviewAsync="OpenSelectedAttachmentPreviewAsync"
-                                                               OpenMermaidViewerAsync="OpenSelectedMermaidViewerAsync"
-                                                               AdvancedDetailsHelpBody="@AdvancedDetailsHelpBody"
-                                                               AdvancedDetailsHelpTip="@AdvancedDetailsHelpTip" />
-                            </CanvasFloatingWindow>
+                            <CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow
+                                WindowId="@SelectionWindowKey" Origin="@CurrentInsights.Origin"
+                                Title="@SelectionWindowTitle" Summary="@SelectionWindowSummary"
+                                WindowState="@SelectionWindowState" WindowChanged="HandleInsightsWindowAsync"
+                                Selection="@CurrentInsights.Selection" Dispatch="HandleInsightsSelectionAsync"
+                                Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip" />
                         }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
@@ -555,6 +533,7 @@ else
                                     ChangeSummaryStatus="HandleSummaryStatusChangedAsync"
                                     SummaryStatuses="@SummaryStatusOptions"
                                     PendingDeletePrompt="@pendingDeletePrompt"
+                                    DeleteFailure="@deleteFailure"
                                     ConfirmDelete="ConfirmDeleteAsync"
                                     CancelDelete="CancelDelete"
                                     PendingTranscriptAction="@pendingTranscriptAction"
@@ -814,7 +793,16 @@ else
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();
-    private List<string> selectedNodeIds = [];
+    private List<string> insightSelectedNodeIds = [];
+    private List<string> selectedNodeIds {
+        get => insightSelectedNodeIds;
+        set {
+            if (!insightSelectedNodeIds.SequenceEqual(value, StringComparer.Ordinal)) {
+                insightsSelectionRevision++;
+            }
+            insightSelectedNodeIds = value;
+        }
+    }
     private string canvasToolMode = CanvasAuthoringMode.Select;
     private string? linkModeSourceId;
     private string? currentViewStateJson;
@@ -958,9 +946,6 @@ else
         => AgentChatNavigationIdentity.CreateForLocation(
             Navigation.BaseUri,
             Navigation.Uri);
-
-    private Task RunSelectedValidationAsync()
-        => Task.CompletedTask;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -1481,9 +1466,16 @@ else
 
         selectedNodeIds = args.SelectedNodeIds.ToList();
         pendingClientSelectionId = null;
+        var actionContext = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
         await RefreshSelectedWorkflowStatusAsync(args.PrimaryNodeId ?? selectedNodeIds.FirstOrDefault());
+        if (!IsCurrentAction(actionContext) || insightsSelectionRevision != selectionRevision) {
+            return;
+        }
         await LoadPartyEditorAsync();
-        await InvokeAsync(StateHasChanged);
+        if (IsCurrentAction(actionContext) && insightsSelectionRevision == selectionRevision) {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
@@ -2023,15 +2015,20 @@ else
         ProjectStructureCommandKind commandKind,
         string? nodeId = null,
         bool allowQuickActionDialog = false,
-        bool openInNewTab = false)
+        bool openInNewTab = false,
+        ProjectStructureActionContext? capturedContext = null)
     {
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         var targetNodeId = nodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(targetNodeId))
         {
             return;
         }
 
-        var attachmentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
+        var attachmentNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
         if (commandKind == ProjectStructureCommandKind.Open &&
             attachmentNode is not null &&
             ProjectStructureNodeHelpers.CanRenderAttachmentPreview(attachmentNode))
@@ -2052,9 +2049,25 @@ else
         }
 
         CloseQuickActionDialog();
-        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(ProjectId, targetNodeId, commandKind);
+        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(context.Surface.ProjectId, targetNodeId, commandKind,
+            mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+        committedInsightCommands.Enqueue((context.Admission, targetNodeId, commandKind, artifact));
+        while (committedInsightCommands.Count > 16) {
+            committedInsightCommands.Dequeue();
+        }
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         linkModeSourceId = null;
-        await ReloadSurfaceAsync(targetNodeId);
+        try {
+            await ReloadSurfaceAsync(targetNodeId);
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, "The native command completed; reload the view instead of repeating it.");
+            return;
+        }
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         if (artifact is not null)
         {
             if (openInNewTab)
@@ -2490,7 +2503,7 @@ else
 
     private async Task ClearSelectionAsync()
     {
-        selectedNodeIds.Clear();
+        selectedNodeIds = [];
         selectedWorkflowStatus = null;
         await PersistSelectionAsync();
         await LoadPartyEditorAsync();
@@ -2878,12 +2891,6 @@ else
             SignalsWindowKey => ResolveSignalsWindowState(),
             _ => ResolveWindowState(key)
         };
-
-    private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(SelectionWindowKey, state);
-
-    private Task HandleHealthWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(HealthWindowKey, state);
 
     private async Task ToggleWindowAsync(string key)
     {

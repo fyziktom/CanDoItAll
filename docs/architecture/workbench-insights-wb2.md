@@ -124,3 +124,59 @@ optional ownership diagnostic configuration reads. They are portable and match t
 existing sandbox convention. Two further findings match the README's PowerShell
 code-fence label; its commands require no platform-specific behavior or elevation.
 The reviewed baseline has 15,233 findings and final no-write enforcement passes.
+
+## Selection and support checkpoint
+
+Insights.UI now owns the complete Selection Panel, its actual node-detail child,
+Object Index/TreeView/menu, Signals and Health, including their feature CSS. Shared
+canvas/window styles remain in Components. Workbench prepares safe display values;
+the leaf contains no tracked structure nodes, metadata parsing, project writes,
+file-content authority or runtime services. Existing public value/component names
+have type forwards at their original assembly. The native task, file, Mermaid,
+runtime, Workflow and Process integrations retain their original hosts.
+
+Each rendered action carries the original project/profile/lifetime, view identity,
+selection revision, exact targets and receiver. An acknowledged menu carries its
+opening identity and offered actions. Selection A-B-A increments the revision even
+when the visible labels are unchanged. Native admission is checked before writes;
+accepted native node results, command artifacts and exact deletion/partial-recovery
+outcomes are retained before view reconciliation. Refresh failure does not repeat
+a write. Delete confirmations carry their exact prompt, original native admission,
+actor and selection revision. Window placement and selection/border state use a
+new mandatory-admission overload on the existing native view-state owner.
+
+Health's existing native capability is explicitly unavailable: its former callback
+was a no-op and `CanValidateSelected` was false. No validation run is invented.
+The independent controlled host exercises the optional explicit callback; native
+Health shows the original classifier's counts and spotlights without that action.
+
+At this checkpoint, 23 leaf cases and 28 native lifetime/integration cases pass with fresh
+discovery and pre-run source/assembly manifests. Native cases include stackable
+marker add/remove, progress/priority, unchanged neighbors, status/group frames,
+selection A-B-A, forged targets, recreated project lifetime denial, exact delete
+confirmation and the existing summary/transcript/secret action lifetime family.
+The native Workflow-status read rejects A-B-A completion, and the original Workflow
+attachment and canonical party-assignment cases pass. Native pending-delete denial
+keeps its exact prompt and visible error; the deferred render key includes the error.
+The failed error-display attempts are retained. Storage catalog server roots stay at
+their native owner; the renderer receives a configuration status. Activity punctuation
+is normalized to UTF-8 and the leaf suite was rerun on those bytes.
+Initial failures remain in private evidence: fixtures incorrectly assumed a zero
+progress default and a 25% Signals preset, then compared replacement progress with
+the old node rather than the replacement's own pre-write readback.
+
+The real application selected its retained WB1 task through Object Index, persisted
+Signals effects, opened and canceled the exact native delete confirmation, and
+edited the task through the new Selection Panel. Native readback retains dates,
+3.1256789 hours, 125.123456789 EUR, assignment revision and all untouched task fields;
+the intended description is stored in the canonical work-item metadata. Parent
+effective priority changes are native derived values, not extra writes. Both
+independent support instances render the actual windows and detail child. A
+large-desktop screenshot exposed the legacy `copy` icon alias; the leaf now maps
+that presentation alias to the shared icon's `content_copy` glyph.
+
+Portability review identifies five relocated case-insensitive display searches and
+one relocated marker compatibility comparison. All use explicit ordinal policy;
+none normalizes a filesystem path. Eight stale findings correspond to removed or
+moved code. W3 still owns final publication/watch measurements, complete native
+report math/cursors, actor/grant and consumer journeys, final graphs and closure.

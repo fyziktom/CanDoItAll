@@ -202,6 +202,9 @@ public partial class ProjectStructurePage
         }
 
         var openedNode = selectedNode;
+        var context = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
+        bool IsCurrent() => IsCurrentAction(context) && insightsSelectionRevision == selectionRevision;
         var expected = surface?.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("Reload the project before opening its party editor.");
         isPartyEditorLoading = true;
@@ -210,18 +213,22 @@ public partial class ProjectStructurePage
 
         try
         {
-            partyEditorOptions = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(expected.ProjectId);
-            projectPartyAssignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(expected.ProjectId);
-            if (selectedNode?.Id != openedNode.Id || surface?.ExpectedProjectAdmission != expected) {
+            await InsightsAdmissions.RequireCurrentAsync(expected, deferredCompletionCts.Token);
+            var options = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(expected.ProjectId);
+            var assignments = await ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(expected.ProjectId);
+            await InsightsAdmissions.RequireCurrentAsync(expected, deferredCompletionCts.Token);
+            if (!IsCurrent() || selectedNode?.Id != openedNode.Id) {
                 return;
             }
+            partyEditorOptions = options;
+            projectPartyAssignments = assignments;
             partyEditor = new ProjectStructurePartyEditorState
             {
                 ExpectedProjectAdmission = expected,
                 OpenedNode = openedNode,
                 QuickCreate = new ProjectPartyQuickCreateRequest
                 {
-                    ProjectId = ProjectId,
+                    ProjectId = expected.ProjectId,
                     PartyKind = ProjectPartyQuickCreateKind.Person
                 }
             };
@@ -240,9 +247,16 @@ public partial class ProjectStructurePage
                     break;
             }
         }
-        finally
-        {
-            isPartyEditorLoading = false;
+        catch (Exception exception) {
+            if (IsCurrent()) {
+                ReportActionFailure(context, exception);
+            } else {
+                Logger.LogWarning(exception, "Party editor read for original project {ProjectId} completed after its view retired.", expected.ProjectId);
+            }
+        } finally {
+            if (IsCurrent()) {
+                isPartyEditorLoading = false;
+            }
         }
     }
 

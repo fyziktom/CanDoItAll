@@ -11,7 +11,7 @@
     var canMovePrevious = view.CanMovePrevious;
     var canMoveNext = view.CanMoveNext;
     var pageDescription = page is null ? "No accepted page" : page.TotalCount == 0 ? "No results"
-        : $"Page {page.PageIndex + 1:N0} · showing {page.Items.Count:N0} of {page.TotalCount:N0}";
+        : $"Page {page.PageIndex + 1:N0} Â· showing {page.Items.Count:N0} of {page.TotalCount:N0}";
 }
 <Dialog IsOpen="true"
         Eyebrow="Manager Summary"
@@ -59,19 +59,19 @@
                     </InputSelect>
                 </Stack>
                 <MetricCard Label="Matching runs"
-                            Value="@(page is null ? "—" : FormatCount(page.TotalCount))" />
+                            Value="@(page is null ? "â€”" : FormatCount(page.TotalCount))" />
                 <MetricCard Label="Total length"
-                            Value="@(page is null ? "—" : FormatDuration(page.TotalDurationMilliseconds))" />
+                            Value="@(page is null ? "â€”" : FormatDuration(page.TotalDurationMilliseconds))" />
             </Grid>
 
             <Grid Gap="LayoutGap.Medium"
                   ColumnTemplateMd="repeat(3,minmax(0,1fr))">
                 <MetricCard Label="Known cost"
-                            Value="@(page is null ? "—" : FormatUsd(page.Totals.HistoricalKnownUsd))" />
+                            Value="@(page is null ? "â€”" : FormatUsd(page.Totals.HistoricalKnownUsd))" />
                 <MetricCard Label="Recorded estimate"
-                            Value="@(page is null ? "—" : FormatUsd(page.Totals.HistoricalEstimatedUsd))" />
+                            Value="@(page is null ? "â€”" : FormatUsd(page.Totals.HistoricalEstimatedUsd))" />
                 <MetricCard Label="Unknown-cost runs"
-                            Value="@(page is null ? "—" : FormatCount(page.Totals.UnknownHistoricalCostCount))" />
+                            Value="@(page is null ? "â€”" : FormatCount(page.Totals.UnknownHistoricalCostCount))" />
             </Grid>
 
             @if (page is not null && (isLoading || loadError is not null)) {

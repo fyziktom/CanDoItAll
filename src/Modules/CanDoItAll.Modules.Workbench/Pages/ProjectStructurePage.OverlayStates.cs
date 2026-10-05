@@ -381,6 +381,8 @@ public sealed record ProjectStructureDeletePrompt(
     public bool IsBulk => NodeIds.Count > 1;
 }
 
+public sealed record ProjectStructureDeleteConfirmation(ProjectStructureDeletePrompt Prompt, ProjectStructureManagedStorageDisposition Disposition);
+
 public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,
     string RootTitle,

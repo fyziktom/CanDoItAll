@@ -648,7 +648,9 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(pendingDeletePrompt.Title)
                 .Append(':')
-                .Append(pendingDeletePrompt.ImpactCopy);
+                .Append(pendingDeletePrompt.ImpactCopy)
+                .Append(':')
+                .Append(deleteFailure);
         }
         else
         {
@@ -712,74 +714,4 @@ public partial class ProjectStructurePage
         }
     }
 
-    private Task ApplySelectionProgressAsync(int progress)
-        => ApplyProgressAsync(selectedNodeIds, "progress", progress);
-
-    private Task ApplySelectionPriorityAsync(int priority)
-        => ApplyPriorityAsync(selectedNodeIds, priority);
-
-    private Task ApplySelectionMarkerAsync(ProjectStructureSelectionMarkerRequest request)
-        => ApplyMarkerAsync(selectedNodeIds, request.Badge, request.Tone, request.Label);
-
-    private Task UpdateSelectionBorderNameAsync(string value)
-    {
-        selectionBorderName = value;
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private Task ExecuteSelectedInspectorActionAsync(string actionId)
-        => selectedNode is null
-            ? Task.CompletedTask
-            : ExecuteInspectorActionAsync(selectedNode, actionId);
-
-    private Task OpenSelectedAttachmentLocallyAsync()
-        => selectedNode is null
-            ? Task.CompletedTask
-            : OpenAttachmentLocallyAsync(selectedNode);
-
-    private async Task OpenSelectedAttachmentPreviewAsync()
-    {
-        if (selectedNode is null)
-        {
-            return;
-        }
-
-        await OpenAttachmentPreviewAsync(selectedNode);
-    }
-
-    private async Task OpenSelectedMermaidViewerAsync()
-    {
-        if (selectedNode is null)
-        {
-            return;
-        }
-
-        await OpenMermaidViewerAsync(selectedNode);
-        await InvokeAsync(StateHasChanged);
-    }
-}
-
-public sealed record ProjectStructureSelectionBadgePresentation(
-    string Text,
-    ProjectStructureSelectionBadgeStyle Style,
-    string TestId);
-
-public enum ProjectStructureSelectionBadgeStyle
-{
-    Standard,
-    Uploaded,
-    Scheduled,
-    Synced,
-    FileGeneric,
-    FilePdf,
-    FileExcel,
-    FileDocx,
-    FileMarkdown,
-    FileMermaid,
-    FileScreenshot,
-    FileLog,
-    FileArchive,
-    FileAudio,
-    FileJson,
-    FileText
 }

@@ -236,29 +236,12 @@ public partial class ProjectStructurePage
                 action.Tone))
             .ToList();
 
-    private async Task ExecuteOutlineContextActionAsync(ProjectStructureSupportPanelContextActionRequest request)
-    {
-        if (string.Equals(request.ActionId, "delete", StringComparison.OrdinalIgnoreCase) &&
-            request.TargetNodeIds is { Count: > 1 } targetNodeIds)
-        {
-            await DeleteNodesAsync(targetNodeIds);
-            return;
-        }
-
-        var node = ResolveNode(request.NodeId);
-        if (node is null)
-        {
-            return;
-        }
-
-        var actionContext = CaptureActionContext(request.ActionId, node);
-        await SelectNodeAsync(node.Id);
-        await ExecuteInspectorActionAsync(node, request.ActionId, actionContext);
-    }
-
     private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId,
         ProjectStructureActionContext? capturedContext = null) {
-        var actionContext = capturedContext ?? CaptureActionContext(actionId, node);
+        var actionContext = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(actionContext)) {
+            return;
+        }
         if (await TryHandleFileBrowserActionAsync(actionId, node.Id))
         {
             return;
@@ -299,22 +282,22 @@ public partial class ProjectStructurePage
                 await OpenArtifactInNewTabAsync(node.Route);
                 break;
             case "command:open":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id, capturedContext: actionContext);
                 break;
             case "command:wizard":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, node.Id, capturedContext: actionContext);
                 break;
             case "command:branch":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, node.Id, capturedContext: actionContext);
                 break;
             case "command:mark-used":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, node.Id, capturedContext: actionContext);
                 break;
             case "command:skip":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, node.Id, capturedContext: actionContext);
                 break;
             case "command:test":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id, capturedContext: actionContext);
                 break;
             case "copy-id":
             case "copy-info":
@@ -357,7 +340,7 @@ public partial class ProjectStructurePage
                 await BeginReconnectAsync(node.Id);
                 break;
             case "disconnect":
-                await DisconnectNodeAsync(node.Id);
+                await DisconnectNodeAsync(node.Id, actionContext);
                 break;
             case "move-descendants-to-subproject":
                 await OpenMoveDescendantsToSubprojectDialogAsync(node);
@@ -384,7 +367,7 @@ public partial class ProjectStructurePage
                 await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, node.Id, actionContext);
                 break;
             case "delete":
-                await DeleteNodeAsync(node.Id);
+                await DeleteNodeAsync(node.Id, actionContext);
                 break;
         }
     }

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-05T15:25:51.779002+00:00",
+  "generated_utc": "2026-10-05T16:16:35.872235+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15233,
+  "allowance_count": 15231,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59270,42 +59270,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "30e94957c7966c34bc91828a8b318c22943dac6d92d3f5493cafa55f4d9fbd21",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "593563da5ec929d058f8007c6030d4bac3963de0d6745d1dbe2020e7a881147a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "767981781e6385744afa61a819c89e3d4bd1947b2bc20e8111bf25382b532a8d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9d1f39b3cbbf2e176eb0b274196bc3be9ff5e3efde28740a328b3dce8a7cea31",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "ad0fc31b68b1073c20433f3ade5644397ee2cb0c5b5884ab63ba5f01c9c9e573",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
-      "category": "case-policy",
-      "source_fingerprint": "ecd3806361d73e9f3b102974a8b7e82797962b2b7326d97c8f00b5dce110f635",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentDetailsDialog.razor",
       "category": "case-policy",
       "source_fingerprint": "7d75a0309fab19f994e10e431d7a8cc0c6278df8a60762c51f9b021cc80af6a0",
@@ -59576,15 +59540,15 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
       "category": "case-policy",
-      "source_fingerprint": "3ddeccc781e13b6a6a5354eaca42b048102704c09bb48af26c014944e5e5b597",
+      "source_fingerprint": "ffc1ad9dcda24e7ec0752961e032403a7a25301e69060b975a48045477e073b2",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
       "category": "case-policy",
-      "source_fingerprint": "6b42c6dade37ba2c753dbea0cdd8026535a96f5476b249a5a28de0337be22c00",
+      "source_fingerprint": "3ddeccc781e13b6a6a5354eaca42b048102704c09bb48af26c014944e5e5b597",
       "count": 1
     },
     {
@@ -59903,12 +59867,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SelectionPanel.cs",
       "category": "case-policy",
       "source_fingerprint": "d0ac1ff46420b38a30a67e5151cba704460c33cb9e8bd60d1e98e5f3219f639e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
-      "category": "case-policy",
-      "source_fingerprint": "3dab61f0afc014befcc0850761b5e90ab79914b2d7d907add9a60256b024c7ed",
       "count": 1
     },
     {
@@ -75455,6 +75413,36 @@
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
+      "category": "case-policy",
+      "source_fingerprint": "14761dc4a28395f48a4b242675d16a7bda3b04cb30b109ae1a6b5737a1534d9a",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
+      "category": "case-policy",
+      "source_fingerprint": "193b55083decf59ffc072946136e8bf36e4a11cb1cf3d2f5debcd83d845970e8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
+      "category": "case-policy",
+      "source_fingerprint": "7e390d3911af38e98447c3f8843e79b992c84140d45cd6d06e03eeb6d4432579",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
+      "category": "case-policy",
+      "source_fingerprint": "9736eb8d3a8011cd2d58198948ed391dc7d368ea5270fc7c9b16ad49908d02d1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor",
+      "category": "case-policy",
+      "source_fingerprint": "cfbf9bdde309e544652185fdfab1c74835d259df597c2a46536a5af23360d6d5",
       "count": 1
     },
     {

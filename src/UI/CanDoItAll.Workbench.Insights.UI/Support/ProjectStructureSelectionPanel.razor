@@ -1,14 +1,23 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
-@using CanDoItAll.SharedKernel
 
-@if (State.SelectedNodes.Count != 1 && !string.IsNullOrWhiteSpace(State.Feedback))
+<div class="workbench-insights-selection">
+@{
+    var state = State;
+    var origin = Origin;
+    var receiver = Dispatch;
+    var targets = state.SelectedNodes.Select(node => node.Id).ToArray();
+    Task Send(InsightsSelectionCommand command) => receiver.InvokeAsync(new InsightsSelectionIntent(origin, targets, command));
+}
+
+@if (state.SelectedNodes.Count != 1 && !string.IsNullOrWhiteSpace(state.Feedback))
 {
-    <div class="project-structure-inline-feedback" data-tone="@State.FeedbackTone">
-        @State.Feedback
+    <div class="project-structure-inline-feedback" data-tone="@state.FeedbackTone">
+        @state.Feedback
     </div>
 }
 
-@if (State.SelectedNodes.Count == 0)
+@if (state.SelectedNodes.Count == 0)
 {
     <div class="cw-empty-state">
         <p class="cw-panel-kicker">Canvas selection</p>
@@ -22,28 +31,28 @@
         </div>
     </div>
 }
-else if (State.SelectedNodes.Count > 1)
+else if (state.SelectedNodes.Count > 1)
 {
     <div class="space-y-4">
         <div class="cw-panel-card">
             <p class="cw-panel-kicker">Multi-select</p>
-            <h3 class="cw-panel-title">@($"{State.SelectedNodes.Count} nodes selected")</h3>
+            <h3 class="cw-panel-title">@($"{state.SelectedNodes.Count} nodes selected")</h3>
             <p class="cw-panel-copy">Batch movement stays on the canvas. Shared status, progress, marker, priority, and grouping controls stay here.</p>
             <div class="cw-button-row">
-                <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionAsync">Clear selection</button>
-                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => SelectNodeAsync.InvokeAsync(State.SelectedNodes[0].Id))">Focus first</button>
+                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => Send(new InsightsSelectionCommand.Clear()))">Clear selection</button>
+                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => Send(new InsightsSelectionCommand.Focus(state.SelectedNodes[0].Id)))">Focus first</button>
             </div>
         </div>
 
         <div class="cw-panel-card project-structure-batch-card">
-            @if (State.CanApplySelectionStatus)
+            @if (state.CanApplySelectionStatus)
             {
                 <div class="project-structure-action-band">
                     <span>Status</span>
                     <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionStatusAsync.InvokeAsync("In progress"))'>In progress</button>
-                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionStatusAsync.InvokeAsync("Done"))'>Done</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionStatusAsync.InvokeAsync("N/A"))'>N/A</button>
+                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.InProgress)))'>In progress</button>
+                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.Done)))'>Done</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.NotApplicable)))'>N/A</button>
                     </div>
                 </div>
             }
@@ -51,30 +60,30 @@ else if (State.SelectedNodes.Count > 1)
             <div class="project-structure-action-band">
                 <span>Progress</span>
                 <div class="cw-button-row">
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionProgressAsync.InvokeAsync(0))'>0%</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionProgressAsync.InvokeAsync(25))'>25%</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionProgressAsync.InvokeAsync(50))'>50%</button>
-                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionProgressAsync.InvokeAsync(100))'>100%</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(0)))'>0%</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(25)))'>25%</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(50)))'>50%</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(100)))'>100%</button>
                 </div>
             </div>
 
             <div class="project-structure-action-band">
                 <span>Marker</span>
                 <div class="cw-button-row">
-                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplySelectionMarkerAsync.InvokeAsync(new ProjectStructureSelectionMarkerRequest("question", "sky", "Question")))'>Question</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionMarkerAsync.InvokeAsync(new ProjectStructureSelectionMarkerRequest("idea", "accent", "Idea")))'>Idea</button>
-                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionMarkerAsync.InvokeAsync(new ProjectStructureSelectionMarkerRequest("risk", "danger", "Risk")))'>Risk</button>
-                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionMarkerAsync.InvokeAsync(new ProjectStructureSelectionMarkerRequest(string.Empty, string.Empty, string.Empty)))'>Clear</button>
+                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("question", "sky", "Question"))))'>Question</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("idea", "accent", "Idea"))))'>Idea</button>
+                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("risk", "danger", "Risk"))))'>Risk</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest(string.Empty, string.Empty, string.Empty))))'>Clear</button>
                 </div>
             </div>
 
             <div class="project-structure-action-band">
                 <span>Priority</span>
                 <div class="cw-button-row">
-                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => ApplySelectionPriorityAsync.InvokeAsync(1))'>P1</button>
-                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => ApplySelectionPriorityAsync.InvokeAsync(2))'>P2</button>
-                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => ApplySelectionPriorityAsync.InvokeAsync(3))'>P3</button>
-                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => ApplySelectionPriorityAsync.InvokeAsync(0))'>Clear</button>
+                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(1)))'>P1</button>
+                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(2)))'>P2</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(3)))'>P3</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(0)))'>Clear</button>
                 </div>
             </div>
 
@@ -84,11 +93,11 @@ else if (State.SelectedNodes.Count > 1)
                     <input class="cw-context-toolbox__search"
                            type="text"
                            placeholder="Name this border"
-                           value="@State.SelectionBorderName"
-                           @oninput="HandleSelectionBorderNameChangedAsync" />
+                           value="@state.SelectionBorderName"
+                           @oninput="@((ChangeEventArgs args) => Send(new InsightsSelectionCommand.BorderName(args.Value?.ToString() ?? string.Empty)))" />
                     <div class="cw-button-row">
-                        <button type="button" class="cw-button" data-tone="sky" @onclick="CreateSelectionBorderAsync">Border</button>
-                        <button type="button" class="cw-button" data-tone="ghost" @onclick="ClearSelectionBordersAsync">Clear border</button>
+                        <button type="button" class="cw-button" data-tone="sky" @onclick="@(() => Send(new InsightsSelectionCommand.CreateBorder(state.SelectionBorderName)))">Border</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => Send(new InsightsSelectionCommand.ClearBorders()))">Clear border</button>
                     </div>
                 </div>
             </div>
@@ -97,9 +106,9 @@ else if (State.SelectedNodes.Count > 1)
         <div class="cw-panel-card">
             <p class="cw-panel-kicker">Selected nodes</p>
             <div class="cw-list">
-                @foreach (var node in State.SelectedNodes)
+                @foreach (var node in state.SelectedNodes)
                 {
-                    <button type="button" class="cw-list-item" @onclick="@(() => SelectNodeAsync.InvokeAsync(node.Id))">
+                    <button type="button" class="cw-list-item" @onclick="@(() => Send(new InsightsSelectionCommand.Focus(node.Id)))">
                         <strong>@node.Title</strong>
                         <span>@($"{node.KindLabel} - {node.Status}")</span>
                     </button>
@@ -108,9 +117,9 @@ else if (State.SelectedNodes.Count > 1)
         </div>
     </div>
 }
-else if (State.SelectedNode is not null)
+else if (state.SelectedNode is not null)
 {
-    var selectedNode = State.SelectedNode;
+    var selectedNode = state.SelectedNode;
 
         <div class="space-y-4">
             <div class="cw-panel-card project-structure-selected-card">
@@ -134,7 +143,7 @@ else if (State.SelectedNode is not null)
                 }
             </div>
 
-            @if (State.IsConnectMode)
+            @if (state.IsConnectMode)
             {
                 <div class="cw-panel-card">
                     <p class="cw-panel-kicker">Connect mode</p>
@@ -142,7 +151,7 @@ else if (State.SelectedNode is not null)
                 </div>
             }
 
-            @if (State.IsReconnectMode)
+            @if (state.IsReconnectMode)
             {
                 <div class="cw-panel-card">
                     <p class="cw-panel-kicker">Reconnect mode</p>
@@ -281,7 +290,7 @@ else if (State.SelectedNode is not null)
                         <button type="button"
                                 class="cw-button"
                                 data-tone="primary"
-                                @onclick="OpenAttachmentLocallyAsync">
+                                @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.AttachmentLocal)))">
                             Show in folder
                         </button>
                     }
@@ -290,7 +299,7 @@ else if (State.SelectedNode is not null)
                         <button type="button"
                                 class="cw-button"
                                 data-tone="accent"
-                                @onclick="OpenAttachmentPreviewAsync">
+                                @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.AttachmentPreview)))">
                             Expand preview
                         </button>
                     }
@@ -316,7 +325,7 @@ else if (State.SelectedNode is not null)
                     <button type="button"
                             class="cw-button"
                             data-tone="accent"
-                            @onclick="OpenMermaidViewerAsync">
+                            @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.Mermaid)))">
                         View Mermaid
                     </button>
                 </div>
@@ -332,9 +341,9 @@ else if (State.SelectedNode is not null)
                     <Button Variant="Variant.Outlined"
                             ButtonStyle="@ResolveActionButtonStyle(action.Tone)"
                             Class="project-structure-node-action"
-                            Click="@(() => ExecuteInspectorActionAsync.InvokeAsync(action.ActionId))">
+                            Click="@(() => Send(new InsightsSelectionCommand.Inspector(action.ActionId)))">
                         <span class="project-structure-node-action__icon" aria-hidden="true">
-                            <Icon Name="@action.Icon" />
+                            <Icon Name="@InsightsActionIcons.Resolve(action.Icon)" />
                         </span>
                         <span>@action.Label</span>
                     </Button>
@@ -360,7 +369,7 @@ else if (State.SelectedNode is not null)
             <div class="cw-button-row">
                 <Button Text="Open standard blocks"
                         ButtonStyle="ButtonStyle.Info"
-                        Click="OpenToolboxAsync" />
+                        Click="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.Toolbox)))" />
             </div>
         </div>
 
@@ -423,69 +432,20 @@ else if (State.SelectedNode is not null)
     </div>
 }
 
+</div>
+
 @code {
-    private string? lastRenderKey;
+    [Parameter, EditorRequired] public ProjectStructureSelectionPanelState State { get; set; } = default!;
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+    [Parameter, EditorRequired] public EventCallback<InsightsSelectionIntent> Dispatch { get; set; }
+    [Parameter] public string AdvancedDetailsHelpBody { get; set; } = string.Empty;
+    [Parameter] public string AdvancedDetailsHelpTip { get; set; } = string.Empty;
+    private (string RenderKey, InsightsOrigin Origin, EventCallback<InsightsSelectionIntent> Receiver, string Help, string Tip)? rendered;
+    private (string, InsightsOrigin, EventCallback<InsightsSelectionIntent>, string, string) RenderIdentity
+        => (State.RenderKey, Origin, Dispatch, AdvancedDetailsHelpBody, AdvancedDetailsHelpTip);
 
-    [Parameter, EditorRequired]
-    public ProjectStructureSelectionPanelState State { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public EventCallback ClearSelectionAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<string> SelectNodeAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<string> ApplySelectionStatusAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<int> ApplySelectionProgressAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<ProjectStructureSelectionMarkerRequest> ApplySelectionMarkerAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<int> ApplySelectionPriorityAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<string> SelectionBorderNameChangedAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback CreateSelectionBorderAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback ClearSelectionBordersAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<string> ExecuteInspectorActionAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback OpenToolboxAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback OpenAttachmentLocallyAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback OpenAttachmentPreviewAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback OpenMermaidViewerAsync { get; set; }
-
-    [Parameter, EditorRequired]
-    public string AdvancedDetailsHelpBody { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired]
-    public string AdvancedDetailsHelpTip { get; set; } = string.Empty;
-
-    protected override bool ShouldRender()
-        => lastRenderKey is null ||
-           !string.Equals(lastRenderKey, State.RenderKey, StringComparison.Ordinal);
-
-    protected override void OnAfterRender(bool firstRender)
-        => lastRenderKey = State.RenderKey;
-
-    private Task HandleSelectionBorderNameChangedAsync(ChangeEventArgs args)
-        => SelectionBorderNameChangedAsync.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    protected override bool ShouldRender() => rendered is not { } previous || !previous.Equals(RenderIdentity);
+    protected override void OnAfterRender(bool firstRender) => rendered = RenderIdentity;
 
     private static ButtonStyle ResolveActionButtonStyle(string tone)
     {

@@ -30,6 +30,12 @@ public partial class ProjectStructurePage
     private string selectionBorderName = string.Empty;
     private string? reconnectNodeId;
     private ProjectStructureDeletePrompt? pendingDeletePrompt;
+    private string? deleteFailure;
+    private ProjectStructureActionContext? deleteActionContext;
+    private long deleteSelectionRevision;
+    private sealed record RetainedDeletionOutcome(ProjectStructureActionContext Origin,
+        ProjectStructureDeletionResult? Result = null, ProjectStructureDeletionBatchRecovery? Recovery = null, Exception? Failure = null);
+    private readonly Queue<RetainedDeletionOutcome> retainedDeletionOutcomes = new();
     private ProjectStructureSummaryDialogState? summaryDialog;
     private ProjectStructureTranscriptActionDialogState? pendingTranscriptAction;
     private ProjectStructureNode? mermaidPreviewNode;
@@ -114,17 +120,18 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DisconnectNodeAsync(string? nodeId = null)
-    {
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null)
-        {
+    private async Task DisconnectNodeAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (!IsCurrentAction(context) || targetNode is null) {
             return;
         }
-
-        reconnectNodeId = null;
-        await ProjectWorkbenchService.ReparentObjectAsync(ProjectId, targetNode.Id, null);
-        await ReloadSurfaceAsync(targetNode.Id);
+        await ProjectWorkbenchService.ReparentObjectAsync(context.Surface.ProjectId, targetNode.Id, null,
+            mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+        if (IsCurrentAction(context)) {
+            reconnectNodeId = null;
+            await ReloadSurfaceAsync(targetNode.Id);
+        }
     }
 
     private async Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind)
@@ -149,10 +156,11 @@ public partial class ProjectStructurePage
         await ReloadSurfaceAsync(sourceNodeId);
     }
 
-    private async Task DeleteNodeAsync(string? nodeId = null)
+    private async Task DeleteNodeAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null)
     {
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null)
+        var context = capturedContext ?? CaptureActionContext();
+        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (!IsCurrentAction(context) || targetNode is null)
         {
             return;
         }
@@ -164,7 +172,7 @@ public partial class ProjectStructurePage
                 [targetNode],
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
                 $"{targetNode.Title} was deleted.",
-                "The selected node could not be deleted.");
+                "The selected node could not be deleted.", context);
             if (!deleted)
             {
                 return;
@@ -173,49 +181,68 @@ public partial class ProjectStructurePage
             return;
         }
 
+        deleteFailure = null;
+        deleteActionContext = context;
+        deleteSelectionRevision = insightsSelectionRevision;
         pendingDeletePrompt = prompt;
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds)
+    private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds, ProjectStructureActionContext? capturedContext = null)
     {
-        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
-        if (targetNodes.Count == 0)
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        var targetNodes = context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id, StringComparer.Ordinal)).ToArray();
+        if (targetNodes.Length == 0)
         {
             return;
         }
 
-        if (targetNodes.Count == 1)
+        if (targetNodes.Length == 1)
         {
-            await DeleteNodeAsync(targetNodes[0].Id);
+            await DeleteNodeAsync(targetNodes[0].Id, context);
             return;
         }
 
+        deleteActionContext = context;
+        deleteSelectionRevision = insightsSelectionRevision;
+        deleteFailure = null;
         pendingDeletePrompt = BuildDeletePrompt(targetNodes);
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ConfirmDeleteAsync(
-        ProjectStructureManagedStorageDisposition managedStorageDisposition)
-    {
-        if (pendingDeletePrompt is null)
-        {
+    private async Task ConfirmDeleteAsync(ProjectStructureDeleteConfirmation confirmation) {
+        var deletePrompt = confirmation.Prompt;
+        var context = deleteActionContext;
+        if (!ReferenceEquals(pendingDeletePrompt, deletePrompt) || context is null ||
+            !IsCurrentAction(context) || deleteSelectionRevision != insightsSelectionRevision) {
             return;
         }
-
-        var deletePrompt = pendingDeletePrompt;
+        try {
+            await InsightsAdmissions.RequireCurrentAsync(context.Admission, deferredCompletionCts.Token);
+        } catch (Exception exception) {
+            RetainDeletionOutcome(new(context, Failure: exception));
+            Logger.LogWarning(exception, "Delete confirmation was not admitted for original project {ProjectId}, lifetime {LifetimeId}.",
+                context.Surface.ProjectId, context.Admission.LifetimeId);
+            if (ReferenceEquals(pendingDeletePrompt, deletePrompt) && IsCurrentAction(context)) {
+                deleteFailure = exception.Message;
+                await InvokeAsync(StateHasChanged);
+            }
+            return;
+        }
+        if (!ReferenceEquals(pendingDeletePrompt, deletePrompt) || !IsCurrentAction(context) ||
+            deleteSelectionRevision != insightsSelectionRevision) {
+            return;
+        }
+        var managedStorageDisposition = confirmation.Disposition;
         var nodeIds = ResolvePendingDeleteNodeIds(deletePrompt);
+        var targetNodes = context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList();
         pendingDeletePrompt = null;
+        deleteFailure = null;
+        deleteActionContext = null;
         reconnectNodeId = null;
-        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
-        if (targetNodes.Count == 0)
-        {
-            workflowFeedback = "The selected node could not be found anymore.";
-            workflowFeedbackTone = "warn";
-            await ReloadSurfaceAsync();
-            return;
-        }
-
         var isBulk = targetNodes.Count > 1;
         var hasManagedAttachments = deletePrompt.ManagedAttachmentCount > 0;
         var retainedFiles = managedStorageDisposition ==
@@ -234,17 +261,23 @@ public partial class ProjectStructurePage
                 : isBulk
                     ? $"{targetNodes.Count} selected branches and eligible managed files were deleted."
                     : "The selected branch and its eligible managed files were deleted.",
-            isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.");
+            isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.", context);
     }
 
-    private void CancelDelete()
-        => pendingDeletePrompt = null;
+    private void CancelDelete(ProjectStructureDeletePrompt prompt) {
+        if (ReferenceEquals(pendingDeletePrompt, prompt)) {
+            pendingDeletePrompt = null;
+            deleteFailure = null;
+            deleteActionContext = null;
+        }
+    }
 
     private async Task<bool> DeleteSelectedNodesAsync(
         IReadOnlyList<ProjectStructureNode> targetNodes,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string successMessage,
-        string failureMessage)
+        string failureMessage,
+        ProjectStructureActionContext context)
     {
         var deletedAny = false;
         var failedAny = false;
@@ -253,21 +286,25 @@ public partial class ProjectStructurePage
         try
         {
             var deletion = await BatchDeletionCoordinator.DeleteNodesAsync(
-                ProjectId,
+                context.Surface.ProjectId,
                 targetNodes.Select(node => node.Id).ToArray(),
-                managedStorageDisposition);
+                managedStorageDisposition,
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+            RetainDeletionOutcome(new(context, Result: deletion));
             deletionWarnings.AddRange(deletion.DeletionWarnings);
             deletedAny = deletion.DeletedNodeCount > 0;
         }
         catch (ProjectStructureDeletionBatchPartialCommitException exception)
         {
+            RetainDeletionOutcome(new(context, Recovery: exception.Recovery));
             deletedAny = exception.Recovery.CompletedNodeCount > 0 ||
                          exception.Recovery.Recoveries.Count > 0;
             failedAny = true;
             deletionWarnings.AddRange(exception.Recovery.Warnings);
-            foreach (var recovery in exception.Recovery.Recoveries)
-            {
-                AddOrReplacePendingDeletionRecovery(recovery);
+            if (IsCurrentAction(context)) {
+                foreach (var recovery in exception.Recovery.Recoveries) {
+                    AddOrReplacePendingDeletionRecovery(recovery);
+                }
             }
 
             if (exception.Recovery.BranchFailures.Count > 0)
@@ -291,7 +328,7 @@ public partial class ProjectStructurePage
                 {
                     Logger.LogWarning(
                         "Project structure branch deletion failed. ProjectId={ProjectId} RootNodeId={RootNodeId} FailureKind={FailureKind} BindingId={BindingId} Disposition={Disposition}.",
-                        ProjectId,
+                        context.Surface.ProjectId,
                         branchFailure.RootNodeId,
                         branchFailure.Kind,
                         branchFailure.BindingId,
@@ -301,6 +338,7 @@ public partial class ProjectStructurePage
         }
         catch (ProjectManagedStorageBindingException exception)
         {
+            RetainDeletionOutcome(new(context, Failure: exception));
             failedAny = true;
             failureMessage = managedStorageDisposition ==
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
@@ -308,24 +346,41 @@ public partial class ProjectStructurePage
                     : failureMessage;
             Logger.LogWarning(
                 "Project structure deletion was blocked by managed-storage validation. ProjectId={ProjectId} BindingId={BindingId} Disposition={Disposition}.",
-                ProjectId,
+                context.Surface.ProjectId,
                 exception.BindingId,
                 managedStorageDisposition);
         }
         catch (Exception exception)
         {
+            RetainDeletionOutcome(new(context, Failure: exception));
+            failureMessage = "No additional deletion result was confirmed. Inspect the original project before retrying.";
             failedAny = true;
             Logger.LogWarning(
                 "Project structure deletion failed before durable completion. ProjectId={ProjectId} RootCount={RootCount} Disposition={Disposition} FailureType={FailureType}.",
-                ProjectId,
+                context.Surface.ProjectId,
                 targetNodes.Count,
                 managedStorageDisposition,
                 exception.GetType().Name);
         }
 
+        if (!IsCurrentAction(context)) {
+            return deletedAny && !failedAny;
+        }
         if (failedAny)
         {
-            await ReloadSurfaceAsync();
+            try {
+                await ReloadSurfaceAsync();
+            } catch (Exception exception) {
+                RetainDeletionOutcome(new(context, Failure: exception));
+                if (IsCurrentAction(context)) {
+                    workflowFeedback = "The original deletion outcome is retained, but the view could not refresh. Reload; do not repeat the deletion.";
+                    workflowFeedbackTone = "warn";
+                }
+                return false;
+            }
+            if (!IsCurrentAction(context)) {
+                return false;
+            }
             workflowFeedback = pendingDeletionRecoveries.Count > 0
                 ? AppendDeletionWarningFeedback(
                     string.Join(
@@ -341,7 +396,19 @@ public partial class ProjectStructurePage
 
         if (deletedAny)
         {
-            await ReloadSurfaceAsync();
+            try {
+                await ReloadSurfaceAsync();
+            } catch (Exception exception) {
+                RetainDeletionOutcome(new(context, Failure: exception));
+                if (IsCurrentAction(context)) {
+                    workflowFeedback = "The original deletion outcome is retained, but the view could not refresh. Reload; do not repeat the deletion.";
+                    workflowFeedbackTone = "warn";
+                }
+                return false;
+            }
+            if (!IsCurrentAction(context)) {
+                return false;
+            }
             if (pendingDeletionRecoveries.Count > 0)
             {
                 workflowFeedback =
@@ -361,6 +428,13 @@ public partial class ProjectStructurePage
         workflowFeedbackTone = "warn";
         await InvokeAsync(StateHasChanged);
         return false;
+    }
+
+    private void RetainDeletionOutcome(RetainedDeletionOutcome outcome) {
+        retainedDeletionOutcomes.Enqueue(outcome);
+        while (retainedDeletionOutcomes.Count > 16) {
+            retainedDeletionOutcomes.Dequeue();
+        }
     }
 
     private async Task RetryPendingDeletionCleanupAsync()

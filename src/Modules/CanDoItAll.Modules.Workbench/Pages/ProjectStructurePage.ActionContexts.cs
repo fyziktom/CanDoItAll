@@ -14,13 +14,14 @@ public partial class ProjectStructurePage {
     private sealed record ProjectStructureActionContext(
         ProjectStructureSurface Surface,
         ProjectWriteAdmission Admission,
-        long NavigationRevision);
+        long NavigationRevision,
+        Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Actor);
 
     private ProjectStructureActionContext CaptureActionContext() {
         var displayed = surface ?? throw new InvalidOperationException("The project surface is no longer available. Reload it before continuing.");
         var admission = displayed.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("The original project lifetime is unavailable. Reload the project before continuing.");
-        return new(displayed, admission, actionNavigationRevision);
+        return new(displayed, admission, actionNavigationRevision, InsightsAuthentication);
     }
 
     private ProjectStructureActionContext? CaptureActionContext(string actionId, ProjectStructureNode? node) {
@@ -34,6 +35,7 @@ public partial class ProjectStructurePage {
     private bool IsCurrentAction(ProjectStructureActionContext context)
         => !deferredCompletionCts.IsCancellationRequested &&
            context.NavigationRevision == actionNavigationRevision &&
+           ReferenceEquals(context.Actor, InsightsAuthentication) &&
            ProjectId == context.Surface.ProjectId &&
            surface?.ExpectedProjectAdmission == context.Admission;
 

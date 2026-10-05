@@ -22,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePageActionLifetimeTests {
+public sealed partial class ProjectStructurePageActionLifetimeTests {
     public enum SummaryAction { Status, Workbook, Gantt }
 
     [Theory]
@@ -97,7 +97,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         var cut = Render(harness, original.ProjectId);
         await SelectAsync(cut, original.Node.Id);
         var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => true);
-        var pending = cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSelectionPanel>().Instance.ExecuteInspectorActionAsync.InvokeAsync("export-image"));
+        var pending = InvokeSelectionAsync(cut, new CanDoItAll.Workbench.Insights.UI.InsightsSelectionCommand.Inspector("export-image"));
         try {
             cut.WaitForAssertion(() => Assert.Single(capture.Invocations));
             if (recreate) {
@@ -279,7 +279,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         var next = await CreateTargetAsync(harness, "Other reference project");
         var cut = Render(harness, original.ProjectId);
         await SelectAsync(cut, original.Node.Id);
-        await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSelectionPanel>().Instance.ExecuteInspectorActionAsync.InvokeAsync("edit"));
+        await InvokeSelectionAsync(cut, new CanDoItAll.Workbench.Insights.UI.InsightsSelectionCommand.Inspector("edit"));
         cut.WaitForElement("[data-testid='project-structure-secret-dialog']");
         cut.Find("[data-testid='project-structure-secret-select']").Change(secretResult.Value.ToString("D"));
         cut.Find("[data-testid='project-structure-secret-purpose']").Input("Original edit purpose");

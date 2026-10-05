@@ -1,19 +1,18 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
-using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Workbench.Insights.UI;
 using CanDoItAll.Modules.Workbench.Pages;
-using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components.ProjectStructure;
+namespace CanDoItAll.Workbench.Insights.UI.Tests;
 
 public sealed class ProjectStructureObjectIndexWindowTests
 {
     [Fact]
-    public void Outline_context_delete_targets_selected_nodes_when_clicked_node_is_selected()
+    public async Task Outline_context_delete_targets_selected_nodes_when_clicked_node_is_selected()
     {
         using var context = CreateContext();
         var nodes = new[]
@@ -21,34 +20,35 @@ public sealed class ProjectStructureObjectIndexWindowTests
             CreateNode("node-a", "Architecture"),
             CreateNode("node-b", "Implementation")
         };
-        ProjectStructureSupportPanelContextActionRequest? actionRequest = null;
+        InsightsMenuIntent? actionRequest = null;
 
         var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
                 parameters,
                 nodes,
                 selectedNodeIds: ["node-a", "node-b"])
-            .Add(component => component.ResolveContextActions, _ => [CreateDeleteAction()])
+            .Add(component => component.OpenMenu, request => Task.FromResult<InsightsMenu?>(new(request.Origin, request.OpeningId, request.NodeId, "2 selected nodes", ["node-a", "node-b"], request.ClientX, request.ClientY, [CreateDeleteAction()])))
             .Add(
                 component => component.OnExecuteNodeContextAction,
-                EventCallback.Factory.Create<ProjectStructureSupportPanelContextActionRequest>(
+                EventCallback.Factory.Create<InsightsMenuIntent>(
                     new object(),
                     request => actionRequest = request)));
 
-        cut.Find("[data-testid='project-structure-outline-node-node-a']")
-            .TriggerEvent("oncontextmenu", new MouseEventArgs { ClientX = 140, ClientY = 96 });
+        await cut.Find("[data-testid='project-structure-outline-node-node-a']")
+            .TriggerEventAsync("oncontextmenu", new MouseEventArgs { ClientX = 140, ClientY = 96 });
 
         Assert.Contains("2 selected nodes", cut.Markup);
 
-        cut.Find("[data-testid='project-structure-outline-context-action-delete']").Click();
+        await cut.Find("[data-testid='project-structure-outline-context-action-delete']").ClickAsync(new());
 
         Assert.NotNull(actionRequest);
-        Assert.Equal("node-a", actionRequest!.NodeId);
+        Assert.Equal("node-a", actionRequest!.Menu.NodeId);
         Assert.Equal("delete", actionRequest.ActionId);
-        Assert.Equal(new[] { "node-a", "node-b" }, actionRequest.TargetNodeIds);
+        Assert.Equal(new[] { "node-a", "node-b" }, actionRequest.Menu.NodeIds);
+        await context.DisposeAsync();
     }
 
     [Fact]
-    public void Outline_context_menu_selects_clicked_node_when_it_is_not_in_multi_selection()
+    public async Task Outline_context_menu_selects_clicked_node_when_it_is_not_in_multi_selection()
     {
         using var context = CreateContext();
         var nodes = new[]
@@ -58,35 +58,39 @@ public sealed class ProjectStructureObjectIndexWindowTests
             CreateNode("node-c", "Validation")
         };
         var selectedNodeId = string.Empty;
-        ProjectStructureSupportPanelContextActionRequest? actionRequest = null;
+        InsightsMenuIntent? actionRequest = null;
 
         var cut = context.Render<ProjectStructureObjectIndexWindow>(parameters => AddRequiredParameters(
                 parameters,
                 nodes,
                 selectedNodeIds: ["node-b", "node-c"])
-            .Add(component => component.ResolveContextActions, _ => [CreateDeleteAction()])
+            .Add(component => component.OpenMenu, request => {
+                selectedNodeId = request.NodeId;
+                return Task.FromResult<InsightsMenu?>(new(request.Origin, request.OpeningId, request.NodeId, "Architecture", [request.NodeId], request.ClientX, request.ClientY, [CreateDeleteAction()]));
+            })
             .Add(
                 component => component.OnSelectNode,
-                EventCallback.Factory.Create<string>(
+                EventCallback.Factory.Create<InsightsFocusIntent>(
                     new object(),
-                    nodeId => selectedNodeId = nodeId))
+                    request => selectedNodeId = request.NodeId))
             .Add(
                 component => component.OnExecuteNodeContextAction,
-                EventCallback.Factory.Create<ProjectStructureSupportPanelContextActionRequest>(
+                EventCallback.Factory.Create<InsightsMenuIntent>(
                     new object(),
                     request => actionRequest = request)));
 
-        cut.Find("[data-testid='project-structure-outline-node-node-a']")
-            .TriggerEvent("oncontextmenu", new MouseEventArgs { ClientX = 140, ClientY = 96 });
-        cut.Find("[data-testid='project-structure-outline-context-action-delete']").Click();
+        await cut.Find("[data-testid='project-structure-outline-node-node-a']")
+            .TriggerEventAsync("oncontextmenu", new MouseEventArgs { ClientX = 140, ClientY = 96 });
+        await cut.Find("[data-testid='project-structure-outline-context-action-delete']").ClickAsync(new());
 
         Assert.Equal("node-a", selectedNodeId);
         Assert.NotNull(actionRequest);
-        Assert.Equal(new[] { "node-a" }, actionRequest!.TargetNodeIds);
+        Assert.Equal(new[] { "node-a" }, actionRequest!.Menu.NodeIds);
+        await context.DisposeAsync();
     }
 
     [Fact]
-    public void Search_filters_visible_nodes_by_title_status_and_type()
+    public async Task Search_filters_visible_nodes_by_title_status_and_type()
     {
         using var context = CreateContext();
         var searchText = "ready";
@@ -100,21 +104,22 @@ public sealed class ProjectStructureObjectIndexWindowTests
             .Add(component => component.SearchText, searchText)
             .Add(
                 component => component.SearchTextChanged,
-                EventCallback.Factory.Create<string>(
+                EventCallback.Factory.Create<InsightsSearchIntent>(
                     new object(),
-                    value => searchText = value)));
+                    request => searchText = request.Text)));
 
         Assert.Contains("Architecture", cut.Markup);
         Assert.DoesNotContain("Implementation", cut.Markup);
 
-        cut.Find("[data-testid='project-structure-object-index-search']")
-            .Input("work item");
+        await cut.Find("[data-testid='project-structure-object-index-search']")
+            .InputAsync(new() { Value = "work item" });
 
         Assert.Equal("work item", searchText);
+        await context.DisposeAsync();
     }
 
     [Fact]
-    public void Loaded_window_renders_owned_tree_scroller()
+    public async Task Loaded_window_renders_owned_tree_scroller()
     {
         using var context = CreateContext();
 
@@ -126,10 +131,11 @@ public sealed class ProjectStructureObjectIndexWindowTests
                     .ToList()));
 
         Assert.NotNull(cut.Find("[data-testid='project-structure-object-index-tree-scroller']"));
+        await context.DisposeAsync();
     }
 
     [Fact]
-    public void Unloaded_window_does_not_render_node_index()
+    public async Task Unloaded_window_does_not_render_node_index()
     {
         using var context = CreateContext();
 
@@ -140,15 +146,17 @@ public sealed class ProjectStructureObjectIndexWindowTests
 
         Assert.Contains("Object index loading is paused.", cut.Markup);
         Assert.DoesNotContain("project-structure-outline-node-node-a", cut.Markup);
+        await context.DisposeAsync();
     }
 
     private static ComponentParameterCollectionBuilder<ProjectStructureObjectIndexWindow> AddRequiredParameters(
         ComponentParameterCollectionBuilder<ProjectStructureObjectIndexWindow> parameters,
-        IReadOnlyList<ProjectStructureNode> nodes,
+        IReadOnlyList<InsightsOutlineNode> nodes,
         IReadOnlyList<string>? selectedNodeIds = null,
         bool isLoaded = true)
     {
         return parameters
+            .Add(component => component.Origin, new InsightsOrigin(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1))
             .Add(component => component.WindowId, "project-structure.objectIndex")
             .Add(component => component.TestId, "project-structure-object-index-window")
             .Add(component => component.AriaLabel, "Project object index")
@@ -172,31 +180,6 @@ public sealed class ProjectStructureObjectIndexWindowTests
     private static ProjectStructureSupportPanelContextAction CreateDeleteAction()
         => new("delete", "Delete", "delete", "danger");
 
-    private static ProjectStructureNode CreateNode(string id, string title, string status = "Ready")
-        => new(
-            id,
-            null,
-            ProjectObjectType.WorkItem,
-            string.Empty,
-            title,
-            string.Empty,
-            status,
-            string.Empty,
-            "/projects/test/structure",
-            "Work item",
-            null,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            0,
-            0,
-            new ProjectObjectVisualProfile("pill", "#059669", "WI", "Work item"),
-            [],
-            "none",
-            0,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            [],
-            0);
+    private static InsightsOutlineNode CreateNode(string id, string title, string status = "Ready")
+        => new(id, title, status, "Work item", "task_alt", string.Empty, "task", [CreateDeleteAction()]);
 }
