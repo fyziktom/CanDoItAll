@@ -1,8 +1,10 @@
 # Workbench Insights WB2
 
-The rendering boundary and native consumer campaign are complete. The single broad
-regression checkpoint is still running; this record does not yet claim closure of
-WB2 or readiness for the next slice. The sealed package is
+WB2 is complete for the bounded Insights and Selection family, including the
+rendering boundary, native consumer campaign and reviewed regression closure.
+The original broad run retains four failures: three have passing focused repairs;
+one is the unchanged historical synthetic secret-scan control. This is not a
+passing full-suite claim or release readiness. The sealed package is
 `codex/bundles/CanDoItAll_Workbench_Insights_WB2`; original attempt logs and manifests
 are retained under ignored `artifacts/workbench-insights-wb2`.
 
@@ -366,6 +368,23 @@ used the old copied DLL; another lacked the Web dependency. Those attempts are
 preserved separately from the verified current three-case result. Production
 source is unchanged by these test repairs, and the original broad result stays failed.
 
+The single frozen Stable checkpoint builds the 186 production and 29 Stable
+project memberships, retaining 20 existing build warnings. It discovers 16,607
+cases and executes 16,662: 16,658 pass, four fail and none are skipped. Seven
+deferred theory groups explain all 55 additional executions: five in Integration,
+16 in Memory and 34 in Unit. Every discovery method is accounted for. Native
+Integration passes all 3,289 executions. The remaining Unit failure reports only
+the same synthetic negative control in four retained historical JSON files. Their
+complete hashes, control fingerprint and unchanged scanner source match the WB1
+review. Neither the artifacts nor scanner rules are altered to obtain closure.
+
+The frozen checkpoint has pre-run source and assembly manifests. A later
+observation confirms all 29 primary test DLLs still match those input hashes;
+isolated repair outputs never replace them. Current native and focused proof,
+reviewed failure dispositions and final static gates establish bounded WB2 closure
+without relabeling the original failed run. No further broad run was needed after
+the test-only repairs and documentation updates.
+
 Current portability enforcement passes all 15,231 reviewed findings without
 baseline-write mode. Documentation validation passes 368 maintained Markdown files.
 The changed-source secret scan retains 20 heuristic candidates, all with the same
@@ -381,15 +400,51 @@ under that UTF-8/UTF-16 procedure. Originals and scanner rules are unchanged. Ne
 report is represented as a clean whole checkout. A further reversible byte mapping
 of those four historical files also finds no ASCII-rule candidates; it does not
 claim to recover their original encoding. The final changed-source snapshot covers
-105 text files. Native consumer proof is complete; broad regression closure remains
-in progress.
+105 text files. The post-native owned-task snapshot scans 5,502 text files and
+retains 130 reviewed candidates: 120 existing CI-copy values, seven synthetic
+discovery controls and three ignored owned-fixture credential matches. The final
+owned-task scan includes completed Stable output; its exact coverage and reviewed
+candidate fingerprints are recorded separately in
+`w3-final-owned-secrets-review.json`. These scoped reviews do not change the
+complete-worktree qualification.
+
+The C# architecture gate finds no blocking boundary or composition issue. The
+remaining qualifications are local-only dependency delivery and the measured SDK
+CSS hot-reload limitation. All owned source, published, watch and multi-instance
+hosts and the final PostgreSQL test fixture are stopped. Their containers,
+volumes, project data and original evidence remain retained. The ordinary
+application on port 5032 and historical fixtures are untouched. All new browser
+proof uses 1920x1080 at scale 1, with zero paid model calls.
+
+## Signed checkpoints and dependency delivery
+
+| Repository | Verified signed checkpoint | Scope |
+|---|---|---|
+| Components | `24d182c664d0b1f293098643e52caed7384a5d50` | Acquired Gantt interop cleanup after pending cancellation/fault or DOM removal. |
+| Main | `4722d6888f1939e5023dba87cddcf8e020bf0134` | Complete Summary and Activity rendering boundary. |
+| Main | `531a80391f6efef3c72a3e3ab9bfa07c8f03726f` | Complete Selection and support boundary. |
+| Main | `379efe1d3a238b758e2045799b58e90e5db27357` | Native consumer proof, public identities and focused test repairs. |
+
+All four signatures verify with fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6`. Components delivery is verified locally
+through project-reference builds, loaded assemblies and exact served asset bytes.
+The new shared commit has not been pushed or published. FileTools remains at
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`; no sibling source reset or remote delivery
+is implied. Release readiness remains false.
+
+The final signed main checkpoint changes only this closure record after
+`379efe1d3a238b758e2045799b58e90e5db27357`. Its exact final main/Components/FileTools
+pair, clean checkout observations, signature verification and artifact hashes are
+recorded in the external `evidence.json` and `w3-final-source-pair.json`. Native
+image provenance remains tied to W2 `531a8039`; later test and documentation
+commits are not presented as a different tested image.
 
 ## Workbench roadmap
 
 | Family | Current boundary |
 |---|---|
 | Calendar, Gantt, both task editor families | WB1 completed; preserved native planning and pricing owners. |
-| Summary, Activity, Selection, Index, Signals, Health | Rendering boundary implemented here; final W3 consumer/regression closure is still in progress. |
+| Summary, Activity, Selection, Index, Signals, Health | WB2 complete, including the actual advanced child, independent/native proof and qualified regression closure. |
 | Main Structure canvas | Not started by WB2. |
 | Broader runtime, assignment and file presentation | Original owners retained; no new extraction started. |
 | Processes product surfaces | Not started by WB2. |
