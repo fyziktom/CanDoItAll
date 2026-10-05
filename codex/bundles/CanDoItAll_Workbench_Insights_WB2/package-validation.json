@@ -1,0 +1,22 @@
+{
+  "scope": "Package integrity and helper tests only; product runtime not executed.",
+  "helper_tests": {
+    "handoff_tests_passed": 29,
+    "shared_tooling_tests_passed": 14,
+    "total_passed": 43,
+    "failed": 0
+  },
+  "product_execution": false,
+  "product_groups": 29,
+  "initial_product_status": "NOT_RUN",
+  "checks": [
+    "exact root SHA-256 manifest",
+    "22 byte-identical shared v3 files",
+    "UTF-8 text inventory",
+    "local file-link existence and containment",
+    "evidence template fail-closed completion",
+    "ZIP CRC and freshly extracted package validation"
+  ],
+  "source_records": 30,
+  "qualification": "Remote link targets and artifact authenticity are not certified. Documentation anchors are not checked."
+}

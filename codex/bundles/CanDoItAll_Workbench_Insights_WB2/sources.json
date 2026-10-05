@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-05",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "docs/architecture/workbench-planning-wb1.md",
+      "blob_sha": "bd4c44694c393440fe473757e5fda9d7244d9f09",
+      "reviewed_ranges": [
+        "1-381"
+      ],
+      "finding_or_use": "WB1 implementation report; implementer-reported execution, not independently rerun.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/docs/architecture/workbench-planning-wb1.md"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj",
+      "blob_sha": "2d419580876f739e5af70dce900b77b074012029",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Actual renderer dependencies.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj",
+      "blob_sha": "56b4550c1cbbb5678b519fbc61ca82b8e552a28e",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Dependency-free values project and emitted XML documentation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/ProjectStructureTaskResourceCostEstimator.razor",
+      "blob_sha": "6588c05c12700cd9b1d3cf0f70442455ce4f0689",
+      "reviewed_ranges": [
+        "62-end"
+      ],
+      "finding_or_use": "Preserve WB1-Q1 input, eligibility, context and request ownership.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/ProjectStructureTaskResourceCostEstimator.razor"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs",
+      "blob_sha": "84af42800fd992e060848985f277005fe09025c5",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Preserve partial/unknown native result and read-only reconciliation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor.cs",
+      "blob_sha": "a58caf8857eaedd54fed82f3fd6216e51c95d0c3",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Calendar read, accepted lifetime and ordered view-state writes.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor.cs"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskApplicationService.cs",
+      "blob_sha": "cb9ace0d7a78697d38fd3cd982c15b238725cce3",
+      "reviewed_ranges": [
+        "205-475"
+      ],
+      "finding_or_use": "Captured expected task supplied to native edit compensation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskApplicationService.cs"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkItemAssigneeService.cs",
+      "blob_sha": "3ea4b109b363d769c858f4f92fa764326c35bb52",
+      "reviewed_ranges": [
+        "180-405"
+      ],
+      "finding_or_use": "Actual coordinated compensation checks before assignment restoration.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkItemAssigneeService.cs"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "blob_sha": "4032c8f063bcaa9b4efb31ed805c05819425a864",
+      "reviewed_ranges": [
+        "1-295"
+      ],
+      "finding_or_use": "Uncertain pricing commit retains exact attachment; known rejection compensation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
+      "blob_sha": "3cd44ec88f6a8df7b37bcaa921b5c1696a944e48",
+      "reviewed_ranges": [
+        "1-515"
+      ],
+      "finding_or_use": "Origin-fenced native Gantt, readback and actual task dialogs.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "dc573e2b438621599401a28968acef3682d14e63",
+      "path": "src/CanDoItAll.Components.Gantt/Components/GanttChart.razor.cs",
+      "blob_sha": "6f60477efebe11cbe50159e1c45bc274513500a7",
+      "reviewed_ranges": [
+        "commit diff:319-378",
+        "565-630",
+        "760-875",
+        "900-1290"
+      ],
+      "finding_or_use": "WB2-S0: pending interop exception can skip disposal of an already-created canvas.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/dc573e2b438621599401a28968acef3682d14e63/src/CanDoItAll.Components.Gantt/Components/GanttChart.razor.cs"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "dc573e2b438621599401a28968acef3682d14e63",
+      "path": "tests/CanDoItAll.Components.Gantt.Tests/GanttInteropLifetimeTests.cs",
+      "blob_sha": "56af0068d748f73d923cddc6c69cc691f21e541c",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Three new delayed-success interop cases in the reviewed commit; fault/cancellation regression remains needed.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/dc573e2b438621599401a28968acef3682d14e63/tests/CanDoItAll.Components.Gantt.Tests/GanttInteropLifetimeTests.cs"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerSummaryPanel.razor",
+      "blob_sha": "389590f35ef22652175fd26af5a2833a79610f21",
+      "reviewed_ranges": [
+        "1-210",
+        "310-655"
+      ],
+      "finding_or_use": "Entire next reporting family; draft versus accepted options, lazy load, confirmation, progress and error lifetime.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerSummaryPanel.razor"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerActivityDialog.razor",
+      "blob_sha": "a584e76a0b49156eaaa2b0868a3cd55c85c2d7ea",
+      "reviewed_ranges": [
+        "1-400"
+      ],
+      "finding_or_use": "Four activity kinds, aggregate caching and process cursors; weak current-request checks.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerActivityDialog.razor"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryQueryService.cs",
+      "blob_sha": "7e22027f8ac580165d4feb3cb2f837bacbc3d60f",
+      "reviewed_ranges": [
+        "1-250"
+      ],
+      "finding_or_use": "Native report composition, exact as-of window, uncategorized semantics and paging.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryQueryService.cs"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryStateStore.cs",
+      "blob_sha": "f7f9cbe7ac76368ff5fdfdb247bea094f451163b",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Bounded retained state by runtime profile/project; not per-view transient ownership.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryStateStore.cs"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryScopeResolver.cs",
+      "blob_sha": "df12e72fe2ba0d05a567d0337d1f3e1e3698b32f",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Bounded descendant traversal, preflight and real large-scope confirmation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryScopeResolver.cs"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryContracts.cs",
+      "blob_sha": "38f00157bb076ccedb2621da96dc9498633cfbc6",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Value semantics; native ProcessRunRecordCursor/preflight edges must not leak wholesale to UI.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummaryContracts.cs"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
+      "blob_sha": "880256080494268fe41118307c05f2b8c6f1862c",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Actual outline window, captured context-menu targets and multi-delete.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSignalsWindow.razor",
+      "blob_sha": "e1c365e8485fb9ca40274357a1ac858ea6677f46",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Actual marker/progress/priority action renderer; not read-only.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSignalsWindow.razor"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasHealthWindow.razor",
+      "blob_sha": "db6ab13ba2feacc1dfe124b4193714fac03a069d",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Health counts/spotlight plus explicit Validate selected host action.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasHealthWindow.razor"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureSelectionPanel.razor",
+      "blob_sha": "a91c9cc9afa14b93c500ed0aface4afe5f247d19",
+      "reviewed_ranges": [
+        "1-520"
+      ],
+      "finding_or_use": "Complete none/single/multi presentation, action callbacks and RenderKey optimization.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureSelectionPanel.razor"
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureSelectionPanelModels.cs",
+      "blob_sha": "94b6638134e8ea758c5d751828bc0026c85ba033",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Existing mostly presentational models, safe metadata and referenced child types.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructureSelectionPanelModels.cs"
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureNodeDetailPreview.razor",
+      "blob_sha": "db954e485d3f95f3c7c6c2d9df3e5d6df692368a",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Actual label/value detail renderer; source metadata parsing stays native.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureNodeDetailPreview.razor"
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
+      "blob_sha": "5a5314a2cd13d5c7cc33cfb931c488639f604ee4",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Existing original surface/admission/navigation capture; preserve and reuse where appropriate.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs"
+    },
+    {
+      "id": "S26",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+      "blob_sha": "1e9417a235c3eb1f5dc0e065e7aa5cea4379af70",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Preserve WB1 task dialog composition and original committed node identities.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs"
+    },
+    {
+      "id": "S27",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
+      "blob_sha": "1cd43860672fadd711533b2ee0ae810c7238da53",
+      "reviewed_ranges": [
+        "1-215"
+      ],
+      "finding_or_use": "Signals currently resolve live selected IDs; final intents must carry rendered origin.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs"
+    },
+    {
+      "id": "S28",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectManagerSummaryStateStoreTests.cs",
+      "blob_sha": "355221d764a5128c6a81151515a0a9621b08d408",
+      "reviewed_ranges": [
+        "complete"
+      ],
+      "finding_or_use": "Preserve profile/project retention and LRU tests; do not confuse retention with session ownership.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/tests/Unit/CanDoItAll.Tests.Unit/ProjectManagerSummaryStateStoreTests.cs"
+    },
+    {
+      "id": "S29",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": "docs/architecture/ui-component-seams.md",
+      "blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "reviewed_ranges": [
+        "1-235"
+      ],
+      "finding_or_use": "Canonical current UI boundary guidance.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/docs/architecture/ui-component-seams.md"
+    },
+    {
+      "id": "S30",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+      "path": ".github/workflows/ci.yml",
+      "blob_sha": "f05c1fe3df7da1eca1702cf3dcd5224570908447",
+      "reviewed_ranges": [
+        "1-120"
+      ],
+      "finding_or_use": "Actual CI triggers and matching Components source selection.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/be2045c312ee5fa99fb5b1f8526f1825ecf8352c/.github/workflows/ci.yml"
+    }
+  ],
+  "limitations": "Selected source, commit and report review, not a complete repository audit or execution. Search results from the default branch were used only for locating files; source conclusions use the explicit refs above."
+}

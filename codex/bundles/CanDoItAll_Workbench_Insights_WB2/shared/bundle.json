@@ -1,0 +1,32 @@
+{
+  "name": "CanDoItAll Shared UI Decoupling Bundle",
+  "reference_id": "CDA-UI-DECOUPLING-SHARED-v3",
+  "version": "3.0.0",
+  "prepared_at": "2026-09-28",
+  "kind": "shared-architecture-execution-companion",
+  "executable": false,
+  "product_changes_authorized_by_this_bundle": false,
+  "language": "English engineering content; Czech owner summary",
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "development",
+  "review_commit": "7db3543ab437376baeca55089cb331fbe1b30483",
+  "review_commit_is_execution_pin": false,
+  "canonical_product_guidance": [
+    "AGENTS.md",
+    ".github/copilot-instructions.md",
+    "docs/architecture/ui-component-seams.md",
+    "docs/testing.md",
+    ".github/workflows/ci.yml"
+  ],
+  "replacement_scope": "UI-decoupling shared guidance from the three uploaded bundles; not replacement of unrelated Architecture Foundation domain roadmap.",
+  "superseded_ui_reference": "CDA-UI-SEAMS-BASE-v2",
+  "entry_point": "prompt.md",
+  "child_template": "templates/module-slice.md",
+  "evidence_template": "templates/evidence.md",
+  "source_register": "audit/source-register.json",
+  "input_provenance": "audit/input-provenance.json",
+  "application_validation": "NOT_RUN",
+  "expected_local_validation": "See audit/package-validation.md for actual package-only results.",
+  "new_modules_automatically_authorized": false,
+  "publication_or_remote_writes_authorized": false
+}

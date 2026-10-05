@@ -1,0 +1,28 @@
+{
+  "review_date": "2026-10-05",
+  "main": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "components-decoupling",
+    "head": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+    "comparison_base": "9969913fe653500a59d24af06482f48b758a5ca6",
+    "ahead_commits": 7
+  },
+  "components": {
+    "repository": "fyziktom/CanDoItAll.Components",
+    "branch": "development",
+    "head": "dc573e2b438621599401a28968acef3682d14e63",
+    "published": true
+  },
+  "product_build_executed": false,
+  "product_tests_executed": false,
+  "private_execution_artifacts_available": false,
+  "available_local_runtime": "Python and Node; neither dotnet nor Docker is installed",
+  "instruction": "Record actual current checkout and source pair before execution; do not reset, checkout, pull, rebase or clean automatically.",
+  "final_ref_recheck": {
+    "main_unchanged": true,
+    "components_unchanged": true,
+    "main_head_signature": "GitHub verification verified=true/reason=valid",
+    "actions_runs_for_reviewed_main_sha": 0,
+    "actions_query_scope": "GitHub REST Actions runs filtered by exact head_sha, all event types; total_count=0"
+  }
+}
