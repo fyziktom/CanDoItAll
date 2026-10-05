@@ -1,4 +1,6 @@
 @using CanDoItAll.Workbench.Planning.UiSandbox
+@using CanDoItAll.Components.Gantt
+@using CanDoItAll.Components.Mermaid
 @inject IWebHostEnvironment Environment
 
 <!DOCTYPE html>
@@ -15,10 +17,13 @@
     <link rel="stylesheet" href="@Assets["CanDoItAll.Workbench.Planning.UiSandbox.styles.css"]" />
     <ImportMap />
     <CanvasLibHeadAssets />
+    <GanttChartHeadAssets IncludeBaseLibStyles="false" />
+    <MermaidHeadAssets />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
     <CanvasLibBodyAssets IncludePreviewAssets="true" IncludeCalendarAssets="true" />
+    <GanttChartBodyAssets IncludeCanvasRuntimeAssets="false" />
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>

@@ -1,0 +1,19 @@
+<SectionCard Title="@Scenario.Presentation.ProjectName" Description="Synthetic schedule; all changes stay in this independent host.">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        @foreach (var state in new[] { PlanningReadState.Ready, PlanningReadState.Loading, PlanningReadState.Failed, PlanningReadState.Stale }) {
+            <Button Text="@($"Gantt {state}")" Click="@(() => Scenario.SetState(state))" />
+        }
+    </Cluster>
+    <PlanningGanttSurface Presentation="@Scenario.Presentation" DependencyIdFactory="GanttScenario.DependencyId"
+                          TitleChanged="Scenario.Title" ScheduleChanged="Scenario.Schedule" DependencyChanged="Scenario.Dependency"
+                          TaskInserted="Scenario.Insert" OrderChanged="Scenario.Order" TaskOpened="Scenario.Select"
+                          TimelineOpened="Scenario.Timeline" ExportRequested="Scenario.Export" PreviewClosed="Scenario.Close"
+                          ReloadRequested="@(_ => Scenario.SetState(PlanningReadState.Ready))" />
+    @if (Scenario.LastAction is not null) {
+        <TextBlock Value="@Scenario.LastAction" />
+    }
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired] public GanttScenario Scenario { get; set; } = default!;
+}

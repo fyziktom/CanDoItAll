@@ -77,10 +77,40 @@ snapshot; caller-supplied field values cannot replace those facts. The native
 calendar remains read-only. Independent published-host and final consumer proof
 will be completed with the full planning family in W4.
 
+## W2: Gantt boundary
+
+The planning library now owns the entire Gantt chart, task drag source, toolbar,
+summary and error states, dependency-removal controls, scoped CSS and Mermaid
+preview. Title, schedule, dependency, insertion, ordering and both double-click
+intents capture the displayed occurrence and receiver. The native panel retains
+projection, expected schedules, original project admission, mutations, row-state
+persistence and bounded Agent observations. Pure Mermaid encoding moved into the
+leaf; its native adapter still supplies the authoritative accepted projection.
+
+Queued callbacks cannot rebind after A-B-A navigation. Accepted writes retain their
+result before parent readback; a confirmed commit is never rolled back by a failed
+reload. Unknown outcomes block further mutation until a read. Both task editor
+coordinators remain native pending the form and exact partial-outcome work in W3.
+
+Large-desktop native proof created real tasks, changed a title, moved a bar, resized
+both endpoints, added/reconnected/removed dependencies, inserted a task on an
+existing link and changed its row order. Canonical database readback confirms
+the exact task and link identities, propagated dates and byte-identical unchanged
+neighbor. The actual PNG and Mermaid downloads match the accepted ordered rows;
+copy completion and both native dialog entry points were exercised separately.
+
+That journey exposed overlapping shared Gantt canvas updates: a newly saved row
+could appear in the table while the canvas retained an earlier model. Components
+commit `dc573e2b438621599401a28968acef3682d14e63` serializes interop updates,
+retains changes arriving during an await and waits for late creation on disposal.
+Three controlled interop failures now pass; all 88 Gantt component tests, routing
+and asset verification pass. This signed commit is local only, without a remote
+push or package publication. Final image fingerprints must include that source.
+
 ## Remaining WB1 work
 
-The complete Gantt renderer, both task form families, the rest of the independent
-sandbox and all final operator/Agent/Workflow/multi-instance journeys are pending.
+Both task form families, the rest of the independent sandbox and final
+operator/Agent/Workflow/multi-instance journeys are pending.
 Large-desktop validation uses 1920 by 1080 at scale 1. Final closure
 requires a current caller/asset census, repeated watch measurements, native
 partial-commit proof, the settled Stable decision and final static enforcement.

@@ -2,8 +2,10 @@
 
 This standalone host renders the actual planning controls with explicit synthetic
 data. It has no native module, database, application bootstrap or credential store.
-Calendar currently provides availability scenarios, two independent instances and
-the former production boundary specimens. Gantt and task forms are added by WB1.
+Calendar provides availability scenarios, two independent instances and the
+former production boundary specimens. Gantt mounts the same chart, drag source,
+gesture intents and export preview with independent synthetic task graphs. Task
+forms and the complete outcome scenarios are completed in WB1's editor stage.
 
 From the repository root:
 

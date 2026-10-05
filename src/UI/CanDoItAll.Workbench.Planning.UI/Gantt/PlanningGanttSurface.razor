@@ -1,0 +1,318 @@
+@namespace CanDoItAll.Workbench.Planning.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Gantt
+@using CanDoItAll.Components.Mermaid
+@using Microsoft.AspNetCore.Components.Web
+
+@{
+    var projection = Presentation.HasProjection ? Presentation : null;
+    var accepted = Presentation;
+    var titleCallback = TitleChanged;
+    var scheduleCallback = ScheduleChanged;
+    var dependencyCallback = DependencyChanged;
+    var insertionCallback = TaskInserted;
+    var timelineCallback = TimelineOpened;
+    var detailsCallback = TaskOpened;
+    var orderCallback = OrderChanged;
+    var addCallback = AddRequested;
+    var exportCallback = ExportRequested;
+    var closeCallback = PreviewClosed;
+    var agentsCallback = AgentsRequested;
+    var reloadCallback = ReloadRequested;
+    var CanMutate = accepted.CanMutate && accepted.IsValid && !accepted.IsLoading;
+    var CanInsertTask = CanMutate && accepted.IsValid && accepted.Dependencies.Count > 0;
+    var isLoading = accepted.IsLoading;
+    var loadError = accepted.LoadError;
+    var mermaidSource = accepted.Preview?.Source;
+}
+
+<section class="project-structure-gantt-panel"
+         data-testid="project-structure-gantt-panel">
+    @if (accepted.Receipt is { } receipt && receipt.Origin == accepted.Origin) {
+        <Alert AlertStyle="@(receipt.State == PlanningCommitState.Committed ? AlertStyle.Info : AlertStyle.Warning)"
+               data-testid="planning-gantt-mutation-receipt">
+            @receipt.Message
+            @if (receipt.TaskIds.Count > 0) {
+                <TextBlock Value="@string.Join(", ", receipt.TaskIds.Select(id => id.Value))" />
+            }
+            <Button Text="Reload schedule" Click="@(() => reloadCallback.InvokeAsync(new(accepted.Origin)))" />
+        </Alert>
+    }
+    @if (isLoading && projection is null)
+    {
+        <LoadingState Eyebrow="Project schedule"
+                      Title="Building the Gantt projection"
+                      Description="Loading task assignments and validating the project dependency graph." />
+    }
+    else if (loadError is not null)
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-gantt-load-error">
+            @loadError
+        </Alert>
+    }
+    else if (projection is not null)
+    {
+        <Stack GapScale="LayoutGap.Small"
+               Class="w-full min-w-0"
+               AlignItems="AlignItems.Stretch">
+            <SurfaceCard Soft="true"
+                         Class="project-structure-gantt-panel__utility-bar">
+                <Cluster Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.Wrap"
+                         Class="project-structure-gantt-panel__utility-row">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Project schedule"
+                               Class="project-structure-gantt-panel__title" />
+                    <Pill Tone="PillTone.Info" Text="@($"{projection.Tasks.Count} tasks")" />
+                    <Pill Tone="PillTone.Neutral" Text="@($"{projection.Dependencies.Count} dependencies")" />
+                    @if (projection.TotalExpectedEffortHours is { } expectedEffortHours)
+                    {
+                        <Pill Tone="PillTone.Neutral"
+                              Text="@($"{expectedEffortHours:0.##} h pure effort")" />
+                    }
+                    @foreach (var expectedCost in projection.ExpectedCostTotals)
+                    {
+                        <Pill Tone="PillTone.Neutral"
+                              Text="@expectedCost" />
+                    }
+                    @if (projection.ProjectionOnlyTaskIds.Count > 0)
+                    {
+                        <Pill Tone="PillTone.Warn"
+                              Text="@($"{projection.ProjectionOnlyTaskIds.Count} projected schedules")" />
+                    }
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Move bars · resize green handles · connect blue ports."
+                               Class="project-structure-gantt-panel__hint" />
+                    <Button Text="Export Mermaid"
+                            Icon="download"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(projection is not { IsValid: true, Tasks.Count: > 0 })"
+                            data-testid="project-structure-gantt-export-mermaid"
+                            Click="@(() => exportCallback.InvokeAsync(new(accepted.Origin)))" />
+                    <Button Text="Add task"
+                            Icon="add_task"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@(!CanMutate)"
+                            data-testid="project-structure-gantt-add-task"
+                            Click="@(() => addCallback.InvokeAsync(new(accepted.Origin)))" />
+                    <Button Text="Agent chats"
+                            Icon="smart_toy"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Light"
+                            data-testid="project-structure-gantt-agent-chats"
+                            Click="@(() => agentsCallback.InvokeAsync(new(accepted.Origin)))" />
+                    <Button Text="Dependencies" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                            Disabled="@(!projection.IsValid || projection.Dependencies.Count == 0)" Click="@(() => showDependencies = !showDependencies)" />
+                    <ErrorBoundary @ref="dragSourceErrorBoundary">
+                        <ChildContent>
+                            <GanttTaskDragSource Task="@accepted.InsertionCandidate"
+                                                 Disabled="@(!CanInsertTask)"
+                                                 AriaLabel="Drag a new project task onto a dependency connection">
+                                <Pill Text="Insert 8 h task on dependency"
+                                      Tone="PillTone.Info" />
+                            </GanttTaskDragSource>
+                        </ChildContent>
+                        <ErrorContent>
+                            <Pill Text="Task drag briefly unavailable"
+                                  Tone="PillTone.Warn"
+                                  data-testid="project-structure-gantt-dragsource-degraded" />
+                        </ErrorContent>
+                    </ErrorBoundary>
+                </Cluster>
+            </SurfaceCard>
+
+            @if (showDependencies && projection.IsValid) {
+                <SectionCard Title="Schedule dependencies" Description="Remove the exact displayed link. Task dates remain unchanged.">
+                    @foreach (var dependency in accepted.Dependencies) {
+                        var predecessor = accepted.Tasks.First(task => task.Id == dependency.PredecessorId);
+                        var successor = accepted.Tasks.First(task => task.Id == dependency.SuccessorId);
+                        <Cluster Gap="LayoutGap.Small" @key="dependency.Id">
+                            <TextBlock Value="@($"{predecessor.Title} → {successor.Title}")" />
+                            <Button Text="Remove dependency" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@(!CanMutate)"
+                                    aria-label="@($"Remove dependency from {predecessor.Title} to {successor.Title}")"
+                                    Click="@(() => dependencyCallback.InvokeAsync(new(accepted.Origin,
+                                        GanttDependencyPlanner.PlanRemove(accepted.Tasks, accepted.Dependencies, dependency.Id))))" />
+                        </Cluster>
+                    }
+                </SectionCard>
+            }
+
+            @if (projection.ProjectionOnlyTaskIds.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning"
+                       data-testid="project-structure-gantt-projection-warning">
+                    @projection.ProjectionOnlyTaskIds.Count task(s) have no complete persisted schedule. Their displayed dates are projected; moving or resizing a bar saves the complete displayed schedule, including required dependent-task shifts, through authoritative project services.
+                </Alert>
+            }
+
+            @if (projection.Warnings.Count > 0)
+            {
+                <Alert AlertStyle="AlertStyle.Warning">
+                    <strong>The projection includes warnings:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in projection.Warnings)
+                        {
+                            <li>@issue</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+
+            @if (!projection.IsValid)
+            {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       data-testid="project-structure-gantt-validation-error">
+                    <strong>The Gantt projection is blocked until the project structure is corrected:</strong>
+                    <ul class="project-structure-gantt-panel__issues">
+                        @foreach (var issue in projection.Errors)
+                        {
+                            <li>@issue</li>
+                        }
+                    </ul>
+                </Alert>
+            }
+            else
+            {
+                <Stack Class="w-full min-w-0"
+                       data-testid="project-structure-gantt-chart">
+                    <ErrorBoundary @ref="chartErrorBoundary">
+                    <ChildContent>
+                    <GanttChart Tasks="@projection.Tasks"
+                                Dependencies="@projection.Dependencies"
+                                TaskTitleChangeRequested="@(args => titleCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                TaskScheduleChangeRequested="@(args => scheduleCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                DependencyMutationRequested="@(args => dependencyCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                TaskInsertionRequested="@(args => insertionCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                TimelineDoubleClicked="@(args => timelineCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                TaskDoubleClicked="@(args => detailsCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                TaskOrderChangeRequested="@(args => orderCallback.InvokeAsync(new(accepted.Origin, args)))"
+                                DependencyIdFactory="@DependencyIdFactory"
+                                ProjectionOnlySelector="@(task => accepted.ProjectionOnlyTaskIds.Contains(task.Id))"
+                                AllowTaskEditing="@CanMutate"
+                                AllowTimelineTaskCreation="@CanMutate"
+                                AllowDependencyEditing="@CanMutate"
+                                AllowTaskInsertion="@CanMutate"
+                                AllowTaskReordering="@CanMutate"
+                                HoursPerManDay="8"
+                                RowHeight="48"
+                                HeaderHeight="40"
+                                BarHeight="26"
+                                TaskTableWidth="600"
+                                MaxHeight="48rem"
+                                ExportFileName="@ExportFileName"
+                                AriaLabel="Interactive project structure Gantt schedule" />
+                    </ChildContent>
+                    <ErrorContent>
+                        <Alert AlertStyle="AlertStyle.Warning"
+                               data-testid="project-structure-gantt-chart-degraded">
+                            The interactive schedule hit a rendering fault and was paused to keep this page responsive. It recovers automatically with the next schedule refresh.
+                        </Alert>
+                    </ErrorContent>
+                    </ErrorBoundary>
+                </Stack>
+            }
+        </Stack>
+    }
+</section>
+
+@if (accepted.Preview is { } previewProjection)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="Mermaid Gantt"
+            Title="@($"{previewProjection.ProjectName} schedule")"
+            Subtitle="Preview and download the task-only Mermaid export generated from this Gantt projection."
+            Size="ModalSize.Wide"
+            ShowCloseButton="false"
+            TestId="project-structure-gantt-mermaid-dialog"
+            OnClose="@(() => closeCallback.InvokeAsync(new(accepted.Origin)))">
+        <HeaderActions>
+            <StatusBadge Tone="info" Text="@($"{previewProjection.TaskCount} tasks")" />
+            <StatusBadge Tone="neutral" Text="@($"{previewProjection.DependencyCount} source dependencies")" />
+            <Button Text="Download .mmd"
+                    Icon="download"
+                    Size="ButtonSize.Small"
+                    Href="@($"data:text/vnd.mermaid;charset=utf-8,{Uri.EscapeDataString(previewProjection.Source)}")"
+                    download="@MermaidExportFileName"
+                    data-testid="project-structure-gantt-download-mermaid" />
+            <Button Text="Close"
+                    Size="ButtonSize.Small"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="@(() => closeCallback.InvokeAsync(new(accepted.Origin)))" />
+        </HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium"
+                   Class="min-w-0">
+                <SurfaceCard>
+                    <Split Gap="LayoutGap.Small"
+                           Breakpoint="LayoutBreakpoint.None"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny"
+                               Class="min-w-0 flex-1">
+                            <TextBlock TextStyle="TextStyle.Subtitle2"
+                                       Value="Task-only Mermaid preview" />
+                            <TextBlock TextStyle="TextStyle.Caption"
+                                       Value="The export uses the same canonical task rows, order, and projected dates as the interactive Gantt. Dependency anchors are included only when they preserve that schedule." />
+                        </Stack>
+                        <CopyButton Value="@mermaidSource"
+                                    DisplayMode="CopyButtonDisplayMode.IconButton"
+                                    Size="CopyButtonSize.Small"
+                                    AriaLabel="Copy Mermaid Gantt source"
+                                    data-testid="project-structure-gantt-copy-mermaid" />
+                    </Split>
+                    <MermaidDiagram Source="@mermaidSource"
+                                    Options="StrictOptions"
+                                    PanZoomEnabled="true"
+                                    ShowControls="true"
+                                    Class="mt-4"
+                                    Style="--cda-mermaid-height: 28rem; --cda-mermaid-min-height: 24rem;"
+                                    data-testid="project-structure-gantt-mermaid-diagram" />
+                </SurfaceCard>
+
+                <SurfaceCard>
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Mermaid source" />
+                    <pre class="mt-4 max-h-60 overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
+                         data-testid="project-structure-gantt-mermaid-source">@mermaidSource</pre>
+                </SurfaceCard>
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired] public GanttPresentation Presentation { get; set; } = new(Guid.Empty);
+    [Parameter] public EventCallback<GanttIntent<GanttTaskTitleChangeRequest>> TitleChanged { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttTaskScheduleChangeRequest>> ScheduleChanged { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttDependencyMutationRequest>> DependencyChanged { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttTaskInsertionRequest>> TaskInserted { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttTimelineDoubleClickEventArgs>> TimelineOpened { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttTaskId>> TaskOpened { get; set; }
+    [Parameter] public EventCallback<GanttIntent<GanttTaskOrderChangeRequest>> OrderChanged { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> AddRequested { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> ExportRequested { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> PreviewClosed { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> AgentsRequested { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> ReloadRequested { get; set; }
+    [Parameter, EditorRequired] public Func<GanttTaskId, GanttTaskId, GanttDependencyId> DependencyIdFactory { get; set; } = default!;
+
+    private const string ExportFileName = "project-schedule-gantt.png";
+    private const string MermaidExportFileName = "project-schedule-gantt.mmd";
+    private static readonly MermaidDiagramOptions StrictOptions = new() {
+        SecurityLevel = "strict", HtmlLabels = false, FlowchartUseMaxWidth = true, ArchitectureRandomize = false
+    };
+    private ErrorBoundary? chartErrorBoundary;
+    private ErrorBoundary? dragSourceErrorBoundary;
+    private Guid recoveredOrigin;
+    private bool showDependencies;
+
+    protected override void OnParametersSet() {
+        if (Presentation.Origin != recoveredOrigin && !Presentation.IsLoading) {
+            recoveredOrigin = Presentation.Origin;
+            chartErrorBoundary?.Recover();
+            dragSourceErrorBoundary?.Recover();
+        }
+    }
+}

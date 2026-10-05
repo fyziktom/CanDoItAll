@@ -12,7 +12,9 @@ public sealed record ProjectStructureGanttTaskEditContext(
     ProjectStructureSurface Surface,
     ProjectStructureGanttProjectionResult Projection,
     IReadOnlyList<ProjectPartyAssignmentDetail> Assignments,
-    ProjectStructureAgentContext MutationOwner);
+    ProjectStructureAgentContext MutationOwner) {
+    public Func<bool> IsCurrent { get; init; } = static () => true;
+}
 
 public sealed class ProjectStructureGanttTaskEditCoordinator(
     ProjectStructureTaskResourceService taskResourceService,
@@ -39,9 +41,11 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             string.Equals(node.Id, taskId.Value, StringComparison.Ordinal));
         if (projectedTask is null || taskNode is null)
         {
-            notificationService.Error(
-                "Task details unavailable",
-                "The selected task is no longer present in the authoritative project structure. Reload the project and try again.");
+            if (context.IsCurrent()) {
+                notificationService.Error(
+                    "Task details unavailable",
+                    "The selected task is no longer present in the authoritative project structure. Reload the project and try again.");
+            }
             return;
         }
 
@@ -64,7 +68,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
         catch (Exception exception) when (exception is InvalidOperationException or ProjectStructureTaskDetailsException)
         {
-            notificationService.Error("Task details unavailable", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task details unavailable", exception.Message);
+            }
             logger.LogWarning(
                 "Could not prepare Gantt task details for project {ProjectId}, task {TaskId}; failure type {FailureType}.",
                 Mask(context.ProjectId),
@@ -77,6 +83,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             context,
             assigneeResolution,
             cancellationToken);
+        if (!context.IsCurrent()) {
+            return;
+        }
         var editModel = new ProjectStructureGanttTaskEditModel(
             taskId,
             taskNode.Title,
@@ -121,9 +130,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             },
             cancellationToken);
 
-        if (result is ProjectStructureTaskEditDialogResult editResult)
+        if (context.IsCurrent() && result is ProjectStructureTaskEditDialogResult editResult)
         {
-            await SaveAsync(context, editModel, editResult, reloadAuthoritativeProject, cancellationToken);
+            await SaveAsync(context, editModel, editResult, reloadAuthoritativeProject, CancellationToken.None);
         }
     }
 
@@ -136,9 +145,11 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     {
         if (proposed.TaskId != current.TaskId)
         {
-            notificationService.Error(
-                "Task details could not be saved",
-                "The task detail result does not belong to the selected task.");
+            if (context.IsCurrent()) {
+                notificationService.Error(
+                    "Task details could not be saved",
+                    "The task detail result does not belong to the selected task.");
+            }
             return;
         }
 
@@ -151,9 +162,11 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             }
             catch (ProjectStructureAgentException exception)
             {
-                notificationService.Error(
-                    "Task resource could not be attached",
-                    exception.Message);
+                if (context.IsCurrent()) {
+                    notificationService.Error(
+                        "Task resource could not be attached",
+                        exception.Message);
+                }
                 return;
             }
         }
@@ -173,7 +186,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             }
             catch (Exception exception) when (exception is GanttScheduleException or ArgumentOutOfRangeException)
             {
-                notificationService.Error("Task schedule change rejected", exception.Message);
+                if (context.IsCurrent()) {
+                    notificationService.Error("Task schedule change rejected", exception.Message);
+                }
                 return;
             }
         }
@@ -225,9 +240,11 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                         current.TaskId.Value,
                         proposed.ResourceToAttach.Kind,
                         reloadAuthoritativeProject);
-                    notificationService.Warning(
-                        "Task details partially saved",
-                        "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
+                    if (context.IsCurrent()) {
+                        notificationService.Warning(
+                            "Task details partially saved",
+                            "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
+                    }
                     logger.LogWarning(
                         "Task details were committed before resource attachment pricing completed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
                         Mask(context.ProjectId),
@@ -247,15 +264,19 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                             ErrorCode: ProjectStructureTaskResourceAttachmentService.CompensationFailedErrorCode
                         })
                     {
-                        notificationService.Error(
-                            "Task resource requires attention",
-                            exception.Message);
+                        if (context.IsCurrent()) {
+                            notificationService.Error(
+                                "Task resource requires attention",
+                                exception.Message);
+                        }
                     }
                     else
                     {
-                        notificationService.Warning(
-                            "Task details partially saved",
-                            "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
+                        if (context.IsCurrent()) {
+                            notificationService.Warning(
+                                "Task details partially saved",
+                                "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
+                        }
                     }
 
                     logger.LogWarning(
@@ -270,15 +291,19 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             }
 
             await reloadAuthoritativeProject();
-            notificationService.Success(
-                "Task details saved",
-                proposed.ResourceToAttach is null
-                    ? $"{proposed.Title} was saved; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}"
-                    : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}");
+            if (context.IsCurrent()) {
+                notificationService.Success(
+                    "Task details saved",
+                    proposed.ResourceToAttach is null
+                        ? $"{proposed.Title} was saved; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}"
+                        : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}");
+            }
         }
         catch (ProjectStructureGanttMutationException exception)
         {
-            notificationService.Error("Task details change rejected", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task details change rejected", exception.Message);
+            }
             logger.LogWarning(
                 "Rejected Gantt task detail update for project {ProjectId}, task {TaskId}, with code {ErrorCode}.",
                 Mask(context.ProjectId),
@@ -287,7 +312,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
         catch (ProjectStructureTaskDetailsException exception)
         {
-            notificationService.Error("Task details could not be saved", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task details could not be saved", exception.Message);
+            }
             logger.LogWarning(
                 "Rejected Gantt task detail orchestration for project {ProjectId}, task {TaskId}, with code {ErrorCode}.",
                 Mask(context.ProjectId),
@@ -296,7 +323,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
         catch (ProjectStructureAgentException exception)
         {
-            notificationService.Error("Task details could not be saved", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task details could not be saved", exception.Message);
+            }
             logger.LogWarning(
                 "Rejected Gantt task detail update for project {ProjectId}, task {TaskId}, with application error {ErrorCode}.",
                 Mask(context.ProjectId),
@@ -310,15 +339,19 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         {
             if (mutationCommitted)
             {
-                notificationService.Warning(
-                    "Task details saved; reload required",
-                    $"The change was saved, but the authoritative project could not be reloaded.{BuildPricingSummary(committedPricing)} Reload this page before making another change.");
+                if (context.IsCurrent()) {
+                    notificationService.Warning(
+                        "Task details saved; reload required",
+                        $"The change was saved, but the authoritative project could not be reloaded.{BuildPricingSummary(committedPricing)} Reload this page before making another change.");
+                }
             }
             else
             {
-                notificationService.Error(
-                    "Task details save failed",
-                    "The task details could not be saved. The project remains unchanged.");
+                if (context.IsCurrent()) {
+                    notificationService.Error(
+                        "Task details save failed",
+                        "The task details could not be saved. The project remains unchanged.");
+                }
             }
 
             logger.LogError(

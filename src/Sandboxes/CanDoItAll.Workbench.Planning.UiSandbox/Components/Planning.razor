@@ -9,7 +9,15 @@
             }
             <Button Text="Toggle independent calendar" Click="@(() => showSecond = !showSecond)" />
             <Button Text="Synthetic specimens" Click="@(() => showSpecimens = !showSpecimens)" />
+            <Button Text="Toggle Gantt family" Click="@(() => showGantt = !showGantt)" />
+            <Button Text="Toggle independent Gantt" Click="@(() => showSecondGantt = !showSecondGantt)" />
         </Cluster>
+        @if (showGantt) {
+            <GanttSpecimen Scenario="@ganttFirst" />
+            @if (showSecondGantt) {
+                <GanttSpecimen Scenario="@ganttSecond" />
+            }
+        }
         <PlanningCalendarSurface Presentation="@first.Presentation" SelectionChanged="first.Select" StateChanged="first.ChangeState"
                                  OpenRequested="first.Open" RetryRequested="first.Retry" ProjectsRequested="first.Retry" />
         @if (first.LastAction is not null) {
@@ -33,4 +41,8 @@
     private readonly CalendarScenario second = new("Planning specimen B");
     private bool showSecond;
     private bool showSpecimens;
+    private readonly GanttScenario ganttFirst = new("Planning Gantt A");
+    private readonly GanttScenario ganttSecond = new("Planning Gantt B");
+    private bool showGantt = true;
+    private bool showSecondGantt;
 }
