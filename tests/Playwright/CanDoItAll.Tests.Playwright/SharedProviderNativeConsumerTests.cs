@@ -65,7 +65,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
     public Task Final_image_agent_reads_hidden_content_and_creates_attaches_reads_downloads_with_exact_approvals() =>
         RunFileConsumerAsync(planning: false);
 
-    private static async Task RunFileConsumerAsync(bool planning) {
+    private static async Task RunFileConsumerAsync(bool planning, bool insights = false) {
         await using var fixture = await SharedProviderConsumerFixture.StartAsync();
         var profile = await ImportedResponsesAsync(fixture);
         var marker = "PP2C_FILES_" + Guid.NewGuid().ToString("N");
@@ -128,6 +128,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await PreviewAndDownloadAsync(fixture, projectId, projectName, created, expected.Content);
         if (planning) {
             await AssertPlanningConsumersAsync(fixture, projectId, parent);
+            Assert.Equal(siblingContent, await ContentAsync(fixture, siblingId, sibling.Id));
+        }
+        if (insights) {
+            await AssertInsightsConsumersAsync(fixture, projectId, parent.Id);
             Assert.Equal(siblingContent, await ContentAsync(fixture, siblingId, sibling.Id));
         }
         await AssertRoutedAsync(fixture, profile, alternate.Id, marker);

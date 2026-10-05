@@ -551,7 +551,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     {
         await NavigateAsync(page, $"{baseUrl}/settings?tab=secrets");
         await page.GetByRole(AriaRole.Heading, new() { Name = "Secret vault", Exact = true }).WaitForAsync();
-        var existingSecret = page.GetByText(name, new() { Exact = true }).First;
+        await Assertions.Expect(page.GetByTestId("secrets-refresh")).ToBeEnabledAsync();
+        var existingSecret = page.GetByText(name, new() { Exact = true });
+        Assert.InRange(await existingSecret.CountAsync(), 0, 1);
         if (await existingSecret.CountAsync() > 0)
         {
             await SelectSecretForEditingAsync(page, existingSecret, name);
@@ -581,7 +583,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         string name,
         string expectedValue)
     {
-        var secret = page.GetByText(name, new() { Exact = true }).First;
+        await Assertions.Expect(page.GetByTestId("secrets-refresh")).ToBeEnabledAsync();
+        var secret = page.GetByText(name, new() { Exact = true });
+        await Assertions.Expect(secret).ToHaveCountAsync(1);
         await SelectSecretForEditingAsync(page, secret, name);
         var actualValue = await page.GetByTestId("settings-secret-value").InputValueAsync();
         var expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expectedValue));

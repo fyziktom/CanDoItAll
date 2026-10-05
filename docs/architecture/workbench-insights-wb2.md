@@ -1,7 +1,8 @@
 # Workbench Insights WB2
 
-Execution is in progress. This record does not claim closure of WB2 or readiness for
-the next slice. The sealed package is
+The rendering boundary and native consumer campaign are complete. The single broad
+regression checkpoint is still running; this record does not yet claim closure of
+WB2 or readiness for the next slice. The sealed package is
 `codex/bundles/CanDoItAll_Workbench_Insights_WB2`; original attempt logs and manifests
 are retained under ignored `artifacts/workbench-insights-wb2`.
 
@@ -19,15 +20,15 @@ Source inspection, evaluated MSBuild restore graphs, CLI builds and actual
 Playwright browser interactions provide the corresponding evidence. Entry graphs
 and native/planning watch file sets were captured before moving renderers.
 
-The new `CanDoItAll.Workbench.Insights.UI` leaf will own the full Manager Summary,
+The new `CanDoItAll.Workbench.Insights.UI` leaf owns the full Manager Summary,
 Activity, Selection Panel, Object Index, Signals, Canvas Health and advanced detail
 renderers and their CSS. BaseLib, CanvasLib and Charts remain the owners of their
 real child widgets and JavaScript. No main Structure canvas or Processes renderer
 is included in this extraction.
 
-The native Workbench module will retain report scope resolution, bounded queries,
+The native Workbench module retains report scope resolution, bounded queries,
 arithmetic, runtime profile selection, process cursors, access checks and all
-project/task/file/runtime effects. A small Insights.Contracts assembly will hold
+project/task/file/runtime effects. A small Insights.Contracts assembly holds
 only shared report values; native preflight, process cursor and mixed workbench
 model types stay with their existing owners. Public moved values retain their
 namespaces and explicit type forwards.
@@ -45,7 +46,7 @@ that origin and passes the original admission to mutation owners. Current select
 must never substitute for the targets of an old callback. File preview, Mermaid,
 task editing and runtime execution remain explicit native actions.
 
-A new independent Insights sandbox and test project will exercise the same real
+A new independent Insights sandbox and test project exercise the same real
 renderers without constructing the Workbench module. This project boundary is
 needed because moving files inside the module would retain its Foundation, MAF,
 Processes and application dependency graph. A generic service bag, new parent
@@ -180,3 +181,218 @@ one relocated marker compatibility comparison. All use explicit ordinal policy;
 none normalizes a filesystem path. Eight stale findings correspond to removed or
 moved code. W3 still owns final publication/watch measurements, complete native
 report math/cursors, actor/grant and consumer journeys, final graphs and closure.
+
+## Current renderer, caller and asset census
+
+| Surface | Extracted rendering and children | Native caller and retained authority |
+|---|---|---|
+| Manager Summary | `Reporting/ProjectManagerSummaryPanel`, real `CdaChart`/series, metrics, options, load/progress, confirmation, warnings and notes | Workbench's small same-name adapter owns project admission, native query source and retained profile/project snapshots. |
+| Activity | `Reporting/ProjectManagerActivityDialog`, real `DataGrid`, kind/status controls, totals and page footer | Each native activity source owns accepted UTC cutoff, aggregate provenance and Process continuation cursors. |
+| Selection | `InsightsSelectionWindow`, full `ProjectStructureSelectionPanel`, actual `ProjectStructureNodeDetailPreview`, badges and compact statistics | `ProjectStructurePage` captures original selection and actor; existing inspector commands, task forms, assignments, approvals and mutation owners perform effects. |
+| Object Index | Real `TreeView` and nodes, search, exact offered context menu, shared floating window | The page acknowledges original target membership and menu opening; native actions retain authority. |
+| Signals | Full marker/progress/priority sections and shared floating window | Native admitted node mutation methods preserve additive markers and precise changed identities. |
+| Canvas Health | Existing classifier counts, spotlights and shared floating window | Native validation remains unavailable as at entry; the optional controlled callback does not claim a native validation run. |
+
+The production caller is `ProjectStructurePage`; its Summary adapter composes a
+per-view `ManagerSummarySession`. The sandbox's `Insights.razor` contains two report
+sessions, and two `SupportSpecimen` instances render the actual support windows and
+advanced detail child. `CanvasFloatingWindow`/`OverlayWindow`, `TreeView`, Charts,
+dialogs, shared theme, fonts, icons and browser runtimes stay in Components. Feature
+CSS moved with its renderers. Insights has no feature-owned JavaScript.
+
+File bytes, previews, direct file interaction and Mermaid remain native FileTools
+integrations. Workflow status/start/attachment, Agent launch, transcript/export,
+party assignment, task editing, project hierarchy, deletion confirmations and
+main-canvas operations retain their existing page/application owners. The leaf has
+safe display projections and captured intents, never a runtime service bag.
+
+Evaluated graphs preserve all 21 existing renderer/sandbox roots. Workbench changes
+from 94 to 96 projects by adding Insights.UI and its contracts. The new UI closure
+has seven projects; its independent sandbox has eight. Loaded-assembly tests verify
+all 40 moved public identities through the original Workbench assembly and reject
+product implementation dependencies from the complete Insights assembly closure.
+AppComponents, Foundation and Processes have no reverse product-renderer reference.
+
+## Independent host and developer-loop proof
+
+Source Fast/Parity and independently published Fast/Parity pass the actual report,
+four-chart, Activity, full support and advanced-detail journeys at 1920x1080/DPR1.
+Every served JavaScript, stylesheet and font response in these runs has a recorded
+hash. Both published modes additionally pass window dragging, resizing, stacking,
+keyboard minimize/restore and index typing. Screenshots were inspected, including
+scrolling and Activity footers. Initial harness assumptions about HTML canvas,
+border-inclusive drag coordinates and reset placement are retained as failed
+attempts; Charts uses SVG and window reset uses the configured default placement.
+
+SDK 10.0.303 watch observations contain three edits and byte-exact restorations per
+owned file kind. These are warm-cache observations, not a cold-build comparison or
+an inferred speedup ratio:
+
+| Host and mode | Razor edit/restore | C# edit/restore | CSS edit/restore |
+|---|---|---|---|
+| Small Fast host, hot reload | 1.081-6.199 s | 0.156-0.171 s | 0.664-1.013 s |
+| Native host | 2.183-3.595 s, hot reload | 1.002-1.409 s, hot reload | 29.374-37.517 s, restart mode |
+
+All small-host and native managed-code observations preserve PID and require no
+manual navigation. Eleven small-host Razor/C# observations include an automatic
+page navigation; its CSS observations and all native managed-code observations
+have none. Same PID does not mean every update happened in place. Native default
+CSS hot reload crashes inside the SDK's
+`HotReloadClients.ApplyStaticAssetUpdatesAsync`. The documented static-file
+suppression option does not apply CSS in this native graph. The completed native
+CSS measurements therefore use `dotnet watch --no-hot-reload`: they record actual
+process restarts and five explicit navigations across six observations. Original
+SDK failures and two navigation-harness failures remain separate. No SDK or product
+workaround hides the limitation. See the [official watch reference](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-watch).
+
+## Native reporting evidence
+
+Fresh focused owner selections pass 54 Unit and 71 PostgreSQL Integration cases.
+They cover scope bounds, report arithmetic/currencies, deletion partial results,
+native admission, execution tracking and Workflow/Simple Chat report persistence.
+Two added persisted paging cases pass on actual stores: canonical Simple Chat
+operations use offset pages; root Process runtime commits, assignments, projections
+and native facts assembly use continuation pages. Both span 20 plus five records,
+retain accepted totals on backward navigation and exclude later records from their
+original as-of window. No report DTOs stand in for native persistence.
+
+The first Process fixture omitted facts assembly and launch assignment project
+identity; its failed result is retained. Once the actual assembler ran, cancelled
+never-executed runs correctly produced known zero cost, not missing pricing. The
+Simple Chat fixture separately verifies exact decimal charges and a later accepted
+window. Forty original public identities and the complete allowed assembly graph
+have their own two-case passing selection.
+
+The retained native project also opens a stored `.mmd` asset through Selection's
+existing governed preview. The native file owner supplies exact canonical bytes,
+the original Mermaid renderer produces SVG, and every neighboring node remains
+equal. The initial generic-node request was explicitly refused with
+`ManagedAssetCreationRequired`; the subsequent managed-asset creation is recorded
+once and reused. Metadata's omitted notes never substitute for content authority.
+
+## W3 qualifications and retained attempts
+
+The owned source/two-client topology passes all 19 protocol vectors on image
+`sha256:d4829fdc2a2db772065d11dc00f6d617ec21f78c988d2a810d2a63535d73b1c9`,
+with source fingerprint
+`bdf4a6ac4b2e50d02c60d29f6c13e838c597b5aa7f69478bbaa894f70ddbd721`.
+Its application source is W2 `531a8039` paired with Components `24d182c6`.
+Later test and documentation edits have separate input manifests; they do not
+change the image's recorded identity or its production source. The defaults and
+custom-catalog browser campaigns each pass one current case. No paid calls occur.
+
+The first full Insights consumer reaches the final descendant readback after its
+native approvals, rejection, file readback/download, task edit, Calendar/Gantt and
+accepted report/Activity assertions. Its whole-child-tree equality incorrectly
+rejects the expected parent relationship just added by the hierarchy command.
+The corrected test asserts that exact parent, preserves both original task rows,
+then compares the settled attached tree before and after the read-only report load.
+The original failed run and accepted project/run/approval identities remain retained;
+its routing and History assertions below the failure were not reached.
+
+The second full attempt completes its Agent/file, approval, rejection and task
+prefix, then fails an overly broad header equality check: changing draft options
+intentionally adds the `Options changed` badge. The corrected check waits for that
+badge and compares the accepted metrics and exact `As of` text. A continuation on
+the retained project, task and readback run passes the current report, hierarchy,
+route and History helpers. Both parent asset hashes and the untouched sibling's
+asset hash remain equal. No Agent/file proposal is replayed. This is passing native
+continuation proof; neither original full xUnit failure is relabeled as a pass.
+
+The initial continuity batch reports two failures before an intentional stop.
+Scheduler fails before saving its draft; a retained unsaved probe verifies native
+input/JSON synchronization. Waiting for the schema default alone still fails on a
+future draft after two successful restarts. The current test also clicks the input
+and verifies focus before typing; the complete campaign then passes. Its completed
+plan stays enabled across two actual app restarts with the exact original run and
+detail unchanged. A future neighboring plan executes once; provider captures remain
+unchanged. No Scheduler production change or timeout increase is involved.
+Floating context, detach/follow, distinct handles and close
+with a pending approval pass; the final rejection reply exceeds its 60-second
+assertion while persisting. Readback then verifies the exact original run/session,
+rejected proposal, no write receipt, unchanged Agent configurations and the stored
+reply, which is also visible after reopening the native chat. No rejection repeats.
+The interrupted batch had already accepted the next standard-chat case's initial
+turn; that exact completed turn and capture are read before its fully consumed
+plan is cleared. The original aborted batch remains failed. Subsequent consumers
+run individually.
+
+The standard-chat case passes runtime details, execution log, pending-run
+cancellation and original-transcript reopening, then encounters the fresh profile's
+explicit incomplete Usage index. Its original grid assertion stays intact. The
+existing `tools/UsageIndex` command initializes 31 records for only this fixture's
+client-A organization scope, without rebuild or legacy-migration flags. All 602
+canonical JSON payloads remain byte-identical. This derives an index from native
+evidence; it neither seeds report rows nor makes a model call. The initial failed
+partial-view assertion remains part of the evidence.
+
+The separate current standard-chat/Usage, default and nondefault Simple Chat,
+accepted and incomplete Workflow/TestLab, human-response and canvas-gesture cases
+pass. The source disable/retire/reimport and two-circuit local-settings cases also
+pass: unavailable routes refuse dispatch, native imported identity survives
+reimport, and explicit conflict resolution preserves the other operator's unedited
+enabled value. Original local settings are restored and read back.
+
+The first final History case passes lazy metadata reads, provider/global identity,
+caller-key filtering, paging and denied content authority, then fails credential
+rotation. The shared test helper checked for an existing secret while native
+metadata was still loading and created a duplicate name. It now waits for the
+native refresh completion and requires unique identity instead of selecting the
+first ambiguous label. Exact readback shows the original source binding and valid
+credential remained intact; the duplicate had no references and held the revoked
+test credential. Only that orphan is deleted through the native secret editor,
+with an exact committed receipt and unchanged original hash/binding. Two private
+cleanup attempts omitted the startup database confirmation and produced no native
+receipt or database effect; their observations are retained. The corrected private
+helper completes that confirmation before selecting the exact record. No SQL
+writes, source rebinding or setup replay are involved.
+The corrected one-case History follow-up passes in 4 minutes 4 seconds, including
+revocation HTTP 401, a completed native turn through the replacement credential,
+exact caller-key History identities and cleanup restoring the original secret.
+Browser errors and failed requests are empty. The original three-case final batch
+remains recorded as two passes and one failure, with the History follow-up separate.
+
+Central, client A and client B each serve the fingerprinted Gantt runtime with
+SHA-256 `C1F03766D8AC098A336F8AB8BDC51FDC10C7C8A6BA6196FD38D3A21A746EDED8`,
+identical to the repaired Components source. Local image provenance and served-byte
+readback are separate from remote dependency delivery.
+
+The broad Components assembly executes 2,649 cases: 2,646 pass and three event-
+dispatch cases fail. The mutation test now combines each DOM lookup and click on
+the dispatcher; the Workspace status test queries its actual tabs renderer. A
+fresh isolated assembly passes all three with the original persistence, read-count
+and unavailable-status assertions intact. The first isolated attempt accidentally
+used the old copied DLL; another lacked the Web dependency. Those attempts are
+preserved separately from the verified current three-case result. Production
+source is unchanged by these test repairs, and the original broad result stays failed.
+
+Current portability enforcement passes all 15,231 reviewed findings without
+baseline-write mode. Documentation validation passes 368 maintained Markdown files.
+The changed-source secret scan retains 20 heuristic candidates, all with the same
+fingerprints and counts as existing entry CI test values/expressions; it finds no
+introduced candidate. This is a scoped comparison, not a clean complete-worktree
+claim. The separate complete-worktree snapshot scans 109,612 text files and reports
+1,936 heuristic candidates, including historical artifacts, test controls,
+dependency copies and ignored owned-fixture credentials. It has no oversized text
+exclusion. Of 6,954 reported unreadable paths, 4,876 are non-text candidates; a
+supplemental scan reads 2,074 text files through extended Windows paths or explicit
+BOM decoding, with no candidates. Four retained historical files remain undecodable
+under that UTF-8/UTF-16 procedure. Originals and scanner rules are unchanged. Neither
+report is represented as a clean whole checkout. A further reversible byte mapping
+of those four historical files also finds no ASCII-rule candidates; it does not
+claim to recover their original encoding. The final changed-source snapshot covers
+105 text files. Native consumer proof is complete; broad regression closure remains
+in progress.
+
+## Workbench roadmap
+
+| Family | Current boundary |
+|---|---|
+| Calendar, Gantt, both task editor families | WB1 completed; preserved native planning and pricing owners. |
+| Summary, Activity, Selection, Index, Signals, Health | Rendering boundary implemented here; final W3 consumer/regression closure is still in progress. |
+| Main Structure canvas | Not started by WB2. |
+| Broader runtime, assignment and file presentation | Original owners retained; no new extraction started. |
+| Processes product surfaces | Not started by WB2. |
+
+Completed Agents AC1, Workflow and provider boundaries remain preservation
+constraints. This roadmap does not declare all Workbench complete.

@@ -1780,9 +1780,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() => Assert.Contains("2 nodes selected", cut.Markup));
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "In progress", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1800,9 +1800,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "Risk", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1820,9 +1820,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "P2", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1836,9 +1836,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "100%", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes

@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages;
 using CanDoItAll.Workspace.UI;
@@ -45,8 +46,9 @@ public sealed class WorkspaceApiStatusTests {
         cut.WaitForAssertion(() => Assert.Contains(initialBadge, ApiTab().TextContent));
         Assert.Equal(3, tokens.Reads);
 
-        AngleSharp.Dom.IElement ApiTab() => cut.FindAll("button").Single(button => button.TextContent.Contains("API Access", StringComparison.Ordinal));
-        Task SelectWorkspaceAsync() => cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Workspace").Click());
+        IRenderedComponent<SecondaryTabs> Tabs() => cut.FindComponent<WorkspaceSettingsSurface>().FindComponent<SecondaryTabs>();
+        AngleSharp.Dom.IElement ApiTab() => Tabs().FindAll("button").Single(button => button.TextContent.Contains("API Access", StringComparison.Ordinal));
+        Task SelectWorkspaceAsync() => cut.InvokeAsync(() => Tabs().FindAll("button").Single(button => button.TextContent.Trim() == "Workspace").Click());
     }
 
     private sealed class StatusService(bool authorizationEnabled) : IApiTokenService {

@@ -6,6 +6,8 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright;
 
 public sealed partial class SharedProviderNativeConsumerTests {
+    private const string NativeWorkflowMessageDefault = "WF1 default";
+
     [Fact]
     [Trait("Category", "ExternalSharedProviderUi")]
     public async Task Final_image_native_navigation_keeps_tab_drafts_and_retires_them_across_browser_history() {
@@ -131,7 +133,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             name, "WF1 exact native authoring consumer", WorkflowLifecycleStatus.Draft, new(start.Id, nodes, edges),
             new(WorkflowRuntimeBackendKind.InProcess, true, false, false, false)) {
             InputParameters = [new("message", "Message", WorkflowInputParameterKind.Text, true, "Retained native input", "$.message",
-                "WF1 default", WorkflowInputParameterOptionSource.None, null, null, "Enter message")]
+                NativeWorkflowMessageDefault, WorkflowInputParameterOptionSource.None, null, null, "Enter message")]
         });
         var page = fixture.Page;
         await fixture.NavigateAsync($"/agents/workflows?workflowId={initial.Id.Value:D}");

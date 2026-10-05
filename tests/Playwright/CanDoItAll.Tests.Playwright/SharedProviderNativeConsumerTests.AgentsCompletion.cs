@@ -92,7 +92,11 @@ public sealed partial class SharedProviderNativeConsumerTests {
     }
 
     private static async Task<(DateTimeOffset FireAt, string Cron)> SetFiniteScheduleInputAsync(IPage page, string message) {
-        await page.GetByTestId("scheduler-input-message").FillAsync(message);
+        var input = page.GetByTestId("scheduler-input-message");
+        await Assertions.Expect(input).ToHaveValueAsync(NativeWorkflowMessageDefault);
+        await input.ClickAsync();
+        await Assertions.Expect(input).ToBeFocusedAsync();
+        await input.FillAsync(message);
         await Assertions.Expect(page.GetByTestId("scheduler-input-json")).ToHaveValueAsync(new Regex(Regex.Escape(message)));
         await page.GetByTestId("scheduler-timezone").FillAsync("UTC");
         await Assertions.Expect(page.GetByTestId("scheduler-cron-preview")).ToContainTextAsync("Schedule time zone: UTC.");

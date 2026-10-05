@@ -22,6 +22,15 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 
+Calendar, Gantt and both native task forms render through the
+[Planning boundary](../../../docs/architecture/workbench-planning-wb1.md).
+Manager Summary, Activity, Selection and its advanced detail, Object Index,
+Signals and Canvas Health render through the
+[Insights boundary](../../../docs/architecture/workbench-insights-wb2.md).
+This module retains native reporting queries, project admission, mutation outcomes
+and the page adapters. Main Structure canvas, runtime and file integrations retain
+their existing owners; the renderer libraries receive typed projections and intents.
+
 Processes.Application owns process-run root semantics through `ProcessRunArtifactRootPolicy`. Workbench consumes its typed resolution when projecting current-run managed roots, collapses artifact evidence under `artifacts/.../process-runs/{runId}` to the run artifact folder, and collapses generated or external-delivery output persisted under `output/.../process-runs/{runId}/{productRoot}` to the product folder. Wrong-run, dated receipt, absolute, traversal, or otherwise unanchored paths are ignored instead of mirroring noisy artifact subtrees. Raw `external-target/...` aliases remain Processes grounding metadata; Workbench projects the managed output root that records the run-owned delivery evidence.
 
 ### Runtime node execution and terminal presentation
