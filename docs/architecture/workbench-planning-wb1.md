@@ -107,11 +107,80 @@ Three controlled interop failures now pass; all 88 Gantt component tests, routin
 and asset verification pass. This signed commit is local only, without a remote
 push or package publication. Final image fingerprints must include that source.
 
+## W3: both task editor families
+
+The leaf owns the complete Gantt and general Structure create/edit forms and their
+actual estimate, execution, resource-picker and price-preview children. Their
+different fields and creation rules remain intact. The two existing native dialog
+types are small adapters around those renderers. General create/edit callers use
+`ProjectStructureCanvasTaskDialogCoordinator`; Gantt creation uses its native panel
+and edits use `ProjectStructureGanttTaskEditCoordinator`. The independent sandbox
+mounts those same forms, including two stacked independent openings.
+
+The dependency-free `Workbench.Planning.Contracts` project contains only existing
+estimate, execution, progress and resource values shared by the renderer and native
+services. Public namespace and assembly-qualified identities are preserved through
+type forwarding. The mixed Workbench entity/service models remain native. The real
+checked resource-type filter moved to the existing light RecordBrowsing library,
+with its previous public identity forwarded. The renderer's evaluated closure has
+nine projects and the sandbox ten; all 19 protected existing closures are unchanged.
+The recursive assembly guard rejects unresolved or backend implementation edges.
+
+The native opening retains project admission, original assignment revision and
+historical pricing basis. The form captures its draft before submission, retires
+quotes and prevents duplicate submission. Each adapter closes only its original
+dialog reference. Partial/unknown outcomes keep the draft, exact known identities
+and individual task, assignment, pricing, attachment, ordering and compensation
+facts. Explicit readback performs no write and cannot refresh a replacement view.
+It does not grant permission to replay a create or reuse stale expected revisions.
+
+Commit order remains with existing owners:
+
+| Path | Native phases and recovery |
+|---|---|
+| General create | Revalidate pricing, create task and canvas follow-up, then assign. A returned task identity survives failed placement/readback. Assignment failure compensates creation; both failures are retained if recovery fails. |
+| Gantt create | Create the task through the application owner, attach the optional definition/direct assignment and price it, then save row order. Existing compensation removes the task after a later phase fails; cancellation also retains its native recovery receipt. |
+| Both edits | Validate original execution/estimate/cost/assignment revision, reload authoritative pricing, optionally replace the direct assignment, then persist task fields. Gantt also validates original title/progress/schedule. Only afterward may an additive definition be attached and priced. |
+| Readback | Preserve successful phase receipts before reloading. A failed refresh cannot relabel a task as unsaved or close another opening. |
+
+Controlled PostgreSQL failures exposed two unsafe compensation paths. An edit whose
+task write committed but lost its acknowledgement could restore the old assignment
+and cost onto the newly saved task. Compensation now compares the captured task
+fields under the existing native assignment lock before restoration. A definition
+attachment whose pricing transaction committed but lost acknowledgement could be
+removed while leaving its price. That uncertain commit now preserves the attachment
+and exact identities for readback. Known pre-commit pricing rejection still uses
+native compensation. The stale Gantt exception contract is retained alongside its
+compensation facts; no new durable operation protocol or schema was introduced.
+
+Failing-first raw-input tests also cover invalid dates, progress, effort and cost;
+unknown execution; null versus zero; sub-minute timestamp precision; queued saves;
+late quote/input changes; and cancellation. Correcting invalid cost no longer rescales
+man-day effort. Native reopening formerly rounded estimate decimals and converted
+UTC due dates to server-local minutes. Its task projection now retains exact values.
+The actual 1920 by 1080 browser journey created and edited through all four entry
+points, rejected invalid raw due text, reached both footers and saved with keyboard
+focus. Canonical readback preserved exact task metadata/schedules, zero GBP historical
+cost after starting execution, all unrelated task rows and both existing links.
+
+Fresh proof passes 251 native family cases and all 44 independent planning cases.
+This includes the original quote matrix, native assignment/attachment/compensation
+tests, the real coordinator/dialog outcome tests and public identity/wire checks.
+The earlier 247/248 run, two native reopening failures and a discovery attempt blocked
+by the owned app's locked output files remain separate failed evidence. Current
+source and delta secret matches are reviewed against entry; private credentials,
+TRX, screenshots and full logs are excluded from tracked delivery.
+
 ## Remaining WB1 work
 
-Both task form families, the rest of the independent sandbox and final
-operator/Agent/Workflow/multi-instance journeys are pending.
-Large-desktop validation uses 1920 by 1080 at scale 1. Final closure
-requires a current caller/asset census, repeated watch measurements, native
-partial-commit proof, the settled Stable decision and final static enforcement.
-Neither the full planning boundary nor release readiness is claimed here.
+The final W4 operator/Agent/Workflow/multi-instance campaign, independently published
+Parity/Fast sandbox and repeated development-loop measurements remain pending.
+Large-desktop validation uses 1920 by 1080 at scale 1. New shared contracts, owner
+recovery behavior and test/CI registration justify one frozen Stable checkpoint after
+the final source is settled. Later changes require explicit affected proof. The
+historical AC1 Stable failure remains a historical failure, never a fresh pass.
+
+Final closure also requires refreshed static/docs/secret gates and final image/asset
+fingerprints. Remaining Workbench cuts are PM/read panels, the main Structure canvas
+and inspectors, assignment/runtime/files and Processes. None is started by WB1.
+Release readiness is outside this assignment.

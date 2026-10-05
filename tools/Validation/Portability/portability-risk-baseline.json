@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-05T06:26:57.831936+00:00",
+  "generated_utc": "2026-10-05T08:47:36.029881+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15213,
+  "allowance_count": 15227,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -58028,6 +58028,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/README.md",
+      "category": "permissions",
+      "source_fingerprint": "a7f7b468577deeb8587dbc2f2de2994f02894bbbe8d02e3a1bb10e4f34b3c630",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentContext/ProjectStructureRuntimeGuidanceContributor.cs",
       "category": "case-policy",
       "source_fingerprint": "b94f3a7c71ac8fb2c2a5b876077e5b8a79aa159c7392eff48a990c857c8f9d42",
@@ -59258,6 +59264,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "fb588b7d298aacabf5e6454f4c9cfb603913c93b67c3e1ab0805fc46cf955e2f",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
       "category": "case-policy",
       "source_fingerprint": "30e94957c7966c34bc91828a8b318c22943dac6d92d3f5493cafa55f4d9fbd21",
@@ -59390,39 +59402,27 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "2e287855fc547098bdca6920ef69cf0a38de0c52aa064745a90c510f9676e7fc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "3f2b5c938e9b37080febfbac9759fb108facafc704caa5d75d9781a55f39ad27",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a69c6a18b95506c314911db7d3a65beb714f6b412f5925a1f1feb2c26e64f5c5",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e525d3b55615c298f73436525652a6b540183c68357756368577d5378a1751d3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f6b8801dea21204cab0a32fed9afdfcfddd5f669ef99e7bf22ec40f842747cc5",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
       "category": "external-tool",
       "source_fingerprint": "9b8262f9917bdf111608614d6876ae20fe176295eabc9fe33c35f4e692e7b74d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "6ce974a171147b325dba4d32cafd8faa019805f192a9b55c3cf288892477eacd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "95b73841c38243f139900016eb8238955083bf185ec4966ca399264931b56b40",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "bbf402220e44b20155702fe0c0036e00417d8329c3f509fe69d8449b1cdfc3b9",
       "count": 1
     },
     {
@@ -65156,6 +65156,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskCreationContracts.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "3bcd480dcd8a8ed3f4d2928fd737ea01abe442bc2c0f1f7ef3f35ccb09d439c8",
+      "count": 2
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskCreationService.cs",
       "category": "case-policy",
       "source_fingerprint": "b4b8802722a69cf927cd1c2d61948553ee324161ecace722e622b77e743e2a24",
@@ -65168,6 +65174,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskCreationService.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "3a00a0e9dd640911924e6d469159a1db692d8f968cf4162dc3d5c9b263c276e9",
+      "count": 3
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskPricingCommitService.cs",
       "category": "case-policy",
       "source_fingerprint": "e57dec04eabb85865a95ca1f8cd7a812ccbd9c00f96f7ced36c601a5025a7ae5",
@@ -65176,7 +65188,31 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
       "category": "link-reparse",
+      "source_fingerprint": "35b728230781e106740a09e97ad1a715c3422c276f22ad852bdd5fa180dd52d4",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "category": "link-reparse",
       "source_fingerprint": "3b0a6de915b70203a5f9bbb1f66becae6a449db147e3abc91d26485dc9366a59",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "7905e12ea8d7890204d5edbfad6916a68268458d141bbba26a6dc2c3590bf5b2",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "d1e79c36230630f4b9059fdcb25d4551367238553e0255542a80b8e4db842b69",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "fc918f835177e6edcf8e7badf037d3af5f73236c777b4684c9f259d4ec99ce8c",
       "count": 1
     },
     {
@@ -75383,6 +75419,36 @@
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "011373e61826411845ed9cc98ebd01448cda19016193755de4030d5053338204",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "823f19faa51e47f746ddb9f587bff5fb6d9b086499509c4e39b96daeead7c490",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "82406b1b7fe09b6ed9deadfd46c7ffcb3e90a7b988c65823e9e42418e3d26742",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "93c8e4dff968461b3b17b2d2494bc9f93f2c7296bc287c0c783ccdb70c20e6d3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "97092c7110e2943fdaad9cd4994e1de26dd870357b639776d03fe2d1ba6d831a",
       "count": 1
     },
     {

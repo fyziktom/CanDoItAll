@@ -110,11 +110,12 @@ public sealed class ProjectStructureTaskDetailsService(
                 ProjectProgressPolicy.UntrackedPercent &&
              !ProjectProgressPolicy.IsTrackedPercent(
                  request.CurrentProgressPercent)) ||
-            !ProjectProgressPolicy.IsTrackedPercent(
-                request.ProposedProgressPercent))
+            (!(request.CurrentProgressPercent == ProjectProgressPolicy.UntrackedPercent &&
+               request.ProposedProgressPercent == ProjectProgressPolicy.UntrackedPercent) &&
+             !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent)))
         {
             throw InvalidRequest(
-                "Current task progress must be untracked (-1) or between 0 and 100 percent; proposed progress must be between 0 and 100 percent.");
+                "Task progress must be untracked (-1) or between 0 and 100 percent.");
         }
 
         if (request.ScheduleChange is not null &&

@@ -1,5 +1,6 @@
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Workbench.Planning.UI;
+using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Workbench.Planning.UiSandbox;
 
@@ -28,6 +29,28 @@ public sealed class GanttScenario {
     }
 
     public static GanttDependencyId DependencyId(GanttTaskId predecessor, GanttTaskId successor) => new(Guid.NewGuid().ToString("N"));
+
+    public void AcceptCreate(GanttTaskId id, PlanningGanttTaskCreate draft) {
+        var rows = Presentation.Tasks.ToList();
+        var index = draft.AfterTaskNodeId is null ? rows.Count : rows.FindIndex(task => task.Id.Value == draft.AfterTaskNodeId) + 1;
+        rows.Insert(index, new(id, draft.Title, draft.StartUtc, draft.EndUtc) {
+            ExpectedEffort = draft.Estimate.ExpectedEffortHours is { } effort ? TimeSpan.FromHours((double)effort) : null
+        });
+        Presentation = Presentation with { Tasks = rows.ToArray() };
+        LastAction = $"Synthetic task created: {id.Value}";
+    }
+
+    public void AcceptEdit(ProjectStructureTaskEditDialogResult draft) {
+        var schedule = GanttSchedulePlanner.PlanInterval(Presentation.Tasks, Presentation.Dependencies, draft.TaskId,
+            draft.StartUtc, draft.EndUtc, minimumTaskDuration: TimeSpan.FromMinutes(15));
+        ChangeDates(schedule.AffectedTasks);
+        Presentation = Presentation with { Tasks = Presentation.Tasks.Select(task => task.Id == draft.TaskId
+            ? new GanttTask(task.Id, draft.Title, task.Start, task.End, task.Assignments) {
+                ProgressPercent = draft.ProgressPercent,
+                ExpectedEffort = draft.Estimate.ExpectedEffortHours is { } effort ? TimeSpan.FromHours((double)effort) : null
+            } : task).ToArray() };
+        LastAction = $"Synthetic task edited: {draft.TaskId.Value}";
+    }
 
     public void Title(GanttIntent<GanttTaskTitleChangeRequest> intent) {
         if (!Accept(intent.Origin)) {

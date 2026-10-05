@@ -45,7 +45,20 @@ public sealed record ProjectStructureTaskResourceAttachRequest(
 public sealed record ProjectStructureTaskResourceAttachResult(
     ProjectStructureTaskResourceSelection Resource,
     ProjectStructureTaskEstimateRefreshResult Pricing,
-    string? CreatedNodeId = null);
+    string? CreatedNodeId = null) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LinkTargetNodeId { get; init; }
+}
+
+public sealed record ProjectStructureTaskAttachmentFailureFacts(
+    string TaskNodeId,
+    ProjectStructureTaskResourceKind ResourceKind,
+    string? CreatedNodeId,
+    string? LinkTargetNodeId,
+    bool? CompensationSucceeded,
+    string FailureType,
+    string? CompensationFailureType = null);
+
 
 public sealed class ProjectStructureTaskResourceAttachmentService(
     ProjectStructureTaskResourceService resourceService,
@@ -165,89 +178,44 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
             return new ProjectStructureTaskResourceAttachResult(
                 resource,
                 pricing,
-                attachment.CreatedNodeId);
+                attachment.CreatedNodeId) { LinkTargetNodeId = attachment.LinkTargetNodeId };
         }
-        catch (OperationCanceledException cancellationFailure)
-            when (cancellationToken.IsCancellationRequested)
-        {
-            if (attachment is not null)
-            {
-                try
-                {
-                    await CompensateAsync(
-                        projectId,
-                        taskNodeId,
-                        attachment,
-                        agent,
-                        CancellationToken.None);
-                }
-                catch (Exception compensationFailure)
-                {
-                    throw BuildCompensationException(
-                        resource,
-                        cancellationFailure,
-                        compensationFailure);
-                }
-            }
-
-            throw;
+        catch (ProjectStructureTaskPricingCommitUnconfirmedException failure) when (attachment is not null) {
+            throw AttachmentFailure(taskNodeId, attachment, failure, compensationSucceeded: null);
         }
-        catch (Exception failure) when (attachment is not null)
-        {
-            try
-            {
-                await CompensateAsync(
-                    projectId,
-                    taskNodeId,
-                    attachment,
-                    agent,
-                    CancellationToken.None);
+        catch (Exception failure) when (attachment is not null) {
+            try {
+                await CompensateAsync(projectId, taskNodeId, attachment, agent, CancellationToken.None);
+            } catch (Exception compensationFailure) {
+                throw AttachmentFailure(taskNodeId, attachment, failure, compensationSucceeded: false, compensationFailure);
             }
-            catch (Exception compensationFailure)
-            {
-                throw BuildCompensationException(
-                    resource,
-                    failure,
-                    compensationFailure);
-            }
-
-            throw new ProjectStructureAgentException(
-                409,
-                "TaskResourceAttachmentPricingConflict",
-                "The task changed before authoritative resource pricing could be committed. The new resource attachment was rolled back; reload and try again.",
-                new
-                {
-                    ResourceKind = resource.Kind,
-                    FailureType = failure.GetType().Name
-                });
+            throw AttachmentFailure(taskNodeId, attachment, failure, compensationSucceeded: true);
         }
     }
 
-
-    // The attach request is validated before any resource, pricing, or task change is written.
     private static ProjectStructureAgentException InvalidAttachRequest(int statusCode, string errorCode, string message)
-        => ProjectStructureAgentException.CreateAgentVisible(
-            statusCode,
-            errorCode,
-            message,
-            canRetryWithCorrectedInput: true,
-            effectState: AgentToolEffectState.None);
+        => ProjectStructureAgentException.CreateAgentVisible(statusCode, errorCode, message,
+            canRetryWithCorrectedInput: true, effectState: AgentToolEffectState.None);
 
-    private static ProjectStructureAgentException BuildCompensationException(
-        ProjectStructureTaskResourceSelection resource,
-        Exception failure,
-        Exception compensationFailure)
-    {
-        return new ProjectStructureAgentException(
-            500,
-            CompensationFailedErrorCode,
-            "The task resource was attached, pricing failed, and the attachment could not be rolled back. Reload and resolve the task resource before editing it again.",
-            new
-            {
-                ResourceKind = resource.Kind,
-                FailureType = failure.GetType().Name,
-                CompensationFailureType = compensationFailure.GetType().Name
-            });
+    private static ProjectStructureAgentException AttachmentFailure(string taskNodeId,
+        ProjectStructureTaskResourceAttachment attachment, Exception failure, bool? compensationSucceeded,
+        Exception? compensationFailure = null) {
+        var message = compensationSucceeded switch {
+            true => "The resource was attached, but pricing was rejected. The new attachment was removed. Read the task before retrying.",
+            false => "The resource was attached, pricing failed, and removal could not be confirmed. Read the task before another change.",
+            null => "The resource was attached, but its pricing commit could not be confirmed. The attachment was retained. Read the task before another change."
+        };
+        return ProjectStructureAgentException.CreateMapped(compensationSucceeded == true ? 409 : 500,
+            compensationSucceeded switch {
+                true => "TaskResourceAttachmentPricingConflict",
+                false => CompensationFailedErrorCode,
+                null => "TaskResourceAttachmentPricingUnconfirmed"
+            }, message,
+            new ProjectStructureTaskAttachmentFailureFacts(taskNodeId, attachment.Kind, attachment.CreatedNodeId,
+                attachment.LinkTargetNodeId, compensationSucceeded, failure.GetType().Name, compensationFailure?.GetType().Name),
+            isSafeToExpose: true, canRetryWithCorrectedInput: false,
+            compensationFailure is null ? failure : new AggregateException(failure, compensationFailure),
+            effectState: compensationSucceeded == true ? AgentToolEffectState.NotCommitted : AgentToolEffectState.Unknown);
     }
 
     private static void ValidateRequiredRequestValues(
@@ -318,9 +286,8 @@ public sealed class ProjectStructureTaskResourceAttachmentService(
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Task resource attachment rollback failed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
-                Mask(projectId),
+                "Task resource attachment rollback failed with {FailureType}. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
+                exception.GetType().Name, Mask(projectId),
                 Mask(taskNodeId),
                 attachment.Kind);
             throw;

@@ -9,6 +9,8 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
+
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 

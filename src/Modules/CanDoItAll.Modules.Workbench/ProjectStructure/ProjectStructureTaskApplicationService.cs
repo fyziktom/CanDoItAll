@@ -58,7 +58,11 @@ public sealed class ProjectStructureTaskApplicationException : Exception
     }
 
     public ProjectStructureTaskApplicationErrorCode Code { get; }
+    public ProjectStructureTaskCompensationFacts? Compensation { get; init; }
 }
+
+public sealed record ProjectStructureTaskCompensationFacts(
+    string TaskNodeId, bool IsCreate, bool Succeeded, bool AssignmentRestored = false, bool PricingRestored = false);
 
 public sealed class ProjectStructureTaskApplicationService(
     ProjectStructureWorkItemAssigneeService assigneeService,
@@ -128,7 +132,10 @@ public sealed class ProjectStructureTaskApplicationService(
                 request.ProjectId,
                 createdTask.Id,
                 failure, request.MutationOwner);
-            throw;
+            throw new ProjectStructureTaskApplicationException(ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict,
+                "The task was created, but its assignment did not complete. The created task was removed.", failure) {
+                Compensation = new(createdTask.Id, IsCreate: true, Succeeded: true)
+            };
         }
     }
 
@@ -299,8 +306,17 @@ public sealed class ProjectStructureTaskApplicationService(
                 commitAssignments,
                 commitState.DirectAssignmentRevision,
                 originalState,
-                updateFailure);
-            throw;
+                updateFailure,
+                commitTask);
+            if (updateFailure is ProjectStructureGanttMutationException ganttFailure) {
+                ganttFailure.Compensation = new(request.TaskNodeId, IsCreate: false, Succeeded: true,
+                    AssignmentRestored: true, PricingRestored: true);
+                throw;
+            }
+            throw new ProjectStructureTaskApplicationException(ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict,
+                "The task edit did not complete. Its previous assignment and pricing were restored; reopen the task before saving again.", updateFailure) {
+                Compensation = new(request.TaskNodeId, IsCreate: false, Succeeded: true, AssignmentRestored: true, PricingRestored: true)
+            };
         }
     }
 
@@ -330,7 +346,6 @@ public sealed class ProjectStructureTaskApplicationService(
         catch (Exception compensationFailure)
         {
             logger.LogError(
-                compensationFailure,
                 "Task creation failed and the partially created task could not be removed. ProjectId={ProjectId} TaskId={TaskId} FailureType={FailureType}",
                 Mask(projectId),
                 Mask(taskNodeId),
@@ -340,7 +355,9 @@ public sealed class ProjectStructureTaskApplicationService(
                 "The task could not be created and its partial record could not be removed. Reload the project before making another change.",
                 new AggregateException(
                     creationFailure,
-                    compensationFailure));
+                    compensationFailure)) {
+                Compensation = new(taskNodeId, IsCreate: true, Succeeded: false)
+            };
         }
     }
 
@@ -350,8 +367,10 @@ public sealed class ProjectStructureTaskApplicationService(
         IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
         long expectedDirectAssignmentRevision,
         ProjectStructureTaskEditState originalState,
-        Exception updateFailure)
+        Exception updateFailure,
+        ProjectStructureNode expectedTask)
     {
+        var assignmentRestored = false;
         try
         {
             var restored =
@@ -361,7 +380,8 @@ public sealed class ProjectStructureTaskApplicationService(
                     previousAssignment,
                     expectedAssignments,
                     expectedDirectAssignmentRevision,
-                    CancellationToken.None, request.MutationOwner);
+                    CancellationToken.None, request.MutationOwner, expectedTask);
+            assignmentRestored = true;
             var postRestoreState =
                 ProjectStructureTaskEditStatePolicy.Read(restored.Task);
             await compensationService.RestorePricingAsync(
@@ -379,17 +399,18 @@ public sealed class ProjectStructureTaskApplicationService(
         catch (Exception compensationFailure)
         {
             logger.LogError(
-                compensationFailure,
                 "Task persistence failed and its previous assignee or pricing could not be restored. ProjectId={ProjectId} TaskId={TaskId} FailureType={FailureType}",
                 Mask(request.ProjectId),
                 Mask(request.TaskNodeId),
                 updateFailure.GetType().Name);
             throw new ProjectStructureTaskApplicationException(
                 ProjectStructureTaskApplicationErrorCode.CompensationFailed,
-                "The task fields were not saved and its previous assignee or pricing could not be restored. Reload the project before making another change.",
+                "The task write could not be confirmed and compensation did not complete. Read the project before making another change.",
                 new AggregateException(
                     updateFailure,
-                    compensationFailure));
+                    compensationFailure)) {
+                Compensation = new(request.TaskNodeId, IsCreate: false, Succeeded: false, AssignmentRestored: assignmentRestored)
+            };
         }
     }
 

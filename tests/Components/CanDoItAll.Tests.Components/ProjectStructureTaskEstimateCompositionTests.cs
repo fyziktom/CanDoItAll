@@ -7,6 +7,32 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructureTaskEstimateCompositionTests
 {
     [Fact]
+    public void Reopened_task_keeps_exact_UTC_due_instead_of_server_local_minutes() {
+        var due = new DateTimeOffset(2026, 10, 8, 12, 34, 56, TimeSpan.Zero).AddTicks(1234567);
+        var node = CreateTaskNode(new ProjectWorkItemMetadata { WorkItemKind = ProjectWorkItemKind.Task, DueUtc = due });
+        var input = ProjectStructureNodeEditor.BuildInputValues(ResolveTaskDefinition(), node);
+        Assert.Equal(due.ToString("O"), Assert.Single(input, value => value.Key == "dueUtc").Value);
+    }
+
+    [Fact]
+    public void Reopened_task_keeps_exact_effort_and_cost_for_an_unrelated_edit() {
+        var original = new ProjectWorkItemMetadata {
+            WorkItemKind = ProjectWorkItemKind.Task, ExpectedEffortHours = 8.987654312m,
+            ExpectedEffortUnit = ProjectWorkItemEffortUnit.ManDays, ExpectedCostAmount = 125.123456789m,
+            ExpectedCostCurrencyCode = "EUR", Description = "Task notes"
+        };
+        var node = CreateTaskNode(original);
+        var definition = ResolveTaskDefinition();
+        var input = ProjectStructureNodeEditor.BuildInputValues(definition, node);
+        var update = ProjectStructureNodeEditor.ComposeUpdate(definition, node, CreateRequest(input));
+        var saved = ProjectObjectMetadataSerializer.Parse(update.MetadataJson).WorkItem!;
+        Assert.Equal(original.ExpectedEffortHours, saved.ExpectedEffortHours);
+        Assert.Equal(original.ExpectedCostAmount, saved.ExpectedCostAmount);
+        Assert.Equal(original.ExpectedEffortUnit, saved.ExpectedEffortUnit);
+        Assert.Equal(original.ExpectedCostCurrencyCode, saved.ExpectedCostCurrencyCode);
+    }
+
+    [Fact]
     public void Create_composer_persists_canonical_effort_and_expected_cost()
     {
         var definition = ResolveTaskDefinition();

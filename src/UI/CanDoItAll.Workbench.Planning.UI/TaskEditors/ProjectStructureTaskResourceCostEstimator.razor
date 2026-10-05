@@ -18,7 +18,7 @@
                     <TextBlock TextStyle="TextStyle.Subtitle2"
                                Value="Resource price estimate" />
                     <TextBlock TextStyle="TextStyle.Note"
-                               Value="@(AllowsAuthoritativeRepricing
+                               Value="@(!InputIsValid ? "Correct the estimate inputs before requesting a price preview." : AllowsAuthoritativeRepricing
                                    ? "This is a preview. Save reloads the authoritative rate or execution history before committing the task cost."
                                    : "This task is not explicitly not started, so its historical cost snapshot is preserved.")" />
                 </Stack>
@@ -89,10 +89,16 @@
         ProjectTaskExecutionState.NotStarted;
 
     [Parameter]
+    public long InputRevision { get; set; }
+
+    [Parameter]
+    public bool InputIsValid { get; set; } = true;
+
+    [Parameter]
     public string DataTestId { get; set; } = "project-structure-task-resource-cost";
 
     private bool AllowsAuthoritativeRepricing =>
-        ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(ExecutionState);
+        InputIsValid && ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(ExecutionState);
 
     protected override void OnParametersSet() {
         QuoteRequestIdentity? nextRequestIdentity = SelectedResource is null
@@ -197,7 +203,7 @@
     }
 
     private QuoteRequestIdentity CreateIdentity(ProjectStructureTaskResourceSelection resource, ProjectTaskEstimate estimate)
-        => new(ProjectId, Context, resource, estimate, ExecutionState, QuoteResolver, EstimateChanged);
+        => new(ProjectId, Context, resource, estimate, ExecutionState, InputRevision, InputIsValid, QuoteResolver, EstimateChanged);
 
     private bool IsCurrent(QuoteRequestIdentity identity, long generation)
         => !disposed && generation == requestGeneration && activeRequestIdentity == identity && AllowsAuthoritativeRepricing;
@@ -209,6 +215,7 @@
         if (activeRequestIdentity?.ProjectId != identity?.ProjectId ||
             activeRequestIdentity?.Context != identity?.Context ||
             activeRequestIdentity?.ExecutionState != identity?.ExecutionState ||
+            activeRequestIdentity?.InputIsValid != identity?.InputIsValid ||
             activeRequestIdentity?.Resolver != identity?.Resolver) {
             quoteCache.Clear();
         }
@@ -223,7 +230,9 @@
             return;
         }
         statusStyle = AlertStyle.Info;
-        statusSummary = ExecutionState == ProjectTaskExecutionState.Unknown
+        statusSummary = !InputIsValid
+            ? "Correct the invalid effort or cost input before requesting another price preview."
+            : ExecutionState == ProjectTaskExecutionState.Unknown
             ? "Automatic pricing is disabled until this legacy task is explicitly confirmed as not started."
             : "Automatic pricing is disabled because this task has execution history.";
     }
@@ -264,6 +273,8 @@
         ProjectStructureTaskResourceSelection Resource,
         ProjectTaskEstimate Estimate,
         ProjectTaskExecutionState ExecutionState,
+        long InputRevision,
+        bool InputIsValid,
         Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? Resolver,
         EventCallback<ProjectTaskEstimate> Callback);
 }

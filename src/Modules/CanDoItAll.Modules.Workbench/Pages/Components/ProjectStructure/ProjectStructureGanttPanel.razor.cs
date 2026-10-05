@@ -489,10 +489,17 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
         var normalizedStart = startUtc.ToUniversalTime();
-        var result = await DialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
+        var session = new ProjectTaskDialogSession(() => IsCurrent(origin), () => reload.InvokeAsync(), Logger);
+        await DialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Add project task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureGanttTaskDialog.CreateSubmitted)] =
+                    new Func<ProjectStructureTaskCreateRequest, Task<PlanningTaskSaveResult>>(draft =>
+                        session.SubmitAsync(() => CreateTaskAsync(openedProjectId,
+                            draft with { ExpectedProjectAdmission = openedAdmission, AfterTaskNodeId = afterTaskNodeId },
+                            openedOwner, origin, operation, session))),
+                [nameof(ProjectStructureGanttTaskDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = openedProjectId,
                 [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
                     openedAdmission.DatabaseProfileId, openedAdmission.LifetimeId, Guid.NewGuid()),
@@ -525,56 +532,24 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             },
             lifetimeCancellation.Token);
 
-        if (IsCurrent(origin) && result is ProjectStructureTaskCreateRequest request)
-        {
-            await CreateTaskAsync(openedProjectId, request with { ExpectedProjectAdmission = openedAdmission }, openedOwner, origin, operation, reload);
-        }
     }
 
     private async Task CreateTaskAsync(Guid openedProjectId, ProjectStructureTaskCreateRequest request,
-        ProjectStructureAgentContext openedOwner, Guid origin, Guid operation, EventCallback reload) {
-        if (!IsCurrent(origin)) {
-            return;
+        ProjectStructureAgentContext openedOwner, Guid origin, Guid operation, ProjectTaskDialogSession session) {
+        var result = await TaskCreationService.CreateAsync(openedProjectId, request, openedOwner, CancellationToken.None);
+        session.TaskCommitted([result.TaskNodeId], result.Pricing,
+            request.Resource?.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent,
+            rowOrderChanged: true);
+        if (request.Resource?.Kind is ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process) {
+            session.AttachmentCommitted(new(request.Resource, result.Pricing, result.ResourceNodeId) {
+                LinkTargetNodeId = result.ResourceLinkTargetNodeId
+            });
         }
-        var committed = false;
-        try {
-            var result = await TaskCreationService.CreateAsync(openedProjectId, request, openedOwner, CancellationToken.None);
-            committed = true;
-            var message = $"{request.Title} was added to Main.{ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing)}";
-            mutationReceipts[operation] = new(origin, operation, PlanningCommitState.Committed, message, [new(result.TaskNodeId)]);
-            if (!IsCurrent(origin)) {
-                return;
-            }
-            await reload.InvokeAsync();
-            if (IsCurrent(origin)) {
-                NotificationService.Success("Project task created", message);
-            }
-        } catch (ProjectStructureTaskCreationException exception) {
-            mutationReceipts[operation] = new(origin, operation,
-                exception.CompensationSucceeded ? PlanningCommitState.Rejected : PlanningCommitState.Unknown,
-                exception.Message, [new(exception.TaskNodeId)]);
-            if (IsCurrent(origin)) {
-                readbackRequired = true;
-                NotificationService.Error("Task creation requires review", exception.Message);
-            }
-            Logger.LogWarning("Gantt task creation stopped for project {ProjectId}, operation {Operation}, stage {Stage}, compensated {Compensated}, code {Code}.",
-                Mask(openedProjectId), operation, exception.Stage, exception.CompensationSucceeded, exception.Code);
-        } catch (ProjectStructureAgentException exception) {
-            if (IsCurrent(origin)) {
-                NotificationService.Error("Project task could not be created", exception.Message);
-            }
-            Logger.LogWarning("Gantt task creation rejected for project {ProjectId}, operation {Operation}, code {Code}.", Mask(openedProjectId), operation, exception.ErrorCode);
-        } catch (Exception exception) {
-            if (!committed) {
-                mutationReceipts[operation] = new(origin, operation, PlanningCommitState.Unknown,
-                    "Task creation could not be confirmed. Read the project before attempting another creation.", []);
-            }
-            if (IsCurrent(origin)) {
-                readbackRequired = true;
-                NotifyUnexpectedMutationFailure("task creation", committed);
-            }
-            Logger.LogError("Gantt task creation failed for project {ProjectId}, operation {Operation}, committed {Committed}; failure type {FailureType}.",
-                Mask(openedProjectId), operation, committed, exception.GetType().Name);
+        mutationReceipts[operation] = new(origin, operation, PlanningCommitState.Committed,
+            session.Result!.Message, [new(result.TaskNodeId)]);
+        await session.RefreshAfterCommitAsync();
+        if (IsCurrent(origin)) {
+            NotificationService.Success("Project task created", session.Result.Message);
         }
     }
 

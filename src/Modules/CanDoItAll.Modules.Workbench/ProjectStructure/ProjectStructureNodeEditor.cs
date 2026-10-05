@@ -277,14 +277,16 @@ internal static class ProjectStructureNodeEditor
             "repositoryRoot" => metadata.ProjectBlock?.RepositoryRoot ?? string.Empty,
             "workspaceRoot" => metadata.ProjectBlock?.WorkspaceRoot ?? string.Empty,
             "workItemKind" => ToCamelCaseToken(metadata.WorkItem?.WorkItemKind == default ? ProjectNodeKindRegistry.ResolveWorkItemKind(node.ObjectSubtype) : metadata.WorkItem?.WorkItemKind),
-            "dueUtc" => FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
+            "dueUtc" => metadata.WorkItem?.WorkItemKind == ProjectWorkItemKind.Task
+                ? metadata.WorkItem.DueUtc?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+                : FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
             "sendKind" => ToCamelCaseToken(metadata.WorkItem?.SendKind),
             "deliveryChannel" => ToCamelCaseToken(metadata.WorkItem?.DeliveryChannel),
             "amount" => metadata.WorkItem?.Amount?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
             "currencyCode" => metadata.WorkItem?.CurrencyCode ?? string.Empty,
             ProjectTaskEstimateInputKeys.ExpectedEffortValue => ResolveTaskEffortInputValue(metadata.WorkItem),
             ProjectTaskEstimateInputKeys.ExpectedEffortUnit => ToCamelCaseToken(metadata.WorkItem?.ExpectedEffortUnit),
-            ProjectTaskEstimateInputKeys.ExpectedCostAmount => metadata.WorkItem?.ExpectedCostAmount?.ToString("0.####", CultureInfo.InvariantCulture) ?? string.Empty,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount => metadata.WorkItem?.ExpectedCostAmount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode => metadata.WorkItem?.ExpectedCostCurrencyCode ?? string.Empty,
             "repositoryMode" => ToCamelCaseToken(metadata.Repository?.RepositoryMode == default ? ProjectNodeKindRegistry.ResolveRepositoryMode(node.ObjectSubtype) : metadata.Repository?.RepositoryMode),
             "repositoryUrl" => metadata.Repository?.RepositoryUrl ?? string.Empty,
@@ -501,7 +503,7 @@ internal static class ProjectStructureNodeEditor
             metadata.ExpectedEffortUnit,
             metadata.ExpectedCostAmount,
             metadata.ExpectedCostCurrencyCode));
-        return ProjectTaskEstimatePolicy.ToInputValue(estimate)?.ToString("0.####", CultureInfo.InvariantCulture)
+        return ProjectTaskEstimatePolicy.ToInputValue(estimate)?.ToString(CultureInfo.InvariantCulture)
             ?? string.Empty;
     }
 

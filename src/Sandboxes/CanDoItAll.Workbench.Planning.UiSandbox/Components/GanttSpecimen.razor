@@ -1,3 +1,5 @@
+@using CanDoItAll.Components.Gantt
+@inject DialogService Dialogs
 <SectionCard Title="@Scenario.Presentation.ProjectName" Description="Synthetic schedule; all changes stay in this independent host.">
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         @foreach (var state in new[] { PlanningReadState.Ready, PlanningReadState.Loading, PlanningReadState.Failed, PlanningReadState.Stale }) {
@@ -6,8 +8,9 @@
     </Cluster>
     <PlanningGanttSurface Presentation="@Scenario.Presentation" DependencyIdFactory="GanttScenario.DependencyId"
                           TitleChanged="Scenario.Title" ScheduleChanged="Scenario.Schedule" DependencyChanged="Scenario.Dependency"
-                          TaskInserted="Scenario.Insert" OrderChanged="Scenario.Order" TaskOpened="Scenario.Select"
-                          TimelineOpened="Scenario.Timeline" ExportRequested="Scenario.Export" PreviewClosed="Scenario.Close"
+                          TaskInserted="Scenario.Insert" OrderChanged="Scenario.Order" TaskOpened="OpenEditAsync"
+                          AddRequested="OpenCreateAsync" TimelineOpened="OpenTimelineAsync" AgentsRequested="ShowAgentObservationAsync"
+                          ExportRequested="Scenario.Export" PreviewClosed="Scenario.Close"
                           ReloadRequested="@(_ => Scenario.SetState(PlanningReadState.Ready))" />
     @if (Scenario.LastAction is not null) {
         <TextBlock Value="@Scenario.LastAction" />
@@ -16,4 +19,24 @@
 
 @code {
     [Parameter, EditorRequired] public GanttScenario Scenario { get; set; } = default!;
+    private Task OpenEditAsync(GanttIntent<GanttTaskId> intent) => Accept(intent.Origin)
+        ? OpenAsync(TaskFormMode.GanttEdit, Scenario.Presentation.Tasks.Single(task => task.Id == intent.Value)) : Task.CompletedTask;
+    private Task OpenCreateAsync(PlanningOriginIntent intent) => Accept(intent.Origin)
+        ? OpenAsync(TaskFormMode.GanttCreate, start: Scenario.Presentation.Tasks.Max(task => task.End)) : Task.CompletedTask;
+    private Task OpenTimelineAsync(GanttIntent<GanttTimelineDoubleClickEventArgs> intent) => Accept(intent.Origin)
+        ? OpenAsync(TaskFormMode.GanttCreate, start: intent.Value.ClickedAtUtc, after: intent.Value.RowTaskId.Value) : Task.CompletedTask;
+    private bool Accept(Guid origin) => origin == Scenario.Presentation.Origin && Scenario.Presentation.CanMutate;
+    private Task OpenAsync(TaskFormMode mode, GanttTask? task = null, DateTimeOffset? start = null, string? after = null)
+        => Dialogs.OpenAsync<TaskFormSpecimen>($"Synthetic {mode}", new Dictionary<string, object?> {
+            [nameof(TaskFormSpecimen.Scenario)] = new TaskFormScenario(),
+            [nameof(TaskFormSpecimen.Mode)] = mode,
+            [nameof(TaskFormSpecimen.Gantt)] = Scenario,
+            [nameof(TaskFormSpecimen.ExistingTask)] = task,
+            [nameof(TaskFormSpecimen.Start)] = start ?? task!.Start,
+            [nameof(TaskFormSpecimen.AfterTaskId)] = after
+        }, new DialogOptions { Size = ModalSize.Wide, DenseChrome = true, TestId = "synthetic-gantt-editor" });
+    private Task ShowAgentObservationAsync(PlanningOriginIntent intent) => Dialogs.OpenAsync("Synthetic agent observation", reference => @<Stack>
+        <TextBlock Value="@($"Synthetic read-only observation: {Scenario.Presentation.Tasks.Count} task rows. No agent runtime is connected to this sandbox.")" />
+        <Button Text="Close" Click="@(() => reference.CloseAsync())" />
+    </Stack>);
 }

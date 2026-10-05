@@ -125,15 +125,19 @@ public partial class ProjectStructurePage
     }
 
     private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext() {
-        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project structure before opening the task editor.");
+        var action = CaptureActionContext();
+        var openedSurface = action.Surface;
         var owner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
         ProjectAssignmentAdmission.Require(openedSurface.ProjectId, owner.ExpectedProjectAdmission);
         return new(openedSurface.ProjectId, BuildNodeOptions(ProjectObjectType.Repository),
-            (request, configure) => CreateCanvasTaskNodeAsync(openedSurface, request, configure), ReloadSurfaceAsync, owner);
+            (request, configure) => CreateCanvasTaskNodeAsync(action, request, configure),
+            taskId => IsCurrentAction(action) ? ReloadSurfaceAsync(taskId) : Task.CompletedTask, owner) {
+            IsCurrent = () => IsCurrentAction(action)
+        };
     }
 
-    private Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
-        ProjectStructureSurface openedSurface,
+    private async Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
+        ProjectStructureActionContext action,
         CanvasWorkbenchCreateActionRequest createRequest,
         Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest)
     {
@@ -145,9 +149,16 @@ public partial class ProjectStructurePage
                 "The canonical task definition is unavailable.");
         }
 
-        return CreateObjectAsync(
-            definition,
-            createRequest,
-            configureRequest, capturedSurface: openedSurface);
+        if (!IsCurrentAction(action)) {
+            throw new InvalidOperationException("The original task editor is no longer current.");
+        }
+        ProjectStructureNode? committed = null;
+        try {
+            return await CreateObjectAsync(definition, createRequest, configureRequest,
+                cancellationToken: CancellationToken.None, onNodeCommitted: node => committed = node,
+                capturedSurface: action.Surface, capturedNavigationRevision: action.NavigationRevision);
+        } catch (Exception failure) when (committed is not null) {
+            throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, failure);
+        }
     }
 }

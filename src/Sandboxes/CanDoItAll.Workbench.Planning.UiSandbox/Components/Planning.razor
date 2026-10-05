@@ -12,6 +12,7 @@
             <Button Text="Toggle Gantt family" Click="@(() => showGantt = !showGantt)" />
             <Button Text="Toggle independent Gantt" Click="@(() => showSecondGantt = !showSecondGantt)" />
         </Cluster>
+        <TaskEditorsSpecimen />
         @if (showGantt) {
             <GanttSpecimen Scenario="@ganttFirst" />
             @if (showSecondGantt) {

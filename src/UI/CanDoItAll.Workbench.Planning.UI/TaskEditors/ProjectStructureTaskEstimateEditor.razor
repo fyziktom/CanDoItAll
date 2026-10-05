@@ -8,7 +8,7 @@
     <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
           Gap="LayoutGap.Medium">
         <FormField Text="Pure effort">
-            <input type="number"
+            <input type="text" inputmode="decimal"
                    class="cda-input"
                    min="0.01"
                    step="0.25"
@@ -19,7 +19,7 @@
         </FormField>
 
         <FormField Text="Effort unit">
-            <DropDown TValue="ProjectWorkItemEffortUnit"
+            <DropDown TValue="ProjectWorkItemEffortUnit?"
                       Data="@EffortUnitOptions"
                       TextProperty="Label"
                       ValueProperty="Value"
@@ -49,7 +49,7 @@
     <Grid ColumnTemplate="minmax(0,2fr) minmax(10rem,1fr)"
           Gap="LayoutGap.Medium">
         <FormField Text="Expected cost">
-            <input type="number"
+            <input type="text" inputmode="decimal"
                    class="cda-input"
                    min="0"
                    step="0.01"
@@ -103,7 +103,8 @@
     private ProjectTaskEstimate? lastParameterValue;
     private ProjectTaskEstimate? lastEmittedValue;
     private string expectedEffortValueText = string.Empty;
-    private ProjectWorkItemEffortUnit expectedEffortUnit;
+    private ProjectWorkItemEffortUnit? expectedEffortUnit;
+    private string invalidUnitText = string.Empty;
     private string expectedCostAmountText = string.Empty;
     private string expectedCostCurrencyCode = string.Empty;
     private string validationError = string.Empty;
@@ -113,6 +114,12 @@
 
     [Parameter]
     public EventCallback<ProjectTaskEstimate> ValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> InputChanged { get; set; }
+
+    [Parameter]
+    public TaskEstimateInputText? InitialInput { get; set; }
 
     [Parameter]
     public decimal HoursPerManDay { get; set; } = ProjectTaskEstimatePolicy.DefaultHoursPerManDay;
@@ -139,6 +146,17 @@
             return;
         }
 
+        if (!initialized && InitialInput is { } raw) {
+            initialized = true;
+            lastParameterValue = Value;
+            expectedEffortValueText = raw.Effort;
+            expectedCostAmountText = raw.Cost;
+            expectedCostCurrencyCode = raw.Currency;
+            expectedEffortUnit = Enum.TryParse<ProjectWorkItemEffortUnit>(raw.Unit, true, out var unit) && Enum.IsDefined(unit) ? unit : null;
+            invalidUnitText = raw.Unit;
+            TryGetValue(out _, out _);
+            return;
+        }
         initialized = true;
         lastParameterValue = Value;
         lastEmittedValue = null;
@@ -179,10 +197,14 @@
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentOutOfRangeException)
         {
-            expectedEffortValueText = string.Empty;
-            expectedEffortUnit = ProjectWorkItemEffortUnit.Hours;
-            expectedCostAmountText = string.Empty;
-            expectedCostCurrencyCode = NormalizeDefaultCurrencyCode();
+            expectedEffortValueText = FormatDecimal(value.ExpectedEffortHours.HasValue &&
+                Enum.IsDefined(value.ExpectedEffortUnit) && HoursPerManDay > 0
+                ? ProjectTaskEstimatePolicy.FromHours(value.ExpectedEffortHours.Value, value.ExpectedEffortUnit, HoursPerManDay)
+                : value.ExpectedEffortHours);
+            expectedEffortUnit = Enum.IsDefined(value.ExpectedEffortUnit) ? value.ExpectedEffortUnit : null;
+            invalidUnitText = value.ExpectedEffortUnit.ToString();
+            expectedCostAmountText = FormatDecimal(value.ExpectedCostAmount);
+            expectedCostCurrencyCode = value.ExpectedCostCurrencyCode;
             validationError = exception.Message;
         }
     }
@@ -193,14 +215,14 @@
         await PublishIfValidAsync();
     }
 
-    private async Task HandleExpectedEffortUnitChangedAsync(ProjectWorkItemEffortUnit value)
+    private async Task HandleExpectedEffortUnitChangedAsync(ProjectWorkItemEffortUnit? value)
     {
         if (TryParseOptionalDecimal(expectedEffortValueText, out var currentValue) &&
-            currentValue.HasValue)
+            currentValue.HasValue && expectedEffortUnit.HasValue && value.HasValue)
         {
-            var hours = ProjectTaskEstimatePolicy.ToHours(currentValue.Value, expectedEffortUnit, HoursPerManDay);
+            var hours = ProjectTaskEstimatePolicy.ToHours(currentValue.Value, expectedEffortUnit.Value, HoursPerManDay);
             expectedEffortValueText = FormatDecimal(
-                ProjectTaskEstimatePolicy.FromHours(hours, value, HoursPerManDay));
+                ProjectTaskEstimatePolicy.FromHours(hours, value.Value, HoursPerManDay));
         }
 
         expectedEffortUnit = value;
@@ -228,7 +250,9 @@
 
     private async Task PublishIfValidAsync()
     {
-        if (!TryGetValue(out var estimate, out _))
+        var isValid = TryGetValue(out var estimate, out _);
+        await InputChanged.InvokeAsync(isValid);
+        if (!isValid)
         {
             return;
         }
@@ -239,22 +263,8 @@
 
     private ProjectTaskEstimate BuildEstimate()
     {
-        if (!TryParseOptionalDecimal(expectedEffortValueText, out var effortValue))
-        {
-            throw new FormatException("Expected task effort must be a number.");
-        }
-
-        if (!TryParseOptionalDecimal(expectedCostAmountText, out var costAmount))
-        {
-            throw new FormatException("Expected task cost must be a number.");
-        }
-
-        return ProjectTaskEstimatePolicy.Create(
-            effortValue,
-            expectedEffortUnit,
-            costAmount,
-            costAmount.HasValue ? expectedCostCurrencyCode : string.Empty,
-            HoursPerManDay);
+        return new TaskEstimateInputText(expectedEffortValueText, expectedEffortUnit?.ToString() ?? invalidUnitText,
+            expectedCostAmountText, expectedCostCurrencyCode).Parse(HoursPerManDay);
     }
 
     private string NormalizeDefaultCurrencyCode()
@@ -287,7 +297,7 @@
     }
 
     private static string FormatDecimal(decimal? value)
-        => value?.ToString("0.####", CultureInfo.InvariantCulture) ?? string.Empty;
+        => value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
     private sealed record EffortUnitOption(ProjectWorkItemEffortUnit Value, string Label);
 

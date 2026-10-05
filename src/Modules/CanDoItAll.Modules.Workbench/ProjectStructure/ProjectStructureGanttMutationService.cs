@@ -100,7 +100,9 @@ public sealed class ProjectStructureGanttMutationService(
 
         if ((request.CurrentProgressPercent != ProjectProgressPolicy.UntrackedPercent &&
              !ProjectProgressPolicy.IsTrackedPercent(request.CurrentProgressPercent)) ||
-            !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent))
+            (!(request.CurrentProgressPercent == ProjectProgressPolicy.UntrackedPercent &&
+               request.ProposedProgressPercent == ProjectProgressPolicy.UntrackedPercent) &&
+             !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent)))
         {
             throw new ProjectStructureGanttMutationException(
                 ProjectStructureGanttMutationErrorCode.InvalidTask,
@@ -193,7 +195,11 @@ public sealed class ProjectStructureGanttMutationService(
 
                 task.Title = proposedTitle;
                 task.ProgressPercent = request.ProposedProgressPercent;
-                task.ProgressMode = request.ProposedProgressPercent == 100 ? "complete" : "progress";
+                task.ProgressMode = request.ProposedProgressPercent switch {
+                    ProjectProgressPolicy.UntrackedPercent => string.Empty,
+                    100 => "complete",
+                    _ => "progress"
+                };
                 task.MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata);
                 task.UpdatedAtUtc = now;
                 return Task.FromResult(Result(affectedTaskIds));

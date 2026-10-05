@@ -18,18 +18,6 @@ public sealed record ProjectStructureGanttTaskEditModel(
     ProjectTaskExpectedCostBasis? ExpectedCostBasis = null,
     long DirectAssignmentRevision = 0);
 
-public sealed record ProjectStructureTaskEditDialogResult(
-    GanttTaskId TaskId,
-    string Title,
-    DateTimeOffset StartUtc,
-    DateTimeOffset EndUtc,
-    int ProgressPercent,
-    ProjectTaskEstimate Estimate,
-    bool AssigneeChanged,
-    ProjectStructureTaskResourceSelection? Assignee,
-    ProjectStructureTaskResourceSelection? ResourceToAttach = null,
-    ProjectTaskExecutionSnapshot? Execution = null);
-
 public sealed record ProjectStructureTaskDetailsUpdateRequest(
     GanttTaskId TaskId,
     string CurrentTitle,

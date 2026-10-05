@@ -106,6 +106,7 @@ public sealed class ProjectStructureTaskDetailsServiceTests
             detailsService.UpdateAsync(projectId, request));
 
         Assert.Equal(ProjectStructureGanttMutationErrorCode.StaleTask, exception.Code);
+        Assert.Equal(new ProjectStructureTaskCompensationFacts(task.Id, false, true, true, true), exception.Compensation);
         var assignment = Assert.Single(await bridge.ListAssignmentsDetailedAsync(projectId), item =>
             item.NodeKey == task.Id && item.Role == ProjectPartyAssignmentRole.WorkItemAssignee);
         Assert.Equal(joeId, assignment.PartyId);

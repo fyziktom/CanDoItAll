@@ -1,3 +1,4 @@
+using CanDoItAll.Workbench.Planning.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
@@ -15,7 +16,9 @@ public sealed record ProjectStructureCanvasTaskDialogContext(
     IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions,
     ProjectStructureCanvasTaskNodeCreator CreateTaskNodeAsync,
     Func<string?, Task> ReloadAuthoritativeProject,
-    ProjectStructureAgentContext MutationOwner);
+    ProjectStructureAgentContext MutationOwner) {
+    public Func<bool> IsCurrent { get; init; } = static () => true;
+}
 
 public sealed class ProjectStructureCanvasTaskDialogCoordinator(
     ProjectStructureWorkItemAssigneeService assigneeService,
@@ -55,15 +58,22 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             assigneeWarnings =
                 ["People and agents could not be loaded. You can still create the task without an assignee."];
             logger.LogWarning(
-                exception,
-                "Failed to load canvas task assignees for project {ProjectId}.",
-                context.ProjectId);
+                "Failed to load canvas task assignees for project {ProjectId}; failure type {FailureType}.",
+                Mask(context.ProjectId), exception.GetType().Name);
         }
 
-        var result = await dialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
+        if (!context.IsCurrent()) {
+            return;
+        }
+        var session = new ProjectTaskDialogSession(context.IsCurrent, () => context.ReloadAuthoritativeProject(null), logger);
+        await dialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
             "Add task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureTaskCreateDialog.Submitted)] =
+                    new Func<ProjectStructureTaskDialogResult, Task<PlanningTaskSaveResult>>(draft =>
+                        session.SubmitAsync(() => CreateAsync(context, draft, session))),
+                [nameof(ProjectStructureTaskCreateDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureTaskCreateDialog.QuoteContext)] = new ProjectTaskQuoteContext(
                     context.MutationOwner.ExpectedProjectAdmission!.DatabaseProfileId,
@@ -89,10 +99,6 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             },
             cancellationToken);
 
-        if (result is ProjectStructureTaskDialogResult submission)
-        {
-            await CreateAsync(context, submission, cancellationToken);
-        }
     }
 
     public async Task OpenEditAsync(
@@ -112,12 +118,13 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         }
         catch (Exception exception) when (exception is InvalidOperationException or FormatException)
         {
-            notificationService.Error("Task could not be opened", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task could not be opened", "The task metadata could not be read. Refresh the project before editing it.");
+            }
             logger.LogWarning(
-                exception,
                 "Could not prepare canvas task details for project {ProjectId} and task {TaskNodeId}.",
-                context.ProjectId,
-                taskNode.Id);
+                Mask(context.ProjectId),
+                Mask(taskNode.Id));
             return;
         }
 
@@ -136,7 +143,7 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             var assignmentContextTask = LoadEditAssignmentContextAsync(
                 context.ProjectId,
                 taskNode.Id,
-                cancellationToken);
+                cancellationToken, context.MutationOwner.ExpectedProjectAdmission!);
             await Task.WhenAll(resourcesTask, assignmentContextTask);
             var resources = await resourcesTask;
             var assignmentContext = await assignmentContextTask;
@@ -169,10 +176,19 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             return;
         }
 
-        var result = await dialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
+        if (!context.IsCurrent()) {
+            return;
+        }
+        var session = new ProjectTaskDialogSession(context.IsCurrent, () => context.ReloadAuthoritativeProject(taskNode.Id), logger, [taskNode.Id]);
+        await dialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
             "Edit task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureTaskCreateDialog.Submitted)] =
+                    new Func<ProjectStructureTaskDialogResult, Task<PlanningTaskSaveResult>>(draft =>
+                        session.SubmitAsync(() => SaveEditAsync(context, taskNode, draft, snapshot,
+                            assigneeResolution, assignmentContextLoaded, session))),
+                [nameof(ProjectStructureTaskCreateDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureTaskCreateDialog.QuoteContext)] = new ProjectTaskQuoteContext(
                     context.MutationOwner.ExpectedProjectAdmission!.DatabaseProfileId,
@@ -202,297 +218,80 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             },
             cancellationToken);
 
-        if (result is ProjectStructureTaskDialogResult submission)
-        {
-            await SaveEditAsync(
-                context,
-                taskNode,
-                submission,
-                snapshot,
-                assigneeResolution,
-                assignmentContextLoaded,
-                cancellationToken);
-        }
     }
 
-    private async Task CreateAsync(
-        ProjectStructureCanvasTaskDialogContext context,
-        ProjectStructureTaskDialogResult submission,
-        CancellationToken cancellationToken)
-    {
-        if (!ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
-                ProjectStructureCanvasCatalog.WorkTaskActionId,
-                out _))
-        {
-            notificationService.Error(
-                "Task could not be created",
-                "The canonical task definition is unavailable.");
+    private async Task CreateAsync(ProjectStructureCanvasTaskDialogContext context,
+        ProjectStructureTaskDialogResult submission, ProjectTaskDialogSession session) {
+        if (submission.ResourceToAttach is not null || submission.Assignee?.Kind is
+            ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process) {
+            session.Reject("General task creation accepts only a direct person or agent assignee.");
             return;
         }
-
-        ProjectStructureTaskCreateApplicationResult result;
-        try
-        {
-            var estimate = RequireEstimate(submission);
-            result = await taskApplicationService.CreateAsync(
-                new ProjectStructureTaskCreateApplicationRequest(
-                    context.ProjectId,
-                    estimate,
-                    submission.Assignee,
-                    AssignmentSource, context.MutationOwner),
-                (pricing, _) => context.CreateTaskNodeAsync(
-                    submission.CreateRequest,
-                    request =>
-                        ProjectStructureCanvasTaskCommitPolicy.ApplyCreate(
-                            request,
-                            pricing) with { ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission }),
-                cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Canvas task creation failed. ProjectId={ProjectId} AssigneeSelected={AssigneeSelected}",
-                context.ProjectId,
-                submission.Assignee is not null);
-            notificationService.Error("Task could not be created", exception.Message);
-            return;
-        }
-
-        var committedTask = result.Task;
-        var pricingFeedback = ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(
-            result.Pricing);
-        try
-        {
-            await context.ReloadAuthoritativeProject(committedTask.Id);
-            notificationService.Success(
-                "Task created",
-                submission.Assignee is null
-                    ? $"{committedTask.Title} was added to the project structure.{pricingFeedback}"
-                    : $"{committedTask.Title} was added with its selected assignee.{pricingFeedback}");
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Canvas task was committed but the project structure refresh failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
-                context.ProjectId,
-                committedTask.Id);
-            notificationService.Warning(
-                "Task created; refresh required",
-                $"{committedTask.Title} was saved.{pricingFeedback} Reload the project structure to see the latest state.");
-        }
-    }
-
-    private async Task SaveEditAsync(
-        ProjectStructureCanvasTaskDialogContext context,
-        ProjectStructureNode openedTask,
-        ProjectStructureTaskDialogResult submission,
-        ProjectStructureTaskEditState openedSnapshot,
-        ProjectStructureTaskAssigneeSelectionResult openedAssigneeResolution,
-        bool assignmentContextLoaded,
-        CancellationToken cancellationToken)
-    {
-        if (!TryResolveEditAction(
-                submission.CreateRequest.ActionId,
-                out var createActionId) ||
-            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
-                createActionId,
-                out var definition))
-        {
-            notificationService.Error(
-                "Task could not be saved",
-                "The task edit definition is no longer available.");
-            return;
-        }
-
-        if (submission.ResourceToAttach is { } resourceToAttach)
-        {
-            try
-            {
-                ProjectStructureTaskResourceSelectionPolicy
-                    .ValidateDefinitionAttachment(resourceToAttach);
-            }
-            catch (ProjectStructureAgentException exception)
-            {
-                notificationService.Error(
-                    "Task resource could not be attached",
-                    exception.Message);
-                return;
-            }
-        }
-
-        var proposedExecution =
-            submission.Execution ?? openedSnapshot.Execution;
-        ProjectStructureTaskEditApplicationResult<ProjectStructureNode> result;
-        try
-        {
-            var assignmentWasChanged =
-                assignmentContextLoaded &&
-                submission.Assignee !=
-                    openedAssigneeResolution.Representative;
-            if (assignmentWasChanged &&
-                !openedAssigneeResolution.CanChangeDirectAssignee)
-            {
-                throw new InvalidOperationException(
-                    "This task has direct assignments that are read-only here. Reload the project before changing its assignee.");
-            }
-
-            result = await taskApplicationService.EditAsync(
-                new ProjectStructureTaskEditApplicationRequest(
-                    context.ProjectId,
-                    openedTask.Id,
-                    openedSnapshot,
-                    RequireEstimate(submission),
-                    proposedExecution,
-                    assignmentWasChanged,
-                    submission.Assignee,
-                    AssignmentSource, context.MutationOwner),
-                async (commit, token) =>
-                {
-                    var update =
-                        ProjectStructureNodeEditor.ComposeUpdate(
-                            definition,
-                            commit.CurrentTask,
-                            submission.CreateRequest);
-                    update =
-                        ProjectStructureCanvasTaskCommitPolicy.ApplyEdit(
-                            commit.CurrentTask,
-                            update,
-                            commit.ProposedExecution,
-                            commit.Pricing,
-                            commit.ProposedCostBasis);
-                    update = update with {
+        var result = await taskApplicationService.CreateAsync(
+            new(context.ProjectId, RequireEstimate(submission), submission.Assignee, AssignmentSource, context.MutationOwner),
+            (pricing, _) => {
+                if (!context.IsCurrent()) {
+                    throw new InvalidOperationException("The original task editor retired before creation began.");
+                }
+                return context.CreateTaskNodeAsync(submission.CreateRequest, request =>
+                    ProjectStructureCanvasTaskCommitPolicy.ApplyCreate(request, pricing) with {
                         ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission,
                         ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission
-                    };
-                    return await projectWorkbenchService
-                        .UpdateObjectIfMetadataAsync(
-                            context.ProjectId,
-                            commit.CurrentTask.Id,
-                            update,
-                            metadata =>
-                                ProjectStructureCanvasTaskCommitPolicy
-                                    .ValidateCurrentMetadata(
-                                        metadata,
-                                        commit.CurrentState),
-                            token)
-                        ?? throw new InvalidOperationException(
-                            "The selected task is no longer available.");
-                },
-                cancellationToken);
+                    });
+            }, CancellationToken.None);
+        session.TaskCommitted([result.Task.Id], result.Pricing, submission.Assignee is not null);
+        await session.RefreshAfterCommitAsync();
+        if (context.IsCurrent()) {
+            notificationService.Success("Task created", session.Result!.Message);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
+    }
+
+    private async Task SaveEditAsync(ProjectStructureCanvasTaskDialogContext context,
+        ProjectStructureNode openedTask, ProjectStructureTaskDialogResult submission,
+        ProjectStructureTaskEditState openedSnapshot, ProjectStructureTaskAssigneeSelectionResult openedAssigneeResolution,
+        bool assignmentContextLoaded, ProjectTaskDialogSession session) {
+        if (!TryResolveEditAction(submission.CreateRequest.ActionId, out var actionId) ||
+            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition)) {
+            session.Reject("The task edit definition is no longer available.", readback: true);
             return;
         }
-        catch (Exception exception)
-        {
-            logger.LogWarning(
-                exception,
-                "Canvas task edit failed before a project structure update was committed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
-                context.ProjectId,
-                openedTask.Id);
-            notificationService.Error(
-                "Task could not be saved",
-                exception is InvalidOperationException or
-                    ProjectStructureTaskApplicationException
-                    ? exception.Message
-                    : "The task update failed before it was committed. Review the values and try again.");
+        if (submission.ResourceToAttach is { } resource) {
+            ProjectStructureTaskResourceSelectionPolicy.ValidateDefinitionAttachment(resource);
+        }
+        var changedAssignee = assignmentContextLoaded && submission.Assignee != openedAssigneeResolution.Representative;
+        if (changedAssignee && !openedAssigneeResolution.CanChangeDirectAssignee) {
+            session.Reject("The complete direct-assignment set must be preserved.");
             return;
         }
-
-        var committedPricing = result.Pricing;
-        if (submission.ResourceToAttach is not null)
-        {
-            try
-            {
-                var attachmentResult =
-                    await taskResourceAttachmentService.AttachAfterTransitionAsync(
-                        context.ProjectId,
-                        openedTask.Id,
-                        submission.ResourceToAttach,
-                        openedSnapshot.Execution,
-                        proposedExecution,
-                        context.MutationOwner,
-                        cancellationToken);
-                committedPricing = attachmentResult.Pricing;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                await TryReloadAfterPartialSaveAsync(
-                    context,
-                    openedTask.Id,
-                    submission.ResourceToAttach.Kind);
-                notificationService.Warning(
-                    "Task partially saved",
-                    "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
-                logger.LogWarning(
-                    "Canvas task changes were committed before resource attachment pricing completed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind}",
-                    context.ProjectId,
-                    openedTask.Id,
-                    submission.ResourceToAttach.Kind);
-                return;
-            }
-            catch (Exception exception)
-            {
-                await TryReloadAfterPartialSaveAsync(
-                    context,
-                    openedTask.Id,
-                    submission.ResourceToAttach.Kind);
-                if (exception is ProjectStructureAgentException
-                    {
-                        ErrorCode: ProjectStructureTaskResourceAttachmentService.CompensationFailedErrorCode
-                    })
-                {
-                    notificationService.Error(
-                        "Task resource requires attention",
-                        exception.Message);
+        var proposedExecution = submission.Execution ?? openedSnapshot.Execution;
+        var result = await taskApplicationService.EditAsync(
+            new(context.ProjectId, openedTask.Id, openedSnapshot, RequireEstimate(submission), proposedExecution,
+                changedAssignee, submission.Assignee, AssignmentSource, context.MutationOwner),
+            async (commit, token) => {
+                if (!context.IsCurrent()) {
+                    throw new InvalidOperationException("The original editor retired before task persistence began.");
                 }
-                else
-                {
-                    notificationService.Warning(
-                        "Task partially saved",
-                        "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
-                }
-
-                logger.LogWarning(
-                    exception,
-                    "Canvas task changes were committed but attached-resource pricing did not complete. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind} FailureType={FailureType}",
-                    context.ProjectId,
-                    openedTask.Id,
-                    submission.ResourceToAttach.Kind,
-                    exception.GetType().Name);
-                return;
-            }
+                var update = ProjectStructureNodeEditor.ComposeUpdate(definition, commit.CurrentTask, submission.CreateRequest);
+                update = ProjectStructureCanvasTaskCommitPolicy.ApplyEdit(commit.CurrentTask, update,
+                    commit.ProposedExecution, commit.Pricing, commit.ProposedCostBasis) with {
+                    ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission,
+                    ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission
+                };
+                return await projectWorkbenchService.UpdateObjectIfMetadataAsync(context.ProjectId, commit.CurrentTask.Id, update,
+                    metadata => ProjectStructureCanvasTaskCommitPolicy.ValidateCurrentMetadata(metadata, commit.CurrentState), token)
+                    ?? throw new InvalidOperationException("The selected task is no longer available.");
+            }, CancellationToken.None);
+        session.TaskCommitted([result.PersistenceResult.Id], result.Pricing, changedAssignee);
+        if (submission.ResourceToAttach is not null && context.IsCurrent()) {
+            var attachment = await taskResourceAttachmentService.AttachAfterTransitionAsync(context.ProjectId, openedTask.Id,
+                submission.ResourceToAttach, openedSnapshot.Execution, proposedExecution, context.MutationOwner, CancellationToken.None);
+            session.AttachmentCommitted(attachment);
+        } else if (submission.ResourceToAttach is not null) {
+            throw new InvalidOperationException("The task committed, but its original view retired before attachment began.");
         }
-
-        var pricingFeedback =
-            ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(
-                committedPricing);
-        try
-        {
-            await context.ReloadAuthoritativeProject(openedTask.Id);
-            notificationService.Success(
-                "Task saved",
-                submission.ResourceToAttach is null
-                    ? $"{submission.CreateRequest.Title} was updated.{pricingFeedback}"
-                    : $"{submission.CreateRequest.Title} was updated with its selected {submission.ResourceToAttach.Kind.ToString().ToLowerInvariant()}.{pricingFeedback}");
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Canvas task was committed but the project structure refresh failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId}",
-                context.ProjectId,
-                openedTask.Id);
-            notificationService.Warning(
-                "Task saved; refresh required",
-                $"{submission.CreateRequest.Title} was saved.{pricingFeedback} Reload the project structure to see the latest state.");
+        await session.RefreshAfterCommitAsync();
+        if (context.IsCurrent()) {
+            notificationService.Success("Task saved", session.Result!.Message);
         }
     }
 
@@ -519,9 +318,8 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         catch (Exception exception)
         {
             logger.LogWarning(
-                exception,
-                "Failed to load canvas task resources for project {ProjectId}.",
-                projectId);
+                "Failed to load canvas task resources for project {ProjectId}; failure type {FailureType}.",
+                Mask(projectId), exception.GetType().Name);
             return (
                 [],
                 Loaded: false,
@@ -535,14 +333,15 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         IReadOnlyList<string> Warnings)> LoadEditAssignmentContextAsync(
         Guid projectId,
         string taskNodeId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectWriteAdmission admission)
     {
         try
         {
             var snapshot = await assigneeService.ReadAsync(
                 projectId,
                 taskNodeId,
-                cancellationToken);
+                cancellationToken, admission);
             var resolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
                 snapshot.DirectAssignments,
                 taskNodeId);
@@ -562,10 +361,9 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         catch (Exception exception)
         {
             logger.LogWarning(
-                exception,
-                "Failed to load canvas task direct assignments for project {ProjectId} and task {TaskNodeId}.",
-                projectId,
-                taskNodeId);
+                "Failed to load canvas task direct assignments for project {ProjectId} and task {TaskNodeId}; failure type {FailureType}.",
+                Mask(projectId),
+                Mask(taskNodeId), exception.GetType().Name);
             return (
                 ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
                     [],
@@ -575,32 +373,15 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         }
     }
 
-    private async Task TryReloadAfterPartialSaveAsync(
-        ProjectStructureCanvasTaskDialogContext context,
-        string taskNodeId,
-        ProjectStructureTaskResourceKind resourceKind)
-    {
-        try
-        {
-            await context.ReloadAuthoritativeProject(taskNodeId);
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Canvas task was partially saved and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind}",
-                context.ProjectId,
-                taskNodeId,
-                resourceKind);
-        }
-    }
-
     private static ProjectTaskEstimate RequireEstimate(
         ProjectStructureTaskDialogResult submission)
         => ProjectTaskEstimatePolicy.ValidateAndNormalize(
             submission.Estimate ??
             throw new InvalidOperationException(
                 "The task estimate was not supplied by the task editor."));
+
+    private static string Mask(Guid value) => Mask(value.ToString("N"));
+    private static string Mask(string value) => value.Length <= 12 ? value : $"{value[..6]}...{value[^4..]}";
 
     private static string? ResolveAssigneeWarning(
         ProjectStructureTaskAssigneeSelectionStatus status)

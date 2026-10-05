@@ -4,6 +4,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace CanDoItAll.Tests.WorkbenchPlanning;
 
@@ -26,9 +27,28 @@ public sealed class CalendarSurfaceTests {
         var presentation = CreatePresentation() with { State = state, Error = state == PlanningReadState.Failed ? "Read failed" : null };
         var cut = context.Render<PlanningCalendarSurface>(parameters => parameters.Add(component => component.Presentation, presentation));
         Assert.Contains(expected, cut.Markup);
-        Assert.DoesNotContain(typeof(PlanningCalendarSurface).Assembly.GetReferencedAssemblies(), name =>
-            name.Name?.StartsWith("CanDoItAll.Modules.", StringComparison.Ordinal) == true ||
-            name.Name?.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal) == true);
+        AssertPresentationClosure();
+    }
+
+    private static void AssertPresentationClosure() {
+        var pending = new Queue<Assembly>([typeof(PlanningCalendarSurface).Assembly]);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (pending.TryDequeue(out var assembly)) {
+            if (!visited.Add(assembly.FullName!)) {
+                continue;
+            }
+            foreach (var reference in assembly.GetReferencedAssemblies()) {
+                Assert.False(reference.Name!.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal), reference.Name);
+                if (!reference.Name.StartsWith("CanDoItAll.", StringComparison.Ordinal)) {
+                    continue;
+                }
+                Assert.True(reference.Name.StartsWith("CanDoItAll.Components.", StringComparison.Ordinal) || reference.Name is
+                    "CanDoItAll.AppComponents.RecordBrowsing" or "CanDoItAll.Modules.Workbench.Planning.Contracts", reference.Name);
+                pending.Enqueue(Assembly.Load(reference));
+            }
+        }
+        Assert.DoesNotContain(typeof(ProjectTaskEstimate).Assembly.GetReferencedAssemblies(), reference =>
+            reference.Name!.StartsWith("CanDoItAll.", StringComparison.Ordinal));
     }
 
     [Fact]

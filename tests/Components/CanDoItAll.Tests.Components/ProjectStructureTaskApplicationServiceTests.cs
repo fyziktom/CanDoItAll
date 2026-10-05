@@ -10,6 +10,42 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructureTaskApplicationServiceTests
 {
     [Fact]
+    public async Task Lost_acknowledgement_after_task_commit_preserves_the_committed_assignment_and_price() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var owner = CreateMutationOwner(admission);
+        var directory = services.GetRequiredService<PartyDirectoryService>();
+        var hr = services.GetRequiredService<HrService>();
+        var personA = await CreateRatedPartyAsync(directory, hr, "Original assignee", PartyType.Person, 10m);
+        var personB = await CreateRatedPartyAsync(directory, hr, "Committed assignee", PartyType.Person, 30m);
+        var application = services.GetRequiredService<ProjectStructureTaskApplicationService>();
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var mutations = services.GetRequiredService<ProjectStructureGanttMutationService>();
+        var created = await CreateAssignedTaskAsync(application, workbench, projectId, "Before commit", personA, 8m, owner);
+        var original = ProjectStructureTaskEditStatePolicy.Read(created.Task);
+        var failure = await Record.ExceptionAsync(() => application.EditAsync<bool>(
+            new(projectId, created.Task.Id, original, new(4m, ProjectWorkItemEffortUnit.Hours, null, string.Empty),
+                ProjectTaskExecutionSnapshot.NotStarted, true,
+                new(ProjectStructureTaskResourceKind.Person, personB), "lost-acknowledgement-test", owner),
+            async (commit, token) => {
+                await PersistEditAsync(mutations, projectId, commit, "Committed task", owner, token);
+                throw new IOException("Injected acknowledgement loss after the native transaction committed.");
+            }));
+        Assert.NotNull(failure);
+        var actual = await ReadTaskAsync(workbench, projectId, created.Task.Id);
+        var state = ProjectStructureTaskEditStatePolicy.Read(actual);
+        Assert.Equal("Committed task", actual.Title);
+        Assert.Equal(original.DirectAssignmentRevision + 1, state.DirectAssignmentRevision);
+        Assert.Equal(120m, state.Estimate.ExpectedCostAmount);
+        Assert.Equal(personB, state.CostBasis?.ResourceId);
+        Assert.Equal(personB, Assert.Single(await ReadDirectAssignmentsAsync(
+            services.GetRequiredService<IProjectPartyIntegrationBridge>(), projectId, created.Task.Id)).PartyId);
+    }
+
+    [Fact]
     public async Task Create_applies_the_CRM_quote_and_returns_the_committed_assignment_revision()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -270,7 +306,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var originalState =
             ProjectStructureTaskEditStatePolicy.Read(originalTask);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<ProjectStructureTaskApplicationException>(
             () => applicationService.EditAsync<bool>(
                 new ProjectStructureTaskEditApplicationRequest(
                     projectId,
@@ -294,8 +330,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
 
         Assert.Contains(
             "Injected persistence failure",
-            exception.Message,
+            Assert.IsType<InvalidOperationException>(exception.InnerException).Message,
             StringComparison.Ordinal);
+        Assert.Equal(new ProjectStructureTaskCompensationFacts(created.Task.Id, false, true, true, true), exception.Compensation);
         var restoredAssignment = Assert.Single(
             await ReadDirectAssignmentsAsync(
                 bridge,

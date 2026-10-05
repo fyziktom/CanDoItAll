@@ -7,3 +7,6 @@ using CanDoItAll.AppComponents;
 [assembly: TypeForwardedTo(typeof(ResourceCardPicker<>))]
 [assembly: TypeForwardedTo(typeof(ResourceCardPickerOption<>))]
 [assembly: TypeForwardedTo(typeof(ResourceCardPickerVisualKind))]
+
+[assembly: TypeForwardedTo(typeof(CheckedBadgeFilterGroup<>))]
+[assembly: TypeForwardedTo(typeof(CheckedBadgeFilterOption<>))]

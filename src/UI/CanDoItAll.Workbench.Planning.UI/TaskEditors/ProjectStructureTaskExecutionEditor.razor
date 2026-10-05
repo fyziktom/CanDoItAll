@@ -13,7 +13,7 @@
                 @onchange="HandleStateChanged">
             @foreach (var option in Enum.GetValues<ProjectTaskExecutionState>())
             {
-                if (ProjectTaskExecutionStatePolicy.CanTransition(Value.State, option))
+                if (ProjectTaskExecutionStatePolicy.CanTransition(initialState, option))
                 {
                     <option value="@option">@ResolveStateLabel(option)</option>
                 }
@@ -28,9 +28,9 @@
         <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
               Gap="LayoutGap.Medium">
             <FormField Text="Actual start (UTC)">
-                <input type="datetime-local"
+                <input type="text" placeholder="yyyy-MM-ddTHH:mm"
                        class="project-structure-task-execution-editor__input"
-                       value="@FormatDateTimeLocal(actualStartedAtUtc)"
+                       value="@actualStartText"
                        aria-label="Task actual start in UTC"
                        data-testid="@($"{DataTestId}-started")"
                        @onchange="HandleStartedAtChanged" />
@@ -39,9 +39,9 @@
             @if (state is ProjectTaskExecutionState.Completed or ProjectTaskExecutionState.Cancelled)
             {
                 <FormField Text="Actual end (UTC)">
-                    <input type="datetime-local"
+                    <input type="text" placeholder="yyyy-MM-ddTHH:mm"
                            class="project-structure-task-execution-editor__input"
-                           value="@FormatDateTimeLocal(actualEndedAtUtc)"
+                           value="@actualEndText"
                            aria-label="Task actual end in UTC"
                            data-testid="@($"{DataTestId}-ended")"
                            @onchange="HandleEndedAtChanged" />
@@ -63,6 +63,9 @@
     private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
     private bool initialized;
     private ProjectTaskExecutionState state;
+    private ProjectTaskExecutionState initialState;
+    private string actualStartText = string.Empty;
+    private string actualEndText = string.Empty;
     private DateTimeOffset? actualStartedAtUtc;
     private DateTimeOffset? actualEndedAtUtc;
 
@@ -84,8 +87,11 @@
 
         initialized = true;
         state = Value.State;
+        initialState = Value.State;
         actualStartedAtUtc = Value.ActualStartedAtUtc;
         actualEndedAtUtc = Value.ActualEndedAtUtc;
+        actualStartText = FormatDateTimeLocal(actualStartedAtUtc);
+        actualEndText = FormatDateTimeLocal(actualEndedAtUtc);
     }
 
     public bool TryGetValue(
@@ -96,9 +102,14 @@
             state,
             actualStartedAtUtc,
             actualEndedAtUtc);
+        if ((!string.IsNullOrWhiteSpace(actualStartText) && ParseUtc(actualStartText) is null) ||
+            (!string.IsNullOrWhiteSpace(actualEndText) && ParseUtc(actualEndText) is null)) {
+            validationError = "Enter valid UTC actual execution timestamps.";
+            return false;
+        }
         try
         {
-            ProjectTaskExecutionStatePolicy.ValidateTransition(Value.State, value.State);
+            ProjectTaskExecutionStatePolicy.ValidateTransition(initialState, value.State);
             ProjectTaskExecutionStatePolicy.Validate(
                 value.State,
                 value.ActualStartedAtUtc,
@@ -116,7 +127,7 @@
     private async Task HandleStateChanged(ChangeEventArgs args)
     {
         if (!Enum.TryParse<ProjectTaskExecutionState>(args.Value?.ToString(), out var proposed) ||
-            !ProjectTaskExecutionStatePolicy.CanTransition(Value.State, proposed))
+            !ProjectTaskExecutionStatePolicy.CanTransition(initialState, proposed))
         {
             return;
         }
@@ -126,10 +137,13 @@
         {
             actualStartedAtUtc = null;
             actualEndedAtUtc = null;
+            actualStartText = string.Empty;
+            actualEndText = string.Empty;
         }
         else if (state == ProjectTaskExecutionState.Started)
         {
             actualEndedAtUtc = null;
+            actualEndText = string.Empty;
         }
 
         await NotifyChangedAsync();
@@ -137,12 +151,14 @@
 
     private async Task HandleStartedAtChanged(ChangeEventArgs args)
     {
+        actualStartText = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty;
         actualStartedAtUtc = ParseUtc(args.Value);
         await NotifyChangedAsync();
     }
 
     private async Task HandleEndedAtChanged(ChangeEventArgs args)
     {
+        actualEndText = Convert.ToString(args.Value, CultureInfo.InvariantCulture) ?? string.Empty;
         actualEndedAtUtc = ParseUtc(args.Value);
         await NotifyChangedAsync();
     }
@@ -165,7 +181,10 @@
     }
 
     private static string FormatDateTimeLocal(DateTimeOffset? value)
-        => value?.ToUniversalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture) ?? string.Empty;
+        => value is { } timestamp
+            ? timestamp.ToUniversalTime().ToString(timestamp.Ticks % TimeSpan.TicksPerMinute == 0
+                ? DateTimeLocalFormat : "yyyy-MM-ddTHH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture)
+            : string.Empty;
 
     private static string ResolveStateLabel(ProjectTaskExecutionState value)
         => value switch

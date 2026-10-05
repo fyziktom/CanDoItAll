@@ -4,8 +4,11 @@ This standalone host renders the actual planning controls with explicit syntheti
 data. It has no native module, database, application bootstrap or credential store.
 Calendar provides availability scenarios, two independent instances and the
 former production boundary specimens. Gantt mounts the same chart, drag source,
-gesture intents and export preview with independent synthetic task graphs. Task
-forms and the complete outcome scenarios are completed in WB1's editor stage.
+gesture intents and export preview with independent synthetic task graphs. Both
+real task form families support create/edit, raw invalid input, restricted direct
+assignment, held quotes, partial/unknown save results and readback without replay.
+Stacked forms have independent openings. Gantt Add and both double-click entry
+points use those same forms and update only their own in-memory scenario.
 
 From the repository root:
 
