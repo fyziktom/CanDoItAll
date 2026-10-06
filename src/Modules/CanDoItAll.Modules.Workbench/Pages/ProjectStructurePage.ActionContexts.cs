@@ -82,6 +82,9 @@ public partial class ProjectStructurePage {
         => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
 
     private void RetireInactiveAuthoring() {
+        if (textAssetOpening is { } text && !IsCurrentAction(text.Context)) {
+            textAssetOpening = null;
+        }
         foreach (var retired in composerOpenings.Where(entry => !IsCurrentAction(entry.Value.Ownership.Context)).Select(entry => entry.Key).ToArray()) {
             composerOpenings.Remove(retired);
         }

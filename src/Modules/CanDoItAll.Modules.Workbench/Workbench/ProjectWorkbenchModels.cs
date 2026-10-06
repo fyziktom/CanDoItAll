@@ -774,13 +774,7 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
-        foreach (var expectedNode in request.ExpectedParticipants.Where(node => !node.IsSystemManaged)) {
-            if (!await dbContext.Set<ProjectObjectRecord>().AnyAsync(node => node.ProjectId == projectId &&
-                node.NodeKey == expectedNode.Id && node.Id == expectedNode.RecordId && !node.IsSystemManaged &&
-                node.ObjectType == expectedNode.ObjectType && node.ObjectSubtype == expectedNode.ObjectSubtype, cancellationToken)) {
-                throw new ProjectStructureEditConflictException();
-            }
-        }
+        await ProjectStructureNodeExpectations.ReadAndEnsureCurrentAsync(dbContext, projectId, request.ExpectedParticipants, cancellationToken);
         var existingNodes = await LoadCreatePlanningNodesAsync(
             dbContext,
             projectId,

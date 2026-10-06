@@ -36,8 +36,11 @@ internal sealed record ProjectStructureTextAssetCreationContext(
 
 internal sealed class ProjectStructureTextAssetSubmissionException(
     string message,
-    Exception innerException)
-    : Exception(message, innerException);
+    Exception innerException,
+    bool requiresObservation = false)
+    : Exception(message, innerException) {
+    public bool RequiresObservation { get; } = requiresObservation;
+}
 
 internal sealed class ProjectStructureTextAssetCreationCoordinator(
     DialogService dialogService,
@@ -198,6 +201,10 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         {
             ReportCommittedWithFollowUpFailure(context, definition, subtype, exception);
         }
+        catch (ProjectStructureTextAssetSubmissionException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             LogFailure(context, definition, subtype, exception);
@@ -258,7 +265,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
     }
 
     private static string ResolveUserMessage(Exception exception)
-        => exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException
+        => exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException or ProjectStructureTextAssetSubmissionException
             ? exception.Message
             : "The file could not be saved. Check the application logs for details.";
 

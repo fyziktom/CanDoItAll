@@ -20,6 +20,7 @@ public partial class ProjectStructurePage
     private Guid structureContextId = Guid.NewGuid();
     private ProjectStructureActionContext? structureContext;
     private string? structureLoadError;
+    private ProjectStructureAuthoringOpening? textAssetOpening;
 
     private Guid StructureContextId {
         get {
@@ -275,36 +276,85 @@ public partial class ProjectStructurePage
             editModel.Request,
             deferredCompletionCts.Token);
 
-    private Task CreateTextAssetAsync(
+    private async Task CreateTextAssetAsync(
         ProjectStructureCreateLeafDefinition definition,
-        CanvasWorkbenchCreateActionRequest createRequest)
-        => TextAssetCreationCoordinator.CreateAsync(
-            new ProjectStructureTextAssetCreationContext(ProjectId, CreateTextAssetNodeAsync),
-            definition,
-            createRequest,
-            deferredCompletionCts.Token);
+        CanvasWorkbenchCreateActionRequest createRequest) {
+        var context = CaptureActionContext();
+        var source = context.Surface.Nodes.FirstOrDefault(node => node.Id == createRequest.SourceNodeId);
+        var parentId = CanvasAdapters.ProjectStructurePlacementPolicy.ResolveParentNodeId(source, createRequest)
+            ?? $"project:{context.Surface.ProjectId:D}";
+        var parent = context.Surface.Nodes.FirstOrDefault(node => node.Id == parentId)
+            ?? throw new InvalidOperationException("The original text asset parent is no longer available.");
+        var opening = new ProjectStructureAuthoringOpening(context, source ?? parent);
+        textAssetOpening = opening;
+        var original = createRequest with {
+            ParentNodeId = parentId,
+            InputValues = createRequest.InputValues?.Select(value => new CanvasWorkbenchInputValue { Key = value.Key, Value = value.Value }).ToArray(),
+            UploadedFile = createRequest.UploadedFile is { } upload ? new() {
+                FileName = upload.FileName, ContentType = upload.ContentType, Base64Data = upload.Base64Data
+            } : null
+        };
+        try {
+            await TextAssetCreationCoordinator.CreateAsync(
+                new(context.Surface.ProjectId, (capturedDefinition, submitted, media, cancellationToken) =>
+                    CreateTextAssetNodeAsync(opening, capturedDefinition, original with {
+                        Title = submitted.Title, Subtitle = submitted.Subtitle, Notes = submitted.Notes, UploadedFile = null
+                    }, media, cancellationToken)), definition, original, deferredCompletionCts.Token);
+        } finally {
+            if (ReferenceEquals(textAssetOpening, opening)) {
+                textAssetOpening = null;
+            }
+        }
+    }
 
     private async Task<ProjectStructureNode?> CreateTextAssetNodeAsync(
+        ProjectStructureAuthoringOpening opening,
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest,
         ProjectObjectMediaPayload media,
-        CancellationToken cancellationToken)
-    {
-        ProjectStructureNode? committedNode = null;
-        try
-        {
-            return await CreateObjectAsync(
-                definition,
-                createRequest,
-                request => request with { Media = media },
-                cancellationToken,
-                node => committedNode = node);
+        CancellationToken cancellationToken) {
+        if (!TryBeginAuthoring(opening, textAssetOpening)) {
+            throw new ProjectStructureTextAssetSubmissionException(
+                opening.RequiresObservation ? "The original write requires observation before another create." :
+                    "The original text asset opening is no longer current. Reopen it before submitting.",
+                new InvalidOperationException("The original text asset opening cannot dispatch."), opening.RequiresObservation);
         }
-        catch (Exception exception) when (committedNode is not null)
-        {
-            throw new ProjectStructureNodeCreatedWithFollowUpFailureException(
-                committedNode,
-                exception);
+        var context = opening.Context;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            ProjectStructureAuthoringOperation.CreateNode, ProjectStructureAuthoringResultKind.Rejected,
+            "The text asset was not created.") { SourceNodeId = opening.Node.Id };
+        var invoked = false;
+        try {
+            cancellationToken.ThrowIfCancellationRequested();
+            invoked = true;
+            return await CreateObjectAsync(definition, createRequest, request => request with {
+                Media = media,
+                ExpectedProjectAdmission = context.Admission,
+                ExpectedParticipants = context.Surface.Nodes.Where(node => node.Id == opening.Node.Id || node.Id == createRequest.ParentNodeId).ToArray()
+            }, cancellationToken, node => {
+                opening.RequiresObservation = true;
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = node,
+                    Message = $"{node.Title} was created ({node.Id})." };
+                RecordAuthoringOutcome(opening, outcome);
+            }, context.Surface, context.NavigationRevision, () => IsCurrentAuthoring(opening, textAssetOpening));
+        } catch (Exception exception) {
+            opening.RequiresObservation = outcome.Node is not null || invoked && !IsKnownGraphRejection(exception) &&
+                exception is not (ProjectAssetCreationException or ProjectAssetContentValidationException);
+            if (outcome.Node is { } committed) {
+                RecordAuthoringOutcome(opening, outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit,
+                    Failure = exception, Message = $"{outcome.Message} Follow-up failed. Observe the saved node before continuing." });
+                throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, exception);
+            }
+            var message = opening.RequiresObservation
+                ? "The original file write is unconfirmed. Observe the original project before trying again."
+                : exception.Message;
+            RecordAuthoringOutcome(opening, outcome with { Kind = opening.RequiresObservation
+                ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = message, Failure = exception });
+            throw new ProjectStructureTextAssetSubmissionException(message, exception, opening.RequiresObservation);
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
