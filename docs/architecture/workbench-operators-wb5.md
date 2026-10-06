@@ -88,8 +88,47 @@ passes without write mode at 15,281 findings. The complete edited/new source sca
 reported as a zero-finding whole-source scan. Production/runtime changes add no credential
 material. WB4's historical broad-suite qualifications remain unchanged.
 
+## Protected-reference boundary
+
+The same leaf now owns the complete secret metadata picker, search, reference purpose/note,
+create fields and real SecretField. Each opening retains its EditContext and private draft;
+input events capture the last keystroke before submission, and retirement/accepted creation
+clears the transient value. The action footer stays visible when a long error scrolls the
+body. Metadata selection uses the existing small Security.Abstractions contract, adding one
+project to the leaf (seven) and sandbox (eight). Thirty evaluated graph comparisons preserve
+the completed leaves and implementation boundaries.
+
+`ProjectSecretReferenceSession` composes the existing workspace secret owner with original
+project admission, actor/runtime generation, node/parent expectations and immutable input.
+It never retrieves a stored plaintext value. Vault acceptance, project-reference acceptance
+and observation retain their exact IDs separately. A known vault commit can be observed and
+its original reference explicitly finished without another create. Unknown replies retain
+their candidate identity and prohibit blind replay. Native post-commit activity warnings
+survive successful reference observation. No permission or Agent secret grant is inferred.
+
+Native cases use the actual PostgreSQL/secret owners and inject faults at real vault and
+reference boundaries. They cover exact duplicate-name selection, runtime permission refusal,
+two competing editors, unknown JSON/timing preservation, duplicate handlers, changed original
+parent/kind/content, actor/runtime retirement and A→B→A metadata completion. The runtime
+generation case tests retirement; it does not claim to switch the process's canonical database.
+The independent renderer cases cover unblurred input, stable drafts, direct duplicate callbacks,
+missing/unavailable metadata and independent sensitive drafts.
+
+The original W2 run retained a missing final host-render failure after a retired child completed;
+the native host now explicitly renders the captured operation outcome. Expanded continuity
+also exposed a WB4 test waiting for a component render while JavaScript capture was held.
+That test now awaits the actual interop invocation and preserves both original-selection and
+recreated-project refusal assertions. Original failed attempts remain in the private ledger.
+
+Portability review removes six allowances from the deleted inline form and adds two explicit
+ordinal metadata search/sort comparisons. Final enforcement passes without write mode at
+15,277 findings. The complete W2 edited/new source scan has zero findings. The large-desktop
+sandbox demonstrates separate fixture identities, cleared values and a fixed footer across
+655 pixels of visible body with 1,271 pixels of content. These are presentation fixtures;
+native commit evidence is separate and final application journeys are still required.
+
 ## Remaining implementation
 
-Protected references, exact runtime identity/Stop, approval, preview/readiness, complete
+Exact runtime identity/Stop, approval, preview/readiness, complete
 renderer/caller census and final desktop/application proof remain required before WB5
 closure. The whole Workbench is not complete.

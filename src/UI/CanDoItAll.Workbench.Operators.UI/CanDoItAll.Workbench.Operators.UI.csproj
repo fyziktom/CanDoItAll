@@ -8,5 +8,6 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
+    <ProjectReference Include="../../Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj" />
   </ItemGroup>
 </Project>

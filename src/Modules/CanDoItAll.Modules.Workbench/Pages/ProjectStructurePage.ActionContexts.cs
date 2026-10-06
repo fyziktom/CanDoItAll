@@ -7,7 +7,6 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
     private long actionNavigationRevision;
-    private ProjectStructureActionContext? secretReferenceActionContext;
     private ProjectStructureAuthoringOpening? previewOpening;
     private readonly Queue<ProjectStructureAuthoringOutcome> authoringOutcomes = new();
     private readonly HashSet<Task> authoringOperations = [];
@@ -82,6 +81,9 @@ public partial class ProjectStructurePage {
 
     private void RetireInactiveAuthoring() {
         RetireImageAuthorities();
+        if (secretSession is { IsCurrent: false }) {
+            CloseSecretReferenceDialog();
+        }
         if (partySession is { IsCurrent: false }) {
             partySession.Retire();
             partySession = null;

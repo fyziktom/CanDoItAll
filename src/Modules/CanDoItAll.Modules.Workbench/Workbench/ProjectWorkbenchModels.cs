@@ -1410,7 +1410,7 @@ public sealed partial class ProjectWorkbenchService(
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
         if (request.ExpectedNode is { } expectedNode &&
-            (expectedNode.RecordId != node.Id || expectedNode.ObjectType != node.ObjectType ||
+            (expectedNode.RecordId != node.Id || expectedNode.ObjectType != node.ObjectType || expectedNode.ParentId != node.ParentNodeKey ||
              !string.Equals(expectedNode.ObjectSubtype, node.ObjectSubtype, StringComparison.Ordinal) ||
              !string.Equals(expectedNode.MetadataJson, ProjectNodeLegacyMetadata.SanitizeLegacyReferenceMetadata(node.MetadataJson), StringComparison.Ordinal) ||
              expectedNode.Title != node.Title || expectedNode.Subtitle != node.Subtitle || expectedNode.Notes != node.Notes ||

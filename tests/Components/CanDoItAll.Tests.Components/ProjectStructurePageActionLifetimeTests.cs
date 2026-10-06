@@ -96,10 +96,15 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true).SetResult(true);
         var cut = Render(harness, original.ProjectId);
         await SelectAsync(cut, original.Node.Id);
-        var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => true);
+        var captureEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => {
+            captureEntered.TrySetResult();
+            return true;
+        });
         var pending = InvokeSelectionAsync(cut, new CanDoItAll.Workbench.Insights.UI.InsightsSelectionCommand.Inspector("export-image"));
         try {
-            cut.WaitForAssertion(() => Assert.Single(capture.Invocations));
+            await captureEntered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await cut.InvokeAsync(() => Assert.Single(capture.Invocations));
             if (recreate) {
                 await RecreateProjectAsync(harness, original);
             }
@@ -222,7 +227,7 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         await OpenSecretCreateAsync(cut, original.Node.Id);
         cut.Find("[data-testid='project-structure-secret-purpose']").Input("Original purpose");
         cut.Find("[data-testid='project-structure-secret-external-reference']").Input("Original note");
-        cut.Find("[data-testid='project-structure-secret-create-name']").Change("Original UI secret");
+        cut.Find("[data-testid='project-structure-secret-create-name']").Input("Original UI secret");
         cut.Find("input[data-testid='project-structure-secret-create-value']").Change("synthetic-component-secret");
         vault.Armed = true;
         var pending = cut.Find("[data-testid='project-structure-secret-create-use']").ClickAsync(new MouseEventArgs());
@@ -234,7 +239,7 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
             Navigate(harness, cut, next.ProjectId);
             await OpenSecretCreateAsync(cut, next.Node.Id);
             cut.Find("[data-testid='project-structure-secret-purpose']").Input("New purpose");
-            cut.Find("[data-testid='project-structure-secret-create-name']").Change("New unfinished secret");
+            cut.Find("[data-testid='project-structure-secret-create-name']").Input("New unfinished secret");
         } finally {
             vault.Release.TrySetResult();
         }
