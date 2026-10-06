@@ -1,8 +1,8 @@
 # Workbench content and files WB4
 
-WB4 implementation and native journey proof are complete. Final broad Stable disposition,
-documentation closure and the last signed handoff are still being recorded. This is a bounded
-Content extraction; the whole Workbench is not complete.
+WB4 Content and Files is complete on the verified local source pair. Its independent UI and
+native journeys pass; the original broad Stable run retains the two qualified failures below.
+WB1–WB3 remain preserved. This is a bounded extraction; the whole Workbench is not complete.
 
 The sealed [WB4 package](../../codex/bundles/CanDoItAll_Workbench_Content_WB4/prompt.md)
 is unchanged. Its G00–G35 contract governs closure. Private source fingerprints, binaries,
@@ -28,6 +28,9 @@ publication or reproducible remote CI readiness is claimed.
 The final native application image was built from `6fd90de11e886b5d4480d83243d86d64b09ca1c1`
 with that exact Components/FileTools pair. W4 changes after this revision are test/fixture
 and documentation changes. The owned source and both clients use the same application image.
+The signed native-validation checkpoint is `a48943e1e58f5a13d68b1e3bef13f9939279e325`.
+All 197 existing Playwright source files are unchanged from the pre-run production snapshot;
+the new WB4 cases have separate source/discovery/binary records.
 
 ## Implemented boundary and current callers
 
@@ -179,7 +182,7 @@ Original failed/aborted runs remain failed in the private ledger.
 
 ## C# architecture gate
 
-Status: Pass for the implemented boundary. Final broad disposition remains separate.
+Status: Pass for the implemented boundary. The qualified broad result remains separate.
 
 | Check | Evidence and decision |
 |---|---|
@@ -198,9 +201,37 @@ test/generated-value patterns or unchanged diff context. No introduced secret is
 is not a claim that historical bundles or retained private runtime artifacts are globally clean.
 
 One broad Stable run was selected because native authority, queue, shared overlay and CI
-membership changed. Its frozen production/test inputs are retained; test-only follow-ups use
-separate configurations. The original run is not relabelled by a passing focused continuation.
-Its final counts/disposition and documentation gate results will be added before closure.
+membership changed. It completed all 31 assemblies in 215.4 minutes: 16,817 passed, two failed,
+zero skipped. Exact discovery was 16,764; seven existing MemberData families account for the
+55 additional runtime rows. No selected method was omitted. Its original result remains failed.
+
+| Completed broad selection | Executed | Passed | Failed |
+|---|---:|---:|---:|
+| Native Components | 2,751 | 2,750 | 1 |
+| Native PostgreSQL Integration | 3,293 | 3,293 | 0 |
+| Unit | 9,459 | 9,458 | 1 |
+| Other 28 assemblies, including Content UI and preserved leaves | 1,316 | 1,316 | 0 |
+| Total | 16,819 | 16,817 | 2 |
+
+The Components failure used the removed Structure overlay CSS class. The corrected selector
+retains its original stretch/unbounded assertions; refreshed compatibility tests pass 5/5.
+The Unit repository secret scan reports exactly four retained synthetic controls from earlier
+WF1/A2/CA1 evidence. Each file and the source scanner match their WB3 hashes; neither was
+changed. This qualifies G33/G34 and does not turn either original test green. Required current
+source security review, no-write portability enforcement and documentation checks pass.
+
+All 4,655 frozen production/test binaries were checked again after completion and are unchanged.
+Test-only follow-ups used separate configurations. Source-reading validations observe the
+current working tree; the initial and final source records distinguish that from compiled
+inputs. Production stayed fixed at the native-image revision. No second broad run was used
+to replace this result, and this local monolithic run does not certify remote CI job budgets.
+
+Documentation validation passes for 376 maintained Markdown files and all nine documentation
+evidence checks. The sealed WB4 package remains intact. G00–G35 and artifact hashes are recorded
+in the private handoff; structural checker success is separate from the native proof above.
+All four independent hosts, six native fixture containers and the separate Stable PostgreSQL
+container were stopped after their work completed. Containers, volumes, source copies and
+evidence remain recoverable. Historical fixtures and port 5032 were untouched.
 
 Remaining Workbench integration work includes participant/meeting/directory assignment,
 protected secret forms, terminal/runtime/web-preview and Workflow/Process linkage/start/recovery.
@@ -220,3 +251,7 @@ All checkpoints use the existing PGP key
 | Components | `a3fd4d22f2c4e0432cf389f194c6468b44ab7371` | Shared neutral overlay |
 | CanDoItAll | `c4c88afad5ff70449167ed690c189f554b875c29` | Collections and governed editing |
 | CanDoItAll | `6fd90de11e886b5d4480d83243d86d64b09ca1c1` | Image generation, transcript analysis and stored exports |
+| CanDoItAll | `a48943e1e58f5a13d68b1e3bef13f9939279e325` | Native content consumers, file authority and deterministic fixture proof |
+
+The final documentation-only closure commit and its verified signature are recorded in the
+private handoff and completion message; it changes no tested production input.
