@@ -16,6 +16,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Content.UI.Generation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ using Microsoft.Extensions.Hosting;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePageSimpleMutationTests
+public sealed partial class ProjectStructurePageSimpleMutationTests
 {
     [Fact]
     public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()
@@ -354,12 +355,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
             cut,
             canvasWorkbench);
-        var providerField = Assert.Single(
-            generatedImageAction.InputFields,
-            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
-        Assert.Contains(
-            providerField.Options,
-            option => string.Equals(option.Value, providerId.ToString("D"), StringComparison.Ordinal));
+        Assert.Contains(generatedImageAction.Providers, provider => provider.Id == providerId);
 
         const string prompt = "Create a crisp dashboard thumbnail with teal, white, and charcoal UI panels.";
         var createdNodeId = await InvokeCreateActionAsync(
@@ -472,15 +468,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
             cut,
             canvasWorkbench);
-        var providerField = Assert.Single(
-            generatedImageAction.InputFields,
-            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
-        Assert.Contains(
-            providerField.Options,
-            option => string.Equals(
-                option.Label,
-                "OpenAI image generation (gpt-image-1-mini)",
-                StringComparison.Ordinal));
+        Assert.Contains(generatedImageAction.Providers, provider => provider.Id == providerId &&
+            provider.Name == "OpenAI image generation" && provider.DefaultModelLabel == "gpt-image-1-mini");
 
         const string prompt = "Create a crisp settings panel thumbnail with teal controls.";
         await InvokeCreateActionAsync(
@@ -555,17 +544,17 @@ public sealed class ProjectStructurePageSimpleMutationTests
             var updatedNode = Assert.Single(
                 canvasWorkbench.Instance.Surface.Nodes,
                 node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
-            Assert.Equal("Image generation failed", updatedNode.Status);
+            Assert.Equal("Image generation requires observation", updatedNode.Status);
             Assert.Equal("waiting-for-image-creation-by-ai.svg", updatedNode.MediaFileName);
         });
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
         var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
-        Assert.Equal("Image generation failed", persistedNode.Status);
+        Assert.Equal("Image generation requires observation", persistedNode.Status);
         Assert.Equal("waiting-for-image-creation-by-ai.svg", persistedNode.MediaOriginalFileName);
         var metadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
-        Assert.Equal(ProjectStructureDeferredNodeCompletionState.Failed, metadata.DeferredCompletion?.State);
-        Assert.Contains("provider unavailable", metadata.DeferredCompletion?.ErrorMessage, StringComparison.Ordinal);
+        Assert.Equal(ProjectStructureDeferredNodeCompletionState.RequiresObservation, metadata.DeferredCompletion?.State);
+        Assert.Contains("provider outcome is unconfirmed", metadata.DeferredCompletion?.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2425,6 +2414,16 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(request)));
 
+        if (actionId == "generate-image-asset") {
+            var values = (inputValues ?? []).ToDictionary(value => value.Key, value => value.Value);
+            var image = cut.FindComponent<ContentImageDialog>().Instance;
+            await cut.InvokeAsync(() => image.Submit(new(title, subtitle, notes,
+                Guid.Parse(values["imageProviderProfileId"]), values.GetValueOrDefault("imageModel") ?? string.Empty,
+                values.GetValueOrDefault("imageSize") switch { "auto" => ContentImageSize.Auto, "1536x1024" => ContentImageSize.Landscape, "1024x1536" => ContentImageSize.Portrait, _ => ContentImageSize.Square },
+                values.GetValueOrDefault("imageQuality") switch { "auto" => ContentImageQuality.Auto, "medium" => ContentImageQuality.Medium, "high" => ContentImageQuality.High, _ => ContentImageQuality.Low },
+                values.GetValueOrDefault("imageOutputFormat") switch { "jpeg" => ContentImageFormat.Jpeg, "webp" => ContentImageFormat.Webp, _ => ContentImageFormat.Png })));
+        }
+
         string createdNodeId = string.Empty;
         cut.WaitForAssertion(() =>
         {
@@ -2442,23 +2441,11 @@ public sealed class ProjectStructurePageSimpleMutationTests
         return createdNodeId;
     }
 
-    private static async Task<CanvasWorkbenchAction> RefreshGeneratedImageCreateActionAsync(
-        IRenderedComponent<ProjectStructurePage> cut,
-        IRenderedComponent<CanvasWorkbench> canvasWorkbench)
-    {
-        var assetGroup = Assert.Single(
-            canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
-            action => string.Equals(action.ActionId, "group-assets", StringComparison.Ordinal));
-        var generatedImageAction = Assert.Single(
-            assetGroup.Children,
-            action => string.Equals(action.ActionId, "generate-image-asset", StringComparison.Ordinal));
-        var refreshMethod = typeof(ProjectStructurePage).GetMethod(
-            "RefreshGeneratedImageCreateActionAsync",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(refreshMethod);
-        var refreshTask = Assert.IsAssignableFrom<Task<CanvasWorkbenchAction>>(
-            refreshMethod!.Invoke(cut.Instance, [generatedImageAction]));
-        return await refreshTask;
+    private static async Task<ContentImageSetup> RefreshGeneratedImageCreateActionAsync(
+        IRenderedComponent<ProjectStructurePage> cut, IRenderedComponent<CanvasWorkbench> canvasWorkbench) {
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction($"project:{cut.Instance.ProjectId:D}", "generate-image-asset", 0, 0));
+        cut.WaitForAssertion(() => Assert.False(cut.FindComponent<ContentImageDialog>().Instance.State.IsLoading));
+        return cut.FindComponent<ContentImageDialog>().Instance.State;
     }
 
     private static string ResolveComponentTestProjectPath()

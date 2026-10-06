@@ -399,7 +399,13 @@ public sealed record ProjectStructureDeleteConfirmation(ProjectStructureDeletePr
 public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,
     string RootTitle,
-    ProjectStructureSummary Summary);
+    ProjectStructureSummary Summary) {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+    public string Message { get; init; } = string.Empty;
+    public TimeZoneInfo DisplayTimeZone { get; init; } = TimeZoneInfo.Local;
+}
 
 public sealed record ProjectStructureTranscriptActionDialogState(
     string NodeId,
@@ -408,4 +414,8 @@ public sealed record ProjectStructureTranscriptActionDialogState(
     Guid? SelectedProviderId,
     string LastProviderName,
     IReadOnlyList<ProviderProfile> Providers,
-    string Error);
+    string Error) {
+    public Guid OpeningId { get; init; }
+    public CanDoItAll.Workbench.Content.UI.Analysis.ContentConfirmationPhase Phase { get; init; }
+        = CanDoItAll.Workbench.Content.UI.Analysis.ContentConfirmationPhase.Ready;
+}

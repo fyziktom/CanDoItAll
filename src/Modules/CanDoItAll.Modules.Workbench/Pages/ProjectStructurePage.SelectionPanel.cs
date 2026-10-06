@@ -622,6 +622,7 @@ public partial class ProjectStructurePage
         if (summaryDialog is not null)
         {
             builder.Append("summary:")
+                .Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(summaryDialog))
                 .Append(summaryDialog.RootNodeId)
                 .Append(':')
                 .Append(summaryDialog.RootTitle)
@@ -662,6 +663,7 @@ public partial class ProjectStructurePage
         if (pendingTranscriptAction is not null)
         {
             builder.Append("|transcript:")
+                .Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(pendingTranscriptAction))
                 .Append(pendingTranscriptAction.NodeId)
                 .Append(':')
                 .Append(pendingTranscriptAction.ActionKind)
@@ -678,6 +680,7 @@ public partial class ProjectStructurePage
         if (mermaidPreviewNode is not null)
         {
             builder.Append("|mermaid:")
+                .Append(mermaidOpening?.Id)
                 .Append(mermaidPreviewNode.Id)
                 .Append(':')
                 .Append(mermaidPreviewNode.Title);

@@ -391,24 +391,38 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     </div>
 }
 
+@if (imageOpening is { } imageSetup) {
+    <CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog State="@imageSetup.State" CanvasScoped="false"
+        InitialDraft="@(new(imageSetup.Request.Title, imageSetup.Request.Subtitle, imageSetup.Request.Notes, null, string.Empty))"
+        Submit="@(draft => TrackAuthoringOperationAsync(GenerateImageAsync(imageSetup, draft)))" Close="@(() => CloseImageSetup(imageSetup))" />
+}
+
 <ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
+    @{
+        var summaryReceiver = summaryOpening;
+        var summarySnapshot = summaryDialog;
+        var transcriptReceiver = transcriptOpening;
+        var transcriptSnapshot = pendingTranscriptAction;
+        var mermaidReceiver = mermaidOpening;
+    }
     <ProjectStructureSupportDialogs SummaryDialog="@summaryDialog"
-                                    CloseSummary="CloseSummary"
-                                    ExportSummaryWorkbook="ExportSummaryWorkbookAsync"
-                                    ExportSummaryGantt="ExportSummaryGanttAsync"
-                                    ChangeSummaryStatus="HandleSummaryStatusChangedAsync"
+                                    CloseSummary="@(() => ChangeAuthoringDialog(summaryReceiver, summaryOpening, CloseSummary))"
+                                    ExportSummaryWorkbook="@(() => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.ExportWorkbook)))"
+                                    ExportSummaryGantt="@(() => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.ExportGantt)))"
+                                    ChangeSummaryStatus="@(value => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.SummaryStatus, value.NodeId, value.Status)))"
                                     SummaryStatuses="@SummaryStatusOptions"
                                     PendingDeletePrompt="@pendingDeletePrompt"
                                     DeleteFailure="@deleteFailure"
                                     ConfirmDelete="ConfirmDeleteAsync"
                                     CancelDelete="CancelDelete"
                                     PendingTranscriptAction="@pendingTranscriptAction"
-                                    ExecuteTranscriptAction="ExecuteTranscriptActionAsync"
-                                    CancelTranscriptAction="CancelTranscriptAction"
-                                    HandleTranscriptProviderChanged="HandleTranscriptProviderChanged"
+                                    ExecuteTranscriptAction="@(() => TrackAuthoringOperationAsync(ExecuteTranscriptActionAsync(transcriptReceiver, transcriptSnapshot)))"
+                                    CancelTranscriptAction="@(() => ChangeAuthoringDialog(transcriptReceiver, transcriptOpening, CancelTranscriptAction))"
+                                    HandleTranscriptProviderChanged="@(value => ChangeAuthoringDialog(transcriptReceiver, transcriptOpening, () => HandleTranscriptProviderChanged(value)))"
                                     MermaidPreviewNode="@MermaidViewerNode"
-                                    CloseMermaidViewer="CloseMermaidViewer"
-                                    EditMermaidNode="EditMermaidPreviewNodeAsync"
+                                    MermaidOpeningId="@(mermaidOpening?.Id ?? Guid.Empty)"
+                                    CloseMermaidViewer="@(() => ChangeAuthoringDialog(mermaidReceiver, mermaidOpening, CloseMermaidViewer))"
+                                    EditMermaidNode="@(_ => TrackAuthoringOperationAsync(EditMermaidPreviewNodeAsync(mermaidReceiver)))"
                                     CanEditMermaidNode="CanEditNode"
                                     ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
 </ProjectStructureDeferredSurface>
@@ -2007,11 +2021,6 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
     {
-        if (IsGeneratedImageAssetCreateAction(action.ActionId))
-        {
-            action = await RefreshGeneratedImageCreateActionAsync(action);
-        }
-
         var sourceNode = selectedNode;
         var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,
@@ -2026,6 +2035,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             action.CreateMode,
             action.ObjectSubtype,
             null);
+
+        if (IsGeneratedImageAssetCreateAction(action.ActionId) && ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var imageDefinition)) {
+            await TryCreateGeneratedImageAssetAsync(imageDefinition, request);
+            return;
+        }
 
         if (IsSecretReferenceCreateAction(action.ActionId))
         {
@@ -2966,6 +2980,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         CancelRuntimePreviewWait();
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
+        foreach (var authority in imageAuthorities.Keys) {
+            authority.Revoke();
+        }
         deferredCompletionCts.Cancel();
     }
 

@@ -1,0 +1,38 @@
+@namespace CanDoItAll.Workbench.Content.UI.Analysis
+@using CanDoItAll.Components.Mermaid
+@{
+    var state = State;
+    var edit = Edit;
+    var close = Close;
+}
+<CanvasOverlayDialog @key="state.OpeningId" CanvasScoped="CanvasScoped" AriaLabel="@($"{state.Title} Mermaid viewer")" Kicker="Mermaid viewer" Title="@state.Title"
+                     Summary="@($"Detected diagram type: {state.DiagramKind}")" Close="@(() => close.InvokeAsync())">
+    <Actions>
+        @if (state.CanEdit) {
+            <Button Text="Edit" ButtonStyle="ButtonStyle.Info" Click="@(() => edit.InvokeAsync())" />
+        }
+        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => close.InvokeAsync())" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium">
+            <MermaidDiagram Title="@state.Title" Description="@($"Detected diagram type: {state.DiagramKind}")"
+                            Source="@state.Source" Options="@StrictOptions" PanZoomEnabled="true" ShowControls="true"
+                            Style="--cda-mermaid-min-height:28rem; --cda-mermaid-height:min(62dvh, 46rem);"
+                            data-testid="project-structure-mermaid-diagram" />
+            <details class="content-mermaid-source">
+                <summary>Source</summary>
+                <pre>@state.Source</pre>
+            </details>
+        </Stack>
+    </Body>
+</CanvasOverlayDialog>
+
+@code {
+    [Parameter] public bool CanvasScoped { get; set; }
+    private static readonly MermaidDiagramOptions StrictOptions = new() {
+        SecurityLevel = "strict", HtmlLabels = false, FlowchartUseMaxWidth = true, ArchitectureRandomize = false
+    };
+    [Parameter, EditorRequired] public ContentLegacyMermaid State { get; set; } = default!;
+    [Parameter] public EventCallback Edit { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+}

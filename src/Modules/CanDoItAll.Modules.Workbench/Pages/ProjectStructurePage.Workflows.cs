@@ -39,6 +39,7 @@ public partial class ProjectStructurePage
     private ProjectStructureSummaryDialogState? summaryDialog;
     private ProjectStructureTranscriptActionDialogState? pendingTranscriptAction;
     private ProjectStructureNode? mermaidPreviewNode;
+    private ProjectStructureAuthoringOpening? mermaidOpening;
     private string? workflowFeedback;
     private string workflowFeedbackTone = "neutral";
     private readonly List<ProjectStructureDeletionRecovery> pendingDeletionRecoveries = [];
@@ -624,350 +625,43 @@ public partial class ProjectStructurePage
     private static IReadOnlyList<string> ResolvePendingDeleteNodeIds(ProjectStructureDeletePrompt prompt)
         => prompt.NodeIds.Count > 0 ? prompt.NodeIds : [prompt.NodeId];
 
-    private async Task OpenSummaryAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            return;
-        }
-        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
-        if (targetNode is null) {
-            return;
-        }
-
-        summaryActionContext = context;
-        summaryDialog = new ProjectStructureSummaryDialogState(
-            targetNode.Id, targetNode.Title,
-            ProjectStructureSummaryBuilder.Build(summaryActionContext.Surface, targetNode));
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void CloseSummary() {
-        summaryDialog = null;
-        summaryActionContext = null;
-    }
-
-    private async Task ChangeSummaryStatusAsync(string nodeId, ChangeEventArgs args) {
-        var status = args.Value?.ToString()?.Trim();
-        var context = summaryActionContext;
-        if (string.IsNullOrWhiteSpace(status) || summaryDialog is null || context is null) {
-            return;
-        }
-
-        var committed = false;
-        try {
-            var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
-                context.Surface.ProjectId, [nodeId], status, expectedProjectAdmission: context.Admission);
-            if (updatedNodes.Count == 0) {
-                ReportActionResult(context, "The original summary node is no longer available.", "warn");
-                return;
-            }
-            committed = true;
-            ReportActionResult(context, "The original summary status was updated.");
-            if (IsCurrentAction(context)) {
-                await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-            }
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, committed ? "The original summary status was saved." : null);
-        }
-    }
-
-    private async Task ExportSummaryWorkbookAsync() {
-        var dialog = summaryDialog;
-        var context = summaryActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        ProjectStructureNode? created = null;
-        try {
-            var payload = ProjectStructureSummaryExporter.BuildWorkbook(dialog.Summary);
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.File,
-                    $"{dialog.RootTitle} progress workbook",
-                    "Progress summary export",
-                    "Generated from the structure progress summary modal.",
-                    dialog.RootNodeId, null, null, null, null, "excel",
-                    new ProjectObjectMediaPayload(
-                        $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        Convert.ToBase64String(payload))) { ExpectedProjectAdmission = context.Admission });
-
-            ReportActionResult(context, $"{created.Title} was exported as an Excel attachment.");
-            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task ExportSummaryGanttAsync() {
-        var dialog = summaryDialog;
-        var context = summaryActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        ProjectStructureNode? created = null;
-        try {
-            var mermaidText = ProjectStructureSummaryExporter.BuildMermaidGantt(
-                dialog.Summary, DateOnly.FromDateTime(DateTime.UtcNow));
-            var media = await AssetCreationService.CreateTextAsync(
-                ProjectFileSubtype.Mermaid,
-                $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.mmd",
-                mermaidText, deferredCompletionCts.Token);
-            var metadata = new ProjectObjectMetadataEnvelope {
-                File = new ProjectFileMetadata {
-                    FileSubtype = ProjectFileSubtype.Mermaid,
-                    MermaidDiagramKind = MermaidDiagramKind.Gantt
-                }
-            };
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.File,
-                    $"{dialog.RootTitle} gantt",
-                    "Progress summary export",
-                    "Generated from the structure progress summary modal.",
-                    dialog.RootNodeId, null, null, null, null, "mermaid", media,
-                    ProjectObjectMetadataSerializer.Serialize(metadata)) { ExpectedProjectAdmission = context.Admission },
-                deferredCompletionCts.Token);
-
-            ReportActionResult(context, $"{created.Title} was exported as a Mermaid Gantt node.");
-            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task ExportMindmapImageAsync(ProjectStructureNode? sourceNode = null, ProjectStructureActionContext? capturedContext = null) {
-        var targetNode = sourceNode ?? selectedNode;
-        var canvas = workbenchRef;
-        if (targetNode is null || canvas is null) {
-            return;
-        }
-
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            ReportActionResult(context, "The original canvas is no longer displayed. No image capture was started.", "warn");
-            return;
-        }
-        ProjectStructureNode? created = null;
-        try {
-            var base64 = await canvas.CaptureImageAsync();
-            if (string.IsNullOrWhiteSpace(base64)) {
-                ReportActionResult(context, "The canvas image could not be captured.", "warn");
-                return;
-            }
-
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.ImageAsset,
-                    $"{targetNode.Title} mindmap image",
-                    "Canvas export",
-                    "Generated from the current structure canvas viewport.",
-                    targetNode.Id, null, null, null, null, "png",
-                    new ProjectObjectMediaPayload(
-                        $"{SanitizeExportName(targetNode.Title)}-mindmap.png", "image/png", base64)) {
-                    ExpectedProjectAdmission = context.Admission
-                });
-            ReportActionResult(context, $"{created.Title} was exported as an image node.");
-            await RefreshCreatedActionAsync(context, created);
-        } catch (JSException) when (created is null) {
-            ReportActionResult(context, "The canvas image could not be captured.", "warn");
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task CreateTranscriptFromRecordingAsync(ProjectStructureNode? recordingNode = null, ProjectStructureActionContext? capturedContext = null) {
-        var targetNode = recordingNode ?? selectedNode;
-        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Recording) {
-            return;
-        }
-
-        var context = capturedContext ?? CaptureActionContext();
-        ProjectStructureNode? created = null;
-        try {
-            var metadata = new ProjectObjectMetadataEnvelope {
-                Transcript = new ProjectTranscriptMetadata { TranscriptText = string.Empty }
-            };
-            var nodeReferences = new ProjectNodeReferenceCollection {
-                TranscriptRecordingNodeId = TryParseCustomNodeArtifactId(targetNode.Id)
-            };
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.Transcript,
-                    $"{targetNode.Title} transcript",
-                    "Generated from recording",
-                    $"Transcript scaffold created from recording '{targetNode.Title}'.",
-                    targetNode.Id, targetNode.X + 280, targetNode.Y + 120, null, null,
-                    string.Empty, null, ProjectObjectMetadataSerializer.Serialize(metadata), null, nodeReferences) {
-                    ExpectedProjectAdmission = context.Admission
-                });
-            await ProjectWorkbenchService.LinkObjectsAsync(
-                context.Surface.ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom,
-                expectedProjectAdmission: context.Admission);
-            ReportActionResult(context, $"{created.Title} was created and linked to its recording.");
-            await RefreshCreatedActionAsync(context, created);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"Transcript {created.Title} ({created.Id}) was saved.");
-        }
-    }
-
-    private async Task OpenTranscriptActionAsync(ProjectLlmActionKind actionKind, string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
-        if (!IsCurrentAction(context) || transcriptNode is null || transcriptNode.ObjectType != ProjectObjectType.Transcript) {
-            return;
-        }
-
-        transcriptActionContext = context;
-        var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
-        var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync())
-            .Where(profile => profile.IsEnabled).ToList();
-        if (!IsCurrentAction(context) || !ReferenceEquals(transcriptActionContext, context)) {
-            return;
-        }
-
-        pendingTranscriptAction = new ProjectStructureTranscriptActionDialogState(
-            transcriptNode.Id, transcriptNode.Title, actionKind,
-            transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id,
-            metadata.Transcript?.LastProviderName ?? string.Empty, providers, string.Empty);
-    }
-
-    private void CancelTranscriptAction() {
-        pendingTranscriptAction = null;
-        transcriptActionContext = null;
-    }
-
-    private async Task ExecuteTranscriptActionAsync() {
-        var dialog = pendingTranscriptAction;
-        var context = transcriptActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, dialog.NodeId, StringComparison.Ordinal));
-        if (transcriptNode is null) {
-            CancelTranscriptAction();
-            return;
-        }
-
-        var provider = dialog.Providers.FirstOrDefault(item => item.Id == dialog.SelectedProviderId);
-        if (provider is null) {
-            pendingTranscriptAction = dialog with { Error = "Select an available provider profile before sending the transcript action." };
-            return;
-        }
-
-        var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
-        var transcriptText = string.IsNullOrWhiteSpace(metadata.Transcript?.TranscriptText)
-            ? transcriptNode.Notes : metadata.Transcript.TranscriptText;
-        if (string.IsNullOrWhiteSpace(transcriptText)) {
-            pendingTranscriptAction = dialog with { Error = "Transcript text is required before running an LLM action." };
-            return;
-        }
-
-        var providerCompleted = false;
-        var nativeCompleted = false;
-        try {
-            var result = await ProviderPromptExecutionService.ExecuteAsync(new ProviderPromptExecutionRequest(
-                provider.Id, BuildTranscriptPrompt(dialog.ActionKind, transcriptNode.Title, transcriptText), OutputFormat: "Markdown"));
-            if (result.IsFailure || result.Value is null) {
-                var error = result.Errors.FirstOrDefault()?.Message ?? "The provider request failed.";
-                if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
-                    pendingTranscriptAction = dialog with { Error = error };
-                } else {
-                    ReportActionResult(context, error, "warn");
-                }
-                return;
-            }
-
-            providerCompleted = true;
-            metadata.Transcript ??= new ProjectTranscriptMetadata();
-            metadata.Transcript.TranscriptText = transcriptText;
-            metadata.Transcript.LastActionKind = dialog.ActionKind;
-            metadata.Transcript.LastProviderName = provider.Name;
-            metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
-            var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
-            updatedReferences.TranscriptProviderProfileId = provider.Id;
-            switch (dialog.ActionKind) {
-                case ProjectLlmActionKind.Summarize:
-                    metadata.Transcript.SummaryText = result.Value.OutputText.Trim();
-                    break;
-                case ProjectLlmActionKind.FindMyTasks:
-                    metadata.Transcript.MyTasksText = result.Value.OutputText.Trim();
-                    break;
-                case ProjectLlmActionKind.FindOthersDeliveries:
-                    metadata.Transcript.OthersDeliveriesText = result.Value.OutputText.Trim();
-                    break;
-            }
-
-            var updated = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
-                context.Surface.ProjectId, transcriptNode.Id, ProjectObjectMetadataSerializer.Serialize(metadata),
-                status: "Review", nodeReferences: updatedReferences, expectedProjectAdmission: context.Admission);
-            nativeCompleted = updated is not null;
-            if (updated is null) {
-                throw new InvalidOperationException("The original transcript is no longer available for the completed provider result.");
-            }
-            ReportActionResult(context, $"{ResolveTranscriptActionLabel(dialog.ActionKind)} completed through {provider.Name}.",
-                result.Value.ContainsWarnings ? "warn" : "mint");
-            if (IsCurrentAction(context)) {
-                if (ReferenceEquals(transcriptActionContext, context)) {
-                    CancelTranscriptAction();
-                }
-                await ApplySurfaceNodeUpdatesAsync([updated]);
-            }
-        } catch (Exception exception) {
-            var completed = nativeCompleted ? "The transcript result was saved."
-                : providerCompleted ? "The provider request completed; saving its result to the original transcript could not be confirmed."
-                : null;
-            var failureMessage = ReportActionFailure(context, exception, completed);
-            if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
-                pendingTranscriptAction = dialog with { Error = failureMessage };
-            }
-        }
-    }
-
-    private void HandleTranscriptProviderChanged(ChangeEventArgs args)
-    {
-        if (pendingTranscriptAction is null)
-        {
-            return;
-        }
-
-        var selectedProviderId = Guid.TryParse(args.Value?.ToString(), out var parsedProviderId)
-            ? parsedProviderId
-            : (Guid?)null;
-        pendingTranscriptAction = pendingTranscriptAction with
-        {
-            SelectedProviderId = selectedProviderId,
-            Error = string.Empty
-        };
-    }
-
-    private async Task OpenMermaidViewerAsync(ProjectStructureNode node)
-    {
-        if (!HasMermaidViewer(node))
-        {
-            mermaidPreviewNode = null;
+    private async Task OpenMermaidViewerAsync(ProjectStructureNode node) {
+        if (!HasMermaidViewer(node)) {
+            CloseMermaidViewer();
             await OpenAttachmentPreviewAsync(node);
             return;
         }
-
+        var opening = new ProjectStructureAuthoringOpening(CaptureActionContext(), node);
+        mermaidOpening = opening;
+        mermaidPreviewNode = null;
         await CloseAttachmentPreviewAsync();
-        mermaidPreviewNode = node;
+        if (IsCurrentAuthoring(opening, mermaidOpening)) {
+            mermaidPreviewNode = node;
+        }
     }
 
-    private void CloseMermaidViewer()
-        => mermaidPreviewNode = null;
+    private void CloseMermaidViewer() {
+        mermaidOpening = null;
+        mermaidPreviewNode = null;
+    }
 
-    private async Task EditMermaidPreviewNodeAsync(ProjectStructureNode node)
-    {
-        CloseMermaidViewer();
-        await OpenEditDialogAsync(node);
+    private async Task EditMermaidPreviewNodeAsync(ProjectStructureAuthoringOpening? opening) {
+        if (opening is null || !TryBeginAuthoring(opening, mermaidOpening)) {
+            return;
+        }
+        try {
+            await ProjectWorkbenchService.RequireContentCurrentAsync(opening.Context.Admission, opening.Node, deferredCompletionCts.Token);
+            if (!IsCurrentAuthoring(opening, mermaidOpening)) {
+                return;
+            }
+            CloseMermaidViewer();
+            await OpenEditDialogAsync(opening.Node, opening.Context);
+        } catch (Exception failure) {
+            LogContentFailure(opening, ProjectStructureAuthoringOperation.EditNode, failure);
+            ReportActionResult(opening.Context, "The original Mermaid content changed or is unavailable. Reopen it before editing.", "warn");
+        } finally {
+            opening.IsBusy = false;
+        }
     }
 
     private async Task HandleReconnectSelectionAsync(string? nodeId) {

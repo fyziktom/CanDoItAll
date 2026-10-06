@@ -1578,7 +1578,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        ProjectStructureNode? expectedContent = null)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -1589,8 +1590,10 @@ public sealed partial class ProjectWorkbenchService(
             cancellationToken, expectedProjectAdmission is { } expected ? [expected] : null, processMutationAdmission, agentMutationAdmission);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
-        if (node is null)
-        {
+        if (node is null) {
+            if (expectedContent is not null) {
+                throw new ProjectStructureEditConflictException();
+            }
             return null;
         }
         var resourceParentNodeKey =
@@ -1599,6 +1602,7 @@ public sealed partial class ProjectWorkbenchService(
                 ? node.ParentNodeKey
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node);
 
         if (notes is not null)
         {
@@ -1656,7 +1660,7 @@ public sealed partial class ProjectWorkbenchService(
         return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
-    public async Task<ProjectStructureNode?> ReplaceObjectMediaAsync(
+    public Task<ProjectStructureNode?> ReplaceObjectMediaAsync(
         Guid projectId,
         string nodeKey,
         ProjectObjectMediaPayload media,
@@ -1664,6 +1668,17 @@ public sealed partial class ProjectWorkbenchService(
         string? notes = null,
         string? status = null,
         CancellationToken cancellationToken = default)
+        => ReplaceObjectMediaCoreAsync(projectId, nodeKey, media, metadataJson, notes, status, cancellationToken);
+
+    private async Task<ProjectStructureNode?> ReplaceObjectMediaCoreAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectObjectMediaPayload media,
+        string? metadataJson = null,
+        string? notes = null,
+        string? status = null,
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null, ProjectStructureNode? expectedContent = null)
     {
         ArgumentNullException.ThrowIfNull(media);
 
@@ -1673,11 +1688,13 @@ public sealed partial class ProjectWorkbenchService(
             await mutationScopes.BeginBindingWriteAsync(
                 dbContext,
                 ProjectStructureSerializableMutationScope.ForProject(projectId),
-                cancellationToken);
+                cancellationToken, expectedProjectAdmission is { } expected ? [expected] : null);
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
-        if (node is null)
-        {
+        if (node is null) {
+            if (expectedContent is not null) {
+                throw new ProjectStructureEditConflictException();
+            }
             return null;
         }
 
@@ -1687,6 +1704,7 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node);
         var savedMedia = await assetStorageService.SaveAsync(
                 projectId,
                 node.ObjectType,
@@ -1694,38 +1712,43 @@ public sealed partial class ProjectWorkbenchService(
                 media,
                 cancellationToken)
             ?? throw new InvalidOperationException($"Replacement media for project object '{nodeKey}' could not be saved.");
-        node.Binding = ResolveCreateBinding(projectId, node.ObjectType, savedMedia, null);
+        try {
+            node.Binding = ResolveCreateBinding(projectId, node.ObjectType, savedMedia, null);
 
-        if (notes is not null)
-        {
-            node.Notes = notes.Trim();
+            if (notes is not null)
+            {
+                node.Notes = notes.Trim();
+            }
+
+            node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
+                node.ObjectType,
+                node.ObjectSubtype,
+                metadataJson,
+                node.MetadataJson,
+                node.Notes,
+                savedMedia);
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                node.Status = status.Trim();
+                var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
+                node.ProgressMode = progress.Mode;
+                node.ProgressPercent = progress.Percent;
+            }
+
+            node.UpdatedAtUtc = clock.GetUtcNow();
+            var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken);
+            ProjectNodeBindingStorage.Apply(node, bindingPlan);
+            return ProjectWorkbenchNodeMapper.MapStructureNode(node);
+        } catch (Exception failure) when (expectedContent is not null && expectedProjectAdmission is not null) {
+            throw new ProjectStructureContentMediaWriteException(new(expectedProjectAdmission, node.NodeKey, node.Id,
+                savedMedia.StorageObjectReferenceJson, savedMedia.OriginalFileName, savedMedia.ContentType), failure);
         }
-
-        node.MetadataJson = ProjectWorkbenchObjectModeling.ResolveMetadataJson(
-            node.ObjectType,
-            node.ObjectSubtype,
-            metadataJson,
-            node.MetadataJson,
-            node.Notes,
-            savedMedia);
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            node.Status = status.Trim();
-            var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
-            node.ProgressMode = progress.Mode;
-            node.ProgressPercent = progress.Percent;
-        }
-
-        node.UpdatedAtUtc = clock.GetUtcNow();
-        var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        ProjectNodeBindingStorage.Apply(node, bindingPlan);
-        return ProjectWorkbenchNodeMapper.MapStructureNode(node);
     }
 
-    public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectStatusesDetailedAsync(
+    public Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectStatusesDetailedAsync(
         Guid projectId,
         IReadOnlyCollection<string> nodeKeys,
         string status,
@@ -1733,6 +1756,17 @@ public sealed partial class ProjectWorkbenchService(
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        => UpdateObjectStatusesCoreAsync(projectId, nodeKeys, status, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+
+    private async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectStatusesCoreAsync(
+        Guid projectId,
+        IReadOnlyCollection<string> nodeKeys,
+        string status,
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        ProjectProcessMutationAdmission? processMutationAdmission = null,
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
         if (nodeKeys.Count == 0 || string.IsNullOrWhiteSpace(status))
         {
@@ -1755,6 +1789,7 @@ public sealed partial class ProjectWorkbenchService(
                 !item.IsSystemManaged &&
                 normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        ProjectStructureNodeExpectations.EnsureCurrent(expectedNodes, nodes);
         var normalizedStatus = status.Trim();
         var updatedAtUtc = clock.GetUtcNow();
 

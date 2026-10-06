@@ -21,7 +21,8 @@ public enum ProjectStructureDeferredNodeCompletionState
     Queued = 1,
     Running = 2,
     Completed = 3,
-    Failed = 4
+    Failed = 4,
+    RequiresObservation = 5
 }
 
 public sealed class ProjectStructureDeferredCompletionMetadata
@@ -47,6 +48,8 @@ public sealed class ProjectStructureDeferredCompletionMetadata
     public string PromptHash { get; set; } = string.Empty;
 
     public string ErrorMessage { get; set; } = string.Empty;
+    public bool ProviderCompleted { get; set; }
+    public string? ContentSha256 { get; set; }
 }
 
 public sealed record ProjectStructureGeneratedImageCompletionRequest(
@@ -56,7 +59,9 @@ public sealed record ProjectStructureGeneratedImageCompletionRequest(
     string Size,
     string Quality,
     AgentGeneratedImageFormat Format,
-    string FileName);
+    string FileName) {
+    public ProviderConfigurationFingerprint? ProviderFingerprint { get; init; }
+}
 
 public sealed record ProjectStructureDeferredNodeCompletionRequest(
     Guid OperationId,
@@ -65,6 +70,8 @@ public sealed record ProjectStructureDeferredNodeCompletionRequest(
     ProjectStructureDeferredNodeCompletionKind Kind,
     ProjectStructureGeneratedImageCompletionRequest? GeneratedImage = null)
 {
+    public ProjectStructureImageOrigin? Origin { get; init; }
+
     public static ProjectStructureDeferredNodeCompletionRequest ForGeneratedImage(
         Guid projectId,
         string nodeId,
@@ -84,7 +91,13 @@ public sealed record ProjectStructureDeferredNodeCompletionResult(
     ProjectStructureDeferredNodeCompletionKind Kind,
     bool IsSuccess,
     string Message,
-    ProjectStructureNode? UpdatedNode);
+    ProjectStructureNode? UpdatedNode) {
+    public bool ProviderInvoked { get; init; }
+    public bool ProviderCompleted { get; init; }
+    public bool PersistenceAttempted { get; init; }
+    public string? ContentSha256 { get; init; }
+    public ProjectStructureContentMediaReceipt? StoredMedia { get; init; }
+}
 
 public sealed record ProjectStructureDeferredNodeCompletionHandle(
     Guid OperationId,
@@ -113,6 +126,7 @@ public sealed class ProjectStructureDeferredNodeCompletionQueue : IProjectStruct
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ProjectStructureImageOrigin.Validate(request);
 
         var item = new ProjectStructureDeferredNodeCompletionQueueItem(request);
         await channel.Writer.WriteAsync(item, cancellationToken).ConfigureAwait(false);
@@ -188,185 +202,52 @@ public sealed class ProjectStructureDeferredNodeCompletionWorker(
         {
             item.SetException(exception);
             logger.LogError(
-                exception,
-                "Project structure deferred completion worker failed. ProjectId={ProjectId} NodeId={NodeId} OperationId={OperationId} Kind={Kind}",
+                "Project structure deferred completion worker failed. ProjectId={ProjectId} NodeId={NodeId} OperationId={OperationId} Kind={Kind} FailureType={FailureType}",
                 item.Request.ProjectId,
                 item.Request.NodeId,
                 item.Request.OperationId,
-                item.Request.Kind);
+                item.Request.Kind, exception.GetType().Name);
         }
-    }
-}
-
-public sealed class ProjectStructureDeferredNodeCompletionProcessor(
-    IProviderRuntimeProfileSource providerSource,
-    IAgentImageGenerationService imageGenerationService,
-    ProjectWorkbenchService projectWorkbenchService,
-    ILogger<ProjectStructureDeferredNodeCompletionProcessor> logger)
-{
-    public async Task<ProjectStructureDeferredNodeCompletionResult> ProcessAsync(
-        ProjectStructureDeferredNodeCompletionRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        return request.Kind switch
-        {
-            ProjectStructureDeferredNodeCompletionKind.GeneratedImageAsset => await ProcessGeneratedImageAsync(request, cancellationToken).ConfigureAwait(false),
-            _ => throw new InvalidOperationException($"Unsupported project structure deferred completion kind '{request.Kind}'.")
-        };
-    }
-
-    private async Task<ProjectStructureDeferredNodeCompletionResult> ProcessGeneratedImageAsync(
-        ProjectStructureDeferredNodeCompletionRequest request,
-        CancellationToken cancellationToken)
-    {
-        var imageRequest = request.GeneratedImage
-            ?? throw new InvalidOperationException("Generated image deferred completion requires an image request payload.");
-        ProviderProfile? provider = null;
-
-        try
-        {
-            provider = await providerSource.GetProviderAsync(imageRequest.ProviderProfileId, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Image-generation provider '{imageRequest.ProviderProfileId:D}' was not found.");
-
-            await projectWorkbenchService.UpdateObjectMetadataAsync(
-                request.ProjectId,
-                request.NodeId,
-                ProjectStructureDeferredCompletionMetadataFactory.BuildGeneratedImageMetadataJson(
-                    request.OperationId,
-                    ProjectStructureDeferredNodeCompletionState.Running,
-                    imageRequest,
-                    provider),
-                notes: imageRequest.Prompt,
-                status: "Image generation running",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            var generated = await imageGenerationService.GenerateAsync(
-                new AgentImageGenerationRequest(
-                    provider,
-                    imageRequest.Model,
-                    imageRequest.Prompt,
-                    imageRequest.Size,
-                    imageRequest.Quality,
-                    imageRequest.Format,
-                    []),
-                cancellationToken).ConfigureAwait(false);
-            var image = generated.Images.FirstOrDefault()
-                ?? throw new InvalidOperationException("Image generation completed without image data.");
-            if (image.Bytes.Length == 0)
-            {
-                throw new InvalidOperationException("Image generation completed with empty image data.");
-            }
-
-            var contentType = string.IsNullOrWhiteSpace(image.ContentType)
-                ? ResolveGeneratedImageContentType(imageRequest.Format)
-                : image.ContentType.Trim();
-            var updatedNode = await projectWorkbenchService.ReplaceObjectMediaAsync(
-                request.ProjectId,
-                request.NodeId,
-                new ProjectObjectMediaPayload(
-                    imageRequest.FileName,
-                    contentType,
-                    Convert.ToBase64String(image.Bytes)),
-                ProjectStructureDeferredCompletionMetadataFactory.BuildGeneratedImageMetadataJson(
-                    request.OperationId,
-                    ProjectStructureDeferredNodeCompletionState.Completed,
-                    imageRequest,
-                    provider),
-                notes: imageRequest.Prompt,
-                status: "Generated image ready",
-                cancellationToken: cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Generated image node '{request.NodeId}' was not found.");
-
-            return new ProjectStructureDeferredNodeCompletionResult(
-                request.OperationId,
-                request.ProjectId,
-                request.NodeId,
-                request.Kind,
-                true,
-                $"{imageRequest.FileName} was generated through {provider.Name}.",
-                updatedNode);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            logger.LogWarning(
-                exception,
-                "Generated image deferred completion failed. ProjectId={ProjectId} NodeId={NodeId} OperationId={OperationId} ProviderProfileId={ProviderProfileId} Model={Model}",
-                request.ProjectId,
-                request.NodeId,
-                request.OperationId,
-                imageRequest.ProviderProfileId,
-                imageRequest.Model);
-
-            var updatedNode = await projectWorkbenchService.UpdateObjectMetadataAsync(
-                request.ProjectId,
-                request.NodeId,
-                ProjectStructureDeferredCompletionMetadataFactory.BuildGeneratedImageMetadataJson(
-                    request.OperationId,
-                    ProjectStructureDeferredNodeCompletionState.Failed,
-                    imageRequest,
-                    provider,
-                    exception.GetBaseException().Message),
-                notes: imageRequest.Prompt,
-                status: "Image generation failed",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            return new ProjectStructureDeferredNodeCompletionResult(
-                request.OperationId,
-                request.ProjectId,
-                request.NodeId,
-                request.Kind,
-                false,
-                $"Image generation failed. {exception.GetBaseException().Message}",
-                updatedNode);
-        }
-    }
-
-    private static string ResolveGeneratedImageContentType(AgentGeneratedImageFormat format)
-    {
-        return format switch
-        {
-            AgentGeneratedImageFormat.Jpeg => "image/jpeg",
-            AgentGeneratedImageFormat.Webp => "image/webp",
-            _ => "image/png"
-        };
     }
 }
 
 public static class ProjectStructureDeferredCompletionMetadataFactory
 {
+    public static string BuildGeneratedImageMetadataJson(Guid operationId, ProjectStructureDeferredNodeCompletionState state,
+        ProjectStructureGeneratedImageCompletionRequest request, ProviderProfile? provider, string errorMessage = "")
+        => BuildGeneratedImageMetadataJson(operationId, state, request, provider, errorMessage, null, false, null);
+
     public static string BuildGeneratedImageMetadataJson(
         Guid operationId,
         ProjectStructureDeferredNodeCompletionState state,
         ProjectStructureGeneratedImageCompletionRequest request,
         ProviderProfile? provider,
-        string errorMessage = "")
+        string errorMessage,
+        string? originalMetadataJson,
+        bool providerCompleted,
+        string? contentSha256)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var now = DateTimeOffset.UtcNow;
-        return ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
-        {
-            File = new ProjectFileMetadata
-            {
-                FileSubtype = ProjectFileSubtype.Image,
-                SourceHint = "Generated image"
-            },
-            DeferredCompletion = new ProjectStructureDeferredCompletionMetadata
-            {
+        var metadata = ProjectObjectMetadataSerializer.Parse(originalMetadataJson);
+        metadata.File ??= new ProjectFileMetadata { FileSubtype = ProjectFileSubtype.Image, SourceHint = "Generated image" };
+        var createdAt = metadata.DeferredCompletion?.CreatedAtUtc ?? now;
+        metadata.DeferredCompletion = new ProjectStructureDeferredCompletionMetadata {
                 OperationId = operationId,
                 Kind = ProjectStructureDeferredNodeCompletionKind.GeneratedImageAsset,
                 State = state,
-                CreatedAtUtc = now,
+                CreatedAtUtc = createdAt,
                 UpdatedAtUtc = now,
                 ProviderProfileId = request.ProviderProfileId,
                 ProviderName = provider?.Name ?? string.Empty,
                 Model = request.Model,
                 PromptHash = ComputePromptHash(request.Prompt),
-                ErrorMessage = TrimErrorMessage(errorMessage)
-            }
-        });
+                ErrorMessage = TrimErrorMessage(errorMessage),
+                ProviderCompleted = providerCompleted,
+                ContentSha256 = contentSha256
+        };
+        return ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(originalMetadataJson, metadata);
     }
 
     private static string ComputePromptHash(string prompt)

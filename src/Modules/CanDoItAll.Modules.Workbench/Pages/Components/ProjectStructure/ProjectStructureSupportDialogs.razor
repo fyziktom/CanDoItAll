@@ -5,71 +5,15 @@
 @using CanDoItAll.Modules.Workbench
 @using CanDoItAll.Modules.Workspace
 
-@if (SummaryDialog is not null)
-{
-    <ProjectStructureOverlayDialog AriaLabel="@($"{SummaryDialog.RootTitle} progress summary")"
-                                   Kicker="Progress summary"
-                                   Title="@SummaryDialog.RootTitle"
-                                   Summary="Hierarchy, inline status editing, and exports are generated from the same summary source."
-                                   DialogClass="project-structure-summary-dialog"
-                                   Close="CloseSummary">
-        <Actions>
-            <Button Text="Export XLSX"
-                    ButtonStyle="ButtonStyle.Info"
-                    Click="ExportSummaryWorkbook" />
-            <Button Text="Export Gantt"
-                    ButtonStyle="ButtonStyle.Primary"
-                    Click="ExportSummaryGantt" />
-            <Button Text="Close"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CloseSummary" />
-        </Actions>
-        <Body>
-            <Stack GapScale="LayoutGap.Large">
-                <CompactStatStrip>
-                    <CompactStat Label="done" Value="@SummaryDialog.Summary.CompletedCount.ToString()" TooltipText="Completed project structure rows." Tone="success" />
-                    <CompactStat Label="active" Value="@SummaryDialog.Summary.ActiveCount.ToString()" TooltipText="Active project structure rows." Tone="info" />
-                    <CompactStat Label="blocked" Value="@SummaryDialog.Summary.BlockedCount.ToString()" TooltipText="Blocked project structure rows." Tone="danger" />
-                    <CompactStat Label="review" Value="@SummaryDialog.Summary.ReviewCount.ToString()" TooltipText="Project structure rows needing review." Tone="warning" />
-                    <CompactStat Label="undated" Value="@SummaryDialog.Summary.UndatedCount.ToString()" TooltipText="Project structure rows without a date." />
-                </CompactStatStrip>
+@using CanDoItAll.Workbench.Content.UI.Analysis
 
-                <Stack GapScale="LayoutGap.Small"
-                       Class="project-structure-summary-table">
-                    @foreach (var row in SummaryDialog.Summary.Rows)
-                    {
-                        <Split Breakpoint="LayoutBreakpoint.Lg"
-                               Gap="LayoutGap.Small"
-                               AlignItems="AlignItems.Start"
-                               JustifyContent="JustifyContent.SpaceBetween"
-                               Wrap="FlexWrap.Wrap"
-                               Class="project-structure-summary-row"
-                               Style="@($"--summary-depth:{row.Depth};")">
-                            <Stack GapScale="LayoutGap.Tiny"
-                                   Class="project-structure-summary-row__node">
-                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@row.Title" />
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@row.KindLabel" />
-                            </Stack>
-
-                            <Stack GapScale="LayoutGap.Tiny"
-                                   Class="project-structure-summary-row__meta">
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@row.ProgressLabel" />
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@(row.StartUtc?.ToLocalTime().ToString("g") ?? "Undated")" />
-                            </Stack>
-
-                            <DropDown TValue="string"
-                                      Data="@SummaryStatuses"
-                                      Placeholder="Select status"
-                                      Value="@row.Status"
-                                      Change="@(value => ChangeSummaryStatus.InvokeAsync((row.NodeId, value?.ToString() ?? string.Empty)))"
-                                      Class="project-structure-summary-row__select" />
-                        </Split>
-                    }
-                </Stack>
-            </Stack>
-        </Body>
-    </ProjectStructureOverlayDialog>
+@if (SummaryDialog is { } summary) {
+    var close = CloseSummary;
+    var workbook = ExportSummaryWorkbook;
+    var gantt = ExportSummaryGantt;
+    var change = ChangeSummaryStatus;
+    <ContentProgressSummaryDialog State="@ProjectSummary(summary)"
+        Actions="@(new((node, status) => change.InvokeAsync((node, status)), () => workbook.InvokeAsync(), () => gantt.InvokeAsync(), () => close.InvokeAsync()))" />
 }
 
 @if (PendingDeletePrompt is { } deletePrompt)
@@ -116,108 +60,38 @@
     </ProjectStructureOverlayDialog>
 }
 
-@if (PendingTranscriptAction is not null)
-{
-    <ProjectStructureOverlayDialog AriaLabel="@($"{ResolveTranscriptActionLabel(PendingTranscriptAction.ActionKind)} confirmation")"
-                                   Kicker="LLM confirmation"
-                                   Title="@ResolveTranscriptActionLabel(PendingTranscriptAction.ActionKind)"
-                                   Summary="This action will send transcript content to an external or local provider. Confirmation and explicit provider selection are required."
-                                   DialogClass="project-structure-summary-dialog"
-                                   Close="CancelTranscriptAction">
-        <Actions>
-            <Button Text="Send request"
-                    ButtonStyle="ButtonStyle.Info"
-                    Click="ExecuteTranscriptAction" />
-            <Button Text="Cancel"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CancelTranscriptAction" />
-        </Actions>
-        <Body>
-            <Stack GapScale="LayoutGap.Medium">
-                <FormField Text="Provider profile">
-                    <select class="cw-context-toolbox__search"
-                            value="@(PendingTranscriptAction.SelectedProviderId?.ToString() ?? string.Empty)"
-                            @onchange="HandleTranscriptProviderChanged">
-                        <option value="">Select a provider</option>
-                        @foreach (var provider in PendingTranscriptAction.Providers)
-                        {
-                            <option value="@provider.Id">@($"{provider.Name} ({(string.IsNullOrEmpty(provider.ConnectorPluginKey) ? provider.Kind : provider.ConnectorPluginKey)})")</option>
-                        }
-                    </select>
-                </FormField>
-
-                @if (!string.IsNullOrWhiteSpace(PendingTranscriptAction.LastProviderName))
-                {
-                    <PanelCard Class="project-structure-inline-feedback"
-                               data-tone="accent">
-                        Last provider: @PendingTranscriptAction.LastProviderName
-                    </PanelCard>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(PendingTranscriptAction.Error))
-                {
-                    <PanelCard Class="project-structure-inline-feedback"
-                               data-tone="warn">
-                        @PendingTranscriptAction.Error
-                    </PanelCard>
-                }
-            </Stack>
-        </Body>
-    </ProjectStructureOverlayDialog>
+@if (PendingTranscriptAction is { } transcript) {
+    var select = HandleTranscriptProviderChanged;
+    var submit = ExecuteTranscriptAction;
+    var close = CancelTranscriptAction;
+    <ContentTranscriptDialog State="@ProjectTranscript(transcript)"
+        Actions="@(new(id => select.InvokeAsync(new ChangeEventArgs { Value = id?.ToString() }), () => submit.InvokeAsync(), () => close.InvokeAsync()))" />
 }
 
-@if (MermaidPreviewNode is not null)
-{
-    var diagramKind = ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(MermaidPreviewNode.Notes);
-
-    <ProjectStructureOverlayDialog AriaLabel="@($"{MermaidPreviewNode.Title} Mermaid viewer")"
-                                   Kicker="Mermaid viewer"
-                                   Title="@MermaidPreviewNode.Title"
-                                   Summary="@($"Detected diagram type: {diagramKind}")"
-                                   DialogClass="project-structure-summary-dialog project-structure-mermaid-dialog"
-                                   Close="CloseMermaidViewer">
-        <Actions>
-            @if (CanEditMermaidNode(MermaidPreviewNode))
-            {
-                <Button Text="Edit"
-                        ButtonStyle="ButtonStyle.Info"
-                        Click="@(() => EditMermaidNode.InvokeAsync(MermaidPreviewNode))" />
-            }
-            <Button Text="Close"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CloseMermaidViewer" />
-        </Actions>
-        <Body>
-            <Stack GapScale="LayoutGap.Medium">
-                <MermaidDiagram Title="@MermaidPreviewNode.Title"
-                                Description="@($"Detected diagram type: {diagramKind}")"
-                                Source="@MermaidPreviewNode.Notes"
-                                Options="@MermaidViewerOptions"
-                                PanZoomEnabled="true"
-                                ShowControls="true"
-                                Class="project-structure-mermaid-diagram"
-                                Style="--cda-mermaid-min-height:28rem; --cda-mermaid-height:min(62dvh, 46rem);"
-                                data-testid="project-structure-mermaid-diagram" />
-
-                <details class="project-structure-mermaid-details">
-                    <summary>Source</summary>
-                    <pre class="pf-components-toolbox__preview-content project-structure-mermaid-source">@MermaidPreviewNode.Notes</pre>
-                </details>
-            </Stack>
-        </Body>
-    </ProjectStructureOverlayDialog>
+@if (MermaidPreviewNode is { } mermaid) {
+    var edit = EditMermaidNode;
+    var close = CloseMermaidViewer;
+    <ContentLegacyMermaidDialog State="@(new(mermaid.Title, mermaid.Notes, ProjectObjectMetadataSerializer.DetectMermaidDiagramKind(mermaid.Notes).ToString(), CanEditMermaidNode(mermaid)) { OpeningId = MermaidOpeningId })"
+        Edit="@(() => edit.InvokeAsync(mermaid))" Close="@(() => close.InvokeAsync())" />
 }
 
 @code {
-    private static readonly MermaidDiagramOptions MermaidViewerOptions = new()
-    {
-        SecurityLevel = "strict",
-        FlowchartUseMaxWidth = true,
-        HtmlLabels = false,
-        ArchitectureRandomize = false
-    };
+    private ContentProgressSummary ProjectSummary(ProjectStructureSummaryDialogState state)
+        => new(state.OpeningId, state.RootTitle, state.Summary.Rows.Select(row => new ContentProgressRow(row.NodeId,
+            row.Title, row.KindLabel, row.Status, row.ProgressLabel, row.Depth,
+            row.StartUtc is { } start ? TimeZoneInfo.ConvertTime(start, state.DisplayTimeZone).ToString("g") : "Undated",
+            row.EndUtc is { } end ? TimeZoneInfo.ConvertTime(end, state.DisplayTimeZone).ToString("g") : string.Empty)).ToArray(),
+            SummaryStatuses, state.Summary.CompletedCount, state.Summary.ActiveCount, state.Summary.BlockedCount,
+            state.Summary.ReviewCount, state.Summary.UndatedCount, state.IsBusy, state.RequiresObservation, state.Message);
+
+    private static ContentTranscriptConfirmation ProjectTranscript(ProjectStructureTranscriptActionDialogState state)
+        => new(state.OpeningId, state.NodeTitle, state.ActionKind switch {
+            ProjectLlmActionKind.Summarize => ContentTranscriptAction.Summarize,
+            ProjectLlmActionKind.FindMyTasks => ContentTranscriptAction.FindMyTasks,
+            ProjectLlmActionKind.FindOthersDeliveries => ContentTranscriptAction.FindOthersDeliveries,
+            _ => throw new InvalidOperationException("Unknown transcript action.")
+        }, state.Providers.Select(provider => new ContentProviderOption(provider.Id, provider.Name)).ToArray(),
+            state.SelectedProviderId, state.LastProviderName, state.Phase, state.Error);
 
     [Parameter]
     public ProjectStructureSummaryDialogState? SummaryDialog { get; set; }
@@ -263,6 +137,9 @@
 
     [Parameter]
     public ProjectStructureNode? MermaidPreviewNode { get; set; }
+
+    [Parameter]
+    public Guid MermaidOpeningId { get; set; }
 
     [Parameter]
     public EventCallback CloseMermaidViewer { get; set; }

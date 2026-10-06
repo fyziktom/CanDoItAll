@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T09:48:25.865714+00:00",
+  "generated_utc": "2026-10-06T11:04:04.884504+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15285,
+  "allowance_count": 15280,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59486,42 +59486,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "05470ae059212a0d27030a9c5a2a3ab8d3b4d029319f9b1ffd56ae56be62b046",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "57de9a48d0f981b61e19d7bbf78359a95645bee749944c9fa1e93169b9b3b7f9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "8cb599f47a636d4dc16e4bf8b40802da9be838bc50fde349fa051bcd22d50e42",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c3ad371cf512bedb2578bbdea400a5815313413be53e1da72ac4ad33f006637b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e0c9208b73235ad68091a08595ea74d487269da4b54b403ca87ed20f814acda4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f9c27b28d27c558234185e3c0bac65b1a932cacc5307e6e1fe8c446549e92971",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
       "category": "case-policy",
       "source_fingerprint": "ffc1ad9dcda24e7ec0752961e032403a7a25301e69060b975a48045477e073b2",
@@ -61139,6 +61103,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCreateRequestComposer.cs",
       "category": "case-policy",
       "source_fingerprint": "a8526982c80a8c17958a001504dd0aa634e1cdcb6c94951d0645f13025bd8ed5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletionProcessor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6bf8752fedad638e67ec58d622e1e1330ff70eed93abb40ebceb7ac63ecb6923",
       "count": 1
     },
     {

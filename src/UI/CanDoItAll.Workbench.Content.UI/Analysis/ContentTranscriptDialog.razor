@@ -1,0 +1,50 @@
+@namespace CanDoItAll.Workbench.Content.UI.Analysis
+@{
+    var state = State;
+    var actions = Actions;
+    var label = state.Action switch {
+        ContentTranscriptAction.Summarize => "Summarize transcript",
+        ContentTranscriptAction.FindMyTasks => "Find my tasks",
+        ContentTranscriptAction.FindOthersDeliveries => "Find others' deliveries",
+        _ => throw new InvalidOperationException("Unknown transcript action.")
+    };
+    var ready = state.Phase == ContentConfirmationPhase.Ready;
+}
+<CanvasOverlayDialog @key="state.OpeningId" CanvasScoped="CanvasScoped" AriaLabel="@($"{label} confirmation")" Kicker="LLM confirmation" Title="@label"
+                     Summary="This sends transcript content to the selected external or local provider. It saves analysis text; it does not create tasks."
+                     Close="@(() => actions.Close())" DataTestId="content-transcript-confirmation" DialogClass="project-structure-summary-dialog">
+    <Actions>
+        <Button Text="Send request" ButtonStyle="ButtonStyle.Info" Disabled="@(!ready || state.SelectedProviderId is null)" Click="@(() => actions.Submit())" />
+        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium">
+            <TextBlock Value="@state.Title" />
+            @if (state.Phase == ContentConfirmationPhase.Loading) {
+                <TextBlock Value="Loading provider choices…" />
+            } else if (state.Phase == ContentConfirmationPhase.Submitting) {
+                <TextBlock Value="The original request is in progress…" />
+            }
+            <FormField Text="Provider profile">
+                <DropDown TValue="Guid?" Data="@state.Providers" TextProperty="Name" ValueProperty="Id" Value="@state.SelectedProviderId"
+                          Disabled="@(!ready)" Placeholder="Select a provider"
+                          Change="@(value => actions.SelectProvider(value is Guid id ? id : null))" />
+            </FormField>
+            @if (state.Phase == ContentConfirmationPhase.Ready && state.Providers.Count == 0) {
+                <Alert AlertStyle="AlertStyle.Warning">No provider is available for this action.</Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(state.LastProviderName)) {
+                <TextBlock Value="@($"Last provider: {state.LastProviderName}")" />
+            }
+            @if (!string.IsNullOrWhiteSpace(state.Message)) {
+                <Alert AlertStyle="AlertStyle.Warning">@state.Message</Alert>
+            }
+        </Stack>
+    </Body>
+</CanvasOverlayDialog>
+
+@code {
+    [Parameter] public bool CanvasScoped { get; set; }
+    [Parameter, EditorRequired] public ContentTranscriptConfirmation State { get; set; } = default!;
+    [Parameter, EditorRequired] public ContentTranscriptActions Actions { get; set; } = default!;
+}

@@ -7,8 +7,6 @@ namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
     private long actionNavigationRevision;
-    private ProjectStructureActionContext? summaryActionContext;
-    private ProjectStructureActionContext? transcriptActionContext;
     private ProjectStructureActionContext? secretReferenceActionContext;
     private ProjectStructureAuthoringOpening? previewOpening;
     private readonly Queue<ProjectStructureAuthoringOutcome> authoringOutcomes = new();
@@ -83,6 +81,16 @@ public partial class ProjectStructurePage {
         => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
 
     private void RetireInactiveAuthoring() {
+        RetireImageAuthorities();
+        if (mermaidOpening is { } mermaid && !IsCurrentAction(mermaid.Context)) {
+            CloseMermaidViewer();
+        }
+        if (summaryOpening is { } summary && !IsCurrentAction(summary.Context)) {
+            CloseSummary();
+        }
+        if (transcriptOpening is { } transcript && !IsCurrentAction(transcript.Context)) {
+            CancelTranscriptAction();
+        }
         if (textAssetOpening is { } text && !IsCurrentAction(text.Context)) {
             textAssetOpening = null;
         }
@@ -124,13 +132,15 @@ public partial class ProjectStructurePage {
         ProjectStructureSurface Surface,
         ProjectWriteAdmission Admission,
         long NavigationRevision,
-        Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Actor);
+        Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? Actor) {
+        public long RuntimeGeneration { get; init; }
+    }
 
     private ProjectStructureActionContext CaptureActionContext() {
         var displayed = surface ?? throw new InvalidOperationException("The project surface is no longer available. Reload it before continuing.");
         var admission = displayed.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("The original project lifetime is unavailable. Reload the project before continuing.");
-        return new(displayed, admission, actionNavigationRevision, InsightsAuthentication);
+        return new(displayed, admission, actionNavigationRevision, InsightsAuthentication) { RuntimeGeneration = ContentDatabase.Generation };
     }
 
     private ProjectStructureActionContext? CaptureActionContext(string actionId, ProjectStructureNode? node) {
@@ -170,13 +180,4 @@ public partial class ProjectStructurePage {
         }
     }
 
-    private async Task RefreshSummaryActionAsync(ProjectStructureActionContext context, ProjectStructureNode created, string rootNodeId) {
-        if (!ReferenceEquals(summaryActionContext, context)) {
-            return;
-        }
-        await RefreshCreatedActionAsync(context, created);
-        if (IsCurrentAction(context) && ReferenceEquals(summaryActionContext, context)) {
-            await OpenSummaryAsync(rootNodeId);
-        }
-    }
 }

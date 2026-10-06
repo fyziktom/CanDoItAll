@@ -31,5 +31,12 @@ save, change the source revision, revoke write permission, remove authority and 
 opening. Revision acknowledgements are hashes of the accepted in-memory bytes. These ports
 are scenario controls, not native authorization, storage, grant or launch substitutes.
 
-Generation and stored-export scenarios are added in W3. Source/published parity and final
-native operator/Agent/Workflow consumer proof remain part of W4 closure.
+`/analysis` mounts two independent Progress Summary, transcript and strict legacy Mermaid
+renderers. Switch representative/empty/large/loading/failure/pending/partial/unknown states.
+The 128-row summary preserves one scroll owner and accessible export actions. Scenario
+commands record explicit intent; native stored exports are proved through their real owner.
+
+`/images` mounts two original image setups with safe source model names and opaque routing
+values. Hold a submission, replace its opening, release the predecessor, and select the
+placeholder/queue/provider/media outcome. All results are synthetic and make no model call.
+Source/published parity and final native consumers remain part of W4 closure.

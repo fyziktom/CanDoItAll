@@ -217,3 +217,79 @@ Portability delta review covers FileTools namespace/type/reference matches moved
 and its scenarios, plus original native action code. These are existing governed library
 calls or neutral contracts, not new shell or operating-system dependencies. Removed native
 fingerprints are reconciled in the same checkpoint.
+
+## W3 generation, analysis and stored exports
+
+Content owns the complete Progress Summary, transcript confirmation, generated-image setup
+and legitimate legacy Mermaid presentation. The native support component is now a typed
+projection adapter. The deferred delete dialog remains with its WB3 owner. Source model
+labels are separate from opaque routing values; a source-managed image profile cannot accept
+a custom model. The dropdown's HTML uses option indices, while its typed submission retains
+the original model ID. Both choices are tested through the actual control.
+
+The page captures original admission, node occurrence, actor/profile generation, opening,
+summary rows and transcript content before asynchronous work. Native content mutations check
+that expected metadata, notes, storage reference and typed references still match within the
+existing serializable mutation. Unknown JSON properties survive transcript and image metadata
+updates. Summary exports retain their accepted rows and root. Canvas capture retains the
+original canvas instance; a valid accepted action may finish at its original target after
+navigation. This does not authorize a recreated target or a different actor/database generation.
+
+Image generation retains the existing 64-item single-reader in-memory channel. The request
+carries its accepted placeholder occurrence and original native authority into the worker's
+scope. Provider purpose, enabled state, configuration and source model catalog are checked
+before dispatch and attachment. The worker changes the original queued metadata before
+external dispatch; duplicate delivery cannot repeat a completed request. Restart is not a
+durable replay guarantee: interrupted native state stays observable without automatic resend.
+
+Placeholder creation, queue acknowledgement, provider invocation/completion, stored media,
+node commit and view reconciliation are distinct facts. Native media replacement preserves
+a typed storage receipt if bytes were saved but binding commit failed or its acknowledgement
+was lost. No failure handler overwrites a possibly committed image with a generic failed state.
+Public request/result identities and the original metadata-factory overload are preserved;
+additional receipt fields are additive. Native deferred requests lacking original authority
+are explicitly refused. The current caller census finds only the bound page producer.
+
+Transcript scaffold creates an empty native transcript and recording reference/DerivedFrom
+link; it does not invoke speech recognition. The three explicit analysis commands capture
+content and provider once and save text in their respective metadata fields without creating
+tasks. A concurrent content revision or post-provider native save failure leaves one provider
+attempt and an observation-required result. Known created nodes survive link/readback failure.
+Legacy Mermaid remains eligible only without managed attachment content, renders strict/no
+HTML labels, and its Edit/Close callbacks retain the original opening. Stored .mmd never falls
+back to Notes when a content grant is unavailable.
+
+The native image selection passed 17/17 before the final enqueue-refusal case was added. It
+covers original project/placeholder replacement, actor revocation, changed content/provider,
+worker interruption, duplicate delivery and both pre-commit refusal and post-commit lost
+acknowledgement after media storage. Content/Insights native checks passed 32/32; three new
+legacy tests initially used a canvas command that is not their real caller, and their failed
+attempt is retained while they are corrected to the actual Selection Panel entry. Independent
+leaf tests pass 40/40 after repairing one test's mistaken raw-option-value assumption.
+
+The two-instance browser campaign first exposed missing sandbox placement parameters, which
+caused its summaries to overlap. Native document-scoped placement is preserved; the scenario
+host now explicitly requests canvas-scoped dialogs. The first accepted scenario exports and
+status change were observed as three actions, with zero in the neighbor; their initially stale
+receipt was a missing scenario-owner render, not a reason to repeat the actions. These failed
+and continued observations remain separate. Full final native and publish/watch proof is W4.
+# W3 checkpoint validation
+
+The final focused leaf run passed all 40 discovered cases. The native PostgreSQL run
+passed all 53 discovered action-lifetime and generated-image cases. The earlier corrected
+legacy caller plus image boundary run passed 21 cases. Original failed attempts remain in
+the private evidence ledger, including an additional browser-reproduced lifetime defect:
+the shared asynchronous button retained its busy state after its dialog opening was replaced.
+Opening keys now isolate the Summary, transcript, legacy Mermaid and image dialog subtrees.
+Both success and failure completions are tested before the predecessor is released; the
+large-desktop browser verified the new image form stays enabled and keeps its draft while
+the old result publishes no receipt. Its independent neighbor recorded zero submissions.
+
+Source screenshots were inspected at 1920×1080/DPR1. The image form exposes friendly
+model names and dispatches the opaque alternate ID. Empty, loading, partial and unconfirmed
+states refuse submission. Summary buttons, transcript disclosure and strict legacy SVG
+remain visible; browser readback confirms the Summary Close control lies inside its dialog.
+The regenerated Fast and application styles were reviewed. Portability enforcement passed
+without write mode at 15,280 reviewed allowances (one MIME protocol comparison added and six
+obsolete image option comparisons removed); documentation validation passed for 376 files.
+This checkpoint does not close the final application, published-host or multi-client campaign.

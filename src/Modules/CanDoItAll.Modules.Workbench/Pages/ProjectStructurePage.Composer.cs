@@ -89,8 +89,12 @@ public partial class ProjectStructurePage {
                     invoked = true;
                     result = await ProjectWorkbenchService.UpdateObjectAsync(context.Surface.ProjectId, target.Id, update);
                 } else if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(original.ActionId, out definition)) {
+                    if (IsGeneratedImageAssetCreateAction(original.ActionId)) {
+                        await TryCreateGeneratedImageAssetAsync(definition, submitted, context);
+                        return;
+                    }
                     if (IsTaskCreateAction(original.ActionId) || IsSecretReferenceCreateAction(original.ActionId) ||
-                        ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition) || IsGeneratedImageAssetCreateAction(original.ActionId)) {
+                        ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition)) {
                         await HandleCreateActionAsync(submitted with { ComposerOpeningId = null });
                         return;
                     }

@@ -4,10 +4,14 @@
     <Button Text="Text authoring" Click="() => Navigation.NavigateTo(TextRoute)" />
     <Button Text="File collections" Click="() => Navigation.NavigateTo(FilesRoute)" />
     <Button Text="Direct editors" Click="() => Navigation.NavigateTo(EditorsRoute)" />
+    <Button Text="Summaries and analysis" Click="() => Navigation.NavigateTo(AnalysisRoute)" />
+    <Button Text="Image generation" Click="() => Navigation.NavigateTo(ImagesRoute)" />
 </Cluster>
 
 @code {
     private const string TextRoute = "/";
     private const string FilesRoute = "/files";
     private const string EditorsRoute = "/editors";
+    private const string AnalysisRoute = "/analysis";
+    private const string ImagesRoute = "/images";
 }

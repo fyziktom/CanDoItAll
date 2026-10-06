@@ -2,8 +2,9 @@ using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject, CreateNode, EditNode, CopyNodes, MoveNodes, ConnectNodes, DisconnectNodes, RecomposeNodes }
+internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject, CreateNode, EditNode, CopyNodes, MoveNodes, ConnectNodes, DisconnectNodes, RecomposeNodes, SummaryStatus, ExportWorkbook, ExportGantt, ExportCanvasImage, CreateTranscript, TranscriptAnalysis, GenerateImage }
 internal enum ProjectStructureAuthoringResultKind { Rejected, Committed, Unconfirmed, Compensated, PartialCommit }
+internal enum ProjectStructureExternalEffectState { NotStarted, Dispatched, Completed }
 
 internal sealed record ProjectStructureAuthoringOutcome(
     Guid OpeningId,
@@ -26,4 +27,7 @@ internal sealed record ProjectStructureAuthoringOutcome(
     public ProjectCreationReceipt? Creation { get; init; }
     public ProjectEditorAcknowledgement? Editor { get; init; }
     public Exception? Failure { get; init; }
+    public ProjectStructureExternalEffectState ExternalEffect { get; init; }
+    public Guid? ProviderId { get; init; }
+    public ProjectStructureContentMediaReceipt? StoredMedia { get; init; }
 }

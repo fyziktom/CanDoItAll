@@ -1,0 +1,11 @@
+.content-summary ::deep .content-summary-table { min-width: 0; }
+.content-summary ::deep .content-summary-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(9rem, 1fr) minmax(10rem, .8fr);
+    gap: .85rem;
+    padding: .85rem .95rem .85rem calc(.95rem + (var(--summary-depth) * .9rem));
+    border: 1px solid rgba(148, 163, 184, .2);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, .88);
+}
+.content-summary ::deep .content-summary-row__node, .content-summary ::deep .content-summary-row__meta { min-width: 0; }
