@@ -283,7 +283,7 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
     private static Task DraftAsync(IRenderedComponent<ProjectStructurePage> cut, string name)
         => cut.InvokeAsync(async () => {
             await cut.Find("[data-testid='project-structure-participant-local-only']").ChangeAsync(new ChangeEventArgs { Value = false });
-            await cut.Find("[data-testid='project-structure-participant-quick-name']").ChangeAsync(new ChangeEventArgs { Value = name });
+            await cut.Find("[data-testid='project-structure-participant-quick-name']").InputAsync(new ChangeEventArgs { Value = name });
         });
 
     private sealed class PartyGate {

@@ -52,11 +52,44 @@ broad Stable completion is claimed at this checkpoint. WB4's original Stable rem
 16,819 executions / 16,817 passed / 2 failed / 0 skipped; see
 [WB4 content](workbench-content-wb4.md) for its qualifications.
 
+## Participant and meeting boundary
+
+`CanDoItAll.Workbench.Operators.UI` now owns both complete party forms, including the real
+resource picker, quick-create inputs, local/directory selection, project defaults, missing
+references, sensitive-contact projection and accepted-outcome presentation. Its evaluated
+six-project closure contains only neutral Components and RecordBrowsing. The independent
+Operators sandbox adds one host project. Twenty-eight entry graph comparisons preserve
+every completed leaf and sandbox; Workbench gains only the Operators UI dependency.
+
+`ProjectPartyEditorSession` owns one native interaction. Original admission, occurrence,
+actor, runtime generation and selection fences prevent late reads or completions from
+rebinding a successor. CRM/HR's additive conditional assignment operation retains precise
+existing assignment rows, affiliations and role semantics. Its existing callers keep their
+original contract. A separate native metadata writer patches only party-owned JSON fields,
+under the original node expectation, preserving unknown metadata and timing. Assignment
+commit, node commit and read-back are separate facts. Recovery observes accepted IDs
+without repeating writes. Actor retirement after assignments prevents the metadata phase.
+
+Focused proof covers 48 native/continuity cases and seven independent renderer cases.
+The first W1 selection passed 44 native cases; later additions exercise missing participant
+references, delayed success/error across A→B→A, affiliation/default preservation and actor
+retirement. A mistyped execution filter omitted three picker cases from an intermediate
+45-case run; the corrected 48-case discovery and execution are the checkpoint selection.
+The 1920×1080, DPR 1 sandbox renders two independent actual forms. Browser checks cover
+unblurred input, accepted quick-create identity, read-only retry, missing meeting selection,
+one fixture Save and independent drafts. A stale fixture counter found by that journey was
+fixed in the sandbox host; the accepted create was not replayed. Final application journeys,
+publish and watch measurements remain pending.
+
+Portability review removes three allowances for deleted legacy case comparisons and adds
+four for the sandbox's existing portable watch/environment diagnostic pattern. Enforcement
+passes without write mode at 15,281 findings. The complete edited/new source scan retains
+20 findings in unchanged CI fixture credentials/expressions for explicit review; it is not
+reported as a zero-finding whole-source scan. Production/runtime changes add no credential
+material. WB4's historical broad-suite qualifications remain unchanged.
+
 ## Remaining implementation
 
-The full forms will move into `CanDoItAll.Workbench.Operators.UI`, with coherent native
-family sessions retaining directory/assignment, vault/project and process-session
-authority. The independent sandbox must consume the same actual renderers and children.
-Conditional assignments, exact metadata preservation, native partial outcomes, protected
-references, exact runtime identity/Stop, preview/readiness, complete renderer/caller
-census and final desktop/application proof remain required before WB5 closure.
+Protected references, exact runtime identity/Stop, approval, preview/readiness, complete
+renderer/caller census and final desktop/application proof remain required before WB5
+closure. The whole Workbench is not complete.

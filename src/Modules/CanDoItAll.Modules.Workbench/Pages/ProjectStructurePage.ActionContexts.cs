@@ -82,6 +82,10 @@ public partial class ProjectStructurePage {
 
     private void RetireInactiveAuthoring() {
         RetireImageAuthorities();
+        if (partySession is { IsCurrent: false }) {
+            partySession.Retire();
+            partySession = null;
+        }
         if (mermaidOpening is { } mermaid && !IsCurrentAction(mermaid.Context)) {
             CloseMermaidViewer();
         }

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <OperatorsAssetMode Condition="'$(OperatorsAssetMode)' == ''">Parity</OperatorsAssetMode>
+    <OutputPath>bin/$(OperatorsAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(OperatorsAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(OperatorsAssetMode)' == 'Fast'">$(DefineConstants);OPERATORS_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj" />
+    <Content Remove="wwwroot/css/operators-fast.css" Condition="'$(OperatorsAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(OperatorsAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireOperatorsTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(OperatorsAssetMode)' != 'Parity' and '$(OperatorsAssetMode)' != 'Fast'"
+           Text="OperatorsAssetMode must be Parity or Fast." />
+    <Error Condition="'$(OperatorsAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(OperatorsAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/operators-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run operators:css:build." />
+  </Target>
+</Project>

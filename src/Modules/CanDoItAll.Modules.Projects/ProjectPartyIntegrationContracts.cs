@@ -154,7 +154,15 @@ public sealed record ProjectNodeScopeResolution(
     bool ExistsInOtherProject,
     bool IsCanonicalNode,
     ProjectObjectType? ObjectType,
-    string ObjectSubtype);
+    string ObjectSubtype) {
+    public ProjectPartyNodeOccurrence? Occurrence { get; init; }
+}
+
+public sealed record ProjectPartyNodeOccurrence(Guid RecordId, ProjectObjectType ObjectType, string ObjectSubtype, string? ParentNodeKey);
+
+public sealed record ProjectNodeAssignmentCommit(IReadOnlyList<Guid> AssignmentIds) {
+    public string? ObservationWarning { get; init; }
+}
 
 public sealed record ProjectNodeAssignmentSemantics(
     IReadOnlyList<ProjectPartyAssignmentRole> AllowedRoles,
@@ -274,6 +282,19 @@ public interface IProjectPartyIntegrationBridge
         ProjectWriteAdmission? expectedProjectAdmission = null)
         => Task.FromResult(Result.Failure(Error.Failure(
             "Conditional project-party assignment replacement is not available.",
+            ProjectPartyIntegrationErrorCodes.ConditionalReplacementUnavailable)));
+
+    Task<Result<ProjectNodeAssignmentCommit>> ReplaceNodeAssignmentsIfCurrentAsync(
+        Guid projectId,
+        ProjectNodeReference nodeReference,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
+        ProjectPartyNodeOccurrence expectedNode,
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null)
+        => Task.FromResult(Result<ProjectNodeAssignmentCommit>.Failure(Error.Failure(
+            "Conditional participant/meeting assignment receipts are not available.",
             ProjectPartyIntegrationErrorCodes.ConditionalReplacementUnavailable)));
 
     Task DeleteAssignmentAsync(

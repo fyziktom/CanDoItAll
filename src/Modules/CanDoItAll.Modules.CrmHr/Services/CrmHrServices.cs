@@ -5993,6 +5993,37 @@ public sealed class ProjectPartyIntegrationService(
             expectedProjectAdmission);
     }
 
+    public async Task<Result<ProjectNodeAssignmentCommit>> ReplaceNodeAssignmentsIfCurrentAsync(
+        Guid projectId, ProjectNodeReference nodeReference,
+        IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
+        IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
+        IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot> expectedAssignments,
+        ProjectPartyNodeOccurrence expectedNode, CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null) {
+        ArgumentNullException.ThrowIfNull(expectedNode);
+        ArgumentNullException.ThrowIfNull(expectedAssignments);
+        ArgumentNullException.ThrowIfNull(targetRoles);
+        if (expectedNode.ObjectType is not (ProjectObjectType.Participant or ProjectObjectType.Meeting) ||
+            targetRoles.Count == 0 || targetRoles.Contains(ProjectPartyAssignmentRole.WorkItemAssignee)) {
+            return Result<ProjectNodeAssignmentCommit>.Failure(Error.Validation(
+                "This replacement requires an original participant or meeting.", "crmhr.project-assignment.participation-required"));
+        }
+        ProjectNodeAssignmentCommit? committed = null;
+        try {
+            var result = await ReplaceAssignmentsCoreAsync(projectId, nodeReference.NodeKey, desiredAssignments, targetRoles,
+                expectedAssignments, null, cancellationToken, expectedProjectAdmission,
+                expectedNode: expectedNode, captureAssignments: ids => committed = new(ids));
+            return result.IsSuccess
+                ? Result<ProjectNodeAssignmentCommit>.Success(committed
+                    ?? throw new InvalidOperationException("The replacement has no native commit receipt."))
+                : Result<ProjectNodeAssignmentCommit>.Failure(result.Errors.ToArray());
+        } catch (Exception exception) when (committed is not null) {
+            logger?.LogWarning("Participant/meeting assignments for {ProjectId}, {NodeId} committed; cleanup ended with {FailureType}.",
+                projectId, nodeReference.NodeKey, exception.GetType().Name);
+            return Result<ProjectNodeAssignmentCommit>.Success(committed with { ObservationWarning = "Assignments committed; observation requires a reload." });
+        }
+    }
+
     private async Task<Result> ReplaceAssignmentsCoreAsync(
         Guid projectId,
         string normalizedNodeKey,
@@ -6004,7 +6035,9 @@ public sealed class ProjectPartyIntegrationService(
             expectedDirectAssignmentRevision,
         CancellationToken cancellationToken,
         ProjectWriteAdmission? expectedProjectAdmission,
-        Action<CrmOpportunityAssignmentReceipt>? captureReceipt = null)
+        Action<CrmOpportunityAssignmentReceipt>? captureReceipt = null,
+        ProjectPartyNodeOccurrence? expectedNode = null,
+        Action<IReadOnlyList<Guid>>? captureAssignments = null)
     {
         var expected = ProjectAssignmentAdmission.Require(projectId, expectedProjectAdmission);
         desiredAssignments = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
@@ -6086,6 +6119,19 @@ public sealed class ProjectPartyIntegrationService(
                 cancellationToken);
         using var ownerEntry = coordinatedTransaction.Enter(dbContext);
         await admissions.RequireForMutationAsync(expected, cancellationToken);
+
+        if (expectedNode is not null) {
+            var (currentScope, currentError) = await projectPartyAssignmentNodePolicy.ResolveScopeAsync(
+                projectId, normalizedNodeKey, targetRoleSet.ToArray(), false, cancellationToken);
+            if (currentError is not null) {
+                return Result.Failure(currentError);
+            }
+            if (currentScope?.Occurrence != expectedNode) {
+                return Result.Failure(Error.Failure("The original participant or meeting changed. Reload before saving.",
+                    "crmhr.project-assignment.node-occurrence-changed"));
+            }
+            nodeScope = currentScope;
+        }
 
         var desiredPartyIds = desiredAssignments
             .Select(item => item.PartyId)
@@ -6178,8 +6224,11 @@ public sealed class ProjectPartyIntegrationService(
                 .Where(item => item.ProjectLifetimeId == expected.LifetimeId && item.NodeKey == normalizedNodeKey).ToArray()
             : [];
         var existingIds = existingAssignments.Select(item => item.Id).Concat(workRows.Select(item => item.Id)).ToHashSet();
+        var retained = expectedNode is null ? [] : existingAssignments.Where(row => desiredAssignments.Any(request =>
+            request.AssignmentId == row.Id && request.PartyId == row.PartyId && MapRole(request.Role) == row.AssignmentKind)).ToArray();
+        var retainedIds = retained.Select(row => row.Id).ToHashSet();
         var resolvedReplacementIds = desiredAssignments.Select((item, index) =>
-            item.AssignmentId.HasValue && !existingIds.Contains(item.AssignmentId.Value)
+            item.AssignmentId.HasValue && (!existingIds.Contains(item.AssignmentId.Value) || retainedIds.Contains(item.AssignmentId.Value))
                 ? item.AssignmentId.Value : replacementIds[index]).ToArray();
         if (resolvedReplacementIds.Distinct().Count() != resolvedReplacementIds.Length) {
             return Result.Failure(Error.Validation("An assignment identity is already in use.", "crmhr.project-assignment.identity-in-use"));
@@ -6204,7 +6253,7 @@ public sealed class ProjectPartyIntegrationService(
         var before = captureReceipt is null ? null : existingAssignments.Select(CrmOpportunityAssignmentSnapshot.From).ToArray();
         if (existingAssignments.Count > 0)
         {
-            dbContext.RemoveRange(existingAssignments);
+            dbContext.RemoveRange(existingAssignments.Where(row => !retainedIds.Contains(row.Id)));
         }
 
         var desiredAssignmentItems = desiredAssignments
@@ -6224,6 +6273,18 @@ public sealed class ProjectPartyIntegrationService(
 
         foreach (var desiredAssignment in desiredAssignmentItems.OrderBy(item => item.Index))
         {
+            if (retainedIds.Contains(resolvedReplacementIds[desiredAssignment.Index])) {
+                var retainedRow = retained.Single(row => row.Id == resolvedReplacementIds[desiredAssignment.Index]);
+                if (retainedRow.PartyOrganizationAffiliationId != desiredAssignment.Request.PartyAffiliationId ||
+                    retainedRow.IsPrimary != desiredAssignment.Request.IsPrimary) {
+                    return Result.Failure(Error.Validation("A retained assignment's affiliation or primary flag cannot be changed by party selection.",
+                        "crmhr.project-assignment.retained-context-changed"));
+                }
+                if (retainedRow.IsPrimary) {
+                    emittedPrimaryKinds.Add(retainedRow.AssignmentKind);
+                }
+                continue;
+            }
             var isPrimary = desiredAssignment.Request.IsPrimary;
             if (emittedPrimaryKinds.Contains(desiredAssignment.AssignmentKind))
             {
@@ -6283,6 +6344,7 @@ public sealed class ProjectPartyIntegrationService(
             receipt = new(expected, targetAssignmentKinds, before!, after.Select(CrmOpportunityAssignmentSnapshot.From));
         }
         await mutationScope.CommitAsync(cancellationToken);
+        captureAssignments?.Invoke(resolvedReplacementIds);
         if (receipt is not null) {
             captureReceipt!(receipt);
         }

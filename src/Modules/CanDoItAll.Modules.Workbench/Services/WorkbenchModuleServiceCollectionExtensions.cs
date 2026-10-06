@@ -86,6 +86,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolInvocationPolicyContextContributor,
             AgentContext.ProjectStructureRuntimeGuidanceContributor>());
         services.AddScoped<ProjectStructureGanttMutationService>();
+        services.AddScoped<ProjectPartyPresentationWriter>();
         services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         services.AddScoped<ProjectStructureProjectionMaintenanceService>();
         services.AddScoped<IProjectStructureProjectionContributor, ProjectHierarchyProjectionContributor>();

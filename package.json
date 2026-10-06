@@ -24,7 +24,8 @@
     "planning:css:build": "npm run planning:build --prefix Tailwind",
     "insights:css:build": "npm run insights:build --prefix Tailwind",
     "structure:css:build": "npm run structure:build --prefix Tailwind",
-    "content:css:build": "npm run content:build --prefix Tailwind"
+    "content:css:build": "npm run content:build --prefix Tailwind",
+    "operators:css:build": "npm run operators:build --prefix Tailwind"
   },
   "repository": {
     "type": "git",

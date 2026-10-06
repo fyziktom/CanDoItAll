@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T11:04:04.884504+00:00",
+  "generated_utc": "2026-10-06T17:36:59.543117+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15280,
+  "allowance_count": 15281,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59672,24 +59672,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "15442f6fe9764d54aab8ba4926d6c908b05106d7442cb81fe6a192553f63f844",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2f32dcaa3b76f948fc6ac8194a721b18d743e07e2420f25da90e1540b5e1b038",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
-      "category": "case-policy",
-      "source_fingerprint": "99b689550c3559fdf4529e99389a9cdbd41b2e007613f63d58606b685dff8e75",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProcessPreparations.cs",
       "category": "link-reparse",
       "source_fingerprint": "076c910a956c52d9de31e7402bca9cc3ab3dd052049dfb1e1f64565dfdcd4a9a",
@@ -72335,6 +72317,30 @@
       "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/README.md",
       "category": "windows-executable",
       "source_fingerprint": "101e7b6b624f0b2bf25fbc5b757bf208f99f45795978ee57e81c4273fc870076",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/OperatorsWatchState.cs",
+      "category": "environment",
+      "source_fingerprint": "193c9ed6c6c47bcdbeadb496f43964f6ea17194a3303cbd7f28cc299a0ef35cd",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/OperatorsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "6af0ef2a8eb41058646b560bde7c2e2635429a8db42fd79d2daaa519eecfd539",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/OperatorsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "d4c02a4598bc7f07bca9e998d07bc8c6aacc2cc0a40162cda44945cacaabe266",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/OperatorsWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "df4b7f93efc59395d50c880336d20593ef5f3297a7f08f00f181cbcc29474d08",
       "count": 1
     },
     {
