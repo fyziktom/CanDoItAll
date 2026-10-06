@@ -1,0 +1,76 @@
+@implements IAsyncDisposable
+@inject FileInteractionComponentComposition Composition
+
+<SurfaceCard data-testid="content-editor-specimen" data-name="@Name">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
+        <DropDown TValue="string" Data="fixtures.Select(file => file.Name)" @bind-Value="selected" Style="width:11rem" />
+        <Button Text="Open file" Click="OpenAsync" />
+        <Button Text="Remove authority" Click="RemoveAuthority" />
+        <Button Text="Concurrent edit" Click="() => source?.ChangeRevision()" />
+        <Button Text="Hold save" Click="HoldSave" />
+        <Button Text="Release save" Click="() => heldSave?.Release()" />
+        <Button Text="Revoke edit" Click="() => { if (source is not null) { source.ReadOnly = true; } }" />
+    </Cluster>
+    <div class="cw-stage-surface content-scenario-canvas">
+        @if (opening is not null) {
+            <ContentFileInteractionDialog Opening="opening" />
+        }
+    </div>
+    <TextBlock Value="@($"Scenario saves: {source?.Saves ?? 0}; revision: {source?.Revision.Value ?? "none"}")" TextStyle="TextStyle.Note" data-testid="content-scenario-save-receipt" />
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private readonly IReadOnlyList<ContentFixture> fixtures = ContentFixtureCatalog.Create();
+    private string selected = "notes.txt";
+    private ContentFixtureContent? source;
+    private ContentFileInteractionOpening? opening;
+    private ContentFixtureGate? heldSave;
+
+    protected override Task OnInitializedAsync() => OpenAsync();
+
+    private async Task OpenAsync() {
+        var old = source;
+        var fixture = fixtures.Single(file => file.Name == selected);
+        var current = new ContentFixtureContent(fixture);
+        source = current;
+        var editable = fixture.MediaType.StartsWith("text/", StringComparison.Ordinal) || fixture.MediaType == "application/json";
+        opening = new() {
+            Title = fixture.Name, Notice = editable ? "Scenario revisioned save target" : "Scenario read-only file",
+            Request = current.Request(), ContentSource = current, Composition = Composition, MaximumContentBytes = 16 * 1024 * 1024,
+            ReadNotes = _ => Task.FromResult<string?>("Supplemental notes belong to this opening; file bytes come from the content source."),
+            Save = editable ? async args => {
+                await current.SaveAsync(args);
+                await InvokeAsync(StateHasChanged);
+            } : null,
+            ChangeMode = mode => mode == FileInteractionMode.Diff || mode == FileInteractionMode.Edit && !editable
+                ? throw new InvalidOperationException("The scenario owner does not allow this mode.") : current.Request(mode),
+            Close = EventCallback.Factory.Create(this, () => { if (ReferenceEquals(source, current)) { opening = null; } })
+        };
+        heldSave?.Release();
+        if (old is not null) {
+            await old.DisposeAsync();
+        }
+    }
+
+    private void RemoveAuthority() {
+        if (opening is not null) {
+            opening = opening with { Request = null, ContentSource = null, Save = null };
+        }
+    }
+
+    private void HoldSave() {
+        if (source is not null) {
+            heldSave = new();
+            source.SaveGate = heldSave;
+        }
+    }
+
+    public async ValueTask DisposeAsync() {
+        heldSave?.Release();
+        if (source is not null) {
+            await source.DisposeAsync();
+        }
+    }
+}

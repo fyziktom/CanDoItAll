@@ -3,15 +3,13 @@
 @using CanDoItAll.FileTools.FileInteraction.Markdown
 @implements IMarkdownFencedCodeComponent
 
-@if (string.IsNullOrWhiteSpace(Context.Source))
-{
+@if (string.IsNullOrWhiteSpace(Context.Source)) {
     <Alert AlertStyle="AlertStyle.Warning"
            Variant="Variant.Outlined">
         Mermaid diagram source is empty.
     </Alert>
 }
-else
-{
+else {
     <MermaidDiagram Title="@Context.File.Request.FileName"
                     Description="Markdown Mermaid fence rendered with strict security."
                     Source="@Context.Source"

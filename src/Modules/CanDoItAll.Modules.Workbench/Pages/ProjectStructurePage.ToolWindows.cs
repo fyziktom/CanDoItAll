@@ -1,6 +1,7 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -12,6 +13,63 @@ public partial class ProjectStructurePage
     private string objectIndexSearchText = string.Empty;
     private string? expandedToolboxGroupKey;
     private ProjectStructureFileCollectionRequest? fileBrowserRequest;
+    private ProjectStructureFileCollectionOpening? fileBrowserOpening;
+    private ProjectStructureActionContext? fileBrowserContext;
+    private readonly Queue<ProjectStructureFileActionOutcome> fileActionOutcomes = new();
+
+    internal IReadOnlyList<ProjectStructureFileActionOutcome> FileActionOutcomes => fileActionOutcomes.ToArray();
+
+    private ProjectStructureFileCollectionOpening CurrentFileBrowserOpening {
+        get {
+            var request = CurrentFileBrowserRequest;
+            if (fileBrowserOpening is not null && fileBrowserContext is { } current && IsCurrentAction(current) &&
+                ReferenceEquals(current.Surface, surface) && fileBrowserOpening.Request == request) {
+                return fileBrowserOpening;
+            }
+            var context = CaptureActionContext();
+            var node = CurrentFileBrowserNode;
+            fileBrowserContext = context;
+            fileBrowserOpening = new(request, cancellationToken => EnsureFileOriginAsync(context, request.ProjectId, node, cancellationToken));
+            return fileBrowserOpening;
+        }
+    }
+
+    private async Task EnsureFileOriginAsync(ProjectStructureActionContext context, Guid targetProject, ProjectStructureNode? expectedNode,
+        CancellationToken cancellationToken) {
+        if (!IsCurrentAction(context)) {
+            throw new ProjectStructureEditConflictException();
+        }
+        var expected = targetProject == context.Admission.ProjectId ? context.Admission
+            : context.Surface.HierarchyAdmissions.GetValueOrDefault(targetProject)
+                ?? throw new ProjectStructureEditConflictException();
+        var original = await ProjectWorkbenchService.GetStructureAsync(context.Admission.ProjectId, cancellationToken);
+        if (!IsCurrentAction(context) || original.ExpectedProjectAdmission != context.Admission) {
+            throw new CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException(context.Admission);
+        }
+        if (expectedNode is not null) {
+            var current = original.Nodes.SingleOrDefault(node => node.Id == expectedNode.Id);
+            if (current is null || current.RecordId != expectedNode.RecordId || current.ObjectType != expectedNode.ObjectType ||
+                current.ObjectSubtype != expectedNode.ObjectSubtype || current.ParentId != expectedNode.ParentId ||
+                current.StorageObjectReferenceJson != expectedNode.StorageObjectReferenceJson || current.RelatedProjectId != expectedNode.RelatedProjectId) {
+                throw new ProjectStructureEditConflictException();
+            }
+        }
+        if (targetProject != context.Admission.ProjectId) {
+            var target = await ProjectWorkbenchService.GetStructureAsync(targetProject, cancellationToken);
+            if (!IsCurrentAction(context) || target.ExpectedProjectAdmission != expected) {
+                throw new CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException(expected);
+            }
+        }
+    }
+
+    private void RecordFileActionOutcome(ProjectStructureFileActionOutcome outcome) {
+        fileActionOutcomes.Enqueue(outcome);
+        while (fileActionOutcomes.Count > 16) {
+            fileActionOutcomes.Dequeue();
+        }
+        Logger.LogInformation("File action outcome. OpeningId={OpeningId} Collection={Collection} Action={Action} Outcome={Outcome}.",
+            outcome.OpeningId, outcome.Collection.Identity, outcome.Action, outcome.Kind);
+    }
 
     private CanvasWorkbenchWindowState ToolboxWindowState => ResolveToolboxWindowState();
 

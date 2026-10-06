@@ -14,9 +14,12 @@
     <link rel="stylesheet" href="@Assets["sandbox.css"]" />
     <link rel="stylesheet" href="@Assets["CanDoItAll.Workbench.Content.UiSandbox.styles.css"]" />
     <ImportMap />
+    <CanvasLibHeadAssets />
+    <MermaidHeadAssets />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
+    <CanvasLibBodyAssets IncludePreviewAssets="true" IncludeCalendarAssets="false" />
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>

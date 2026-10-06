@@ -10,6 +10,7 @@ public partial class ProjectStructurePage {
     private ProjectStructureActionContext? summaryActionContext;
     private ProjectStructureActionContext? transcriptActionContext;
     private ProjectStructureActionContext? secretReferenceActionContext;
+    private ProjectStructureAuthoringOpening? previewOpening;
     private readonly Queue<ProjectStructureAuthoringOutcome> authoringOutcomes = new();
     private readonly HashSet<Task> authoringOperations = [];
 

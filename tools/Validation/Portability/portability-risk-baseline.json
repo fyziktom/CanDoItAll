@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T08:40:52.635619+00:00",
+  "generated_utc": "2026-10-06T09:48:25.865714+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15252,
+  "allowance_count": 15285,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59182,7 +59182,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "1fd9bf637f67cf6c53e392027b14f4909ee3c30a4a0f253a5942c352ecc650cb",
+      "source_fingerprint": "2cf6b4776c22e0f0c35c1a4ca8fce758160a2877ec1d48f530f120bd733783cb",
       "count": 1
     },
     {
@@ -59194,37 +59194,13 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "5534df76f567c84c47c5ea3cc2cd50244b9575139469c3a7246398da7fedffb7",
+      "source_fingerprint": "4de358e34ddffbbcaa97df1594704842e534a6a891fe7bc573a659650acdcc8f",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "7488a4184dc021b5d64369c338574c22c4dc10970b1ca10ddbd42504c8af90c4",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
-      "category": "external-tool",
-      "source_fingerprint": "75f85d13ad5b1a2fbc0e6008bbb9101eb3ee9c2f74d09ba14b131d370439e2be",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
-      "category": "external-tool",
-      "source_fingerprint": "7c98c3f3db4da08364dc35a9ddf21e01f709600928602edf2900206aec9bb65c",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
-      "category": "external-tool",
-      "source_fingerprint": "8304bd3a9416e7661a84c1604478cc7ed5b277c563fc06d9bf70288c90403eed",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
-      "category": "external-tool",
-      "source_fingerprint": "879cca2b1b48b4f7a56cb5409b282f63aa048c4f04e929bf1df3a07e0f27e7e4",
+      "source_fingerprint": "73cc998140edb7f1efd5305e7810b7b8c1bad48f585b3b61f0b2fa3919c974f2",
       "count": 1
     },
     {
@@ -59236,19 +59212,37 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "a979e990673810d5eb26ec12da2c9f12ad00825e3284889ad870cd609f6e2c32",
+      "source_fingerprint": "95552d196e6f171c744be663248681e201c9170267cd30e24d8aa49d2392f6f9",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "b75c2688908dd59e77f3a54d4c2736b6fab14ebd11d83eb2de581ba09bc7ff91",
+      "source_fingerprint": "a56568779b4060a03234f58a9082a2241ae8e2b303f310b95e74a62fa60897cc",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "category": "external-tool",
-      "source_fingerprint": "e317dde7e1dda23e06bc5df9cc906477ef03e135c3f5be2daf45580c1cf7bc22",
+      "source_fingerprint": "d0ea95310dae04c58d40753777ab50f27b568728464a41dd0c776d2b65b5a52e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "category": "external-tool",
+      "source_fingerprint": "d8e08da5baa2000fcf238f8a6bbe8a48312498183582d85051774702a00782bd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "category": "external-tool",
+      "source_fingerprint": "d8f4497b4e3aa4944bd34f78210376a6331a3d0ae08a00300118f43f25043f03",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "category": "external-tool",
+      "source_fingerprint": "f631289bc05124b45a5154c9d70e732ef72f80d2f8cfae3d0dafcaec8405470e",
       "count": 1
     },
     {
@@ -60034,19 +60028,25 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "category": "external-tool",
+      "source_fingerprint": "077a30d2ce29c7596c8bfe4d6c1c945844e23e57b5bea232904d64dff0401971",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "category": "external-tool",
+      "source_fingerprint": "1b7b3bd9006438f48613014ed3b1b41c701a4ae5199cddcb45180396b165797f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "category": "external-tool",
       "source_fingerprint": "54169654a70363a216f06a38a7831320ded44553008495b766ea5692588c4c55",
       "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "category": "external-tool",
-      "source_fingerprint": "9e21eb616767a89dc89313d2063bd15923f3286d1a0b019e1662536b6232a13b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "category": "external-tool",
-      "source_fingerprint": "d29f0a6f0195ec97bb3e66208220e487f260cd1338d3381da377b396749df8c6",
+      "source_fingerprint": "77eaf986ab8fd54a3d3e9437c212b27a68eb45e36ef8d37b12ea13e2f5d3fbc7",
       "count": 1
     },
     {
@@ -61832,6 +61832,30 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileCollectionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "00c7f18c7db306dfbe531eea72095113bab80d82147c09c3b7d1e1f771f8d492",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileCollectionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "3de03d079608ccfccbc4f0b5f597c01d04071ed6826c231967c167c871b4e63f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileCollectionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "74247f2485646d854395d04c9eed6ac061412828c6f6482edab05d7178259e0b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileCollectionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "ebfccc43c35ed61a7f74c344bd234f15999542e941fb715709c44fd00ade7cf2",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileInteractionPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "265e8f52a94fb28ce5762363a9d4c61f47329663445d7fedebfe4946be959c05",
@@ -62332,12 +62356,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
       "category": "external-tool",
-      "source_fingerprint": "8032f890cc302a41e9955aafe62a0260ce53b8c1ba94506cfd646789b8728abc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
-      "category": "external-tool",
       "source_fingerprint": "b0743574486dd493b12e5e2d0a77c4927ec57b02bb02a7abf5d1d02958d64e30",
       "count": 1
     },
@@ -62357,6 +62375,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
       "category": "external-tool",
       "source_fingerprint": "b9118c8e27563398a72e703e96c9506d72dad26af7d971b6c0602c61202b6fcd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c4e155e410518578dbcb292932f5589a90651bc13680b5c01e80b9bdd78a33c2",
       "count": 1
     },
     {
@@ -65363,18 +65387,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchFileInteractionComposition.cs",
       "category": "external-tool",
       "source_fingerprint": "0c128299fdfed643ae6288e695f14378ab61a7c469628e54bf625a2246fa531d",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchFileInteractionComposition.cs",
-      "category": "external-tool",
-      "source_fingerprint": "d6c6952d5da17cc46b7309468b65751e35d63ccb16c36c3bb779575ecac152d6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/WorkbenchMarkdownMermaidBlock.razor",
-      "category": "external-tool",
-      "source_fingerprint": "eef82eef6475abe696275103aa30f93be58a0608065bb9635ecbd0cde2f5b3f5",
       "count": 1
     },
     {
@@ -72194,6 +72206,78 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/CanDoItAll.Workbench.Content.UiSandbox.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "4fcf7a6298f6c07ed75b2f1e35b052940d262b5d92a6a8344d7eb2bf629bb943",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "1bc85b7c8d4b03343b640880bdd5a2c1c99140c8bda8563ac5a4689a8186b564",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "38630c030d3631c329b4506601814233c22e695408691d762aa0801e19f2c7c3",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "523085a544a0a206b080c23faf00439d6a7c7663cb7cc8906fe1d9cc12dca79a",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "b0feec6749829f38bbd12e944fc2c31b3d8456708adbb35681d033de78391f45",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentCollectionScenario.cs",
+      "category": "external-tool",
+      "source_fingerprint": "104bf727f4308500fe0800282489cbc9bf0b07dcefa6d0443b64178d7b2fec23",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentCollectionScenario.cs",
+      "category": "external-tool",
+      "source_fingerprint": "3493ad1cb6f1e8b508a52dab79a1f65f15e72f34876d6ff2ac84cac8e2a5fc08",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentCollectionScenario.cs",
+      "category": "external-tool",
+      "source_fingerprint": "d548b307feb719edef864321aaebd53bd03c62afbb73a0ec9f7f9728e6fe1bed",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentCollectionScenario.cs",
+      "category": "external-tool",
+      "source_fingerprint": "db24b275cc70fa31d5e9995c32491cefc8f4a54273729feec2769ae794272c5d",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentFixtureContent.cs",
+      "category": "external-tool",
+      "source_fingerprint": "c2b19a065e2d4d6fe5ae254ddde66aa39a305db0f64c4f68fceb7382ade366be",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentFixtureContent.cs",
+      "category": "external-tool",
+      "source_fingerprint": "e8f29169800eb008145c03ba2c8ceb1db9f4cb7d96317b55f81148cfeb2ae727",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentFixtureProvider.cs",
+      "category": "external-tool",
+      "source_fingerprint": "d8556c7669b2a00a59115c4e24e23880ff83dee2740dfa4300d773ad706aceb4",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
       "category": "environment",
       "source_fingerprint": "12dfc27a3f5621c8fab5aba2d04fe6d7704c1fed6e56a1d3617cd581687e53a6",
@@ -72215,6 +72299,24 @@
       "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
       "category": "mcp",
       "source_fingerprint": "8bebe651c55e1aef37986705f060663acb548cd93d8fb04e217936ad4f396a31",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
+      "category": "external-tool",
+      "source_fingerprint": "18de0ac8ec9a9218590abb726465e703b3c1af7a1808a52e6b6a0799713c8453",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
+      "category": "external-tool",
+      "source_fingerprint": "f506f35e5c62a216638d96a6062fa5fc5ab810ddedfaf86afb69aab84bc39881",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
+      "category": "external-tool",
+      "source_fingerprint": "fb4bba471f4961da74e53cdfd8291b1eb6618f8dc988082aeb9f84d548bc424e",
       "count": 1
     },
     {
@@ -75524,9 +75626,111 @@
       "count": 1
     },
     {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "9b97f7660f419b29c7d8c3afa9735829c3c3e4069eca9de56264e6c0ae98c3e9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "d61dbd2f5007931870ac3922956613a1dd0d9918f463c7350115909d995b1cd9",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj",
+      "category": "external-tool",
+      "source_fingerprint": "e5a1763f23db5a867c89d91a10d241716b6b341392624be8da7e582ec8af8f91",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileCollectionState.cs",
+      "category": "external-tool",
+      "source_fingerprint": "6f4176cba09049390c617db2edb5d685d2a622b24606fe15d155317a8d6eaf6e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileCollectionState.cs",
+      "category": "external-tool",
+      "source_fingerprint": "829073dc4edd5fe0808221d1f617857784dceadbabc286f111611c4ec7a829e4",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileCollectionState.cs",
+      "category": "external-tool",
+      "source_fingerprint": "dd36310e0606e73809c400e935b0308116a9b8af7608098591f1ce1cd3293a87",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileCollectionState.cs",
+      "category": "external-tool",
+      "source_fingerprint": "fe807036d6c99ed7ca2d8259816af7eb21c3fe1cb48247c1e92cd72ed07bdaa8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionComposition.cs",
+      "category": "external-tool",
+      "source_fingerprint": "93a9836d16beefacea45eb5b4b034ab336eda5f1cf63cc3d36fb8f1207ce85b1",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionComposition.cs",
+      "category": "external-tool",
+      "source_fingerprint": "feb28d07c84658180bcfeac567566c523f14ae155be7746b2ef29edfd9eab5ce",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "858a79c9a3370865ee5323af6e15e6884f7ddecedb104c3361d4c40b4726e902",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionOpening.cs",
+      "category": "external-tool",
+      "source_fingerprint": "e25809dace24d38611b10488db1d408bc7c48faff926c1370eac36b7af3b3f19",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentMarkdownMermaidRegistration.cs",
+      "category": "external-tool",
+      "source_fingerprint": "571369962e0f2da108fc74b9c194b92441abdf1d09f6ea3d2f07463bc775dcd8",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/WorkbenchMarkdownMermaidBlock.razor",
+      "category": "external-tool",
+      "source_fingerprint": "7c102963d0c2654c397e819949ffc14e26082a8574c3b88826ece5ad8bb1ded0",
+      "count": 1
+    },
+    {
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
       "category": "external-tool",
       "source_fingerprint": "df417f28940217787279e730a2cee1ac42f45272450e0ed7a63d5f76a05e811e",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "2ceb00401c1e16e089a2a4f90793e04682869ce00888bbdd70c3ecd3669c9fca",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "31b467a31278cf33222a9aa024a2fcee414ea98025bebc4a8e86ad565544c546",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "a0ed727ee81a7cb89c94779a8f61b9d4f72f3d7d76c5c573658e7f483c810674",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
+      "category": "external-tool",
+      "source_fingerprint": "ecdf0bd70be156748d610e1c734ba58115183bac94fea252be8aa3a8cc7309da",
       "count": 1
     },
     {

@@ -261,7 +261,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("true", cut.Find("[role='dialog']").GetAttribute("data-maximized"));
-            Assert.Contains("project-structure-preview-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
+            Assert.Contains("canvas-overlay-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
             Assert.Equal(
                 "Restore preview size",
                 cut.Find("[data-testid='project-structure-dialog-size-toggle']").GetAttribute("aria-label"));
@@ -272,7 +272,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("false", cut.Find("[role='dialog']").GetAttribute("data-maximized"));
-            Assert.DoesNotContain("project-structure-preview-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
+            Assert.DoesNotContain("canvas-overlay-dialog--fullscreen", cut.Find("[role='dialog']").ClassList);
         });
     }
 

@@ -1,9 +1,9 @@
-:global(.project-structure-file-browser-window__body) {
+::deep .project-structure-file-browser-window__body {
     min-height: 0;
     overflow: hidden;
 }
 
-.project-structure-file-browser-window__toolbar {
+::deep .project-structure-file-browser-window__toolbar {
     border-bottom: 1px solid rgb(226 232 240);
     padding-bottom: 0.65rem;
 }
@@ -15,6 +15,6 @@
     white-space: nowrap;
 }
 
-.project-structure-file-browser-window__browser {
+::deep .project-structure-file-browser-window__browser {
     overflow: hidden;
 }

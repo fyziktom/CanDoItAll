@@ -13,11 +13,25 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
     IStorageCatalogService storageCatalog,
     IStorageDriverRegistry storageDrivers)
 {
-    public async ValueTask<ProjectStructureKnownFileInteraction> OpenAsync(
+    public ValueTask<ProjectStructureKnownFileInteraction> OpenAsync(
         Guid projectId,
         string nodeId,
         CancellationToken cancellationToken = default)
     {
+        return OpenCoreAsync(projectId, nodeId, null, cancellationToken);
+    }
+
+    public ValueTask<ProjectStructureKnownFileInteraction> OpenBoundAsync(Guid projectId, string nodeId,
+        Func<CancellationToken, Task> ensureOrigin, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(ensureOrigin);
+        return OpenCoreAsync(projectId, nodeId, ensureOrigin, cancellationToken);
+    }
+
+    private async ValueTask<ProjectStructureKnownFileInteraction> OpenCoreAsync(Guid projectId, string nodeId,
+        Func<CancellationToken, Task>? ensureOrigin, CancellationToken cancellationToken) {
+        if (ensureOrigin is not null) {
+            await ensureOrigin(cancellationToken);
+        }
         FileToolsKnownFileScope resolved = await scopeResolver.ResolveKnownFileAsync(
             projectId,
             nodeId,
@@ -68,7 +82,10 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
                 mediaType,
                 activation.Size,
                 contentRevision);
-            return new ProjectStructureKnownFileInteraction(request, session, sessionReleaser);
+            if (ensureOrigin is not null) {
+                await ensureOrigin(cancellationToken);
+            }
+            return new ProjectStructureKnownFileInteraction(request, session, sessionReleaser, ensureOrigin);
         }
         catch
         {
@@ -82,16 +99,21 @@ internal sealed class ProjectStructureKnownFileInteractionCoordinator(
 public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
 {
     private readonly IFileToolsKnownFileSessionReleaser releaser;
-    private bool disposed;
+    private readonly Func<CancellationToken, Task>? ensureOrigin;
+    private FileContentRevision? persistedRevision;
+    private int disposed;
 
     public ProjectStructureKnownFileInteraction(
         FileInteractionRequest request,
         FileToolsKnownFileSession session,
-        IFileToolsKnownFileSessionReleaser releaser)
+        IFileToolsKnownFileSessionReleaser releaser,
+        Func<CancellationToken, Task>? ensureOrigin = null)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Session = session ?? throw new ArgumentNullException(nameof(session));
         this.releaser = releaser ?? throw new ArgumentNullException(nameof(releaser));
+        this.ensureOrigin = ensureOrigin;
+        persistedRevision = request.ContentRevision;
     }
 
     public FileInteractionRequest Request { get; }
@@ -106,6 +128,7 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
 
     public FileInteractionRequest WithMode(FileInteractionMode mode)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
         if (mode == FileInteractionMode.Edit && !CanEdit)
         {
             throw new FileAccessDeniedException(
@@ -126,12 +149,13 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
             mode,
             Request.MediaType,
             Request.Size,
-            Request.ContentRevision);
+            persistedRevision);
     }
 
     public async Task SaveAsync(FileInteractionSaveRequestedEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
         if (!CanEdit || Session.SaveTarget is null || args.Request.File != Session.File)
         {
             throw new FileAccessDeniedException(
@@ -139,21 +163,25 @@ public sealed class ProjectStructureKnownFileInteraction : IAsyncDisposable
                 "The save request is not authorized for this interaction.");
         }
 
+        if (ensureOrigin is not null) {
+            await ensureOrigin(CancellationToken.None);
+        }
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
         FileSaveTargetResult result = await Session.SaveTarget.SaveAsync(args.Request);
         if (result.PersistedRevision is { } revision)
         {
+            persistedRevision = revision;
             args.SetPersistedRevision(revision);
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (disposed)
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
         {
             return;
         }
 
-        disposed = true;
         await releaser.ReleaseAsync(Session.File);
     }
 }

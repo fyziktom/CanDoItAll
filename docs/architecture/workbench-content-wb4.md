@@ -162,3 +162,58 @@ lists. Portability review identified four existing sandbox diagnostics patterns 
 watch endpoint and the moved text's accepted-extension string; the corresponding old
 text-dialog fingerprint is stale. These are intentional relocation/diagnostic findings,
 not OS assumptions or production authority changes.
+
+## W2 shared overlay decision
+
+The existing preview must maximize inside its canvas. A first extraction using BaseLib's
+document modal failed that continuity check. Content therefore needs the neutral overlay
+shell already used by Structure. Moving that small shell to CanvasLib lets both leaves
+compose it without a Content-to-Structure feature dependency. Structure keeps its public
+compatibility wrapper; the shared shell owns the one rendering implementation and styles.
+This measured need is the bounded sibling edit permitted by WB4's signing/delivery rules.
+The original WB3 dependency remains verified; the new sibling checkpoint will have its own
+source-pair proof and delivery status. No remote delivery is inferred from a local commit.
+
+The resulting Components checkpoint is `a3fd4d22f2c4e0432cf389f194c6468b44ab7371`, verified
+with the existing PGP key. It is local only. Its 31 Canvas tests and asset verification pass.
+Approval deltas include the new overlay and the retained WB3 composer callbacks, opening
+types and six asset fingerprints missing from earlier snapshots; those WB3 sources were
+unchanged. This checkpoint does not establish reproducible remote CI/package readiness.
+
+## W2 collection and direct interaction
+
+Content now renders the real compact FileBrowser, collection previews and direct editor.
+The native adapters retain scope resolution, project admission, original node occurrence,
+file grants, save targets, local commands and downloads. Retired results, errors and cleanup
+are fenced by opening and operation. Cleanup detaches its own handles before awaiting;
+held predecessors cannot release successors or acquire a new lease through a dead callback.
+Direct interactions keep accepted revisions across mode changes, reject Diff, and retain
+dirty/conflict/pending close guards. Supplemental notes remain separate from file content.
+
+A native counterexample found a pre-existing FileTools authorization defect: a previously
+issued edit grant remained writable after its storage became read-only. The existing
+authorization coordinator now checks current write/mutable-update capability on grant and
+resolve. The original 5/6 run remains failed. The repaired independent-storage selection
+passes 7/7, including two live editors, current revision conflicts, revoked handles and
+permission loss. An intermediate capability test incorrectly used bootstrap storage whose
+capability mask is deliberately refreshed; its failed 6/7 result is retained separately.
+
+The initial renderer tests also found unstable child callbacks causing a render loop; the
+aborted run is retained, and stable callbacks pass all 26 leaf cases. Native component checks
+pass 31/31 after adding held activation success/error and exact release ownership. Focused
+file/normalization/authorization unit checks pass 111/111; the added local-dispatch origin
+checks are recorded separately. None of these overlapping selections is a unique suite total.
+
+Source Parity browser checks at 1920×1080/DPR1 render ten real content children and two
+independent windows. An accepted text save was observed through View mode with SHA-256
+`659F53A43D485D3EF52823626D82A913F8929141CFF19D4632563A7A6656B67F` and a count of one;
+an initially stale scenario receipt caused a selector timeout, not another Save. The receipt
+now updates on completion. The old 440×560 collection default left its toolbar obscuring
+rows; a 600×700 default with a bounded minimum height makes pointer navigation usable.
+PNG bytes decoded, XLSX cells/formula rendered, Mermaid used no HTML labels, and the neighbor
+stayed unchanged. Actual native launch/download and final consumer proof remain W4 work.
+
+Portability delta review covers FileTools namespace/type/reference matches moved into Content
+and its scenarios, plus original native action code. These are existing governed library
+calls or neutral contracts, not new shell or operating-system dependencies. Removed native
+fingerprints are reconciled in the same checkpoint.

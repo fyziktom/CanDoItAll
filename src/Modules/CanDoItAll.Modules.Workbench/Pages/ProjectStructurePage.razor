@@ -95,7 +95,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                         @if (FileBrowserWindowState.IsVisible)
                         {
                             <ProjectStructureFileBrowserWindow WindowId="@FileBrowserWindowKey"
-                                                               Request="@CurrentFileBrowserRequest"
+                                                               Opening="@CurrentFileBrowserOpening"
+                                                               ActionCompleted="RecordFileActionOutcome"
                                                                State="@FileBrowserWindowState"
                                                                StateChanged="HandleFileBrowserWindowStateChangedAsync"
                                                                CanOpenRootInExplorer="@CanOpenCurrentFileBrowserNodeInExplorer"
@@ -837,6 +838,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             projectHierarchyDialogBeforeCreate = null;
             projectCreateOpening = null;
             showProjectCreateModal = false;
+            await CloseAttachmentPreviewAsync();
         }
 
         if (loadedProjectId != ProjectId)
@@ -2845,38 +2847,35 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         => string.Equals(localOpenFeedbackNodeId, node.Id, StringComparison.Ordinal) &&
             !string.IsNullOrWhiteSpace(localOpenFeedback);
 
-    private async Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
-    {
-        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
-            node,
-            FileToolsLocalFileAction.OpenContainingFolder);
-        localOpenFeedbackNodeId = node.Id;
-        localOpenFeedback = result.Message;
-        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
-        await InvokeAsync(StateHasChanged);
-    }
+    private Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
+        => OpenAttachmentLocalActionAsync(node, FileToolsLocalFileAction.OpenContainingFolder);
 
-    private async Task OpenAttachmentInPreferredApplicationAsync(ProjectStructureNode node)
-    {
-        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
-            node,
-            FileToolsLocalFileAction.OpenInPreferredApplication);
-        localOpenFeedbackNodeId = node.Id;
-        localOpenFeedback = result.Message;
-        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
-        await InvokeAsync(StateHasChanged);
+    private Task OpenAttachmentInPreferredApplicationAsync(ProjectStructureNode node)
+        => OpenAttachmentLocalActionAsync(node, FileToolsLocalFileAction.OpenInPreferredApplication);
+
+    private async Task OpenAttachmentLocalActionAsync(ProjectStructureNode node, FileToolsLocalFileAction action) {
+        var context = CaptureActionContext();
+        var result = await LaunchAttachmentLocalActionAsync(context, node, action);
+        if (IsCurrentAction(context)) {
+            localOpenFeedbackNodeId = node.Id;
+            localOpenFeedback = result.Message;
+            localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task<ProjectStructureLocalFileOpenResult> LaunchAttachmentLocalActionAsync(
+        ProjectStructureActionContext context,
         ProjectStructureNode requestedNode,
         FileToolsLocalFileAction action)
     {
         try
         {
             return await LocalFileActionCoordinator.LaunchAsync(
-                ProjectId,
+                context.Admission.ProjectId,
                 requestedNode.Id,
-                action);
+                action,
+                ensureOrigin: cancellationToken => EnsureFileOriginAsync(context, context.Admission.ProjectId, requestedNode, cancellationToken));
         }
         catch (Exception exception)
         {
@@ -2903,55 +2902,54 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private ProjectStructureKnownFileInteraction? PreviewInteraction
         => previewInteractionSlot?.Current;
 
-    private async Task OpenAttachmentPreviewAsync(ProjectStructureNode node)
-    {
-        if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
-        {
+    private async Task OpenAttachmentPreviewAsync(ProjectStructureNode node) {
+        if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node)) {
             return;
         }
-
+        var context = CaptureActionContext();
+        var opening = new ProjectStructureAuthoringOpening(context, node);
+        previewOpening = opening;
         webPreviewDialog = null;
         previewNode = null;
         isOpeningAttachmentPreview = true;
-        try
-        {
-            ProjectStructureKnownFileInteraction? opened = await PreviewInteractionSlot.OpenAsync(
-                ProjectId,
-                node.Id);
-            if (opened is null)
-            {
+        var slot = PreviewInteractionSlot;
+        try {
+            var opened = await slot.OpenAsync(cancellationToken => KnownFileInteractionCoordinator.OpenBoundAsync(
+                context.Admission.ProjectId, node.Id,
+                token => EnsureFileOriginAsync(context, context.Admission.ProjectId, node, token), cancellationToken));
+            if (opened is null) {
                 return;
             }
-
+            if (!IsCurrentAuthoring(opening, previewOpening)) {
+                await slot.CloseIfCurrentAsync(opened);
+                return;
+            }
             previewNode = node;
-        }
-        catch (Exception exception)
-        {
-            Logger.LogWarning(
-                "Project Structure file interaction failed. ProjectId={ProjectId} NodeId={NodeId} FailureType={FailureType}.",
-                ProjectId,
-                node.Id,
-                exception.GetType().Name);
-            workflowFeedback = exception switch
-            {
-                FileBrowserProviderException providerException => providerException.Error.Message,
-                FileAccessDeniedException deniedException => deniedException.Message,
-                _ => "Unable to authorize this project asset."
-            };
-            workflowFeedbackTone = "warn";
-        }
-        finally
-        {
-            isOpeningAttachmentPreview = false;
+        } catch (Exception exception) {
+            Logger.LogWarning("Project file interaction failed. ProjectId={ProjectId} NodeId={NodeId} OpeningId={OpeningId} FailureType={FailureType}.",
+                context.Admission.ProjectId, node.Id, opening.Id, exception.GetType().Name);
+            if (IsCurrentAuthoring(opening, previewOpening)) {
+                workflowFeedback = exception switch {
+                    FileBrowserProviderException provider => provider.Error.Message,
+                    FileAccessDeniedException denied => denied.Message,
+                    _ => "Unable to authorize this project asset."
+                };
+                workflowFeedbackTone = "warn";
+            }
+        } finally {
+            if (ReferenceEquals(previewOpening, opening)) {
+                isOpeningAttachmentPreview = false;
+            }
         }
     }
 
-    private async Task CloseAttachmentPreviewAsync()
-    {
+    private async Task CloseAttachmentPreviewAsync() {
+        previewOpening = null;
         previewNode = null;
-        if (previewInteractionSlot is not null)
-        {
-            await previewInteractionSlot.CloseAsync();
+        isOpeningAttachmentPreview = false;
+        var slot = previewInteractionSlot;
+        if (slot is not null) {
+            await slot.CloseAsync();
         }
     }
 

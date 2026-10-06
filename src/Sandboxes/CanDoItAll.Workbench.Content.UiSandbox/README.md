@@ -21,5 +21,15 @@ all five text kinds, use actual browser uploads, hold and release submissions, r
 opening, and exercise Prepared/Committed/Rejected/PartialCommit/Unconfirmed outcomes.
 The form retains exact upload bytes and gates duplicate or uncertain dispatches.
 
-The collection, governed interaction, generation and stored-export scenarios are being
-added during WB4. This checkpoint does not claim completion of those families.
+`/files` mounts two actual compact collection renderers, each with an independent source
+session and opening. Representative, empty, large, missing, loading and error states use
+bounded in-memory sources. Preview text, JSON, logs, Markdown, Mermaid, PNG, inert SVG,
+PDF, XLSX and unknown content. Host actions explicitly record scenario intents.
+
+`/editors` mounts two actual direct interaction dialogs. Switch file types, hold/release a
+save, change the source revision, revoke write permission, remove authority and replace the
+opening. Revision acknowledgements are hashes of the accepted in-memory bytes. These ports
+are scenario controls, not native authorization, storage, grant or launch substitutes.
+
+Generation and stored-export scenarios are added in W3. Source/published parity and final
+native operator/Agent/Workflow consumer proof remain part of W4 closure.
