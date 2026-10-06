@@ -1,0 +1,309 @@
+{
+  "review_date": "2026-10-06",
+  "sources": [
+    {
+      "id": "S01",
+      "kind": "repository-metadata",
+      "url": "https://github.com/fyziktom/CanDoItAll/commit/42cd807dec761daa79fa8b48ff78c2330f615354",
+      "coverage": "Current main HEAD metadata and verified GitHub signature; compared all seven commits after the preceding WB3 checkpoint, including sealed WB4 inputs."
+    },
+    {
+      "id": "S02",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "docs/architecture/workbench-content-wb4.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/docs/architecture/workbench-content-wb4.md",
+      "observed_blob_sha": null,
+      "coverage": "Implementation report: boundary, native source/image, recorded focused and broad test results, remaining work; private original evidence was not independently available."
+    },
+    {
+      "id": "S03",
+      "kind": "repository-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/ref/heads/development",
+      "coverage": "Remote branch read resolved a3fd4d22f2c4e0432cf389f194c6468b44ab7371; compare against previous 24d182c664d0b1f293098643e52caed7384a5d50 includes earlier WB3 composer/minimap and WB4 overlay."
+    },
+    {
+      "id": "S04",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj",
+      "observed_blob_sha": "f8b524c7352d1de8ba256dc95ab2540010c361fe",
+      "coverage": "Complete declared dependency file, not an independently executed MSBuild graph."
+    },
+    {
+      "id": "S05",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
+      "observed_blob_sha": "07d80f6fec648f5ed8f2eadccf935f47f20618a6",
+      "coverage": "Complete adapter and original receiver/submission capture."
+    },
+    {
+      "id": "S06",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+      "observed_blob_sha": "555199e104364eb22ea61aa4854d9ba39e858d51",
+      "coverage": "Lines 220-409: original text opening, immutable input, expected project/participants, commit and failure paths; task continuity."
+    },
+    {
+      "id": "S07",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "observed_blob_sha": null,
+      "coverage": "Native collection host: opening and operation identities, detach/cleanup, guarded results and action outcomes; final nested operation helper was outside displayed full-file excerpt."
+    },
+    {
+      "id": "S08",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
+      "observed_blob_sha": "c9e03a04a8f5f7c846f02ea1b903f45e91a9b1eb",
+      "coverage": "Complete governed edit renderer, notes lifetime, actual FileInteraction, save/close guards."
+    },
+    {
+      "id": "S09",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Integration/CanDoItAll.FileTools.Integration/FileAccessAuthorizationCoordinator.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Integration/CanDoItAll.FileTools.Integration/FileAccessAuthorizationCoordinator.cs",
+      "observed_blob_sha": "f42b6f55105164334e00c4048198e986a7e5e2aa",
+      "coverage": "Lines 1-230: native grant issuance/resolution and writable-storage checks, scope/binding/policy preservation."
+    },
+    {
+      "id": "S10",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletionProcessor.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletionProcessor.cs",
+      "observed_blob_sha": "4e964e22c286123bca98f0432e7d93cf05b3d5f9",
+      "coverage": "Complete worker processor, original authority and expected content, provider fingerprint, effect phases, bounded image header checks and media receipt."
+    },
+    {
+      "id": "S11",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Content.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Content.cs",
+      "observed_blob_sha": null,
+      "coverage": "Summary/export and transcript operation flows through the rendered-state changes; end-of-file helpers were outside the displayed excerpt."
+    },
+    {
+      "id": "S12",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.Content.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchService.Content.cs",
+      "observed_blob_sha": "0c7894c43069dadd805cb337f56b688be6d4e55d",
+      "coverage": "Complete admitted content owner entry points and current-content comparison."
+    },
+    {
+      "id": "S13",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectStructurePageActionLifetimeTests.Content.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/tests/Components/CanDoItAll.Tests.Components/ProjectStructurePageActionLifetimeTests.Content.cs",
+      "observed_blob_sha": "b6ff8f3baecafe9c3c45e2416b3e230ab7987a29",
+      "coverage": "Complete inspected tests: real native records, transcript concurrency/faults, exact export bytes and stale callbacks; not executed by this review."
+    },
+    {
+      "id": "S14",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+      "observed_blob_sha": "cd1abb4729dc2021793544ab8ee3149a4aaab8af",
+      "coverage": "Lines 190-445 at current SHA: loading, quick-create, participant Save and most meeting Save. Remaining helpers also have prior WB3 source context; current defect is visible in the inspected range."
+    },
+    {
+      "id": "S15",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Projects/ProjectPartyIntegrationContracts.cs",
+      "observed_blob_sha": "7957e166f0956491d15ff32847da393069c7b82b",
+      "coverage": "Lines 1-405: mutable quick-create request, exact assignment snapshots, existing conditional replacement and unavailable result."
+    },
+    {
+      "id": "S16",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "observed_blob_sha": "4b4c6ad2c1ea67535ec0e617d2f9030a63237a09",
+      "coverage": "Lines 1950-2270: original create helper and secret reference create/edit/read/write phases; lines 2600-2860: current admitted view-state queue."
+    },
+    {
+      "id": "S17",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+      "observed_blob_sha": "85d3a5e60e39de1f04b17a4d66747dda8297f628",
+      "coverage": "Complete runtime approval, launch, stop and deferred readiness host."
+    },
+    {
+      "id": "S18",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeQuickActions.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeQuickActions.cs",
+      "observed_blob_sha": "27e39d24daf21c9b2574521b84f76d538d7cb5c6",
+      "coverage": "Lines 1-300: current quick-action meanings, runtime capabilities and web-preview projections; finish caller census during execution."
+    },
+    {
+      "id": "S19",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+      "observed_blob_sha": "bc39fc983ca80080571dac7f76d8711b90d4b23b",
+      "coverage": "Lines 1-300: native launcher contract, plan/approval/capability checks and dispatch to existing adapters."
+    },
+    {
+      "id": "S20",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
+      "observed_blob_sha": "fd50aa20dfaf6b3598f5e2e036291b7c7128e8f4",
+      "coverage": "Lines 1-240: executable resolution, direct owned-process start/early-exit and cancellation result, environment composition entry."
+    },
+    {
+      "id": "S21",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeSessionRegistry.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeSessionRegistry.cs",
+      "observed_blob_sha": "ae68d33ae15c2eb653600712669086fa41b81251",
+      "coverage": "Lines 1-210: native process identity, start serialization and exact acquired-session Stop; the rest must be traced before edits."
+    },
+    {
+      "id": "S22",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureWebPreviewDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureWebPreviewDialog.razor",
+      "observed_blob_sha": "2e971f0e68380e3b4a2ad9452b3201c21aa275c4",
+      "coverage": "Complete existing EmbeddedBrowser renderer and Stop/Close/Open browser actions."
+    },
+    {
+      "id": "S23",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureRuntimeLaunchApprovalDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureRuntimeLaunchApprovalDialog.razor",
+      "observed_blob_sha": "a6d93f763c52c133e955fbad3399fc1f5476f3f7",
+      "coverage": "Complete existing explicit script confirmation dialog and close receiver."
+    },
+    {
+      "id": "S24",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "docs/architecture/runtime-execution-portability.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/docs/architecture/runtime-execution-portability.md",
+      "observed_blob_sha": "c88613d881016b2c4d7bfc2608ae5f1938f62497",
+      "coverage": "Lines 1-180: canonical distinctions among typed runtime, terminal, shell, environment, readiness, embedding and stop."
+    },
+    {
+      "id": "S25",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "AGENTS.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/AGENTS.md",
+      "observed_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "Complete current repository instructions."
+    },
+    {
+      "id": "S26",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": ".github/copilot-instructions.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/.github/copilot-instructions.md",
+      "observed_blob_sha": "dde5c2fdbcb56b7b5f48dfa17ed74fda238c2e1a",
+      "coverage": "Complete current engineering, shared-component and closure instructions."
+    },
+    {
+      "id": "S27",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "docs/testing.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/docs/testing.md",
+      "observed_blob_sha": "9dd1a8e0397096af0be65b09bcbd3262bd452225",
+      "coverage": "Lines 1-155: current local loop, isolated PostgreSQL, discovery, bUnit lifecycle and lane distinctions; read full current file for execution."
+    },
+    {
+      "id": "S28",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": ".github/workflows/ci.yml",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/.github/workflows/ci.yml",
+      "observed_blob_sha": "30a681884b3df0b404b946a36deee7665329b18d",
+      "coverage": "Lines 1-125: triggers, matching Components branch resolved to commit, FileTools pin and job topology."
+    },
+    {
+      "id": "S29",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "42cd807dec761daa79fa8b48ff78c2330f615354",
+      "path": "docs/architecture/ui-component-seams.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/42cd807dec761daa79fa8b48ff78c2330f615354/docs/architecture/ui-component-seams.md",
+      "observed_blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "coverage": "Lines 1-155: authoritative placement, state and effects, outcome and reconciliation rules."
+    },
+    {
+      "id": "S30",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "review_commit": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+      "path": "src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasOverlayDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/a3fd4d22f2c4e0432cf389f194c6468b44ab7371/src/CanDoItAll.Components.CanvasLib/Components/Workbench/CanvasOverlayDialog.razor",
+      "observed_blob_sha": "0afa8731baadfb3f9bb2956230cfe6feaa172420",
+      "coverage": "Lines 90-175: remotely available neutral overlay state and layout, no native product service."
+    },
+    {
+      "id": "F01",
+      "kind": "official-documentation",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/blazor/components/synchronization-context",
+      "coverage": "Official Blazor reentrancy/lifecycle reference; supports the awaiting-origin test requirements."
+    },
+    {
+      "id": "F02",
+      "kind": "official-documentation",
+      "url": "https://www.gnupg.org/documentation/manuals/gnupg/Agent-Options.html",
+      "coverage": "Official gpg-agent cache options: default and absolute maximum cache lifetime are different."
+    }
+  ]
+}

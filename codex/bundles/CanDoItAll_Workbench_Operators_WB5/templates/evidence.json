@@ -1,0 +1,305 @@
+{
+  "bundle_id": "CDA-WORKBENCH-OPERATORS-WB5",
+  "evidence_is_template": true,
+  "source_pair": {
+    "main": null,
+    "components": null,
+    "filetools": null
+  },
+  "runtime_tests_executed": false,
+  "ready_for_next_slice": false,
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "name": "Source pair, immutable input and entry graphs",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Actual current main/Components/FileTools, supplied input, signing and protected closures.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G01",
+      "name": "WB5-P1 original quick-create regression",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Native delayed creation must not change successor editor or recreate after read-back failure.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G02",
+      "name": "Complete participant/meeting rendering",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "All original controls and real children are in the leaf and used by production.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G03",
+      "name": "Draft identity and raw inputs",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Same-opening retention, validation, before-blur input, meaningful retire and two independent forms.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G04",
+      "name": "Directory reads and late completion",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Latest generation and actor/profile/project/selection checks for results/errors/finally.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G05",
+      "name": "Native quick-create phases",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Supported kinds, accepted exact PartyId, conditional follow-ups and no implicit Agent/assignment grant.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G06",
+      "name": "Canonical participant sync",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Original role set, affiliation/primary IDs, explicit local-only/unlink and conditional conflicts.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G07",
+      "name": "Meeting defaults and missing references",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Draft-only defaults, exact Save memberships, no silent loss from filtered/unavailable options.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G08",
+      "name": "Original node and project authority",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Recreated project/record, changed kind/parent, profile/auth replacement and A-B-A negatives.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G09",
+      "name": "Sensitive directory projection",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "No prohibited contact data in hidden UI/search/logs; legitimate native data unchanged.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G10",
+      "name": "Assignment and metadata partial results",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Two owners, rich metadata, committed stages, exact recovery and untouched neighbors.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G11",
+      "name": "Secret reference picker",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Metadata-only existing selection, missing/denied states and unchanged reference format.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G12",
+      "name": "Protected create draft",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Real SecretField, short-lived new value, capture and clearing with no private evidence leakage.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G13",
+      "name": "Secret create-and-use phases",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Real vault ID, metadata read, reference commit and read-only recovery without duplicate creation.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G14",
+      "name": "Secret authority and stale callbacks",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Two openings, lost acknowledgements, exact target and Agent without grant remains denied.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G15",
+      "name": "Complete quick-action presentation",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Offered original-node actions, actual compatibility callers and deferred owner composition.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G16",
+      "name": "One-launch explicit approval",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Exact snapshot, duplicate/refused/stale approval, no future cached consent.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G17",
+      "name": "Actual native runtime acquisition",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Owned harmless direct process, pre/post-start outcomes and exact session identity.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G18",
+      "name": "Exact Stop and independent processes",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Old Stop cannot kill replacement; native reference checks and descendant cleanup retained.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G19",
+      "name": "Readiness ownership",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Delayed success/error, old wait same page, navigation, close and no successor preview effect.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G20",
+      "name": "Runtime environment and path policy",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Original typed arguments, allowlists, target checks and no shell/credential fallback.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G21",
+      "name": "Terminal/elevation/host availability",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Available native host proof and explicit unsupported/unavailable lanes without unapproved elevation.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G22",
+      "name": "Actual secure web preview",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "EmbeddedBrowser restrictions, origin policy, close does not stop, Stop/exit feedback.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G23",
+      "name": "Independent sandbox fidelity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Real complete family renderers and two views without production bootstrap/database/services.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G24",
+      "name": "Dependency and public compatibility",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Evaluated/loaded graphs, moved types and no reverse product dependencies.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G25",
+      "name": "Source and published desktop assets",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Fast/Parity actual child widgets, visible actions, geometry/focus and served bytes at 1920x1080.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G26",
+      "name": "Measured development loop",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Three reversible samples per owned kind, PID/navigation/restart and actual restoration qualified.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G27",
+      "name": "Joint native operator/Agent/file journey",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "UI-created project, real approvals/refusals, hidden canary and stored/download bytes.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G28",
+      "name": "Workflow/Scheduler/Usage/History continuity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Saved version/output, finite enabled restart, honest partial indexes and content authorization.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G29",
+      "name": "Final owned multi-instance consumers",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Source and two clients, exact friendly labels/route IDs/credential identities, no paid calls.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G30",
+      "name": "Current tests and static/security gates",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Production build, fresh discovery, no-write portability, scans and maintained docs.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    },
+    {
+      "id": "G31",
+      "name": "Final broad decision and signed closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "proof": "Original attempt identities, justified Stable scope, qualifiers, signatures, safe resources and roadmap.",
+      "qualification": null,
+      "remaining_product_blocker": null
+    }
+  ],
+  "signature_checks": [],
+  "resources": [],
+  "remaining_findings": []
+}
