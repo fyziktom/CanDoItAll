@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T01:05:21.136675+00:00",
+  "generated_utc": "2026-10-06T08:40:52.635619+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15246,
+  "allowance_count": 15252,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59360,12 +59360,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
-      "category": "external-tool",
-      "source_fingerprint": "9b8262f9917bdf111608614d6876ae20fe176295eabc9fe33c35f4e692e7b74d",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectTaskDialogSession.cs",
       "category": "link-reparse",
       "source_fingerprint": "6ce974a171147b325dba4d32cafd8faa019805f192a9b55c3cf288892477eacd",
@@ -72200,6 +72194,42 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
+      "category": "environment",
+      "source_fingerprint": "12dfc27a3f5621c8fab5aba2d04fe6d7704c1fed6e56a1d3617cd581687e53a6",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "65b9633161d372faac4c2f6b5a912aaca22b8407bbcf047000c92d44f8db09f4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "6e548c813aa7d29123b44c67ae39339f8ab422fb9147d3394bb80649c8b12c85",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/ContentWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "8bebe651c55e1aef37986705f060663acb548cd93d8fb04e217936ad4f396a31",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "fdf226b405274d299f4406fea258839b7d901d06fbaffb5ce10b1d6875ee1b82",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "4ce33c07d0fafa244969907f441d4bdb733cf770e0f937a5ee99f39e951ab045",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/InsightsWatchState.cs",
       "category": "environment",
       "source_fingerprint": "18fa21947ac68fbce62dd9a92537f0914f6e7d7fc46351505ca2013e0998442f",
@@ -75491,6 +75521,12 @@
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "category": "case-policy",
       "source_fingerprint": "c82ef3c83c59a08b776ae9d455e8689ff6fabc9028a421ee670ec09d04650137",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
+      "category": "external-tool",
+      "source_fingerprint": "df417f28940217787279e730a2cee1ac42f45272450e0ed7a63d5f76a05e811e",
       "count": 1
     },
     {

@@ -1,0 +1,55 @@
+<PanelCard data-testid="content-text-specimen" aria-label="@Name">
+    <Stack GapScale="LayoutGap.Medium">
+        <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
+        <Cluster Gap="LayoutGap.Small">
+            <DropDown TValue="ContentTextKind" Data="kinds" @bind-Value="kind" Change="@(_ => Reopen())" Style="width:10rem" aria-label="Text kind" />
+            <DropDown TValue="ContentTextOutcomeKind" Data="outcomes" @bind-Value="outcome" Style="width:12rem" aria-label="Owner outcome" />
+            <CheckBox TValue="bool" @bind-Value="hold" aria-label="Hold submission" />
+            <TextBlock TextStyle="TextStyle.Caption" Value="Hold" />
+            <Button Text="Release" Click="@(() => pending?.TrySetResult())" />
+            <Button Text="New opening" Click="Reopen" />
+        </Cluster>
+        <ContentTextForm OpeningId="opening" Definition="Definition" InitialDraft="@(new(Name + " file", "docs", "Descriptive notes"))"
+                         Submit="SubmitAsync" Completed="Completed" Cancelled="Reopen" />
+        <TextBlock TextStyle="TextStyle.Caption" Value="@feedback" data-testid="content-text-receipt" />
+    </Stack>
+</PanelCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private readonly ContentTextKind[] kinds = Enum.GetValues<ContentTextKind>();
+    private readonly ContentTextOutcomeKind[] outcomes = Enum.GetValues<ContentTextOutcomeKind>();
+    private Guid opening = Guid.NewGuid();
+    private ContentTextKind kind;
+    private ContentTextOutcomeKind outcome = ContentTextOutcomeKind.Prepared;
+    private bool hold;
+    private TaskCompletionSource? pending;
+    private string feedback = "No submission.";
+    private string Extension => kind switch {
+        ContentTextKind.Json => "json", ContentTextKind.Markdown => "md", ContentTextKind.Mermaid => "mmd", ContentTextKind.Log => "log", _ => "txt"
+    };
+    private ContentTextDefinition Definition => new(kind, kind.ToString(), "Title", "File title", "Context", "Folder or context", "Notes", "Describe the file",
+        $"content.{Extension}", kind == ContentTextKind.Json ? "{\"enabled\":true}" : "Enter file content", $".{Extension}", "Choose an existing file", "Create file", 16 * 1024 * 1024);
+
+    private void Reopen() {
+        opening = Guid.NewGuid();
+        feedback = "New opening; earlier results remain with their original attempt.";
+    }
+
+    private async Task<ContentTextOutcome> SubmitAsync(ContentTextSubmission submission, CancellationToken cancellationToken) {
+        var acceptedKind = outcome;
+        var original = opening;
+        if (hold) {
+            var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            pending = gate;
+            await gate.Task;
+        }
+        var bytes = submission.Upload?.Bytes.ToArray() ?? System.Text.Encoding.UTF8.GetBytes(submission.Content);
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        var receipt = acceptedKind is ContentTextOutcomeKind.Committed or ContentTextOutcomeKind.PartialCommit
+            ? new ContentAssetReceipt($"scenario:{submission.SubmissionId:D}", Guid.NewGuid(), submission.Upload?.FileName ?? submission.FileName) : null;
+        return new(acceptedKind, $"Scenario {acceptedKind}: {bytes.Length} bytes, SHA-256 {hash}. Opening {original:D}.", receipt);
+    }
+
+    private void Completed(ContentTextOutcome value) => feedback = value.Message;
+}

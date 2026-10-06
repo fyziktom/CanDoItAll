@@ -352,6 +352,12 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
     }
 
     private sealed class HeldUploadStream(byte[] content, TaskCompletionSource entered, TaskCompletionSource release) : MemoryStream(content, writable: false) {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) {
+            entered.TrySetResult();
+            await release.Task.WaitAsync(cancellationToken);
+            return await base.ReadAsync(buffer, cancellationToken);
+        }
+
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) {
             entered.TrySetResult();
             await release.Task.WaitAsync(cancellationToken);

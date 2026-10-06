@@ -18,6 +18,7 @@
     "crmhr:watch": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css --watch",
     "planning:build": "tailwindcss -i ./planning-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/wwwroot/css/planning-fast.css",
     "insights:build": "tailwindcss -i ./insights-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/wwwroot/css/insights-fast.css",
-    "structure:build": "tailwindcss -i ./structure-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/wwwroot/css/structure-fast.css"
+    "structure:build": "tailwindcss -i ./structure-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/wwwroot/css/structure-fast.css",
+    "content:build": "tailwindcss -i ./content-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/wwwroot/css/content-fast.css"
   }
 }

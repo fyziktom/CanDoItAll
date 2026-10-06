@@ -1,6 +1,7 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Content.UI;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -138,7 +139,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
             definition.AcceptedFileTypes,
             definition.FilePrompt,
             definition.SubmitLabel);
-        Func<ProjectStructureTextAssetDialogResult, Task> persistSubmissionAsync = submission =>
+        Func<ProjectStructureTextAssetDialogResult, Task<ContentTextOutcome>> persistSubmissionAsync = submission =>
             PersistDialogSubmissionAsync(
                 context,
                 definition,
@@ -154,7 +155,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
                 {
                     [nameof(ProjectStructureTextAssetCreateDialog.CreateRequest)] = createRequest,
                     [nameof(ProjectStructureTextAssetCreateDialog.Definition)] = dialogDefinition,
-                    [nameof(ProjectStructureTextAssetCreateDialog.PersistSubmissionAsync)] = persistSubmissionAsync,
+                    [nameof(ProjectStructureTextAssetCreateDialog.PersistOutcomeAsync)] = persistSubmissionAsync,
                     [nameof(ProjectStructureTextAssetCreateDialog.CancellationToken)] = dialogCancellationToken
                 },
                 new DialogOptions
@@ -177,7 +178,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         }
     }
 
-    private async Task PersistDialogSubmissionAsync(
+    private async Task<ContentTextOutcome> PersistDialogSubmissionAsync(
         ProjectStructureTextAssetCreationContext context,
         ProjectStructureCreateLeafDefinition definition,
         ProjectFileSubtype subtype,
@@ -186,12 +187,14 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
     {
         try
         {
-            await CreateNodeAsync(
+            var created = await CreateNodeAsync(
                 context,
                 definition,
                 submission.CreateRequest,
                 submission.Media,
                 cancellationToken);
+            return new(ContentTextOutcomeKind.Committed, $"{created.Title} was saved.",
+                new(created.Id, created.RecordId, created.MediaOriginalFileName));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -200,6 +203,9 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         catch (ProjectStructureNodeCreatedWithFollowUpFailureException exception)
         {
             ReportCommittedWithFollowUpFailure(context, definition, subtype, exception);
+            var created = exception.CreatedNode;
+            return new(ContentTextOutcomeKind.PartialCommit, $"{created.Title} was saved. Observe the original project before continuing.",
+                new(created.Id, created.RecordId, created.MediaOriginalFileName));
         }
         catch (ProjectStructureTextAssetSubmissionException)
         {
@@ -209,12 +215,12 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         {
             LogFailure(context, definition, subtype, exception);
             throw new ProjectStructureTextAssetSubmissionException(
-                ResolveUserMessage(exception),
-                exception);
+                "The original file write is unconfirmed. Observe the original project before trying again.",
+                exception, requiresObservation: true);
         }
     }
 
-    private static async Task CreateNodeAsync(
+    private static async Task<ProjectStructureNode> CreateNodeAsync(
         ProjectStructureTextAssetCreationContext context,
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest,
@@ -230,6 +236,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         {
             throw new InvalidOperationException("Text asset creation completed without a persisted node.");
         }
+        return created;
     }
 
     private void LogFailure(

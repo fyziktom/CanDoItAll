@@ -139,3 +139,26 @@ maps to the existing content normalization/preparation service and snapshot-boun
 This avoids moving native authoring policy into UI or introducing a new contract assembly
 only to share five text-form choices. Isolated renderer tests will exercise the new leaf
 without native DI; the existing native harness remains the composition proof.
+
+## W1 text extraction checkpoint
+
+Content UI now owns the complete text form and actual FileUpload child. The native dialog
+maps its immutable submission to the original normalization and persistence owners. The
+typed outcome distinguishes preparation, committed identity, known partial commit, rejection
+and unconfirmed dispatch. Cancellation after dispatch also requires observation. Uploads
+are bounded while reading and must exactly match their declared length; the leaf preserves
+the original bytes and leaves format/UTF-8 policy with the native owner.
+
+The current native selection passes 34/34, and the independent leaf passes 19/19 with zero
+skips. The source Parity sandbox ran two specimens at 1920×1080/DPR1. An actual BOM-prefixed
+18-byte upload retained SHA-256 `4607B9844B4D6B1A32B4697A80604671B4CE469DABDF482FF6770A946F468708`;
+the second specimen remained untouched. Browser automation setup errors are retained; the
+successful readback observed the accepted attempt instead of resubmitting it. Final full
+family source/publish/browser proof remains W4 work.
+
+The new leaf, independent test project and sandbox are registered in the root solution;
+the test project is in both Components/Stable solutions and all three explicit CI component
+lists. Portability review identified four existing sandbox diagnostics patterns in the new
+watch endpoint and the moved text's accepted-extension string; the corresponding old
+text-dialog fingerprint is stale. These are intentional relocation/diagnostic findings,
+not OS assumptions or production authority changes.

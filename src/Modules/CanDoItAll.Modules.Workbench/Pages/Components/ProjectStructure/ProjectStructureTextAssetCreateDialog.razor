@@ -1,377 +1,87 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
-@using Microsoft.Extensions.Logging
-@inject DialogService DialogService
+@using CanDoItAll.Workbench.Content.UI
 @inject ProjectAssetCreationService AssetCreationService
-@inject ILogger<ProjectStructureTextAssetCreateDialog> Logger
 
-<Stack GapScale="LayoutGap.Large"
-       AlignItems="AlignItems.Stretch"
-       data-testid="project-structure-text-asset-create-content">
-    <Alert AlertStyle="AlertStyle.Info"
-           Variant="Variant.Outlined">
-        Create a new stored file from text, or attach an existing file. Both paths use the configured project storage and the same FileTools authorization flow.
-    </Alert>
-
-    <FormField Text="Content source">
-        <Cluster Gap="LayoutGap.Small"
-                 Wrap="FlexWrap.Wrap">
-            <Button Text="Create new"
-                    Disabled="@SubmissionLocked"
-                    Icon="note_add"
-                    ButtonStyle="@(sourceMode == ProjectAssetSourceMode.CreateNew ? ButtonStyle.Info : ButtonStyle.Base)"
-                    Variant="Variant.Outlined"
-                    aria-pressed="@(sourceMode == ProjectAssetSourceMode.CreateNew)"
-                    data-testid="project-structure-text-asset-source-create"
-                    Click="SelectCreateNew" />
-            <Button Text="Upload existing"
-                    Disabled="@SubmissionLocked"
-                    Icon="upload_file"
-                    ButtonStyle="@(sourceMode == ProjectAssetSourceMode.UploadExisting ? ButtonStyle.Info : ButtonStyle.Base)"
-                    Variant="Variant.Outlined"
-                    aria-pressed="@(sourceMode == ProjectAssetSourceMode.UploadExisting)"
-                    data-testid="project-structure-text-asset-source-upload"
-                    Click="SelectUploadExisting" />
-        </Cluster>
-    </FormField>
-
-    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
-          Gap="LayoutGap.Medium">
-        <FormField Text="@Definition.TitleLabel">
-            <TextBox Value="@title"
-                     Disabled="@SubmissionLocked"
-                     ValueChanged="HandleTitleChangedAsync"
-                     Placeholder="@Definition.TitlePlaceholder"
-                     Immediate="true"
-                     data-testid="project-structure-text-asset-title" />
-        </FormField>
-
-        <FormField Text="@Definition.SubtitleLabel">
-            <TextBox Value="@subtitle"
-                     Disabled="@SubmissionLocked"
-                     ValueChanged="HandleSubtitleChangedAsync"
-                     Placeholder="@Definition.SubtitlePlaceholder"
-                     Immediate="true"
-                     data-testid="project-structure-text-asset-subtitle" />
-        </FormField>
-    </Grid>
-
-    @if (sourceMode == ProjectAssetSourceMode.CreateNew)
-    {
-        <FormField Text="File name">
-            <TextBox Value="@fileName"
-                     Disabled="@SubmissionLocked"
-                     ValueChanged="HandleFileNameChangedAsync"
-                     Placeholder="@Definition.FileNamePlaceholder"
-                     Immediate="true"
-                     data-testid="project-structure-text-asset-file-name" />
-        </FormField>
-
-        <FormField Text="File content">
-            <TextArea Value="@content"
-                      Disabled="@SubmissionLocked"
-                      ValueChanged="HandleContentChangedAsync"
-                      Placeholder="@Definition.ContentPlaceholder"
-                      Rows="14"
-                      Immediate="true"
-                      data-testid="project-structure-text-asset-content" />
-        </FormField>
-    }
-    else
-    {
-        <FileUpload PrimaryText="@Definition.FilePrompt"
-                    Disabled="@SubmissionLocked"
-                    SecondaryText="The selected file remains subject to the project asset size and storage policies."
-                    ButtonText="Choose file"
-                    Accept="@Definition.AcceptedFileTypes"
-                    Compact="true"
-                    Change="HandleFileChangedAsync"
-                    RootTestHookId="project-structure-text-asset-upload"
-                    InputTestHookId="project-structure-text-asset-upload-input" />
-
-        @if (uploadedFile is not null)
-        {
-            <Alert AlertStyle="AlertStyle.Info"
-                   Variant="Variant.Outlined"
-                   data-testid="project-structure-text-asset-upload-selection">
-                Selected @uploadedFile.Name (@FormatFileSize(uploadedFile.Size)).
-            </Alert>
-        }
-    }
-
-    <FormField Text="@Definition.NotesLabel">
-        <TextArea Value="@notes"
-                  Disabled="@SubmissionLocked"
-                  ValueChanged="HandleNotesChangedAsync"
-                  Placeholder="@Definition.NotesPlaceholder"
-                  Rows="3"
-                  Immediate="true"
-                  data-testid="project-structure-text-asset-notes" />
-    </FormField>
-
-    @if (!string.IsNullOrWhiteSpace(validationError))
-    {
-        <Alert AlertStyle="AlertStyle.Danger"
-               data-testid="project-structure-text-asset-validation-error">
-            @validationError
-        </Alert>
-    }
-
-    <Cluster Gap="LayoutGap.Small"
-             JustifyContent="JustifyContent.End">
-        <Button Text="Cancel"
-                Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
-                Disabled="@isSubmitting"
-                data-testid="project-structure-text-asset-cancel"
-                Click="CancelAsync" />
-        <Button Text="@Definition.SubmitLabel"
-                Icon="@(sourceMode == ProjectAssetSourceMode.CreateNew ? "note_add" : "upload_file")"
-                ButtonStyle="ButtonStyle.Info"
-                Disabled="@SubmitDisabled"
-                IsBusy="@isSubmitting"
-                data-testid="project-structure-text-asset-submit"
-                Click="SubmitAsync" />
-    </Cluster>
-</Stack>
+<ContentTextForm OpeningId="openingId" Definition="contentDefinition" InitialDraft="initialDraft"
+                 Submit="submit" Completed="complete" Cancelled="cancel" CancellationToken="CancellationToken" />
 
 @code {
-    private ProjectAssetSourceMode sourceMode = ProjectAssetSourceMode.CreateNew;
-    private string title = string.Empty;
-    private string subtitle = string.Empty;
-    private string notes = string.Empty;
-    private string fileName = string.Empty;
-    private string content = string.Empty;
-    private IBrowserFile? uploadedFile;
-    private string validationError = string.Empty;
-    private bool initialized;
-    private bool isSubmitting;
-    private bool requiresObservation;
+    private Guid openingId;
+    private ProjectStructureTextAssetDialogDefinition? boundDefinition;
+    private CanvasWorkbenchCreateActionRequest? boundRequest;
+    private ContentTextDefinition contentDefinition = default!;
+    private ContentTextInitialDraft initialDraft = default!;
+    private Func<ContentTextSubmission, CancellationToken, Task<ContentTextOutcome>> submit = default!;
+    private Func<ContentTextOutcome, Task> complete = default!;
+    private Func<Task> cancel = default!;
 
-    [CascadingParameter]
-    public DialogReference? DialogReference { get; set; }
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    [Parameter, EditorRequired] public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
+    [Parameter, EditorRequired] public ProjectStructureTextAssetDialogDefinition Definition { get; set; } = default!;
+    [Parameter] public Func<ProjectStructureTextAssetDialogResult, Task>? PersistSubmissionAsync { get; set; }
+    [Parameter] public Func<ProjectStructureTextAssetDialogResult, Task<ContentTextOutcome>>? PersistOutcomeAsync { get; set; }
+    [Parameter] public CancellationToken CancellationToken { get; set; }
 
-    [Parameter, EditorRequired]
-    public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public ProjectStructureTextAssetDialogDefinition Definition { get; set; } = default!;
-
-    [Parameter]
-    public Func<ProjectStructureTextAssetDialogResult, Task>? PersistSubmissionAsync { get; set; }
-
-    [Parameter]
-    public CancellationToken CancellationToken { get; set; }
-
-    private bool SubmitDisabled
-        => SubmissionLocked ||
-            sourceMode == ProjectAssetSourceMode.UploadExisting && uploadedFile is null;
-
-    private bool SubmissionLocked => isSubmitting || requiresObservation;
-
-    protected override void OnParametersSet()
-    {
-        if (initialized)
-        {
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(boundRequest, CreateRequest) && ReferenceEquals(boundDefinition, Definition)) {
             return;
         }
-
-        initialized = true;
-        title = CreateRequest.Title ?? string.Empty;
-        subtitle = CreateRequest.Subtitle ?? string.Empty;
-        notes = CreateRequest.Notes ?? string.Empty;
-        fileName = Definition.FileNamePlaceholder;
-    }
-
-    private void SelectCreateNew()
-    {
-        sourceMode = ProjectAssetSourceMode.CreateNew;
-        validationError = string.Empty;
-    }
-
-    private void SelectUploadExisting()
-    {
-        sourceMode = ProjectAssetSourceMode.UploadExisting;
-        validationError = string.Empty;
-    }
-
-    private Task HandleTitleChangedAsync(string? value)
-    {
-        title = value ?? string.Empty;
-        validationError = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleSubtitleChangedAsync(string? value)
-    {
-        subtitle = value ?? string.Empty;
-        validationError = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleNotesChangedAsync(string? value)
-    {
-        notes = value ?? string.Empty;
-        validationError = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleFileNameChangedAsync(string? value)
-    {
-        fileName = value ?? string.Empty;
-        validationError = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleContentChangedAsync(string? value)
-    {
-        content = value ?? string.Empty;
-        validationError = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task HandleFileChangedAsync(InputFileChangeEventArgs args)
-    {
-        uploadedFile = args.File;
-        validationError = string.Empty;
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = Path.GetFileNameWithoutExtension(uploadedFile.Name);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task SubmitAsync()
-    {
-        if (SubmissionLocked)
-        {
-            return;
-        }
-
-        string normalizedTitle = title.Trim();
-        if (normalizedTitle.Length == 0)
-        {
-            validationError = "A file title is required.";
-            return;
-        }
-
-        if (normalizedTitle.Length > 200)
-        {
-            validationError = "The file title cannot exceed 200 characters.";
-            return;
-        }
-
-        if (subtitle.Trim().Length > 240)
-        {
-            validationError = "The folder or context cannot exceed 240 characters.";
-            return;
-        }
-
-        isSubmitting = true;
-        validationError = string.Empty;
-        var request = CreateRequest with { Title = normalizedTitle, Subtitle = subtitle.Trim(), Notes = notes.Trim(), UploadedFile = null };
+        var receiver = DialogReference ?? throw new InvalidOperationException("Text asset creation requires its original dialog reference.");
+        var original = CreateRequest;
         var definition = Definition;
-        var submittedMode = sourceMode;
-        var submittedFileName = fileName;
-        var submittedContent = content;
-        var submittedUpload = uploadedFile;
-        var cancellationToken = CancellationToken;
         var persist = PersistSubmissionAsync;
-        var receiver = DialogReference;
-        try
-        {
-            if (receiver is null) {
-                throw new InvalidOperationException("Text asset creation requires its original dialog reference.");
+        var persistOutcome = PersistOutcomeAsync;
+        boundRequest = original;
+        boundDefinition = definition;
+        openingId = Guid.NewGuid();
+        var kind = definition.FileSubtype switch {
+            ProjectFileSubtype.Text => ContentTextKind.Text,
+            ProjectFileSubtype.Json => ContentTextKind.Json,
+            ProjectFileSubtype.Markdown => ContentTextKind.Markdown,
+            ProjectFileSubtype.Mermaid => ContentTextKind.Mermaid,
+            ProjectFileSubtype.Log => ContentTextKind.Log,
+            _ => throw new ArgumentOutOfRangeException(nameof(Definition), "A supported text format is required.")
+        };
+        contentDefinition = new(kind, definition.Label, definition.TitleLabel, definition.TitlePlaceholder,
+            definition.SubtitleLabel, definition.SubtitlePlaceholder, definition.NotesLabel, definition.NotesPlaceholder,
+            definition.FileNamePlaceholder, definition.ContentPlaceholder, definition.AcceptedFileTypes,
+            definition.FilePrompt, definition.SubmitLabel, ProjectAssetCreationLimits.MaximumEditableTextBytes);
+        initialDraft = new(original.Title ?? string.Empty, original.Subtitle ?? string.Empty, original.Notes ?? string.Empty);
+        ProjectStructureTextAssetDialogResult? accepted = null;
+        submit = async (submission, cancellationToken) => {
+            try {
+                var media = submission.Source switch {
+                    ContentTextSource.CreateNew => await AssetCreationService.CreateTextAsync(definition.FileSubtype, submission.FileName,
+                        submission.Content, cancellationToken),
+                    ContentTextSource.UploadExisting when submission.Upload is { } upload => AssetCreationService.AdaptTextUpload(
+                        definition.FileSubtype, upload.FileName, upload.ContentType, upload.Bytes, cancellationToken),
+                    _ => throw new InvalidDataException("Choose an existing file to upload.")
+                };
+                var result = new ProjectStructureTextAssetDialogResult(original with {
+                    Title = submission.Title, Subtitle = submission.Subtitle, Notes = submission.Notes, UploadedFile = null
+                }, media);
+                ContentTextOutcome outcome;
+                if (persistOutcome is not null) {
+                    outcome = await persistOutcome(result);
+                } else {
+                    if (persist is not null) {
+                        await persist(result);
+                    }
+                    outcome = new(ContentTextOutcomeKind.Prepared, persist is null ? "File content prepared." : "Submission accepted by its native owner.");
+                }
+                if (outcome.IsAccepted) {
+                    accepted = result;
+                }
+                return outcome;
+            } catch (ProjectAssetCreationException exception) {
+                return new(ContentTextOutcomeKind.Rejected, exception.Message);
+            } catch (ProjectStructureTextAssetSubmissionException exception) {
+                return new(exception.RequiresObservation ? ContentTextOutcomeKind.Unconfirmed : ContentTextOutcomeKind.Rejected, exception.Message);
             }
-            ProjectObjectMediaPayload media = submittedMode switch
-            {
-                ProjectAssetSourceMode.CreateNew => await AssetCreationService.CreateTextAsync(
-                    definition.FileSubtype,
-                    submittedFileName,
-                    submittedContent,
-                    cancellationToken),
-                ProjectAssetSourceMode.UploadExisting => await CreateUploadPayloadAsync(definition.FileSubtype, submittedUpload, cancellationToken),
-                _ => throw new ArgumentOutOfRangeException(nameof(sourceMode))
-            };
-            var result = new ProjectStructureTextAssetDialogResult(request, media);
-
-            if (persist is not null)
-            {
-                await persist(result);
-            }
-            requiresObservation = true;
-            await receiver.CloseAsync(result);
-        }
-        catch (ProjectAssetCreationException exception)
-        {
-            validationError = exception.Message;
-        }
-        catch (ProjectStructureTextAssetSubmissionException exception)
-        {
-            validationError = exception.Message;
-            requiresObservation = exception.RequiresObservation;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (IOException exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Project text asset upload could not be read. Subtype={Subtype} Extension={Extension}.",
-                definition.FileSubtype,
-                Path.GetExtension(submittedUpload?.Name ?? string.Empty));
-            validationError = "The selected file could not be read.";
-        }
-        finally
-        {
-            isSubmitting = false;
-        }
+        };
+        complete = _ => receiver.CloseAsync(accepted ?? throw new InvalidOperationException("No accepted text submission is available."));
+        cancel = () => receiver.CloseAsync();
     }
-
-    private async ValueTask<ProjectObjectMediaPayload> CreateUploadPayloadAsync(ProjectFileSubtype subtype, IBrowserFile? upload, CancellationToken cancellationToken)
-    {
-        if (upload is null)
-        {
-            throw new ProjectAssetCreationException(
-                ProjectAssetCreationErrorCode.InvalidContent,
-                "Choose an existing file to upload.");
-        }
-
-        var size = upload.Size;
-        var name = upload.Name;
-        var contentType = upload.ContentType;
-        if (size < 0 || size > ProjectAssetCreationLimits.MaximumEditableTextBytes)
-        {
-            throw new ProjectAssetCreationException(
-                ProjectAssetCreationErrorCode.ContentTooLarge,
-                $"Text assets are limited to {ProjectAssetCreationLimits.MaximumEditableTextBytes / (1024 * 1024)} MiB.");
-        }
-
-        await using Stream source = upload.OpenReadStream(
-            ProjectAssetCreationLimits.MaximumEditableTextBytes,
-            cancellationToken);
-        using var destination = new MemoryStream((int)size);
-        await source.CopyToAsync(destination, cancellationToken);
-        if (destination.Length != size) {
-            throw new ProjectAssetCreationException(ProjectAssetCreationErrorCode.InvalidContent,
-                "The selected file length changed while it was being read. Choose the file again.");
-        }
-        return AssetCreationService.AdaptTextUpload(
-            subtype,
-            name,
-            contentType,
-            destination.ToArray(),
-            cancellationToken);
-    }
-
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync() ?? throw new InvalidOperationException("The original text asset dialog is unavailable.");
-
-    private static string FormatFileSize(long bytes)
-        => bytes >= 1024 * 1024
-            ? $"{bytes / (1024d * 1024d):0.##} MiB"
-            : $"{Math.Max(1, bytes / 1024d):0.##} KiB";
 }

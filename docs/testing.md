@@ -1198,3 +1198,17 @@ partial snapshot, run the resumable command without rebuild/migration flags unle
 independently required, and verify canonical execution/observation payloads are unchanged.
 Then compare real Agent and SimpleChat aggregate totals with all three native dialogs,
 retaining the accepted workload and UTC interval and the independent dialog lifetimes.
+
+## Workbench Content UI WB4
+
+The independent renderer tests are in `tests/Components/CanDoItAll.Workbench.Content.UI.Tests`.
+They are registered in Components/Stable and the three explicit CI component lists.
+Build the owning test assembly, verify discovery with `--list-tests`, then execute the
+selected cases with `--no-build --no-restore`. Native text owner coverage is in
+`ProjectStructureTextAssetLifetimeTests`, `ProjectStructureTextAssetCreateDialogTests` and
+`ProjectStructureTextAssetCreationCoordinatorTests` in the main Components test project.
+The lifetime cases require the native PostgreSQL harness. The independent sandbox and
+its Fast/Parity commands are documented in
+[the sandbox README](../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md).
+See [WB4's boundary and evidence record](architecture/workbench-content-wb4.md) for current
+proof and incomplete groups. Only 1920×1080/DPR1 is in the WB4 visual campaign.
