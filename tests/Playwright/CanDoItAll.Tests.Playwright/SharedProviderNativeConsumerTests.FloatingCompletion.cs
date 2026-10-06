@@ -15,6 +15,11 @@ public sealed partial class SharedProviderNativeConsumerTests {
     [Trait("Category", "ExternalSharedProviderUi")]
     public async Task Final_image_AC1_floating_handles_detach_follow_next_turn_and_close_preserve_pending_approval() {
         await using var fixture = await SharedProviderConsumerFixture.StartAsync();
+        var continuation = Environment.GetEnvironmentVariable("CANDOITALL_WB5_FLOATING_CONTINUATION");
+        if (!string.IsNullOrWhiteSpace(continuation)) {
+            await VerifyFloatingRejectionContinuationAsync(fixture, continuation);
+            return;
+        }
         var profile = await ImportedResponsesAsync(fixture);
         var marker = "AC1_CONTEXT_" + Guid.NewGuid().ToString("N");
         var projectName = "AC1 context " + marker;
@@ -102,10 +107,12 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await Assertions.Expect(chat.GetByTestId("chat-approval-reject-" + proposal.GetProperty("approvalId").GetString())).ToBeVisibleAsync();
         await fixture.ScriptAsync(model.DisplayName, marker + "_B", TextStep("Explicit rejection preserved " + marker));
         await chat.GetByTestId("chat-approval-reject-" + proposal.GetProperty("approvalId").GetString()).ClickAsync();
+        await WaitForFloatingRejectionAsync(fixture, secondAgent, pendingRunId);
         await Assertions.Expect(chat).ToContainTextAsync("Explicit rejection preserved " + marker, new() { Timeout = 60_000 });
         await fixture.AssertScriptCompleteAsync(1);
         var rejected = await fixture.ReadAgentAsync(secondAgent);
         Assert.Equal(pendingRunId, rejected.GetProperty("runId").GetGuid());
+        Assert.True(JsonElement.DeepEquals(pending.GetProperty("session"), rejected.GetProperty("session")));
         Assert.All(rejected.GetProperty("proposals").EnumerateArray(), item => Assert.Equal((int)ExecutionApprovalStatus.Rejected, item.GetProperty("approvalStatus").GetInt32()));
         Assert.DoesNotContain(rejected.GetProperty("receipts").EnumerateArray(), item => item.GetProperty("invocationOutcome").GetInt32() == (int)AgentToolInvocationOutcome.Succeeded);
         Assert.Equal(firstConfiguration.GetRawText(), (await fixture.GetAsync($"api/agents/{firstAgent:D}")).GetRawText());
@@ -137,5 +144,69 @@ public sealed partial class SharedProviderNativeConsumerTests {
             Assert.Equal(projectId, snapshot.GetProperty("projectId").GetGuid());
             Assert.Equal([node.Id], snapshot.GetProperty("selectedNodeIds").EnumerateArray().Select(item => item.GetString()));
         }
+    }
+
+    private sealed record FloatingOriginal(Guid ProjectId, Guid FirstAgent, Guid SecondAgent,
+        JsonElement FirstConfiguration, JsonElement SecondConfiguration);
+
+    private static async Task VerifyFloatingRejectionContinuationAsync(SharedProviderConsumerFixture fixture, string directory) {
+        var original = JsonSerializer.Deserialize<FloatingOriginal>(await File.ReadAllTextAsync(
+            Path.Combine(directory, "ac1-context-original-configurations.json")), SharedProviderConsumerFixture.Json)!;
+        using var receipt = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "ac1-context-after-stop.json")));
+        var pending = receipt.RootElement.GetProperty("pending");
+        Assert.Equal(original.SecondAgent, pending.GetProperty("agentId").GetGuid());
+        Assert.Equal(original.ProjectId.ToString("D"), pending.GetProperty("sourceId").GetString());
+        var name = original.SecondConfiguration.GetProperty("name").GetString()!;
+        Assert.Matches("^PP2C file agent AC1_CONTEXT_[a-f0-9]{32}_B$", name);
+        var marker = name["PP2C file agent ".Length..^2];
+        var project = await fixture.GetAsync($"api/projects/{original.ProjectId:D}");
+        Assert.Equal("AC1 context " + marker, project.GetProperty("name").GetString());
+        var runId = pending.GetProperty("runId").GetGuid();
+        var proposal = Assert.Single(pending.GetProperty("proposals").EnumerateArray());
+        Assert.Equal((int)ExecutionApprovalStatus.Pending, proposal.GetProperty("approvalStatus").GetInt32());
+        await WaitForFloatingRejectionAsync(fixture, original.SecondAgent, runId);
+        var rejected = await fixture.ReadAgentAsync(original.SecondAgent);
+        Assert.Equal(runId, rejected.GetProperty("runId").GetGuid());
+        Assert.True(JsonElement.DeepEquals(pending.GetProperty("session"), rejected.GetProperty("session")));
+        var decision = Assert.Single(rejected.GetProperty("proposals").EnumerateArray());
+        Assert.Equal(proposal.GetProperty("approvalId").GetString(), decision.GetProperty("approvalId").GetString());
+        Assert.Equal((int)ExecutionApprovalStatus.Rejected, decision.GetProperty("approvalStatus").GetInt32());
+        Assert.DoesNotContain(rejected.GetProperty("receipts").EnumerateArray(), item =>
+            item.GetProperty("invocationOutcome").GetInt32() == (int)AgentToolInvocationOutcome.Succeeded);
+        await fixture.NavigateAsync($"/projects/{original.ProjectId:D}/structure");
+        var page = fixture.Page;
+        await ReadyFileCanvasAsync(page);
+        await page.GetByTestId("project-structure-agents-toggle").ClickAsync();
+        var catalog = page.GetByTestId("floating-agent-catalog-window");
+        await catalog.GetByRole(AriaRole.Tab, new() { Name = "Available", Exact = true }).ClickAsync();
+        await catalog.GetByTestId($"floating-agent-chat-agent-list-history-{original.SecondAgent:N}").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("agent-thread-history-row")).ToHaveCountAsync(1);
+        await page.GetByTestId("agent-thread-history-row").ClickAsync();
+        var chat = page.GetByTestId("floating-agent-chat-window");
+        await Assertions.Expect(chat).ToHaveAttributeAsync("aria-label", "Chat with " + name);
+        await Assertions.Expect(chat).ToContainTextAsync("Explicit rejection preserved " + marker, new() { Timeout = 60_000 });
+        await Assertions.Expect(chat.Locator("[data-testid^='chat-approval-approve-']")).ToHaveCountAsync(0);
+        Assert.True(JsonElement.DeepEquals(rejected, await fixture.ReadAgentAsync(original.SecondAgent)));
+        Assert.True(JsonElement.DeepEquals(original.FirstConfiguration, await fixture.GetAsync($"api/agents/{original.FirstAgent:D}")));
+        Assert.True(JsonElement.DeepEquals(original.SecondConfiguration, await fixture.GetAsync($"api/agents/{original.SecondAgent:D}")));
+        await fixture.ScreenshotAsync("ac1-floating-rejection-continuation-1920");
+        await fixture.EvidenceAsync("ac1-floating-rejection-continuation", new { original.ProjectId, original.FirstAgent, original.SecondAgent, Pending = pending, Rejected = rejected });
+        await fixture.AssertScriptCompleteAsync(1);
+    }
+
+    private static async Task WaitForFloatingRejectionAsync(SharedProviderConsumerFixture fixture, Guid agentId, Guid runId) {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(8);
+        ExecutionState state;
+        do {
+            var detail = await fixture.GetAsync($"api/agents/{agentId:D}/execution-runs/{runId:D}");
+            var run = detail.GetProperty("run");
+            Assert.Equal(runId, run.GetProperty("id").GetGuid());
+            state = (ExecutionState)run.GetProperty("state").GetInt32();
+            if (state is ExecutionState.Completed or ExecutionState.Failed) {
+                break;
+            }
+            await Task.Delay(500);
+        } while (DateTimeOffset.UtcNow < deadline);
+        Assert.Equal(ExecutionState.Completed, state);
     }
 }

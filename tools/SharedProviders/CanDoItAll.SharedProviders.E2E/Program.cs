@@ -30,6 +30,11 @@ internal static class Program
                 await E2eConsumerEvidence.ReadAsync(args, cancellation.Token);
                 return 0;
             }
+            if (args is [E2eOperatorsEvidence.Command, ..]) {
+                commandToken = E2eOperatorsEvidence.Command;
+                await E2eOperatorsEvidence.ReadAsync(args, cancellation.Token);
+                return 0;
+            }
             if (args is [E2eModelEvidence.Command]) {
                 commandToken = E2eModelEvidence.Command;
                 await E2eModelEvidence.ReadAsync(cancellation.Token);

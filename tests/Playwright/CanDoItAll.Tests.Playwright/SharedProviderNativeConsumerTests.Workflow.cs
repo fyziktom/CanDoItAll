@@ -24,6 +24,11 @@ public sealed partial class SharedProviderNativeConsumerTests {
 
     private static async Task RunSavedWorkflowAsync(bool incomplete, SharedProviderConsumerClient client) {
         await using var fixture = await SharedProviderConsumerFixture.StartAsync(client);
+        await RunSavedWorkflowAsync(fixture, incomplete, client);
+    }
+
+    private static async Task RunSavedWorkflowAsync(SharedProviderConsumerFixture fixture, bool incomplete,
+        SharedProviderConsumerClient client, Guid? ownedProjectId = null) {
         var profile = await ImportedResponsesAsync(fixture);
         var options = await fixture.Api.GetFromJsonAsync<WorkflowProviderOption[]>("api/workflows/provider-options", SharedProviderConsumerFixture.Json);
         var sharedOption = Assert.Single(options!, option => option.ProviderProfileId == profile.Id);
@@ -33,8 +38,12 @@ public sealed partial class SharedProviderNativeConsumerTests {
             ? profile.ModelCatalog.First(model => model.Id != profile.DefaultModel && profile.SuggestedModels.Contains(model.Id))
             : profile.ModelCatalog.Single(model => model.Id == profile.DefaultModel);
         var marker = "PP2C_WORKFLOW_" + Guid.NewGuid().ToString("N");
-        var projectName = "PP2C workflow " + marker;
-        var projectId = await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName });
+        var projectId = ownedProjectId ?? await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = "PP2C workflow " + marker });
+        if (ownedProjectId.HasValue) {
+            var operators = await fixture.ReadOperatorsAsync(projectId);
+            Assert.Equal(projectId, operators.GetProperty("projectId").GetGuid());
+            Assert.NotEmpty(operators.GetProperty("assignments").EnumerateArray());
+        }
         var output = "# Accepted native output\n" + marker;
         var instructions = marker + ". Produce one bounded Markdown result.";
         var component = await fixture.PostAsync<LlmCallComponent>("api/workflows/components", new LlmCallComponentSaveRequest(null,

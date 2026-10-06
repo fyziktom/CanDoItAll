@@ -27,6 +27,68 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureSecretReferenceTests {
     public enum OriginalChange { Parent, Kind, Metadata }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_project_root_accepts_exact_existing_or_new_secret_without_a_stored_node_identity(bool create) {
+        var gate = new OwnerGate();
+        await using var harness = await HarnessAsync(gate);
+        var target = await SeedAsync(harness);
+        var cut = Render(harness, target.ProjectId);
+        var rootId = $"project:{target.ProjectId:D}";
+        await OpenAsync(cut, rootId);
+        Guid? accepted;
+        if (create) {
+            await FillAsync(cut);
+            await CreateAsync(cut);
+            accepted = gate.Accepted;
+        } else {
+            var secret = await harness.Context.Services.GetRequiredService<SecretService>().SaveAsync(new() { Name = "Existing root secret", SecretValue = Guid.NewGuid().ToString("N") });
+            Assert.True(secret.IsSuccess);
+            await RetryAsync(cut);
+            await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-select']").ChangeAsync(new() { Value = secret.Value.ToString("D") }));
+            await UseAsync(cut);
+            accepted = secret.Value;
+        }
+        Assert.Equal(SecretReferencePhase.Observed, State(cut).Receipt!.Phase);
+        var reference = Assert.Single(await ReferencesAsync(harness, target.ProjectId));
+        Assert.Equal(rootId, reference.ParentId);
+        Assert.Equal(accepted, ProjectObjectMetadataSerializer.Parse(reference.MetadataJson).SecretReference!.SecretId);
+        Assert.Equal(create ? 1 : 0, gate.Saves);
+        Assert.Equal(0, gate.PlaintextReads);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Recreated_project_root_is_refused_before_or_after_vault_dispatch(bool afterCommit) {
+        var gate = new OwnerGate { HoldAfterSave = afterCommit };
+        await using var harness = await HarnessAsync(gate);
+        var target = await SeedAsync(harness);
+        var cut = Render(harness, target.ProjectId);
+        await OpenAsync(cut, $"project:{target.ProjectId:D}");
+        await FillAsync(cut);
+        var admission = (await Workbench(harness).GetStructureAsync(target.ProjectId)).ExpectedProjectAdmission;
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var pending = afterCommit ? CreateAsync(cut) : null;
+        try {
+            if (afterCommit) {
+                await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            }
+            await projects.DeleteAsync(target.ProjectId, expectedProjectAdmission: admission);
+            Assert.True((await projects.CreateAsync(target.ProjectId, new() { Name = "Replacement root" })).IsSuccess);
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await (pending ?? CreateAsync(cut));
+        Assert.Equal(afterCommit ? SecretReferencePhase.VaultCommitted : SecretReferencePhase.Refused, State(cut).Receipt!.Phase);
+        Assert.Equal(afterCommit ? 1 : 0, gate.Saves);
+        await RetryAsync(cut);
+        Assert.False(State(cut).CanFinishReference);
+        Assert.Empty(await ReferencesAsync(harness, target.ProjectId));
+    }
+
     [Fact]
     public async Task Existing_secret_uses_exact_metadata_identity_without_plaintext_reads_or_implicit_runtime_grants() {
         var gate = new OwnerGate();

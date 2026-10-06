@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T19:03:11.315517+00:00",
+  "generated_utc": "2026-10-06T20:04:40.100054+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15283,
+  "allowance_count": 15287,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -79109,6 +79109,30 @@
       "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eModelEvidence.cs",
       "category": "windows-path",
       "source_fingerprint": "b1ffdde22231d68c0be025b08612e47f449b310e3181a062480d966fc0e3efc9",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eOperatorsEvidence.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "8e459f5013189b9203c488d7481f12ce44fc917669fd6309260025aabbccf542",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eOperatorsEvidence.cs",
+      "category": "mcp",
+      "source_fingerprint": "1852788f5b03eec7bd6392b3714e1dc54eed74b021e2fc965756a27034743d21",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eOperatorsEvidence.cs",
+      "category": "mcp",
+      "source_fingerprint": "c058c7ce6c8c9ca3ab3923eb78c4e748fd8e67f73633300d1246ac41d1398b2f",
+      "count": 1
+    },
+    {
+      "path": "tools/SharedProviders/CanDoItAll.SharedProviders.E2E/E2eOperatorsEvidence.cs",
+      "category": "path-api",
+      "source_fingerprint": "f9b364d469dd8947f3a2f747d50b16bb945d0efb5093070b3cc3830166274fcc",
       "count": 1
     },
     {

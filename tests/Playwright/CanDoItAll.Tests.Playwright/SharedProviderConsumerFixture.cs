@@ -144,6 +144,9 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     public Task<JsonElement> ReadAgentAsync(Guid agentId, bool planning = false) => RunOracleAsync("e2e-" + clientRole,
         ["read-consumer-agent", agentId.ToString("D"), "--role", clientRole, .. planning ? new[] { "--planning" } : []]);
 
+    public Task<JsonElement> ReadOperatorsAsync(Guid projectId, Guid? agentId = null) => RunOracleAsync("e2e-" + clientRole,
+        ["read-wb5-operators", projectId.ToString("D"), "--role", clientRole, .. agentId is { } id ? new[] { "--agent", id.ToString("D") } : []]);
+
     public async Task RestartOwnedAppsAsync(string evidenceName = "custom-restart-containers") {
         var project = metadata.GetProperty("composeProjectName").GetString()!;
         using var images = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "tool-state", "handoff", "image-reuse.json")));

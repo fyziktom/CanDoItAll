@@ -1,7 +1,7 @@
 # Workbench operators WB5
 
-WB5 is in progress. Participant/meeting, protected-reference and runtime operator
-presentation are this slice's boundaries. WB1–WB4 and the Agents/Workflow leaves remain
+WB5 is complete with the original broad-test qualifications recorded below. Participant/meeting,
+protected-reference and runtime operator presentation are this slice's boundaries. WB1–WB4 and the Agents/Workflow leaves remain
 preservation constraints. Workflow/Process integration dialogs and the Processes product
 are outside this slice; the whole Workbench is not complete.
 
@@ -78,8 +78,7 @@ retirement. A mistyped execution filter omitted three picker cases from an inter
 The 1920×1080, DPR 1 sandbox renders two independent actual forms. Browser checks cover
 unblurred input, accepted quick-create identity, read-only retry, missing meeting selection,
 one fixture Save and independent drafts. A stale fixture counter found by that journey was
-fixed in the sandbox host; the accepted create was not replayed. Final application journeys,
-publish and watch measurements remain pending.
+fixed in the sandbox host; the accepted create was not replayed. The final application, publish and watch proof is recorded in the W4 sections below.
 
 Portability review removes three allowances for deleted legacy case comparisons and adds
 four for the sandbox's existing portable watch/environment diagnostic pattern. Enforcement
@@ -125,7 +124,7 @@ ordinal metadata search/sort comparisons. Final enforcement passes without write
 15,277 findings. The complete W2 edited/new source scan has zero findings. The large-desktop
 sandbox demonstrates separate fixture identities, cleared values and a fixed footer across
 655 pixels of visible body with 1,271 pixels of content. These are presentation fixtures;
-native commit evidence is separate and final application journeys are still required.
+native commit evidence is separate; the final application journeys are recorded below.
 
 ## Runtime presentation and original-session ownership
 
@@ -157,7 +156,7 @@ observer waited for a render while admission was pending, and a new readiness fi
 its required exact project target. Repairs synchronize on actual events and preserve the
 negative assertions. The final readiness cases hold both success and error after a successor
 preview opens on the same native page. The unit selection includes a real direct executable;
-the complete native browser process/descendant journey remains a W4 obligation.
+the complete native browser process/descendant journey is recorded below.
 
 The 1920×1080 DPR1 sandbox displays actual approval, restricted embedded bytes, Stop failure,
 remote refusal and independent specimens. Long notes scroll inside 190 pixels while retaining
@@ -166,8 +165,170 @@ accepts fourteen additions and eight stale entries: launch-mode fingerprint chan
 plan-path comparison/review, and the moved URI case checks. No-write enforcement passes at
 15,283 findings. These focused results do not claim final application or multi-instance closure.
 
-## Remaining validation
+## Final native root repair
 
-W4 still requires the final renderer/caller/asset census, published Fast/Parity hosts, measured
-watch loop, real native operator/process/Agent/file journeys, final multi-instance consumers,
-the one justified Stable checkpoint and resource closure. The whole Workbench is not complete.
+The application journey exposed a separate generated-root admission defect after all four
+directory kinds and the meeting memberships had committed. Project roots have a synthetic
+record occurrence on each native projection. Comparing that occurrence rejected an otherwise
+valid secret creation before the vault call. The original reproduction passed its recreated-
+project refusal and failed both positive root cases. The private native session now validates
+the original project lifetime and exact canonical active root for creation. Ordinary nodes
+and reference edits retain their occurrence checks; the write still uses original admission
+and participants. Recreating the project after vault acceptance retains the vault identity
+and refuses the reference. All 53 affected secret and page-action lifetime cases pass.
+
+The repaired application image is
+`sha256:70ab352413afc53d5f0f6a58ea3c891e32bb6ba91c8e1dac804162ad963b5645`, built from
+canonical source fingerprint
+`97cef8f0e0745399366c45082853609cff3656d8804ef028718c14be51330b65` and the same Components
+and FileTools pair. Only the three owned application containers were replaced. Their exact
+configuration, database, upstreams, mounts, credentials and accepted artifacts were retained.
+An ordering-only environment comparison stopped the first verification; read-only comparison
+of the environment maps reconciled the accepted upgrade without repeating it.
+
+## Independent hosts and current census
+
+Source and independent published Fast/Parity hosts passed actual renderer journeys at
+1920×1080, DPR 1. All 64 observed assets per mode match their source/published bytes, including
+identity and gzip responses. Twenty-eight additional party, secret and runtime scenario
+states passed. Original observer failures remain recorded: a remount read was premature,
+and Escape dismissal was not part of the original overlay contract. Final checks use the
+supported focused Cancel action and separately prove Escape grants no approval.
+
+Nine reversible watch samples cover three each of Razor, C# and scoped CSS. Visible and
+computed results, restored source bytes, process identity and navigation identity were
+checked. C# samples explicitly remount one fixture; they do not claim automatic state
+replacement. The original CSS width-only samples are excluded where they matched the focus
+baseline. No owned JavaScript changed. The optional MCP tools were unavailable, so evaluated
+MSBuild graphs, CLI watch and actual Playwright browsers supplied the recorded proof.
+
+Thirty evaluated graph roots retain the W3 directions: the Operators leaf closure has eight
+projects and its independent host nine. The refreshed census covers 431 activation/asset
+files and 20 native Razor callers. Native shells, compatibility wrappers and the still-native
+Workflow/Process integration dialogs are distinguished from extracted full renderers. The
+public assembly-qualified EmbeddedBrowser type resolves through its original type forwarder.
+The Resources graph guard now allows that exact neutral child and still rejects a forbidden
+implementation reached through it; the original broad failure is retained with a 3/3 focused
+follow-up.
+
+The broad integration run also exposed an old whole-record expectation that omitted W1's
+added canonical node occurrence. Its focused test repair keeps every scope/precedence field
+and negative assertion, and now requires the exact persisted record ID, kind, subtype and
+parent. All four native owner-projection/transaction/catalog cases pass in a separate output
+configuration. The original failure and all thirty-two frozen Stable assembly hashes remain
+unchanged; this repair changes no production behavior or application image.
+
+The twenty native Razor files have an explicit per-file classification in the working
+census. They include route/context authorities, adapters to completed leaves, four actual
+Process assignment/candidate dialogs, and the mixed Workflow/Process dialog composition.
+The managed-file storage-disposition confirmation remains an explicit native content action.
+The obsolete Calendar adapter and original JS Structure renderer have no current external
+Razor activation in the searched source/tests/templates; they are recorded compatibility
+remnants, not counted as newly extracted product surfaces.
+
+The actual Windows native runtime journey passed: reviewed script cancellation/approval,
+loopback serving bytes, close and page reload without termination, original PID/start
+continuity, explicit Stop and descendant exit while an independent canary remained alive.
+No terminal or elevation was invoked; unsupported presentation and host policy remain
+separate proof. The late secret-session repair does not invalidate runtime or renderer bytes.
+
+## Native application and consumer closure
+
+The joint project journey completed with four real directory kinds, exact participant and
+meeting assignments, two protected values and three references, and a saved single-project
+Agent. Native resolution refused both references without a grant. An explicit UI grant
+allowed only the intended ID, with a matching value hash and unchanged project/file scope.
+The actual secret editor cleared transient values; stored values were not exported into
+the evidence. A bounded scan of 183 final consumer text artifacts found no secret-pattern
+findings or candidates matching either generated private-value hash.
+
+The contextual Agent read a hidden canary, obtained exact write and attachment approvals,
+and produced a native asset whose stored, actual workspace and browser-download SHA-256
+values agree. Separately rejected writes produced no file on that same positively verified
+workspace mount. The saved native Workflow ran on the same project and retained its accepted
+definition, version, run and output identity. Known incomplete output was refused; client B's
+independent saved Workflow retained its own output and source route.
+
+The final consumer selections comprise thirteen browser cases: defaults/catalog (two),
+joint operators (one), Simple Chat (one), Workflow accepted/incomplete (two), client-B
+Workflow (one), Scheduler (one), standard chat (one), floating chat (one), and final
+History/source-policy/two-circuit settings (three). The original image
+`sha256:7b1d4f0feed929814ebf7dc41348e2217f4f9b76a6c9666d201e38c2a2d41914`
+passed the nineteen protocol scenarios and the two defaults/catalog cases. That proof is
+inherited only for unchanged provider/routing inputs. The repaired image supplies the
+affected native consumers; it is not described as rerunning those nineteen scenarios.
+
+Accepted operator setup survived four failed observer attempts. Continuations verified exact
+project, node, assignment, vault and Agent identities before proceeding. They did not recreate
+accepted parties or secrets. Floating chat proved distinct handles, detach/follow and next-turn
+context, and closing without rejecting durable approval. Its original final rejection exceeded
+the test's sixty-second display wait. Native read-back proved the same run/session completed,
+the approval was rejected and no tool receipt succeeded. A bounded continuation opened that
+saved transcript and checked unchanged configurations and actual denied-file absence. A second
+observer's inappropriate live-widget expectation is also retained as failed. The final observer
+uses bounded native completion and the saved transcript; no rejection or model plan was replayed.
+
+The finite completed Scheduler plan remained enabled across two controlled application
+restarts, with no duplicate dispatch and one future neighbor. Standard chat exercised the
+original runtime/log dialogs, pending-approval cancellation and saved-session reopening.
+Separately authorized History preserved lazy reads, exact caller-key identities, denied
+access and owned credential rotation. Source disable/retire/reimport retained identity, and
+two independent settings circuits required explicit conflict resolution while preserving the
+other writer's unedited field. All three final UI cases passed.
+
+Usage initially showed honest partial coverage, including an empty Agent-only detail. The
+first observer incorrectly required a grid for that empty result; its failure remains, and
+the read-only continuation proved the actual empty/partial state and independent dialog close.
+Documented maintenance of only the owned client-A derived index left all 348 canonical JSON
+payloads byte-identical. Complete totals matched nineteen native Agent observations and two
+actual Simple Chat invocation rows, including their original operation IDs: 378 tokens in
+total. All three real detail dialogs matched native counts, pricing and token facets. Source
+and client B remained explicitly partial; no cross-instance consumer identity appeared.
+
+All new visual proof uses 1920×1080, DPR 1. Open dialog screenshots were inspected, including
+actual charts, grids, long-content scroll owners, visible actions and the saved rejection.
+The inherited WB4 content preview's upper heading edge still overlaps the canvas toolbar;
+its content/actions remain usable. That is a non-blocking content follow-up, not a claim
+that the whole Workbench has completed visual closure.
+
+## Final validation and delivery
+
+The one frozen Stable run discovered 16,851 tests and executed
+16,906 cases: 16,903 passed, 3 failed and zero skipped.
+The 55 additional executions are data-driven expansion. The original
+exit code is 1 and elapsed time 240.24 minutes. Its
+thirty-two original assembly hashes remain unchanged. This is a qualified failed aggregate,
+not an all-green release result; it was not rerun for closure.
+
+Two original assertions were repaired with fresh focused proof: the neutral EmbeddedBrowser
+boundary allowance (3/3, including a forbidden-grandchild negative), and the exact canonical
+node occurrence expectation (4/4 native cases, with original scope/precedence assertions).
+The remaining source-secret failure detects four unchanged historical synthetic controls.
+Their original files and the scanner remain intact. The late private root-session repair
+has separate 53-case native proof and the repaired final image's application journeys;
+it is explicitly outside the earlier Stable source freeze.
+
+The complete untracked-inclusive portability scan is untruncated, and final enforcement
+passes without write mode at 15,287 reviewed executable findings. Four W4 additions cover
+only the bounded native oracle's existing instance-root path and secret-consumer constants.
+The complete edited/new source corpus retains twenty byte-identical pre-existing CI fixture
+credential/secret-expression findings, with no new finding. This reviewed raw failure is
+separate from the zero-finding consumer/log scans and is not a clean whole-worktree claim.
+Maintained documentation and sealed-input integrity checks pass.
+
+All owned sandbox/watch, native process, final six-container application fixture and separate
+PostgreSQL resources are stopped. Exact identities and closed ports are recorded privately;
+containers, volumes, accepted objects and original evidence remain retained. All 348 canonical
+payload hashes still agree after derived Usage maintenance and graceful application shutdown.
+The final source audit confirms all application and sibling dependency inputs match the
+repaired image; three browser test files and one native projection assertion changed afterward.
+
+Verified signed checkpoints cover S0, W1, W2 and W3; the final delivery commit contains this
+record, the bounded root repair and final native/browser proof. Exact commit verification,
+all G00–G31 dispositions, commands, source/binary hashes, immutable attempt references and
+resource receipts are in the private working evidence. The supplied package is unchanged.
+No push, merge, history rewrite or sibling source change was made.
+
+The whole Workbench is not complete. Workflow/Process linkage, saved-version/input/start/
+review/matching/recovery presentation is the next Workbench family. The recorded WB4 heading
+overlap remains a content follow-up; Processes product extraction remains later.

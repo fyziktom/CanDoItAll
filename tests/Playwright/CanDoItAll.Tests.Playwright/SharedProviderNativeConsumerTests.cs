@@ -65,25 +65,39 @@ public sealed partial class SharedProviderNativeConsumerTests {
     public Task Final_image_agent_reads_hidden_content_and_creates_attaches_reads_downloads_with_exact_approvals() =>
         RunFileConsumerAsync(planning: false);
 
-    private static async Task RunFileConsumerAsync(bool planning, bool insights = false) {
-        await using var fixture = await SharedProviderConsumerFixture.StartAsync();
+    private static async Task RunFileConsumerAsync(bool planning, bool insights = false, bool operators = false) {
+        await using var fixture = await SharedProviderConsumerFixture.StartAsync(operators
+            ? [CanDoItAll.Modules.Workspace.ApiAccess.ApiAccessScopeNames.ReadCrmHr] : []);
         var profile = await ImportedResponsesAsync(fixture);
-        var marker = "PP2C_FILES_" + Guid.NewGuid().ToString("N");
+        var resume = operators ? await ReadOperatorResumeAsync(fixture) : null;
+        var marker = resume is null ? "PP2C_FILES_" + Guid.NewGuid().ToString("N") : resume.ProjectName["PP2C files ".Length..];
         var projectName = "PP2C files " + marker;
-        var projectId = planning
+        var projectId = resume?.ProjectId ?? (planning || operators
             ? await CreatePlanningProjectAsync(fixture, projectName)
-            : await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName });
-        var siblingId = await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = "PP2C untouched " + marker });
-        var parent = planning
+            : await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = projectName }));
+        var siblingId = resume?.SiblingId ?? await fixture.PostAsync<Guid>("api/projects", new ProjectEditorModel { Name = "PP2C untouched " + marker });
+        var parent = resume is not null
+            ? Assert.Single((await TreeAsync(fixture, projectId)).Nodes, node => node.Id == resume.ParentId)
+            : planning
             ? await CreatePlanningTaskAsync(fixture, projectId)
             : await fixture.PostAsync<ProjectStructureNodeSummary>($"api/project-structure/projects/{projectId:D}/nodes",
                 new ProjectStructureNodeCreateInput(ProjectObjectType.ProjectBlock, "Selected files", "", "", $"project:{projectId:D}", X: 450, Y: 220));
-        var hiddenContent = "Hidden file canary " + Guid.NewGuid().ToString("N");
-        var siblingContent = "Unchanged sibling " + Guid.NewGuid().ToString("N");
-        var seed = await SeedAssetAsync(fixture, projectId, parent.Id, "seed.txt", hiddenContent);
-        var sibling = await SeedAssetAsync(fixture, siblingId, $"project:{siblingId:D}", "canary.txt", siblingContent);
+        if (operators) {
+            await ConfigureOperatorsAsync(fixture, projectId, marker, resume);
+        }
+        var hiddenContent = resume?.Files is { } files ? await ContentAsync(fixture, projectId, files.SeedId) : "Hidden file canary " + Guid.NewGuid().ToString("N");
+        var siblingContent = resume?.Files is { } siblingFiles ? await ContentAsync(fixture, siblingId, siblingFiles.SiblingId) : "Unchanged sibling " + Guid.NewGuid().ToString("N");
+        var seed = resume?.Files is { } seedFiles
+            ? Assert.Single((await TreeAsync(fixture, projectId)).Nodes, node => node.Id == seedFiles.SeedId)
+            : await SeedAssetAsync(fixture, projectId, parent.Id, "seed.txt", hiddenContent);
+        var sibling = resume?.Files is { } acceptedSibling
+            ? Assert.Single((await TreeAsync(fixture, siblingId)).Nodes, node => node.Id == acceptedSibling.SiblingId)
+            : await SeedAssetAsync(fixture, siblingId, $"project:{siblingId:D}", "canary.txt", siblingContent);
         var alternate = profile.ModelCatalog.First(model => model.Id != profile.DefaultModel && profile.SuggestedModels.Contains(model.Id));
-        var agentId = await CreateFileAgentAsync(fixture, profile, alternate.Id, marker, projectId, projectName, planning: planning);
+        var agentId = resume?.Files?.Agent.Id ?? await CreateFileAgentAsync(fixture, profile, alternate.Id, marker, projectId, projectName, planning: planning);
+        if (operators) {
+            await AssertOperatorSecretScopeAsync(fixture, projectId, agentId);
+        }
         await fixture.NavigateAsync($"/projects/{projectId:D}/structure");
         await ReadyFileCanvasAsync(fixture.Page);
         await SelectFileNodeAsync(fixture.Page, parent.Id, parent.Title);
@@ -125,6 +139,21 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.Contains(denial.GetProperty("proposals").EnumerateArray(), item =>
             item.GetProperty("approvalStatus") is { ValueKind: JsonValueKind.Number } status && status.GetInt32() == (int)ExecutionApprovalStatus.Rejected);
         Assert.DoesNotContain((await TreeAsync(fixture, projectId)).Nodes, node => node.Title == denied.Title);
+        if (operators) {
+            var deniedWrite = expected with { WorkspacePath = $"pp2c/{marker}/denied.md", Content = "Explicitly refused native write." };
+            Assert.False((await fixture.ReadOperatorsAsync(projectId)).GetProperty("deniedFileExists").GetBoolean());
+            await fixture.ScriptAsync(alternate.DisplayName, marker,
+                ToolsStep(Call(ToolContractCatalog.WorkspaceWriteFile, new { path = deniedWrite.WorkspacePath, content = deniedWrite.Content, overwrite = false })),
+                TextStep("The operator refused the separate file write."));
+            var refused = await FileTurnAsync(fixture, chat, agentId, projectId, parent.Id,
+                "Propose the separate file write for my explicit denial.", deniedWrite, reject: true);
+            await fixture.AssertScriptCompleteAsync(2);
+            Assert.Contains(refused.GetProperty("proposals").EnumerateArray(), item =>
+                item.GetProperty("approvalStatus").GetInt32() == (int)ExecutionApprovalStatus.Rejected);
+            var observed = await fixture.ReadOperatorsAsync(projectId);
+            Assert.False(observed.GetProperty("deniedFileExists").GetBoolean());
+            await fixture.EvidenceAsync("wb5-denied-write", new { RunId = refused.GetProperty("runId"), Observed = observed });
+        }
         await PreviewAndDownloadAsync(fixture, projectId, projectName, created, expected.Content);
         if (planning) {
             await AssertPlanningConsumersAsync(fixture, projectId, parent);
@@ -143,6 +172,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
             HiddenCanarySha256 = SharedProviderConsumerFixture.Hash(hiddenContent), SiblingSha256 = SharedProviderConsumerFixture.Hash(siblingContent),
             ReadRun = read.GetProperty("runId"), WriteRun = write.GetProperty("runId"), ReadbackRun = readback.GetProperty("runId"), DeniedRun = denial.GetProperty("runId")
         });
+        if (operators) {
+            await RunSavedWorkflowAsync(fixture, incomplete: false, SharedProviderConsumerClient.A, projectId);
+            Assert.Equal(siblingContent, await ContentAsync(fixture, siblingId, sibling.Id));
+        }
     }
 
     private static async Task<ProviderProfile> ImportedResponsesAsync(SharedProviderConsumerFixture fixture) =>

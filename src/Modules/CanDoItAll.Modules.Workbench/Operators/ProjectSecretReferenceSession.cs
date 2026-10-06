@@ -166,11 +166,25 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         if (!originalAuthority() || !secrets.IsCurrent) {
             throw new ProjectWriteAdmissionRejectedException(admission);
         }
-        await workbench.RequireContentCurrentAsync(admission, original);
+        if (!isEdit && IsOriginalProjectRoot(original)) {
+            var surface = await workbench.GetStructureAsync(admission.ProjectId);
+            if (surface.ExpectedProjectAdmission != admission) {
+                throw new ProjectWriteAdmissionRejectedException(admission);
+            }
+            if (!surface.Nodes.Any(IsOriginalProjectRoot)) {
+                throw new ProjectStructureEditConflictException();
+            }
+        } else {
+            await workbench.RequireContentCurrentAsync(admission, original);
+        }
         if (!originalAuthority() || !secrets.IsCurrent) {
             throw new ProjectWriteAdmissionRejectedException(admission);
         }
     }
+
+    private bool IsOriginalProjectRoot(ProjectStructureNode node) => node.IsSystemManaged &&
+        node.ObjectType == ProjectObjectType.ProjectRoot && node.ProjectRole == ProjectStructureProjectRole.ActiveProject &&
+        node.ArtifactId == admission.ProjectId && node.Id == ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(admission.ProjectId);
 
     private async Task<SecretListItem> ReadAcceptedSecretAsync() {
         if (!originalAuthority() || !secrets.IsCurrent) {

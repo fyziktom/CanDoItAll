@@ -17,6 +17,7 @@ public sealed class ResourceBoundaryTests {
     [Fact]
     public void Traversal_rejects_forbidden_transitive_and_unresolved_edges() {
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Resources.UI", name => name == "CanDoItAll.Resources.UI" ? ["CanDoItAll.Components.BaseLib"] : ["CanDoItAll.Infrastructure"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.AppComponents.EmbeddedBrowser", _ => ["CanDoItAll.Infrastructure"]));
         Assert.Throws<FileNotFoundException>(() => Visit("CanDoItAll.Resources.UI", _ => throw new FileNotFoundException("Missing dependency")));
     }
 
@@ -74,7 +75,7 @@ public sealed class ResourceBoundaryTests {
         "CanDoItAll.Configuration.UI", "CanDoItAll.Modules.Projects.Contracts", "CanDoItAll.SharedKernel", "CanDoItAll.FileTools.Integration.Abstractions",
         "CanDoItAll.FileTools.Abstractions", "CanDoItAll.FileTools.FileBrowser.Core", "CanDoItAll.FileTools.FileBrowser.Components",
         "CanDoItAll.FileTools.FileInteraction.Core", "CanDoItAll.FileTools.FileInteraction.Components", "CanDoItAll.AppComponents",
-        "CanDoItAll.AppComponents.RecordBrowsing", "CanDoItAll.Conversations.Components", "CanDoItAll.Components.CanvasLib",
+        "CanDoItAll.AppComponents.RecordBrowsing", "CanDoItAll.AppComponents.EmbeddedBrowser", "CanDoItAll.Conversations.Components", "CanDoItAll.Components.CanvasLib",
         "CanDoItAll.Components.BaseLib", "CanDoItAll.Components.Common", "CanDoItAll.Components.OverlayLib", "Markdig"
     ];
 }
