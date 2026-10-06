@@ -1607,7 +1607,7 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
 
         var request = new CanvasWorkbenchCreateActionRequest(
@@ -1643,9 +1643,9 @@ public sealed class WorkflowsPageTests
         await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(nodeId, "workflow-decision:add-route", 0, 0));
 
         cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
-        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Gamma");
-        cut.Find("[data-testid='workflow-canvas-decision-route-expected-value']").Change("gamma");
-        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-decision-route-label']").ChangeAsync(new ChangeEventArgs { Value = "Case Gamma" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-decision-route-expected-value']").ChangeAsync(new ChangeEventArgs { Value = "gamma" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-decision-save-route']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1655,10 +1655,10 @@ public sealed class WorkflowsPageTests
             Assert.Contains("4 route(s)", cut.Markup);
         });
 
-        cut.FindAll("[data-testid='workflow-canvas-decision-edit-route']").First().Click();
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflow-canvas-decision-edit-route']").First().ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='workflow-canvas-decision-route-editor']");
-        cut.Find("[data-testid='workflow-canvas-decision-route-label']").Change("Case Alpha Updated");
-        cut.Find("[data-testid='workflow-canvas-decision-save-route']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-decision-route-label']").ChangeAsync(new ChangeEventArgs { Value = "Case Alpha Updated" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-decision-save-route']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {

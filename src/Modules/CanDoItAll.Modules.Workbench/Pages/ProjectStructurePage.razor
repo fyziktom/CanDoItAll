@@ -1348,6 +1348,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         if (!string.IsNullOrWhiteSpace(reconnectNodeId) &&
             !string.IsNullOrWhiteSpace(args.PrimaryNodeId))
         {
+            selectedNodeIds = args.SelectedNodeIds.ToList();
+            pendingClientSelectionId = null;
             await HandleReconnectSelectionAsync(args.PrimaryNodeId);
             return;
         }
@@ -2675,13 +2677,15 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
+    private async Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
         await canvasViewStateCommitGate.WaitAsync(cancellationToken);
         try {
-            if (IsCurrentAction(context)) {
-                cancellationToken.ThrowIfCancellationRequested();
-                await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson);
+            if (!IsCurrentAction(context)) {
+                return false;
             }
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson);
+            return true;
         } finally {
             canvasViewStateCommitGate.Release();
         }

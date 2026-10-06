@@ -206,18 +206,19 @@ public partial class ProjectStructurePage {
     private async Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {
         CancelPendingCanvasViewStatePersistence();
         var json = NormalizePersistedCanvasUiState(state).ToJson();
+        currentViewStateJson = json;
+        surface = surface! with { ViewStateJson = json };
+        RefreshCanvasSurface();
+        await InvokeAsync(StateHasChanged);
         try {
-            await ProjectWorkbenchService.SaveViewStateAsync(context.Native.Admission, "structure", json, deferredCompletionCts.Token);
+            if (!await PersistCapturedViewStateAsync(context.Native, json, deferredCompletionCts.Token)) {
+                return false;
+            }
         } catch (Exception exception) {
             RecordInsightsEffect(context, operation, [], null, "The view-state result was not confirmed. Reload before repeating it.", exception);
             return false;
         }
         RecordInsightsEffect(context, operation, [], [], "View state saved for the original project.");
-        if (IsCurrentInsights(context)) {
-            currentViewStateJson = json;
-            surface = surface! with { ViewStateJson = json };
-            RefreshCanvasSurface();
-        }
         return true;
     }
 

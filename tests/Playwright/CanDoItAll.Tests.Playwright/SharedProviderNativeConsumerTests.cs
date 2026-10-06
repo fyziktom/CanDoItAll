@@ -30,7 +30,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             var marker = "PP2C_CHAT_" + Guid.NewGuid().ToString("N");
             var answer = "Native transcript " + marker;
             await fixture.ScriptAsync(profile.GetModelDisplayName(route), marker, TextStep(answer));
-            await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(fixture.Page, fixture.Settings.Clients[0], profile.Name,
+            await SharedProviderMetadataUiChecks.ExerciseSimpleChatAsync(fixture.Page, fixture.Address, profile.Name,
                 defaultName, models, label, fixture.Settings.Evidence, marker, answer, marker);
             var definitions = await fixture.GetAsync("api/llm-chats?take=100");
             var definition = Assert.Single(definitions.GetProperty("items").EnumerateArray(), item => item.GetProperty("name").GetString() == "UI shared catalog " + marker);

@@ -27,13 +27,13 @@ public sealed partial class SharedProviderNativeConsumerTests {
         }
         await fixture.NavigateAsync(secondRoute);
         await ExpectEditorAsync(second.Name);
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Settings.Clients[0] + firstRoute,
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + firstRoute,
             _ => page.GoBackAsync());
-        await Assertions.Expect(page).ToHaveURLAsync(fixture.Settings.Clients[0] + firstRoute);
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + firstRoute);
         await ExpectEditorAsync(first.Name);
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Settings.Clients[0] + secondRoute,
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + secondRoute,
             _ => page.GoForwardAsync());
-        await Assertions.Expect(page).ToHaveURLAsync(fixture.Settings.Clients[0] + secondRoute);
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + secondRoute);
         await ExpectEditorAsync(second.Name);
         Assert.Equal(first.VersionId, (await ReadNativeDefinitionAsync(fixture, first.Id)).VersionId);
         Assert.Equal(second.VersionId, (await ReadNativeDefinitionAsync(fixture, second.Id)).VersionId);

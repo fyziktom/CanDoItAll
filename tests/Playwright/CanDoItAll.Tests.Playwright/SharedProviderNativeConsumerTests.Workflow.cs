@@ -14,8 +14,16 @@ public sealed partial class SharedProviderNativeConsumerTests {
     [InlineData(false)]
     [InlineData(true)]
     [Trait("Category", "ExternalSharedProviderUi")]
-    public async Task Final_image_saved_workflow_and_TestLab_preserve_accepted_and_incomplete_output(bool incomplete) {
-        await using var fixture = await SharedProviderConsumerFixture.StartAsync();
+    public Task Final_image_saved_workflow_and_TestLab_preserve_accepted_and_incomplete_output(bool incomplete)
+        => RunSavedWorkflowAsync(incomplete, SharedProviderConsumerClient.A);
+
+    [Fact]
+    [Trait("Category", "ExternalSharedProviderUi")]
+    public Task Final_image_second_client_saved_workflow_keeps_its_native_output_and_source_route()
+        => RunSavedWorkflowAsync(false, SharedProviderConsumerClient.B);
+
+    private static async Task RunSavedWorkflowAsync(bool incomplete, SharedProviderConsumerClient client) {
+        await using var fixture = await SharedProviderConsumerFixture.StartAsync(client);
         var profile = await ImportedResponsesAsync(fixture);
         var options = await fixture.Api.GetFromJsonAsync<WorkflowProviderOption[]>("api/workflows/provider-options", SharedProviderConsumerFixture.Json);
         var sharedOption = Assert.Single(options!, option => option.ProviderProfileId == profile.Id);
@@ -126,6 +134,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await AssertCanonicalHistoryAsync(fixture, profile, alternate.Id, CanDoItAll.AgentFramework.ProviderHistory.HistorySourceKind.Workflow,
             runId, runId.ToString("D"), "workflow-" + (incomplete ? "incomplete" : "accepted"));
         await fixture.EvidenceAsync("consumer-workflow-" + (incomplete ? "incomplete" : "accepted"), new {
+            Client = client, fixture.Address,
             saved.Id, saved.VersionId, RunId = runId, ProjectId = projectId, ProviderId = profile.Id, Route = alternate.Id,
             ModelSettings = component.ModelSettings, Input = input, Incomplete = incomplete,
             OutputSha256 = SharedProviderConsumerFixture.Hash(output), Assets = assets.Select(node => new { node.Id, node.MediaRelativePath }),

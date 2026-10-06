@@ -10,6 +10,8 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
+internal enum SharedProviderConsumerClient { A, B }
+
 internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
     internal static readonly JsonSerializerOptions ReadJson = new(Json) {
@@ -27,9 +29,12 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     public SharedProviderNativeDefaultsUiTests.Settings Settings { get; }
     public IPage Page { get; }
     public HttpClient Api { get; }
+    public string Address { get; }
+    private readonly string clientRole;
 
     private SharedProviderConsumerFixture(IPlaywright playwright, IBrowser browser, IPage page, HttpClient api,
-        SharedProviderNativeDefaultsUiTests.Settings settings, string root, JsonElement metadata) {
+        SharedProviderNativeDefaultsUiTests.Settings settings, string root, JsonElement metadata,
+        string address, string clientRole) {
         this.playwright = playwright;
         this.browser = browser;
         this.root = root;
@@ -37,6 +42,8 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         Settings = settings;
         Page = page;
         Api = api;
+        Address = address;
+        this.clientRole = clientRole;
         Observe(page);
     }
 
@@ -54,7 +61,7 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
 
     public async Task<IPage> OpenLocalOperatorPageAsync() {
         var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
-        var authority = new Uri(Settings.Clients[0]).Authority;
+        var authority = new Uri(Address).Authority;
         await context.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == authority
             ? route.ContinueAsync() : route.AbortAsync());
         var page = await context.NewPageAsync();
@@ -62,28 +69,36 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         return page;
     }
 
-    public static async Task<SharedProviderConsumerFixture> StartAsync(params string[] additionalScopes) {
+    public static Task<SharedProviderConsumerFixture> StartAsync(params string[] additionalScopes)
+        => StartAsync(SharedProviderConsumerClient.A, additionalScopes);
+
+    public static async Task<SharedProviderConsumerFixture> StartAsync(SharedProviderConsumerClient client, params string[] additionalScopes) {
         var settings = SharedProviderNativeDefaultsUiTests.Settings.Load();
+        var (address, role) = client switch {
+            SharedProviderConsumerClient.A => (settings.Clients[0], "client-a"),
+            SharedProviderConsumerClient.B => (settings.Clients[1], "client-b"),
+            _ => throw new ArgumentOutOfRangeException(nameof(client))
+        };
         var root = Path.GetFullPath(Environment.GetEnvironmentVariable("CANDOITALL_SHARED_PP2_FIXTURE_ROOT")!);
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "host-run-metadata.json")));
         var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chrome" });
         var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
         var page = await context.NewPageAsync();
-        var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, settings.Clients[0], false, [
+        var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, address, false, [
             ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects, ApiAccessScopeNames.WriteProjectStructure,
             ApiAccessScopeNames.WriteAgents, ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows,
             ApiAccessScopeNames.ExecuteWorkflows, .. additionalScopes
         ]);
-        var api = SharedProviderNativeDefaultsUiTests.Api(settings.Clients[0], token);
-        var authority = new Uri(settings.Clients[0]).Authority;
+        var api = SharedProviderNativeDefaultsUiTests.Api(address, token);
+        var authority = new Uri(address).Authority;
         await context.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == authority
             ? route.ContinueAsync() : route.AbortAsync());
         await context.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {token}" });
-        return new(playwright, browser, page, api, settings, root, document.RootElement.Clone());
+        return new(playwright, browser, page, api, settings, root, document.RootElement.Clone(), address, role);
     }
 
-    public Task NavigateAsync(string relative) => SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(Page, Settings.Clients[0] + relative);
+    public Task NavigateAsync(string relative) => SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(Page, Address + relative);
     public Task ScreenshotAsync(string name) => Page.ScreenshotAsync(new() { Path = Path.Combine(Settings.Evidence, name + ".png") });
     public Task EvidenceAsync(string name, object evidence) => File.WriteAllTextAsync(Path.Combine(Settings.Evidence, name + ".json"), JsonSerializer.Serialize(evidence, Json));
     public static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
@@ -126,8 +141,8 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
         return result;
     }
 
-    public Task<JsonElement> ReadAgentAsync(Guid agentId, bool planning = false) => RunOracleAsync("e2e-client-a",
-        ["read-consumer-agent", agentId.ToString("D"), "--role", "client-a", .. planning ? new[] { "--planning" } : []]);
+    public Task<JsonElement> ReadAgentAsync(Guid agentId, bool planning = false) => RunOracleAsync("e2e-" + clientRole,
+        ["read-consumer-agent", agentId.ToString("D"), "--role", clientRole, .. planning ? new[] { "--planning" } : []]);
 
     public async Task RestartOwnedAppsAsync(string evidenceName = "custom-restart-containers") {
         var project = metadata.GetProperty("composeProjectName").GetString()!;

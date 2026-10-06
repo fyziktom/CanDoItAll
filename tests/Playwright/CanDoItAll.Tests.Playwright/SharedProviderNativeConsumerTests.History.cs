@@ -56,10 +56,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
     private static async Task OpenHistoryAsync(IPage page, SharedProviderConsumerFixture fixture, ProviderProfile profile,
         string model, HistorySourceKind kind, bool singleProvider) {
         if (singleProvider) {
-            await SharedProviderMetadataUiChecks.OpenProviderAsync(page, fixture.Settings.Clients[0], profile.Name);
+            await SharedProviderMetadataUiChecks.OpenProviderAsync(page, fixture.Address, profile.Name);
             await page.GetByTestId("provider-editor-tab-history").ClickAsync();
         } else {
-            await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Settings.Clients[0] + "/agents?tab=request-history");
+            await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + "/agents?tab=request-history");
         }
         await page.GetByText("History not requested", new() { Exact = true }).WaitForAsync();
         await Assertions.Expect(page.GetByTestId("history-results")).ToHaveCountAsync(0);

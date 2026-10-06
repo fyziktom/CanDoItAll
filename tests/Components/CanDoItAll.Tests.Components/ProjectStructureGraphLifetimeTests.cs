@@ -11,11 +11,94 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGraphLifetimeTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Held_index_close_preserves_a_later_toolbar_window_and_its_native_state(bool navigate) {
+        var gate = new ViewStateWriteGate();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new PooledDbContextFactory<WorkbenchDbContext>(
+                new DbContextOptionsBuilder<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
+                    .AddInterceptors(gate).Options));
+        });
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Original window owner" })).Value;
+        var next = navigate ? (await projects.SaveAsync(new() { Name = "Successor window owner" })).Value : project;
+        var page = Render(harness, project);
+        await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+        gate.Armed = true;
+        var closing = page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-window'] button[aria-label='Hide window']").ClickAsync(new MouseEventArgs()));
+        Task opening = Task.CompletedTask;
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            if (navigate) {
+                page.Render(parameters => parameters.Add(component => component.ProjectId, next));
+                page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => node.Id == $"project:{next:D}"));
+            }
+            opening = page.InvokeAsync(() => page.Find("[data-testid='project-structure-health-toggle']").ClickAsync(new MouseEventArgs()));
+            page.WaitForElement("[data-testid='project-structure-validation-window']");
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await Task.WhenAll(closing, opening).WaitAsync(TimeSpan.FromSeconds(20));
+        page.WaitForElement("[data-testid='project-structure-validation-window']");
+        Assert.Empty(page.FindAll("[data-testid='project-structure-object-index-window']"));
+        var visible = page.FindComponent<CanvasWorkbench>().Instance.Surface.UiState;
+        var stored = CanvasWorkbenchUiState.Parse((await workbench.GetStructureAsync(next)).ViewStateJson);
+        const string healthWindowKey = "project-structure.health";
+        const string indexWindowKey = "project-structure.objectIndex";
+        Assert.Equal(visible.WindowStates[healthWindowKey].IsVisible, stored.WindowStates[healthWindowKey].IsVisible);
+        Assert.True(stored.WindowStates[healthWindowKey].IsVisible);
+        var original = CanvasWorkbenchUiState.Parse((await workbench.GetStructureAsync(project)).ViewStateJson);
+        Assert.False(original.WindowStates[indexWindowKey].IsVisible);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reconnect_selection_echo_publishes_the_accepted_parent_without_replacing_a_later_selection(bool laterSelection) {
+        var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate();
+        await using var harness = await ProjectStructureHierarchyLifetimeTests.CreateHarnessAsync(gate);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var project = (await projects.SaveAsync(new() { Name = "Reconnect selection echo" })).Value;
+        var rootId = $"project:{project:D}";
+        var source = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Source", "", "Retained", rootId));
+        var target = await workbench.CreateObjectAsync(project, new(ProjectObjectType.Note, "Target", "", "Untouched", rootId));
+        var page = Render(harness, project);
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        await page.InvokeAsync(() => canvas.OnSelectionChanged(source.Id, JsonSerializer.Serialize(new[] { source.Id })));
+        await page.InvokeAsync(() => canvas.OnContextAction(source.Id, "reconnect", source.X, source.Y));
+        gate.ArmNode(project, source.Id);
+        var pending = page.InvokeAsync(() => canvas.OnSelectionChanged(target.Id, JsonSerializer.Serialize(new[] { target.Id })));
+        try {
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await page.InvokeAsync(() => canvas.OnStateChanged(new CanvasWorkbenchUiState { SelectedNodeIds = [target.Id] }.ToJson()));
+            if (laterSelection) {
+                await page.InvokeAsync(() => canvas.OnStateChanged(new CanvasWorkbenchUiState { SelectedNodeIds = [rootId] }.ToJson()));
+            }
+        } finally {
+            gate.Release.TrySetResult();
+        }
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        var accepted = Assert.Single(page.Instance.AuthoringOutcomes);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Committed, accepted.Kind);
+        Assert.Equal(target.Id, accepted.Node!.ParentId);
+        Assert.Equal(target.Id, Assert.Single((await workbench.GetStructureAsync(project)).Nodes, node => node.Id == source.Id).ParentId);
+        var presented = page.FindComponent<CanvasWorkbench>().Instance.Surface;
+        Assert.Equal(new[] { laterSelection ? rootId : target.Id }, presented.UiState.SelectedNodeIds);
+        if (!laterSelection) {
+            Assert.Equal(target.Id, Assert.Single(presented.Nodes, node => node.Id == source.Id).ParentId);
+        }
+    }
+
     [Fact]
     public async Task Paste_publishes_accepted_copies_and_their_selection_into_the_actual_canvas() {
         await using var harness = await ComponentTestHarness.CreateAsync();
