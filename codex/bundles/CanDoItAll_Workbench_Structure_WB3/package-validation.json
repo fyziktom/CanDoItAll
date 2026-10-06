@@ -1,0 +1,18 @@
+{
+  "kind": "handoff integrity and helper tooling only",
+  "product_execution": false,
+  "package_files": 52,
+  "manifest_entries": 51,
+  "local_links_checked": 58,
+  "exact_ref_source_records": 25,
+  "shared_files_unchanged": 22,
+  "product_groups": 32,
+  "product_group_initial_status": "NOT_RUN",
+  "local_helper_tests_passed": 30,
+  "shared_helper_tests_passed": 14,
+  "total_helper_tests_passed": 44,
+  "archive_crc_verified": true,
+  "fresh_extraction_validated": true,
+  "strict_completion_rejects_unexecuted_template": true,
+  "note": "Metrics are structural checks, not C# compilation, native execution or release certification."
+}
