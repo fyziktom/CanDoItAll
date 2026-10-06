@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "id": "CDA-WORKBENCH-CONTENT-WB4",
+  "title": "Workbench Content & Files WB4",
+  "language": "en",
+  "review_date": "2026-10-06",
+  "entry_provenance": {
+    "product": "3957fe73e2a0736c042daa504a2767050423c36b",
+    "head": "d7384b12f435978165b4b73b40cb39f03c377892",
+    "components_remote": "24d182c664d0b1f293098643e52caed7384a5d50",
+    "components_required_reported": "a120106bc3d4576a40c16aac29b1b9654fb31d93"
+  },
+  "required_group_ids": [
+    "G00",
+    "G01",
+    "G02",
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07",
+    "G08",
+    "G09",
+    "G10",
+    "G11",
+    "G12",
+    "G13",
+    "G14",
+    "G15",
+    "G16",
+    "G17",
+    "G18",
+    "G19",
+    "G20",
+    "G21",
+    "G22",
+    "G23",
+    "G24",
+    "G25",
+    "G26",
+    "G27",
+    "G28",
+    "G29",
+    "G30",
+    "G31",
+    "G32",
+    "G33",
+    "G34",
+    "G35"
+  ],
+  "qualifiable_group_ids": [
+    "G28",
+    "G33",
+    "G34"
+  ],
+  "shared_foundation": "CDA-UI-DECOUPLING-SHARED-v3",
+  "scope": [
+    "text_asset_creation_upload",
+    "file_collection",
+    "direct_file_interaction",
+    "image_generation_presentation",
+    "progress_summary_exports",
+    "transcript_actions",
+    "mermaid_content"
+  ],
+  "exclusions": [
+    "participant_meeting_assignment",
+    "protected_secret_editor",
+    "runtime_terminal_web_preview",
+    "workflow_process_launch_recovery",
+    "Processes_product"
+  ],
+  "constraints": {
+    "large_desktop_only": true,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "device_scale": 1,
+    "paid_model_calls": 0,
+    "signed_commits_required": true,
+    "push_allowed": false,
+    "reset_to_review_sha": false,
+    "preserve_historical_bundles": true
+  }
+}
