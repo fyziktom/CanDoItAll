@@ -78,6 +78,7 @@
     <Project Path="src/UI/CanDoItAll.Workspace.StorageSelection.UI/CanDoItAll.Workspace.StorageSelection.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <Project Path="src/UI/CanDoItAll.AppComponents.EmbeddedBrowser/CanDoItAll.AppComponents.EmbeddedBrowser.csproj" />
     <Project Path="src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
     <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />

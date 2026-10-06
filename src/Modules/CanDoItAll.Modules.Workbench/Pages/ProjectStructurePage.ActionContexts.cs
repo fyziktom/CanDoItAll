@@ -81,6 +81,15 @@ public partial class ProjectStructurePage {
 
     private void RetireInactiveAuthoring() {
         RetireImageAuthorities();
+        if (runtimePreviewWait is { } wait && !IsCurrentRuntimeObservation(wait)) {
+            CancelRuntimePreviewWait();
+        }
+        if (quickActionDialog?.Context is { } quick && (!IsCurrentAction(quick) || !HasOriginalContentAuthority(quick))) {
+            CloseQuickActionDialog();
+        }
+        if (webPreviewDialog?.Context is { } web && (!IsCurrentAction(web) || !HasOriginalContentAuthority(web))) {
+            CloseWebPreviewDialog();
+        }
         if (secretSession is { IsCurrent: false }) {
             CloseSecretReferenceDialog();
         }
@@ -134,7 +143,7 @@ public partial class ProjectStructurePage {
         }
     }
 
-    private sealed record ProjectStructureActionContext(
+    internal sealed record ProjectStructureActionContext(
         ProjectStructureSurface Surface,
         ProjectWriteAdmission Admission,
         long NavigationRevision,

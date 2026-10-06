@@ -79,6 +79,23 @@ public sealed record ProjectStructureRuntimeLaunchPlan(
     bool TerminalOnly)
 {
     public ProjectStructureRuntimeLaunchTarget? Target => Targets.FirstOrDefault();
+    internal ProjectStructureRuntimeSessionOwner? Owner { get; init; }
+
+    internal ProjectStructureRuntimeLaunchPlan Capture() => this with {
+        ExecutableCandidates = Array.AsReadOnly(ExecutableCandidates.ToArray()),
+        Arguments = Array.AsReadOnly(Arguments.ToArray()),
+        Targets = Array.AsReadOnly(Targets.ToArray()),
+        EnvironmentVariables = new System.Collections.ObjectModel.ReadOnlyDictionary<string, string?>(
+            EnvironmentVariables.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal))
+    };
+
+    internal bool Matches(ProjectStructureRuntimeLaunchPlan other) =>
+        Kind == other.Kind && RequiresApproval == other.RequiresApproval && TerminalOnly == other.TerminalOnly &&
+        WorkingDirectory == other.WorkingDirectory && DisplayCommand == other.DisplayCommand && DisplayName == other.DisplayName &&
+        ExecutableCandidates.SequenceEqual(other.ExecutableCandidates, StringComparer.Ordinal) &&
+        Arguments.SequenceEqual(other.Arguments, StringComparer.Ordinal) && Targets.SequenceEqual(other.Targets) &&
+        EnvironmentVariables.Count == other.EnvironmentVariables.Count &&
+        EnvironmentVariables.All(entry => other.EnvironmentVariables.TryGetValue(entry.Key, out var value) && value == entry.Value);
 }
 
 internal abstract record ProjectStructureRuntimeNodeDefinition(

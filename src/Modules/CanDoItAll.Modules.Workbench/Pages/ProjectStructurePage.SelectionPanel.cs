@@ -561,7 +561,7 @@ public partial class ProjectStructurePage
         if (quickActionDialog is not null)
         {
             builder.Append("|quick:")
-                .Append(quickActionDialog.NodeId)
+                .Append(quickActionDialog.OpeningId).Append(':').Append(quickActionDialog.NodeId)
                 .Append(':')
                 .Append(quickActionDialog.Title)
                 .Append(':')
@@ -591,7 +591,8 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(webPreviewDialog.CanStopRuntime)
                 .Append(':')
-                .Append(webPreviewDialog.RuntimeStopError);
+                .Append(webPreviewDialog.RuntimeStopError).Append(':').Append(webPreviewDialog.OpeningId)
+                .Append(':').Append(webPreviewDialog.IsBusy).Append(':').Append(webPreviewDialog.RuntimeIdentity);
         }
         else
         {

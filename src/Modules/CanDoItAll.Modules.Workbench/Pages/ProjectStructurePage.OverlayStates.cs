@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
@@ -350,6 +351,11 @@ public sealed record ProjectStructureQuickActionDialogState(
     ProjectStructureQuickActionButton PrimaryAction,
     IReadOnlyList<ProjectStructureQuickActionButton> SecondaryActions)
 {
+    public Guid OpeningId { get; init; } = Guid.NewGuid();
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
+    internal ProjectStructureNode? OriginalNode { get; init; }
+    internal long SelectionRevision { get; init; }
+    internal WorkspaceOwnedProcessIdentity? RuntimeIdentity { get; init; }
     public IReadOnlyList<ProjectStructureQuickActionButton> Actions => [EditAction, PrimaryAction, .. SecondaryActions];
 }
 
@@ -362,7 +368,13 @@ public sealed record ProjectStructureWebPreviewDialogState(
     bool CanEmbed,
     string EmbedUnavailableReason,
     bool CanStopRuntime = false,
-    string RuntimeStopError = "");
+    string RuntimeStopError = "") {
+    public Guid OpeningId { get; init; } = Guid.NewGuid();
+    public bool IsBusy { get; init; }
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
+    internal ProjectStructureNode? OriginalNode { get; init; }
+    internal WorkspaceOwnedProcessIdentity? RuntimeIdentity { get; init; }
+}
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,

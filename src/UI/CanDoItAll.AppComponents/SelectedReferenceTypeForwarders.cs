@@ -10,3 +10,5 @@ using CanDoItAll.AppComponents;
 
 [assembly: TypeForwardedTo(typeof(CheckedBadgeFilterGroup<>))]
 [assembly: TypeForwardedTo(typeof(CheckedBadgeFilterOption<>))]
+
+[assembly: TypeForwardedTo(typeof(EmbeddedBrowser))]

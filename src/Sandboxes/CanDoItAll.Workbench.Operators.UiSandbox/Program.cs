@@ -10,6 +10,7 @@ var app = builder.Build();
 app.UseAntiforgery();
 app.MapStaticAssets();
 if (app.Environment.IsDevelopment()) {
+    app.MapGet("/_dev/preview", () => Results.Content("<!doctype html><html><head><title>Owned renderer fixture</title></head><body><h1>Owned renderer fixture</h1><p>Static preview bytes from the independent Operators sandbox.</p></body></html>", "text/html"));
     app.MapGet(OperatorsWatchState.Endpoint, () => OperatorsWatchState.Read(app.Configuration));
 }
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();

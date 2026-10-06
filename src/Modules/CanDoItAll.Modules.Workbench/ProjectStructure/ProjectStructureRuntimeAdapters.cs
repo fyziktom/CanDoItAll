@@ -86,7 +86,21 @@ internal interface IProjectStructureRuntimeExecutionAdapter
 {
     bool IsRunning(string nodeId);
 
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => null;
+
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken)
+        => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
+
+    Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        CancellationToken cancellationToken)
+        => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "Expected-session stop is unavailable."));
+
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
+
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
 
     Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -117,7 +131,23 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
 
     public bool IsRunning(string nodeId) => sessionRegistry.IsRunning(nodeId);
 
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => sessionRegistry.GetIdentity(nodeId);
+
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => sessionRegistry.GetIdentity(nodeId, owner);
+
+    public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken)
+        => sessionRegistry.WaitForExitAsync(nodeId, expected, timeout, cancellationToken);
+
+    public Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        CancellationToken cancellationToken)
+        => sessionRegistry.StopSessionAsync(nodeId, expected, cancellationToken);
+
     public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => sessionRegistry.GetLastExit(nodeId);
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => sessionRegistry.GetLastExit(nodeId, owner);
 
     public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -153,6 +183,7 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
             return new(false, resolution.Message);
         }
 
+        WorkspaceOwnedProcessIdentity? accepted = null;
         try
         {
             var environment = ProjectStructureRuntimeEnvironment.Compose(
@@ -171,33 +202,42 @@ internal sealed class ProjectStructureRuntimeExecutionAdapter(
                     OutputLimitCharacters,
                     OutputLimitCharacters,
                     StderrCaptureMode: WorkspaceProcessTextCaptureMode.Tail),
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken, plan.Owner).ConfigureAwait(false);
             if (!start.IsSuccess || start.Identity is null)
             {
                 return new(false, start.Message);
             }
 
+            accepted = start.Identity;
             logger.LogInformation(
                 "Started Workbench runtime node {NodeId} as owned process {ProcessId} using plan {PlanKind}.",
                 nodeId,
                 start.Identity.ProcessId,
                 plan.Kind);
             var earlyExit = await sessionRegistry.WaitForExitAsync(
-                nodeId,
+                nodeId, accepted,
                 earlyExitObservationWindow ?? DefaultEarlyExitObservationWindow,
                 cancellationToken).ConfigureAwait(false);
             if (earlyExit is not null && earlyExit.ExitCode != 0)
             {
-                return new(false, $"{plan.DisplayName} exited immediately. {earlyExit.Describe()}");
+                return new(false, $"{plan.DisplayName} exited immediately. {earlyExit.Describe()}") { Identity = accepted, Exit = earlyExit, ObservationCompleted = true };
             }
 
             return new(
                 true,
-                $"Started {plan.DisplayName} directly as process {start.Identity.ProcessId}. Workbench owns the session until it exits or is stopped.");
+                $"Started {plan.DisplayName} directly as process {start.Identity.ProcessId}. Workbench owns the session until it exits or is stopped.") {
+                    Identity = accepted, Exit = earlyExit, ObservationCompleted = true
+                };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return new(false, "The runtime launch was canceled before ownership could be handed off.");
+            return new(false, accepted is null
+                ? "The runtime launch was canceled without an accepted session identity."
+                : $"Process {accepted.ProcessId} was acquired; later observation was canceled. Observe or stop this exact owned session.") { Identity = accepted };
+        }
+        catch (Exception failure) when (accepted is not null) {
+            logger.LogWarning(failure, "Observation failed after acquisition of runtime node {NodeId}, process {ProcessId}.", nodeId, accepted.ProcessId);
+            return new(false, $"Process {accepted.ProcessId} was acquired, but subsequent observation failed. Its ownership is retained.") { Identity = accepted };
         }
         catch (WorkspaceProcessStartException exception)
         {

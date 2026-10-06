@@ -127,8 +127,47 @@ sandbox demonstrates separate fixture identities, cleared values and a fixed foo
 655 pixels of visible body with 1,271 pixels of content. These are presentation fixtures;
 native commit evidence is separate and final application journeys are still required.
 
-## Remaining implementation
+## Runtime presentation and original-session ownership
 
-Exact runtime identity/Stop, approval, preview/readiness, complete
-renderer/caller census and final desktop/application proof remain required before WB5
-closure. The whole Workbench is not complete.
+The full quick-action cards, explicit script confirmation and web-preview overlay now use
+Operators.UI. Native compatibility components map their original states and callbacks into
+the same renderers. The original EmbeddedBrowser markup and scoped CSS moved unchanged into
+a small neutral project; AppComponents forwards its public type. Thirty evaluated graph
+comparisons show only this justified child addition. Operators has eight projects in its
+closure and its independent sandbox has nine, without product implementations.
+
+The existing runtime registry retains its per-node keys and original native process host.
+Each reviewed launch freezes the typed plan and retains project admission and node occurrence.
+Approval cannot admit a changed node, project lifetime, actor, runtime generation or selection.
+The registry stores original project ownership alongside the accepted process identity.
+New views resolve only their own session and bounded exit output. Agent and runtime read
+projections supply the original admission; process output remains absent from Agent guidance.
+Legacy unscoped exit lookup exposes only legacy unbound entries.
+
+Acquisition and observation are separate result facts. Cancellation after acquisition retains
+the exact native identity. Stop compares the complete owned identity, including its boundary,
+before termination; late cleanup cannot remove a replacement under the same node or numeric
+PID. Unconfirmed termination retains ownership. Readiness checks the accepted identity before
+and after the exact URL request, and the page checks its original opening again before
+publishing. Closing a preview cancels observation without stopping a process.
+
+Focused proof passes 91 runtime/policy tests, 17 leaf tests and 23 native page tests. Original
+failed attempts remain recorded: a navigation observer clicked a retired dialog, a Stop
+observer waited for a render while admission was pending, and a new readiness fixture omitted
+its required exact project target. Repairs synchronize on actual events and preserve the
+negative assertions. The final readiness cases hold both success and error after a successor
+preview opens on the same native page. The unit selection includes a real direct executable;
+the complete native browser process/descendant journey remains a W4 obligation.
+
+The 1920×1080 DPR1 sandbox displays actual approval, restricted embedded bytes, Stop failure,
+remote refusal and independent specimens. Long notes scroll inside 190 pixels while retaining
+the frame and actions; maximization leaves the other specimen unchanged. Portability review
+accepts fourteen additions and eight stale entries: launch-mode fingerprint changes, original
+plan-path comparison/review, and the moved URI case checks. No-write enforcement passes at
+15,283 findings. These focused results do not claim final application or multi-instance closure.
+
+## Remaining validation
+
+W4 still requires the final renderer/caller/asset census, published Fast/Parity hosts, measured
+watch loop, real native operator/process/Agent/file journeys, final multi-instance consumers,
+the one justified Stable checkpoint and resource closure. The whole Workbench is not complete.

@@ -257,16 +257,16 @@ public partial class ProjectStructurePage
                 await InvokeAsync(StateHasChanged);
                 break;
             case "runtime:open":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Direct);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Direct, actionContext);
                 break;
             case "runtime:terminal":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Terminal);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Terminal, actionContext);
                 break;
             case "runtime:admin":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Elevated);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Elevated, actionContext);
                 break;
             case "runtime:stop":
-                await StopRuntimeAsync(node);
+                await StopRuntimeAsync(node, CurrentRuntimeIdentity(node, actionContext), actionContext);
                 break;
             case RuntimePreviewActionId:
                 if (TryResolveRuntimePreviewLink(node, out var runtimePreviewLink))

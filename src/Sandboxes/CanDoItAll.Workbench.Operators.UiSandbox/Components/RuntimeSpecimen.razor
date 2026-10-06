@@ -1,0 +1,130 @@
+@using CanDoItAll.Workbench.Operators.UI.Runtime
+@inject NavigationManager Navigation
+<SurfaceCard data-testid="@($"operators-runtime-{Name.ToLowerInvariant()}")">
+    <Stack GapScale="LayoutGap.Medium">
+        <TextBlock TextStyle="TextStyle.H4" Value="@($"{Name} runtime specimen")" />
+        <FormField Text="Scenario">
+            <InputSelect class="cda-input" @bind-Value="scenario" data-testid="operators-runtime-scenario">
+                @foreach (var value in Enum.GetValues<Scenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+        </FormField>
+        <Cluster>
+            <Button Text="Open quick actions" Click="OpenQuick" />
+            <Button Text="Open web preview" Click="OpenPreview" />
+        </Cluster>
+        <TextBlock Value="@($"Fixture approvals {approvals}; fixture stops {stops}. {status}")" data-testid="operators-runtime-status" />
+    </Stack>
+</SurfaceCard>
+@if (quick is { } actions) {
+    <OperatorQuickActions View="actions" CanvasScoped="false" Execute="@(index => Execute(actions, index))"
+        Close="@(() => CloseQuick(actions))" />
+}
+@if (approval is { } approvalId) {
+    <CanvasOverlayDialog AriaLabel="Fixture script approval" Kicker="One launch" Title="Fixture approval" Close="@(() => Decide(approvalId, false))">
+        <Body>
+            <OperatorRuntimeApproval @key="approvalId" DisplayName="Synthetic script review" Review="Fixture presentation only; no command will execute."
+                Decide="@(accepted => Decide(approvalId, accepted))" />
+        </Body>
+    </CanvasOverlayDialog>
+}
+@if (preview is { } web) {
+    <OperatorWebPreview View="web" CanvasScoped="false" Stop="@(() => StopAsync(web))"
+        Close="@(() => ClosePreview(web))" />
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = "Fixture";
+    private enum Scenario { Normal, Loading, Unavailable, FailedToStart, Started, EarlyExit, PostStartCanceled, ReadinessWaiting, ReadinessFailure, Serving, Stopping, Exited, StopFailure, DelayedStop, LongNotes, Remote }
+    private Scenario scenario;
+    private OperatorQuickActionsView? quick;
+    private OperatorWebPreviewView? preview;
+    private Guid? approval;
+    private int approvals;
+    private int stops;
+    private string status = "No native process effects.";
+    private void CloseQuick(OperatorQuickActionsView opening) {
+        if (ReferenceEquals(quick, opening)) {
+            quick = null;
+        }
+    }
+    private void ClosePreview(OperatorWebPreviewView opening) {
+        if (preview?.OpeningId == opening.OpeningId) {
+            preview = null;
+        }
+    }
+    private void OpenQuick() {
+        var unavailable = scenario is Scenario.Loading or Scenario.Unavailable or Scenario.Stopping;
+        var summary = scenario switch {
+            Scenario.Loading => "Fixture runtime capabilities are loading; no action is available yet.",
+            Scenario.FailedToStart => "Fixture launch failed before any native process identity was accepted.",
+            Scenario.Started => "Fixture process identity was accepted. Readiness has not been observed.",
+            Scenario.EarlyExit => "Fixture process exited with code 7. Its accepted identity remains in the owner receipt.",
+            Scenario.PostStartCanceled => "Fixture process was acquired; later observation was canceled. No stop has been confirmed.",
+            Scenario.ReadinessWaiting => "Fixture accepted process is waiting for its exact preview URL.",
+            Scenario.ReadinessFailure => "Fixture readiness could not be observed. No launch was repeated.",
+            Scenario.Serving => "Fixture presentation of serving state; this is not native runtime proof.",
+            Scenario.Stopping => "Fixture Stop is pending for one exact original process identity.",
+            Scenario.Exited => "Fixture process exited with code 0. No process remains owned by this view.",
+            _ => "Choose a fixture action. Real native effects are validated separately."
+        };
+        quick = new(Guid.NewGuid(), $"{Name} runtime", "Script", summary, Notes(), [
+            new(0, "Edit", "Edit stays with the original native node owner.", "draw", OperatorActionTone.Primary, "fixture-edit", false),
+            new(1, unavailable ? "Runtime unavailable" : "Run", unavailable ? "The fixture has no executable capability." : "Review exactly one explicit script launch.",
+                "play_arrow", OperatorActionTone.Information, "fixture-run", unavailable),
+            new(2, "Open preview", "Use the real restricted EmbeddedBrowser child.", "preview", OperatorActionTone.Success, "fixture-preview", false)
+        ]);
+    }
+    private void Execute(OperatorQuickActionsView opening, int index) {
+        if (!ReferenceEquals(quick, opening)) {
+            return;
+        }
+        quick = null;
+        if (index == 1) {
+            approval = Guid.NewGuid();
+        } else if (index == 2) {
+            OpenPreview();
+        } else {
+            status = "Fixture edit requested; no native editor or store is invoked.";
+        }
+    }
+    private void Decide(Guid opening, bool accepted) {
+        if (approval != opening) {
+            return;
+        }
+        approval = null;
+        if (accepted) {
+            approvals++;
+            status = "One fixture approval recorded. No native process was started.";
+            OpenPreview();
+        } else {
+            status = "Fixture launch canceled before any effect.";
+        }
+    }
+    private void OpenPreview() {
+        quick = null;
+        preview = new(Guid.NewGuid(), $"{Name} web preview", "Fixture runtime", scenario == Scenario.Remote
+            ? new("https://example.invalid/") : new(new Uri(Navigation.BaseUri), "_dev/preview"), Notes(), scenario != Scenario.Remote,
+            "The remote fixture cannot be embedded.", scenario != Scenario.Remote, string.Empty,
+            ProcessLabel: scenario == Scenario.Remote ? null : "Fixture process identity; no operating-system process is owned");
+    }
+    private async Task StopAsync(OperatorWebPreviewView opening) {
+        if (preview?.OpeningId != opening.OpeningId || preview.IsBusy) {
+            return;
+        }
+        preview = opening with { IsBusy = true };
+        stops++;
+        if (scenario == Scenario.DelayedStop) {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+        if (preview?.OpeningId != opening.OpeningId) {
+            return;
+        }
+        preview = scenario == Scenario.StopFailure ? opening with { Error = "Fixture Stop failed; the original view remains available." } : null;
+        status = scenario == Scenario.StopFailure ? "Fixture stop failure retained." : "Fixture stop observed. No native process was terminated.";
+    }
+    private string Notes() => scenario == Scenario.LongNotes
+        ? string.Join(' ', Enumerable.Repeat("Long fixture notes remain scrollable beside the preview and actions.", 200))
+        : "Only the existing renderer and restricted EmbeddedBrowser run in this sandbox.";
+}

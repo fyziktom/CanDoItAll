@@ -358,63 +358,14 @@
     </ProjectStructureOverlayDialog>
 }
 
-@if (QuickActionDialog is not null)
-{
-    var quickActionDialog = QuickActionDialog;
-
-    <ProjectStructureOverlayDialog CanvasScoped="true"
-                                   AriaLabel="@($"{quickActionDialog.Title} quick actions")"
-                                   Kicker="Node quick actions"
-                                   Title="@quickActionDialog.Title"
-                                   Summary="@quickActionDialog.Copy"
-                                   DialogClass="project-structure-quick-action-dialog"
-                                   BodyClass="project-structure-quick-action-dialog__body"
-                                   DataTestId="project-structure-node-quick-actions"
-                                   Close="CloseQuickActionDialog">
-        <Actions>
-            <Pill Tone="PillTone.Info" Text="@quickActionDialog.NodeLabel" />
-            <Button Text="Close"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CloseQuickActionDialog" />
-        </Actions>
-        <Body>
-            <Stack GapScale="LayoutGap.Medium">
-                @if (!string.IsNullOrWhiteSpace(quickActionDialog.Notes))
-                {
-                    <PanelCard Soft="true" data-testid="project-structure-quick-action-notes">
-                        <Stack GapScale="LayoutGap.Tiny">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
-                            <TextBlock TextStyle="TextStyle.Note"
-                                       Value="@quickActionDialog.Notes"
-                                       Class="whitespace-pre-wrap break-words" />
-                        </Stack>
-                    </PanelCard>
-                }
-
-                <Grid Columns="2"
-                      Gap="LayoutGap.Medium"
-                      Class="project-structure-quick-action-grid">
-                    @foreach (var action in quickActionDialog.Actions)
-                    {
-                        <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
-                                Variant="Variant.Outlined"
-                                Class="project-structure-quick-action-card"
-                                data-testid="@ResolveQuickActionTestId(action)"
-                                Disabled="@action.IsDisabled"
-                                Click="@(() => ExecuteQuickAction.InvokeAsync(action))">
-                            <Stack GapScale="LayoutGap.Small"
-                                   Class="items-center text-center">
-                                <Icon Name="@action.Icon" />
-                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
-                                <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
-                            </Stack>
-                        </Button>
-                    }
-                </Grid>
-            </Stack>
-        </Body>
-    </ProjectStructureOverlayDialog>
+@if (QuickActionDialog is { } quick) {
+    var dispatch = ExecuteQuickAction;
+    var close = CloseQuickActionDialog;
+    var actions = quick.Actions.ToArray();
+    <CanDoItAll.Workbench.Operators.UI.Runtime.OperatorQuickActions @key="quick.OpeningId"
+        View="@(new(quick.OpeningId, quick.Title, quick.NodeLabel, quick.Copy, quick.Notes,
+            actions.Select((action, index) => ToOperatorAction(action, index)).ToArray()))"
+        Execute="@(index => dispatch.InvokeAsync(actions[index]))" Close="close" />
 }
 
 @if (WebPreviewDialog is not null)
@@ -984,10 +935,16 @@
         };
     }
 
-    private static string ResolveQuickActionTestId(ProjectStructureQuickActionButton action)
-        => action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit
+    private static CanDoItAll.Workbench.Operators.UI.Runtime.OperatorQuickAction ToOperatorAction(ProjectStructureQuickActionButton action, int index)
+        => new(index, action.Label, action.Description, action.Icon, action.Tone switch {
+            "danger" => CanDoItAll.Workbench.Operators.UI.Runtime.OperatorActionTone.Danger,
+            "warn" => CanDoItAll.Workbench.Operators.UI.Runtime.OperatorActionTone.Warning,
+            "mint" => CanDoItAll.Workbench.Operators.UI.Runtime.OperatorActionTone.Success,
+            "sky" => CanDoItAll.Workbench.Operators.UI.Runtime.OperatorActionTone.Information,
+            _ => CanDoItAll.Workbench.Operators.UI.Runtime.OperatorActionTone.Primary
+        }, action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit
             ? "project-structure-quick-action-edit"
-            : $"project-structure-quick-action-{NormalizeTestIdToken(action.ActionId)}";
+            : $"project-structure-quick-action-{NormalizeTestIdToken(action.ActionId)}", action.IsDisabled);
 
     private static string FormatUsd(decimal amount)
         => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));

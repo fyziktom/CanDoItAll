@@ -144,6 +144,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     </SupportWindows>
     <DeferredDialogs>
+                            @{
+                                var quickOpening = quickActionDialog;
+                                var webOpening = webPreviewDialog;
+                            }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs RenderProcessStartDialog="false"
                                                            ProcessLinkDialog="@processLinkDialog"
@@ -177,11 +181,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             CancelHrManagerMatch="CancelHrManagerMatchAsync"
             ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
                                                            QuickActionDialog="@quickActionDialog"
-                                                           CloseQuickActionDialog="CloseQuickActionDialog"
-                                                           ExecuteQuickAction="ExecuteQuickActionAsync"
+                                                           CloseQuickActionDialog="@(() => CloseQuickActionDialog(quickOpening))"
+                                                           ExecuteQuickAction="@(action => ExecuteQuickActionAsync(quickOpening, action))"
                                                            WebPreviewDialog="@webPreviewDialog"
-                                                           StopWebPreviewRuntime="StopWebPreviewRuntimeAsync"
-                                                           CloseWebPreviewDialog="CloseWebPreviewDialog"
+                                                           StopWebPreviewRuntime="@(_ => StopWebPreviewRuntimeAsync(webOpening))"
+                                                           CloseWebPreviewDialog="@(() => CloseWebPreviewDialog(webOpening))"
                                                            PreviewNode="@previewNode"
                                                            PreviewInteraction="@PreviewInteraction"
                                                            CloseAttachmentPreview="CloseAttachmentPreviewAsync"
