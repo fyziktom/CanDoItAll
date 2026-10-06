@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.CrmHr;
 
@@ -240,7 +241,11 @@ public sealed partial class PartyDirectoryService(
         };
     }
 
-    public async Task<Result<Guid>> SavePartyAsync(PartyEditorModel model, CancellationToken cancellationToken = default)
+    public Task<Result<Guid>> SavePartyAsync(PartyEditorModel model, CancellationToken cancellationToken = default)
+        => SavePartyObservedAsync(model, null, cancellationToken);
+
+    internal async Task<Result<Guid>> SavePartyObservedAsync(PartyEditorModel model, Action<Guid>? onCommitted,
+        CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var saveResult = await SavePartyCoreAsync(dbContext, model, cancellationToken);
@@ -250,6 +255,7 @@ public sealed partial class PartyDirectoryService(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        onCommitted?.Invoke(saveResult.Value.PartyId);
         await PublishPartySavedAsync(saveResult.Value, cancellationToken);
         return Result<Guid>.Success(saveResult.Value.PartyId);
     }
@@ -5113,7 +5119,8 @@ public sealed class ProjectPartyIntegrationService(
     CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectRecordQueryService projectRecordQueryService,
     ProjectWriteAdmissionService admissions,
-    DbContextOptions<CrmHrDbContext> contextOptions) :
+    DbContextOptions<CrmHrDbContext> contextOptions,
+    ILogger<ProjectPartyIntegrationService>? logger = null) :
     IProjectPartyIntegrationBridge,
     IProjectPartyCostRateBridge,
     IProjectPartyDeletionStateQuery
@@ -6582,6 +6589,7 @@ public sealed class ProjectPartyIntegrationService(
         ProjectPartyQuickCreateRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.DisplayName))
         {
             return Result<ProjectPartyQuickCreateResult>.Failure(Error.Validation(
@@ -6606,25 +6614,32 @@ public sealed class ProjectPartyIntegrationService(
             LastChangedBy = "project-structure",
             ContactPoints = BuildQuickCreateContacts(request)
         };
-
-        var saveResult = await partyDirectoryService.SavePartyAsync(editor, cancellationToken);
-        if (!saveResult.IsSuccess)
-        {
-            return Result<ProjectPartyQuickCreateResult>.Failure(saveResult.Errors.ToArray());
+        var expected = request.ExpectedProjectAdmission;
+        if (expected is not null) {
+            if (expected.ProjectId != request.ProjectId) {
+                throw new ArgumentException("The quick-create admission must name its original project.", nameof(request));
+            }
+            await admissions.RequireCurrentAsync(expected, cancellationToken);
         }
 
-        var option = await GetPartyOptionAsync(saveResult.Value, cancellationToken);
-        if (option is null)
-        {
-            return Result<ProjectPartyQuickCreateResult>.Failure(Error.Failure(
-                "The created party could not be loaded.",
-                "crmhr.project-party.created-party-not-found"));
+        Guid? committed = null;
+        try {
+            var saveResult = await partyDirectoryService.SavePartyObservedAsync(editor, id => committed = id, cancellationToken);
+            if (!saveResult.IsSuccess) {
+                return Result<ProjectPartyQuickCreateResult>.Failure(saveResult.Errors.ToArray());
+            }
+            var option = await GetPartyOptionAsync(saveResult.Value, cancellationToken);
+            return Result<ProjectPartyQuickCreateResult>.Success(new(saveResult.Value,
+                option?.DisplayName ?? editor.DisplayName, option?.PartyTypeLabel ?? ResolvePartyTypeLabel(partyType)) {
+                ObservationWarning = option is null ? "The party was created, but its directory option could not be loaded." : null
+            });
+        } catch (Exception exception) when (committed.HasValue) {
+            logger?.LogWarning("Directory party {PartyId} was committed; its follow-up ended with {FailureType}.",
+                committed.Value, exception.GetType().Name);
+            return Result<ProjectPartyQuickCreateResult>.Success(new(committed.Value, editor.DisplayName, ResolvePartyTypeLabel(partyType)) {
+                ObservationWarning = "The party was created, but directory follow-up did not finish. Reload its metadata; do not create it again."
+            });
         }
-
-        return Result<ProjectPartyQuickCreateResult>.Success(new ProjectPartyQuickCreateResult(
-            option.PartyId,
-            option.DisplayName,
-            option.PartyTypeLabel));
     }
 
     private static List<PartyContactPointEditorModel> BuildQuickCreateContacts(ProjectPartyQuickCreateRequest request)

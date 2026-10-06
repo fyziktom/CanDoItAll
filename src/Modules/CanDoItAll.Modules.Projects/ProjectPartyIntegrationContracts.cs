@@ -129,6 +129,8 @@ public sealed class ProjectPartyQuickCreateRequest
 {
     public Guid ProjectId { get; set; }
 
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
     public ProjectPartyQuickCreateKind PartyKind { get; set; } = ProjectPartyQuickCreateKind.Person;
 
     public string DisplayName { get; set; } = string.Empty;
@@ -143,7 +145,9 @@ public sealed class ProjectPartyQuickCreateRequest
 public sealed record ProjectPartyQuickCreateResult(
     Guid PartyId,
     string DisplayName,
-    string PartyTypeLabel);
+    string PartyTypeLabel) {
+    public string? ObservationWarning { get; init; }
+}
 
 public sealed record ProjectNodeScopeResolution(
     bool ExistsInProject,

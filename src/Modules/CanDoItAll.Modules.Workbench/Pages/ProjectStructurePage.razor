@@ -203,9 +203,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         @if (structureViewIndex == CanvasViewIndex && CanShowPartyEditor)
         {
+            var displayedPartyEditor = partyEditor;
             <SectionCard Title="@PartyEditorTitle"
                          Description="@PartyEditorDescription">
-                <div class="space-y-5"
+                <div @key="displayedPartyEditor" class="space-y-5"
                      data-testid="project-structure-party-editor">
                     <SurfaceCard Soft="true">
                         <Stack GapScale="LayoutGap.Small">
@@ -234,6 +235,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                         <SurfaceCard Soft="true">
                             <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-slate-700")"
                                data-testid="project-structure-party-editor-message">@partyEditor.Message</p>
+                            @if (partyEditor.CreatedParty is not null) {
+                                <Button Text="Reload created party" Disabled="@isPartyEditorBusy"
+                                        data-testid="project-structure-party-retry" Click="@(() => RetryCreatedPartyAsync(displayedPartyEditor))" />
+                            }
                         </SurfaceCard>
                     }
 
@@ -325,9 +330,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                             <Cluster>
                                                 <Button ButtonStyle="ButtonStyle.Light"
                                                         Text="Create party"
-                                                        Disabled="@isPartyEditorBusy"
+                                                        Disabled="@(isPartyEditorBusy || partyEditor.RequiresObservation || partyEditor.CreatedParty is not null)"
                                                         data-testid="project-structure-participant-quick-create"
-                                                        Click="CreateParticipantPartyAsync" />
+                                                        Click="@(() => CreateParticipantPartyAsync(displayedPartyEditor))" />
                                             </Cluster>
                                         </Stack>
                                     </SurfaceCard>

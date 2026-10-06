@@ -14,6 +14,16 @@ public partial class ProjectStructurePage
 
         public ProjectStructureNode? OpenedNode { get; init; }
 
+        public ProjectStructureActionContext? Context { get; init; }
+
+        public long SelectionRevision { get; init; }
+
+        public bool IsBusy { get; set; }
+
+        public bool RequiresObservation { get; set; }
+
+        public ProjectPartyQuickCreateResult? CreatedParty { get; set; }
+
         public Guid? SelectedPartyId { get; set; }
 
         public HashSet<Guid> SelectedMeetingPartyIds { get; } = [];
@@ -30,8 +40,13 @@ public partial class ProjectStructurePage
     private IReadOnlyList<ProjectPartyOption> partyEditorOptions = [];
     private IReadOnlyList<ProjectPartyAssignmentDetail> projectPartyAssignments = [];
     private ProjectStructurePartyEditorState partyEditor = new();
-    private bool isPartyEditorBusy;
+    private bool isPartyEditorBusy {
+        get => partyEditor.IsBusy;
+        set => partyEditor.IsBusy = value;
+    }
     private bool isPartyEditorLoading;
+    private long partyReadGeneration;
+    private readonly Queue<(ProjectWriteAdmission Project, string NodeId, ProjectPartyQuickCreateResult Party)> createdParticipantParties = new();
 
     [Inject]
     private IProjectNodeAssignmentPolicyBridge NodeAssignmentPolicyBridge { get; set; } = default!;
@@ -194,6 +209,7 @@ public partial class ProjectStructurePage
 
     private async Task LoadPartyEditorAsync()
     {
+        var generation = ++partyReadGeneration;
         if (!CanShowPartyEditor || selectedNode is null)
         {
             isPartyEditorLoading = false;
@@ -202,9 +218,13 @@ public partial class ProjectStructurePage
         }
 
         var openedNode = selectedNode;
+        if (IsCurrentPartyEditor(partyEditor) && partyEditor.OpenedNode?.Id == openedNode.Id) {
+            return;
+        }
         var context = CaptureActionContext();
         var selectionRevision = insightsSelectionRevision;
-        bool IsCurrent() => IsCurrentAction(context) && insightsSelectionRevision == selectionRevision;
+        bool IsCurrent() => IsCurrentAction(context) && HasOriginalContentAuthority(context) &&
+            insightsSelectionRevision == selectionRevision && partyReadGeneration == generation;
         var expected = surface?.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("Reload the project before opening its party editor.");
         isPartyEditorLoading = true;
@@ -226,6 +246,8 @@ public partial class ProjectStructurePage
             {
                 ExpectedProjectAdmission = expected,
                 OpenedNode = openedNode,
+                Context = context,
+                SelectionRevision = selectionRevision,
                 QuickCreate = new ProjectPartyQuickCreateRequest
                 {
                     ProjectId = expected.ProjectId,
@@ -260,33 +282,94 @@ public partial class ProjectStructurePage
         }
     }
 
-    private async Task CreateParticipantPartyAsync()
-    {
-        isPartyEditorBusy = true;
-        try
-        {
-            var result = await ProjectPartyIntegrationBridge.CreatePartyAsync(partyEditor.QuickCreate);
-            if (!result.IsSuccess)
-            {
-                SetPartyEditorMessage(result.Errors.FirstOrDefault()?.Message ?? "Unable to create the party.", "danger");
+    private bool IsCurrentPartyEditor(ProjectStructurePartyEditorState edit)
+        => ReferenceEquals(partyEditor, edit) && edit.Context is { } context && IsCurrentAction(context) &&
+            HasOriginalContentAuthority(context) && edit.SelectionRevision == insightsSelectionRevision;
+
+    private async Task CreateParticipantPartyAsync(ProjectStructurePartyEditorState edit) {
+        if (!IsCurrentPartyEditor(edit) || edit.IsBusy || edit.RequiresObservation || edit.CreatedParty is not null ||
+            edit.ExpectedProjectAdmission is not { } expected || edit.OpenedNode is not { ObjectType: ProjectObjectType.Participant } node) {
+            return;
+        }
+        var submitted = new ProjectPartyQuickCreateRequest {
+            ProjectId = expected.ProjectId,
+            ExpectedProjectAdmission = expected,
+            PartyKind = edit.QuickCreate.PartyKind,
+            DisplayName = edit.QuickCreate.DisplayName,
+            Email = edit.QuickCreate.Email,
+            Phone = edit.QuickCreate.Phone,
+            Summary = edit.QuickCreate.Summary
+        };
+        edit.IsBusy = true;
+        var dispatched = false;
+        try {
+            await ProjectWorkbenchService.RequireContentCurrentAsync(expected, node, deferredCompletionCts.Token);
+            if (!IsCurrentPartyEditor(edit)) {
                 return;
             }
-
-            var createdParty = result.Value
+            dispatched = true;
+            var result = await ProjectPartyIntegrationBridge.CreatePartyAsync(submitted);
+            if (!result.IsSuccess) {
+                edit.Message = result.Errors.FirstOrDefault()?.Message ?? "Unable to create the party.";
+                edit.MessageTone = "danger";
+                return;
+            }
+            var created = result.Value
                 ?? throw new InvalidOperationException("Party creation succeeded without a created party result.");
-            partyEditorOptions = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(ProjectId);
-            partyEditor.SelectedPartyId = createdParty.PartyId;
-            partyEditor.KeepProjectLocalOnly = false;
-            partyEditor.QuickCreate = new ProjectPartyQuickCreateRequest
-            {
-                ProjectId = ProjectId,
-                PartyKind = ProjectPartyQuickCreateKind.Person
-            };
-            SetPartyEditorMessage("Directory party created from the participant flow.", "mint");
+            edit.CreatedParty = created;
+            createdParticipantParties.Enqueue((expected, node.Id, created));
+            while (createdParticipantParties.Count > 16) {
+                createdParticipantParties.Dequeue();
+            }
+            Logger.LogInformation("Directory party {PartyId} created for original participant {NodeId}, project {ProjectId}, lifetime {LifetimeId}. Assignment has not been saved.",
+                created.PartyId, node.Id, expected.ProjectId, expected.LifetimeId);
+            await ObserveCreatedPartyAsync(edit);
+        } catch (Exception exception) {
+            edit.RequiresObservation = dispatched && edit.CreatedParty is null && !IsKnownGraphRejection(exception);
+            edit.Message = edit.CreatedParty is { } created
+                ? $"Directory party {created.PartyId:D} was created. Its options could not be refreshed. Retry the read; do not create it again."
+                : edit.RequiresObservation
+                    ? "Directory creation has no confirmed result. Inspect the original directory before creating another party."
+                    : "The original participant is no longer available for quick-create. Reload its editor.";
+            edit.MessageTone = "warn";
+            Logger.LogWarning("Participant quick-create for project {ProjectId}, node {NodeId} ended with {FailureType}; accepted PartyId {PartyId}.",
+                expected.ProjectId, node.Id, exception.GetType().Name, edit.CreatedParty?.PartyId);
+        } finally {
+            edit.IsBusy = false;
         }
-        finally
-        {
-            isPartyEditorBusy = false;
+    }
+
+    private async Task ObserveCreatedPartyAsync(ProjectStructurePartyEditorState edit) {
+        if (!IsCurrentPartyEditor(edit) || edit.CreatedParty is not { } created) {
+            return;
+        }
+        var options = await ProjectPartyIntegrationBridge.ListPartyOptionsAsync(edit.ExpectedProjectAdmission!.ProjectId);
+        if (!IsCurrentPartyEditor(edit)) {
+            return;
+        }
+        partyEditorOptions = options;
+        edit.SelectedPartyId = created.PartyId;
+        edit.KeepProjectLocalOnly = false;
+        edit.Message = $"Directory party {created.PartyId:D} created. Save participant sync to assign it.";
+        if (created.ObservationWarning is { } warning) {
+            edit.Message += $" {warning}";
+        }
+        edit.MessageTone = created.ObservationWarning is null ? "mint" : "warn";
+    }
+
+    private async Task RetryCreatedPartyAsync(ProjectStructurePartyEditorState edit) {
+        if (!IsCurrentPartyEditor(edit) || edit.IsBusy || edit.CreatedParty is null) {
+            return;
+        }
+        edit.IsBusy = true;
+        try {
+            await ObserveCreatedPartyAsync(edit);
+        } catch (Exception exception) {
+            edit.Message = $"Directory party {edit.CreatedParty.PartyId:D} was created. Metadata is still unavailable; no create was repeated.";
+            edit.MessageTone = "warn";
+            Logger.LogWarning("Directory party {PartyId} observation failed with {FailureType}.", edit.CreatedParty.PartyId, exception.GetType().Name);
+        } finally {
+            edit.IsBusy = false;
         }
     }
 
