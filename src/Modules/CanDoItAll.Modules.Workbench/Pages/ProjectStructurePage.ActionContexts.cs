@@ -15,8 +15,8 @@ public partial class ProjectStructurePage {
 
     internal IReadOnlyList<ProjectStructureAuthoringOutcome> AuthoringOutcomes => authoringOutcomes.ToArray();
 
-    private sealed class ProjectStructureAuthoringOpening(ProjectStructureActionContext context, ProjectStructureNode node) {
-        public Guid Id { get; } = Guid.NewGuid();
+    private sealed class ProjectStructureAuthoringOpening(ProjectStructureActionContext context, ProjectStructureNode node, Guid? id = null) {
+        public Guid Id { get; } = id ?? Guid.NewGuid();
         public ProjectStructureActionContext Context { get; } = context;
         public ProjectStructureNode Node { get; } = node;
         public bool IsBusy { get; set; }
@@ -75,6 +75,12 @@ public partial class ProjectStructurePage {
         => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
 
     private void RetireInactiveAuthoring() {
+        foreach (var retired in composerOpenings.Where(entry => !IsCurrentAction(entry.Value.Ownership.Context)).Select(entry => entry.Key).ToArray()) {
+            composerOpenings.Remove(retired);
+        }
+        if (composerOpening is { } composer && !IsCurrentAction(composer.Ownership.Context)) {
+            composerOpening = null;
+        }
         if (hierarchyOpening is { } hierarchy && !IsCurrentAction(hierarchy.Context)) {
             CloseProjectHierarchyDialog();
         }

@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject }
+internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject, CreateNode, EditNode, CopyNodes, MoveNodes, ConnectNodes, SaveLayout }
 internal enum ProjectStructureAuthoringResultKind { Rejected, Committed, Unconfirmed, Compensated, PartialCommit }
 
 internal sealed record ProjectStructureAuthoringOutcome(

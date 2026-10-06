@@ -28,21 +28,6 @@ internal sealed record ProjectStructureCreateLeafDefinition(
     IReadOnlyList<CanvasWorkbenchInputValue>? DefaultInputValues = null,
     bool AllowsFileUpload = false);
 
-public sealed record ProjectStructureMutationTypeOption(
-    string ActionId,
-    string ObjectSubtype,
-    string Label,
-    string Description,
-    string Icon,
-    string Tone);
-
-public sealed record ProjectStructureInspectorCreateGroup(
-    string Key,
-    string Label,
-    string Description,
-    bool IsOpen,
-    IReadOnlyList<CanvasWorkbenchAction> Actions);
-
 internal static partial class ProjectStructureCanvasCatalog
 {
     internal const string GenerateImageAssetActionId = "generate-image-asset";

@@ -687,6 +687,13 @@ for source/dependency provenance, retained attempts and closure status.
 
 ## Broad Stable Gate
 
+The Workbench Structure renderer suite is included in Components, Stable and all
+three component CI selections. `CanDoItAll.Workbench.Structure.UI.Tests` exercises
+the real canvas and structural dialogs without native services. Native composer,
+hierarchy and transfer lifetime cases remain in `CanDoItAll.Tests.Components`.
+See [the WB3 record](architecture/workbench-structure-wb3.md) for frozen inputs,
+mixed attempts, independent sandbox proof and the final Stable checkpoint status.
+
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
 operator or reviewer request, or a named invalidation trigger in the work plan. Typical
 invalidation triggers are cross-cutting composition/DI changes, root solution or

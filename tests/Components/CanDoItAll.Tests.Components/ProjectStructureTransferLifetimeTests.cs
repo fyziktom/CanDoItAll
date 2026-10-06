@@ -1,3 +1,4 @@
+using CanDoItAll.Workbench.Structure.UI;
 using System.Reflection;
 using System.Text.Json;
 using Bunit;
@@ -65,9 +66,9 @@ public sealed class ProjectStructureTransferLifetimeTests {
         var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, source));
         page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
         await OpenAsync(page, first.Id);
-        var originalOpening = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.SubprojectTransferDialog!.OpeningId;
+        var originalOpening = page.FindComponent<StructureStructuralDialogs>().Instance.SubprojectTransferDialog!.OpeningId;
         await page.InvokeAsync(() => page.Find("[data-testid='project-structure-subproject-transfer-name']").Input("Original extraction"));
-        var pending = page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ExecuteSubprojectTransfer.InvokeAsync());
+        var pending = page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteSubprojectTransfer.InvokeAsync());
         Guid successorOpening;
         try {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
@@ -75,10 +76,10 @@ public sealed class ProjectStructureTransferLifetimeTests {
             if (completion == Completion.Compensated) {
                 Assert.Equal(1, await workbench.DeleteObjectAsync(source, child.Id));
             }
-            await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseSubprojectTransfer.InvokeAsync());
+            await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseSubprojectTransfer.InvokeAsync());
             await OpenAsync(page, next.Id);
             await page.InvokeAsync(() => page.Find("[data-testid='project-structure-subproject-transfer-name']").Input("Unsubmitted successor"));
-            successorOpening = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.SubprojectTransferDialog!.OpeningId;
+            successorOpening = page.FindComponent<StructureStructuralDialogs>().Instance.SubprojectTransferDialog!.OpeningId;
         } finally {
             release.TrySetResult();
         }
@@ -87,7 +88,7 @@ public sealed class ProjectStructureTransferLifetimeTests {
         var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
         Assert.Equal(originalOpening, outcome.OpeningId);
         Assert.Equal(creation!.Project.ProjectId, outcome.TargetProjectId);
-        var successor = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.SubprojectTransferDialog!;
+        var successor = page.FindComponent<StructureStructuralDialogs>().Instance.SubprojectTransferDialog!;
         Assert.Equal(successorOpening, successor.OpeningId);
         Assert.Equal("Unsubmitted successor", successor.ProjectName);
         Assert.Empty(successor.Error);

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations.Schema;
 using CanDoItAll.Infrastructure.Persistence;
@@ -208,7 +209,10 @@ public sealed record ProjectStructureNode(
     int? DurationSeconds = null,
     ProjectNodeReferenceCollection? NodeReferences = null,
     bool IsSystemManaged = false,
-    Guid ProjectId = default);
+    Guid ProjectId = default) {
+    [JsonIgnore]
+    public Guid? RecordId { get; init; }
+}
 
 public sealed record ProjectStructureLink(
     string SourceId,
@@ -290,6 +294,9 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectTaskPricingInitialization TaskPricingInitialization =
         ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
     [JsonIgnore]
+    public IReadOnlyList<ProjectStructureNode> ExpectedParticipants { get; init; } = [];
+
+    [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
     [JsonIgnore]
@@ -318,6 +325,10 @@ public sealed record ProjectObjectEditRequest(
     ProjectNodeReferenceCollection? NodeReferences = null) {
     [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public ProjectStructureNode? ExpectedNode { get; init; }
+
 
     [JsonIgnore]
     public ProjectProcessMutationAdmission? ProcessMutationAdmission { get; init; }
@@ -763,6 +774,13 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         var normalizedParentNodeKey = ProjectWorkbenchGraphConventions.NormalizeEditableParentNodeKey(projectId, request.ParentNodeKey);
+        foreach (var expectedNode in request.ExpectedParticipants.Where(node => !node.IsSystemManaged)) {
+            if (!await dbContext.Set<ProjectObjectRecord>().AnyAsync(node => node.ProjectId == projectId &&
+                node.NodeKey == expectedNode.Id && node.Id == expectedNode.RecordId && !node.IsSystemManaged &&
+                node.ObjectType == expectedNode.ObjectType && node.ObjectSubtype == expectedNode.ObjectSubtype, cancellationToken)) {
+                throw new ProjectStructureEditConflictException();
+            }
+        }
         var existingNodes = await LoadCreatePlanningNodesAsync(
             dbContext,
             projectId,
@@ -1388,6 +1406,15 @@ public sealed partial class ProjectWorkbenchService(
                 ? node.ParentNodeKey
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        if (request.ExpectedNode is { } expectedNode &&
+            (expectedNode.RecordId != node.Id || expectedNode.ObjectType != node.ObjectType ||
+             !string.Equals(expectedNode.ObjectSubtype, node.ObjectSubtype, StringComparison.Ordinal) ||
+             !string.Equals(expectedNode.MetadataJson, ProjectNodeLegacyMetadata.SanitizeLegacyReferenceMetadata(node.MetadataJson), StringComparison.Ordinal) ||
+             expectedNode.Title != node.Title || expectedNode.Subtitle != node.Subtitle || expectedNode.Notes != node.Notes ||
+             expectedNode.StartUtc != node.StartUtc || expectedNode.EndUtc != node.EndUtc || expectedNode.DurationSeconds != node.DurationSeconds ||
+             JsonSerializer.Serialize(expectedNode.NodeReferences) != JsonSerializer.Serialize(node.NodeReferences))) {
+            throw new ProjectStructureEditConflictException();
+        }
         if (currentMetadataValidation is not null)
         {
             currentMetadataValidation(ProjectObjectMetadataSerializer.Parse(node.MetadataJson));

@@ -31,7 +31,7 @@ public sealed class ProjectStructurePlacementPolicy
         CanvasWorkbenchCreateActionRequest request,
         ProjectObjectType? objectType = null)
     {
-        if (request.X > 0 && request.Y > 0 && string.Equals(request.PlacementKind, "canvas", StringComparison.OrdinalIgnoreCase))
+        if (double.IsFinite(request.X) && double.IsFinite(request.Y) && string.Equals(request.PlacementKind, "canvas", StringComparison.OrdinalIgnoreCase))
         {
             return new ProjectStructureCreatePlacementPlan((request.X, request.Y), []);
         }

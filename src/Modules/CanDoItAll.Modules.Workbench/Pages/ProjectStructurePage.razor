@@ -59,134 +59,18 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           ContextAccessState="@agentChatContextAccessState"
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
-@if (unavailableState is not null)
-{
-    <PageScaffold>
-        <Header>
-            <PageHeader Eyebrow="Workbench"
-                        Title="Project structure unavailable"
-                        Description="The requested project is not available in the active database profile." />
-        </Header>
-        <ChildContent>
-            <EmptyState Eyebrow="Switched profile"
-                        Title="@unavailableState.Title"
-                        Description="@unavailableState.Description">
-                <Actions>
-                    <Button Text="Open projects"
-                            Click="OpenUnavailableRouteAsync" />
-                </Actions>
-            </EmptyState>
-        </ChildContent>
-    </PageScaffold>
-}
-else if (surface is null || canvasSurface is null)
-{
-    <div class="project-structure-page">
-        <CanvasWorkbenchStage Eyebrow=""
-                              Title=""
-                              Description="">
-            <Canvas>
-                <SkeletonStateOverlay Snapshot="@LoadingSkeletonSnapshot" />
-            </Canvas>
-        </CanvasWorkbenchStage>
-    </div>
-}
-else
-{
-    <div class="project-structure-page">
-        <Stack Gap="1.5rem"
-               Class="project-structure-page__stack">
-
-        <Tabs @bind-SelectedIndex="structureViewIndex"
-              AriaLabel="Project structure views"
-              Variant="TabsVariant.WorkspaceSecondary"
-              RenderMode="TabRenderMode.Server">
-            <TabsItem Text="Canvas" Icon="account_tree">
-        <CanvasWorkbenchStage Eyebrow=""
-                              Title=""
-                              Description="">
-            <Canvas>
-                <CanvasWorkbench Surface="canvasSurface"
-                                 @ref="workbenchRef"
-                                 SelectionChanged="HandleSelectionChangedAsync"
-                                 NodesMoved="HandleNodesMovedAsync"
-                                 ContextActionRequested="HandleContextActionAsync"
-                                 CreateActionInvoked="HandleCreateActionAsync"
-                                 NodeEdited="HandleNodeEditedAsync"
-                                 NodeOpened="HandleNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync"
-                                 ClipboardRequested="HandleClipboardRequestedAsync">
-                    <ToolbarLeftContent>
-                        <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
-                                                       HealthWindowVisible="@HealthWindowState.IsVisible"
-                                                       ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
-                                                       ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
-                                                       FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
-                                                       SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@ConversationShellCoordinator.Snapshot().IsCatalogVisible"
-                                                       GanttViewVisible="@IsGanttViewVisible"
-                                                       ActiveTool="@canvasToolMode"
-                                                       CanUseDependencyTool="@(selectedNode is not null)"
-                                                       CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
-                                                       IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
-                                                       SelectToolClicked="SelectCanvasToolAsync"
-                                                       DependencyToolClicked="EnableLinkModeAsync"
-                                                       DeleteToolClicked="EnableDeleteModeAsync"
-                                                       ToggleSelectionWindow="ToggleSelectionWindowAsync"
-                                                       ToggleHealthWindow="ToggleHealthWindowAsync"
-                                                       ToggleToolboxWindow="ToggleToolboxWindowAsync"
-                                                       ToggleObjectIndexWindow="ToggleObjectIndexWindowAsync"
-                                                       OpenFileBrowserWindow="OpenProjectFileBrowserAsync"
-                                                       ToggleSignalsWindow="ToggleSignalsWindowAsync"
-                                                       ToggleAgentWindow="ToggleAgentWindowAsync"
-                                                       OpenGanttView="OpenGanttViewAsync"
-                                                       RecomposeBranch="RecomposeSelectedBranchAsync" />
-                        <div class="project-structure-toolbar-stats"
-                             data-testid="project-structure-canvas-loaded">
-                            <StatusBadge Tone="info" Text="@($"Nodes {surface.Nodes.Count}")" />
-                            <StatusBadge Tone="neutral" Text="@($"Selection {selectedNodeIds.Count}")" />
-                        </div>
-                    </ToolbarLeftContent>
-                    <OverlayContent>
-                        @if ((!SelectionWindowState.IsVisible || SelectionWindowState.IsMinimized) &&
-                            !string.IsNullOrWhiteSpace(workflowFeedback))
-                        {
-                            <PanelCard Class="project-structure-inline-feedback project-structure-clipboard-feedback"
-                                       role="status"
-                                       aria-live="polite"
-                                       data-testid="project-structure-clipboard-feedback"
-                                       data-tone="@workflowFeedbackTone">
-                                <Stack GapScale="LayoutGap.Small">
-                                    <TextBlock Value="@workflowFeedback" />
-                                    @if (pendingDeletionRecoveries.Count > 0)
-                                    {
-                                        <Button ButtonStyle="ButtonStyle.Light"
-                                                Text="Retry cleanup"
-                                                Disabled="@isRetryingDeletionCleanup"
-                                                data-testid="project-structure-deletion-retry"
-                                                Click="RetryPendingDeletionCleanupAsync" />
-                                    }
-                                </Stack>
-                            </PanelCard>
-                        }
-                        @if (ToolboxWindowState.IsVisible)
-                        {
-                            <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
-                                                           TestId="project-structure-toolbox-window"
-                                                           AriaLabel="Project structure standard blocks toolbox"
-                                                           Kicker="Standard Blocks Toolbox"
-                                                           Title=""
-                                                           Summary=""
-                                                           State="@ToolboxWindowState"
-                                                           StateChanged="HandleToolboxWindowStateChangedAsync"
-                                                           Groups="@ToolboxCreateGroups"
-                                                           SearchText="@structureToolboxSearchText"
-                                                           SearchTextChanged="@((string? value) => structureToolboxSearchText = value ?? string.Empty)"
-                                                           SourceLabel="@ToolboxSourceLabel"
-                                                           DefaultWidth="@ToolboxWindowDefaultWidth"
-                                                           OnToggleGroup="ExpandToolboxGroup"
-                                                           OnOpenAction="HandleToolboxActionSelectedAsync" />
-                        }
+<StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync">
+    <Planning>
+                <ProjectStructureGanttPanel ProjectId="@ProjectId"
+                                            Surface="@surface"
+                                            OpenAgentCatalog="ToggleAgentWindowAsync"
+                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
+                                            ObservationChanged="HandleGanttObservationChanged" />
+    </Planning>
+    <Insights>
+                <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
+    </Insights>
+    <SupportWindows>
                         @if (ObjectIndexWindowState.IsVisible)
                         {
                             <ProjectStructureObjectIndexWindow WindowId="@ObjectIndexWindowKey"
@@ -257,26 +141,11 @@ else
                                 Selection="@CurrentInsights.Selection" Dispatch="HandleInsightsSelectionAsync"
                                 Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip" />
                         }
+
+    </SupportWindows>
+    <DeferredDialogs>
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
-                            @{
-                                var hierarchyReceiver = hierarchyOpening;
-                                var blockReceiver = blockOpening;
-                                var transferReceiver = transferOpening;
-                            }
-                            <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
-                                                           RenderProcessStartDialog="false"
-                                                           CloseProjectHierarchy="@(() => ChangeAuthoringDialog(hierarchyReceiver, hierarchyOpening, CloseProjectHierarchyDialog))"
-                                                           ProjectHierarchySelectionChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(hierarchyReceiver, hierarchyOpening, () => HandleProjectHierarchySelectionChanged(args)))"
-                                                           ExecuteProjectHierarchyCommand="@(() => DispatchAuthoringDialogAsync(hierarchyReceiver, hierarchyOpening, ExecuteProjectHierarchyCommandAsync))"
-                                                           BlockMutationDialog="@blockMutationDialog"
-                                                           CloseBlockMutation="@(() => ChangeAuthoringDialog(blockReceiver, blockOpening, CloseBlockMutationDialog))"
-                                                           BlockMutationSelectionChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(blockReceiver, blockOpening, () => HandleBlockMutationSelectionChanged(args)))"
-                                                           ExecuteBlockMutation="@(() => DispatchAuthoringDialogAsync(blockReceiver, blockOpening, ExecuteBlockMutationAsync))"
-                                                           SubprojectTransferDialog="@subprojectTransferDialog"
-                                                           CloseSubprojectTransfer="@(() => ChangeAuthoringDialog(transferReceiver, transferOpening, CloseSubprojectTransferDialog))"
-                                                           SubprojectTransferNameChanged="@((ChangeEventArgs args) => ChangeAuthoringDialog(transferReceiver, transferOpening, () => HandleSubprojectTransferNameChanged(args)))"
-                                                           ExecuteSubprojectTransfer="@(() => DispatchAuthoringDialogAsync(transferReceiver, transferOpening, ExecuteSubprojectTransferAsync))"
-                                                           OpenProjectCreateDialog="@(() => DispatchAuthoringDialogAsync(hierarchyReceiver, hierarchyOpening, OpenProjectCreateDialogAsync))"
+                            <ProjectStructureCanvasDialogs RenderProcessStartDialog="false"
                                                            ProcessLinkDialog="@processLinkDialog"
                                                            CloseProcessLink="CloseProcessLinkDialog"
                                                            ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
@@ -323,22 +192,13 @@ else
                                                            CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                                            CanEditPreviewNode="CanEditNode" />
                         </ProjectStructureDeferredSurface>
-                    </OverlayContent>
-                </CanvasWorkbench>
-            </Canvas>
-        </CanvasWorkbenchStage>
-            </TabsItem>
-            <TabsItem Text="Gantt" Icon="view_timeline">
-                <ProjectStructureGanttPanel ProjectId="@ProjectId"
-                                            Surface="@surface"
-                                            OpenAgentCatalog="ToggleAgentWindowAsync"
-                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
-                                            ObservationChanged="HandleGanttObservationChanged" />
-            </TabsItem>
-            <TabsItem Text="Manager Summary" Icon="monitoring">
-                <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
-            </TabsItem>
-        </Tabs>
+    </DeferredDialogs>
+</StructureWorkspace>
+
+@if (surface is not null && canvasSurface is not null) {
+    <div class="project-structure-integrations">
+        <Stack Gap="1.5rem">
+
 
         @if (structureViewIndex == CanvasViewIndex && CanShowPartyEditor)
         {
@@ -772,7 +632,7 @@ else
 
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
-    private CanvasWorkbench? workbenchRef;
+    private StructureWorkspace? workbenchRef;
     private int structureViewIndex;
     private AgentContext.ProjectStructureGanttObservation? ganttObservation;
 
@@ -1044,6 +904,7 @@ else
             Interlocked.Increment(ref surfaceReloadGeneration), canPublish);
         if (canPublish is null) {
             agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            structureLoadError = null;
         }
         try
         {
@@ -1216,7 +1077,7 @@ else
                 agentChatContextAccessState = AgentChatContextAccessState.Ready;
             }
         }
-        catch
+        catch (Exception exception)
         {
             if (!IsCurrentSurfaceReload(request))
             {
@@ -1224,7 +1085,12 @@ else
             }
 
             agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            throw;
+            if (canPublish is not null) {
+                throw;
+            }
+            structureLoadError = "The project structure could not be loaded. Retry after the connection or project access is restored.";
+            Logger.LogWarning("Structure read failed for project {ProjectId}. FailureType={FailureType}.",
+                request.ProjectId, exception.GetType().Name);
         }
     }
 
@@ -1695,6 +1561,13 @@ else
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
+        if (request.ComposerOpeningId.HasValue) {
+            await SubmitComposerAsync(request, null);
+            return;
+        }
+        if (TryResolveEditAction(request.ActionId, out _)) {
+            return;
+        }
         if (IsSecretReferenceCreateRequest(request))
         {
             if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition("add-secret-reference", out var secretDefinition))
@@ -1707,11 +1580,6 @@ else
                 });
             }
 
-            return;
-        }
-
-        if (await TryApplyNodeEditAsync(request))
-        {
             return;
         }
 
@@ -1767,27 +1635,8 @@ else
         }
     }
 
-    private async Task HandleNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)
-    {
-        var targetNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.NodeId, StringComparison.Ordinal));
-        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Note)
-        {
-            return;
-        }
-
-        var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
-            ProjectId,
-            targetNode.Id,
-                ProjectStructureNodeHelpers.BuildSimpleNoteTitle(request.Notes),
-            string.Empty,
-            request.Notes);
-        if (updatedNode is null)
-        {
-            return;
-        }
-
-        await ApplySurfaceNodeUpdatesAsync([updatedNode]);
-    }
+    private Task HandleNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)
+        => SubmitComposerAsync(null, request);
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
@@ -2109,7 +1958,8 @@ else
         CancellationToken cancellationToken = default,
         Action<ProjectStructureNode>? onNodeCommitted = null,
         ProjectStructureSurface? capturedSurface = null,
-        long? capturedNavigationRevision = null)
+        long? capturedNavigationRevision = null,
+        Func<bool>? canPublish = null)
     {
         var mutationNavigationRevision = capturedNavigationRevision ?? actionNavigationRevision;
         var mutationSurface = capturedSurface ?? surface;
@@ -2157,7 +2007,7 @@ else
                 cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
         }
 
-        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission) {
+        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission && canPublish?.Invoke() != false) {
             await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
         }
         return created;

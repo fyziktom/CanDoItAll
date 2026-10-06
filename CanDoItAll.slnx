@@ -2,6 +2,7 @@
   <Folder Name="/src/Sandboxes/">
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/CanDoItAll.Workbench.Planning.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/CanDoItAll.Workbench.Insights.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/CanDoItAll.Workbench.Structure.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" />
@@ -20,6 +21,7 @@
     <Project Path="src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj" />
   </Folder>
+  <Folder Name="/src/" />
   <Folder Name="/src/App/">
     <Project Path="src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" />
     <Project Path="src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
@@ -56,6 +58,7 @@
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Workbench.Structure.UI/CanDoItAll.Workbench.Structure.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj" />
@@ -106,6 +109,7 @@
     <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Application/CanDoItAll.AgentFramework.ProviderHistory.Application.csproj" />
     <Project Path="src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
   </Folder>
+  <Folder Name="/src/MAF/" />
   <Folder Name="/src/MAF/Capabilities/">
     <Project Path="src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <Project Path="src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Access/CanDoItAll.AgentFramework.Capabilities.Access.csproj" />
@@ -213,6 +217,7 @@
     <Project Path="src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj" />
     <Project Path="src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/CanDoItAll.Processes.Drivers.Standard.csproj" />
   </Folder>
+  <Folder Name="/src/Plugins/" />
   <Folder Name="/src/Plugins/Abstractions/">
     <Project Path="src/plugins/Abstractions/CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj" />
   </Folder>
@@ -225,6 +230,7 @@
   <Folder Name="/src/MAF/Memory/">
     <Project Path="src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj" />
   </Folder>
+  <Folder Name="/tools/" />
   <Folder Name="/tools/App/">
     <Project Path="tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />
   </Folder>
@@ -239,6 +245,10 @@
   </Folder>
   <Folder Name="/tools/Validation/">
     <Project Path="tools/Validation/CanDoItAll.RpiValidationArtifacts/CanDoItAll.RpiValidationArtifacts.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Components/">
+    <Project Path="tests/Components/CanDoItAll.Workbench.Structure.UI.Tests/CanDoItAll.Workbench.Structure.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Support/">
     <Project Path="tests/Support/CanDoItAll.SharedProviders.TestUpstream/CanDoItAll.SharedProviders.TestUpstream.csproj" />

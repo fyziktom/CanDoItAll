@@ -139,7 +139,12 @@ public partial class ProjectStructurePage
         if (IsCurrentAuthoring(opening, blockOpening)) {
             if (outcome.Kind == ProjectStructureAuthoringResultKind.Committed) {
                 blockMutationDialog = null;
-                await RefreshAuthoringSurfaceAsync(opening, outcome, node.Id, () => ReferenceEquals(opening, blockOpening));
+                try {
+                    await ApplySurfaceNodeUpdatesAsync([outcome.Node!]);
+                } catch (Exception failure) {
+                    RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                        Message = $"{outcome.Message} The accepted change could not be displayed. Reload the original project; do not repeat the conversion." });
+                }
                 if (ReferenceEquals(opening, blockOpening)) {
                     blockOpening = null;
                 }

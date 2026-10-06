@@ -192,7 +192,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         createCounter.Reset();
 
         const string updatedNoteBody = "Updated heading\r\nSecond line of note";
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodeEdited(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.EditAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchNodeEditRequest(noteNode.Id, noteNode.Title, updatedNoteBody))));
 
         cut.WaitForAssertion(() =>
@@ -238,7 +238,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             "Final line includes symbols #release @owner and punctuation.";
         const string expectedTitle = "Long simple note first line that deliberately exceeds the sho...";
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
                 "add-note",
                 projectRootId,
@@ -607,7 +607,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         createCounter.Reset();
 
         const string insertedNote = "Inserted quick note\r\nwith enough text\r\nto require vertical room";
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
                 "add-note",
                 sourceNode.Id,
@@ -667,7 +667,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() => Assert.Contains("Change block", cut.Markup));
         createCounter.Reset();
 
-        FindButtonByLabel(cut, "Change block", "[data-testid='project-structure-node-actions'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Change block", "[data-testid='project-structure-node-actions'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -675,7 +675,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         });
 
         cut.Find("[data-testid='project-structure-block-mutation-select']").Change("add-block-router");
-        cut.Find("[data-testid='project-structure-block-mutation-submit']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-block-mutation-submit']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -742,7 +742,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() => Assert.Contains("API runtime", cut.Markup));
         createCounter.Reset();
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
                 "edit:add-environment-dotnet-watch",
                 runtimeNode.Id,
@@ -1053,7 +1053,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1062,7 +1062,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Dependency tool:", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1071,7 +1071,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Delete tool:", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-select']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-select']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1107,7 +1107,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         cut.WaitForAssertion(() => Assert.Contains("Reset source", cut.Markup));
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1125,7 +1125,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Click to select", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1348,7 +1348,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
         Assert.True(File.Exists(physicalPath));
 
-        FindButtonByLabel(cut, "Delete node and file", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete node and file", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("eligible managed files were deleted", cut.Markup, StringComparison.Ordinal));
         var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
@@ -1401,7 +1401,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             cut.Markup,
             StringComparison.Ordinal));
 
-        FindButtonByLabel(cut, "Delete node only", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete node only", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains(
             "managed files were preserved",
@@ -1496,7 +1496,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         await cut.InvokeAsync(() =>
             canvasWorkbench.Instance.OnContextAction(validNode.Id, "delete", 0, 0));
         cut.WaitForAssertion(() => Assert.Contains("Delete nodes and files", cut.Markup, StringComparison.Ordinal));
-        FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains(
             "1 node was confirmed deleted. 1 selected branch requires separate follow-up.",
@@ -1602,7 +1602,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.True(File.Exists(physicalPath));
         Assert.True(File.Exists(secondPhysicalPath));
 
-        FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("eligible managed files were deleted", cut.Markup, StringComparison.Ordinal));
         var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
@@ -1667,7 +1667,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
         });
 
-        FindButtonByLabel(cut, "Delete selected").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete selected").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -1727,7 +1727,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
         });
 
-        FindButtonByLabel(cut, "Delete selected").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete selected").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -1886,7 +1886,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         cut.WaitForAssertion(() => Assert.Contains("Signals", cut.Markup));
-        cut.Find("[data-testid='project-structure-signals-toggle']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-signals-toggle']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -2423,7 +2423,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             uploadedFile,
             inputValues);
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(request)));
 
         string createdNodeId = string.Empty;
         cut.WaitForAssertion(() =>

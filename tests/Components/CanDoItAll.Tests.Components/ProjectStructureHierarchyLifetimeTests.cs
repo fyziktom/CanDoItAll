@@ -1,3 +1,4 @@
+using CanDoItAll.Workbench.Structure.UI;
 using Bunit;
 using System.Data.Common;
 using System.Security.Claims;
@@ -34,7 +35,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var pending = SubmitHierarchyAsync(page);
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
+            await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
             if (reopen) {
                 await OpenHierarchyAsync(page, parent, neighbor);
             }
@@ -47,7 +48,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Contains(links, link => link.ParentProjectId == parent && link.ChildProjectId == child);
         Assert.DoesNotContain(links, link => link.ParentProjectId == parent && link.ChildProjectId == neighbor);
         await page.InvokeAsync(() => {
-            var dialog = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog;
+            var dialog = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog;
             if (reopen) {
                 Assert.NotNull(dialog);
                 Assert.Equal(neighbor, dialog.SelectedProjectId);
@@ -79,8 +80,8 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var page = Render(harness, project);
         await ContextActionAsync(page, first.Id, "note:convert-to-block");
         gate.ArmNode(project, first.Id);
-        var submit = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ExecuteBlockMutation;
-        var close = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseBlockMutation;
+        var submit = page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteBlockMutation;
+        var close = page.FindComponent<StructureStructuralDialogs>().Instance.CloseBlockMutation;
         var pending = page.InvokeAsync(() => submit.InvokeAsync());
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
@@ -102,7 +103,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Equal(first.Id, outcome.SourceNodeId);
         Assert.Equal(loseReply ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
         await page.InvokeAsync(() => Assert.Equal(reopen ? second.Id : null,
-            page.FindComponent<ProjectStructureCanvasDialogs>().Instance.BlockMutationDialog?.NodeId));
+            page.FindComponent<StructureStructuralDialogs>().Instance.BlockMutationDialog?.NodeId));
     }
 
     [Fact]
@@ -118,7 +119,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var changed = await workbench.ReclassifyObjectAsync(project, first.Id,
             new(ProjectObjectType.ProjectBlock, "decision", "External change", "", "Externally retained notes"));
         Assert.NotNull(changed);
-        await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ExecuteBlockMutation.InvokeAsync());
+        await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteBlockMutation.InvokeAsync());
         var stored = await workbench.GetStructureAsync(project);
         var actual = Assert.Single(stored.Nodes, node => node.Id == first.Id);
         Assert.Equal((changed.Title, changed.Notes, changed.ObjectType, changed.ObjectSubtype),
@@ -137,9 +138,9 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var neighbor = await CreateProjectAsync(projects, "ABA neighbor");
         var page = Render(harness, parent);
         await OpenHierarchyAsync(page, parent, child);
-        var oldSubmit = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ExecuteProjectHierarchyCommand;
-        var oldClose = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy;
-        var oldId = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
+        var oldSubmit = page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteProjectHierarchyCommand;
+        var oldClose = page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy;
+        var oldId = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
         gate.ArmHierarchy(parent);
         var pending = page.InvokeAsync(() => oldSubmit.InvokeAsync());
         Guid reopenedId;
@@ -148,9 +149,9 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
             await page.InvokeAsync(() => oldSubmit.InvokeAsync()).WaitAsync(TimeSpan.FromSeconds(5));
             await page.InvokeAsync(() => oldClose.InvokeAsync());
             await OpenHierarchyAsync(page, parent, neighbor);
-            await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
+            await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
             await OpenHierarchyAsync(page, parent, child);
-            reopenedId = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
+            reopenedId = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
             Assert.NotEqual(oldId, reopenedId);
             await page.InvokeAsync(() => oldSubmit.InvokeAsync());
             await page.InvokeAsync(() => oldClose.InvokeAsync());
@@ -159,7 +160,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         }
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
         await page.InvokeAsync(() => Assert.Equal(reopenedId,
-            page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId));
+            page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId));
         Assert.Single(page.Instance.AuthoringOutcomes);
         Assert.Single(await projects.ListHierarchyLinksAsync(), link => link.ParentProjectId == parent && link.ChildProjectId == child);
         Assert.DoesNotContain(await projects.ListHierarchyLinksAsync(), link => link.ChildProjectId == neighbor);
@@ -202,14 +203,14 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Guid nextId;
         try {
             await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
+            await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
             await OpenHierarchyAsync(page, parent, neighbor);
-            nextId = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
+            nextId = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
         } finally {
             read.Release.TrySetResult();
         }
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
-        var dialog = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!;
+        var dialog = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!;
         Assert.Equal(nextId, dialog.OpeningId);
         Assert.Equal(neighbor, dialog.SelectedProjectId);
         Assert.Empty(dialog.Error);
@@ -233,7 +234,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
             Assert.Contains(await projects.ListHierarchyLinksAsync(), link => link.ParentProjectId == parent && link.ChildProjectId == child);
-            await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
+            await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
             await OpenHierarchyAsync(page, parent, neighbor);
         } finally {
             gate.Release.TrySetResult();
@@ -243,7 +244,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Equal(ProjectStructureAuthoringResultKind.Unconfirmed, outcome.Kind);
         Assert.Equal(child, outcome.TargetProjectId);
         Assert.Same(gate.LostReply, outcome.Failure);
-        var successor = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!;
+        var successor = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!;
         Assert.Equal(neighbor, successor.SelectedProjectId);
         Assert.Empty(successor.Error);
         Assert.False(successor.RequiresObservation);
@@ -275,11 +276,11 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         try {
             await read.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
             if (retirement is ReadRetirement.Close or ReadRetirement.Replace) {
-                await page.InvokeAsync(() => page.FindComponent<ProjectStructureCanvasDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
+                await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseProjectHierarchy.InvokeAsync());
             }
             if (retirement == ReadRetirement.Replace) {
                 await OpenHierarchyAsync(page, parent, other);
-                replacementOpening = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
+                replacementOpening = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
             } else if (retirement == ReadRetirement.RecreatedLifetime) {
                 var original = (await projects.GetAsync(parent)).ExpectedProjectAdmission;
                 await projects.DeleteAsync(parent, expectedProjectAdmission: original);
@@ -297,8 +298,10 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
             read.Release.TrySetResult();
         }
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        page.WaitForAssertion(() => Assert.Contains(page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes,
+            node => node.Id == $"project:{(retirement == ReadRetirement.Route ? other : parent):D}"));
         await page.InvokeAsync(() => {
-            var dialog = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog;
+            var dialog = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog;
             if (replacementOpening.HasValue) {
                 Assert.Equal(replacementOpening, dialog?.OpeningId);
                 Assert.Equal(other, dialog?.SelectedProjectId);
@@ -337,7 +340,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         Assert.Contains(links, link => link.ParentProjectId == second && link.ChildProjectId == secondChild);
     }
 
-    private static Task<ComponentTestHarness> CreateHarnessAsync(OwnerWriteGate? gate = null, OwnerReadGate? read = null)
+    internal static Task<ComponentTestHarness> CreateHarnessAsync(OwnerWriteGate? gate = null, OwnerReadGate? read = null)
         => ComponentTestHarness.CreateAsync(services => {
             var interceptors = new IInterceptor?[] { gate, read }.OfType<IInterceptor>().ToArray();
             services.AddSingleton<IDbContextFactory<ProjectsDbContext>>(provider => new PooledDbContextFactory<ProjectsDbContext>(
@@ -376,7 +379,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
     private static Task SubmitHierarchyAsync(IRenderedComponent<ProjectStructurePage> page)
         => page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-submit']").ClickAsync(new MouseEventArgs()));
 
-    private sealed class OwnerWriteGate : SaveChangesInterceptor, IDbTransactionInterceptor {
+    internal sealed class OwnerWriteGate : SaveChangesInterceptor, IDbTransactionInterceptor {
         private Guid? project;
         private string? node;
         private DbContext? committedContext;
@@ -422,7 +425,7 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         }
     }
 
-    private sealed class OwnerReadGate : DbCommandInterceptor {
+    internal sealed class OwnerReadGate : DbCommandInterceptor {
         private string? table;
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

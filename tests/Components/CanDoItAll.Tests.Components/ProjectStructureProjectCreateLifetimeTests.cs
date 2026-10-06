@@ -1,3 +1,4 @@
+using CanDoItAll.Workbench.Structure.UI;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
@@ -31,7 +32,7 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
         var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, parent));
         page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
         await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnContextAction($"project:{parent:D}", "project:add-subproject", 0, 0));
-        var hierarchyId = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
+        var hierarchyId = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!.OpeningId;
         await page.InvokeAsync(() => page.Find("[data-testid='project-structure-hierarchy-create-project']").ClickAsync(new MouseEventArgs()));
         await page.InvokeAsync(() => page.Find("[data-testid='project-name-input']").Input("Original created project"));
         var editor = page.FindComponent<ProjectModalHost>().Instance;
@@ -66,7 +67,7 @@ public sealed class ProjectStructureProjectCreateLifetimeTests {
             Assert.Equal("Unsubmitted project draft", successor.Model.Name);
             Assert.True(successor.CanMutate);
         } else {
-            var restored = page.FindComponent<ProjectStructureCanvasDialogs>().Instance.ProjectHierarchyDialog!;
+            var restored = page.FindComponent<StructureStructuralDialogs>().Instance.ProjectHierarchyDialog!;
             Assert.Equal(hierarchyId, restored.OpeningId);
             Assert.Equal(neighbor, restored.SelectedProjectId);
         }

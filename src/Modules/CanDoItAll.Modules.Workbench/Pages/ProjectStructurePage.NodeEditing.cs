@@ -483,30 +483,6 @@ public partial class ProjectStructurePage
            string.Equals(node.ObjectSubtype, "task", StringComparison.OrdinalIgnoreCase) &&
            !node.IsSystemManaged;
 
-    private async Task<bool> TryApplyNodeEditAsync(CanvasWorkbenchCreateActionRequest request)
-    {
-        if (!TryResolveEditAction(request.ActionId, out var createActionId) ||
-            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(createActionId, out var definition) ||
-            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal)) is not { } targetNode)
-        {
-            return false;
-        }
-
-        var update = ProjectStructureNodeEditor.ComposeUpdate(definition, targetNode, request);
-        var updated = await ProjectWorkbenchService.UpdateObjectAsync(ProjectId, targetNode.Id, update);
-        if (updated is null)
-        {
-            workflowFeedback = "The selected node could not be updated.";
-            workflowFeedbackTone = "warn";
-            return true;
-        }
-
-        await ApplySurfaceNodeUpdatesAsync([updated]);
-        workflowFeedback = $"{updated.Title} was updated.";
-        workflowFeedbackTone = "mint";
-        return true;
-    }
-
     private bool TryBuildNodeEditModel(ProjectStructureNode node, out ProjectStructureNodeEditModel model)
     {
         model = default!;

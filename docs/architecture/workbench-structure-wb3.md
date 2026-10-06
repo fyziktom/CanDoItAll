@@ -87,3 +87,73 @@ case-insensitive project-name sorting expression. WB2's earlier qualified broad
 result and native SDK scoped-CSS restart limitation remain unchanged.
 
 Status: bounded lifetime repair verified; W1–W5 and final WB3 closure remain in progress.
+
+## Rendering and generic authoring checkpoint in progress
+
+Structure.UI now owns the actual stage, toolbar, standard blocks toolbox, generic
+CanvasLib composer and hierarchy/conversion/transfer dialogs. Its five-project
+source closure consists of neutral component dependencies; the independent sandbox
+adds only its host. The route projects typed presentations and origin-bound intents,
+and composes the existing Planning, Insights and deferred native integrations.
+Public presentation names moved with compatibility type forwards. No mixed native
+model file, semantic catalog, storage or runtime owner moved into the leaf.
+
+The native reproduction confirmed that an original generic edit could overwrite a
+node after native reclassification. CanvasLib now offers optional opening/close
+notifications and carries the original opening ID on create and note-edit results.
+Structure captures native admission and node/parent identity, refuses retired and
+duplicate submissions, checks original node facts at the writer, and retains
+accepted or unconfirmed outcomes independently of successor editors. The existing
+close-on-submit policy remains. Other CanvasLib consumers retain their default
+behavior.
+
+The mapper preserves decimal precision, unknown envelope and nested metadata,
+omitted duration, references and zero/negative canvas coordinates. Invalid typed
+values are rejected explicitly. Browser timestamps display milliseconds; an
+unchanged displayed value retains its original finer native precision. Chromium
+rejects longer fractional values in `datetime-local`, so displaying seven digits
+would silently clear a field. This constraint was verified in the actual browser.
+
+The first extraction continuity attempt passed 40 of 41 native cases; its route
+assertion queried dialogs during loading. After waiting for the replacement canvas,
+the next 50-case native run passed with no skips. The initial generic reproduction
+had five failures: one confirmed stale native write and four fixture subtype errors.
+The repaired focused run includes valid fixtures. Shared callback tests passed 16
+cases; four JavaScript cases cover invalid input and opening/submission ordering.
+Browser proof retained the original invalid-number submission, then confirmed
+blocking and correction. A receipt-label timeout occurred after the corrected
+submission had succeeded; later readback observed that original receipt without
+repeating the write. Raw draft/precision checks and final native journeys continue.
+
+The expanded native attempt remains mixed: 92 of 95 passed. Conversion reconciliation
+was using a full read instead of its accepted node; it now patches the original view.
+Awaiting toolbar clicks did not repair the other two failures: the next 36-case run
+passed 34 and exposed a real snapshot lag in the extracted tab content. A separate
+renderer reproduction failed before moving the snapshot capture inside the active
+tab fragment. Seven isolated cases and the three original native callers then passed.
+The 95-case attempt lacks a pre-run hash receipt because binary enumeration failed;
+the follow-up receipts include source and compiled DLL hashes. It is not retroactively
+called a frozen or green run.
+
+The independent source browser held A's submission, opened B, then released A. Its
+accepted ID and precise inputs remained attached to A; B's draft and the second canvas
+were untouched. The native application created and edited one note through the real
+toolbox/context menu with the same row, node and parent identity confirmed by SQL.
+The snapshot repair also restores immediate toolbox visibility. The 26 evaluated
+dependency graphs retain all previously completed closures, with five projects for
+Structure.UI and six for its sandbox. The new isolated suite is included in Components,
+Stable and all three component CI selections.
+
+Open-state inspection caught composer actions below the short sandbox canvas. The
+shared layout now measures the actual host and toolbar, bounds the dialog card to
+the remaining height, and keeps its existing internal scroll owner. At 1920 by 1080,
+the repaired card spans y=360–880 within the y=258–898 host, with both actions visible.
+Five shared runtime cases and asset verification pass. The sandbox closes its toolbox
+when opening the editor, matching the native host. Portability enforcement passes
+15,241 reviewed findings. Scoped proposed-source secret review found only unchanged
+CI fixture credentials in diff context; no added credentials or Components findings.
+The shared checkpoint is Components `49decea8ffc057dccf086a572959e8c764967d2e`,
+verified with the existing PGP key. S0 is main `d45d56a42`; no push was performed.
+
+W3 graph/clipboard hardening and W5 final-image closure remain outstanding. These
+intermediate observations are not the final WB3 acceptance result.
