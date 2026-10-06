@@ -71,7 +71,7 @@ public sealed class ProjectStructureResourcePickerTests : BunitContext
             .Add(component => component.CanEditPreviewNode, _ => false));
 
         var bodyStack = cut.Find(
-            "[data-testid='project-structure-process-link-dialog'] .project-structure-preview-dialog__body > .rz-stack");
+            "[data-testid='project-structure-process-link-dialog'] .canvas-overlay-dialog__body > .rz-stack");
         var picker = cut.FindComponent<ResourceCardPicker<Guid>>();
         var results = cut.Find("[data-testid='project-structure-process-link-select-results']");
 
