@@ -115,7 +115,13 @@ public partial class ProjectStructurePage
 
     private async Task BeginReconnectAsync(string? nodeId = null)
     {
-        reconnectNodeId = nodeId ?? selectedNode?.Id;
+        var context = CaptureActionContext();
+        var source = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (source is null) {
+            return;
+        }
+        reconnectNodeId = source.Id;
+        reconnectOpening = new(context, source);
         await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
         await InvokeAsync(StateHasChanged);
     }
@@ -126,34 +132,75 @@ public partial class ProjectStructurePage
         if (!IsCurrentAction(context) || targetNode is null) {
             return;
         }
-        await ProjectWorkbenchService.ReparentObjectAsync(context.Surface.ProjectId, targetNode.Id, null,
-            mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
-        if (IsCurrentAction(context)) {
-            reconnectNodeId = null;
-            await ReloadSurfaceAsync(targetNode.Id);
+        if (reconnectOpening is { } pending && IsCurrentAction(pending.Context) && (pending.IsBusy || pending.RequiresObservation)) {
+            return;
         }
+        var opening = new ProjectStructureAuthoringOpening(context, targetNode) { IsBusy = true };
+        reconnectOpening = opening;
+        reconnectNodeId = null;
+        await ReparentBranchAsync(opening, null);
     }
 
-    private async Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind)
-    {
-        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
-            string.IsNullOrWhiteSpace(targetNodeId) ||
-            !Enum.TryParse<ProjectObjectLinkKind>(linkKind, ignoreCase: true, out var parsedKind))
-        {
+    private ProjectStructureAuthoringOpening? dependencyOpening;
+    private ProjectStructureAuthoringOpening? linkOperation;
+    private ProjectStructureAuthoringOpening? reconnectOpening;
+
+    private Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind) {
+        if (!Enum.TryParse<ProjectObjectLinkKind>(linkKind, ignoreCase: true, out var kind) || !Enum.IsDefined(kind)) {
+            return Task.CompletedTask;
+        }
+        var context = CaptureActionContext();
+        var link = context.Surface.Links.FirstOrDefault(link => link.SourceId == sourceNodeId && link.TargetId == targetNodeId && link.Kind == kind);
+        var nodes = context.Surface.Nodes.Where(node => node.Id == sourceNodeId || node.Id == targetNodeId).ToArray();
+        return link is not { IsUserAuthored: true, RecordId: not null } || nodes.Length != 2 ? Task.CompletedTask :
+            ExecuteGraphLinkAsync(context, link, nodes, remove: true);
+    }
+
+    private async Task ExecuteGraphLinkAsync(ProjectStructureActionContext context, ProjectStructureLink requested,
+        IReadOnlyList<ProjectStructureNode> nodes, bool remove) {
+        if (!IsCurrentAction(context) || linkOperation is { } pending && IsCurrentAction(pending.Context) && (pending.IsBusy || pending.RequiresObservation)) {
             return;
         }
-
-        var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, parsedKind);
-        if (!removed)
-        {
-            workflowFeedback = "The selected dependency could not be deleted.";
-            workflowFeedbackTone = "warn";
-            return;
+        var opening = new ProjectStructureAuthoringOpening(context, nodes[0]) { IsBusy = true };
+        var selectionRevision = insightsSelectionRevision;
+        var mode = canvasToolMode;
+        linkOperation = opening;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            remove ? ProjectStructureAuthoringOperation.DisconnectNodes : ProjectStructureAuthoringOperation.ConnectNodes,
+            ProjectStructureAuthoringResultKind.Rejected, "The selected dependency could not be changed.") {
+            SourceNodeId = requested.SourceId, Link = requested
+        };
+        try {
+            if (remove) {
+                var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(context.Surface.ProjectId, requested.SourceId, requested.TargetId, requested.Kind,
+                    mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission }, expectedLink: requested);
+                if (!removed) {
+                    RecordAuthoringOutcome(opening, outcome);
+                    return;
+                }
+            } else {
+                var accepted = await ProjectWorkbenchService.LinkObjectsDetailedAsync(context.Admission, requested.SourceId, requested.TargetId, requested.Kind, nodes);
+                outcome = outcome with { Link = accepted };
+            }
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
+                Message = remove ? "The dependency link was deleted." : "The dependency link was added." };
+            RecordAuthoringOutcome(opening, outcome);
+            if (IsCurrentAuthoring(opening, linkOperation) && selectionRevision == insightsSelectionRevision) {
+                if (canvasToolMode == mode) {
+                    await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+                }
+                await RefreshAuthoringSurfaceAsync(opening, outcome, requested.SourceId,
+                    () => ReferenceEquals(linkOperation, opening) && selectionRevision == insightsSelectionRevision);
+            }
+        } catch (Exception failure) {
+            opening.RequiresObservation = !IsKnownGraphRejection(failure);
+            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = opening.RequiresObservation ? "The dependency change is unconfirmed. Observe the original project before repeating it." : failure.Message });
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
         }
-
-        workflowFeedback = "The dependency link was deleted.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(sourceNodeId);
     }
 
     private async Task DeleteNodeAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null)
@@ -923,22 +970,50 @@ public partial class ProjectStructurePage
         await OpenEditDialogAsync(node);
     }
 
-    private async Task HandleReconnectSelectionAsync(string? nodeId)
-    {
-        if (string.IsNullOrWhiteSpace(reconnectNodeId) || string.IsNullOrWhiteSpace(nodeId))
-        {
+    private async Task HandleReconnectSelectionAsync(string? nodeId) {
+        var opening = reconnectOpening;
+        if (opening is null || string.IsNullOrWhiteSpace(reconnectNodeId) || !TryBeginAuthoring(opening, reconnectOpening)) {
             return;
         }
-
-        if (string.Equals(reconnectNodeId, nodeId, StringComparison.Ordinal))
-        {
-            reconnectNodeId = null;
+        var target = surface?.Nodes.FirstOrDefault(node => node.Id == nodeId);
+        if (target is null || target.Id == opening.Node.Id) {
+            opening.IsBusy = false;
             return;
         }
+        await ReparentBranchAsync(opening, target);
+    }
 
-        await ProjectWorkbenchService.ReparentObjectAsync(ProjectId, reconnectNodeId, nodeId);
-        reconnectNodeId = null;
-        await ReloadSurfaceAsync(nodeId);
+    private async Task ReparentBranchAsync(ProjectStructureAuthoringOpening opening, ProjectStructureNode? target) {
+        var context = opening.Context;
+        var selectionRevision = insightsSelectionRevision;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            target is null ? ProjectStructureAuthoringOperation.DisconnectNodes : ProjectStructureAuthoringOperation.MoveNodes,
+            ProjectStructureAuthoringResultKind.Rejected, "The branch could not be reconnected.") {
+            SourceNodeId = opening.Node.Id
+        };
+        try {
+            var accepted = await ProjectWorkbenchService.ReparentObjectAsync(context.Surface.ProjectId, opening.Node.Id, target?.Id,
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission },
+                expectedNodes: target is null ? [opening.Node] : [opening.Node, target]);
+            if (accepted is not null) {
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = accepted,
+                    Message = target is null ? $"{opening.Node.Title} was disconnected." : $"{opening.Node.Title} was reconnected under {target.Title}." };
+            }
+            RecordAuthoringOutcome(opening, outcome);
+            if (accepted is not null && IsCurrentAuthoring(opening, reconnectOpening) && selectionRevision == insightsSelectionRevision) {
+                reconnectNodeId = null;
+                await RefreshAuthoringSurfaceAsync(opening, outcome, target?.Id ?? opening.Node.Id,
+                    () => ReferenceEquals(reconnectOpening, opening) && selectionRevision == insightsSelectionRevision);
+            }
+        } catch (Exception failure) {
+            opening.RequiresObservation = !IsKnownGraphRejection(failure);
+            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = opening.RequiresObservation ? "Reconnection is unconfirmed. Observe the original project before repeating it." : failure.Message });
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
+        }
     }
 
     private async Task<bool> TryAdoptMovedNodesIntoBordersAsync(CanvasWorkbenchNodesMovedEventArgs args)

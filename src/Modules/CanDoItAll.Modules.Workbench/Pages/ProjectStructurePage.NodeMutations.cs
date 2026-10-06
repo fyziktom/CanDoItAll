@@ -230,7 +230,10 @@ public partial class ProjectStructurePage
             editor.Objective = string.IsNullOrWhiteSpace(sourceNode.Notes) ? sourceNode.Title : ProjectStructureNodeHelpers.BuildSimpleNoteTitle(sourceNode.Notes);
             editor.CurrentPhase = string.IsNullOrWhiteSpace(sourceProject.CurrentPhase) ? "Discovery" : sourceProject.CurrentPhase;
             editor.Status = sourceProject.Status;
-            var owner = CreateProjectStructureUiAgentContext(source.Surface.ProjectId) with { ExpectedProjectAdmission = source.Admission };
+            var owner = CreateProjectStructureUiAgentContext(source.Surface.ProjectId) with {
+                ExpectedProjectAdmission = source.Admission,
+                ExpectedTransferRoots = [sourceNode]
+            };
             var result = await SubprojectTransferCoordinator.MoveDescendantsToNewSubprojectAsync(
                 source.Surface.ProjectId, reservation, editor, sourceNode.Id, mutationOwner: owner);
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Transfer = result, Creation = result.CreationReceipt,

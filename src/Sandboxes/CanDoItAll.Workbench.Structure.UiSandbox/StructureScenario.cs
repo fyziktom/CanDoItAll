@@ -13,6 +13,9 @@ public sealed class StructureScenario {
     public const string ConversionAction = "scenario:conversion";
     public const string TransferAction = "scenario:transfer";
     public const string ReadonlyNode = "managed";
+    private const string DependencyCreateAction = "dependency:create";
+    private const string DependencyDeleteAction = "delete-link";
+    private const string DependencyKind = "DependsOn";
     public static readonly Guid ChildProjectId = Guid.Parse("cb5ca2b0-a6c9-44be-82f2-e14e9b2f7051");
     public static readonly Guid NestedProjectId = Guid.Parse("2cd8e917-e9db-489d-811b-958f5f4c4899");
     public StructurePresentation Presentation { get; private set; } = default!;
@@ -26,6 +29,11 @@ public sealed class StructureScenario {
     public TaskCompletionSource? Pending => pendingOperations.FirstOrDefault();
     public int View { get; set; }
     private CanvasWorkbenchSurface graph = new();
+    private ClipboardBuffer? clipboard;
+    private sealed record ClipboardBuffer(CanvasWorkbenchClipboardAction Action, Guid ContextId, IReadOnlyList<string> Roots) {
+        public bool IsBusy { get; set; }
+        public bool RequiresObservation { get; set; }
+    }
     private readonly string name;
 
     public StructureScenario(string name) {
@@ -44,6 +52,8 @@ public sealed class StructureScenario {
 
     public void Reset(StructureScenarioKind kind) {
         Dialogs = new();
+        clipboard = null;
+        View = 0;
         NestedOpening = null;
         graph = new() {
             SurfaceId = Guid.NewGuid().ToString("N"),
@@ -102,7 +112,8 @@ public sealed class StructureScenario {
         switch (intent) {
             case StructureSelectionIntent selection:
                 graph.UiState.SelectedNodeIds = selection.Selection.SelectedNodeIds.ToList();
-                Presentation = Presentation with { SelectionCount = selection.Selection.SelectedNodeIds.Count };
+                Presentation = Presentation with { SelectionCount = selection.Selection.SelectedNodeIds.Count,
+                    Toolbar = Presentation.Toolbar with { CanConnect = graph.Nodes.Any(node => selection.Selection.SelectedNodeIds.Contains(node.Id) && !node.IsReadOnly) } };
                 break;
             case StructureNodesMovedIntent moved:
                 foreach (var position in moved.Move.Positions) {
@@ -117,6 +128,15 @@ public sealed class StructureScenario {
                 break;
             case StructureViewIntent view:
                 View = view.Index;
+                break;
+            case StructureToolbarIntent { Command: StructureToolbarCommand.Select }:
+                SetMode(CanvasWorkbenchModes.Authoring);
+                break;
+            case StructureToolbarIntent { Command: StructureToolbarCommand.Dependency }:
+                SetMode(CanvasWorkbenchModes.Dependency);
+                break;
+            case StructureToolbarIntent { Command: StructureToolbarCommand.Delete }:
+                SetMode(CanvasWorkbenchModes.Delete);
                 break;
             case StructureToolbarIntent { Command: StructureToolbarCommand.Toolbox }:
                 var toolbox = Presentation.Toolbox.State.Clone();
@@ -137,7 +157,37 @@ public sealed class StructureScenario {
                     .Select(item => item.Key == group.GroupId ? item with { IsOpen = !item.IsOpen } : item).ToArray() } };
                 break;
             case StructureContextIntent context:
-                OpenDialog(context.Request.ActionId, context.Request.NodeId ?? "root");
+                if (context.Request.ActionId is DependencyCreateAction or DependencyDeleteAction) {
+                    await ApplyGraphAsync(context.Request.ActionId, original => {
+                        var source = context.Request.LinkSourceId;
+                        var target = context.Request.LinkTargetId ?? context.Request.NodeId;
+                        if (source is null || target is null || source == target ||
+                            original.Nodes.All(node => node.Id != source || node.IsReadOnly) || original.Nodes.All(node => node.Id != target || node.IsReadOnly)) {
+                            throw new InvalidOperationException("Read-only or unavailable dependency target was refused.");
+                        }
+                        original.Links.RemoveAll(link => link.SourceId == source && link.TargetId == target && link.Kind == DependencyKind);
+                        if (context.Request.ActionId == DependencyCreateAction) {
+                            original.Links.Add(new() { SourceId = source, TargetId = target, Kind = DependencyKind, IsUserAuthored = true });
+                        }
+                        return $"Dependency {source} to {target}.";
+                    });
+                } else {
+                    OpenDialog(context.Request.ActionId, context.Request.NodeId ?? "root");
+                }
+                break;
+            case StructureClipboardIntent clipboardIntent:
+                await ApplyClipboardAsync(clipboardIntent.Request);
+                break;
+            case StructureNoteEditIntent edit:
+                await ApplyGraphAsync("Edit note", original => {
+                    var node = original.Nodes.Find(node => node.Id == edit.Request.NodeId && !node.IsReadOnly);
+                    if (node is null) {
+                        throw new InvalidOperationException("The original editable note is unavailable.");
+                    }
+                    node.Title = edit.Request.Title;
+                    node.InlineText = edit.Request.Notes;
+                    return $"Retained {node.Id}.";
+                });
                 break;
             case StructureCreateIntent create:
                 var originalGraph = graph;
@@ -161,6 +211,95 @@ public sealed class StructureScenario {
                 Receipts.Add($"Received {intent.GetType().Name} on {name}.");
                 break;
         }
+    }
+
+    private void SetMode(string mode) {
+        graph.Mode = mode;
+        graph.DependencySourceId = mode == CanvasWorkbenchModes.Dependency ? graph.UiState.SelectedNodeIds.FirstOrDefault() ?? string.Empty : string.Empty;
+        Presentation = Presentation with { Toolbar = Presentation.Toolbar with { Mode = mode } };
+    }
+
+    private async Task ApplyGraphAsync(string operation, Func<CanvasWorkbenchSurface, string> apply) {
+        var original = graph;
+        var context = Presentation.ContextId;
+        var outcome = Outcome;
+        await WaitForCompletionAsync();
+        var message = $"{outcome}: {operation}.";
+        if (outcome is StructureScenarioOutcome.Accepted or StructureScenarioOutcome.AcceptedWithReadbackWarning) {
+            try {
+                message += " " + apply(original);
+            } catch (InvalidOperationException failure) {
+                outcome = StructureScenarioOutcome.Rejected;
+                message = $"{outcome}: {failure.Message}";
+            }
+        }
+        Receipts.Add(message);
+        if (context == Presentation.ContextId) {
+            Presentation = Presentation with { Feedback = message, FeedbackTone = outcome == StructureScenarioOutcome.Accepted ? "mint" : "warn" };
+        }
+    }
+
+    private async Task ApplyClipboardAsync(CanvasWorkbenchClipboardRequest request) {
+        if (request.SurfaceId != graph.SurfaceId || request.Action == CanvasWorkbenchClipboardAction.Duplicate) {
+            Receipts.Add("Unsupported clipboard action or retired surface was refused.");
+            return;
+        }
+        if (request.Action is CanvasWorkbenchClipboardAction.Copy or CanvasWorkbenchClipboardAction.Cut) {
+            var selected = graph.Nodes.Where(node => request.SelectedNodeIds.Contains(node.Id)).ToArray();
+            clipboard = selected.Length == request.SelectedNodeIds.Count && selected.All(node => !node.IsReadOnly)
+                ? new(request.Action, Presentation.ContextId, selected.Where(node => !HasSelectedAncestor(node, request.SelectedNodeIds)).Select(node => node.Id).ToArray()) : null;
+            Receipts.Add(clipboard is null ? "Read-only or missing clipboard sources were refused." : $"{request.Action}: captured {clipboard.Roots.Count} branch roots.");
+            return;
+        }
+        var buffer = clipboard;
+        var target = request.SelectedNodeIds.Count == 1 ? graph.Nodes.Find(node => node.Id == request.SelectedNodeIds[0] && !node.IsReadOnly) : null;
+        if (buffer is null || target is null || buffer.ContextId != Presentation.ContextId || buffer.IsBusy || buffer.RequiresObservation ||
+            buffer.Roots.Contains(target.Id) || HasSelectedAncestor(target, buffer.Roots)) {
+            Receipts.Add("The clipboard destination, ownership or pending outcome was refused.");
+            return;
+        }
+        buffer.IsBusy = true;
+        var outcome = Outcome;
+        try {
+            await ApplyGraphAsync(buffer.Action.ToString(), original => {
+                var roots = original.Nodes.Where(node => buffer.Roots.Contains(node.Id)).ToArray();
+                if (buffer.Action == CanvasWorkbenchClipboardAction.Cut) {
+                    foreach (var root in roots) {
+                        root.ParentId = target.Id;
+                    }
+                    original.Links.RemoveAll(link => buffer.Roots.Contains(link.TargetId) && link.Kind == "contains");
+                    original.Links.AddRange(roots.Select(root => new CanvasWorkbenchLink { SourceId = target.Id, TargetId = root.Id, Kind = "contains" }));
+                    if (ReferenceEquals(clipboard, buffer)) {
+                        clipboard = null;
+                    }
+                    return $"Retained roots {string.Join(", ", buffer.Roots)} under {target.Id}.";
+                }
+                var nodes = original.Nodes.Where(node => !node.IsReadOnly && (buffer.Roots.Contains(node.Id) || HasSelectedAncestor(node, buffer.Roots, original))).ToArray();
+                var map = nodes.ToDictionary(node => node.Id, _ => Guid.NewGuid().ToString("N"), StringComparer.Ordinal);
+                var links = original.Links.Where(link => map.ContainsKey(link.SourceId) && map.ContainsKey(link.TargetId)).ToArray();
+                foreach (var source in nodes) {
+                    original.Nodes.Add(Node(map[source.Id], source.Title, buffer.Roots.Contains(source.Id) ? target.Id : map[source.ParentId!], source.X + 80, source.Y + 80, false));
+                }
+                original.Links.AddRange(links.Select(link => new CanvasWorkbenchLink { SourceId = map[link.SourceId], TargetId = map[link.TargetId], Kind = link.Kind, IsUserAuthored = link.IsUserAuthored }));
+                original.Links.AddRange(buffer.Roots.Select(root => new CanvasWorkbenchLink { SourceId = target.Id, TargetId = map[root], Kind = "contains" }));
+                return "New identities: " + string.Join(", ", map.Select(pair => $"{pair.Key} → {pair.Value}"));
+            });
+            buffer.RequiresObservation = outcome == StructureScenarioOutcome.Unknown;
+        } finally {
+            buffer.IsBusy = false;
+        }
+    }
+
+    private bool HasSelectedAncestor(CanvasWorkbenchNode node, IReadOnlyList<string> roots, CanvasWorkbenchSurface? source = null) {
+        var parent = node.ParentId;
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (parent is not null && visited.Add(parent)) {
+            if (roots.Contains(parent)) {
+                return true;
+            }
+            parent = (source ?? graph).Nodes.Find(candidate => candidate.Id == parent)?.ParentId;
+        }
+        return false;
     }
 
     public void OpenDialog(string action, string node) {

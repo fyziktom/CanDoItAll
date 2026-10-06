@@ -8,12 +8,14 @@ public partial class ProjectStructurePage
 {
     private sealed record ProjectStructureClipboardState(
         CanvasWorkbenchClipboardAction Operation,
-        Guid ProjectId,
+        ProjectStructureAuthoringOpening Opening,
         string SurfaceId,
-        IReadOnlyList<string> RootNodeIds);
+        IReadOnlyList<ProjectStructureNode> Roots) {
+        public Guid ProjectId => Opening.Context.Surface.ProjectId;
+        public IReadOnlyList<string> RootNodeIds => Roots.Select(node => node.Id).ToArray();
+    }
 
     private ProjectStructureClipboardState? clipboardState;
-    private bool isClipboardPasteInProgress;
 
     private async Task HandleClipboardRequestedAsync(CanvasWorkbenchClipboardRequest request)
     {
@@ -27,7 +29,7 @@ public partial class ProjectStructurePage
                 await InvokeAsync(StateHasChanged);
                 break;
             case CanvasWorkbenchClipboardAction.Paste:
-                await PasteClipboardAsync(request);
+                await TrackAuthoringOperationAsync(PasteClipboardAsync(request));
                 break;
             case CanvasWorkbenchClipboardAction.Duplicate:
                 SetClipboardFeedback(
@@ -133,9 +135,9 @@ public partial class ProjectStructurePage
 
         clipboardState = new ProjectStructureClipboardState(
             request.Action,
-            ProjectId,
+            new(CaptureActionContext(), rootNodes[0]),
             request.SurfaceId,
-            rootNodes.Select(node => node.Id).ToArray());
+            rootNodes.ToArray());
 
         var operationLabel = request.Action == CanvasWorkbenchClipboardAction.Copy ? "Copy" : "Cut";
         SetClipboardFeedback(
@@ -147,9 +149,9 @@ public partial class ProjectStructurePage
 
     private async Task PasteClipboardAsync(CanvasWorkbenchClipboardRequest request)
     {
-        if (isClipboardPasteInProgress)
+        if (clipboardState?.Opening is { IsBusy: true } or { RequiresObservation: true })
         {
-            SetClipboardFeedback("A clipboard paste is already in progress.", "warn");
+            SetClipboardFeedback("The original paste is pending or unconfirmed. Observe it before pasting again.", "warn");
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -230,133 +232,64 @@ public partial class ProjectStructurePage
             return;
         }
 
-        isClipboardPasteInProgress = true;
-        try
-        {
-            IReadOnlyList<string> committedRootNodeIds;
-            try
-            {
-                committedRootNodeIds = capturedState.Operation switch
-                {
-                    CanvasWorkbenchClipboardAction.Copy =>
-                        (await ProjectWorkbenchService.CopySubtreesAsync(
-                            capturedState.ProjectId,
-                            capturedState.RootNodeIds,
-                            destinationNodeId)).RootNodeIds,
-                    CanvasWorkbenchClipboardAction.Cut =>
-                        (await ProjectWorkbenchService.ReparentSubtreesAsync(
-                            capturedState.ProjectId,
-                            capturedState.RootNodeIds,
-                            destinationNodeId))
-                        .Select(node => node.Id)
-                        .ToList(),
-                    _ => throw new InvalidOperationException("The clipboard buffer does not contain a pasteable operation.")
-                };
+        var opening = capturedState.Opening;
+        var selectionRevision = insightsSelectionRevision;
+        if (!TryBeginAuthoring(opening, clipboardState?.Opening)) {
+            return;
+        }
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), opening.Context.Admission,
+            capturedState.Operation == CanvasWorkbenchClipboardAction.Copy ? ProjectStructureAuthoringOperation.CopyNodes : ProjectStructureAuthoringOperation.MoveNodes,
+            ProjectStructureAuthoringResultKind.Rejected, "The original clipboard selection could not be pasted.") {
+            SourceNodeId = opening.Node.Id
+        };
+        try {
+            var owner = CreateProjectStructureUiAgentContext(capturedState.ProjectId) with { ExpectedProjectAdmission = opening.Context.Admission };
+            var expected = capturedState.Roots.Append(destinationNode).ToArray();
+            if (capturedState.Operation == CanvasWorkbenchClipboardAction.Copy) {
+                var copied = await ProjectWorkbenchService.CopySubtreesAsync(capturedState.ProjectId, capturedState.RootNodeIds, destinationNodeId,
+                    mutationOwner: owner, expectedNodes: expected);
+                outcome = outcome with { ClipboardCopy = copied, NodeIds = copied.RootNodeIds };
+            } else {
+                var moved = await ProjectWorkbenchService.ReparentSubtreesAsync(capturedState.ProjectId, capturedState.RootNodeIds, destinationNodeId,
+                    mutationOwner: owner, expectedNodes: expected);
+                outcome = outcome with { Nodes = moved, NodeIds = moved.Select(node => node.Id).ToArray() };
             }
-            catch (ArgumentException exception)
-            {
-                Logger.LogWarning(
-                    exception,
-                    "Project structure clipboard paste received invalid input. ProjectId={ProjectId} Operation={Operation} SourceRootNodeIds={SourceRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    capturedState.RootNodeIds,
-                    destinationNodeId);
-                SetClipboardFeedback("The clipboard paste request is invalid. Select the source and destination again.", "warn");
+            if (outcome.NodeIds.Count == 0) {
+                RecordAuthoringOutcome(opening, outcome);
                 return;
             }
-            catch (InvalidOperationException exception)
-            {
-                Logger.LogWarning(
-                    exception,
-                    "Project structure clipboard paste was rejected. ProjectId={ProjectId} Operation={Operation} SourceRootNodeIds={SourceRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    capturedState.RootNodeIds,
-                    destinationNodeId);
-                SetClipboardFeedback(
-                    capturedState.Operation == CanvasWorkbenchClipboardAction.Cut
-                        ? "The cut paste was rejected because its source or destination is stale, invalid, or would create a hierarchy cycle."
-                        : "The copy paste was rejected because its source or destination is stale, invalid, or no longer editable.",
-                    "warn");
+            var operationLabel = capturedState.Operation == CanvasWorkbenchClipboardAction.Copy ? "Copied" : "Moved";
+            var omitted = outcome.ClipboardCopy?.OmittedBoundaryLinks.Count ?? 0;
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
+                Message = $"{operationLabel} {outcome.NodeIds.Count} branches under {destinationNode.Title}." +
+                    (omitted > 0 ? $" {omitted} boundary links were intentionally omitted." : string.Empty) };
+            RecordAuthoringOutcome(opening, outcome);
+            if (!IsCurrentAction(opening.Context) || !ReferenceEquals(clipboardState, capturedState)) {
                 return;
             }
-            catch (Exception exception)
-            {
-                Logger.LogError(
-                    exception,
-                    "Project structure clipboard paste failed. ProjectId={ProjectId} Operation={Operation} SourceRootNodeIds={SourceRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    capturedState.RootNodeIds,
-                    destinationNodeId);
-                SetClipboardFeedback("The clipboard paste failed unexpectedly. No local canvas state was changed.", "warn");
-                return;
-            }
-
-            committedRootNodeIds = committedRootNodeIds
-                .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-            if (committedRootNodeIds.Count == 0)
-            {
-                Logger.LogWarning(
-                    "Project structure clipboard paste returned no committed roots. ProjectId={ProjectId} Operation={Operation} SourceRootNodeIds={SourceRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    capturedState.RootNodeIds,
-                    destinationNodeId);
-                SetClipboardFeedback("The clipboard selection could not be pasted under the selected destination.", "warn");
-                return;
-            }
-
-            if (capturedState.Operation == CanvasWorkbenchClipboardAction.Cut &&
-                ReferenceEquals(clipboardState, capturedState))
-            {
+            if (capturedState.Operation == CanvasWorkbenchClipboardAction.Cut) {
                 clipboardState = null;
             }
-
-            if (capturedState.ProjectId != ProjectId ||
-                !IsActiveClipboardSurface(capturedState.SurfaceId))
-            {
-                Logger.LogInformation(
-                    "Project structure clipboard paste committed after the active surface changed. ProjectId={ProjectId} Operation={Operation} CommittedRootNodeIds={CommittedRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    committedRootNodeIds,
-                    destinationNodeId);
+            if (selectionRevision != insightsSelectionRevision) {
                 return;
             }
-
-            selectedNodeIds = committedRootNodeIds.ToList();
-            try
-            {
-                await ReloadSurfaceAsync();
+            selectedNodeIds = outcome.NodeIds.ToList();
+            selectionRevision = insightsSelectionRevision;
+            try {
+                await ReloadSurfaceAsync(canPublish: () => IsCurrentAction(opening.Context) && selectionRevision == insightsSelectionRevision &&
+                    (clipboardState is null || ReferenceEquals(clipboardState, capturedState)));
+            } catch (Exception failure) {
+                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    Message = $"{outcome.Message} Canvas readback failed. Reload the original project; do not repeat the paste." });
             }
-            catch (Exception exception)
-            {
-                Logger.LogError(
-                    exception,
-                    "Project structure clipboard paste committed but the surface reload failed. ProjectId={ProjectId} Operation={Operation} CommittedRootNodeIds={CommittedRootNodeIds} DestinationNodeId={DestinationNodeId}.",
-                    capturedState.ProjectId,
-                    capturedState.Operation,
-                    committedRootNodeIds,
-                    destinationNodeId);
-                SetClipboardFeedback("The clipboard paste was saved, but the canvas could not reload. Reload the page before making another change.", "warn");
-                return;
-            }
-
-            var operationLabel = capturedState.Operation == CanvasWorkbenchClipboardAction.Copy ? "Copied" : "Moved";
-            SetClipboardFeedback(
-                committedRootNodeIds.Count == 1
-                    ? $"{operationLabel} branch was pasted under {destinationNode.Title}."
-                    : $"{operationLabel} {committedRootNodeIds.Count} branches were pasted under {destinationNode.Title}.",
-                "mint");
-        }
-        finally
-        {
-            isClipboardPasteInProgress = false;
-            await InvokeAsync(StateHasChanged);
+        } catch (Exception failure) {
+            opening.RequiresObservation = !IsKnownGraphRejection(failure);
+            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = opening.RequiresObservation ? "The original paste is unconfirmed. Observe the original project before pasting again." : failure.Message });
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
@@ -373,7 +306,7 @@ public partial class ProjectStructurePage
             return;
         }
 
-        if (clipboardState.ProjectId != ProjectId ||
+        if (!IsCurrentAction(clipboardState.Opening.Context) ||
             canvasSurface is null ||
             !string.Equals(clipboardState.SurfaceId, canvasSurface.SurfaceId, StringComparison.Ordinal))
         {

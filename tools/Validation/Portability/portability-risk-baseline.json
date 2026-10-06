@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T00:19:59.450529+00:00",
+  "generated_utc": "2026-10-06T01:05:21.136675+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15241,
+  "allowance_count": 15246,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -72281,6 +72281,36 @@
       "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/README.md",
       "category": "windows-executable",
       "source_fingerprint": "7160da3738ab02da6e227c9198c8fb4b46df5faf0069cba034efe7e17e91db0f",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/StructureScenario.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "931b44970f3dffe934e6d2986f68be1b8c7c6cb2a01bfa0ef7e098c0500239b4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/StructureScenario.cs",
+      "category": "permissions",
+      "source_fingerprint": "71cf3381edb034aa054e119fa9856e536438f76bcdbb5a772be4d775f0843fc4",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/StructureScenario.cs",
+      "category": "permissions",
+      "source_fingerprint": "9c99e79fbd42b26ebb60e6ef33d88f805966f1ced643c677a74a2c80f2672962",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/StructureScenario.cs",
+      "category": "permissions",
+      "source_fingerprint": "a0059af6405051741b50c77ff0bda121bb3d561cfec8dd804d96c73c90847ba5",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/StructureScenario.cs",
+      "category": "permissions",
+      "source_fingerprint": "af5c9bb8eaaa4daa8b92c3247be4d8a119af2f9dd97c5c8b243e879325ff62b7",
       "count": 1
     },
     {

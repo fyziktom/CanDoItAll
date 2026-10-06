@@ -89,13 +89,13 @@ public partial class ProjectStructurePage
                 structureViewIndex = view.Index;
                 break;
             case StructureSelectionIntent selection:
-                await HandleSelectionChangedAsync(selection.Selection);
+                await TrackAuthoringOperationAsync(HandleSelectionChangedAsync(selection.Selection));
                 break;
             case StructureNodesMovedIntent move:
-                await HandleNodesMovedAsync(move.Move);
+                await TrackAuthoringOperationAsync(HandleNodesMovedAsync(move.Move));
                 break;
             case StructureContextIntent context:
-                await HandleContextActionAsync(context.Request);
+                await TrackAuthoringOperationAsync(HandleContextActionAsync(context.Request));
                 break;
             case StructureComposerOpenedIntent opened:
                 CaptureComposer(opened.Opening);
@@ -113,7 +113,7 @@ public partial class ProjectStructurePage
                 await HandleNodeEditedAsync(edit.Request);
                 break;
             case StructureOpenIntent open:
-                await HandleNodeOpenedAsync(open.NodeId);
+                await TrackAuthoringOperationAsync(HandleNodeOpenedAsync(open.NodeId));
                 break;
             case StructureStateIntent state:
                 await HandleCanvasStateChangedAsync(state.StateJson);
@@ -151,7 +151,7 @@ public partial class ProjectStructurePage
         StructureToolbarCommand.Signals => ToggleSignalsWindowAsync(),
         StructureToolbarCommand.Agents => ToggleAgentWindowAsync(),
         StructureToolbarCommand.Gantt => OpenGanttViewAsync(),
-        StructureToolbarCommand.Recompose => RecomposeSelectedBranchAsync(),
+        StructureToolbarCommand.Recompose => TrackAuthoringOperationAsync(RecomposeSelectedBranchAsync()),
         StructureToolbarCommand.RetryCleanup => RetryPendingDeletionCleanupAsync(),
         _ => Task.CompletedTask
     };

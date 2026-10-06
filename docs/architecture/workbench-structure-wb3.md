@@ -157,3 +157,38 @@ verified with the existing PGP key. S0 is main `d45d56a42`; no push was performe
 
 W3 graph/clipboard hardening and W5 final-image closure remain outstanding. These
 intermediate observations are not the final WB3 acceptance result.
+
+## Graph and hierarchy checkpoint
+
+The native graph owners now validate captured root/destination row identities and
+kinds inside their existing admitted transaction. Copy retains its complete ID map
+and omitted boundary links; Cut retains original identities. Clipboard replacement,
+duplicate submissions and uncertain acknowledgements cannot reuse the old buffer.
+Connections retain the accepted native link ID, and deletion refuses a replacement
+link with identical endpoints. Movement captures original positions before waiting;
+viewport saves serialize accepted writes and retire unsent work on navigation.
+Reparenting and recomposition retain original outcomes and fence successor selection.
+Transfer validates the original root snapshot and preserves its native child creation,
+compensation and partial-recovery facts. No new durable protocol or schema was added.
+
+Three original clipboard cases failed before repair. Fourteen focused graph cases
+and 16 existing callers then passed. A separate native transfer reproduction failed
+because a changed root was accepted; its repair passed in the 39-case owner run.
+Ten integration cases passed canonical copy metadata/bindings/link policy, cut,
+recomposition and transfer. The source/binary receipt for those final owner runs is
+`w3-owner-final-inputs.json` (SHA-256
+`d9a295fe38bc1c1ec586184b095a8254310de11a9d7108f7f9a68c7bca98045d`).
+
+Real browser Copy committed its two-node forest but exposed a new publication bug:
+the page advanced its own selection revision before evaluating its readback fence.
+The native mapping and metadata were retained; that effect was read back without
+repeating Copy. The fence now captures the revision after its own selection update,
+with an additional assertion against the actual CanvasWorkbench presentation.
+This browser failure remains separate from the earlier passing owner tests.
+
+The sandbox supplies local graph selection/movement, dependency and clipboard
+outcomes in addition to its real composer and structural dialogs. Source and
+independent publication builds for both Fast and Parity succeeded without native
+services. Browser publication, repeated watch, final native consumers and the broad
+frozen checkpoint are still required before closure. The earlier main rendering
+checkpoint is `5c6b8a998511041729f8e69b4123d9250db52fc2`, with a verified PGP signature.

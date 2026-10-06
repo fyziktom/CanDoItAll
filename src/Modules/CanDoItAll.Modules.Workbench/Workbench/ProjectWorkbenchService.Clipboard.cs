@@ -12,7 +12,8 @@ public sealed partial class ProjectWorkbenchService
         string targetParentNodeKey,
         ProjectStructureClipboardCopyTaskPolicy taskPolicy = ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
@@ -29,6 +30,7 @@ public sealed partial class ProjectWorkbenchService
             projectId,
             targetParentNodeKey);
         var assembly = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
+        ProjectStructureNodeExpectations.EnsureCurrent(expectedNodes, assembly.Nodes);
         ProjectStructureEditableForestResolver.ValidateTarget(
             projectId,
             normalizedTargetNodeKey,

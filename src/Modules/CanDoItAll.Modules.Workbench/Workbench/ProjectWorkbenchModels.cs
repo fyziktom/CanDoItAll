@@ -1089,6 +1089,10 @@ public sealed partial class ProjectWorkbenchService(
         await relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
     }
 
+    public Task<ProjectStructureLink> LinkObjectsDetailedAsync(ProjectWriteAdmission admission, string sourceNodeKey, string targetNodeKey,
+        ProjectObjectLinkKind linkKind, IReadOnlyCollection<ProjectStructureNode> expectedNodes, CancellationToken cancellationToken = default)
+        => relationService.LinkObjectsDetailedAsync(admission, sourceNodeKey, targetNodeKey, linkKind, expectedNodes, cancellationToken);
+
     internal Task LinkCanonicalTaskResourceAsync(
         Guid projectId,
         string sourceNodeKey,
@@ -1111,9 +1115,10 @@ public sealed partial class ProjectWorkbenchService(
         string targetNodeKey,
         ProjectObjectLinkKind linkKind,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        ProjectStructureLink? expectedLink = null)
     {
-        return await relationService.UnlinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, mutationOwner);
+        return await relationService.UnlinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, mutationOwner, expectedLink);
     }
 
     internal Task<bool> UnlinkCanonicalTaskResourceAsync(
@@ -1135,9 +1140,10 @@ public sealed partial class ProjectWorkbenchService(
         string nodeKey,
         string? parentNodeKey,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
-        return await relationService.ReparentObjectAsync(projectId, nodeKey, parentNodeKey, cancellationToken, mutationOwner);
+        return await relationService.ReparentObjectAsync(projectId, nodeKey, parentNodeKey, cancellationToken, mutationOwner, expectedNodes);
     }
 
     public async Task<IReadOnlyList<ProjectStructureNode>> ReparentSubtreesAsync(
@@ -1145,13 +1151,14 @@ public sealed partial class ProjectWorkbenchService(
         IReadOnlyCollection<string> sourceRootNodeKeys,
         string targetParentNodeKey,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
         return await relationService.ReparentSubtreesAsync(
             projectId,
             sourceRootNodeKeys,
             targetParentNodeKey,
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, expectedNodes);
     }
 
     public async Task<int> DeleteObjectAsync(Guid projectId, string nodeKey, CancellationToken cancellationToken = default,
@@ -1305,18 +1312,20 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
-        return await relationService.MoveObjectsAsync(projectId, positions, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+        return await relationService.MoveObjectsAsync(projectId, positions, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedNodes);
     }
 
     public async Task<ProjectStructureSubtreeRecompositionResult?> RecomposeSubtreeAsync(
         Guid projectId,
         string rootNodeKey,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
     {
-        return await relationService.RecomposeSubtreeAsync(projectId, rootNodeKey, cancellationToken, mutationOwner);
+        return await relationService.RecomposeSubtreeAsync(projectId, rootNodeKey, cancellationToken, mutationOwner, expectedNodes);
     }
 
     public async Task<ProjectStructureNode?> UpdateObjectAsync(

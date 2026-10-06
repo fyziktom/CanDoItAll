@@ -395,13 +395,16 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
             node = key;
         }
 
+        public void ArmCreatedNodes(Guid owner) => ArmNode(owner, string.Empty);
+
         public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
             var matches = project is { } owner && (node is null
                 ? eventData.Context?.ChangeTracker.Entries<ProjectHierarchyLink>().Any(entry =>
                     entry.State == EntityState.Added && entry.Entity.ParentProjectId == owner) is true
                 : eventData.Context?.ChangeTracker.Entries<ProjectObjectRecord>().Any(entry =>
-                    entry.State == EntityState.Modified && entry.Entity.ProjectId == owner && entry.Entity.NodeKey == node) is true);
+                    entry.Entity.ProjectId == owner && (node == string.Empty ? entry.State == EntityState.Added :
+                        entry.State == EntityState.Modified && entry.Entity.NodeKey == node)) is true);
             if (matches) {
                 project = null;
                 if (LoseCommitReply) {

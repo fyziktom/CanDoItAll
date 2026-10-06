@@ -1366,70 +1366,58 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         }
     }
 
-    private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
-    {
-        var requestedPositions = args.Positions
-            .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
-            .ToList();
-        if (requestedPositions.Count == 0)
-        {
+    private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args) {
+        var context = CaptureActionContext();
+        var requestedPositions = args.Positions.Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y)).ToArray();
+        var targets = context.Surface.Nodes.Where(node => requestedPositions.Any(position => position.NodeId == node.Id)).ToArray();
+        if (targets.Length == 0) {
             return;
         }
-
+        var opening = new ProjectStructureAuthoringOpening(context, targets[0]);
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            ProjectStructureAuthoringOperation.MoveNodes, ProjectStructureAuthoringResultKind.Rejected, "The original movement was rejected.") {
+            SourceNodeId = targets[0].Id
+        };
         await nodeMoveCommitGate.WaitAsync();
-        try
-        {
-            var requestedNodeIds = requestedPositions
-                .Select(position => position.NodeId)
-                .ToHashSet(StringComparer.Ordinal);
-            var originalPositions = surface?.Nodes
-                .Where(node => requestedNodeIds.Contains(node.Id))
-                .Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y))
-                .ToList() ?? [];
+        try {
+            if (!IsCurrentAction(context)) {
+                return;
+            }
+            var originalPositions = targets.Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y)).ToArray();
             TryPatchSurfaceNodePositions(args.Positions);
-
             IReadOnlyList<string> updatedNodeIds;
-            try
-            {
-                updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, requestedPositions);
-            }
-            catch
-            {
-                TryPatchSurfaceNodePositions(originalPositions);
-                await InvokeAsync(StateHasChanged);
-                throw;
-            }
-
-            if (updatedNodeIds.Count == 0)
-            {
-                TryPatchSurfaceNodePositions(originalPositions);
+            try {
+                updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(context.Surface.ProjectId, requestedPositions,
+                    expectedProjectAdmission: context.Admission, expectedNodes: targets);
+            } catch (Exception failure) {
+                if (IsCurrentAction(context)) {
+                    TryPatchSurfaceNodePositions(originalPositions);
+                }
+                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    Kind = IsKnownGraphRejection(failure) ? ProjectStructureAuthoringResultKind.Rejected : ProjectStructureAuthoringResultKind.Unconfirmed,
+                    Message = IsKnownGraphRejection(failure) ? failure.Message : "The original movement is unconfirmed. Observe the original project before repeating it." });
                 return;
             }
-
-            var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
-            var rejectedPositions = originalPositions
-                .Where(position => !updatedNodeIdSet.Contains(position.NodeId))
-                .ToList();
-            TryPatchSurfaceNodePositions(rejectedPositions);
-            var committedPositions = args.Positions
-                .Where(position => updatedNodeIdSet.Contains(position.NodeId))
-                .ToList();
-            var requiresReload = surface is null ||
-                committedPositions.Count != updatedNodeIdSet.Count ||
-                committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
-            if (requiresReload)
-            {
-                await ReloadSurfaceAsync();
+            var committed = args.Positions.Where(position => updatedNodeIds.Contains(position.NodeId)).ToArray();
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, NodeIds = updatedNodeIds,
+                Positions = requestedPositions.Where(position => updatedNodeIds.Contains(position.NodeId)).ToArray(),
+                Message = $"Saved {updatedNodeIds.Count} original node positions." };
+            RecordAuthoringOutcome(opening, outcome);
+            if (!IsCurrentAction(context)) {
                 return;
             }
-
-            TryPatchSurfaceNodePositions(committedPositions);
-            await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
+            TryPatchSurfaceNodePositions(originalPositions.Where(position => !updatedNodeIds.Contains(position.NodeId)).ToArray());
+            TryPatchSurfaceNodePositions(committed);
+            try {
+                await TryAdoptMovedNodesIntoBordersAsync(new(committed));
+            } catch (Exception failure) {
+                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    Kind = ProjectStructureAuthoringResultKind.PartialCommit,
+                    Message = "The original positions were saved, but border-state reconciliation failed. Do not repeat the movement." });
+            }
+        } finally {
             nodeMoveCommitGate.Release();
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
@@ -2413,11 +2401,14 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private async Task EnableLinkModeAsync()
     {
+        var context = CaptureActionContext();
         var selectedNodeId = await ResolveCurrentSelectedNodeIdAsync();
-        await EnterDependencyModeAsync(selectedNodeId);
+        if (IsCurrentAction(context)) {
+            await EnterDependencyModeAsync(selectedNodeId, context);
+        }
     }
 
-    private async Task EnterDependencyModeAsync(string? sourceNodeId = null)
+    private async Task EnterDependencyModeAsync(string? sourceNodeId = null, ProjectStructureActionContext? capturedContext = null)
     {
         var resolvedSourceNodeId = sourceNodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(resolvedSourceNodeId))
@@ -2425,7 +2416,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             return;
         }
 
+        var context = capturedContext ?? CaptureActionContext();
+        var original = context.Surface.Nodes.FirstOrDefault(node => node.Id == resolvedSourceNodeId);
+        if (original is null || !IsCurrentAction(context)) {
+            return;
+        }
         reconnectNodeId = null;
+        dependencyOpening = new(context, original);
         linkModeSourceId = resolvedSourceNodeId;
         await SetCanvasToolModeAsync(CanvasAuthoringMode.Dependency, keepDependencySource: true);
     }
@@ -2448,20 +2445,19 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         return selectedNodeIds.FirstOrDefault();
     }
 
-    private async Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId)
-    {
-        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
-            string.IsNullOrWhiteSpace(targetNodeId) ||
-            string.Equals(sourceNodeId, targetNodeId, StringComparison.Ordinal))
-        {
-            return;
+    private Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId) {
+        if (string.IsNullOrWhiteSpace(sourceNodeId) || string.IsNullOrWhiteSpace(targetNodeId) || sourceNodeId == targetNodeId) {
+            return Task.CompletedTask;
         }
-
-        await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn);
-        workflowFeedback = "The dependency link was added.";
-        workflowFeedbackTone = "mint";
-        await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
-        await ReloadSurfaceAsync(sourceNodeId);
+        var sourceOpening = dependencyOpening?.Node.Id == sourceNodeId ? dependencyOpening : null;
+        var context = sourceOpening?.Context ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return Task.CompletedTask;
+        }
+        var source = sourceOpening?.Node ?? context.Surface.Nodes.FirstOrDefault(node => node.Id == sourceNodeId);
+        var target = surface?.Nodes.FirstOrDefault(node => node.Id == targetNodeId);
+        return source is null || target is null ? Task.CompletedTask : ExecuteGraphLinkAsync(context,
+            new(sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn, true), [source, target], remove: false);
     }
 
     private async Task SetCanvasToolModeAsync(string mode, bool keepDependencySource = false)
@@ -2650,68 +2646,57 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         return true;
     }
 
-    private void ScheduleCanvasViewStatePersistence()
-    {
-        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson))
-        {
-            CancelPendingCanvasViewStatePersistence();
+    private readonly SemaphoreSlim canvasViewStateCommitGate = new(1, 1);
+
+    private void ScheduleCanvasViewStatePersistence() {
+        CancelPendingCanvasViewStatePersistence();
+        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson)) {
             return;
         }
-
-        CancelPendingCanvasViewStatePersistence();
+        var context = CaptureActionContext();
         var persistCts = new CancellationTokenSource();
         pendingCanvasViewStatePersistCts = persistCts;
-        _ = PersistCanvasViewStateWhenIdleAsync(persistCts, currentViewStateJson);
+        _ = TrackAuthoringOperationAsync(PersistCanvasViewStateWhenIdleAsync(context, persistCts, currentViewStateJson));
     }
 
-    private async Task PersistCanvasViewStateWhenIdleAsync(CancellationTokenSource persistCts, string? stateJson)
-    {
-        try
-        {
+    private async Task PersistCanvasViewStateWhenIdleAsync(ProjectStructureActionContext context, CancellationTokenSource persistCts, string stateJson) {
+        try {
             await Task.Delay(CanvasViewStatePersistDelayMs, persistCts.Token);
-            if (persistCts.IsCancellationRequested || string.IsNullOrWhiteSpace(stateJson))
-            {
-                return;
-            }
-
-            await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", stateJson);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts))
-            {
+            await PersistCapturedViewStateAsync(context, stateJson, persistCts.Token);
+        } catch (OperationCanceledException) when (persistCts.IsCancellationRequested) {
+        } catch (Exception failure) {
+            ReportActionFailure(context, failure, "The original canvas state could not be confirmed.");
+            await RenderAuthoringOutcomeAsync();
+        } finally {
+            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts)) {
                 pendingCanvasViewStatePersistCts = null;
             }
-
             persistCts.Dispose();
         }
     }
 
-    private void CancelPendingCanvasViewStatePersistence()
-    {
-        var persistCts = pendingCanvasViewStatePersistCts;
-        pendingCanvasViewStatePersistCts = null;
-        if (persistCts is null)
-        {
-            return;
+    private async Task PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
+        await canvasViewStateCommitGate.WaitAsync(cancellationToken);
+        try {
+            if (IsCurrentAction(context)) {
+                cancellationToken.ThrowIfCancellationRequested();
+                await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson);
+            }
+        } finally {
+            canvasViewStateCommitGate.Release();
         }
-
-        persistCts.Cancel();
-        persistCts.Dispose();
     }
 
-    private async Task PersistCurrentViewStateAsync()
-    {
-        CancelPendingCanvasViewStatePersistence();
-        if (string.IsNullOrWhiteSpace(currentViewStateJson))
-        {
-            return;
-        }
+    private void CancelPendingCanvasViewStatePersistence() {
+        var persistCts = pendingCanvasViewStatePersistCts;
+        pendingCanvasViewStatePersistCts = null;
+        persistCts?.Cancel();
+    }
 
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+    private Task PersistCurrentViewStateAsync() {
+        CancelPendingCanvasViewStatePersistence();
+        return string.IsNullOrWhiteSpace(currentViewStateJson) ? Task.CompletedTask :
+            TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(CaptureActionContext(), currentViewStateJson));
     }
 
     private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
@@ -2980,7 +2965,6 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
         deferredCompletionCts.Cancel();
-        nodeMoveCommitGate.Dispose();
     }
 
     public async ValueTask DisposeAsync()
@@ -2994,6 +2978,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 previewInteractionSlot = null;
             }
         } finally {
+            nodeMoveCommitGate.Dispose();
+            canvasViewStateCommitGate.Dispose();
             deferredCompletionCts.Dispose();
         }
     }

@@ -31,7 +31,10 @@ public partial class ProjectStructurePage {
         if (receiver is null || !IsCurrentAuthoring(receiver, current)) {
             return;
         }
-        var operation = action();
+        await TrackAuthoringOperationAsync(action());
+    }
+
+    private async Task TrackAuthoringOperationAsync(Task operation) {
         authoringOperations.Add(operation);
         try {
             await operation;
@@ -39,6 +42,10 @@ public partial class ProjectStructurePage {
             authoringOperations.Remove(operation);
         }
     }
+
+    private static bool IsKnownGraphRejection(Exception failure)
+        => failure is ArgumentException or InvalidDataException or ProjectWriteAdmissionRejectedException or
+            ProjectStructureClipboardMutationInputException or ProjectStructureEditConflictException;
 
     private void ChangeAuthoringDialog(ProjectStructureAuthoringOpening? receiver,
         ProjectStructureAuthoringOpening? current, Action action) {

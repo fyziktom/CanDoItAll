@@ -16,7 +16,7 @@ dotnet publish src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox -c Release
 
 Fast uses the scoped Structure Tailwind input. Parity uses the application theme.
 Both use CanvasLib's supported asset components and isolated mode-specific output
-directories. Invalid or missing asset modes fail explicitly. Run the published host
+directories. Invalid modes or missing theme assets fail explicitly. Run the published host
 from its output directory and keep the mode selected at build time.
 
 Use 1920×1080/DPR1. The fixed scenario canvas height leaves room for controls and

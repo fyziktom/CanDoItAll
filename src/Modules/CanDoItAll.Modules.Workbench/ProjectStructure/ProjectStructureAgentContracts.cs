@@ -33,6 +33,9 @@ public sealed record ProjectStructureAgentContext(
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
     [JsonIgnore]
+    public IReadOnlyCollection<ProjectStructureNode>? ExpectedTransferRoots { get; init; }
+
+    [JsonIgnore]
     public System.Collections.Immutable.ImmutableArray<ProjectWriteAdmission> ExpectedProjectAdmissions { get; init; } = [];
 
     [JsonIgnore]
