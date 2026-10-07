@@ -2530,13 +2530,12 @@ public sealed record ProjectStructureImportRequest(
     string? ParentNodeKey,
     ProjectStructureImportSourceKind SourceKind,
     string Title,
-    [property: System.ComponentModel.Description("Text to import. JsonOutline accepts objects with title (or name), notes and children. Optional sourceKey is case-sensitive, unique across the outline, starts with an ASCII letter or digit, and contains at most 128 ASCII letters, digits, '-', '_', '.', ':' or '/'. Invalid or duplicate keys fail with HTTP 400 before import writes. Supplied keys are preserved in each node's metadataJson.importSource with sourceKind and containerNodeId; notes remain human text. Omitting sourceKey preserves the existing import behavior. Imports remain non-atomic after validation; inspect partial results before retrying.")]
     string? SourceText = null,
     ProjectObjectMediaPayload? SourceAsset = null,
     string ContainerBlockSubtype = "delivery",
     string LeafWorkItemSubtype = "task",
     string? LeaseToken = null) {
-    [System.ComponentModel.Description("When true, every JsonOutline node must supply a valid unique sourceKey. Missing keys fail with HTTP 400 ImportSourceKeyRequired before import writes; other source kinds fail with ImportSourceKeysUnsupported. Default false preserves imports without source keys. Clients that depend on structured import identities should verify that this property exists in the live schema, then set it true.")]
+    [System.ComponentModel.Description("When true, every JsonOutline object in sourceText must supply sourceKey alongside title (or name), optional notes and children. A key is case-sensitive, unique across the complete outline, starts with an ASCII letter or digit, and contains at most 128 ASCII letters, digits, '-', '_', '.', ':' or '/'. Supplied keys are validated even when this option is false. Missing required keys fail with HTTP 400 ImportSourceKeyRequired; invalid supplied keys with InvalidImportSourceKey; duplicate keys with DuplicateImportSourceKey; other source kinds with this option enabled fail with ImportSourceKeysUnsupported. Validation occurs before creating the import container or source asset. Supplied keys are preserved in each node's typed metadataJson.importSource with numeric sourceKind and containerNodeId; notes remain human text. Default false preserves imports without keys. Clients that depend on structured identities should verify this property exists in the live schema, then set it true. Imports remain non-atomic after validation; inspect partial results before retrying.")]
     public bool RequireSourceKeys { get; init; }
 }
 
