@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T15:19:17.432876+00:00",
+  "generated_utc": "2026-10-07T18:53:06.838983+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15305,
+  "allowance_count": 15308,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6233,6 +6233,24 @@
       "path": "src/App/CanDoItAll.Web/Api/AgentApiResponseContracts.cs",
       "category": "mcp",
       "source_fingerprint": "f6e08ac931063baaa5bf4cfd63e7c8bf9098c399b195bb2129c2c82f35414755",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0fe5a8cf05f0e2f0a7fdd1b45b4d156b9d0ee5de99c88e2fa387f3d0a0e12d1a",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "31ecc95b03d6d334094ad8d43f8c3aa2f5949e9a40329696298d85504a39976c",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b49a4a845544293ac78ddaed7bdffe318481aedc90504133dee282906ac279ef",
       "count": 1
     },
     {
