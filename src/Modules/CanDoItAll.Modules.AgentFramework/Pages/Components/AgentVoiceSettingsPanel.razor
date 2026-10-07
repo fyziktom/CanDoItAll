@@ -7,12 +7,15 @@
 @inject NotificationService NotificationService
 @inject IJSRuntime JsRuntime
 @inject ILogger<AgentVoiceSettingsSession> Logger
-@implements IDisposable
+@implements IAsyncDisposable
 
 <VoiceSettingsSurface Presentation="session.Presentation" Intent="HandleIntentAsync" />
 
 @code {
-    private const string PlayAudioFunction = "CanDoItAll.agentFramework.voice.playAudio";
+    private const string PlayAudioFunction = "CanDoItAll.agentFramework.voice.playAudioForOwner";
+    private const string DisposeAudioFunction = "CanDoItAll.agentFramework.voice.disposeOwner";
+    private readonly string audioOwnerId = $"voice-settings-{Guid.NewGuid():N}";
+    private bool playbackStarted;
     private AgentVoiceSettingsSession session = default!;
     private bool disposed;
     protected override async Task OnInitializedAsync() {
@@ -28,7 +31,11 @@
             .Select(provider => new VoiceSettingsProvider(provider.Id, provider.Name, provider.DefaultModel))];
     }
     private async Task PlayAsync(AgentVoiceSynthesisResult result, CancellationToken cancellationToken) {
-        await JsRuntime.InvokeVoidAsync(PlayAudioFunction, cancellationToken, Convert.ToBase64String(result.AudioBytes), result.ContentType);
+        if (disposed || cancellationToken.IsCancellationRequested) {
+            return;
+        }
+        playbackStarted = true;
+        await JsRuntime.InvokeVoidAsync(PlayAudioFunction, cancellationToken, audioOwnerId, Convert.ToBase64String(result.AudioBytes), result.ContentType);
     }
     private async Task HandleIntentAsync(VoiceSettingsIntent intent) {
         if (!session.IsCurrent(intent.Generation) || session.Presentation.IsBusy) {
@@ -59,11 +66,22 @@
             _ = InvokeAsync(StateHasChanged);
         }
     }
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         if (session is not null) {
             session.Changed -= Refresh;
             session.Dispose();
+        }
+        if (playbackStarted) {
+            try {
+                await JsRuntime.InvokeVoidAsync(DisposeAudioFunction, audioOwnerId);
+            } catch (JSDisconnectedException) {
+            } catch (JSException exception) {
+                Logger.LogWarning("Voice playback cleanup failed ({FailureType}) for owner {OwnerId}.", exception.GetType().Name, audioOwnerId);
+            }
         }
     }
 }

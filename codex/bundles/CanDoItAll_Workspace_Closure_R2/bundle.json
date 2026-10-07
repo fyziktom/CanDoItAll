@@ -1,0 +1,54 @@
+{
+  "bundle_id": "CDA-WORKSPACE-CLOSURE-R2-v1",
+  "title": "Workspace closure R2: Agent deletion, navigation and dependency delivery",
+  "created_on": "2026-09-30",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "15eadc18932e77a20ae5be2d7f2b207700a15d25",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "CLOSURE.md",
+    "DEPENDENCY_DELIVERY.md",
+    "FIX_AGENT_DELETION.md",
+    "FIX_NAVIGATION.md",
+    "PACKAGE_VALIDATION.md",
+    "README.md",
+    "REGRESSION_JOURNEYS.md",
+    "REMAINING_MODULES.md",
+    "REVIEW.cs.md",
+    "REVIEW.md",
+    "SAFE_EXECUTION.md",
+    "SOURCES.md",
+    "TEST_RESULTS.md",
+    "TOOLS.md",
+    "VALIDATION_MATRIX.md",
+    "WORKSPACE_STATUS.md",
+    "prompt.md"
+  ],
+  "new_module_extraction": false,
+  "required_campaign_groups": 38,
+  "additional_repository_scope": {
+    "fyziktom/CanDoItAll.Components": "Verify existing bounded fix and exact consumption; no unrelated refactor or implicit remote write."
+  },
+  "live_policy": {
+    "previous_campaign_reserved": 40,
+    "previous_campaign_limit": 40,
+    "new_requests_authorized_by_bundle": 0,
+    "maximum_if_separately_authorized": 40,
+    "per_execution_maximum_if_separately_authorized": 10
+  },
+  "review_proof": {
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "raw_implementer_artifacts_available": false,
+    "repaired_components_source_accessible_remotely": false,
+    "app_branch_recheck": "Same HEAD confirmed through Git refs API before packaging."
+  },
+  "artifact_proof_is_product_proof": false
+}

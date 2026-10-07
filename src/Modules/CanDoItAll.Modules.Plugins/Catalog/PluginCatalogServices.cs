@@ -101,12 +101,12 @@ public sealed class PluginInstallationStore(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         Interlocked.Increment(ref revision);
-        logger.LogInformation(
+        PluginCommit.Observe(existing, () => logger.LogInformation(
             "Installed plugin {PluginId} version {Version}. Enabled={IsEnabled}. Actor={Actor}.",
             existing.PluginId,
             existing.Version,
             existing.IsEnabled,
-            normalizedActor);
+            normalizedActor));
         return Result<PluginInstallationRecord>.Success(existing);
     }
 
@@ -130,11 +130,11 @@ public sealed class PluginInstallationStore(
         await dbContext.SaveChangesAsync(cancellationToken);
         Interlocked.Increment(ref revision);
 
-        logger.LogInformation(
+        PluginCommit.Observe(installation, () => logger.LogInformation(
             "Set plugin {PluginId} enabled state to {IsEnabled}. Actor={Actor}.",
             installation.PluginId,
             installation.IsEnabled,
-            installation.InstalledBy);
+            installation.InstalledBy));
         return Result<PluginInstallationRecord>.Success(installation);
     }
 
@@ -192,11 +192,16 @@ public sealed class PluginCatalogService(
             return Result<PluginCatalogItem>.Failure(Error.Failure($"Plugin '{pluginId}' is not available in the active plugin catalog.", "plugins.not-found"));
         }
 
-        var installResult = await installationStore.InstallAsync(
-            descriptor,
-            request.Enable,
-            request.Actor,
-            cancellationToken);
+        Result<PluginInstallationRecord> installResult;
+        try {
+            installResult = await installationStore.InstallAsync(
+                descriptor,
+                request.Enable,
+                request.Actor,
+                cancellationToken);
+        } catch (PluginCommittedException<PluginInstallationRecord> exception) {
+            throw new PluginCommittedException<PluginCatalogItem>(CreateAvailableItem(descriptor, exception.Value), exception);
+        }
         if (installResult.IsFailure)
         {
             await logStore.WriteAsync(new PluginLogWriteRequest(
@@ -211,7 +216,8 @@ public sealed class PluginCatalogService(
             return Result<PluginCatalogItem>.Failure(installResult.Errors);
         }
 
-        await logStore.WriteAsync(new PluginLogWriteRequest(
+        var committed = CreateAvailableItem(descriptor, installResult.Value!);
+        await PluginCommit.ObserveAsync(committed, () => logStore.WriteAsync(new PluginLogWriteRequest(
             PluginLogStreamKind.Installation,
             PluginLogOperationKind.PluginInstall,
             PluginLogSeverity.Information,
@@ -220,8 +226,8 @@ public sealed class PluginCatalogService(
             PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, request.Enable, request.Actor }),
             pluginId,
             descriptor.Package?.PackageId),
-            cancellationToken);
-        return Result<PluginCatalogItem>.Success(CreateAvailableItem(descriptor, installResult.Value!));
+            cancellationToken));
+        return Result<PluginCatalogItem>.Success(committed);
     }
 
     public async Task<Result<PluginCatalogItem>> SetEnabledAsync(
@@ -231,7 +237,12 @@ public sealed class PluginCatalogService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var updateResult = await installationStore.SetEnabledAsync(pluginId, isEnabled, request.Actor, cancellationToken);
+        Result<PluginInstallationRecord> updateResult;
+        try {
+            updateResult = await installationStore.SetEnabledAsync(pluginId, isEnabled, request.Actor, cancellationToken);
+        } catch (PluginCommittedException<PluginInstallationRecord> exception) {
+            throw new PluginCommittedException<PluginCatalogItem>(CreateUnavailableItem(exception.Value), exception);
+        }
         if (updateResult.IsFailure)
         {
             await logStore.WriteAsync(new PluginLogWriteRequest(
@@ -246,22 +257,27 @@ public sealed class PluginCatalogService(
             return Result<PluginCatalogItem>.Failure(updateResult.Errors);
         }
 
-        var descriptor = (await LoadDescriptorsAsync(cancellationToken))
-            .SingleOrDefault(item => item.Id == pluginId);
-        await logStore.WriteAsync(new PluginLogWriteRequest(
-            PluginLogStreamKind.Installation,
-            isEnabled ? PluginLogOperationKind.PluginEnable : PluginLogOperationKind.PluginDisable,
-            PluginLogSeverity.Information,
-            isEnabled ? "Enabled" : "Disabled",
-            $"Plugin '{pluginId}' was {(isEnabled ? "enabled" : "disabled")}.",
-            PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, isEnabled, request.Actor }),
-            pluginId,
-            descriptor?.Package?.PackageId),
-            cancellationToken);
-        return Result<PluginCatalogItem>.Success(
-            descriptor is null
-                ? CreateUnavailableItem(updateResult.Value!)
-                : CreateAvailableItem(descriptor, updateResult.Value!));
+        var committed = CreateUnavailableItem(updateResult.Value!);
+        try {
+            var descriptor = (await LoadDescriptorsAsync(cancellationToken))
+                .SingleOrDefault(item => item.Id == pluginId);
+            await logStore.WriteAsync(new PluginLogWriteRequest(
+                PluginLogStreamKind.Installation,
+                isEnabled ? PluginLogOperationKind.PluginEnable : PluginLogOperationKind.PluginDisable,
+                PluginLogSeverity.Information,
+                isEnabled ? "Enabled" : "Disabled",
+                $"Plugin '{pluginId}' was {(isEnabled ? "enabled" : "disabled")}.",
+                PluginLogStore.SerializeDetails(new { pluginId = pluginId.Value, isEnabled, request.Actor }),
+                pluginId,
+                descriptor?.Package?.PackageId),
+                cancellationToken);
+            return Result<PluginCatalogItem>.Success(
+                descriptor is null
+                    ? CreateUnavailableItem(updateResult.Value!)
+                    : CreateAvailableItem(descriptor, updateResult.Value!));
+        } catch (Exception exception) {
+            throw new PluginCommittedException<PluginCatalogItem>(committed, exception);
+        }
     }
 
     private async Task<IReadOnlyList<PluginDescriptor>> LoadDescriptorsAsync(CancellationToken cancellationToken)

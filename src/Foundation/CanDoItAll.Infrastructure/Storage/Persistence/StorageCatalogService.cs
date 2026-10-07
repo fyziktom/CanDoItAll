@@ -44,6 +44,13 @@ public sealed partial class StorageCatalogService(
         return (await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken, request.Configuration is null)).ToSnapshot();
     }
 
+    public async Task<StorageCatalogSnapshot> SaveEditorAsync(StorageCatalogSaveRequest request, bool isNew,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return (await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken,
+            request.Configuration is null, isNew)).ToSnapshot();
+    }
+
     public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
         (await ListRoutingRuleRecordsAsync(cancellationToken)).Select(StorageCatalogMapping.ToSnapshot).ToArray();
 
@@ -343,7 +350,8 @@ public sealed partial class StorageCatalogService(
         return storage.ToSnapshot();
     }
 
-    private async Task<StorageCatalogRecord> SaveCoreAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default, bool preserveConfiguration = false)
+    private async Task<StorageCatalogRecord> SaveCoreAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default,
+        bool preserveConfiguration = false, bool? editorCreate = null)
     {
         ArgumentNullException.ThrowIfNull(record);
         StorageJson.ParseProviderConfiguration(record.ConfigJson);
@@ -353,6 +361,18 @@ public sealed partial class StorageCatalogService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var entity = await dbContext.Set<StorageCatalogRecord>()
             .FirstOrDefaultAsync(item => item.Id == record.Id, cancellationToken);
+
+        if (editorCreate.HasValue) {
+            if (entity?.IsSystemDefault == true || record.IsSystemDefault) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Protected);
+            }
+            if (!editorCreate.Value && entity is null) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Missing);
+            }
+            if (editorCreate.Value && entity is not null) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.AlreadyExists);
+            }
+        }
 
         if (entity is null)
         {
@@ -402,8 +422,11 @@ public sealed partial class StorageCatalogService(
         return entity;
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => DeleteCoreAsync(id, false, cancellationToken);
+
+    public Task DeleteEditorAsync(Guid id, CancellationToken cancellationToken = default) => DeleteCoreAsync(id, true, cancellationToken);
+
+    private async Task DeleteCoreAsync(Guid id, bool exactEditor, CancellationToken cancellationToken) {
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -411,6 +434,10 @@ public sealed partial class StorageCatalogService(
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (storage is null || storage.IsSystemDefault)
         {
+            if (exactEditor) {
+                throw new StorageCatalogEditorRefusedException(storage is null
+                    ? StorageCatalogEditorRefusal.Missing : StorageCatalogEditorRefusal.Protected);
+            }
             return;
         }
 

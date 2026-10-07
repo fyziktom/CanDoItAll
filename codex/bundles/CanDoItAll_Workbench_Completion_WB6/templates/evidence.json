@@ -1,0 +1,288 @@
+{
+  "bundle_id": "CanDoItAll_Workbench_Completion_WB6",
+  "is_template": true,
+  "source_pair": {
+    "main_commit": null,
+    "components_commit": null,
+    "filetools_commit": null,
+    "production_fingerprint": null,
+    "published_hash": null
+  },
+  "groups": [
+    {
+      "id": "G00",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "status": "NOT_RUN",
+      "lane": "structure",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "status": "NOT_RUN",
+      "lane": "delivery",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "status": "NOT_RUN",
+      "lane": "genuine",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "status": "NOT_RUN",
+      "lane": "native",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "status": "NOT_RUN",
+      "lane": "native",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "status": "NOT_RUN",
+      "lane": "native",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "status": "NOT_RUN",
+      "lane": "static",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "status": "NOT_RUN",
+      "lane": "broad",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "status": "NOT_RUN",
+      "lane": "delivery",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "status": "NOT_RUN",
+      "lane": "delivery",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "status": "NOT_RUN",
+      "lane": "delivery",
+      "attempts": [],
+      "evidence": [],
+      "notes": ""
+    }
+  ],
+  "readiness": {
+    "workbench_ui_complete": false,
+    "candidate_runnable": false,
+    "deterministic_integration_passed": false,
+    "genuine_model_rehearsal_passed": false,
+    "demo_ready": false
+  },
+  "census": {
+    "unfinished_active": null,
+    "unclassified_active": null
+  },
+  "candidate": {
+    "start_script": null,
+    "stop_script": null,
+    "check_script": null,
+    "restart_count": 0,
+    "restore_test_passed": false,
+    "runbook": null
+  },
+  "genuine_provider": {
+    "authorization_reference": null,
+    "real_language_vision_attempts": 0,
+    "real_image_attempts": 0,
+    "known_cost_usd": null,
+    "reserved_upper_bound_usd": null,
+    "is_scripted": null
+  },
+  "blocking_findings": [],
+  "broad_result": {
+    "original_status": "NOT_RUN",
+    "exceptions": []
+  },
+  "artifact_oracles": [],
+  "signed_commits": [],
+  "resource_disposition": []
+}

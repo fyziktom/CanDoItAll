@@ -1,8 +1,36 @@
 <Solution>
   <Folder Name="/tests/Unit/">
+    <Project Path="../Unit/CanDoItAll.Collaboration.Tests/CanDoItAll.Collaboration.Tests.csproj" />
+    <Project Path="../Unit/CanDoItAll.TestLab.Tests/CanDoItAll.TestLab.Tests.csproj" />
     <Project Path="../Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
   </Folder>
   <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.Workbench.Planning.UI.Tests/CanDoItAll.Workbench.Planning.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workbench.Insights.UI.Tests/CanDoItAll.Workbench.Insights.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workbench.Structure.UI.Tests/CanDoItAll.Workbench.Structure.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workbench.Content.UI.Tests/CanDoItAll.Workbench.Content.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workbench.Operators.UI.Tests/CanDoItAll.Workbench.Operators.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workbench.Execution.UI.Tests/CanDoItAll.Workbench.Execution.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.Editor.UI.Tests/CanDoItAll.AgentFramework.Editor.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.Providers.UI.Tests/CanDoItAll.AgentFramework.Providers.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.SharedProviders.UI.Tests/CanDoItAll.AgentFramework.SharedProviders.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.AgentFramework.UI.Tests/CanDoItAll.AgentFramework.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Plugins.UI.Tests/CanDoItAll.Plugins.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.SchedulerPlanner.UI.Tests/CanDoItAll.SchedulerPlanner.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Memory.UI.Tests/CanDoItAll.Memory.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.UI.Tests/CanDoItAll.Workspace.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.ApiAccess.UI.Tests/CanDoItAll.Workspace.ApiAccess.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.StorageCatalog.UI.Tests/CanDoItAll.Workspace.StorageCatalog.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests/CanDoItAll.Workspace.StorageRecovery.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.DataSources.UI.Tests/CanDoItAll.Workspace.DataSources.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Workspace.StorageSelection.UI.Tests/CanDoItAll.Workspace.StorageSelection.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">

@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -11,6 +12,12 @@ public sealed class ProjectManagerSummaryViewState(Guid profileId, Guid projectI
     public ProjectManagerSummaryOptions Options { get; set; } = new();
 
     public ProjectManagerSummarySnapshot? Snapshot { get; set; }
+
+    public Guid? LifetimeId { get; set; }
+
+    public string? ActorStamp { get; set; }
+
+    public IReadOnlyList<ProjectWriteAdmission> ScopeAdmissions { get; set; } = [];
 }
 
 public sealed class ProjectManagerSummaryStateStore

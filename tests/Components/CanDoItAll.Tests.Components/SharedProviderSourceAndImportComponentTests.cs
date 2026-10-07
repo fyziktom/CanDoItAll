@@ -55,9 +55,9 @@ public sealed class SharedProviderSourceAndImportComponentTests
         var cut = harness.Context.Render<SharedProviderManagementPanel>(parameters => parameters
             .Add(component => component.ProviderProfileId, providerId));
 
-        var aliasInput = (IHtmlInputElement)cut.WaitForElement("[data-testid='shared-provider-import-alias']");
-        aliasInput.Change("Local finance model");
-        cut.Find("[data-testid='shared-provider-import-save']").Click();
+        var aliasInput = cut.WaitForElement("[data-testid='shared-provider-import-alias']");
+        aliasInput.Input("Local finance model");
+        await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
 
         cut.WaitForAssertion(() =>
         {
@@ -135,7 +135,7 @@ public sealed class SharedProviderSourceAndImportComponentTests
         });
     }
 
-    private static SharedProviderImportedProfileSnapshot CreateImport(Guid providerId)
+    internal static SharedProviderImportedProfileSnapshot CreateImport(Guid providerId)
     {
         var publicationId = new SharedProviderPublicationId(Guid.NewGuid());
         return new SharedProviderImportedProfileSnapshot(

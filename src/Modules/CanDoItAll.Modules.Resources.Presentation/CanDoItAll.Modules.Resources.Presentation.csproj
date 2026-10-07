@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj" />
+  </ItemGroup>
+</Project>

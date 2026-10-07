@@ -1,0 +1,115 @@
+@{ var rendered = State; }
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="AgentFramework"
+                    Title="Integrated technical agent runtime"
+                    Description="@HelpText"
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="technical agents"
+                             Value="@rendered.TechnicalAgents"
+                             TooltipText="Organization-scoped technical runtime records."
+                             Tone="info" />
+                <CompactStat Label="providers"
+                             Value="@rendered.Providers"
+                                  TooltipText="Provider profiles executed through AgentFramework."
+                             Tone="success" />
+                <CompactStat Label="bound resources"
+                             Value="@rendered.BoundResources"
+                             TooltipText="CRM-HR AI resources already bound to a technical agent."
+                             Tone="warning" />
+                <CompactStat Label="capabilities"
+                             Value="@rendered.Capabilities"
+                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
+                             Tone="accent" />
+                <CompactStat Label="active runs"
+                             Value="@rendered.ActiveRuns"
+                             TooltipText="Durable technical executions still in progress."
+                             Tone="info" />
+                <CompactStat Label="failed runs"
+                             Value="@rendered.FailedRuns"
+                             TooltipText="Recent execution failures that still need governance attention."
+                             Tone="danger" />
+            </Stats>
+            <Actions>
+                @if (!string.IsNullOrWhiteSpace(rendered.HeaderFailure)) {
+                    <Button Icon="refresh"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Warning"
+                            title="@rendered.HeaderFailure"
+                            aria-label="Retry header information"
+                            Disabled="@rendered.HeaderLoading"
+                            Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.RetryHeader)))"
+                            data-testid="agents-header-retry" />
+                }
+                <AgentAvatarActionButton AgentName="@rendered.HrAgentName"
+                                         AvatarImageUrl="@rendered.HrAgentAvatar"
+                                         FallbackText="HR"
+                                         Label="@($"Open {rendered.HrAgentName}")"
+                                         Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.OpenHrAgent)))"
+                                         Disabled="@(!rendered.HrReady || rendered.OpeningHrAgent)"
+                                         TestId="agents-hr-agent-open-header"
+                                         TooltipTestId="agents-hr-agent-tooltip" />
+                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
+                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                             OpenOnHover="true"
+                             AriaLabel="Show AgentFramework shell help"
+                             Title="Show AgentFramework shell help"
+                             Heading="AgentFramework shell"
+                             Body="@HelpText" />
+                <PageHeaderActionButton Icon="groups"
+                                        Label="Open CRM / HR agents"
+                                        TooltipText="Open CRM-HR agent projections."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.OpenCrmHrAgents)))"
+                                        data-testid="agents-shell-open-crmhr" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open workflows"
+                                        TooltipText="Open AgentFramework workflows."
+                                        Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.OpenWorkflows)))"
+                                        data-testid="agents-shell-open-workflows" />
+                <PageHeaderActionButton Icon="flow"
+                                        Label="Open processes"
+                                        TooltipText="Open the processes workspace."
+                                        Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.OpenProcesses)))"
+                                        data-testid="agents-shell-open-processes" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <Lead>
+        <Cluster AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="w-full"
+                 data-testid="agents-shell-tabs">
+            <SecondaryTabs Items="rendered.Tabs"
+                           SelectedKey="@rendered.Origin.Tab"
+                           SelectedKeyChanged="@(key => Intent.InvokeAsync(new AgentsShellIntent.SelectTab(rendered.Origin, key)))" />
+            <PageHeaderActionButton Icon="cloud_sync"
+                                    Label="Load default agents and providers"
+                                    TooltipText="Load the managed default agents and providers again."
+                                    Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.FeedDefaults)))"
+                                    Disabled="@(rendered.ConfirmingDefaults || rendered.FeedingDefaults)"
+                                    IsBusy="@rendered.FeedingDefaults"
+                                    data-testid="agents-shell-feed-defaults" />
+        </Cluster>
+    </Lead>
+
+    <ChildContent>@ChildContent</ChildContent>
+</PageScaffold>
+
+@code {
+    private const string HelpText = "This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.";
+
+    [Parameter, EditorRequired]
+    public AgentsShellState State { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<AgentsShellIntent> Intent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

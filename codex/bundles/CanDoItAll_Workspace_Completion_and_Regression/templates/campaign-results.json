@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "campaign_id": "CDA-WORKSPACE-COMPLETION-REGRESSION-v1",
+  "workspace_ui_complete": false,
+  "application_regression_ready": false,
+  "accepted_checkpoints": [],
+  "cases": [
+    {
+      "id": "BASE-01",
+      "attempts": []
+    },
+    {
+      "id": "WS-01",
+      "attempts": []
+    },
+    {
+      "id": "WS-02",
+      "attempts": []
+    },
+    {
+      "id": "WS-03",
+      "attempts": []
+    },
+    {
+      "id": "WS-04",
+      "attempts": []
+    },
+    {
+      "id": "WS-05",
+      "attempts": []
+    },
+    {
+      "id": "WS-06",
+      "attempts": []
+    },
+    {
+      "id": "APP-01",
+      "attempts": []
+    },
+    {
+      "id": "APP-02",
+      "attempts": []
+    },
+    {
+      "id": "APP-03",
+      "attempts": []
+    },
+    {
+      "id": "APP-04",
+      "attempts": []
+    },
+    {
+      "id": "APP-05",
+      "attempts": []
+    },
+    {
+      "id": "APP-06",
+      "attempts": []
+    },
+    {
+      "id": "APP-07",
+      "attempts": []
+    },
+    {
+      "id": "APP-08",
+      "attempts": []
+    },
+    {
+      "id": "APP-09",
+      "attempts": []
+    },
+    {
+      "id": "APP-10",
+      "attempts": []
+    },
+    {
+      "id": "APP-11",
+      "attempts": []
+    },
+    {
+      "id": "APP-12",
+      "attempts": []
+    },
+    {
+      "id": "APP-13",
+      "attempts": []
+    },
+    {
+      "id": "APP-14",
+      "attempts": []
+    },
+    {
+      "id": "APP-15",
+      "attempts": []
+    },
+    {
+      "id": "LIVE-01",
+      "attempts": []
+    },
+    {
+      "id": "LIVE-02",
+      "attempts": []
+    },
+    {
+      "id": "LIVE-03",
+      "attempts": []
+    },
+    {
+      "id": "GATE-01",
+      "attempts": []
+    },
+    {
+      "id": "GATE-02",
+      "attempts": []
+    },
+    {
+      "id": "GATE-03",
+      "attempts": []
+    },
+    {
+      "id": "GATE-04",
+      "attempts": []
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Workbench.Content.UI
 @using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
@@ -8,165 +9,25 @@
 @inject ILogger<ProjectStructureFileBrowserWindow> Logger
 @inject IJSRuntime JSRuntime
 
-<CanvasFloatingWindow WindowId="@WindowId"
-                      TestId="project-structure-file-browser-window"
-                      AriaLabel="Project structure files"
-                      Kicker="Authorized files"
-                      Title="@Request.DisplayName"
-                      Summary="@WindowSummary"
-                      BodyClass="project-structure-file-browser-window__body"
-                      DefaultPlacement="top-right"
-                      DefaultWidth="440"
-                      DefaultHeight="560"
-                      MinWidth="340"
-                      MinHeight="300"
-                      MaxWidth="760"
-                      MaxHeight="820"
-                      State="@State"
-                      StateChanged="StateChanged">
-    <Stack GapScale="LayoutGap.Small"
-           AlignItems="AlignItems.Stretch"
-           Class="project-structure-file-browser-window__content h-full min-h-0 overflow-hidden">
-        <Split Breakpoint="LayoutBreakpoint.None"
-               Gap="LayoutGap.Small"
-               AlignItems="AlignItems.Center"
-               JustifyContent="JustifyContent.SpaceBetween"
-               Wrap="FlexWrap.Wrap"
-               Class="project-structure-file-browser-window__toolbar shrink-0">
-            <Cluster Gap="LayoutGap.XSmall"
-                     Wrap="FlexWrap.Wrap">
-                <StatusBadge Tone="info"
-                             Text="@SourceStatus" />
-                <StatusBadge Tone="neutral"
-                             Text="Compact" />
-            </Cluster>
-            <Cluster Gap="LayoutGap.XSmall"
-                     AlignItems="AlignItems.Center"
-                     Wrap="FlexWrap.Wrap">
-                @if (CanOpenRootInExplorer)
-                {
-                    <Button Text="Open in Explorer"
-                            Icon="folder_open"
-                            Size="ButtonSize.Small"
-                            Variant="Variant.Outlined"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@isLoading"
-                            data-testid="project-structure-file-browser-open-root-explorer"
-                            Click="OpenRootInExplorer" />
-                }
-                @if (Request is ProjectStructureProjectFileCollectionRequest)
-                {
-                    <label class="project-structure-file-browser-window__subprojects">
-                        <CheckBox TValue="bool"
-                                  Value="@includeSubprojects"
-                                  ValueChanged="HandleIncludeSubprojectsChangedAsync"
-                                  Disabled="@isLoading"
-                                  aria-label="Include subprojects" />
-                        <TextBlock TextStyle="TextStyle.Caption"
-                                   Value="Include subprojects" />
-                    </label>
-                }
-            </Cluster>
-        </Split>
-
-        @if (isLoading)
-        {
-            <Cluster Gap="LayoutGap.XSmall"
-                     AlignItems="AlignItems.Center"
-                     JustifyContent="JustifyContent.Center"
-                     data-testid="project-structure-file-browser-loading"
-                     aria-live="polite"
-                     aria-busy="true">
-                <Icon Name="progress_activity"
-                      Class="animate-spin text-xl" />
-                <TextBlock TextStyle="TextStyle.Caption"
-                           Value="Loading files" />
-            </Cluster>
-            <LoadingState Eyebrow="Project Structure files"
-                          Title="Resolving authorized sources"
-                          Description="Building a bounded file collection from the current semantic scope." />
-        }
-        else if (!string.IsNullOrWhiteSpace(openError))
-        {
-            <EmptyState Eyebrow="Files unavailable"
-                        Title="Unable to open this file collection"
-                        Description="@openError">
-                <Actions>
-                    <Button Text="Retry"
-                            data-testid="project-structure-file-browser-retry"
-                            Click="RetryAsync" />
-                </Actions>
-            </EmptyState>
-        }
-        else if (interaction is not null)
-        {
-            <Stack GapScale="LayoutGap.Small"
-                   AlignItems="AlignItems.Stretch"
-                   Class="h-full min-h-0 overflow-hidden">
-                <Cluster Gap="LayoutGap.XSmall"
-                         Class="shrink-0">
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Icon="arrow_back"
-                            Text="Back to files"
-                            data-testid="project-structure-file-browser-back"
-                            Click="CloseInteractionAsync" />
-                    <StatusBadge Tone="info"
-                                 Text="Read only" />
-                </Cluster>
-                <FileInteraction Request="interaction.Request"
-                                 ContentSource="interaction.Session.ContentSource"
-                                 Composition="InteractionComposition"
-                                 OpenExternallyRequested="OpenInteractionExternallyCallback"
-                                 OpenExternallyLabel="Open in preferred app"
-                                 AllowModeSwitch="false"
-                                 MaximumContentBytes="ProjectStructureFileInteractionPolicy.MaximumContentBytes"
-                                 AriaLabel="@($"Read-only project structure file {interaction.Request.FileName}")" />
-            </Stack>
-        }
-        else if (workspace is not null)
-        {
-            @if (!string.IsNullOrWhiteSpace(activationError))
-            {
-                <Alert AlertStyle="AlertStyle.Danger"
-                       Variant="Variant.Outlined"
-                       data-testid="project-structure-file-browser-activation-error">
-                    @activationError
-                </Alert>
-            }
-
-            @if (!string.IsNullOrWhiteSpace(actionFeedback))
-            {
-                <Alert AlertStyle="AlertStyle.Info"
-                       Variant="Variant.Outlined"
-                       data-testid="project-structure-file-browser-action-feedback">
-                    @actionFeedback
-                </Alert>
-            }
-
-            <FileBrowser Session="workspace.Browser"
-                         HostActionCatalog="hostActionCatalog"
-                         Class="project-structure-file-browser-window__browser w-full flex-1 min-h-0"
-                         AriaLabel="Project structure file collection"
-                         DisplayMode="FileBrowserDisplayMode.Compact"
-                         InitialViewMode="FileBrowserViewMode.List"
-                         SearchDebounceMilliseconds="280"
-                         SnapshotChanged="HandleSnapshotChanged"
-                         ItemInvoked="ActivateAsync"
-                         ActionRequested="HandleActionRequestedAsync" />
-        }
-    </Stack>
-</CanvasFloatingWindow>
+@{
+    var renderedOpening = Opening;
+    var stateReceiver = StateChanged;
+}
+<ContentFileCollectionWindow WindowId="@WindowId" WindowState="State"
+                             StateChanged="@(state => ChangeWindowStateAsync(renderedOpening, stateReceiver, state))" State="BuildView()" />
 
 @code {
-    private readonly CancellationTokenSource lifetime = new();
+    private readonly HashSet<BrowserOperation> pending = [];
+    private readonly HashSet<(Guid Opening, FileBrowserItemKey Item, FileToolsHostAction Action)> pendingActions = [];
+    private readonly HashSet<(Guid Opening, FileBrowserItemKey Item, FileToolsHostAction Action)> unconfirmedActions = [];
+    private ProjectStructureFileCollectionOpening? activeOpening;
     private ProjectStructureFileBrowserWorkspace? workspace;
     private ProjectStructureKnownFileInteraction? interaction;
     private FileBrowserItemKey? interactionItemKey;
     private IFileBrowserHostActionCatalog? hostActionCatalog;
     private FileToolsHostActionRunner? actionRunner;
-    private CancellationTokenSource? operation;
+    private BrowserOperation? operation;
     private FileBrowserSnapshot? snapshot;
-    private string? activeRequestIdentity;
     private string? openError;
     private string? activationError;
     private string? actionFeedback;
@@ -174,389 +35,375 @@
     private bool isLoading;
     private bool disposed;
 
-    private FileToolsHostActionRunner ActionRunner => actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+    [Parameter, EditorRequired] public string WindowId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public ProjectStructureFileCollectionOpening Opening { get; set; } = default!;
+    [Parameter, EditorRequired] public CanvasWorkbenchWindowState State { get; set; } = default!;
+    [Parameter] public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+    [Parameter] public bool CanOpenRootInExplorer { get; set; }
+    [Parameter] public EventCallback OpenRootInExplorer { get; set; }
+    [Parameter] public EventCallback<ProjectStructureFileActionOutcome> ActionCompleted { get; set; }
+    public ProjectStructureFileCollectionRequest Request => Opening.Request;
 
-    private EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback
-        => workspace is not null &&
-           interactionItemKey is { } itemKey &&
-           SupportsLocalOpen(workspace, itemKey.SourceId)
-            ? EventCallback.Factory.Create<FileInteractionRequest>(this, OpenInteractionExternallyAsync)
-            : default;
-
-    [Parameter, EditorRequired]
-    public string WindowId { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired]
-    public ProjectStructureFileCollectionRequest Request { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public CanvasWorkbenchWindowState State { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
-
-    [Parameter]
-    public bool CanOpenRootInExplorer { get; set; }
-
-    [Parameter]
-    public EventCallback OpenRootInExplorer { get; set; }
-
-    private string WindowSummary => interaction is not null
-        ? "Authorized read-only file"
-        : workspace is null
-            ? "Compact collection browser"
-            : $"{workspace.SourceCount} source(s) · revision {workspace.Revision[..12]}";
-
-    private string SourceStatus => interaction is not null
-        ? "File open"
-        : snapshot?.Search is { } search
-            ? $"{snapshot.Items.Count} visible · {search.ScannedItems} inspected"
-            : workspace is null
-                ? "Resolving"
-                : $"{workspace.SourceCount} source(s)";
-
-    protected override async Task OnParametersSetAsync()
-    {
+    protected override async Task OnParametersSetAsync() {
         ArgumentException.ThrowIfNullOrWhiteSpace(WindowId);
-        ArgumentNullException.ThrowIfNull(Request);
-        ArgumentNullException.ThrowIfNull(State);
-        if (string.Equals(activeRequestIdentity, Request.Identity, StringComparison.Ordinal))
-        {
+        ArgumentNullException.ThrowIfNull(Opening);
+        if (ReferenceEquals(activeOpening, Opening)) {
             return;
         }
-
+        activeOpening = Opening;
+        unconfirmedActions.Clear();
         includeSubprojects = true;
-        await OpenAsync(force: true);
+        await OpenAsync(Opening);
     }
 
-    private Task RetryAsync() => OpenAsync(force: true);
+    private bool IsCurrent(ProjectStructureFileCollectionOpening opening)
+        => !disposed && ReferenceEquals(activeOpening, opening) && ReferenceEquals(Opening, opening);
 
-    private async Task HandleIncludeSubprojectsChangedAsync(bool value)
-    {
-        if (includeSubprojects == value)
-        {
+    private bool IsCurrent(BrowserOperation candidate)
+        => IsCurrent(candidate.Opening) && ReferenceEquals(operation, candidate) && !candidate.Token.IsCancellationRequested;
+
+    private Task ChangeWindowStateAsync(ProjectStructureFileCollectionOpening origin, EventCallback<CanvasWorkbenchWindowState> receiver, CanvasWorkbenchWindowState state)
+        => IsCurrent(origin) ? receiver.InvokeAsync(state) : Task.CompletedTask;
+
+    private ContentFileCollectionState BuildView() {
+        var origin = Opening;
+        var currentWorkspace = workspace;
+        var currentInteraction = interaction;
+        var itemKey = interactionItemKey;
+        var openRoot = OpenRootInExplorer;
+        return new() {
+            OpeningId = origin.Id,
+            Title = origin.Request.DisplayName,
+            Summary = currentInteraction is not null ? "Authorized read-only file" : currentWorkspace is null
+                ? "Compact collection browser" : $"{currentWorkspace.SourceCount} source(s) · revision {currentWorkspace.Revision[..12]}",
+            SourceStatus = currentInteraction is not null ? "File open" : snapshot?.Search is { } search
+                ? $"{snapshot.Items.Count} visible · {search.ScannedItems} inspected"
+                : currentWorkspace is null ? "Resolving" : $"{currentWorkspace.SourceCount} source(s)",
+            IsProjectCollection = origin.Request is ProjectStructureProjectFileCollectionRequest,
+            IncludeSubprojects = includeSubprojects,
+            IsLoading = isLoading,
+            OpenError = openError,
+            ActivationError = activationError,
+            ActionFeedback = actionFeedback,
+            Retry = EventCallback.Factory.Create(this, () => OpenAsync(origin)),
+            Back = EventCallback.Factory.Create(this, () => CloseInteractionAsync(origin, currentInteraction)),
+            IncludeSubprojectsChanged = EventCallback.Factory.Create<bool>(this, value => ChangeSubprojectsAsync(origin, value)),
+            OpenRoot = CanOpenRootInExplorer ? EventCallback.Factory.Create(this, () => OpenRootAsync(origin, openRoot)) : default,
+            Browse = currentWorkspace is null || hostActionCatalog is null ? null : new(currentWorkspace.Browser, hostActionCatalog,
+                EventCallback.Factory.Create<FileBrowserSnapshot>(this, value => SnapshotChanged(origin, currentWorkspace, value)),
+                EventCallback.Factory.Create<FileBrowserItemInvokedEventArgs>(this, value => ActivateAsync(origin, currentWorkspace, value)),
+                EventCallback.Factory.Create<FileBrowserItemActionEventArgs>(this, value => ActionRequestedAsync(origin, currentWorkspace, value))),
+            Preview = currentInteraction is null ? null : new(currentInteraction.Request, currentInteraction.Session.ContentSource,
+                InteractionComposition, ProjectStructureFileInteractionPolicy.MaximumContentBytes,
+                currentWorkspace is not null && itemKey is { } key && SupportsLocalOpen(currentWorkspace, key.SourceId)
+                    ? EventCallback.Factory.Create<FileInteractionRequest>(this, value =>
+                        ReferenceEquals(interaction, currentInteraction) && value.File == currentInteraction.Request.File
+                            ? ExecuteFileActionAsync(origin, currentWorkspace, key, FileToolsHostAction.OpenInPreferredApplication)
+                            : Task.CompletedTask) : default)
+        };
+    }
+
+    private async Task OpenRootAsync(ProjectStructureFileCollectionOpening origin, EventCallback receiver) {
+        if (!IsCurrent(origin)) {
             return;
         }
+        await origin.EnsureCurrentAsync(CancellationToken.None);
+        if (IsCurrent(origin)) {
+            await receiver.InvokeAsync();
+        }
+    }
 
+    private async Task ChangeSubprojectsAsync(ProjectStructureFileCollectionOpening origin, bool value) {
+        if (!IsCurrent(origin) || includeSubprojects == value) {
+            return;
+        }
         includeSubprojects = value;
-        await OpenAsync(force: true);
+        await OpenAsync(origin);
     }
 
-    private async Task OpenAsync(bool force)
-    {
-        if (!force && string.Equals(activeRequestIdentity, Request.Identity, StringComparison.Ordinal))
-        {
+    private async Task OpenAsync(ProjectStructureFileCollectionOpening origin) {
+        if (!IsCurrent(origin)) {
             return;
         }
-
-        CancellationTokenSource currentOperation = ReplaceOperation();
+        var current = BeginOperation(origin);
+        var requestedSubprojects = includeSubprojects;
         isLoading = true;
         openError = null;
         activationError = null;
         actionFeedback = null;
         snapshot = null;
-        try
-        {
+        ProjectStructureFileBrowserWorkspace? opened = null;
+        try {
             await DisposeRuntimeAsync();
-            ProjectStructureFileBrowserWorkspace opened = await Coordinator.OpenAsync(
-                Request,
-                includeSubprojects,
-                currentOperation.Token);
-            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
-            {
-                await opened.DisposeAsync();
+            await origin.EnsureCurrentAsync(current.Token);
+            if (!IsCurrent(current)) {
                 return;
             }
-
-            workspace = opened;
+            opened = await Coordinator.OpenAsync(origin.Request, requestedSubprojects, current.Token);
+            await origin.EnsureCurrentAsync(current.Token);
+            if (!IsCurrent(current)) {
+                return;
+            }
+            var accepted = opened;
+            workspace = accepted;
             hostActionCatalog = new DefaultFileToolsHostActionCatalog(
-                sourceId => ResolveActionAvailability(opened, sourceId),
-                ItemActionService.IsLocalLaunchAvailable,
-                ProjectStructureFileBrowserHostActions.GetAdditionalActionsAsync);
-            snapshot = opened.Browser.Snapshot;
-            activeRequestIdentity = Request.Identity;
-        }
-        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            activeRequestIdentity = Request.Identity;
-            Logger.LogWarning(
-                exception,
-                "Project Structure file collection could not be opened. RequestKind={RequestKind} RequestIdentity={RequestIdentity} IncludeSubprojects={IncludeSubprojects}.",
-                Request is ProjectStructureProjectFileCollectionRequest ? "project" : "node",
-                Request.Identity,
-                includeSubprojects);
-            openError = SafeMessage(exception, "Unable to open Project Structure files.");
-        }
-        finally
-        {
-            if (ReferenceEquals(operation, currentOperation))
-            {
+                sourceId => new(accepted.SupportsLocalOpen(sourceId), accepted.SupportsDownload(sourceId)),
+                ItemActionService.IsLocalLaunchAvailable, ProjectStructureFileBrowserHostActions.GetAdditionalActionsAsync);
+            snapshot = accepted.Browser.Snapshot;
+            opened = null;
+        } catch (OperationCanceledException) when (current.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "File collection opening failed. OpeningId={OpeningId} RequestIdentity={RequestIdentity}.", origin.Id, origin.Request.Identity);
+            if (IsCurrent(current)) {
+                openError = SafeMessage(exception, "Unable to open Project Structure files.");
+            }
+        } finally {
+            if (IsCurrent(current)) {
                 isLoading = false;
             }
+            try {
+                if (opened is not null) {
+                    await opened.DisposeAsync();
+                }
+            } finally {
+                Complete(current);
+            }
         }
     }
 
-    private async Task ActivateAsync(FileBrowserItemInvokedEventArgs args)
-    {
-        if (workspace is null || args.Item.IsContainer)
-        {
-            return;
+    private Task ActivateAsync(ProjectStructureFileCollectionOpening origin, ProjectStructureFileBrowserWorkspace target, FileBrowserItemInvokedEventArgs args) {
+        if (!IsCurrent(origin) || !ReferenceEquals(workspace, target) || args.Item.IsContainer) {
+            return Task.CompletedTask;
         }
-
-        if (args.Kind is FileBrowserInvocationKind.PointerDoubleClick or FileBrowserInvocationKind.Keyboard &&
-            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) &&
-            SupportsLocalOpen(workspace, args.Item.Key.SourceId))
-        {
-            await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
-            return;
-        }
-
-        await PreviewAsync(args.Item.Key);
+        return args.Kind is FileBrowserInvocationKind.PointerDoubleClick or FileBrowserInvocationKind.Keyboard &&
+            !FileInteractionDefaultActivationPolicy.ShouldOpenInternally(args.Item, InteractionComposition.Core) && SupportsLocalOpen(target, args.Item.Key.SourceId)
+                ? ExecuteFileActionAsync(origin, target, args.Item.Key, FileToolsHostAction.OpenInPreferredApplication)
+                : PreviewAsync(origin, target, args.Item.Key);
     }
 
-    private async Task PreviewAsync(FileBrowserItemKey itemKey)
-    {
-        if (workspace is null)
-        {
+    private async Task PreviewAsync(ProjectStructureFileCollectionOpening origin, ProjectStructureFileBrowserWorkspace target, FileBrowserItemKey itemKey) {
+        if (!IsCurrent(origin) || !ReferenceEquals(workspace, target)) {
             return;
         }
-
+        var current = BeginOperation(origin);
         activationError = null;
         actionFeedback = null;
-        CancellationTokenSource currentOperation = ReplaceOperation();
+        var previous = DetachInteraction();
         ProjectStructureKnownFileInteraction? activated = null;
-        try
-        {
-            activated = await Coordinator.ActivateAsync(workspace, itemKey, currentOperation.Token);
-            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
-            {
+        try {
+            if (previous is not null) {
+                await previous.DisposeAsync();
+            }
+            await origin.EnsureCurrentAsync(current.Token);
+            if (!IsCurrent(current) || !ReferenceEquals(workspace, target)) {
                 return;
             }
-
-            if (interaction is not null)
-            {
-                await interaction.DisposeAsync();
+            activated = await Coordinator.ActivateAsync(target, itemKey, current.Token);
+            await origin.EnsureCurrentAsync(current.Token);
+            if (!IsCurrent(current) || !ReferenceEquals(workspace, target)) {
+                return;
             }
-
             interaction = activated;
             interactionItemKey = itemKey;
             activated = null;
-        }
-        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Logger.LogWarning(
-                exception,
-                "Project Structure file activation failed. RequestIdentity={RequestIdentity}.",
-                Request.Identity);
-            activationError = SafeMessage(exception, "Unable to open the selected file.");
-        }
-        finally
-        {
-            if (activated is not null)
-            {
-                await activated.DisposeAsync();
+        } catch (OperationCanceledException) when (current.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "File activation failed. OpeningId={OpeningId} RequestIdentity={RequestIdentity}.", origin.Id, origin.Request.Identity);
+            if (IsCurrent(current)) {
+                activationError = SafeMessage(exception, "Unable to open the selected file.");
+            }
+        } finally {
+            try {
+                if (activated is not null) {
+                    await activated.DisposeAsync();
+                }
+            } finally {
+                Complete(current);
             }
         }
     }
 
-    private async Task CloseInteractionAsync()
-    {
-        if (interaction is not null)
-        {
-            await interaction.DisposeAsync();
-            interaction = null;
-        }
-
-        interactionItemKey = null;
-    }
-
-    private async Task HandleActionRequestedAsync(FileBrowserItemActionEventArgs args)
-    {
-        if (workspace is null || args.Origin != FileBrowserActionOrigin.Host)
-        {
+    private async Task CloseInteractionAsync(ProjectStructureFileCollectionOpening origin, ProjectStructureKnownFileInteraction? expected) {
+        if (!IsCurrent(origin) || !ReferenceEquals(interaction, expected)) {
             return;
         }
-
-        switch (args.ActionId)
-        {
-            case FileBrowserActionIds.Open:
-                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenInPreferredApplication);
-                break;
-            case ProjectStructureFileBrowserActionIds.Preview:
-                await PreviewAsync(args.Item.Key);
-                break;
-            case FileToolsBrowseHostActionIds.OpenContainingFolder:
-                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.OpenContainingFolder);
-                break;
-            case FileBrowserActionIds.Download:
-                await ExecuteFileActionAsync(args.Item.Key, FileToolsHostAction.Download);
-                break;
-            default:
-                activationError = "The selected file action is not supported by this host.";
-                break;
+        operation?.Cancel();
+        operation = null;
+        var previous = DetachInteraction();
+        if (previous is not null) {
+            await previous.DisposeAsync();
         }
     }
 
-    private async Task OpenInteractionExternallyAsync(FileInteractionRequest request)
-    {
-        if (interaction is null ||
-            interactionItemKey is not { } itemKey ||
-            request.File != interaction.Request.File)
-        {
-            return;
+    private Task ActionRequestedAsync(ProjectStructureFileCollectionOpening origin, ProjectStructureFileBrowserWorkspace target, FileBrowserItemActionEventArgs args) {
+        if (!IsCurrent(origin) || !ReferenceEquals(workspace, target) || args.Origin != FileBrowserActionOrigin.Host) {
+            return Task.CompletedTask;
         }
-
-        await ExecuteFileActionAsync(itemKey, FileToolsHostAction.OpenInPreferredApplication);
+        return args.ActionId switch {
+            FileBrowserActionIds.Open => ExecuteFileActionAsync(origin, target, args.Item.Key, FileToolsHostAction.OpenInPreferredApplication),
+            ProjectStructureFileBrowserActionIds.Preview => PreviewAsync(origin, target, args.Item.Key),
+            FileToolsBrowseHostActionIds.OpenContainingFolder => ExecuteFileActionAsync(origin, target, args.Item.Key, FileToolsHostAction.OpenContainingFolder),
+            FileBrowserActionIds.Download => ExecuteFileActionAsync(origin, target, args.Item.Key, FileToolsHostAction.Download),
+            _ => Task.FromException(new InvalidOperationException("The selected file action is not supported by this host."))
+        };
     }
 
-    private async Task ExecuteFileActionAsync(
-        FileBrowserItemKey itemKey,
-        FileToolsHostAction action)
-    {
-        if (workspace is null)
-        {
+    private async Task ExecuteFileActionAsync(ProjectStructureFileCollectionOpening origin, ProjectStructureFileBrowserWorkspace target,
+        FileBrowserItemKey itemKey, FileToolsHostAction action) {
+        if (!IsCurrent(origin) || !ReferenceEquals(workspace, target)) {
             return;
         }
-
-        ProjectStructureFileBrowserWorkspace currentWorkspace = workspace;
+        var attempt = (origin.Id, itemKey, action);
+        if (unconfirmedActions.Contains(attempt)) {
+            activationError = "Observe the original unconfirmed file action before opening a new interaction.";
+            return;
+        }
+        if (!pendingActions.Add(attempt)) {
+            return;
+        }
+        var current = BeginOperation(origin);
+        var completed = ActionCompleted;
+        var dispatched = false;
+        ProjectStructureFileActionOutcome? outcome = null;
         activationError = null;
         actionFeedback = null;
-        CancellationTokenSource currentOperation = ReplaceOperation();
-        try
-        {
-            FileToolsBrowseItemActionResult result = await ActionRunner.ExecuteAsync(
-                action,
-                (localAction, cancellationToken) => Coordinator.LaunchAsync(
-                    currentWorkspace,
-                    itemKey,
-                    localAction,
-                    cancellationToken),
-                cancellationToken => Coordinator.AuthorizeDownloadAsync(
-                    currentWorkspace,
-                    itemKey,
-                    cancellationToken),
-                currentOperation.Token);
-            if (!ReferenceEquals(operation, currentOperation) || currentOperation.IsCancellationRequested)
-            {
+        try {
+            await origin.EnsureCurrentAsync(current.Token);
+            if (!IsCurrent(current) || !ReferenceEquals(workspace, target)) {
                 return;
             }
-
-            if (result.IsSuccess)
-            {
-                actionFeedback = result.Message;
+            var runner = actionRunner ??= new FileToolsHostActionRunner(JSRuntime);
+            dispatched = true;
+            var result = await runner.ExecuteAsync(action,
+                (localAction, cancellationToken) => Coordinator.LaunchAsync(target, itemKey, localAction, cancellationToken),
+                cancellationToken => Coordinator.AuthorizeDownloadAsync(target, itemKey, cancellationToken), current.Token);
+            outcome = new(origin.Id, origin.Request, itemKey, action,
+                result.IsSuccess ? ProjectStructureFileActionOutcomeKind.Accepted : ProjectStructureFileActionOutcomeKind.Rejected, result.Message);
+            await completed.InvokeAsync(outcome);
+            if (IsCurrent(current)) {
+                actionFeedback = result.IsSuccess ? result.Message : null;
+                activationError = result.IsSuccess ? null : result.Message;
             }
-            else
-            {
-                activationError = result.Message;
+        } catch (Exception exception) {
+            if (dispatched && outcome is null) {
+                unconfirmedActions.Add(attempt);
+                await completed.InvokeAsync(new(origin.Id, origin.Request, itemKey, action, ProjectStructureFileActionOutcomeKind.Unconfirmed,
+                    "The file action is unconfirmed. Observe the original target before repeating it."));
             }
-        }
-        catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Logger.LogWarning(
-                "Project Structure authorized file action failed. RequestIdentity={RequestIdentity} Action={Action} FailureType={FailureType}.",
-                Request.Identity,
-                action,
-                exception.GetType().Name);
-            activationError = SafeMessage(
-                exception,
-                action == FileToolsHostAction.Download
-                    ? "Unable to download the selected file."
-                    : "Unable to open the selected file locally.");
+            Logger.LogWarning("Authorized file action failed. OpeningId={OpeningId} RequestIdentity={RequestIdentity} Action={Action} Dispatched={Dispatched} FailureType={FailureType}.",
+                origin.Id, origin.Request.Identity, action, dispatched, exception.GetType().Name);
+            if (IsCurrent(current)) {
+                activationError = outcome is not null ? $"{outcome.Message} The outcome could not be published to the current view."
+                    : dispatched ? "The file action is unconfirmed. Observe the original target before repeating it."
+                    : SafeMessage(exception, "Unable to authorize the selected file action.");
+            }
+        } finally {
+            pendingActions.Remove(attempt);
+            Complete(current);
         }
     }
 
-    private void HandleSnapshotChanged(FileBrowserSnapshot value)
-    {
+    private void SnapshotChanged(ProjectStructureFileCollectionOpening origin, ProjectStructureFileBrowserWorkspace target, FileBrowserSnapshot value) {
+        if (!IsCurrent(origin) || !ReferenceEquals(workspace, target)) {
+            return;
+        }
         snapshot = value;
-        if (value.Search is not { } search || value.IsBusy)
-        {
-            return;
+        if (value.Search is { } search && !value.IsBusy) {
+            Logger.LogInformation("File search completed. OpeningId={OpeningId} Revision={Revision} Returned={Returned} Inspected={Inspected} RetainedBytes={RetainedBytes} Partial={Partial}.",
+                origin.Id, target.Revision, value.Items.Count, search.ScannedItems, search.RetainedBytes, search.IsPartial);
         }
-
-        Logger.LogInformation(
-            "Project Structure file search completed. Returned={ReturnedItems} Inspected={InspectedItems} Retained={RetainedItems} RetainedBytes={RetainedBytes} DurationMs={DurationMs} Partial={IsPartial}.",
-            value.Items.Count,
-            search.ScannedItems,
-            search.RetainedItems,
-            search.RetainedBytes,
-            search.Elapsed.TotalMilliseconds,
-            search.IsPartial);
     }
 
-    private CancellationTokenSource ReplaceOperation()
-    {
+    private BrowserOperation BeginOperation(ProjectStructureFileCollectionOpening origin) {
         operation?.Cancel();
-        operation?.Dispose();
-        operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        return operation;
+        var next = new BrowserOperation(origin);
+        operation = next;
+        pending.Add(next);
+        return next;
     }
 
-    private async ValueTask DisposeRuntimeAsync()
-    {
-        if (interaction is not null)
-        {
-            await interaction.DisposeAsync();
-            interaction = null;
+    private void Complete(BrowserOperation current) {
+        pending.Remove(current);
+        if (ReferenceEquals(operation, current)) {
+            operation = null;
         }
+        current.Complete();
+    }
 
+    private ProjectStructureKnownFileInteraction? DetachInteraction() {
+        var previous = interaction;
+        interaction = null;
         interactionItemKey = null;
-
-        if (workspace is not null)
-        {
-            await workspace.DisposeAsync();
-            workspace = null;
-        }
-
-        hostActionCatalog = null;
+        return previous;
     }
 
-    private static string SafeMessage(Exception exception, string fallback)
-        => exception switch
-        {
-            FileBrowserProviderException providerException => providerException.Error.Message,
-            FileAccessDeniedException deniedException => deniedException.Message,
-            _ => fallback
-        };
+    private async ValueTask DisposeRuntimeAsync() {
+        var previousInteraction = DetachInteraction();
+        var previousWorkspace = workspace;
+        workspace = null;
+        hostActionCatalog = null;
+        try {
+            if (previousInteraction is not null) {
+                await previousInteraction.DisposeAsync();
+            }
+        } finally {
+            if (previousWorkspace is not null) {
+                await previousWorkspace.DisposeAsync();
+            }
+        }
+    }
 
-    private static FileToolsBrowseSourceActionAvailability ResolveActionAvailability(
-        ProjectStructureFileBrowserWorkspace currentWorkspace,
-        FileBrowserSourceId sourceId)
-        => new(
-            currentWorkspace.SupportsLocalOpen(sourceId),
-            currentWorkspace.SupportsDownload(sourceId));
+    private static string SafeMessage(Exception exception, string fallback) => exception switch {
+        FileBrowserProviderException provider => provider.Error.Message,
+        FileAccessDeniedException denied => denied.Message,
+        _ => fallback
+    };
 
-    private bool SupportsLocalOpen(
-        ProjectStructureFileBrowserWorkspace currentWorkspace,
-        FileBrowserSourceId sourceId)
-        => ItemActionService.IsLocalLaunchAvailable && currentWorkspace.SupportsLocalOpen(sourceId);
+    private bool SupportsLocalOpen(ProjectStructureFileBrowserWorkspace target, FileBrowserSourceId sourceId)
+        => ItemActionService.IsLocalLaunchAvailable && target.SupportsLocalOpen(sourceId);
 
-    public async ValueTask DisposeAsync()
-    {
-        if (disposed)
-        {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
             return;
         }
-
         disposed = true;
-        lifetime.Cancel();
-        operation?.Cancel();
-        operation?.Dispose();
-        await DisposeRuntimeAsync();
-        if (actionRunner is not null)
-        {
-            await actionRunner.DisposeAsync();
-            actionRunner = null;
+        activeOpening = null;
+        var operations = pending.ToArray();
+        foreach (var current in operations) {
+            current.Cancel();
         }
+        await DisposeRuntimeAsync();
+        await Task.WhenAll(operations.Select(current => current.Completion.Task));
+        var runner = actionRunner;
+        actionRunner = null;
+        if (runner is not null) {
+            await runner.DisposeAsync();
+        }
+    }
 
-        lifetime.Dispose();
+    private sealed class BrowserOperation {
+        private readonly CancellationTokenSource cancellation = new();
+        private int completed;
+        public BrowserOperation(ProjectStructureFileCollectionOpening opening) {
+            Opening = opening;
+            Token = cancellation.Token;
+        }
+        public ProjectStructureFileCollectionOpening Opening { get; }
+        public CancellationToken Token { get; }
+        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void Cancel() {
+            if (Volatile.Read(ref completed) != 0) {
+                return;
+            }
+            try {
+                cancellation.Cancel();
+            } catch (ObjectDisposedException) when (Volatile.Read(ref completed) != 0) {
+            }
+        }
+        public void Complete() {
+            Volatile.Write(ref completed, 1);
+            cancellation.Dispose();
+            Completion.TrySetResult();
+        }
     }
 }

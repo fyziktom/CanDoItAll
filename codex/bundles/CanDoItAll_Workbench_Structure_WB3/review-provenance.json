@@ -1,0 +1,27 @@
+{
+  "review_date": "2026-10-05",
+  "review_kind": "source inspection and implementer-report assessment",
+  "main_repository": "fyziktom/CanDoItAll",
+  "main_branch": "components-decoupling",
+  "main_ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+  "comparison_base": "be2045c312ee5fa99fb5b1f8526f1825ecf8352c",
+  "commits_ahead": 5,
+  "components_repository": "fyziktom/CanDoItAll.Components",
+  "components_branch": "development",
+  "components_ref": "24d182c664d0b1f293098643e52caed7384a5d50",
+  "components_delivery": "Observed at current remote development; earlier local-only report is historical.",
+  "main_commit_message": "docs(workbench): close verified WB2 insights boundary",
+  "main_signature_github_verified": true,
+  "product_build_executed": false,
+  "product_tests_executed": false,
+  "runtime_reproduction_executed": false,
+  "private_original_artifacts_available": false,
+  "source_snapshot_is_mandatory_checkout": false,
+  "limits": [
+    "Selected source paths/ranges inspected, not exhaustive proof of the whole repository.",
+    "C#/.NET, Docker, PostgreSQL, browser and watch tests were not run in this review.",
+    "GitHub test source and implementation report do not substitute for fresh execution evidence."
+  ],
+  "new_inherited_finding": "WB3-H1: mutable hierarchy dialog used after owner await; deterministic reproduction requested.",
+  "retained_foundation": "22 files copied byte-identically from the prior attached WB2 bundle."
+}

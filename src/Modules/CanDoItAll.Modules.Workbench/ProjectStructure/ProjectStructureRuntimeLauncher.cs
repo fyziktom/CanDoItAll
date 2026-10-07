@@ -1,7 +1,11 @@
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
+
+public sealed record ProjectStructureRuntimeSessionOwner(ProjectWriteAdmission Admission, Guid? NodeRecordId);
 
 public interface IProjectStructureRuntimeLauncher
 {
@@ -9,7 +13,25 @@ public interface IProjectStructureRuntimeLauncher
 
     bool IsRunning(string nodeId) => false;
 
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => null;
+
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken = default)
+        => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
+
+    Task<ProjectStructureRuntimeLaunchResult> LaunchReviewedAsync(ProjectStructureRuntimeSessionOwner owner, ProjectStructureNode node, ProjectStructureRuntimeLaunchPlan reviewed,
+        ProjectStructureRuntimeLaunchMode mode, ProjectStructureRuntimeLaunchApproval approval, CancellationToken cancellationToken = default)
+        => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "This launcher cannot admit an immutable reviewed plan."));
+
+    Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "This launcher cannot stop an expected owned session."));
+
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => null;
+
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
 
     Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -85,7 +107,11 @@ public sealed record ProjectStructureRuntimeLaunchResolution(
         Capabilities ?? ProjectStructureRuntimeLaunchCapabilities.Unavailable(Message);
 }
 
-public sealed record ProjectStructureRuntimeLaunchResult(bool IsSuccess, string Message);
+public sealed record ProjectStructureRuntimeLaunchResult(bool IsSuccess, string Message) {
+    public WorkspaceOwnedProcessIdentity? Identity { get; init; }
+    public ProjectStructureRuntimeExitRecord? Exit { get; init; }
+    public bool ObservationCompleted { get; init; }
+}
 
 internal sealed class ProjectStructureRuntimeLauncher(
     ProjectStructureRuntimePathResolver pathResolver,
@@ -101,7 +127,23 @@ internal sealed class ProjectStructureRuntimeLauncher(
 
     public bool IsRunning(string nodeId) => executionAdapter.IsRunning(nodeId);
 
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => executionAdapter.GetIdentity(nodeId);
+
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => executionAdapter.GetIdentity(nodeId, owner);
+
+    public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken = default)
+        => executionAdapter.WaitForExitAsync(nodeId, expected, timeout, cancellationToken);
+
+    public Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        CancellationToken cancellationToken = default)
+        => executionAdapter.StopAsync(nodeId, expected, cancellationToken);
+
     public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId) => executionAdapter.GetLastExit(nodeId);
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => executionAdapter.GetLastExit(nodeId, owner);
 
     public Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -203,7 +245,25 @@ internal sealed class ProjectStructureRuntimeLauncher(
             return new(false, resolution.Message);
         }
 
-        var plan = resolution.Plan;
+        return await LaunchCoreAsync(node, resolution.Plan, null, mode, approval, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<ProjectStructureRuntimeLaunchResult> LaunchReviewedAsync(ProjectStructureRuntimeSessionOwner owner, ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchPlan reviewed, ProjectStructureRuntimeLaunchMode mode,
+        ProjectStructureRuntimeLaunchApproval approval, CancellationToken cancellationToken = default)
+        => LaunchCoreAsync(node, reviewed, owner, mode, approval, cancellationToken);
+
+    private async Task<ProjectStructureRuntimeLaunchResult> LaunchCoreAsync(ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchPlan reviewed, ProjectStructureRuntimeSessionOwner? owner, ProjectStructureRuntimeLaunchMode mode,
+        ProjectStructureRuntimeLaunchApproval approval, CancellationToken cancellationToken) {
+        if (owner is not null && (owner.Admission.ProjectId != node.ProjectId || owner.NodeRecordId != node.RecordId)) {
+            return new(false, "The reviewed runtime owner does not identify the original project node.");
+        }
+        var plan = reviewed.Capture() with { Owner = owner };
+        var resolution = Resolve(node);
+        if (resolution.Plan is null || !plan.Matches(resolution.Plan)) {
+            return new(false, "The reviewed runtime plan is no longer available unchanged. Review a new launch.");
+        }
         if (plan.RequiresApproval && approval != ProjectStructureRuntimeLaunchApproval.OperatorConfirmed)
         {
             return new(

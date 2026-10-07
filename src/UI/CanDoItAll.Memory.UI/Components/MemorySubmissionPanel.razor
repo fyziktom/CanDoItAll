@@ -1,0 +1,35 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+@if (Workspace.Submissions.Count > 0) {
+    <details class="memory-submissions" data-testid="memory-ui-submissions">
+        <summary>Action outcomes (@Workspace.Submissions.Count)</summary>
+        @foreach (var receipt in Workspace.Submissions.Reverse()) {
+            <SurfaceCard @key="receipt.Id" data-testid="memory-ui-submission">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@($"{receipt.Action}: {receipt.ProviderId ?? "demo catalog"} — {receipt.State}")" />
+                <TextBlock TextStyle="TextStyle.Body2" Value="@receipt.Message" />
+                @if (receipt.SavedProviders.Count > 0) {
+                    <TextBlock Value="@($"Saved: {string.Join(", ", receipt.SavedProviders.Select(p => p.Value))}")" />
+                }
+                @if (receipt.OperationId is { } operationId) {
+                    <TextBlock Value="@($"Operation: {operationId.Value:D}")" />
+                }
+                @if (receipt.QueryResult is { } result && !ReferenceEquals(Workspace.Draft.QuerySubmission, receipt)) {
+                    <details data-testid="memory-ui-historical-query">
+                        <summary>Historical query result for @receipt.ProviderId</summary>
+                        <TextBlock Value="@($"Submitted profile revision: {receipt.ProviderRevision?.Value ?? "unavailable"}")" />
+                        <MemoryProviderQueryResultPanel Result="result" FeedbackEditor="historicalFeedback" />
+                    </details>
+                }
+                @if (receipt.State == MemoryEffectState.Unknown) {
+                    <Button Text="Review stored identity" Click="@(() => Workspace.ReviewAsync(receipt))"
+                            Disabled="receipt.IsReviewing" IsBusy="receipt.IsReviewing" data-testid="memory-ui-review" />
+                }
+            </SurfaceCard>
+        }
+    </details>
+}
+
+@code {
+    private readonly MemoryFeedbackEditorModel historicalFeedback = new();
+    [Parameter, EditorRequired] public IMemoryWorkspace Workspace { get; set; } = null!;
+}

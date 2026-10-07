@@ -15,9 +15,41 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatWholeUseCaseProfileScopeTests
 {
     [Fact]
+    public async Task Retirement_keeps_admitted_work_alive_and_cancels_waiting_admissions() {
+        var lease = new MutableLlmChatRuntimeLease();
+        using var dependencies = new ServiceCollection().BuildServiceProvider();
+        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor(), dependencies.GetRequiredService<IServiceScopeFactory>());
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var accepted = runner.ExecuteAsync(LlmChatOperationId.New(), async _ => {
+            entered.TrySetResult();
+            await release.Task;
+            return Result<int>.Success(17);
+        });
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var waitingEntered = false;
+        var waiting = runner.ExecuteAsync(LlmChatOperationId.New(), _ => {
+            waitingEntered = true;
+            return Task.FromResult(Result<int>.Success(18));
+        });
+        runner.Dispose();
+        try {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.False(waitingEntered);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => runner.ExecuteAsync(LlmChatOperationId.New(), _ => Task.FromResult(Result<int>.Success(19))));
+        } finally {
+            release.TrySetResult();
+            Assert.Equal(17, (await accepted.WaitAsync(TimeSpan.FromSeconds(10))).Value);
+        }
+        runner.Dispose();
+        Assert.Equal(1, lease.DisposeCount);
+    }
+
+    [Fact]
     public async Task Concurrent_use_cases_do_not_share_database_work_at_the_same_time() {
         var lease = new MutableLlmChatRuntimeLease();
-        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor());
+        using var dependencies = new ServiceCollection().BuildServiceProvider();
+        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor(), dependencies.GetRequiredService<IServiceScopeFactory>());
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var first = runner.ExecuteAsync(LlmChatOperationId.New(), async token => {
             await release.Task.WaitAsync(token);
@@ -41,7 +73,8 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
     [Fact]
     public async Task Cancelled_waiter_and_failed_operation_do_not_block_later_use_cases() {
         var lease = new MutableLlmChatRuntimeLease();
-        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor());
+        using var dependencies = new ServiceCollection().BuildServiceProvider();
+        using var runner = new LlmChatProfileScopeRunner(new TestLlmChatRuntimeLeaseFactory(lease), new LlmChatOperationScopeAccessor(), dependencies.GetRequiredService<IServiceScopeFactory>());
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var first = runner.ExecuteAsync(LlmChatOperationId.New(), async token => {
             await release.Task.WaitAsync(token);

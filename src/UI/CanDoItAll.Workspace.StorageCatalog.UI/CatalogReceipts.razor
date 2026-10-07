@@ -1,0 +1,50 @@
+<Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small" data-testid="storage-operation-receipts">
+    @foreach (var receipt in Session.Receipts) {
+        <FormSection @key="receipt.OperationId" Title="@($"{receipt.Effect}: {receipt.Outcome?.CatalogId ?? receipt.OriginalId}")">
+            @if (receipt.Outcome is not { } result) {
+                <p role="status">Operation admitted for its original target. Reads and selection remain independent.</p>
+            } else {
+                <p role="status" data-testid="storage-operation-facts">Catalog: @result.Write. Routing: @result.Routing. Driver: @result.Driver. Activity: @result.Activity.</p>
+                @if (result.Diagnostic != CatalogDiagnostic.None) {
+                    <p role="alert">@Describe(result.Diagnostic)</p>
+                }
+                @if (result.DiagnosticsUnavailable) {
+                    <p role="alert">Diagnostic logging also failed. The acknowledged operation facts above are retained.</p>
+                }
+                @if (result.IsUnknown) {
+                    <p>Outcome unknown. Another effect is blocked. Observation cannot establish acknowledgement and will never replay Save or Test.</p>
+                }
+                @if (result.Health is { } health) {
+                    <p>Tested snapshot: @health.Status. @health.Message</p>
+                }
+                <p>@receipt.Observation</p>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Observe original target" ButtonStyle="ButtonStyle.Light" Disabled="receipt.ObservationLoading"
+                            Click="@(() => Session.ObserveAsync(receipt))" data-testid="storage-observe" />
+                    @if (result.NeedsReview && !result.IsUnknown && !receipt.CorrectionAcknowledged) {
+                        <Button Text="Review partial routing for explicit correction" ButtonStyle="ButtonStyle.Warning"
+                                Click="@(() => Session.AcknowledgeCorrection(receipt))" data-testid="storage-review-partial" />
+                    }
+                </Cluster>
+            }
+        </FormSection>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public CatalogSession Session { get; set; } = default!;
+    private static string Describe(CatalogDiagnostic diagnostic) => diagnostic switch {
+        CatalogDiagnostic.Invalid => "The submitted configuration is invalid; no effect was admitted.",
+        CatalogDiagnostic.Missing => "The exact catalog target no longer exists. No replacement was created.",
+        CatalogDiagnostic.Protected => "The catalog owner refused this protected target.",
+        CatalogDiagnostic.Retired => "The workspace profile changed before admission. Reopen Storage.",
+        CatalogDiagnostic.ReadUnavailable => "The original target could not be verified. No driver or catalog write was dispatched.",
+        CatalogDiagnostic.CredentialDenied => "The credential could not be resolved under the storage consumer policy. No driver was dispatched.",
+        CatalogDiagnostic.DriverMissing => "No driver is registered for the submitted provider.",
+        CatalogDiagnostic.DriverFailed => "The driver did not return a known result. It will not be retried automatically.",
+        CatalogDiagnostic.PersistenceFailed => "Catalog acknowledgement is unavailable. Review the original operation before any further change.",
+        CatalogDiagnostic.RoutingFailed => "The catalog was saved. Default routing may be partially changed; inspect it before a separate correction.",
+        CatalogDiagnostic.ActivityFailed => "The known storage effects are retained; Activity recording failed.",
+        _ => "Review the retained operation facts."
+    };
+}

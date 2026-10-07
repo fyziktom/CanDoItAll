@@ -294,7 +294,7 @@ public sealed class ProjectStructurePageTaskAssigneeCreationTests
         => entryPoint switch
         {
             TaskCreateEntryPoint.CreateActionInvoked => page.InvokeAsync(() =>
-                canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+                CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
                     new CanvasWorkbenchCreateActionRequest(
                         ProjectStructureTaskActionIds.Create,
                         projectRoot.Id,

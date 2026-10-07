@@ -4,19 +4,24 @@ using CanDoItAll.AgentFramework.ProviderHistory;
 namespace CanDoItAll.AgentFramework.UI.History;
 
 public enum HistorySearchPhase { NotRequested, Loading, Canceled, Failed, Ready }
+public readonly record struct HistoryViewOrigin(Guid Value) {
+    public static HistoryViewOrigin New() => new(Guid.NewGuid());
+}
+
 public sealed record HistoryResultsPresentation(HistorySearchPhase Phase, ProviderRequestHistoryQuery? AppliedQuery,
     bool DraftChanged, HistoryFailure? Failure, ImmutableArray<HistoryEntry> Entries,
     HistoryCoverage? Coverage, DateTimeOffset? QueriedAtUtc, int PageNumber,
     bool CanPrevious, bool CanNext, bool HasEarlierPages) {
+    public HistoryViewOrigin Origin { get; init; } = HistoryViewOrigin.New();
     public static HistoryResultsPresentation Initial { get; } = new(HistorySearchPhase.NotRequested, null, false, null, [], null, null, 1, false, false, false);
 }
 
-public abstract record HistoryResultsIntent {
-    public sealed record Previous : HistoryResultsIntent;
-    public sealed record Next : HistoryResultsIntent;
-    public sealed record Cancel : HistoryResultsIntent;
-    public sealed record Clear : HistoryResultsIntent;
-    public sealed record Details(HistoryEntryId EntryId) : HistoryResultsIntent;
+public abstract record HistoryResultsIntent(HistoryViewOrigin Origin) {
+    public sealed record Previous(HistoryViewOrigin Origin) : HistoryResultsIntent(Origin);
+    public sealed record Next(HistoryViewOrigin Origin) : HistoryResultsIntent(Origin);
+    public sealed record Cancel(HistoryViewOrigin Origin) : HistoryResultsIntent(Origin);
+    public sealed record Clear(HistoryViewOrigin Origin) : HistoryResultsIntent(Origin);
+    public sealed record Details(HistoryViewOrigin Origin, HistoryEntryId EntryId) : HistoryResultsIntent(Origin);
 }
 
 public static class HistoryPublicErrors {

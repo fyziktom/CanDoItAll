@@ -66,6 +66,16 @@ internal static class ProjectStructureNodeEditor
             .GroupBy(item => item.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Last().Value?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
         var submittedKeys = inputValues.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in definition.InputFields ?? []) {
+            if (!inputValues.TryGetValue(field.Key, out var raw) || string.IsNullOrWhiteSpace(raw)) {
+                continue;
+            }
+            if (field.InputMode == "number" && !decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out _) ||
+                field.InputMode is "date" or "datetime-local" && !DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out _) ||
+                field.InputMode == "select" && field.Options.Count > 0 && !field.Options.Any(option => string.Equals(option.Value, raw, StringComparison.OrdinalIgnoreCase))) {
+                throw new InvalidOperationException($"{field.Label} is invalid.");
+            }
+        }
         var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
         var nodeReferences = node.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
         var notes = ResolveNotes(definition, node, request, inputValues);
@@ -237,8 +247,8 @@ internal static class ProjectStructureNodeEditor
             notes,
             startUtc,
             endUtc,
-            ProjectObjectMetadataSerializer.Serialize(metadata),
-            null,
+            ProjectObjectMetadataSerializer.SerializePreservingUnknownProperties(node.MetadataJson, metadata),
+            node.DurationSeconds,
             nodeReferences.IsEmpty ? null : nodeReferences);
     }
 
@@ -277,14 +287,16 @@ internal static class ProjectStructureNodeEditor
             "repositoryRoot" => metadata.ProjectBlock?.RepositoryRoot ?? string.Empty,
             "workspaceRoot" => metadata.ProjectBlock?.WorkspaceRoot ?? string.Empty,
             "workItemKind" => ToCamelCaseToken(metadata.WorkItem?.WorkItemKind == default ? ProjectNodeKindRegistry.ResolveWorkItemKind(node.ObjectSubtype) : metadata.WorkItem?.WorkItemKind),
-            "dueUtc" => FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
+            "dueUtc" => metadata.WorkItem?.WorkItemKind == ProjectWorkItemKind.Task
+                ? metadata.WorkItem.DueUtc?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+                : FormatDateTimeLocal(metadata.WorkItem?.DueUtc),
             "sendKind" => ToCamelCaseToken(metadata.WorkItem?.SendKind),
             "deliveryChannel" => ToCamelCaseToken(metadata.WorkItem?.DeliveryChannel),
-            "amount" => metadata.WorkItem?.Amount?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
+            "amount" => metadata.WorkItem?.Amount?.ToString("G29", CultureInfo.InvariantCulture) ?? string.Empty,
             "currencyCode" => metadata.WorkItem?.CurrencyCode ?? string.Empty,
             ProjectTaskEstimateInputKeys.ExpectedEffortValue => ResolveTaskEffortInputValue(metadata.WorkItem),
             ProjectTaskEstimateInputKeys.ExpectedEffortUnit => ToCamelCaseToken(metadata.WorkItem?.ExpectedEffortUnit),
-            ProjectTaskEstimateInputKeys.ExpectedCostAmount => metadata.WorkItem?.ExpectedCostAmount?.ToString("0.####", CultureInfo.InvariantCulture) ?? string.Empty,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount => metadata.WorkItem?.ExpectedCostAmount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode => metadata.WorkItem?.ExpectedCostCurrencyCode ?? string.Empty,
             "repositoryMode" => ToCamelCaseToken(metadata.Repository?.RepositoryMode == default ? ProjectNodeKindRegistry.ResolveRepositoryMode(node.ObjectSubtype) : metadata.Repository?.RepositoryMode),
             "repositoryUrl" => metadata.Repository?.RepositoryUrl ?? string.Empty,
@@ -314,10 +326,10 @@ internal static class ProjectStructureNodeEditor
             "providerUrl" => metadata.Infrastructure?.ProviderUrl ?? string.Empty,
             "loginUrl" => metadata.Infrastructure?.LoginUrl ?? string.Empty,
             "accountName" => metadata.Infrastructure?.AccountName ?? string.Empty,
-            "cpuCores" => metadata.Infrastructure?.CpuCores?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
-            "memoryGb" => metadata.Infrastructure?.MemoryGb?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
-            "storageGb" => metadata.Infrastructure?.StorageGb?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
-            "monthlyPrice" => metadata.Infrastructure?.MonthlyPrice?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty,
+            "cpuCores" => metadata.Infrastructure?.CpuCores?.ToString("G29", CultureInfo.InvariantCulture) ?? string.Empty,
+            "memoryGb" => metadata.Infrastructure?.MemoryGb?.ToString("G29", CultureInfo.InvariantCulture) ?? string.Empty,
+            "storageGb" => metadata.Infrastructure?.StorageGb?.ToString("G29", CultureInfo.InvariantCulture) ?? string.Empty,
+            "monthlyPrice" => metadata.Infrastructure?.MonthlyPrice?.ToString("G29", CultureInfo.InvariantCulture) ?? string.Empty,
             "domainName" => metadata.Infrastructure?.DomainName ?? string.Empty,
             "ownerName" => metadata.Infrastructure?.OwnerName ?? string.Empty,
             "dnsRecordType" => metadata.Infrastructure?.DnsRecordType ?? string.Empty,
@@ -375,9 +387,9 @@ internal static class ProjectStructureNodeEditor
         int currentValue)
         => !submittedKeys.Contains(key)
             ? currentValue
-            : inputValues.TryGetValue(key, out var value) && int.TryParse(value, out var parsed)
+            : inputValues.TryGetValue(key, out var value) && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
                 ? parsed
-                : 0;
+                : string.IsNullOrWhiteSpace(value) ? 0 : throw new InvalidOperationException($"{key} must be an integer.");
 
     private static int? ResolveNullableInt(
         IReadOnlyDictionary<string, string> inputValues,
@@ -386,9 +398,9 @@ internal static class ProjectStructureNodeEditor
         int? currentValue)
         => !submittedKeys.Contains(key)
             ? currentValue
-            : inputValues.TryGetValue(key, out var value) && int.TryParse(value, out var parsed)
+            : inputValues.TryGetValue(key, out var value) && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
                 ? parsed
-                : null;
+                : string.IsNullOrWhiteSpace(value) ? null : throw new InvalidOperationException($"{key} must be an integer.");
 
     private static decimal? ResolveNullableDecimal(
         IReadOnlyDictionary<string, string> inputValues,
@@ -397,9 +409,9 @@ internal static class ProjectStructureNodeEditor
         decimal? currentValue)
         => !submittedKeys.Contains(key)
             ? currentValue
-            : inputValues.TryGetValue(key, out var value) && decimal.TryParse(value, out var parsed)
+            : inputValues.TryGetValue(key, out var value) && decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
                 ? parsed
-                : null;
+                : string.IsNullOrWhiteSpace(value) ? null : throw new InvalidOperationException($"{key} must be a number.");
 
     private static void ApplyTaskEstimate(
         ProjectWorkItemMetadata metadata,
@@ -501,7 +513,7 @@ internal static class ProjectStructureNodeEditor
             metadata.ExpectedEffortUnit,
             metadata.ExpectedCostAmount,
             metadata.ExpectedCostCurrencyCode));
-        return ProjectTaskEstimatePolicy.ToInputValue(estimate)?.ToString("0.####", CultureInfo.InvariantCulture)
+        return ProjectTaskEstimatePolicy.ToInputValue(estimate)?.ToString(CultureInfo.InvariantCulture)
             ?? string.Empty;
     }
 
@@ -520,12 +532,19 @@ internal static class ProjectStructureNodeEditor
         DateTimeOffset? currentValue,
         IReadOnlyDictionary<string, string> inputValues,
         IReadOnlySet<string> submittedKeys,
-        string key)
-        => !submittedKeys.Contains(key)
-            ? currentValue
-            : inputValues.TryGetValue(key, out var value) && DateTimeOffset.TryParse(value, out var parsed)
-                ? parsed
-                : null;
+        string key) {
+        if (!submittedKeys.Contains(key)) {
+            return currentValue;
+        }
+        if (!inputValues.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value)) {
+            return null;
+        }
+        if (currentValue.HasValue && value == FormatDateTimeLocal(currentValue)) {
+            return currentValue;
+        }
+        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed)
+            ? parsed : throw new InvalidOperationException($"{key} must be a date and time.");
+    }
 
     private static TEnum ResolveEnum<TEnum>(
         IReadOnlyDictionary<string, string> inputValues,
@@ -535,9 +554,9 @@ internal static class ProjectStructureNodeEditor
         where TEnum : struct, Enum
         => !submittedKeys.Contains(key)
             ? currentValue
-            : inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed)
+            : inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) && Enum.IsDefined(parsed)
                 ? parsed
-                : currentValue;
+                : throw new InvalidOperationException($"{key} is invalid.");
 
     private static TEnum? ResolveNullableEnum<TEnum>(
         IReadOnlyDictionary<string, string> inputValues,
@@ -547,12 +566,12 @@ internal static class ProjectStructureNodeEditor
         where TEnum : struct, Enum
         => !submittedKeys.Contains(key)
             ? currentValue
-            : inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed)
+            : inputValues.TryGetValue(key, out var value) && Enum.TryParse<TEnum>(value, true, out var parsed) && Enum.IsDefined(parsed)
                 ? parsed
-                : null;
+                : string.IsNullOrWhiteSpace(value) ? null : throw new InvalidOperationException($"{key} is invalid.");
 
     private static string FormatDateTimeLocal(DateTimeOffset? value)
-        => value?.ToLocalTime().ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+        => value?.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss.fff", CultureInfo.InvariantCulture) ?? string.Empty;
 
     private static string ToCamelCaseToken<TEnum>(TEnum? value)
         where TEnum : struct, Enum

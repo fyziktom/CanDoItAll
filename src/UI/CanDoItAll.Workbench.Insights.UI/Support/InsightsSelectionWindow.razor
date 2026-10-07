@@ -1,0 +1,39 @@
+@namespace CanDoItAll.Workbench.Insights.UI
+@{
+    var origin = Origin;
+    var receiver = WindowChanged;
+    var selection = Selection;
+    var dispatch = Dispatch;
+    var help = Help;
+    var tip = Tip;
+}
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="project-structure-selection-window"
+                      AriaLabel="Project structure selection panel"
+                      Kicker="Selection panel"
+                      Title="@Title"
+                      Summary="@Summary"
+                      DefaultPlacement="top-right"
+                      DefaultWidth="360"
+                      DefaultHeight="360"
+                      MinWidth="320"
+                      MinHeight="240"
+                      MaxWidth="520"
+                      State="@WindowState"
+                      StateChanged="@(state => receiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.Selection, state)))">
+    <ProjectStructureSelectionPanel State="@selection" Origin="@origin" Dispatch="dispatch"
+                                    AdvancedDetailsHelpBody="@help" AdvancedDetailsHelpTip="@tip" />
+</CanvasFloatingWindow>
+
+@code {
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+    [Parameter, EditorRequired] public string WindowId { get; set; } = string.Empty;
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Summary { get; set; } = string.Empty;
+    [Parameter] public string Help { get; set; } = string.Empty;
+    [Parameter] public string Tip { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public CanvasWorkbenchWindowState WindowState { get; set; } = default!;
+    [Parameter, EditorRequired] public ProjectStructureSelectionPanelState Selection { get; set; } = default!;
+    [Parameter] public EventCallback<InsightsWindowIntent> WindowChanged { get; set; }
+    [Parameter] public EventCallback<InsightsSelectionIntent> Dispatch { get; set; }
+}

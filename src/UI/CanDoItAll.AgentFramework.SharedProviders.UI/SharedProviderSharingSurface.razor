@@ -1,0 +1,50 @@
+@{
+    var state = View.Presentation;
+    var origin = state.Origin;
+}
+<div class="shared-provider-management" data-testid="shared-provider-management">
+    @if (state.Warning is not null) {
+        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="shared-provider-warning">
+            @state.Warning
+        </Alert>
+        <Button Text="Retry sharing read" Click="@(() => View.RetryAsync(origin))" Disabled="@state.Loading" data-testid="shared-provider-retry" />
+    }
+    @if (state.Loading && state.Profile is null) {
+        <EmptyState Eyebrow="Loading" Title="Loading sharing state" Description="Reading provider sharing state." />
+    } else if (origin.ProviderId is null) {
+        <EmptyState Eyebrow="No provider selected" Title="Select or create a provider to publish it"
+                    Description="Use Shared provider connections in the provider toolbar to connect another instance." />
+    } else if (state.Profile is null) {
+        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
+            Sharing state is unavailable. Refresh the provider editor and try again.
+        </Alert>
+    } else if (state.Profile.Ownership == SharedProviderOwnership.Local) {
+        <SharedProviderLocalPublicationContent State="state.Profile" IsBusy="state.WritesBlocked"
+            Publish="@(() => View.PublishAsync(origin))"
+            Unpublish="@(() => View.OpenConfirmation(origin, SharedProviderConfirmationKind.Unpublish))" />
+    } else if (state.Profile.Import is { } import && state.Draft is { } draft) {
+        <SharedProviderImportedProfileContent @key="import.Baseline.ImportId" Import="import" Draft="draft"
+            IsBusy="state.WritesBlocked" Save="@(submission => View.SaveImportedAsync(origin, submission))"
+            Retire="@(() => View.OpenConfirmation(origin, SharedProviderConfirmationKind.RetireImport))" />
+    } else {
+        <EmptyState Eyebrow="Runtime provider" Title="This provider is not persisted"
+                    Description="Seeded runtime-only providers cannot be published. Create a saved provider profile first." />
+    }
+</div>
+
+@if (state.Confirmation is { } confirmation) {
+    <Dialog IsOpen="true" Title="@confirmation.Title" Eyebrow="Confirm change" Subtitle="@confirmation.Message"
+            Size="ModalSize.Compact" OnClose="@(() => View.CloseConfirmation(confirmation))" TestId="shared-provider-confirmation-dialog">
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseConfirmation(confirmation))" />
+                <Button Text="@confirmation.ActionText" ButtonStyle="ButtonStyle.Danger" Disabled="state.WritesBlocked"
+                        Click="@(() => View.ConfirmAsync(confirmation))" data-testid="shared-provider-confirmation-apply" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired] public ISharedProviderSharingView View { get; set; } = default!;
+}

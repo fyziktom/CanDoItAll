@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
@@ -193,7 +194,8 @@ public sealed class ProjectStructurePageWebPreviewTests
 
         page.WaitForElement("[data-testid='project-structure-web-preview-stop']");
         var stop = page.InvokeAsync(() => page.Find("[data-testid='project-structure-web-preview-stop']").ClickAsync(new()));
-        page.WaitForAssertion(() => {
+        await launcher.StopEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await page.InvokeAsync(() => {
             Assert.Equal(runtimeNode.Id, Assert.Single(launcher.StoppedNodeIds));
             Assert.True(page.Find("[data-testid='project-structure-web-preview-stop']").HasAttribute("disabled"));
         });
@@ -217,6 +219,10 @@ public sealed class ProjectStructurePageWebPreviewTests
 
     private sealed class RuntimeLauncherProbe : IProjectStructureRuntimeLauncher {
         private bool running = true;
+        private readonly WorkspaceOwnedProcessIdentity identity = new(1234, DateTimeOffset.UnixEpoch, new string('a', 64),
+            new(WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup, 1234, Guid.NewGuid()));
+        public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => running ? identity : null;
+        public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner) => GetIdentity(nodeId);
 
         public bool IsAvailable => true;
 
@@ -224,6 +230,7 @@ public sealed class ProjectStructurePageWebPreviewTests
 
         public List<string> StoppedNodeIds { get; } = [];
 
+        public TaskCompletionSource StopEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<ProjectStructureRuntimeLaunchResult> StopCompletion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -257,13 +264,14 @@ public sealed class ProjectStructurePageWebPreviewTests
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("This scenario must only stop the existing runtime.");
 
-        public async Task<ProjectStructureRuntimeLaunchResult> StopAsync(
-            ProjectStructureNode node,
+        public async Task<ProjectStructureRuntimeLaunchResult> StopAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
             CancellationToken cancellationToken = default) {
-            StoppedNodeIds.Add(node.Id);
+            Assert.Equal(identity, expected);
+            StoppedNodeIds.Add(nodeId);
+            StopEntered.TrySetResult();
             var result = await StopCompletion.Task.WaitAsync(cancellationToken);
             running = !result.IsSuccess;
-            return result;
+            return result with { Identity = identity };
         }
     }
 

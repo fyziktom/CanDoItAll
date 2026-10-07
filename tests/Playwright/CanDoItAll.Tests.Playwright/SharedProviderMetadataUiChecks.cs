@@ -19,9 +19,11 @@ internal static class SharedProviderMetadataUiChecks {
         await page.GetByTestId("providers-suggested-models").FillAsync(suggestedModels);
         await page.GetByTestId("providers-suggested-models").PressAsync("Tab");
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
+        await page.GetByTestId("provider-pricing-table").WaitForAsync();
         await page.GetByTestId("provider-editor-tab-runtime").ClickAsync();
         await Assertions.Expect(page.GetByTestId("providers-suggested-models")).ToHaveValueAsync(suggestedModels);
         await page.GetByTestId("provider-editor-tab-prices").ClickAsync();
+        await page.GetByTestId("provider-pricing-table").WaitForAsync();
         var rows = page.GetByTestId("provider-pricing-table").Locator("tbody tr[data-testid^='provider-pricing-row-']");
         if (await rows.CountAsync() == 0) {
             await page.GetByTestId("provider-pricing-add-button").ClickAsync();
@@ -105,12 +107,21 @@ internal static class SharedProviderMetadataUiChecks {
         await page.GetByText("Agent saved", new() { Exact = true }).WaitForAsync();
     }
 
-    internal static async Task OpenProviderAsync(IPage page, string baseUrl, string providerName) {
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{baseUrl}/agents?tab=providers");
+    internal static async Task OpenProviderAsync(IPage page, string baseUrl, string providerName,
+        Func<string, Task<IResponse?>>? navigate = null) {
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, $"{baseUrl}/agents?tab=providers", navigate);
         var provider = page.GetByTestId("providers-tree-provider")
-            .Filter(new() { HasTextString = providerName }).First;
+            .Filter(new() { Has = page.GetByText(providerName, new() { Exact = true }) }).First;
         await provider.WaitForAsync();
+        var alreadySelected = await provider.GetAttributeAsync("aria-selected") == "true";
+        var previousName = await page.GetByTestId("providers-name-input").ElementHandleAsync();
         await provider.ClickAsync();
+        if (alreadySelected) {
+            Assert.True(await previousName!.EvaluateAsync<bool>("element => element.isConnected"));
+        } else {
+            await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
+        }
+        await Assertions.Expect(provider).ToHaveAttributeAsync("aria-selected", "true");
         await Assertions.Expect(page.GetByTestId("providers-name-input")).ToHaveValueAsync(providerName);
     }
 
@@ -134,10 +145,10 @@ internal static class SharedProviderMetadataUiChecks {
     public static async Task ExerciseSimpleChatAsync(IPage page, string baseUrl, string providerName,
         string defaultModel, IReadOnlyList<string> models, string selectedModel, string evidenceDirectory, string label,
         string expectedResponse = "deterministic fixture response", string? prompt = null,
-        Regex? responsePattern = null, bool importedProvider = true) {
+        Regex? responsePattern = null, bool importedProvider = true, Func<string, Task<IResponse?>>? navigate = null) {
         var definitionName = $"UI shared catalog {label}";
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page,
-            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=definitions");
+            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=definitions", navigate);
         var card = page.Locator("article[data-testid^='llm-chat-definition-']").Filter(new() { HasTextString = definitionName });
         if (await card.CountAsync() == 0) {
             await page.GetByTestId("llm-chat-definition-create").ClickAsync();
@@ -145,6 +156,7 @@ internal static class SharedProviderMetadataUiChecks {
             await card.GetByRole(AriaRole.Button, new() { Name = "Edit", Exact = true }).ClickAsync();
         }
         var dialog = page.GetByTestId("llm-chat-definition-editor-dialog");
+        await using var selectorTrace = await SharedProviderSelectorTrace.StartAsync(page, evidenceDirectory, label);
         await dialog.GetByTestId("llm-chat-definition-name").FillAsync(definitionName);
         await dialog.GetByTestId("llm-chat-definition-tab-runtime").ClickAsync();
         await dialog.GetByTestId("llm-chat-definition-provider").SelectOptionAsync(new SelectOptionValue { Label = providerName });
@@ -153,6 +165,7 @@ internal static class SharedProviderMetadataUiChecks {
         await Assertions.Expect(selector.Locator("option")).ToHaveCountAsync(models.Count);
         Assert.Equal(models.Where(model => model != defaultModel).Append($"Provider default ({defaultModel})").Order(),
             (await selector.Locator("option").AllTextContentsAsync()).Order());
+        await selectorTrace.DisposeAsync();
         var overrides = await dialog.GetByTestId("llm-chat-definition-model-override").AllAsync();
         if (importedProvider) {
             Assert.Empty(overrides);
@@ -176,7 +189,7 @@ internal static class SharedProviderMetadataUiChecks {
         }
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page,
-            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=conversations");
+            $"{baseUrl}/agents?tab=simple-chats&simpleChatView=conversations", navigate);
         await page.GetByTestId("llm-chat-new").ClickAsync();
         var start = page.GetByTestId("llm-chat-start-dialog");
         await start.GetByTestId("llm-chat-start-definition-search").FillAsync(definitionName);

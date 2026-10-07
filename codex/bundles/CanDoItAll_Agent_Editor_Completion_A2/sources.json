@@ -1,0 +1,287 @@
+{
+  "application_ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+  "archive_head": "0aad5360b4ac037ed4471ed44fc6083b7f09fb85",
+  "components_ref": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "sources": [
+    {
+      "id": "R01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "docs/architecture/agent-editor-core-ui-a1.md",
+      "observed_blob_sha": "86223489642dd90865b245d9d730a6e23f40226a",
+      "coverage": "full",
+      "role": "A1 implementation and recorded validation",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/docs/architecture/agent-editor-core-ui-a1.md"
+    },
+    {
+      "id": "R02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFilesSurfaceSession.cs",
+      "observed_blob_sha": "848c95d7627be1305792f6b7d5685f0ff005e92f",
+      "coverage": "lines 83-223",
+      "role": "Former P2-R1 exact operation fence",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.Projects/ProjectFilesSurfaceSession.cs"
+    },
+    {
+      "id": "R03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor",
+      "observed_blob_sha": "5c313fc822bc03f2721593c6f69c7be25b30ba5c",
+      "coverage": "lines 1-165; remaining pre-A1 blocks identified by current tree and A1 diff",
+      "role": "Production slots and access-section source",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor"
+    },
+    {
+      "id": "R04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "observed_blob_sha": "307b0030ef1238dfcdac129f9cc8c601ccf04e96",
+      "coverage": "lines 1-830 and 1030-1320",
+      "role": "Current core/session/save/reconciliation/capability/permission host",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs"
+    },
+    {
+      "id": "R05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreState.cs",
+      "observed_blob_sha": "c507225fad398506609cefeb38924aee1c51a69f",
+      "coverage": "full",
+      "role": "Current safe state/intent and slot contract",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreState.cs"
+    },
+    {
+      "id": "R06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanel.razor",
+      "observed_blob_sha": "155017bf91c0b7ab7571855a104c1a9ea50ed31e",
+      "coverage": "full",
+      "role": "Memory markup and application dependencies",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanel.razor"
+    },
+    {
+      "id": "R07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanelState.cs",
+      "observed_blob_sha": "902db3adc09cb7db8acd510db5fb390f54294621",
+      "coverage": "full",
+      "role": "Eligibility, binding editing, read/lifetime policy",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemorySettingsPanelState.cs"
+    },
+    {
+      "id": "R08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs",
+      "observed_blob_sha": "1c85b8201cfedc37749fe245154da134bf18cc7b",
+      "coverage": "full",
+      "role": "Host registry and protected-root selection semantics",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor.cs"
+    },
+    {
+      "id": "R09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor",
+      "observed_blob_sha": "bfdf5224835b6e9896e147f1384dd6848e2a7e24",
+      "coverage": "full",
+      "role": "Actual root entry/reference renderer",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor"
+    },
+    {
+      "id": "R10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs",
+      "observed_blob_sha": "cdb7f4694096a1c91056cdea56c6e195b0200f5c",
+      "coverage": "Full file read on the current implementation; blob also matches the prior reviewed version.",
+      "role": "Native editor adapter contracts, normalization and outcomes",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorCommands.cs"
+    },
+    {
+      "id": "R11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
+      "observed_blob_sha": "012b66cc99d3d1f76fea535e213e23b82d90eeca",
+      "coverage": "Lines 1–66 reread on the current implementation; prior complete file has the same observed Git blob.",
+      "role": "Whole-agent capture and HasLaterEdits meaning",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs"
+    },
+    {
+      "id": "R12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "observed_blob_sha": "8ff6b1bae1a5f3167f8361aef4b8c45958f304d3",
+      "coverage": "lines 1-280",
+      "role": "Native Verify entry and catalog ownership",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs"
+    },
+    {
+      "id": "R13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs",
+      "observed_blob_sha": "d66d08332a1082af01bad37e4c2214ce89624fac",
+      "coverage": "full",
+      "role": "Exact proof publication, version, outcomes and receipt recovery",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/MAF/Common/CanDoItAll.AgentFramework.Core/Capabilities/CapabilityVerificationPublication.cs"
+    },
+    {
+      "id": "R14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/UI/CanDoItAll.Conversations.Components/ConversationIdentityFields.razor",
+      "observed_blob_sha": "b86eb41597c0a6c165f24b288f89b24bce88784a",
+      "coverage": "full",
+      "role": "Immediate input compatibility",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/UI/CanDoItAll.Conversations.Components/ConversationIdentityFields.razor"
+    },
+    {
+      "id": "R15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs",
+      "observed_blob_sha": "0b44e0074768947776c4ebb98fb9f922a77d9681",
+      "coverage": "full",
+      "role": "Reference loading and current safe access projections",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorReads.cs"
+    },
+    {
+      "id": "R16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEditorCoreRoundTripTests.cs",
+      "observed_blob_sha": "33f8e2ad0bbeaffdbd961b95fdf36a8f329d7865",
+      "coverage": "full",
+      "role": "Native all-deferred-field preservation proof source",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/tests/Components/CanDoItAll.Tests.Components/AgentEditorCoreRoundTripTests.cs"
+    },
+    {
+      "id": "R17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/AgentEditorScenarioSession.cs",
+      "observed_blob_sha": "ef2067ed2e03606cf925ede211822aa363092448",
+      "coverage": "full",
+      "role": "Existing A1 scenario state and its simulation boundary",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/AgentEditorScenarioSession.cs"
+    },
+    {
+      "id": "R18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs",
+      "observed_blob_sha": "ef47578f5c5628daa32a96ccb63c210f1b949b8e",
+      "coverage": "full",
+      "role": "Projects and secret metadata query adapters",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs"
+    },
+    {
+      "id": "R19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemoryBindingRemovalPolicy.cs",
+      "observed_blob_sha": "0f7f352fd5ad389ee5031657928e60a648da5f05",
+      "coverage": "full",
+      "role": "Binding removal preserves intentional dependent-field semantics",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentMemoryBindingRemovalPolicy.cs"
+    },
+    {
+      "id": "R20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs",
+      "observed_blob_sha": "ea176b9e221fcc5b0748b3db171310c96aeac56d",
+      "coverage": "full",
+      "role": "Existing typed diagnostic/assignment reuse candidate",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentCapabilityCommands.cs"
+    },
+    {
+      "id": "R21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "docs/architecture/modules.md",
+      "observed_blob_sha": "c373903b3f32a502f7757fde9d5bbf6271388ae4",
+      "coverage": "lines 150-240",
+      "role": "Current maintained roadmap; supplemented with inventories",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/docs/architecture/modules.md"
+    },
+    {
+      "id": "R22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "observed_blob_sha": "d5108e0dbe8cec23359e5274abe092a4ec5a43e6",
+      "coverage": "lines 1-125",
+      "role": "Remaining provider administration markup",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor"
+    },
+    {
+      "id": "R23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
+      "observed_blob_sha": "7ec9bdff0cac9e4b9fb369e83cdf5d9c22804080",
+      "coverage": "lines 1-105",
+      "role": "Remaining native workflow canvas and imported module types",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor"
+    },
+    {
+      "id": "R24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "observed_blob_sha": "64bc25942744c99f7e90b5a17d1a6ebb4fc952b8",
+      "coverage": "full",
+      "role": "Distinguish compositional chat host from missing renderer",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor"
+    },
+    {
+      "id": "R25",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor",
+      "observed_blob_sha": "2914d7e50b2e4ce915135dc332d7944c6f1a9119",
+      "coverage": "lines 1-95",
+      "role": "Actual retained definition-authoring family",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor"
+    },
+    {
+      "id": "R26",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandLifetimeTests.cs",
+      "observed_blob_sha": "ca2a7c3de73d3a6b26835ffb5bfe96dd7e46da26",
+      "coverage": "full",
+      "role": "Existing save/reset/delayed-result tests; not Verify-before-edits proof",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/tests/Components/CanDoItAll.Tests.Components/AgentEditorCommandLifetimeTests.cs"
+    },
+    {
+      "id": "R27",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs",
+      "observed_blob_sha": "d88677adb51599ac60c2466b18b0ad93fc5dbb3c",
+      "coverage": "full",
+      "role": "Existing separate global capability workspace; do not duplicate/refactor it",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesSession.cs"
+    },
+    {
+      "id": "R28",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "ed64d4edf868cb26c749c31a94ff918683e0f4a0",
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ed64d4edf868cb26c749c31a94ff918683e0f4a0/src/UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj",
+      "observed_blob_sha": "43e9d6a4da12fe7ee1a6aabeb177d5865b99f2e7",
+      "coverage": "Full current project file. Declared references only; evaluated graph is implementer evidence, not reevaluated by reviewer.",
+      "role": "Actual A1 rendering project uses Models, neutral Conversations and BaseLib, not broad runtime Components."
+    }
+  ]
+}

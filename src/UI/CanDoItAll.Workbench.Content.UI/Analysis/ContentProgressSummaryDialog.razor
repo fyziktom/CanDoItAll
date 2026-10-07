@@ -1,0 +1,61 @@
+@namespace CanDoItAll.Workbench.Content.UI.Analysis
+@{
+    var state = State;
+    var actions = Actions;
+    var disabled = state.IsBusy || state.RequiresObservation;
+}
+<CanvasOverlayDialog @key="state.OpeningId" CanvasScoped="CanvasScoped" AriaLabel="@($"{state.Title} progress summary")" Kicker="Progress summary"
+                     Title="@state.Title" Summary="Hierarchy, inline status editing, and stored exports use this summary snapshot."
+                     Close="@(() => actions.Close())" DataTestId="content-progress-summary" DialogClass="project-structure-summary-dialog">
+    <Actions>
+        <Button Text="Export XLSX" ButtonStyle="ButtonStyle.Info" Disabled="@disabled" Click="@(() => actions.ExportWorkbook())" />
+        <Button Text="Export Gantt" ButtonStyle="ButtonStyle.Primary" Disabled="@disabled" Click="@(() => actions.ExportGantt())" />
+        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
+    </Actions>
+    <Body>
+        <section class="content-summary">
+        <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+            @if (state.IsBusy) {
+                <TextBlock Value="Saving the original summary action…" />
+            }
+            @if (!string.IsNullOrWhiteSpace(state.Message)) {
+                <Alert AlertStyle="@(state.RequiresObservation ? AlertStyle.Warning : AlertStyle.Info)">@state.Message</Alert>
+            }
+            <CompactStatStrip>
+                <CompactStat Label="done" Value="@state.Completed.ToString()" TooltipText="Completed project structure rows." Tone="success" />
+                <CompactStat Label="active" Value="@state.Active.ToString()" TooltipText="Active project structure rows." Tone="info" />
+                <CompactStat Label="blocked" Value="@state.Blocked.ToString()" TooltipText="Blocked project structure rows." Tone="danger" />
+                <CompactStat Label="review" Value="@state.Review.ToString()" TooltipText="Rows needing review." Tone="warning" />
+                <CompactStat Label="undated" Value="@state.Undated.ToString()" TooltipText="Rows without a date." />
+            </CompactStatStrip>
+            @if (state.Rows.Count == 0) {
+                <TextBlock Value="No rows in this summary." />
+            }
+            <Stack GapScale="LayoutGap.Small" Class="content-summary-table">
+                @foreach (var row in state.Rows) {
+                    <Split @key="row.NodeId" Breakpoint="LayoutBreakpoint.Lg" Gap="LayoutGap.Small" AlignItems="AlignItems.Start"
+                           Class="content-summary-row" Style="@($"--summary-depth:{row.Depth};")" data-node-id="@row.NodeId">
+                        <Stack GapScale="LayoutGap.Tiny" Class="content-summary-row__node">
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@row.Title" />
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@row.KindLabel" />
+                        </Stack>
+                        <Stack GapScale="LayoutGap.Tiny" Class="content-summary-row__meta">
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@row.ProgressLabel" />
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@row.StartLabel" />
+                            <TextBlock TextStyle="TextStyle.Caption" Value="@row.EndLabel" />
+                        </Stack>
+                        <DropDown TValue="string" Data="@state.Statuses" Value="@row.Status" Disabled="@disabled"
+                                  Placeholder="Select status" Change="@(value => actions.ChangeStatus(row.NodeId, value?.ToString() ?? string.Empty))" />
+                    </Split>
+                }
+            </Stack>
+        </Stack>
+        </section>
+    </Body>
+</CanvasOverlayDialog>
+
+@code {
+    [Parameter] public bool CanvasScoped { get; set; }
+    [Parameter, EditorRequired] public ContentProgressSummary State { get; set; } = default!;
+    [Parameter, EditorRequired] public ContentSummaryActions Actions { get; set; } = default!;
+}

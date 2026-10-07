@@ -1,0 +1,29 @@
+@{
+    var owner = Session;
+    var draft = owner.Draft;
+}
+<Stack GapScale="LayoutGap.Large">
+    @if (draft.ConfigurationError is not null) {
+        <Alert AlertStyle="AlertStyle.Danger">@draft.ConfigurationError</Alert>
+    } else if (draft.Model.Kind == CapabilityKind.McpServer) {
+        <McpConfigurationFields Draft="draft.Mcp" TestId="@TestId" />
+    } else if (draft.Model.Kind == CapabilityKind.Skill) {
+        <SkillConfigurationFields Draft="draft" TestId="@TestId" Upload="args => owner.UploadAsync(args.File)" />
+    } else if (draft.Model.Kind == CapabilityKind.Tool) {
+        <ToolConfigurationFields Draft="draft.Tool" TestId="@TestId" Locked="@draft.IdentityLocked" />
+    } else {
+        <FormSection Title="Configuration JSON" Description="This capability kind uses its existing raw JSON configuration.">
+            <AuthoringTextArea @bind-Value="draft.RawConfigurationJson" disabled="@draft.Model.IsBuiltIn" class="cda-input capability-authoring__large-textarea" data-testid="@($"{TestId}-raw-config")" />
+        </FormSection>
+    }
+    @if (draft.Model.Kind is CapabilityKind.Tool or CapabilityKind.McpServer) {
+        <CapabilitySetupPanel Draft="draft" TestId="@TestId" TestButtonId="@(draft.IsWizard ? $"{TestId}-test" : $"{TestId}-test-setup")"
+                              Test="owner.TestSetupAsync" Busy="@(owner.Busy || owner.SetupUnknown || draft.ConfigurationError is not null)"
+                              Succeeded="owner.SetupSucceeded" Historical="owner.SetupHistorical" Diagnostics="owner.SetupDiagnostics" Tools="owner.SetupTools" />
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringSession Session { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+}

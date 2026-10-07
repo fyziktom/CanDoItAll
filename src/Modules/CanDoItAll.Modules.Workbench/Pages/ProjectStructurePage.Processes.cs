@@ -51,6 +51,26 @@ public partial class ProjectStructurePage
 
     private ProjectStructureProcessLinkDialogState? processLinkDialog;
     private Guid processLinkRequestId;
+    private ProjectStructureActionContext? processLinkContext;
+    internal sealed record ProcessLinkReceipt(ProjectStructureProcessLinkDialogState Origin,
+        Guid DefinitionId, ProjectStructureTaskResourceAttachResult? Attachment, bool Committed, Exception? Failure);
+    private readonly Queue<ProcessLinkReceipt> processLinkReceipts = new();
+    internal IReadOnlyList<ProcessLinkReceipt> ProcessLinkReceipts => processLinkReceipts.ToArray();
+
+    private void RetainProcessLink(ProcessLinkReceipt receipt) {
+        processLinkReceipts.Enqueue(receipt);
+        while (processLinkReceipts.Count > 16) {
+            processLinkReceipts.Dequeue();
+        }
+    }
+
+    private Task DispatchProcessLinkAsync(ProjectStructureProcessLinkDialogState? receiver, Func<Task> action)
+        => receiver is not null && IsCurrentProcessLink(receiver) ? TrackAuthoringOperationAsync(action()) : Task.CompletedTask;
+
+    private Task DispatchProcessStartAsync(ProjectStructureProcessStartDialogState? receiver, Func<Task> action)
+        => receiver is not null && IsCurrentProcessStart(receiver) && receiver.LaunchIntentId == processStartDialog?.LaunchIntentId
+            ? TrackAuthoringOperationAsync(action()) : Task.CompletedTask;
+
     private AgentChatNavigationIdentity? processDialogNavigationIdentity;
     private ProjectStructureProcessStartDialogState? processStartDialog;
     private CancellationTokenSource? processStartHistoricalEstimateRefreshCts;
@@ -74,6 +94,7 @@ public partial class ProjectStructurePage
         var navigation = AgentChatNavigationFence;
         var requestId = Guid.NewGuid();
         processLinkRequestId = requestId;
+        var context = processLinkContext = CaptureActionContext();
         try {
             var catalog = await ProcessDefinitionCatalogService.GetCatalogAsync(
                 ProcessWorkspaceShellScope.ForProject(projectId),
@@ -98,6 +119,7 @@ public partial class ProjectStructurePage
                 options.FirstOrDefault()?.DefinitionId,
                 options.Count == 0 ? "No process definitions are available in the process template catalog." : string.Empty) {
                 ProjectId = projectId,
+                Context = context,
                 OpenedSurface = openedSurface,
                 MutationOwner = mutationOwner,
                 DialogId = requestId,
@@ -115,6 +137,7 @@ public partial class ProjectStructurePage
                 null,
                 $"Process definitions could not be loaded: {exception.Message}") {
                 ProjectId = projectId,
+                Context = context,
                 OpenedSurface = openedSurface,
                 MutationOwner = mutationOwner,
                 DialogId = requestId,
@@ -128,10 +151,12 @@ public partial class ProjectStructurePage
     private void CloseProcessLinkDialog() {
         processLinkDialog = null;
         processLinkRequestId = Guid.Empty;
+        processLinkContext = null;
     }
 
     private bool IsCurrentProcessLinkRequest(Guid requestId, Guid projectId, AgentChatNavigationIdentity navigation)
-        => processLinkRequestId == requestId && ProjectId == projectId && AgentChatNavigationFence == navigation;
+        => processLinkRequestId == requestId && ProjectId == projectId && AgentChatNavigationFence == navigation &&
+           processLinkContext is { } context && IsCurrentAction(context) && HasOriginalContentAuthority(context);
 
     private bool IsCurrentProcessLink(ProjectStructureProcessLinkDialogState dialog)
         => processLinkDialog?.DialogId == dialog.DialogId &&
@@ -139,7 +164,7 @@ public partial class ProjectStructurePage
 
     private void HandleProcessLinkSelectionChanged(Guid definitionId)
     {
-        if (processLinkDialog is not { IsBusy: false })
+        if (processLinkDialog is not { IsBusy: false, RequiresObservation: false })
         {
             return;
         }
@@ -171,6 +196,12 @@ public partial class ProjectStructurePage
             return;
         }
 
+        if (dialog.RequiresObservation) {
+            await CompleteProcessLinkViewAsync(dialog, selectedOption);
+            return;
+        }
+
+        ProjectStructureTaskResourceAttachResult? attachment = null;
         try {
             var openedSurface = dialog.OpenedSurface ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
             var mutationOwner = dialog.MutationOwner ?? throw new InvalidOperationException("Reopen this editor to capture its project.");
@@ -179,7 +210,7 @@ public partial class ProjectStructurePage
             processLinkDialog = dialog with { IsBusy = true };
             if (IsCanonicalTaskNode(sourceNode)) {
                 var execution = ProjectStructureTaskEditStatePolicy.Read(sourceNode).Execution;
-                await TaskResourceAttachmentService.AttachAsync(
+                attachment = await TaskResourceAttachmentService.AttachAsync(
                     dialog.ProjectId,
                     sourceNode.Id,
                     new ProjectStructureTaskResourceAttachRequest(
@@ -205,31 +236,62 @@ public partial class ProjectStructurePage
                 dialog.ProjectId,
                 dialog.SourceNodeId,
                 selectedOption.DefinitionId);
+            RetainProcessLink(new(dialog, selectedOption.DefinitionId, attachment, false, exception));
             if (!IsCurrentProcessLink(dialog)) {
                 return;
             }
-            processLinkDialog = dialog with { Error = message, IsBusy = false };
+            processLinkDialog = dialog with {
+                Error = message, IsBusy = false, RequiresObservation = !IsKnownGraphRejection(exception)
+            };
             await InvokeAsync(StateHasChanged);
             return;
         }
+        RetainProcessLink(new(dialog, selectedOption.DefinitionId, attachment, true, null));
         if (!IsCurrentProcessLink(dialog)) {
             return;
         }
-        var sourceNodeId = dialog.SourceNodeId;
+        dialog = dialog with { IsBusy = false, IsLinked = true, RequiresObservation = true };
+        processLinkDialog = dialog;
+        await CompleteProcessLinkViewAsync(dialog, selectedOption);
+    }
+
+    private async Task CompleteProcessLinkViewAsync(ProjectStructureProcessLinkDialogState dialog,
+        ProjectStructureProcessLinkOption selectedOption) {
+        if (!IsCurrentProcessLink(dialog)) {
+            return;
+        }
+        processLinkDialog = dialog with { IsBusy = true };
         var processNodeId = ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(selectedOption.DefinitionId);
-        workflowFeedback = $"{selectedOption.DisplayName} was linked to {dialog.SourceNodeTitle}.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(sourceNodeId);
-        if (!IsCurrentProcessLink(dialog)) {
-            return;
+        try {
+            await ReloadSurfaceAsync(dialog.SourceNodeId, () => IsCurrentProcessLink(dialog));
+            if (!IsCurrentProcessLink(dialog)) {
+                return;
+            }
+            var linked = surface?.Links.Any(link => link.SourceId == dialog.SourceNodeId &&
+                link.TargetId == processNodeId && link.Kind == ProjectObjectLinkKind.Uses) == true;
+            if (!linked) {
+                processLinkDialog = dialog with { IsBusy = false, RequiresObservation = true,
+                    Error = "The original link is not observable yet. Inspect its outcome before submitting a new link." };
+                return;
+            }
+            workflowFeedback = $"{selectedOption.DisplayName} was linked to {dialog.SourceNodeTitle}.";
+            workflowFeedbackTone = "mint";
+            CloseProcessLinkDialog();
+            await OpenProcessDialogAsync(selectedOption.DefinitionId, processNodeId, selectedOption.DisplayName,
+                ResolveNode(dialog.SourceNodeId), estimateOnly: false);
+        } catch (Exception exception) when (exception is not OperationCanceledException) {
+            Logger.LogWarning(exception, "Process link observation failed. ProjectId={ProjectId} SourceNodeId={SourceNodeId} ProcessDefinitionId={ProcessDefinitionId} Linked={Linked}",
+                dialog.ProjectId, dialog.SourceNodeId, selectedOption.DefinitionId, dialog.IsLinked);
+            if (IsCurrentProcessLink(dialog)) {
+                processLinkDialog = dialog with { IsBusy = false, RequiresObservation = true,
+                    Error = dialog.IsLinked ? "The process was linked, but refreshing the view failed. Observe the original link."
+                        : "The original link outcome is still unknown. Observe it before creating another link." };
+            }
+        } finally {
+            if (!deferredCompletionCts.IsCancellationRequested) {
+                await InvokeAsync(StateHasChanged);
+            }
         }
-        CloseProcessLinkDialog();
-        await OpenProcessDialogAsync(
-            selectedOption.DefinitionId,
-            processNodeId,
-            selectedOption.DisplayName,
-            ResolveNode(sourceNodeId),
-            estimateOnly: false);
     }
 
     private Task OpenStartProcessDialogAsync(ProjectStructureNode node)
@@ -286,11 +348,15 @@ public partial class ProjectStructurePage
             false,
             string.Empty) {
             EstimateOnlyMode = estimateOnly,
+            Context = CaptureActionContext(),
             NavigationIdentity = AgentChatNavigationFence
         };
         processStartDialog = dialog;
         try {
             var caller = await ProcessLaunchAuthorities.CaptureUserInterfaceAsync(null);
+            if (!IsCurrentProcessStart(dialog)) {
+                return;
+            }
             var storageKey = $"candoitall.process-launch.structure:{caller.DatabaseProfileId:D}:{dialog.ProjectId:D}:{dialog.TargetNodeId}:{dialog.ProcessDefinitionId:D}";
             var restore = await TryRestoreProcessStartAsync(dialog, caller, storageKey);
             if (restore.Restored) {
@@ -301,7 +367,13 @@ public partial class ProjectStructurePage
             if (!IsCurrentProcessStart(dialog)) {
                 return;
             }
-            var launchSurface = surface;
+            var originalAdmission = dialog.Context!.Admission;
+            if (authority.ProjectAdmission is not { } capturedAdmission ||
+                capturedAdmission.DatabaseProfileId != originalAdmission.DatabaseProfileId ||
+                capturedAdmission.ProjectId != originalAdmission.ProjectId || capturedAdmission.LifetimeId != originalAdmission.LifetimeId) {
+                throw new InvalidOperationException("The original project lifetime changed. Reopen the process launch.");
+            }
+            var launchSurface = dialog.Context.Surface;
             if (launchSurface?.ProjectId != dialog.ProjectId) {
                 throw new InvalidOperationException("Wait for the selected project structure to finish loading before starting a process.");
             }
@@ -344,7 +416,7 @@ public partial class ProjectStructurePage
     }
 
     private async Task ReviewAndStartProcessAsync() {
-        if (processStartDialog is not { IsBusy: false } dialog) {
+        if (processStartDialog is not { IsBusy: false } dialog || !IsCurrentProcessStart(dialog)) {
             return;
         }
         processStartDialog = dialog with { AssignmentsReviewed = true, Error = string.Empty };
@@ -417,6 +489,9 @@ public partial class ProjectStructurePage
                 return;
             }
 
+            if (IsCurrentProcessStart(dialog)) {
+                processStartDialog = processStartDialog! with { LaunchObservation = result.Observation };
+            }
             var deliveryMessage = await ObserveProcessLinkDeliveryAsync(dialog, result);
             if (!IsCurrentProcessStart(dialog)) {
                 return;
@@ -508,7 +583,8 @@ public partial class ProjectStructurePage
     private bool IsCurrentProcessStart(ProjectStructureProcessStartDialogState dialog)
         => processStartDialog?.DialogId == dialog.DialogId &&
            ProjectId == dialog.ProjectId &&
-           AgentChatNavigationFence == dialog.NavigationIdentity;
+           AgentChatNavigationFence == dialog.NavigationIdentity && dialog.Context is { } context &&
+           IsCurrentAction(context) && HasOriginalContentAuthority(context);
 
     private static string AppendProcessStartedQuery(string route)
     {
@@ -523,8 +599,12 @@ public partial class ProjectStructurePage
 
     private Task SelectProcessStartCandidateAsync(ProjectStructureProcessStartCandidateSelection selection)
     {
-        if (processStartDialog is not { IsBusy: false, IsAccepted: false })
-        {
+        if (processStartDialog is not { IsBusy: false, IsAccepted: false } dialog || !IsCurrentProcessStart(dialog)) {
+            return Task.CompletedTask;
+        }
+        var originalRole = dialog.Roles.FirstOrDefault(role => role.LaunchPlanRoleId == selection.LaunchPlanRoleId);
+        if (originalRole is null || !originalRole.Candidates.Concat(originalRole.DirectoryCandidates)
+            .Any(candidate => candidate.CandidateId == selection.CandidateId && candidate.IsResolvable && !candidate.IsSelected)) {
             return Task.CompletedTask;
         }
 
@@ -549,13 +629,12 @@ public partial class ProjectStructurePage
 
     private Task OpenManualProcessStartAgentPickerAsync(Guid launchPlanRoleId)
     {
-        if (processStartDialog is null)
-        {
+        if (processStartDialog is not { IsBusy: false, IsAccepted: false } dialog || !IsCurrentProcessStart(dialog) ||
+            !dialog.Roles.Any(role => role.LaunchPlanRoleId == launchPlanRoleId)) {
             return Task.CompletedTask;
         }
 
-        processStartDialog = processStartDialog with
-        {
+        processStartDialog = processStartDialog with {
             StatusMessage = "Agent picker opened with compatible active agents from the directory.",
             Error = string.Empty
         };

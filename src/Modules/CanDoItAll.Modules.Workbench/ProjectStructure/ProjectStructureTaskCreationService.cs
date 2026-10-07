@@ -86,25 +86,25 @@ public sealed class ProjectStructureTaskCreationService(
             agent,
             cancellationToken);
 
+        ProjectStructureTaskResourceAttachment? attachment = null;
         if (request.Resource is not null)
         {
             try
             {
-                await resourceService.AttachAsync(
+                attachment = await resourceService.AttachAsync(
                     projectId,
                     task.Id,
                     request.Resource,
                     agent,
                     cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException failure) when (cancellationToken.IsCancellationRequested)
             {
-                await CompensateCancellationAsync(
+                throw await CompensateCancellationAsync(
                     projectId,
                     task.Id,
                     ProjectStructureTaskCreationFailureStage.ResourceAttachment,
-                    agent);
-                throw;
+                    agent, failure, attachment);
             }
             catch (Exception failure)
             {
@@ -125,14 +125,13 @@ public sealed class ProjectStructureTaskCreationService(
                 request.AfterTaskNodeId,
                 cancellationToken, agent);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException failure) when (cancellationToken.IsCancellationRequested)
         {
-            await CompensateCancellationAsync(
+            throw await CompensateCancellationAsync(
                 projectId,
                 task.Id,
                 ProjectStructureTaskCreationFailureStage.RowOrdering,
-                agent);
-            throw;
+                agent, failure, attachment);
         }
         catch (Exception failure)
         {
@@ -141,10 +140,13 @@ public sealed class ProjectStructureTaskCreationService(
                 task.Id,
                 ProjectStructureTaskCreationFailureStage.RowOrdering,
                 failure,
-                agent);
+                agent, attachment);
         }
 
-        return new ProjectStructureTaskCreateResult(task.Id, backlog.Id, request.Resource, pricing);
+        return new ProjectStructureTaskCreateResult(task.Id, backlog.Id, request.Resource, pricing) {
+            ResourceNodeId = attachment?.CreatedNodeId,
+            ResourceLinkTargetNodeId = attachment?.LinkTargetNodeId
+        };
     }
 
     private async Task<ProjectStructureNodeSummary> EnsureMainBacklogAsync(
@@ -187,14 +189,12 @@ public sealed class ProjectStructureTaskCreationService(
         string taskNodeId,
         ProjectStructureTaskCreationFailureStage stage,
         Exception failure,
-        ProjectStructureAgentContext agent)
+        ProjectStructureAgentContext agent,
+        ProjectStructureTaskResourceAttachment? attachment = null)
     {
         logger.LogWarning(
-            failure,
-            "Gantt task creation failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage}",
-            projectId,
-            taskNodeId,
-            stage);
+            "Gantt task creation failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage} FailureType={FailureType}",
+            Mask(projectId.ToString("N")), Mask(taskNodeId), stage, failure.GetType().Name);
 
         var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, taskNodeId, agent);
         LogCompensationFailure(projectId, taskNodeId, stage, compensationFailure);
@@ -204,14 +204,19 @@ public sealed class ProjectStructureTaskCreationService(
             taskNodeId,
             compensationFailure is null,
             failure,
-            compensationFailure);
+            compensationFailure) {
+            ResourceNodeId = attachment?.CreatedNodeId,
+            ResourceLinkTargetNodeId = attachment?.LinkTargetNodeId
+        };
     }
 
-    private async Task CompensateCancellationAsync(
+    private async Task<OperationCanceledException> CompensateCancellationAsync(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskCreationFailureStage stage,
-        ProjectStructureAgentContext agent)
+        ProjectStructureAgentContext agent,
+        OperationCanceledException failure,
+        ProjectStructureTaskResourceAttachment? attachment)
     {
         logger.LogInformation(
             "Gantt task creation was canceled. Removing the partially created task. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage}",
@@ -221,6 +226,11 @@ public sealed class ProjectStructureTaskCreationService(
 
         var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, taskNodeId, agent);
         LogCompensationFailure(projectId, taskNodeId, stage, compensationFailure);
+        var outcome = new ProjectStructureTaskCreationException(stage, taskNodeId, compensationFailure is null, failure, compensationFailure) {
+            ResourceNodeId = attachment?.CreatedNodeId,
+            ResourceLinkTargetNodeId = attachment?.LinkTargetNodeId
+        };
+        return new OperationCanceledException(outcome.Message, outcome, failure.CancellationToken);
     }
 
     private async Task<Exception?> TryRemoveCreatedTaskAsync(
@@ -258,12 +268,11 @@ public sealed class ProjectStructureTaskCreationService(
         }
 
         logger.LogError(
-            compensationFailure,
-            "Gantt task creation compensation failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage}",
-            projectId,
-            taskNodeId,
-            stage);
+            "Gantt task creation compensation failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage} FailureType={FailureType}",
+            Mask(projectId.ToString("N")), Mask(taskNodeId), stage, compensationFailure.GetType().Name);
     }
+
+    private static string Mask(string value) => value.Length <= 12 ? value : $"{value[..6]}...{value[^4..]}";
 
     private static ProjectStructureTaskCreateRequest ValidateAndNormalize(
         Guid projectId,

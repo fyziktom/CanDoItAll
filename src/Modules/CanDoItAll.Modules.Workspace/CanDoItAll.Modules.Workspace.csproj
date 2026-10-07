@@ -9,6 +9,7 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.DataSources.UI/CanDoItAll.Workspace.DataSources.UI.csproj" />
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
@@ -19,8 +20,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageRecovery.UI/CanDoItAll.Workspace.StorageRecovery.UI.csproj" />
+    <ProjectReference Include="../CanDoItAll.Modules.Workspace.Presentation/CanDoItAll.Modules.Workspace.Presentation.csproj" />
+    <ProjectReference Include="../CanDoItAll.Modules.Workspace.StorageSelection.Contracts/CanDoItAll.Modules.Workspace.StorageSelection.Contracts.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageCatalog.UI/CanDoItAll.Workspace.StorageCatalog.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.ApiAccess.UI/CanDoItAll.Workspace.ApiAccess.UI.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.Configuration.UI\CanDoItAll.Configuration.UI.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\..\MAF\ProviderHistory\CanDoItAll.AgentFramework.ProviderHistory.Abstractions\CanDoItAll.AgentFramework.ProviderHistory.Abstractions.csproj" />

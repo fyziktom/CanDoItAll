@@ -46,7 +46,7 @@ internal sealed class ProjectCreationReservationRecordConfiguration : IEntityTyp
 public sealed partial class ProjectWriteAdmissionService {
     public async Task<ProjectCreationReservation> ReserveCreationAsync(Guid projectId, Guid requesterId, Guid operationId,
         Guid? parentProjectId = null, CancellationToken cancellationToken = default,
-        ProjectMutationAuthorization? authorization = null) {
+        ProjectMutationAuthorization? authorization = null, ProjectWriteAdmission? expectedParentAdmission = null) {
         if (projectId == Guid.Empty || requesterId == Guid.Empty || operationId == Guid.Empty || parentProjectId == Guid.Empty || parentProjectId == projectId) {
             throw new ArgumentException("A reservation requires nonempty project, requester and operation identifiers and a different parent project.");
         }
@@ -54,7 +54,8 @@ public sealed partial class ProjectWriteAdmissionService {
         await using var mutation = await ProjectSourceMutationScope.BeginAsync(context,
             ReservationScopeKeys(projectId, parentProjectId), parentProjectId.HasValue ? ProjectMutationPurpose.ReserveChild : ProjectMutationPurpose.ReserveRoot,
             projectId, parentProjectId.HasValue ? [parentProjectId.Value] : [], authorization, this, coordinatedTransaction,
-            cancellationToken, requesterId: requesterId);
+            cancellationToken, requesterId: requesterId,
+            expectedProjectAdmissions: expectedParentAdmission is null ? null : [expectedParentAdmission]);
         var existing = await context.Set<ProjectCreationReservationRecord>().SingleOrDefaultAsync(record => record.Id == operationId, cancellationToken);
         if (existing is not null) {
             RetainedEvidenceImport.RequireNative(existing.ImportedHistory);

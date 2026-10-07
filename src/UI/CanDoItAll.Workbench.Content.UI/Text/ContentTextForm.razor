@@ -1,0 +1,201 @@
+@namespace CanDoItAll.Workbench.Content.UI
+@implements IAsyncDisposable
+@inject ILogger<ContentTextForm> Logger
+
+@if (draft is { } form) {
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" data-testid="project-structure-text-asset-create-content">
+        <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+            Create a new stored file from text, or attach an existing file. Both paths use the configured project storage and the same FileTools authorization flow.
+        </Alert>
+        <FormField Text="Content source">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Create new" Icon="note_add" Disabled="form.Locked"
+                        ButtonStyle="@(form.Source == ContentTextSource.CreateNew ? ButtonStyle.Info : ButtonStyle.Base)"
+                        Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.CreateNew)"
+                        data-testid="project-structure-text-asset-source-create" Click="@(() => Change(form, () => form.Source = ContentTextSource.CreateNew))" />
+                <Button Text="Upload existing" Icon="upload_file" Disabled="form.Locked"
+                        ButtonStyle="@(form.Source == ContentTextSource.UploadExisting ? ButtonStyle.Info : ButtonStyle.Base)"
+                        Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.UploadExisting)"
+                        data-testid="project-structure-text-asset-source-upload" Click="@(() => Change(form, () => form.Source = ContentTextSource.UploadExisting))" />
+            </Cluster>
+        </FormField>
+        <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+            <FormField Text="@form.Definition.TitleLabel">
+                <TextBox Value="@form.Title" Disabled="form.Locked" Placeholder="@form.Definition.TitlePlaceholder" Immediate="true"
+                         ValueChanged="@(value => Change(form, () => form.Title = value ?? string.Empty))" data-testid="project-structure-text-asset-title" />
+            </FormField>
+            <FormField Text="@form.Definition.SubtitleLabel">
+                <TextBox Value="@form.Subtitle" Disabled="form.Locked" Placeholder="@form.Definition.SubtitlePlaceholder" Immediate="true"
+                         ValueChanged="@(value => Change(form, () => form.Subtitle = value ?? string.Empty))" data-testid="project-structure-text-asset-subtitle" />
+            </FormField>
+        </Grid>
+        @if (form.Source == ContentTextSource.CreateNew) {
+            <FormField Text="File name">
+                <TextBox Value="@form.FileName" Disabled="form.Locked" Placeholder="@form.Definition.FileNamePlaceholder" Immediate="true"
+                         ValueChanged="@(value => Change(form, () => form.FileName = value ?? string.Empty))" data-testid="project-structure-text-asset-file-name" />
+            </FormField>
+            <FormField Text="File content">
+                <TextArea Value="@form.Content" Disabled="form.Locked" Placeholder="@form.Definition.ContentPlaceholder" Rows="10" Immediate="true"
+                          ValueChanged="@(value => Change(form, () => form.Content = value ?? string.Empty))" data-testid="project-structure-text-asset-content" />
+            </FormField>
+        } else {
+            <FileUpload PrimaryText="@form.Definition.FilePrompt" Disabled="form.Locked"
+                        SecondaryText="The selected file remains subject to the project asset size and storage policies."
+                        ButtonText="Choose file" Accept="@form.Definition.AcceptedFileTypes" Compact="true"
+                        Change="@(args => ChangeUpload(form, args.File))" RootTestHookId="project-structure-text-asset-upload"
+                        InputTestHookId="project-structure-text-asset-upload-input" />
+            @if (form.Upload is { } upload) {
+                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="project-structure-text-asset-upload-selection">
+                    Selected @upload.Name (@FormatFileSize(upload.Size)).
+                </Alert>
+            }
+        }
+        <FormField Text="@form.Definition.NotesLabel">
+            <TextArea Value="@form.Notes" Disabled="form.Locked" Placeholder="@form.Definition.NotesPlaceholder" Rows="3" Immediate="true"
+                      ValueChanged="@(value => Change(form, () => form.Notes = value ?? string.Empty))" data-testid="project-structure-text-asset-notes" />
+        </FormField>
+        @if (!string.IsNullOrWhiteSpace(form.Error)) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="project-structure-text-asset-validation-error">@form.Error</Alert>
+        }
+        @if (form.Outcome is { } outcome && outcome.Kind != ContentTextOutcomeKind.Rejected) {
+            <Alert AlertStyle="@(outcome.RequiresObservation ? AlertStyle.Warning : AlertStyle.Info)" data-testid="content-text-outcome">
+                @outcome.Message
+                @if (outcome.Receipt is { } receipt) {
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"{receipt.FileName} · {receipt.NodeId} · {receipt.RecordId:D}")" />
+                }
+            </Alert>
+        }
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <Button Text="Cancel" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Base" Disabled="@(form.IsDispatching || form.Retired)"
+                    data-testid="project-structure-text-asset-cancel" Click="@(() => CancelAsync(form))" />
+            <Button Text="@form.Definition.SubmitLabel" Icon="@(form.Source == ContentTextSource.CreateNew ? "note_add" : "upload_file")"
+                    ButtonStyle="ButtonStyle.Info" Disabled="@(form.Locked || form.Source == ContentTextSource.UploadExisting && form.Upload is null)"
+                    IsBusy="form.IsBusy" data-testid="project-structure-text-asset-submit" Click="@(() => SubmitAsync(form))" />
+        </Cluster>
+    </Stack>
+}
+
+@code {
+    private ContentTextDraftSession? draft;
+    private bool disposed;
+
+    [Parameter, EditorRequired] public Guid OpeningId { get; set; }
+    [Parameter, EditorRequired] public ContentTextDefinition Definition { get; set; } = default!;
+    [Parameter, EditorRequired] public ContentTextInitialDraft InitialDraft { get; set; } = new(string.Empty, string.Empty, string.Empty);
+    [Parameter, EditorRequired] public Func<ContentTextSubmission, CancellationToken, Task<ContentTextOutcome>> Submit { get; set; } = default!;
+    [Parameter] public EventCallback<ContentTextOutcome> Completed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public CancellationToken CancellationToken { get; set; }
+
+    protected override async Task OnParametersSetAsync() {
+        if (OpeningId == Guid.Empty) {
+            throw new InvalidOperationException("A text authoring opening identity is required.");
+        }
+        if (draft?.OpeningId == OpeningId) {
+            return;
+        }
+        var previous = draft;
+        draft = new(OpeningId, Definition, InitialDraft, CancellationToken);
+        if (previous is not null) {
+            await previous.RetireAsync();
+        }
+    }
+
+    private bool IsCurrent(ContentTextDraftSession form) => !disposed && !form.Retired && ReferenceEquals(form, draft);
+
+    private void Change(ContentTextDraftSession form, Action change) {
+        if (!IsCurrent(form) || form.Locked) {
+            return;
+        }
+        change();
+        form.Error = string.Empty;
+        form.Outcome = null;
+    }
+
+    private void ChangeUpload(ContentTextDraftSession form, IBrowserFile file) => Change(form, () => {
+        form.Upload = file;
+        if (string.IsNullOrWhiteSpace(form.Title)) {
+            form.Title = Path.GetFileNameWithoutExtension(file.Name);
+        }
+    });
+
+    private async Task SubmitAsync(ContentTextDraftSession form) {
+        if (!IsCurrent(form) || form.Locked) {
+            return;
+        }
+        var submission = new ContentTextSubmission(Guid.NewGuid(), form.Source, form.Title.Trim(), form.Subtitle.Trim(),
+            form.Notes.Trim(), form.FileName, form.Content, null);
+        form.Error = submission.Title.Length switch {
+            0 => "A file title is required.",
+            > 200 => "The file title cannot exceed 200 characters.",
+            _ => submission.Subtitle.Length > 240 ? "The folder or context cannot exceed 240 characters." : string.Empty
+        };
+        if (form.Error.Length > 0) {
+            return;
+        }
+        var submit = Submit;
+        var completed = Completed;
+        var upload = form.Upload;
+        var cancellationToken = form.Lifetime.Token;
+        form.IsBusy = true;
+        form.Outcome = null;
+        try {
+            if (submission.Source == ContentTextSource.UploadExisting) {
+                if (upload is null) {
+                    throw new InvalidDataException("Choose an existing file to upload.");
+                }
+                submission = submission with { Upload = await ContentTextUploadReader.ReadAsync(upload, form.Definition.MaximumUploadBytes, cancellationToken) };
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsCurrent(form)) {
+                return;
+            }
+            form.IsDispatching = true;
+            var outcome = await submit(submission, cancellationToken);
+            if (IsCurrent(form)) {
+                form.Outcome = outcome;
+                form.Error = outcome.Kind == ContentTextOutcomeKind.Rejected ? outcome.Message : string.Empty;
+                if (outcome.IsAccepted) {
+                    await completed.InvokeAsync(outcome);
+                }
+            }
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            if (IsCurrent(form) && form.IsDispatching) {
+                form.Outcome = new(ContentTextOutcomeKind.Unconfirmed, "The file write was interrupted. Observe the original target before another create.");
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Text authoring failed. Kind={Kind} OpeningId={OpeningId} SubmissionId={SubmissionId} Dispatched={Dispatched}.",
+                form.Definition.Kind, form.OpeningId, submission.SubmissionId, form.IsDispatching);
+            if (IsCurrent(form)) {
+                if (form.IsDispatching) {
+                    form.Outcome = new(ContentTextOutcomeKind.Unconfirmed, "The file write is unconfirmed. Observe the original target before another create.");
+                } else {
+                    form.Error = exception is InvalidDataException ? exception.Message : "The selected file could not be read.";
+                }
+            }
+        } finally {
+            form.IsBusy = false;
+            form.IsDispatching = false;
+            form.ReleaseIfRetired();
+        }
+    }
+
+    private async Task CancelAsync(ContentTextDraftSession form) {
+        if (!IsCurrent(form) || form.IsDispatching) {
+            return;
+        }
+        var cancelled = Cancelled;
+        await form.RetireAsync();
+        await cancelled.InvokeAsync();
+    }
+
+    private static string FormatFileSize(long bytes) => bytes >= 1024 * 1024
+        ? $"{bytes / (1024d * 1024d):0.##} MiB" : $"{Math.Max(1, bytes / 1024d):0.##} KiB";
+
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        if (draft is { } form) {
+            await form.RetireAsync();
+        }
+    }
+}

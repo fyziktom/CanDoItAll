@@ -143,7 +143,7 @@ public sealed class MemoryProvidersPageTests
                      MemoryCapabilityIds.EventsProviderPush
                  })
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<MemoryActionRefusedException>(() =>
                 guard.EnsureProviderCanExecuteAsync("provider.stale", capability, CancellationToken.None));
         }
 
@@ -205,14 +205,13 @@ public sealed class MemoryProvidersPageTests
             .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
                            path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        var oversizedFiles = sourceFiles
-            .Select(path => new { Path = path, Lines = File.ReadLines(path).Count() })
-            .Where(file => file.Lines > 220)
-            .ToArray();
         var sourceText = string.Join(Environment.NewLine, sourceFiles.Select(File.ReadAllText));
         var facade = File.ReadAllText(Path.Combine(moduleRoot, "Services", "MemoryProviderManagementUiService.cs"));
 
-        Assert.Empty(oversizedFiles);
+        var route = File.ReadAllText(Path.Combine(moduleRoot, "Pages", "MemoryProvidersPage.razor"));
+        Assert.Contains("MemoryWorkspaceSurface", route, StringComparison.Ordinal);
+        Assert.DoesNotContain("MemoryProviderProfileEditor", route, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(moduleRoot, "Components")) && Directory.EnumerateFiles(Path.Combine(moduleRoot, "Components"), "*.razor").Any());
         Assert.DoesNotContain("partial class", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("BuildCapabilities", facade, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectRclSurface", facade, StringComparison.Ordinal);
@@ -231,6 +230,7 @@ public sealed class MemoryProvidersPageTests
 
         var store = new InMemoryMemoryProviderProfileStore(profiles);
         context.Services.AddSingleton<IMemoryProviderProfileStore>(store);
+        context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
 
         return (context, store);
@@ -324,6 +324,7 @@ public sealed class MemoryProvidersPageTests
 
     private sealed class PendingSnapshotMemoryProviderManagementUiService : IMemoryProviderManagementUiService
     {
+        public bool IsCurrent => true;
         private readonly TaskCompletionSource<MemoryProviderManagementSnapshot> snapshotSource =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 

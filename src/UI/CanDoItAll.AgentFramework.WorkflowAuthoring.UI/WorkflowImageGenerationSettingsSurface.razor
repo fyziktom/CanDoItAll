@@ -1,0 +1,188 @@
+@using System.Text.Json
+@using CanDoItAll.SharedKernel.Configuration
+
+<Stack GapScale="LayoutGap.Small" data-testid="@TestIdPrefix">
+    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+        <FormField Text="@providerProfileLabel">
+            <InputSelect TValue="string"
+                         Value="@SelectedProviderProfileId"
+                         ValueChanged="HandleProviderProfileChangedAsync"
+                         ValueExpression="@(() => SelectedProviderProfileId)"
+                         class="cda-input"
+                         data-testid="@BuildProviderTestId()">
+                <option value="">Default image provider</option>
+                @if (HasUnknownProviderSelection)
+                {
+                    <option value="@SelectedProviderProfileId">Unavailable provider (@SelectedProviderProfileId)</option>
+                }
+                @foreach (var provider in Providers)
+                {
+                    <option value="@provider.ProviderProfileId.ToString("D")"
+                            disabled="@(!provider.IsEnabled)">@BuildProviderLabel(provider)</option>
+                }
+            </InputSelect>
+
+            @if (IsLoading)
+            {
+                <LoadingState Eyebrow="Loading"
+                              Title="Loading image providers"
+                              Description="Reading providers with image-generation capability." />
+            }
+            else if (!string.IsNullOrWhiteSpace(LoadError))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" data-testid="@BuildProviderStatusTestId()">
+                    @LoadError
+                </Alert>
+            }
+            else if (HasUnknownProviderSelection)
+            {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="@BuildProviderStatusTestId()">
+                    The selected provider is not an available image-generation provider.
+                </Alert>
+            }
+            else if (SelectedProviderOption is { IsEnabled: false })
+            {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="@BuildProviderStatusTestId()">
+                    The selected image-generation provider is disabled. Enable it or choose another provider.
+                </Alert>
+            }
+            else
+            {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="@BuildProviderStatusTestId()">
+                    @BuildProviderSummary()
+                </Alert>
+            }
+
+            @foreach (var issue in ResolveProviderIssues())
+            {
+                <Alert AlertStyle="AlertStyle.Warning">
+                    @issue.Message
+                </Alert>
+            }
+        </FormField>
+    </Grid>
+
+    <ConfigurationSchemaRenderer Schema="remainingSchema"
+                                         State="State"
+                                         Secrets="Secrets"
+                                         Validation="Validation"
+                                         StateChanged="StateChanged"
+                                         TestIdPrefix="@TestIdPrefix" />
+</Stack>
+
+@code {
+    private static readonly string ProviderProfileIdFieldKey = JsonNamingPolicy.CamelCase.ConvertName(
+        nameof(WorkflowImageGenerationExecutorSettings.ProviderProfileId));
+
+    [Parameter]
+    public required ConfigurationSchema Schema { get; set; }
+
+    [Parameter]
+    public required ConfigurationState State { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ConfigurationSecretOption> Secrets { get; set; } = [];
+
+    [Parameter]
+    public ConfigurationValidationResult? Validation { get; set; }
+
+    [Parameter]
+    public EventCallback<ConfigurationState> StateChanged { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "workflow-image-generation-settings";
+
+    private ConfigurationSchema remainingSchema = ConfigurationSchema.Empty();
+    [Parameter] public IReadOnlyList<WorkflowProviderOption> Providers { get; set; } = [];
+    private string providerProfileLabel = "Image provider";
+    [Parameter] public string LoadError { get; set; } = string.Empty;
+    [Parameter] public bool IsLoading { get; set; }
+
+    private string SelectedProviderProfileId
+    {
+        get => State.GetText(ProviderProfileIdFieldKey);
+        set => State.SetText(ProviderProfileIdFieldKey, value);
+    }
+
+    private bool HasUnknownProviderSelection =>
+        !IsLoading &&
+        !string.IsNullOrWhiteSpace(SelectedProviderProfileId) &&
+        !Providers.Any(option => string.Equals(
+            option.ProviderProfileId.ToString("D"),
+            SelectedProviderProfileId,
+            StringComparison.OrdinalIgnoreCase));
+
+    private WorkflowProviderOption? SelectedProviderOption => Providers.FirstOrDefault(option =>
+        string.Equals(
+            option.ProviderProfileId.ToString("D"),
+            SelectedProviderProfileId,
+            StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnParametersSet()
+    {
+        ApplySchemaContract();
+    }
+
+    private void ApplySchemaContract()
+    {
+        var providerFields = Schema.Fields
+            .Where(field => string.Equals(
+                field.Key,
+                ProviderProfileIdFieldKey,
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (providerFields.Length != 1 || providerFields[0].FieldType != ConfigurationFieldType.Guid)
+        {
+            throw new InvalidOperationException(
+                $"Image-generation settings schema must define one GUID field named '{ProviderProfileIdFieldKey}'.");
+        }
+
+        providerProfileLabel = providerFields[0].Label;
+        remainingSchema = Schema with
+        {
+            Fields = Schema.Fields
+                .Where(field => !string.Equals(
+                    field.Key,
+                    ProviderProfileIdFieldKey,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray()
+        };
+    }
+
+    private async Task HandleProviderProfileChangedAsync(string value)
+    {
+        SelectedProviderProfileId = value;
+        await StateChanged.InvokeAsync(State);
+    }
+
+    private string BuildProviderTestId()
+        => $"{TestIdPrefix}-{ProviderProfileIdFieldKey}";
+
+    private string BuildProviderStatusTestId()
+        => $"{TestIdPrefix}-{ProviderProfileIdFieldKey}-status";
+
+    private static string BuildProviderLabel(WorkflowProviderOption option)
+    {
+        var label = $"{option.Name} - {option.Kind} - {option.Transport}";
+        return option.IsEnabled ? label : $"{label} (disabled)";
+    }
+
+    private string BuildProviderSummary()
+    {
+        if (Providers.Count == 0)
+        {
+            return "No image-generation providers are available.";
+        }
+
+        var enabledCount = Providers.Count(option => option.IsEnabled);
+        return $"{enabledCount} enabled image provider(s) available.";
+    }
+
+    private IReadOnlyList<ConfigurationValidationIssue> ResolveProviderIssues()
+        => Validation?.Issues
+            .Where(issue => string.Equals(
+                issue.FieldKey,
+                ProviderProfileIdFieldKey,
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray() ?? [];
+}

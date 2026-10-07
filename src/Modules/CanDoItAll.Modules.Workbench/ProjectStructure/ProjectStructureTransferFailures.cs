@@ -1,4 +1,5 @@
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -67,6 +68,7 @@ public sealed class ProjectStructureCompensatedSubprojectTransferException : Exc
     public Guid RemovedProjectId { get; }
 
     public Exception TransferFailure { get; }
+    public ProjectCreationReceipt? CreationReceipt { get; internal set; }
 }
 
 public sealed class ProjectStructureTransferPartialCommitException : Exception
@@ -81,6 +83,7 @@ public sealed class ProjectStructureTransferPartialCommitException : Exception
     }
 
     public ProjectStructureTransferRecovery Recovery { get; }
+    public ProjectCreationReceipt? CreationReceipt { get; internal set; }
 }
 
 internal static class ProjectStructureProjectCreationResult

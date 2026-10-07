@@ -1,0 +1,141 @@
+@using System.Collections.Immutable
+
+@{
+    var rendered = State;
+    var rows = rendered.Snapshot is { } accepted ? BuildRows(accepted) : [];
+    var series = BuildSeries(rows);
+    var totalUsage = rows.Sum(item => item.Totals.UsageObservationCount);
+}
+
+<UsageDetailFrame State="rendered" Title="Model usage" Intent="Intent">
+    @if (rendered.Snapshot is { } snapshot) {
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch"
+           data-testid="model-usage-dialog">
+        @if (!snapshot.IsComplete) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="usage-dialog-partial">
+                Some usage evidence is unavailable. Displayed totals are partial.
+            </Alert>
+        }
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
+            <MetricCard Label="Models" Value="@AgentUsageDisplay.FormatCount(snapshot.Models.Count)" />
+            <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
+            <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.Tokens.TotalTokens)" />
+            <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+            <MetricCard Label="Unpriced" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnpricedObservationCount)" />
+        </Grid>
+
+        <CdaChart Title="Model usage"
+                  Description="Model-level usage stays lazy-loaded so the default Agents overview stays light."
+                  Series="@series"
+                  Options="@ModelUsageChartOptions"
+                  Height="340"
+                  Class="w-full"
+                  EmptyText="No model usage has been recorded in this interval." />
+
+        <SurfaceCard Soft="true">
+            @if (snapshot.Models.Count == 0) {
+                <EmptyState Eyebrow="No usage"
+                            Title="No model usage rows"
+                            Description="Model usage rows appear after executions report provider model metadata." />
+            }
+            else {
+                <DataGrid TItem="ProviderUsageModelRow"
+                          Data="@rows"
+                          AllowPaging="true"
+                          PageSize="10"
+                          data-testid="model-usage-dialog-grid">
+                    <Columns>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Model">
+                            <Template Context="model">
+                                <Stack Gap="0.15rem">
+                                    <span class="font-medium text-slate-950">@model.Model</span>
+                                    <span class="text-xs text-slate-500">@model.ProviderName · @model.ProviderKind</span>
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Share">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatUsageShare(model.Totals.UsageObservationCount, totalUsage)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Observations">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCount(model.Totals.UsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Unknown">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCount(model.Totals.UnknownUsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Tokens">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatTokens(model.Totals.Tokens.TotalTokens)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Known cost">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatCost(model.Totals.KnownCostUsd)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Last used">
+                            <Template Context="model">
+                                <span>@AgentUsageDisplay.FormatLastUsed(model.LastUsedAtUtc)</span>
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SurfaceCard>
+
+    </Stack>
+    }
+</UsageDetailFrame>
+
+@code {
+    private readonly CdaChartOptions ModelUsageChartOptions = new() {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        YAxisTitle = "Usage observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = false,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        Palette = CdaChartPalette.Calm.ToImmutableArray()
+    };
+
+    [Parameter, EditorRequired]
+    public UsageDetailState State { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<UsageDetailIntent> Intent { get; set; }
+
+    private static IReadOnlyList<ProviderUsageModelRow> BuildRows(ProviderUsageSnapshot snapshot) =>
+        snapshot.Models
+            .OrderByDescending(item => item.Totals.UsageObservationCount)
+            .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static IReadOnlyList<CdaChartSeries> BuildSeries(IReadOnlyList<ProviderUsageModelRow> rows) =>
+        rows.Count == 0
+            ? []
+            :
+            [
+                new CdaChartSeries {
+                    Name = "Model usage",
+                    Type = CdaChartType.Bar,
+                    Points = rows
+                        .Take(12)
+                        .Select(item => new CdaChartPoint(
+                            AgentUsageDisplay.TrimLabel(item.Model, 24),
+                            item.Totals.UsageObservationCount))
+                        .ToArray()
+                }
+            ];
+
+}

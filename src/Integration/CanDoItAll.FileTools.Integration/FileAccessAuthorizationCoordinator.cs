@@ -92,6 +92,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(reference);
         StorageDriverInput storage = await ResolveStorageAsync(request.StorageId, cancellationToken);
+        EnsureWritableStorage(storage, request.Operations);
         if (reference.StorageId != storage.Id || reference.ProviderKind != storage.ProviderKind)
         {
             throw Denied(FileAccessFailureCode.SourceUnavailable);
@@ -136,6 +137,7 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
         FileAccessHandleId id = AuthorizedFileReference.Parse(file);
         FileAccessHandleGrant grant = registry.Resolve(id, context, operation);
         StorageDriverInput storage = await ResolveStorageAsync(grant.Request.StorageId, cancellationToken);
+        EnsureWritableStorage(storage, operation);
         if (grant.Reference.StorageId != storage.Id || grant.Reference.ProviderKind != storage.ProviderKind)
         {
             throw Denied(FileAccessFailureCode.SourceUnavailable);
@@ -185,6 +187,15 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
         }
 
         return storage;
+    }
+
+    private static void EnsureWritableStorage(StorageDriverInput storage, FileAccessOperation operations) {
+        const StorageCapability required = StorageCapability.Write | StorageCapability.MutableUpdate;
+        if ((operations & (FileAccessOperation.Edit | FileAccessOperation.Overwrite)) != 0 &&
+            (storage.IsReadOnly || (storage.CapabilityMask & required) != required)) {
+            throw new FileAccessDeniedException(FileAccessFailureCode.OperationDenied,
+                "The authorized file source no longer permits revisioned writes.");
+        }
     }
 
     private async ValueTask EnsureCurrentBindingAsync(

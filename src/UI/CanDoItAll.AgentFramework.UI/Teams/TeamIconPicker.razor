@@ -1,0 +1,83 @@
+@implements IDisposable
+@{
+    var owner = current;
+}
+@if (owner is not null && IsCurrent(owner)) {
+    <div class="team-icon-picker min-w-0" data-testid="material-icon-picker-dialog">
+        <Stack GapScale="LayoutGap.Medium">
+            <FilterBar ResultText="@($"{Filtered(owner).Count} of {AgentTeamIconCatalog.Options.Count} icon(s)")">
+                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="cda-input min-w-[14rem] flex-1" placeholder="Search icons" data-testid="material-icon-picker-search" />
+                <StatusBadge Tone="info" Text="@owner.Selected" />
+            </FilterBar>
+            <Grid Gap="LayoutGap.Small" ColumnTemplate="repeat(auto-fit,minmax(6.5rem,1fr))" Class="team-icon-picker__options" data-testid="material-icon-picker-grid">
+                @foreach (var option in Filtered(owner)) {
+                    <button type="button" class="@ResolveIconCardClass(owner, option.Icon)" title="@option.Label"
+                            aria-pressed="@(owner.Selected == option.Icon ? "true" : "false")" @onclick="() => Select(owner, option.Icon)" data-testid="material-icon-picker-option">
+                        <Icon Name="@option.Icon" Class="text-2xl" />
+                        <span class="max-w-full truncate text-xs font-semibold">@option.Label</span>
+                    </button>
+                }
+            </Grid>
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
+                <Button Text="Cancel" Icon="close" Variant="Variant.Outlined" Click="() => CancelAsync(owner)" />
+                <Button Text="Use icon" Icon="check" Disabled="@owner.Completed" Click="() => ConfirmAsync(owner)" data-testid="material-icon-picker-confirm" />
+            </Cluster>
+        </Stack>
+    </div>
+}
+
+@code {
+    [Parameter] public string? SelectedIcon { get; set; }
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public EventCallback<string> Completed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private Selection? current;
+    private bool disposed;
+    protected override void OnParametersSet() {
+        var initial = AgentTeamIconCatalog.Normalize(SelectedIcon);
+        if (!disposed && (current is null || current.Initial != initial || current.Token != OwnerCancellationToken)) {
+            current = new(initial, OwnerCancellationToken);
+        }
+    }
+    private bool IsCurrent(Selection owner) => !disposed && ReferenceEquals(current, owner) && !owner.Token.IsCancellationRequested;
+    private void Search(Selection owner, ChangeEventArgs args) {
+        if (IsCurrent(owner)) {
+            owner.Search = args.Value?.ToString() ?? string.Empty;
+        }
+    }
+    private void Select(Selection owner, string icon) {
+        if (IsCurrent(owner) && !owner.Completed) {
+            owner.Selected = icon;
+        }
+    }
+    private async Task ConfirmAsync(Selection owner) {
+        if (IsCurrent(owner) && !owner.Completed) {
+            owner.Completed = true;
+            await Completed.InvokeAsync(owner.Selected);
+        }
+    }
+    private async Task CancelAsync(Selection owner) {
+        if (IsCurrent(owner) && !owner.Completed) {
+            owner.Completed = true;
+            await Cancelled.InvokeAsync();
+        }
+    }
+    private static IReadOnlyList<AgentTeamIconOption> Filtered(Selection owner) {
+        var query = owner.Search.Trim();
+        return AgentTeamIconCatalog.Options.Where(option => query.Length == 0 || option.Icon.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || option.Label.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
+    private static string ResolveIconCardClass(Selection owner, string icon) {
+        const string baseClass = "flex aspect-square min-w-0 flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition";
+        return owner.Selected == icon ? $"{baseClass} border-sky-500 bg-sky-50 text-sky-700 shadow-sm ring-2 ring-sky-100"
+            : $"{baseClass} border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+    }
+    public void Dispose() => disposed = true;
+    private sealed class Selection(string initial, CancellationToken token) {
+        public string Initial { get; } = initial;
+        public CancellationToken Token { get; } = token;
+        public string Selected { get; set; } = initial;
+        public string Search { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
+}

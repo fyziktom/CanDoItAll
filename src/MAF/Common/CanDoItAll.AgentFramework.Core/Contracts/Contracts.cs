@@ -508,6 +508,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default);
+    Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace owner does not support team metadata editing.");
     Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default);
     Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
     Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default);
@@ -543,8 +545,10 @@ public interface IAgentFrameworkWorkspaceService :
     Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default);
+    Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not return accepted capability definitions.");
     Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default);
-    Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
+    Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default);
     Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default);

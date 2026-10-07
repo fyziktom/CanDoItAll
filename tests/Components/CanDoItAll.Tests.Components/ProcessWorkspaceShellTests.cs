@@ -212,13 +212,16 @@ public sealed partial class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Live_processes_expires_runtime_context_without_an_implicit_projection_read()
+    public async Task Live_processes_expires_historical_context_without_an_implicit_projection_read()
     {
         var timeProvider = new ManualTimeProvider(Now);
         using var context = CreateContext(out var client, timeProvider: timeProvider);
         ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var cut = context.Render<LiveProcessesDashboard>();
+        cut.WaitForElement("[data-testid='live-processes-history-window']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='live-processes-history-window']")
+            .ChangeAsync(new ChangeEventArgs { Value = nameof(ProcessRuntimeHistoryWindow.OneDay) }));
 
         AgentChatContextSnapshot initial = null!;
         AgentChatContextAttachmentEnvelope initialAttachment = null!;
@@ -3026,7 +3029,7 @@ public sealed partial class ProcessWorkspaceShellTests
 
         public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(
             bool includeTemplates = false,

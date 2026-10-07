@@ -67,10 +67,12 @@ public sealed class ProviderAdministrationLayoutTests {
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var model = Assert.IsType<ProviderProfileEditorModel>(context.Model);
         var originalName = model.Name;
-        cut.Find("[data-testid='providers-name-input']").Change("Unsaved provider edit");
+        cut.Find("[data-testid='providers-name-input']").Input("Unsaved provider edit");
         await OpenProviderTabAsync(cut, "History");
         var form = cut.WaitForElement("[data-testid='history-search-form']");
-        Assert.Single(cut.FindAll("form"));
+        Assert.Equal(5, cut.FindAll("form").Count);
+        Assert.Empty(cut.FindAll("form form"));
+        Assert.All(cut.FindComponents<ProviderProfileEditorForm>(), editor => Assert.Same(context, editor.Instance.Context));
         Assert.Empty(cut.FindAll("[data-testid='providers-save']"));
         await form.SubmitAsync();
         Assert.Single(history.Queries);

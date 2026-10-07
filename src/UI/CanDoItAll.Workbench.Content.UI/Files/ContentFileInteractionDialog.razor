@@ -1,0 +1,228 @@
+@namespace CanDoItAll.Workbench.Content.UI
+@implements IAsyncDisposable
+@inject ILogger<ContentFileInteractionDialog> Logger
+
+@if (session is { } view) {
+    <div class="content-file-host">
+    <CanvasOverlayDialog CanvasScoped="true" CanMaximize="true" Title="@view.Opening.Title" Kicker="Governed file" Summary="@view.Opening.Notice"
+                         AriaLabel="@($"{view.Opening.Title} file interaction")" FillBody="true"
+                         SizeToggleTestId="project-structure-dialog-size-toggle" Close="@(() => RequestCloseAsync(view))">
+        <Actions>
+            @if (view.State is not null) {
+                <StatusBadge Tone="@StateTone(view)" Text="@StateLabel(view)" />
+            }
+            @if (view.Opening.EditDetails.HasDelegate) {
+                <Button Text="Edit node details" ButtonStyle="ButtonStyle.Info" Disabled="view.HasGuardedWork"
+                        Click="@(() => InvokeAsync(view, view.Opening.EditDetails))" />
+            }
+            @if (view.Opening.OpenPreferred.HasDelegate) {
+                <Button Text="Open in preferred app" ButtonStyle="ButtonStyle.Primary" Click="@(() => InvokeAsync(view, view.Opening.OpenPreferred))" />
+            }
+            @if (view.Opening.ShowInFolder.HasDelegate) {
+                <Button Text="Show in folder" ButtonStyle="ButtonStyle.Info" Click="@(() => InvokeAsync(view, view.Opening.ShowInFolder))" />
+            }
+            <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => RequestCloseAsync(view))" />
+        </Actions>
+        <Body>
+            @if (view.Request is null || view.Opening.ContentSource is null) {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="project-structure-direct-file-interaction-unavailable">
+                    The current file authority could not be established. No unsigned preview is available.
+                </Alert>
+            } else {
+                <Stack GapScale="LayoutGap.Small" Class="content-file-interaction-layout">
+                    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="project-structure-file-interaction-policy">@view.Opening.Notice</Alert>
+                    @if (!string.IsNullOrWhiteSpace(view.Notes)) {
+                        <PanelCard Soft="true" Class="content-file-notes" Style="flex:0 1 auto;max-height:min(12rem,35%);min-height:0;overflow:auto;box-sizing:border-box;" data-testid="project-structure-file-interaction-notes">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                                <TextBlock TextStyle="TextStyle.Note" Value="@view.Notes" Class="whitespace-pre-wrap break-words" />
+                            </Stack>
+                        </PanelCard>
+                    }
+                    @if (view.NotesError is not null) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="content-file-notes-error">@view.NotesError</Alert>
+                    }
+                    <SurfaceCard Class="content-file-interaction" data-testid="project-structure-direct-file-interaction">
+                        <FileInteraction @key="view.Opening.Id" Request="view.Request" ContentSource="view.Opening.ContentSource"
+                                         Composition="view.Opening.Composition" SaveRequested="view.SaveCallback"
+                                         ModeChanged="view.ModeChanged" StateChanged="view.StateChanged"
+                                         AllowModeSwitch="@(view.Opening.Save is not null)" FillAvailableHeight="true"
+                                         MaximumContentBytes="view.Opening.MaximumContentBytes" AriaLabel="@($"Governed project structure file {view.Request.FileName}")" />
+                    </SurfaceCard>
+                    @if (view.ShowCloseGuard) {
+                        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Filled" data-testid="project-structure-interaction-close-guard">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(view.IsSaving ? "Save is still in progress" : "Unsaved work remains")" />
+                                <TextBlock TextStyle="TextStyle.Note" Value="@(view.IsSaving ? "Wait for the awaited save before closing this interaction." : "Close and discard the in-memory edit session?")" />
+                                <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                    <Button Text="Keep editing" Variant="Variant.Text" Click="@(() => KeepEditing(view))" />
+                                    <Button Text="Discard and close" ButtonStyle="ButtonStyle.Danger" Disabled="view.IsSaving"
+                                            data-testid="project-structure-interaction-close-confirm" Click="@(() => ConfirmCloseAsync(view))" />
+                                </Cluster>
+                            </Stack>
+                        </Alert>
+                    }
+                </Stack>
+            }
+        </Body>
+    </CanvasOverlayDialog>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ContentFileInteractionOpening Opening { get; set; } = default!;
+    private InteractionView? session;
+    private bool disposed;
+
+    protected override async Task OnParametersSetAsync() {
+        if (ReferenceEquals(session?.Opening, Opening)) {
+            return;
+        }
+        var previous = session;
+        var current = new InteractionView(Opening);
+        current.SaveCallback = SaveCallback(current);
+        current.ModeChanged = EventCallback.Factory.Create<FileInteractionMode>(this, mode => ChangeMode(current, mode));
+        current.StateChanged = EventCallback.Factory.Create<FileInteractionState>(this, state => StateChanged(current, state));
+        session = current;
+        previous?.Retire();
+        try {
+            var notes = await current.Opening.ReadNotes(current.Token);
+            if (IsCurrent(current)) {
+                current.Notes = notes;
+            }
+        } catch (OperationCanceledException) when (current.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Governed file notes comparison failed. OpeningId={OpeningId}.", current.Opening.Id);
+            if (IsCurrent(current)) {
+                current.NotesError = "Supplemental notes could not be compared with authorized file content.";
+            }
+        } finally {
+            current.CompleteNotes();
+        }
+    }
+
+    private bool IsCurrent(InteractionView view) => !disposed && !view.Retired && ReferenceEquals(session, view);
+
+    private Task InvokeAsync(InteractionView view, EventCallback callback)
+        => IsCurrent(view) ? callback.InvokeAsync() : Task.CompletedTask;
+
+    private EventCallback<FileInteractionSaveRequestedEventArgs> SaveCallback(InteractionView view)
+        => view.Opening.Save is null ? default : EventCallback.Factory.Create<FileInteractionSaveRequestedEventArgs>(this, args => SaveAsync(view, args));
+
+    private async Task SaveAsync(InteractionView view, FileInteractionSaveRequestedEventArgs args) {
+        if (!IsCurrent(view) || view.Opening.Save is null || view.SavePending || args.Request.File != view.Opening.Request?.File) {
+            throw new InvalidOperationException("The original editable file interaction is no longer available.");
+        }
+        view.SavePending = true;
+        try {
+            await view.Opening.Save(args);
+        } finally {
+            view.SavePending = false;
+        }
+    }
+
+    private void ChangeMode(InteractionView view, FileInteractionMode mode) {
+        if (!IsCurrent(view)) {
+            return;
+        }
+        if (view.Opening.ChangeMode is null) {
+            throw new InvalidOperationException("Mode changes are unavailable for this file interaction.");
+        }
+        view.Request = view.Opening.ChangeMode(mode);
+    }
+
+    private void StateChanged(InteractionView view, FileInteractionState state) {
+        if (!IsCurrent(view)) {
+            return;
+        }
+        view.State = state;
+        if (!view.HasGuardedWork) {
+            view.ShowCloseGuard = false;
+        }
+        if (view.Request?.Mode != state.Mode) {
+            ChangeMode(view, state.Mode);
+        }
+    }
+
+    private Task RequestCloseAsync(InteractionView view) {
+        if (!IsCurrent(view)) {
+            return Task.CompletedTask;
+        }
+        if (view.HasGuardedWork) {
+            view.ShowCloseGuard = true;
+            return Task.CompletedTask;
+        }
+        return view.Opening.Close.InvokeAsync();
+    }
+
+    private Task ConfirmCloseAsync(InteractionView view)
+        => IsCurrent(view) && !view.IsSaving ? view.Opening.Close.InvokeAsync() : Task.CompletedTask;
+
+    private void KeepEditing(InteractionView view) {
+        if (IsCurrent(view)) {
+            view.ShowCloseGuard = false;
+        }
+    }
+
+    private static string StateLabel(InteractionView view) => view.State switch {
+        _ when view.IsSaving => "Saving",
+        null => "Loading",
+        { HasConflict: true } => "Conflict",
+        { IsDirty: true } => "Unsaved",
+        { Lifecycle: FileInteractionLifecycleState.Unsupported } => "Inert",
+        { Lifecycle: FileInteractionLifecycleState.Error } => "Error",
+        _ => view.Opening.Save is null ? "Read only" : "Revision guarded"
+    };
+
+    private static string StateTone(InteractionView view) => view.State switch {
+        _ when view.IsSaving => "info",
+        { HasConflict: true } or { Lifecycle: FileInteractionLifecycleState.Error } => "danger",
+        { IsDirty: true } => "warning",
+        { Lifecycle: FileInteractionLifecycleState.Unsupported } => "neutral",
+        _ => "success"
+    };
+
+    public ValueTask DisposeAsync() {
+        disposed = true;
+        session?.Retire();
+        return ValueTask.CompletedTask;
+    }
+
+    private sealed class InteractionView(ContentFileInteractionOpening opening) {
+        private readonly CancellationTokenSource notesCancellation = new();
+        private bool notesComplete;
+        public ContentFileInteractionOpening Opening { get; } = opening;
+        public FileInteractionRequest? Request { get; set; } = opening.Request;
+        public FileInteractionState? State { get; set; }
+        public string? Notes { get; set; }
+        public string? NotesError { get; set; }
+        public bool ShowCloseGuard { get; set; }
+        public bool SavePending { get; set; }
+        public bool Retired { get; private set; }
+        public EventCallback<FileInteractionSaveRequestedEventArgs> SaveCallback { get; set; }
+        public EventCallback<FileInteractionMode> ModeChanged { get; set; }
+        public EventCallback<FileInteractionState> StateChanged { get; set; }
+        public CancellationToken Token => notesCancellation.Token;
+        public bool IsSaving => SavePending || State?.IsSaving == true;
+        public bool HasGuardedWork => IsSaving || State is { IsDirty: true } or { HasConflict: true };
+
+        public void Retire() {
+            if (Retired) {
+                return;
+            }
+            Retired = true;
+            if (!notesComplete) {
+                notesCancellation.Cancel();
+            } else {
+                notesCancellation.Dispose();
+            }
+        }
+
+        public void CompleteNotes() {
+            notesComplete = true;
+            if (Retired) {
+                notesCancellation.Dispose();
+            }
+        }
+    }
+}

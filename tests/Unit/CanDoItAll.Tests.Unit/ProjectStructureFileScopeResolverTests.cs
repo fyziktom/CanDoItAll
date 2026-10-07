@@ -14,6 +14,32 @@ namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureFileScopeResolverTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Closing_a_held_open_detaches_it_before_a_successor_and_releases_only_its_result(bool fail) {
+        var releaser = new RecordingKnownFileSessionReleaser();
+        var held = new TaskCompletionSource<ProjectStructureKnownFileInteraction>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var slot = new ProjectStructureKnownFileInteractionSlot((_, _, _) => new(held.Task));
+        var old = slot.OpenAsync(Guid.NewGuid(), "same-node").AsTask();
+        await slot.CloseAsync();
+        var expected = CreateInteraction("same-node", releaser);
+        Assert.Same(expected, await slot.OpenAsync(_ => ValueTask.FromResult(expected)));
+
+        if (fail) {
+            held.SetException(new InvalidOperationException("Retired source failed."));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => old);
+            Assert.Equal(0, releaser.CallCount);
+        } else {
+            held.SetResult(CreateInteraction("same-node", releaser));
+            Assert.Null(await old);
+            Assert.Equal(1, releaser.CallCount);
+        }
+        Assert.Same(expected, slot.Current);
+        await slot.CloseAsync();
+        Assert.Equal(fail ? 1 : 2, releaser.CallCount);
+    }
+
     [Fact]
     public void Known_file_interaction_coordinator_has_no_FileBrowser_runtime_dependency()
     {

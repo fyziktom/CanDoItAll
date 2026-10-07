@@ -69,11 +69,41 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return id;
     }
 
+    public async Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(
+        AgentTeamEditorModel model, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(model);
+        var requestedId = model.Id;
+        var id = requestedId ?? Guid.NewGuid();
+        var name = NormalizeTeamName(model.Name);
+        var description = NormalizeTeamDescription(model.Description);
+        var icon = AgentTeamIconCatalog.Normalize(model.Icon);
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(name)) {
+            throw new AgentTeamMetadataRejectedException("A team identity and nonblank name are required.");
+        }
+        var now = DateTimeOffset.UtcNow;
+        var saved = await UpdateCatalogAsync(catalog => {
+            var existing = catalog.AgentTeams.FirstOrDefault(team => team.Id == id);
+            if (requestedId.HasValue && existing is null) {
+                throw new AgentTeamMetadataRejectedException("The edited team no longer exists.");
+            }
+            if (catalog.AgentTeams.Any(team => team.Id != id && string.Equals(team.Name, name, StringComparison.OrdinalIgnoreCase))) {
+                throw new AgentTeamMetadataRejectedException("The team name is already in use.");
+            }
+            var team = new AgentTeamDefinition(id, name, description, existing?.AgentIds ?? [], existing?.CreatedAtUtc ?? now, now, icon);
+            return catalog with {
+                AgentTeams = catalog.AgentTeams.Where(item => item.Id != id).Append(team)
+                    .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList()
+            };
+        }, cancellationToken);
+        return AgentTeamEditorModel.FromDefinition(saved.AgentTeams.Single(team => team.Id == id));
+    }
+
     public async Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
         Guid teamId,
         IReadOnlyList<Guid> agentIds,
         CancellationToken cancellationToken = default)
     {
+        var requestedAgentIds = agentIds?.ToArray() ?? [];
         AgentTeamDefinition? updatedTeam = null;
         var now = DateTimeOffset.UtcNow;
         await UpdateCatalogAsync(catalog =>
@@ -82,7 +112,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 ?? throw new InvalidOperationException("Agent team was not found.");
             updatedTeam = currentTeam with
             {
-                AgentIds = NormalizeRequestedTeamAgentIds(agentIds, catalog.Agents),
+                AgentIds = NormalizeRequestedTeamAgentIds(requestedAgentIds, catalog.Agents),
                 UpdatedAtUtc = now
             };
 

@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Definitions\CanDoItAll.AgentFramework.Workflows.Definitions.csproj" />
     <ProjectReference Include="..\..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <ProjectReference Include="..\..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />

@@ -29,7 +29,7 @@ public partial class ProjectStructurePage
         var useSecretReferenceDialog = IsSecretReferenceCreateAction(action.ActionId);
         var useTaskCreateDialog = IsTaskCreateAction(action.ActionId);
         var useTextAssetDialog = IsTextAssetCreateAction(action.ActionId);
-        var useDedicatedDialog = useSecretReferenceDialog || useTaskCreateDialog || useTextAssetDialog;
+        var useDedicatedDialog = useSecretReferenceDialog || useTaskCreateDialog || useTextAssetDialog || IsGeneratedImageAssetCreateAction(action.ActionId);
         return new CanvasWorkbenchAction
         {
             ActionId = action.ActionId,
@@ -102,7 +102,6 @@ public partial class ProjectStructurePage
             "recordingRef" => BuildNodeOptions(ProjectObjectType.Recording),
             "secretRef" => BuildNodeOptions(ProjectObjectType.SecretReference),
             "storageCatalogId" => BuildStorageCatalogOptions(),
-            ProjectStructureCanvasCatalog.ImageProviderProfileFieldKey => BuildImageGenerationProviderOptions(),
             _ => null
         };
 

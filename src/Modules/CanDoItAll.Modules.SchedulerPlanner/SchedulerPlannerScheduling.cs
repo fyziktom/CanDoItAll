@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Quartz.Spi;
 
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
@@ -46,7 +47,7 @@ public sealed class SchedulerPlannerTriggerScheduler(
 
         foreach (var plan in plans)
         {
-            await SynchronizePlanAsync(scheduler, plan, cancellationToken);
+            await SynchronizePlanAsync(dbContext, scheduler, plan, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -71,31 +72,34 @@ public sealed class SchedulerPlannerTriggerScheduler(
             return;
         }
 
-        await SynchronizePlanAsync(scheduler, plan, cancellationToken);
+        await SynchronizePlanAsync(dbContext, scheduler, plan, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SynchronizePlanAsync(
+        SchedulerPlannerDbContext dbContext,
         IScheduler scheduler,
         SchedulerPlan plan,
         CancellationToken cancellationToken)
     {
         var jobKey = BuildJobKey(plan.Id);
         var triggerKey = BuildTriggerKey(plan.Id);
+        var projection = await PrepareProjectionAsync(dbContext, plan, jobKey, triggerKey, cancellationToken);
 
         if (await scheduler.CheckExists(jobKey, cancellationToken))
         {
             await scheduler.DeleteJob(jobKey, cancellationToken);
         }
 
-        if (!plan.IsEnabled)
-        {
+        if (projection.Trigger is null) {
             plan.NextPlannedFireAtUtc = null;
             plan.UpdatedAtUtc = clock.GetUtcNow();
+            logger.LogInformation("Scheduler plan {PlanId} has no runtime trigger. Projection={Projection}, Enabled={IsEnabled}.",
+                plan.Id, projection.Kind, plan.IsEnabled);
             return;
         }
 
-        var quartzTrigger = BuildQuartzTrigger(plan, jobKey, triggerKey);
+        var quartzTrigger = projection.Trigger;
         var job = JobBuilder.Create<SchedulerPlannerQuartzJob>()
             .WithIdentity(jobKey)
             .UsingJobData(SchedulerPlannerQuartzJob.PlanIdKey, plan.Id.ToString("N"))
@@ -115,6 +119,20 @@ public sealed class SchedulerPlannerTriggerScheduler(
             plan.NextPlannedFireAtUtc);
     }
 
+    private async Task<SchedulerPlanProjection> PrepareProjectionAsync(SchedulerPlannerDbContext database, SchedulerPlan plan,
+        JobKey jobKey, TriggerKey triggerKey, CancellationToken cancellationToken) {
+        if (!plan.IsEnabled) {
+            return new(SchedulerPlanProjectionKind.Disabled, null);
+        }
+        var trigger = (IOperableTrigger)BuildQuartzTrigger(plan, jobKey, triggerKey);
+        trigger.Validate();
+        var latest = await database.Set<SchedulerPlanRun>().AsNoTracking().Where(row => row.PlanId == plan.Id)
+            .OrderByDescending(row => row.FiredAtUtc).FirstOrDefaultAsync(cancellationToken);
+        var admission = latest is null ? null : await database.Set<SchedulerFireAdmissionRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == latest.Id, cancellationToken);
+        return SchedulerPlanProjection.Prepare(plan, trigger, latest, admission, clock.GetUtcNow());
+    }
+
     private static ITrigger BuildQuartzTrigger(
         SchedulerPlan plan,
         JobKey jobKey,
@@ -124,11 +142,10 @@ public sealed class SchedulerPlannerTriggerScheduler(
             .WithIdentity(triggerKey)
             .ForJob(jobKey);
 
-        builder = plan.StartAtUtc.HasValue
-            ? builder.StartAt(plan.StartAtUtc.Value)
-            : builder.StartNow();
+        var start = plan.StartAtUtc ?? SystemTime.UtcNow();
+        builder = builder.StartAt(start);
 
-        if (plan.EndAtUtc.HasValue)
+        if (plan.EndAtUtc.HasValue && (plan.StartAtUtc.HasValue || plan.EndAtUtc >= start))
         {
             builder = builder.EndAt(plan.EndAtUtc.Value);
         }
@@ -139,7 +156,8 @@ public sealed class SchedulerPlannerTriggerScheduler(
         {
             SchedulerPlanMisfirePolicy.DoNothing => cronBuilder.WithMisfireHandlingInstructionDoNothing(),
             SchedulerPlanMisfirePolicy.IgnoreMisfire => cronBuilder.WithMisfireHandlingInstructionIgnoreMisfires(),
-            _ => cronBuilder.WithMisfireHandlingInstructionFireAndProceed()
+            SchedulerPlanMisfirePolicy.FireOnceNow => cronBuilder.WithMisfireHandlingInstructionFireAndProceed(),
+            _ => throw new ArgumentOutOfRangeException(nameof(plan.MisfirePolicy))
         };
 
         return builder

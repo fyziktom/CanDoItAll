@@ -1,0 +1,5 @@
+.team-icon-picker ::deep .team-icon-picker__options {
+    max-height: min(58vh, 42rem);
+    overflow: auto;
+    scrollbar-gutter: stable;
+}

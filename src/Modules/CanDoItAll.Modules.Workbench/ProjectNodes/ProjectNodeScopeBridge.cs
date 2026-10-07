@@ -46,13 +46,17 @@ internal sealed class ProjectNodeScopeBridge(
             .Select(item => new
             {
                 item.ProjectId,
+                item.Id,
                 item.ObjectType,
-                item.ObjectSubtype
+                item.ObjectSubtype,
+                item.ParentNodeKey
             })
             .FirstOrDefaultAsync(cancellationToken);
         if (projectNode is not null)
         {
-            return new ProjectNodeScopeResolution(true, false, true, projectNode.ObjectType, projectNode.ObjectSubtype);
+            return new ProjectNodeScopeResolution(true, false, true, projectNode.ObjectType, projectNode.ObjectSubtype) {
+                Occurrence = new(projectNode.Id, projectNode.ObjectType, projectNode.ObjectSubtype, projectNode.ParentNodeKey)
+            };
         }
 
         var projectedScope = await ResolveProjectedNodeAsync(projectId, normalizedNodeKey, cancellationToken);

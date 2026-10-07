@@ -1,0 +1,93 @@
+{
+  "bundle_id": "CDA-WORKSPACE-STORAGE-SELECTION-UI-DECOUPLING-v1",
+  "title": "Storage catalog reselection repair and independent Storage Selection UI",
+  "created_on": "2026-09-29",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "cbb135c7c8d76ff50a624c142f12faf8c9b55f91",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "APPLICATION_REGRESSION_MATRIX.md",
+    "ARCHITECTURE.md",
+    "DEV_LOOP.md",
+    "PROOF_STATUS.md",
+    "README.md",
+    "SELECTION_REVIEW_NOTES.md",
+    "SENSITIVE_STATE.md",
+    "SOURCES.md",
+    "STORAGE_REVIEW.md",
+    "VALIDATION_MATRIX.md",
+    "WORKSPACE_STATUS.md",
+    "prompt.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "phases": [
+    {
+      "id": "S0",
+      "scope": "Reproduce/repair SCAT-R1; preserve exact retry and preceding API/Core repairs"
+    },
+    {
+      "id": "P1",
+      "scope": "Current picker/consumer/read-effect inventory and original production baseline"
+    },
+    {
+      "id": "P2",
+      "scope": "Narrow independent selection contracts/rendering and actual production composition"
+    },
+    {
+      "id": "P3",
+      "scope": "Parent/source/dialog lifetimes, selection policy and safe read availability"
+    },
+    {
+      "id": "P4",
+      "scope": "Actual Agent consumer and faithful independent sandbox"
+    },
+    {
+      "id": "P5",
+      "scope": "Application/parent persistence/runtime/boundary/browser/publish/dev-loop and gates"
+    }
+  ],
+  "completion_scope": {
+    "prior_fixes": [
+      "SCAT-R1"
+    ],
+    "extracted": [
+      "Storage catalog selection field",
+      "Selected-reference display/remove integration",
+      "Storage catalog selection dialog, staging/search/Apply/Cancel",
+      "Read-only metadata projection and current source/lifetime seam",
+      "Actual Agent details consumer and independent sandbox"
+    ],
+    "preserved_deferred": [
+      "Storage placement Recovery and owner continuation",
+      "Data Sources/database profile activation and transfer",
+      "Residual SettingsRendererHost/fallback/trust integrations"
+    ],
+    "entire_workspace_module_complete": false,
+    "core_api_catalog_sandboxes_must_not_gain_selection_dependencies": true,
+    "picker_has_its_own_durable_mutations": false
+  },
+  "out_of_scope": [
+    "New authority/permission protocol",
+    "New HTTP API or schema/migration",
+    "Storage catalog administration redesign",
+    "Recovery or Data Sources extraction",
+    "Generic component framework or mandatory whole AppComponents move",
+    "Agent/Processes/Workbench full extraction"
+  ],
+  "review_proof": {
+    "type": "connected-source-and-metadata",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "watch_measured": false,
+    "runtime_regressions_reproduced": false,
+    "raw_implementer_artifacts_available": false
+  },
+  "artifact_proof_is_product_proof": false
+}

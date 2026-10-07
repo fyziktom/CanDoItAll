@@ -230,6 +230,7 @@ Start with:
 
 - [Architecture overview](docs/architecture/overview.md)
 - [UI component seams](docs/architecture/ui-component-seams.md)
+- [Workbench operators WB5](docs/architecture/workbench-operators-wb5.md)
 - [Storage, paths, and host portability](docs/architecture/storage-and-path-portability.md)
 - [Runtime execution and shell portability](docs/architecture/runtime-execution-portability.md)
 - [Internal communication](docs/architecture/internal-communication.md)
@@ -248,20 +249,22 @@ database, so a rendering change can be seen without starting the application:
 | Library | Sandbox | Started with |
 |---|---|---|
 | [`CanDoItAll.CrmHr.UI`](src/UI/CanDoItAll.CrmHr.UI/README.md) | [CRM / HR UI sandbox](src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile "CrmHr sandbox"` |
+| [`CanDoItAll.Collaboration.UI`](src/UI/CanDoItAll.Collaboration.UI/README.md) | [Collaboration UI sandbox](src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Collaboration.UiSandbox --no-launch-profile --urls http://127.0.0.1:5187` |
 | [`CanDoItAll.Prompts.UI`](src/UI/CanDoItAll.Prompts.UI/README.md) | [Prompt Gallery UI sandbox](src/Sandboxes/CanDoItAll.Prompts.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Prompts.UiSandbox --launch-profile "Prompts sandbox"` |
 | [`CanDoItAll.AgentFramework.UI`](src/UI/CanDoItAll.AgentFramework.UI) | [Agent catalog sandbox](src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox --launch-profile "Catalog sandbox"` |
+| [`CanDoItAll.Workspace.StorageSelection.UI`](src/UI/CanDoItAll.Workspace.StorageSelection.UI/README.md) | [Storage selection sandbox](src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/README.md) | `dotnet watch --project ./src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox --no-launch-profile --urls http://127.0.0.1:0` |
 
-Each sandbox has two asset modes. The default profile links the real production stylesheet, so what
-the sandbox shows is what the application shows; the `... Fast` profile generates a small stylesheet
-that scans only the sandbox and its rendering library, which starts faster while iterating on markup.
-Each sandbox README describes its own modes and ports.
+The default Parity assets use the real production stylesheet. Collaboration and Storage selection support Parity only.
+The other sandbox READMEs also document their optional Fast asset mode and its narrower scan,
+as well as launch profiles and ports. Asset modes are separate from source/package dependency mode.
 
 The shared record browser, picker and selection family lives in
 [`CanDoItAll.AppComponents.RecordBrowsing`](src/UI/CanDoItAll.AppComponents.RecordBrowsing/README.md)
 and the application-wide shell in [`CanDoItAll.AppComponents`](src/UI/CanDoItAll.AppComponents/README.md).
 
-This separation is being applied module by module. CRM / HR and the Prompt Gallery are done; the
-other modules keep their rendering in the module itself, which is a supported state and not a defect.
+This separation is being applied module by module. The table is a selection of available hosts;
+the maintained architecture records describe each completed slice and its remaining owners.
+Workspace remains partial: Data Sources, Recovery and residual configuration hosts are deferred.
 [UI component seams](docs/architecture/ui-component-seams.md) is the guidance, and each completed
 slice has its own record under [`docs/architecture`](docs/architecture).
 

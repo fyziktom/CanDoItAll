@@ -1,0 +1,49 @@
+<FormSection Title="@(Draft.IsWizard ? "Type and identity" : "Capability identity")" Description="Edit the catalog definition. Assignment to an agent and runtime access remain separate actions.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+        <div>
+            <label class="cda-field-label">Kind</label>
+            <InputSelect TValue="CapabilityKind" Value="Draft.Model.Kind" ValueChanged="Draft.ChangeKind" ValueExpression="@(() => Draft.Model.Kind)" disabled="@Draft.Model.IsBuiltIn" class="cda-input" data-testid="@($"{TestId}-kind")">
+                @foreach (var kind in Kinds) {
+                    <option value="@kind">@Label(kind)</option>
+                }
+            </InputSelect>
+        </div>
+        <div>
+            <label class="cda-field-label">Name</label>
+            <AuthoringText Value="@Draft.Model.Name" ValueChanged="Draft.ChangeName" ValueExpression="@(() => Draft.Model.Name)" disabled="@Draft.IdentityLocked" class="cda-input" data-testid="@($"{TestId}-name")" />
+        </div>
+        <div>
+            <label class="cda-field-label">Key</label>
+            <AuthoringText Value="@Draft.Model.Key" ValueChanged="Draft.ChangeKey" ValueExpression="@(() => Draft.Model.Key)" disabled="@Draft.IdentityLocked" class="cda-input" data-testid="@($"{TestId}-key")" />
+        </div>
+    </Grid>
+    <div>
+        <label class="cda-field-label">Description</label>
+        <AuthoringTextArea @bind-Value="Draft.Model.Description" disabled="@Draft.IdentityLocked" class="cda-input capability-authoring__small-textarea" data-testid="@($"{TestId}-description")" />
+    </div>
+    @if (!Draft.IsWizard) {
+        <div>
+            <label class="cda-field-label">Endpoint or path</label>
+            <AuthoringText @bind-Value="Draft.Model.EndpointOrPath" disabled="@Draft.IdentityLocked" class="cda-input" data-testid="@($"{TestId}-endpoint")" />
+        </div>
+    }
+    <TagEditor Value="Draft.Model.Tags" ValueChanged="ChangeTags" Suggestions="TagSuggestions" Placeholder="Add capability tag" MaxTags="12" TestId="@($"{TestId}-tags")" InputTestId="@($"{TestId}-tags-input")" />
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<string> TagSuggestions { get; set; } = [];
+    private IEnumerable<CapabilityKind> Kinds => Draft.IsWizard
+        ? [CapabilityKind.McpServer, CapabilityKind.Skill, CapabilityKind.Tool]
+        : new[] { CapabilityKind.McpServer, CapabilityKind.Skill, CapabilityKind.Tool, CapabilityKind.Plugin, CapabilityKind.Rag, CapabilityKind.AiContext, Draft.Model.Kind }.Distinct();
+    private static string Label(CapabilityKind kind) => kind switch {
+        CapabilityKind.McpServer => "MCP server",
+        CapabilityKind.AiContext => "AI context",
+        _ => kind.ToString()
+    };
+    private void ChangeTags(IReadOnlyList<string> tags) {
+        Draft.Model.Tags = tags.ToList();
+        Draft.Changed();
+    }
+}

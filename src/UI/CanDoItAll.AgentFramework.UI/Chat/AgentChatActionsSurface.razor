@@ -1,0 +1,20 @@
+@{ var rendered = State; }
+
+@if (rendered.HasPendingApprovals) {
+    <Button Icon="cancel" Text="Cancel pending run" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+            Disabled="@rendered.Busy" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.CancelPendingRun)))"
+            data-testid="agents-chat-cancel-pending-run" />
+}
+@if (rendered.FocusedFloating) {
+    <Button Icon="add_comment" Text="New thread" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+            Disabled="@rendered.NewThreadBlocked" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.NewThread)))"
+            data-testid="agents-chat-focused-new-thread" />
+}
+<Button Icon="runtime" Text="Runtime details" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+        Disabled="@(!rendered.CanOpenRuntime)" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.OpenRuntime)))"
+        data-testid="agents-chat-open-runtime-details" />
+
+@code {
+    [Parameter, EditorRequired] public AgentChatActionState State { get; set; } = default!;
+    [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
+}

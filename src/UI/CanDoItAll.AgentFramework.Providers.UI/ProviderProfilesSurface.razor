@@ -1,0 +1,331 @@
+@{
+    var editor = View.Editor;
+    var providerModel = editor.Model;
+    var target = new ProviderEditorTarget(View.State.ProviderId, View.Activation, View.Editor.Context);
+    var slot = new ProviderHostSlotContext(target, View.State.Section, View.SourceManaged);
+}
+<ListDetailShell ListPaneWidth="25rem"
+                 data-testid="agents-provider-profiles-panel" data-editor-activation="@target.Activation">
+    <ListHeader>
+        <ListPanelHeader Title="Provider profiles" Dense="true">
+            <Actions>
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                    <Button Icon="add" title="New provider" aria-label="New provider"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => ResetProviderAsync(target))" data-testid="providers-new" />
+                    <Button Icon="refresh" title="Refresh providers" aria-label="Refresh providers"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="LoadAsync" data-testid="providers-refresh" />
+                    <Button Icon="hub" title="Shared provider connections" aria-label="Shared provider connections"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => sharedConnectionsOpen = true)" data-testid="providers-connections" />
+                </Cluster>
+            </Actions>
+            <Filters>
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny" data-testid="providers-filter">
+                    <TextBox Immediate="true" @bind-Value="providerSearch"
+                           class="cda-input min-w-0 flex-1" placeholder="Search providers"
+                           aria-label="Search providers" data-testid="providers-search" />
+                    <Button Icon="filter_alt_off" title="Reset filter" aria-label="Reset provider filter"
+                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="ResetProviderSearch" data-testid="providers-search-reset" />
+                    <span class="shrink-0 text-xs text-slate-500" data-testid="providers-filter-count"
+                          aria-label="Provider results">@FilteredProviders.Count / @providers.Count</span>
+                </Cluster>
+            </Filters>
+        </ListPanelHeader>
+    </ListHeader>
+
+    <ListContent>
+        @if (isLoading) {
+            <EmptyState Eyebrow="Loading"
+                        Title="Loading provider catalog"
+                        Description="AgentFramework is reading persisted and seeded provider profiles." />
+        } else if (FilteredProviders.Count == 0) {
+            <EmptyState Eyebrow="No providers"
+                        Title="No provider profiles match the current filter"
+                        Description="Clear the search filter or create a provider profile." />
+        } else {
+            <TreeView Items="@ProviderTreeNodes"
+                      Style="TreeViewStyle.Workbench"
+                      AriaLabel="Provider profiles grouped by tag"
+                      EmptyText="No provider profiles are available."
+                      OnSelect="HandleProviderTreeSelectAsync"
+                      OnToggle="HandleProviderTreeToggleAsync"
+                      data-testid="providers-tree" />
+        }
+    </ListContent>
+
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Tiny">
+            <p class="cda-eyebrow">Provider editor</p>
+            <h2 class="cda-title-xl">@(View.State.ProviderId.HasValue
+                ? View.CanEdit ? providerModel.Name : SelectedProvider?.Name ?? "Unavailable provider"
+                : "New provider profile")</h2>
+            <p class="cda-body-muted">@ResolveSelectedProviderStatus()</p>
+        </Stack>
+    </DetailHeader>
+
+    <DetailContent>
+        @if (View.HasPendingReconciliation) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-reconciliation-pending">
+                The provider change is saved. Reconcile its current state before another write.
+                <Button Text="Reconcile saved change" Icon="refresh" Disabled="@isBusy"
+                        Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Reconcile)))" data-testid="providers-reconcile" />
+            </Alert>
+        }
+        @if (View.IsWriteUnconfirmed) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="providers-write-unconfirmed">
+                The write outcome is unconfirmed. Verify this exact provider attempt before another write.
+                <Button Text="Verify provider write" Icon="refresh" Disabled="@isBusy"
+                        Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Verify)))" data-testid="providers-verify" />
+            </Alert>
+        }
+        @if (View.HasVerifiedRetry) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-verified-absent">
+                The write was not committed. A controlled retry retains the same identity and submission.
+                <Button Text="Retry verified write" Disabled="@isBusy" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.RetryVerified)))" data-testid="providers-retry-verified" />
+            </Alert>
+        }
+        @if (View.MetadataWarning is { } metadataWarning) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-metadata-warning">@metadataWarning</Alert>
+        }
+        @if (View.Error is { } error) {
+            <Stack GapScale="LayoutGap.Medium" data-testid="providers-load-failed">
+                <Alert AlertStyle="AlertStyle.Danger">@error</Alert>
+                <Button Text="Retry" Icon="refresh" Click="LoadAsync" data-testid="providers-load-retry" />
+            </Stack>
+        } else if (!View.CanEdit) {
+            <Stack data-testid="providers-editor-loading">
+                <EmptyState Title="Loading provider editor" Description="Reading the selected provider profile." />
+            </Stack>
+        } else {
+            @if (View.SecretMetadataError is { } secretError) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-secret-warning">
+                    Secret metadata could not be loaded: @secretError. Saved references are retained.
+                </Alert>
+            }
+                <div class="agent-provider-editor-tabs-shell">
+                    <Tabs @key="(target.ProviderId, target.Activation)" @bind-SelectedIndex="providerEditorTabIndex"
+                          RenderMode="TabRenderMode.Client"
+                          Variant="TabsVariant.WorkspaceSecondary"
+                          OverflowMode="TabsOverflowMode.Wrap"
+                          Class="agent-provider-editor-tabs"
+                          AriaLabel="Provider editor tabs"
+                          data-testid="provider-editor-tabs">
+                        @foreach (var definition in ProviderEditorSections.All) {
+                            <TabsItem @key="definition.Section" Text="@definition.Label" Icon="@definition.Icon"
+                                      data-testid="@($"provider-editor-tab-{ProviderEditorSections.Token(definition.Section)}")">
+                                @switch (definition.Section) {
+                                    case ProviderEditorSection.Connection:
+
+                            <ProviderProfileEditorForm Context="providerEditContext" Active="@(View.State.Section == definition.Section)" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@View.WritesBlocked"
+                                                       Save="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Save)))" Clear="@(() => ResetProviderAsync(target))"
+                                                       Health="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Health)))"
+                                                       Delete="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Delete)))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
+                            <div class="agent-provider-connection-tab">
+                                <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
+                                    <div>
+                                        <label class="cda-field-label">Name</label>
+                                        <TextBox Immediate="true" @bind-Value:get="providerModel.Name" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Name), value, accepted => providerModel.Name = accepted))"
+                                                   class="cda-input"
+                                                   data-testid="providers-name-input" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Default model</label>
+                                        <TextBox Immediate="true" Value="@ProviderDefaultModelText" ValueChanged="@(value => SetField(target, editor, nameof(providerModel.DefaultModel), value, accepted => providerModel.DefaultModel = accepted ?? string.Empty))"
+                                                   class="cda-input"
+                                                   data-testid="providers-model-input" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Provider kind</label>
+                                        <InputSelect TValue="ProviderKind" Value="@providerModel.Kind"
+                                                     ValueChanged="@(value => ChangeProviderKind(target, value))"
+                                                     ValueExpression="@(() => providerModel.Kind)"
+                                                     class="cda-input"
+                                                     data-testid="providers-kind-select">
+                                            @foreach (var kind in Enum.GetValues<ProviderKind>()) {
+                                                <option value="@kind">@kind</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Purpose</label>
+                                        <InputSelect @bind-Value:get="providerModel.Purpose" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Purpose), value, accepted => providerModel.Purpose = accepted))"
+                                                     class="cda-input"
+                                                     data-testid="providers-purpose-select">
+                                            @foreach (var purpose in Enum.GetValues<ProviderProfilePurpose>()) {
+                                                <option value="@purpose">@purpose</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                </Grid>
+
+                                <div>
+                                    <label class="cda-field-label">Base URL</label>
+                                    <TextBox Immediate="true" @bind-Value:get="providerModel.BaseUrl" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.BaseUrl), value, accepted => providerModel.BaseUrl = accepted))"
+                                               class="cda-input"
+                                               data-testid="providers-base-url-input" />
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">API key secret</label>
+                                    <InputSelect @bind-Value:get="providerModel.ApiKeyEnvironmentVariable" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ApiKeyEnvironmentVariable), value, accepted => providerModel.ApiKeyEnvironmentVariable = accepted))"
+                                                 class="cda-input"
+                                                 data-testid="providers-api-key-input">
+                                        <option value="">None</option>
+                                        @if (HasUnlistedSecretReference) {
+                                            <option value="@providerModel.ApiKeyEnvironmentVariable">@(View.SecretMetadataError is null ? "Unavailable saved secret" : "Unverified saved secret")</option>
+                                        }
+                                        @foreach (var secret in secrets) {
+                                            <option value="@secret.Reference">@secret.Name</option>
+                                        }
+                                    </InputSelect>
+                                    @if (HasUnlistedSecretReference) {
+                                        <p class="cda-body-muted mt-1">@(View.SecretMetadataError is null ? "The saved secret reference is no longer available in the vault. Select another secret before saving." : "Secret metadata is unavailable. The saved reference has not been verified and is retained.")</p>
+                                    } else if (secrets.Count == 0 && View.SecretMetadataError is null) {
+                                        <p class="cda-body-muted mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</p>
+                                    }
+                                </div>
+
+                                <TagEditor Value="@providerTagValues"
+                                           onkeydown="if (event.key === 'Enter' &amp;&amp; event.target instanceof HTMLInputElement) event.preventDefault();"
+                                           ValueChanged="@(value => ChangeProviderTags(target, value))"
+                                           Suggestions="@AvailableProviderTags"
+                                           Placeholder="Add provider tag"
+                                           Hint="Use tags such as openai, ollama, local, cloud, chat, image, or fallback."
+                                           MaxTags="12"
+                                           TestId="providers-tags"
+                                           InputTestId="providers-tags-input" />
+                                </FormSection>
+                            </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
+
+                                        break;
+                                    case ProviderEditorSection.Prices:
+
+                            <ProviderProfileEditorForm Context="providerEditContext" Active="@(View.State.Section == definition.Section)" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@View.WritesBlocked"
+                                                       Save="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Save)))" Clear="@(() => ResetProviderAsync(target))"
+                                                       Health="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Health)))"
+                                                       Delete="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Delete)))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
+                            <div class="agent-provider-prices-tab">
+                                <ProviderModelPricingEditor @key="providerModel" Model="providerModel"
+                                                            ModelNames="@providerModel.SuggestedModels"
+                                                            SourceManaged="@SelectedProviderIsSourceManaged"
+                                                            Provider="@SelectedProvider"
+                                                            PricingKind="@providerModel.Kind"
+                                                            DefaultModel="@providerModel.DefaultModel"
+                                                            OnRefreshPrices="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.DiscoverModels)))" />
+                            </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
+
+                                        break;
+                                    case ProviderEditorSection.Runtime:
+
+                            <ProviderProfileEditorForm Context="providerEditContext" Active="@(View.State.Section == definition.Section)" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@View.WritesBlocked"
+                                                       Save="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Save)))" Clear="@(() => ResetProviderAsync(target))"
+                                                       Health="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Health)))"
+                                                       Delete="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Delete)))">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
+                            <div class="agent-provider-runtime-tab">
+                                <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                        <div>
+                                            <label class="cda-field-label">Transport</label>
+                                            <InputSelect @bind-Value:get="providerModel.Transport" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Transport), value, accepted => providerModel.Transport = accepted))"
+                                                         class="cda-input"
+                                                         data-testid="providers-transport-select">
+                                                @foreach (var transport in Enum.GetValues<ProviderTransportKind>()) {
+                                                    <option value="@transport">@transport</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Suggested models</label>
+                                            <TextArea Immediate="true" Value="@suggestedModelsText" ValueChanged="@(value => ChangeSuggestedModels(target, value))"
+                                                      class="cda-input min-h-[7rem]"
+                                                      data-testid="providers-suggested-models"></TextArea>
+                                        </div>
+                                    </Grid>
+
+                                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2" ColumnsXl="3">
+                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.IsEnabled" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.IsEnabled), value, accepted => providerModel.IsEnabled = accepted))" /> Enabled</label>
+                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsStreaming" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsStreaming), value, accepted => providerModel.SupportsStreaming = accepted))" /> Streaming</label>
+                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsTools" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsTools), value, accepted => providerModel.SupportsTools = accepted))" /> Tool calling</label>
+                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.PreferFrameworkManagedChatHistory" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.PreferFrameworkManagedChatHistory), value, accepted => providerModel.PreferFrameworkManagedChatHistory = accepted))" /> Framework-managed history</label>
+                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsBackgroundResponses" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsBackgroundResponses), value, accepted => providerModel.SupportsBackgroundResponses = accepted))" /> Background responses</label>
+                                    </Grid>
+                                </FormSection>
+
+                                <FormSection Title="Configuration and notes" Description="Advanced provider metadata. Keep JSON valid and explicit.">
+                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                        <div>
+                                            <label class="cda-field-label">Configuration JSON</label>
+                                            <TextArea Immediate="true" @bind-Value:get="providerModel.ConfigurationJson" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ConfigurationJson), value, accepted => providerModel.ConfigurationJson = accepted))"
+                                                           class="cda-input min-h-[12rem] font-mono text-xs"
+                                                           data-testid="providers-config-json" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Notes</label>
+                                            <TextArea Immediate="true" @bind-Value:get="providerModel.Notes" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Notes), value, accepted => providerModel.Notes = accepted))"
+                                                           class="cda-input min-h-[12rem]"
+                                                           data-testid="providers-notes" />
+                                        </div>
+                                    </Grid>
+                                </FormSection>
+                            </div>
+                            </fieldset>
+                            </ProviderProfileEditorForm>
+
+                                        break;
+                                    case ProviderEditorSection.Thinking:
+
+                            <ProviderProfileEditorForm Context="providerEditContext" Active="@(View.State.Section == definition.Section)" CanManage="@(!SelectedProviderIsSourceManaged)"
+                                                       HasSavedProvider="@providerModel.Id.HasValue" IsBusy="@isBusy" WritesBlocked="@View.WritesBlocked"
+                                                       Save="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Save)))" Clear="@(() => ResetProviderAsync(target))"
+                                                       Health="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Health)))"
+                                                       Delete="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.Delete)))">
+                            <ProviderThinkingSurface @key="providerModel" Model="providerModel" Provider="SelectedProvider" Draft="View.Editor">
+                                <SourceRefresh>@SourceRefreshSlot?.Invoke(slot with { Section = ProviderEditorSection.Thinking })</SourceRefresh>
+                            </ProviderThinkingSurface>
+                            </ProviderProfileEditorForm>
+
+                                        break;
+                                    case ProviderEditorSection.Sharing:
+
+                            @if (View.State.Section == ProviderEditorSection.Sharing) {
+                                @SharingSlot?.Invoke(slot)
+                            }
+
+                                        break;
+                                    case ProviderEditorSection.History:
+
+                            @if (View.State.Section == ProviderEditorSection.History) {
+                                @HistorySlot?.Invoke(slot)
+                            }
+
+                                        break;
+                                }
+                            </TabsItem>
+                        }
+                    </Tabs>
+                </div>
+
+        }
+    </DetailContent>
+</ListDetailShell>
+
+@if (sharedConnectionsOpen) {
+    @ConnectionsSlot?.Invoke(slot)
+}

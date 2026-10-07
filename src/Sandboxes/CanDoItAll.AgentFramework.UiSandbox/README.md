@@ -66,7 +66,52 @@ Loading, empty and card states use the same components. Avatar fallback demonstr
 
 See the [rendering UI boundary](../../UI/CanDoItAll.AgentFramework.UI/README.md) for current ownership and [Testing](../../../docs/testing.md) for maintained validation commands. Historical Catalog extraction and direct-watch reports are not included in this checkout. For new timing evidence, separate SDK update time from local edit-to-visible latency and retain failures. A small project graph or reduced CSS size alone is not a performance result.
 
-## Reload context
+## Agents shell and Usage completion
+
+Open `/completion?detail=consumers`, `detail=providers` or `detail=models` for the actual
+shared shell and all three Usage renderers. Ready, loading, error, empty, partial, unknown,
+long-content and retired states are deterministic. The second instance holds an independent
+fourteen-day Simple Chat interval; closing or retrying the first view does not retarget it.
+Shell commands and default confirmation only update the sample intent log. These fixtures do
+not certify native reads, writes or authorization. AC1 evidence uses the flexible page at
+1920×1080, scale 1; it does not run a smaller viewport campaign.
+
+## Technical team authoring
+
+Open `/teams` or `/teams/Large` for the complete technical-team metadata, nested icon and
+membership family. The selector includes new, existing, empty, missing references, failed
+load, rejection, unknown acknowledgement, held load/save and deleted-target cases. Release
+held operations explicitly; open the second metadata editor to check draft isolation. The
+fixture has independent stored records and separate metadata/member counters. This is simulated
+catalog behavior, not native authority or persistence proof. New CA1 checks use only
+1920×1080 at scale 1.
+
+## Request History specimen
+
+Open `/agents?specimen=history&scenario=normal` for the full production History workspace,
+including filters, paging, metadata and the separate content dialog. Use the scenario selector
+for large/empty/incomplete results, exact canonical owners, denied reads, expired/pending/redacted/
+unavailable content, controlled delays and two independent workspaces. All data is synthetic.
+These scenarios do not claim native provider or authorization proof.
+
+Each workspace owns a narrow fixture reader and reports separate search, metadata, content,
+pending and canceled read counters. Mounting, editing or changing scope leaves the counters at
+zero. Search reads one bounded page; choosing a row reads metadata; explicit content requests
+carry the exact owner. Fixture cursors are bound to the submitted query. Fixed provider scope
+and global scope use the same renderer.
+
+Delayed reads complete after three seconds, deliberately including a late response after
+cancellation. Retire or close the workspace while waiting to inspect the publication fence.
+The page-level completion/failure controls can finish pending reads sooner. Retiring one
+workspace leaves its neighbor active. This host registers no production History, runtime,
+database, vault or HTTP service.
+
+New PP3 browser checks use 1920×1080 at scale 1. `ProviderHistorySandboxBrowserTests` runs both
+source and independent published Parity hosts, with actual fonts, scoped CSS and dialog assets.
+The [boundary record](../../../docs/architecture/provider-history-ui-pp3.md) records results and
+measured development-loop evidence separately from the historical catalog measurements.
+
+## Catalog reload context
 
 The development specimen accepts `scenario=normal|loading|empty|card-states|avatar-fallback`, `layout=matched|flexible`, and optional `agentId`/`teamId` query values on `/agents`. IDs must exist in the embedded fixture. Invalid values normalize to Normal/Matched or no selection. Controls replace the current history entry; a browser reload restores that context. Search text, favorite toggles and recorded intent text remain transient.
 
@@ -95,3 +140,44 @@ The scenario selector covers initial loading/failure, stale Overview, empty/read
 Both modes use the actual Charts components, Apex chart JavaScript/static assets, isolated Overview CSS, real consumer avatars, icons and tooltips. The Overview controls reserve the observed full-app top offset so its 1600x1000 comparison uses the same rendered chart frame. Small viewports and long labels are separate browser checks.
 
 Record new Overview direct-watch measurements against this specimen, including exact probes and source restoration. The historical Overview evidence is not included in this checkout. Catalog/Capabilities timings are not Overview measurements.
+# Runtime and conversation adjunct specimen
+
+`/adjuncts` uses the actual runtime/log, context, close-choice, activity, chat-action,
+attachment and avatar renderers from the light UI library. It covers waiting, streaming,
+completed, failure, unknown, partial and long-line presentation, and an independent second
+run. The sample reads selected image bytes with an explicit limit and displays their SHA-256;
+avatar upload validates the same Models image policy. No provider, paid generation, native
+staging, admission, approval or persistence service is registered.
+
+AC1 source browser proof uses only 1920×1080 at scale 1. Test the real file chooser, decoded
+avatar image, modal footer/focus, run highlight/copy, Detach/Follow and independent close.
+Published assets and final native consumer proof are recorded separately in
+[the current completion record](../../../docs/architecture/agents-completion-ac1.md).
+
+## Shell and Usage specimen
+
+`/completion?detail=consumers` renders `AgentsShellSurface` and the complete consumer,
+provider and model Usage surfaces. The specimen controls expose Loading, Ready, Empty,
+Partial, Error, Unknown, Long and Retired, explicit same-view Retry/Close and an independent second
+view. Queries and snapshots are fixed controlled values; paging does not read native
+history. The actual Charts components and shared assets are used in Fast, Parity and an
+independent Production publish. AC1 validates these modes at 1920×1080 scale 1.
+
+The adjacent Voice and Floating settings specimens remain the existing light components.
+Their Save and secondary-failure displays are fixture outcomes; native save/readback,
+coordinator outcomes and real Audio lifecycle are separate proof. See the maintained
+[asset and activation closure](../../../docs/architecture/agents-renderer-assets.md).
+
+## Simple Chat conversation dialogs
+
+`/simple-chat-dialogs?scenario=Start` uses the real SimpleChats UI dialog renderer.
+The named scenarios are Start, Empty, Loading, Busy, Rename, Archive and Independent.
+They cover the actual definition picker/filter, Load more intent, title input, busy
+controls, exact archive confirmation and two independent dialog owners. The specimen
+changes only local immutable presentation and its intent log; it has no authorization,
+conversation store or runtime service.
+
+Use source Fast/Parity and independent Production publish at 1920×1080, scale 1.
+Wait for the actual open HTML `dialog` and its rendered state before interaction.
+An unreferenced button has no guaranteed Blazor `_bl_` marker and is not a valid readiness
+barrier. Native persistence and old-opening callback isolation have separate owning tests.

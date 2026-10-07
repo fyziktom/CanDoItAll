@@ -2,13 +2,14 @@ using System.Globalization;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Workbench.Execution.UI.Processes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
-public sealed class ProjectStructureProcessAssignmentDialogTests
+public sealed partial class ProjectStructureProcessAssignmentDialogTests
 {
     [Fact]
     public void Assignment_dialog_renders_fullscreen_role_assignment_surface()
@@ -182,14 +183,14 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             Assert.Equal(typeof(ProjectStructureProcessAgentPickerDialog), picker.ComponentType);
         });
 
-        dialogService.Close(directoryOnlyCandidate.CandidateId);
+        dialogService.Close(new ProcessCandidateChoice(state.DialogId, role.LaunchPlanRoleId, directoryOnlyCandidate.CandidateId, selectedCandidate.CandidateId));
 
         cut.WaitForAssertion(() =>
         {
             var confirmation = Assert.Single(dialogService.Dialogs);
             Assert.Equal("project-structure-process-assignment-agent-switch-confirmation-dialog", confirmation.Options.TestId);
         });
-        dialogService.Close(true);
+        dialogService.Close(Assert.Single(dialogService.Dialogs).Parameters[nameof(ProjectStructureProcessAgentSwitchConfirmationDialog.Choice)]);
 
         cut.WaitForAssertion(() => Assert.NotNull(selection));
         Assert.Equal(role.LaunchPlanRoleId, selection!.LaunchPlanRoleId);
@@ -236,7 +237,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
         Assert.Equal(typeof(ProjectStructureProcessAgentSwitchConfirmationDialog), dialog.ComponentType);
         Assert.Null(selection);
 
-        dialogService.Close(true);
+        dialogService.Close(Assert.Single(dialogService.Dialogs).Parameters[nameof(ProjectStructureProcessAgentSwitchConfirmationDialog.Choice)]);
 
         cut.WaitForAssertion(() => Assert.NotNull(selection));
         Assert.Equal(role.LaunchPlanRoleId, selection!.LaunchPlanRoleId);

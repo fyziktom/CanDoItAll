@@ -1,106 +1,9 @@
 @page "/agents"
+@using CanDoItAll.AgentFramework.UI.Shell
 
 <PageTitle>Agents</PageTitle>
 
-<PageScaffold MaxWidthClass="max-w-full">
-    <Header>
-        <PageHeader Eyebrow="AgentFramework"
-                    Title="Integrated technical agent runtime"
-                    Description="@AgentFrameworkShellHelpText"
-                    Compact="true">
-            <Stats>
-                <CompactStat Label="technical agents"
-                             Value="@ResolveSummaryValue(technicalAgentCount)"
-                             TooltipText="Organization-scoped technical runtime records."
-                             Tone="info" />
-                <CompactStat Label="providers"
-                             Value="@ResolveSummaryValue(providerCount)"
-                                  TooltipText="Provider profiles executed through AgentFramework."
-                             Tone="success" />
-                <CompactStat Label="bound resources"
-                             Value="@BoundResourceValue"
-                             TooltipText="CRM-HR AI resources already bound to a technical agent."
-                             Tone="warning" />
-                <CompactStat Label="capabilities"
-                             Value="@ResolveSummaryValue(capabilityCount)"
-                             TooltipText="Reusable skills, MCP servers, and other runtime capabilities."
-                             Tone="accent" />
-                <CompactStat Label="active runs"
-                             Value="@ResolveSummaryValue(activeRunCount)"
-                             TooltipText="Durable technical executions still in progress."
-                             Tone="info" />
-                <CompactStat Label="failed runs"
-                             Value="@ResolveSummaryValue(failedRunCount)"
-                             TooltipText="Recent execution failures that still need governance attention."
-                             Tone="danger" />
-            </Stats>
-            <Actions>
-                @if (HasHeaderFailure) {
-                    <Button Icon="refresh"
-                            Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Warning"
-                            title="@HeaderFailureText"
-                            aria-label="Retry header information"
-                            Disabled="@session.HeaderLoading"
-                            Click="RetryHeaderAsync"
-                            data-testid="agents-header-retry" />
-                }
-                <AgentAvatarActionButton AgentName="@HrAgentDisplayName"
-                                         AvatarImageUrl="@HrAgentAvatarImageUrl"
-                                         FallbackText="HR"
-                                         Label="@($"Open {HrAgentDisplayName}")"
-                                         Click="OpenHrAgentAsync"
-                                         Disabled="@(!IsHrReady || isOpeningHrAgent)"
-                                         TestId="agents-hr-agent-open-header"
-                                         TooltipTestId="agents-hr-agent-tooltip" />
-                <HelpPopover RootClass="pf-help-popover inline-flex items-center"
-                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
-                             OpenOnHover="true"
-                             AriaLabel="Show AgentFramework shell help"
-                             Title="Show AgentFramework shell help"
-                             Heading="AgentFramework shell"
-                             Body="@AgentFrameworkShellHelpText" />
-                <PageHeaderActionButton Icon="groups"
-                                        Label="Open CRM / HR agents"
-                                        TooltipText="Open CRM-HR agent projections."
-                                        ButtonStyle="ButtonStyle.Primary"
-                                        Click="OpenCrmHrAgents"
-                                        data-testid="agents-shell-open-crmhr" />
-                <PageHeaderActionButton Icon="flow"
-                                        Label="Open workflows"
-                                        TooltipText="Open AgentFramework workflows."
-                                        Click="OpenWorkflows"
-                                        data-testid="agents-shell-open-workflows" />
-                <PageHeaderActionButton Icon="flow"
-                                        Label="Open processes"
-                                        TooltipText="Open the processes workspace."
-                                        Click="OpenProcesses"
-                                        data-testid="agents-shell-open-processes" />
-            </Actions>
-        </PageHeader>
-    </Header>
-
-    <Lead>
-        <Cluster AlignItems="AlignItems.Center"
-                 JustifyContent="JustifyContent.SpaceBetween"
-                 Gap="LayoutGap.Small"
-                 Wrap="FlexWrap.NoWrap"
-                 Class="w-full"
-                 data-testid="agents-shell-tabs">
-            <SecondaryTabs Items="Tabs"
-                           SelectedKey="@selectedTab"
-                           SelectedKeyChanged="HandleTabChangedAsync" />
-            <PageHeaderActionButton Icon="cloud_sync"
-                                    Label="Load default agents and providers"
-                                    TooltipText="Load the managed default agents and providers again."
-                                    Click="FeedDefaultsAsync"
-                                    Disabled="@(isConfirmingDefaults || isFeedingDefaults)"
-                                    IsBusy="@isFeedingDefaults"
-                                    data-testid="agents-shell-feed-defaults" />
-        </Cluster>
-    </Lead>
-
-    <ChildContent>
+<AgentsShellSurface State="ShellPresentation" Intent="HandleShellIntentAsync">
         @if (string.Equals(selectedTab, AgentWorkspaceTabs.Providers, StringComparison.Ordinal))
         {
             <AgentProviderProfilesPanel />
@@ -119,7 +22,7 @@
         }
         else if (string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
         {
-            <AgentCatalogHost RequestedAgentId="@effectiveRequestedAgentId"
+            <AgentCatalogHost @key="catalogScopeVersion" RequestedAgentId="@effectiveRequestedAgentId"
                                RequestedTeamId="@effectiveRequestedTeamId"
                                SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                SelectedTeamChanged="HandleSelectedTeamChangedAsync"
@@ -159,8 +62,7 @@
         {
             <AgentsOverviewSurface State="@OverviewPresentation" Intent="HandleOverviewIntentAsync" />
         }
-    </ChildContent>
-</PageScaffold>
+</AgentsShellSurface>
 
 <AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
                                  ContextNavigationIdentity="@AgentChatNavigationFence"

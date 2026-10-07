@@ -93,7 +93,7 @@
         RebuildModelChoices();
 
         var providerFingerprint = ResolveProviderFingerprint();
-        var currentValue = NormalizeModel(Value);
+        var currentValue = NormalizeSelectedModel(Value);
         var providerChanged = !string.Equals(previousProviderFingerprint, providerFingerprint, StringComparison.Ordinal);
         var valueChangedExternally = !suppressNextParameterSync &&
                                      !string.Equals(previousValue, currentValue, StringComparison.Ordinal);
@@ -128,7 +128,7 @@
         foreach (var option in ResolveModelOptions())
         {
             if (!string.IsNullOrWhiteSpace(providerDefault) &&
-                string.Equals(option, providerDefault, StringComparison.OrdinalIgnoreCase))
+                string.Equals(option, providerDefault, ModelComparison))
             {
                 continue;
             }
@@ -143,14 +143,14 @@
     private IReadOnlyList<string> ResolveModelOptions()
     {
         var models = Provider?.SuggestedModels ?? [];
-        var selected = NormalizeModel(Value);
+        var selected = NormalizeSelectedModel(Value);
         if (Provider?.ModelDisplayNames.ContainsKey(selected) == true) {
             models = [.. models, selected];
         }
         return models
             .Where(model => !string.IsNullOrWhiteSpace(model))
-            .Select(model => model.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(NormalizeSelectedModel)
+            .Distinct(ModelComparer)
             .OrderBy(model => Provider?.GetModelDisplayName(model) ?? model, ModelNameComparer)
             .ToList();
     }
@@ -192,7 +192,7 @@
 
         var modelChoice = modelChoices.FirstOrDefault(option =>
             option.Kind == ProviderModelChoiceKind.SuggestedModel &&
-            string.Equals(option.Model, currentValue, StringComparison.OrdinalIgnoreCase));
+            string.Equals(option.Model, currentValue, ModelComparison));
         if (modelChoice is not null)
         {
             choice = modelChoice;
@@ -207,7 +207,7 @@
     {
         var providerDefault = ResolveProviderDefaultModel();
         return !string.IsNullOrWhiteSpace(providerDefault) &&
-               string.Equals(value.Trim(), providerDefault, StringComparison.OrdinalIgnoreCase);
+               string.Equals(NormalizeSelectedModel(value), providerDefault, ModelComparison);
     }
 
     private async Task HandleChoiceChangedAsync(ProviderModelSelectorOption? choice)
@@ -246,13 +246,13 @@
 
     private async Task HandleCustomModelChangedAsync(string? value)
     {
-        customModelName = NormalizeModel(value);
+        customModelName = NormalizeSelectedModel(value);
         await EmitValueAsync(customModelName);
     }
 
     private async Task EmitValueAsync(string? value)
     {
-        var normalizedValue = NormalizeModel(value);
+        var normalizedValue = NormalizeSelectedModel(value);
         suppressNextParameterSync = true;
         previousValue = normalizedValue;
         await ValueChanged.InvokeAsync(normalizedValue);
@@ -270,7 +270,7 @@
         => UseEmptyValueForProviderDefault ? string.Empty : ResolveProviderDefaultModel();
 
     private string ResolveProviderDefaultModel()
-        => NormalizeModel(Provider?.DefaultModel);
+        => NormalizeSelectedModel(Provider?.DefaultModel);
 
     private string ResolveProviderFingerprint()
     {
@@ -283,6 +283,13 @@
             modelOptions,
             string.Join('\u001f', modelChoices.Select(choice => choice.Text)));
     }
+
+    private StringComparison ModelComparison => Provider?.AllowsModelOverride == false
+        ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+    private StringComparer ModelComparer => Provider?.AllowsModelOverride == false
+        ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+    private string NormalizeSelectedModel(string? value)
+        => Provider?.AllowsModelOverride == false ? value ?? string.Empty : NormalizeModel(value);
 
     private static string NormalizeModel(string? value)
         => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();

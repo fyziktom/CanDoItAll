@@ -408,7 +408,19 @@ public sealed record WorkflowProviderOption(
     bool SupportsTools,
     bool SupportsStructuredOutput,
     bool SupportsVision,
-    bool SupportsBackgroundResponses);
+    bool SupportsBackgroundResponses) {
+    /// <summary>
+    /// Model identifiers and display names published by the shared provider source; empty for local profiles.
+    /// Use each model's identifier, not its display name, when selecting a model.
+    /// </summary>
+    public IReadOnlyList<ProviderModelDisplayMetadata> ModelCatalog { get; init; } = [];
+
+    /// <summary>
+    /// True when the provider profile is imported from and managed by a shared provider source. Model selection
+    /// uses that source's published routing identifiers; custom model overrides are unavailable.
+    /// </summary>
+    public bool IsSourceManaged { get; init; }
+}
 
 /// <summary>
 /// Body of <c>POST /api/workflows/test-runs</c>: what to test and how. Identify the definition either with

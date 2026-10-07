@@ -16,6 +16,7 @@ public static class MemoryModuleServiceCollectionExtensions
         services.TryAddSingleton<MemoryProviderProfileEditorMapper>();
         services.TryAddScoped<IMemoryProviderProfileConfigurationService, MemoryProviderProfileConfigurationService>();
         services.TryAddScoped<MemoryProviderUiSurfaceProjector>();
+        services.TryAddScoped<MemoryUiProfileOrigin>();
         services.TryAddScoped<MemoryProviderSnapshotReader>();
         services.TryAddScoped<MemoryProviderProfileUiService>();
         services.TryAddScoped<MemoryProviderUiRequestFactory>();

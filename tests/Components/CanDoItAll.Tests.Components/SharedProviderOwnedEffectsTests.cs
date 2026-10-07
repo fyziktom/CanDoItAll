@@ -33,18 +33,18 @@ public sealed class SharedProviderOwnedEffectsTests {
         if (newDraft) {
             await cut.Find("[data-testid='providers-new']").ClickAsync();
         }
-        cut.Find("[data-testid='providers-name-input']").Change("Unsaved name");
+        cut.Find("[data-testid='providers-name-input']").Input("Unsaved name");
         await cut.FindAll("button[role='tab']").Single(x => x.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
         var raw = "first\n\n second \n first";
-        cut.Find("[data-testid='providers-suggested-models']").Change(raw);
-        cut.Find("[data-testid='providers-notes']").Change("Unsaved notes");
+        cut.Find("[data-testid='providers-suggested-models']").Input(raw);
+        cut.Find("[data-testid='providers-notes']").Input("Unsaved notes");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var count = reads.EditorReads;
         await cut.Find("[data-testid='providers-connections']").ClickAsync();
         await cut.WaitForElement("[data-testid='shared-provider-source-sync']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
-        Assert.Equal(raw, cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
+        Assert.Equal(raw, ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
         Assert.Equal("Unsaved notes", ((Editor)context.Model).Notes);
         Assert.Equal("Unsaved name", ((Editor)context.Model).Name);
         Assert.Equal(count, reads.EditorReads);
@@ -72,8 +72,8 @@ public sealed class SharedProviderOwnedEffectsTests {
         Task running;
         if (action == SourceAction.Save) {
             await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
-            cut.Find("[data-testid='shared-provider-source-name']").Change("New source");
-            cut.Find("[data-testid='shared-provider-source-uri']").Change("https://source.example.test/");
+            cut.Find("[data-testid='shared-provider-source-name']").Input("New source");
+            cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
             running = cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
         } else {
             running = cut.WaitForElement(action == SourceAction.Test
@@ -180,11 +180,12 @@ public sealed class SharedProviderOwnedEffectsTests {
         public int Operations { get; private set; }
         public CancellationToken ReceivedToken { get; private set; }
         private readonly TaskCompletionSource<SharedProviderSourceWriteResult> write = new();
+        private Guid? proposedSourceId;
         private readonly TaskCompletionSource<SharedProviderSourceOperationResult> operation = new();
         private SharedProviderChange Change => new(SharedProviderChangeKind.Reconciliation, [ImportedId],
             remoteOwnedFieldsChanged: true, catalogMembershipMayHaveChanged: true);
         public void Complete() {
-            write.TrySetResult(new(SourceId, Guid.NewGuid()) { Change = Change });
+            write.TrySetResult(new(proposedSourceId ?? SourceId, Guid.NewGuid()) { Change = Change });
             operation.TrySetResult(Result());
         }
         private SharedProviderSourceOperationResult Result() => SharedProviderSourceOperationResult.NotModified(
@@ -204,6 +205,9 @@ public sealed class SharedProviderOwnedEffectsTests {
             }
             Operations++;
             ReceivedToken = (CancellationToken)args![^1]!;
+            if (method?.Name == nameof(ISharedProviderManagementService.SaveSourceAsync)) {
+                proposedSourceId = ((SharedProviderSourceEditorRequest)args[0]!).Id;
+            }
             return method?.Name switch {
                 nameof(ISharedProviderManagementService.SaveSourceAsync) => write.Task,
                 nameof(ISharedProviderManagementService.TestSourceAsync) or nameof(ISharedProviderManagementService.SynchronizeSourceAsync)

@@ -5,9 +5,9 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.AgentContext;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using CanDoItAll.Workbench.Planning.UI;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -25,7 +25,12 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private bool isLoading;
     private bool mutationInFlight;
     private string? loadError;
-    private string? mermaidSource;
+    private GanttPreview? mermaidPreview;
+    private Guid viewOrigin = Guid.NewGuid();
+    private Guid? mutationOperation;
+    private bool readbackRequired;
+    private int activeOperations;
+    private readonly Dictionary<Guid, GanttMutationReceipt> mutationReceipts = [];
 
     [Inject]
     private IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge { get; set; } = default!;
@@ -89,9 +94,44 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     private string? lastPublishedObservationFingerprint;
     private bool disposed;
 
-    private ErrorBoundary? dragSourceErrorBoundary;
+    private bool IsCurrent(Guid origin) => !disposed && origin == viewOrigin;
 
-    private ErrorBoundary? chartErrorBoundary;
+    private async Task AcceptAsync(Guid origin, Func<Task> action) {
+        if (!IsCurrent(origin) || isLoading) {
+            return;
+        }
+        activeOperations++;
+        try {
+            await action();
+        } finally {
+            ReleaseOperation();
+        }
+    }
+
+    private void ReleaseOperation() {
+        activeOperations--;
+        if (disposed && activeOperations == 0) {
+            lifetimeCancellation.Dispose();
+        }
+    }
+
+    private GanttPresentation BuildPresentation() => new(viewOrigin) {
+        ProjectName = loadedSurface?.ProjectName ?? string.Empty,
+        HasProjection = projection is not null,
+        IsLoading = isLoading,
+        CanMutate = CanMutate,
+        LoadError = loadError,
+        Tasks = projection?.Tasks ?? [],
+        Dependencies = projection?.Dependencies ?? [],
+        ProjectionOnlyTaskIds = projection?.ProjectionOnlyTaskIds ?? new HashSet<GanttTaskId>(),
+        Warnings = NonScheduleWarnings.Select(issue => issue.Message).ToArray(),
+        Errors = ProjectionErrors.Select(issue => issue.Message).ToArray(),
+        ExpectedCostTotals = projection?.ExpectedCostTotals.Select(FormatExpectedCost).ToArray() ?? [],
+        TotalExpectedEffortHours = TotalExpectedEffortHours,
+        InsertionCandidate = insertionCandidate,
+        Preview = mermaidPreview,
+        Receipt = readbackRequired ? mutationReceipts.Values.LastOrDefault(receipt => receipt.Origin == viewOrigin) : null
+    };
 
     private Task PublishObservationAsync()
     {
@@ -122,11 +162,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         return ObservationChanged.InvokeAsync(observation);
     }
 
-    private bool CanMutate => !mutationInFlight && !isLoading;
-
-    private bool CanInsertTask =>
-        projection is { IsValid: true, Dependencies.Count: > 0 } &&
-        CanMutate;
+    private bool CanMutate => !disposed && !mutationInFlight && !isLoading && !readbackRequired;
 
     private decimal? TotalExpectedEffortHours
     {
@@ -152,19 +188,25 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 !IsScheduleProjectionIssue(issue.Code))
             .ToArray() ?? [];
 
-    private const string ExportFileName = "project-schedule-gantt.png";
-    private const string MermaidExportFileName = "project-schedule-gantt.mmd";
-
-    private string MermaidDownloadHref
-        => $"data:text/vnd.mermaid;charset=utf-8,{Uri.EscapeDataString(mermaidSource ?? string.Empty)}";
-
     protected override async Task OnParametersSetAsync()
     {
+        if (disposed) {
+            return;
+        }
+        activeOperations++;
+        try {
+            await LoadProjectionAsync();
+        } finally {
+            ReleaseOperation();
+        }
+    }
+
+    private async Task LoadProjectionAsync() {
         if (ProjectId == Guid.Empty)
         {
             loadError = "A project is required before its Gantt schedule can be displayed.";
             projection = null;
-            mermaidSource = null;
+            RetireView();
             return;
         }
 
@@ -172,7 +214,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             loadError = "The project schedule cannot be built because the supplied structure does not match this project.";
             projection = null;
-            mermaidSource = null;
+            RetireView();
             await PublishObservationAsync();
             return;
         }
@@ -185,7 +227,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         var capturedSurface = Surface;
         var previousAdmission = loadedSurface?.ExpectedProjectAdmission;
         loadedSurface = capturedSurface;
-        mermaidSource = null;
+        RetireView();
         if (projectionProjectId != ProjectId || previousAdmission != capturedSurface.ExpectedProjectAdmission)
         {
             projectionProjectId = ProjectId;
@@ -226,6 +268,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     projectionOriginUtc,
                     DefaultTaskDuration,
                     viewState.OrderedTaskNodeIds));
+            readbackRequired = false;
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
@@ -253,13 +296,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
-        // The interactive Gantt components come from a packaged library whose JS-interop
-        // registration can fault during rapid re-render/dispose cycles. The error boundaries
-        // keep such a fault scoped to the schedule area; a fresh projection retries them.
-        dragSourceErrorBoundary?.Recover();
-        chartErrorBoundary?.Recover();
-
         await PublishObservationAsync();
+    }
+
+    private void RetireView() {
+        viewOrigin = Guid.NewGuid();
+        mermaidPreview = null;
+        mutationInFlight = false;
+        mutationOperation = null;
     }
 
     private Task OpenMermaidPreviewAsync()
@@ -269,18 +313,23 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return Task.CompletedTask;
         }
 
-        mermaidSource = ProjectStructureGanttMermaidExporter.Build(Surface.ProjectName, projection);
+        mermaidPreview = new(viewOrigin, loadedSurface!.ProjectName,
+            ProjectStructureGanttMermaidExporter.Build(loadedSurface.ProjectName, projection),
+            projection.Tasks.Count, projection.Dependencies.Count);
         return Task.CompletedTask;
     }
 
     private Task CloseMermaidPreviewAsync()
     {
-        mermaidSource = null;
+        mermaidPreview = null;
         return Task.CompletedTask;
     }
 
     private async Task ApplyTitleAsync(GanttTaskTitleChangeRequest request)
     {
+        if (projection?.Tasks.Any(task => task.Id == request.TaskId && task.Title == request.CurrentTitle) != true) {
+            return;
+        }
         var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
         if (owner is null) {
             return;
@@ -292,6 +341,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private async Task ApplyScheduleAsync(GanttTaskScheduleChangeRequest request)
     {
+        if (!EnsureMutationHostAvailable()) {
+            return;
+        }
+        var origin = viewOrigin;
         var renderedSurface = loadedSurface ?? Surface;
         var owner = CaptureRenderedMutationOwner(renderedSurface);
         if (owner is null) {
@@ -299,6 +352,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         var renderedProjection = projection
             ?? throw new InvalidOperationException("The Gantt projection is unavailable.");
+        var frozenRequest = ProjectStructureGanttScheduleMutationFactory.Create(request, renderedSurface, renderedProjection.Tasks);
         var pendingProjection = renderedProjection.WithScheduleChanges(request.AffectedTasks);
         projection = pendingProjection;
 
@@ -306,12 +360,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             "schedule",
             cancellationToken => MutationService.ApplyScheduleAsync(
                 owner.ExpectedProjectAdmission!.ProjectId,
-                ProjectStructureGanttScheduleMutationFactory.Create(
-                    request,
-                    renderedSurface,
-                    renderedProjection.Tasks),
+                frozenRequest,
                 cancellationToken, owner));
-        if (!committed && ReferenceEquals(projection, pendingProjection))
+        if (committed == PlanningCommitState.Rejected && IsCurrent(origin) && ReferenceEquals(projection, pendingProjection))
         {
             projection = renderedProjection;
         }
@@ -358,6 +409,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
+        var origin = viewOrigin;
+        var operation = Guid.NewGuid();
+        var reload = MutationCommitted;
+        mutationOperation = operation;
         mutationInFlight = true;
         try
         {
@@ -367,9 +422,11 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                     loadedSurface,
                     projection,
                     loadedAssignments,
-                    uiMutationOwner with { ExpectedProjectAdmission = loadedSurface.ExpectedProjectAdmission }),
+                    uiMutationOwner with { ExpectedProjectAdmission = loadedSurface.ExpectedProjectAdmission }) {
+                        IsCurrent = () => IsCurrent(origin)
+                    },
                 taskId,
-                () => MutationCommitted.InvokeAsync(),
+                () => IsCurrent(origin) ? reload.InvokeAsync() : Task.CompletedTask,
                 lifetimeCancellation.Token);
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
@@ -377,20 +434,34 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         finally
         {
+            EndMutation(operation);
+        }
+    }
+
+    private async Task OpenTaskDialogAsync(DateTimeOffset startUtc, string? afterTaskNodeId) {
+        if (!EnsureMutationHostAvailable()) {
+            return;
+        }
+        var origin = viewOrigin;
+        var operation = Guid.NewGuid();
+        var reload = MutationCommitted;
+        mutationOperation = operation;
+        mutationInFlight = true;
+        try {
+            await OpenTaskDialogCoreAsync(startUtc, afterTaskNodeId, origin, operation, reload);
+        } finally {
+            EndMutation(operation);
+        }
+    }
+
+    private void EndMutation(Guid operation) {
+        if (mutationOperation == operation) {
+            mutationOperation = null;
             mutationInFlight = false;
         }
     }
 
-    private async Task OpenTaskDialogAsync(DateTimeOffset startUtc, string? afterTaskNodeId)
-    {
-        if (mutationInFlight)
-        {
-            NotificationService.Warning(
-                "Project schedule change in progress",
-                "Wait for the current schedule change to finish before adding a task.");
-            return;
-        }
-
+    private async Task OpenTaskDialogCoreAsync(DateTimeOffset startUtc, string? afterTaskNodeId, Guid origin, Guid operation, EventCallback reload) {
         var openedProjectId = ProjectId;
         var openedAdmission = loadedSurface?.ExpectedProjectAdmission
             ?? throw new InvalidOperationException("Reload the project structure before creating a task.");
@@ -414,12 +485,24 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
                 exception.GetType().Name);
         }
 
+        if (!IsCurrent(origin)) {
+            return;
+        }
         var normalizedStart = startUtc.ToUniversalTime();
-        var result = await DialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
+        var session = new ProjectTaskDialogSession(() => IsCurrent(origin), () => reload.InvokeAsync(), Logger);
+        await DialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Add project task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureGanttTaskDialog.CreateSubmitted)] =
+                    new Func<ProjectStructureTaskCreateRequest, Task<PlanningTaskSaveResult>>(draft =>
+                        session.SubmitAsync(() => CreateTaskAsync(openedProjectId,
+                            draft with { ExpectedProjectAdmission = openedAdmission, AfterTaskNodeId = afterTaskNodeId },
+                            openedOwner, origin, operation, session))),
+                [nameof(ProjectStructureGanttTaskDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = openedProjectId,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    openedAdmission.DatabaseProfileId, openedAdmission.LifetimeId, Guid.NewGuid()),
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = normalizedStart,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = normalizedStart + DefaultTaskDuration,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEstimate)] = new ProjectTaskEstimate(
@@ -449,198 +532,136 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             },
             lifetimeCancellation.Token);
 
-        if (result is ProjectStructureTaskCreateRequest request)
-        {
-            await CreateTaskAsync(openedProjectId, request with { ExpectedProjectAdmission = openedAdmission }, openedOwner);
+    }
+
+    private async Task CreateTaskAsync(Guid openedProjectId, ProjectStructureTaskCreateRequest request,
+        ProjectStructureAgentContext openedOwner, Guid origin, Guid operation, ProjectTaskDialogSession session) {
+        var result = await TaskCreationService.CreateAsync(openedProjectId, request, openedOwner, CancellationToken.None);
+        session.TaskCommitted([result.TaskNodeId], result.Pricing,
+            request.Resource?.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent,
+            rowOrderChanged: true);
+        if (request.Resource?.Kind is ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process) {
+            session.AttachmentCommitted(new(request.Resource, result.Pricing, result.ResourceNodeId) {
+                LinkTargetNodeId = result.ResourceLinkTargetNodeId
+            });
+        }
+        mutationReceipts[operation] = new(origin, operation, PlanningCommitState.Committed,
+            session.Result!.Message, [new(result.TaskNodeId)]);
+        await session.RefreshAfterCommitAsync();
+        if (IsCurrent(origin)) {
+            NotificationService.Success("Project task created", session.Result.Message);
         }
     }
 
-    private async Task CreateTaskAsync(Guid openedProjectId, ProjectStructureTaskCreateRequest request, ProjectStructureAgentContext openedOwner)
-    {
-        if (!EnsureMutationHostAvailable())
-        {
-            return;
-        }
-
-        mutationInFlight = true;
-        var mutationCommitted = false;
-        var committedPricingFeedback = string.Empty;
-        try
-        {
-            var result = await TaskCreationService.CreateAsync(
-                openedProjectId,
-                request,
-                openedOwner,
-                lifetimeCancellation.Token);
-            committedPricingFeedback =
-                ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing);
-            mutationCommitted = true;
-            await MutationCommitted.InvokeAsync();
-            NotificationService.Success(
-                "Project task created",
-                result.AttachedResource is null
-                    ? $"{request.Title} was added to Main.{committedPricingFeedback}"
-                    : $"{request.Title} was added to Main with its selected resource.{committedPricingFeedback}");
-        }
-        catch (ProjectStructureTaskCreationException exception)
-        {
-            NotificationService.Error("Project task could not be created", exception.Message);
-            Logger.LogWarning(
-                "Rejected Gantt task creation for project {ProjectId} with code {ErrorCode}.",
-                Mask(ProjectId),
-                exception.Code);
-        }
-        catch (ProjectStructureAgentException exception)
-        {
-            NotificationService.Error("Project task could not be created", exception.Message);
-            Logger.LogWarning(
-                "Rejected Gantt task creation for project {ProjectId} with application error {ErrorCode}.",
-                Mask(ProjectId),
-                exception.ErrorCode);
-        }
-        catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            NotifyUnexpectedMutationFailure(
-                "task creation",
-                mutationCommitted,
-                committedPricingFeedback);
-            Logger.LogError(
-                "Gantt task creation failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
-                Mask(ProjectId),
-                mutationCommitted,
-                exception.GetType().Name);
-        }
-        finally
-        {
-            mutationInFlight = false;
-        }
-    }
-
-    private async Task ApplyTaskOrderAsync(GanttTaskOrderChangeRequest request)
-    {
-        if (!EnsureMutationHostAvailable())
-        {
-            return;
-        }
-
+    private async Task ApplyTaskOrderAsync(GanttTaskOrderChangeRequest request) {
         var owner = CaptureRenderedMutationOwner(loadedSurface ?? Surface);
         if (owner is null) {
             return;
         }
-
-        var placement = request.Placement switch
-        {
+        var placement = request.Placement switch {
             GanttTaskOrderPlacement.Before => ProjectStructureGanttRowPlacement.Before,
             GanttTaskOrderPlacement.After => ProjectStructureGanttRowPlacement.After,
             _ => throw new ArgumentOutOfRangeException(nameof(request), request.Placement, "Unknown Gantt row placement.")
         };
-
-        mutationInFlight = true;
-        var mutationCommitted = false;
-        try
-        {
-            await RowOrderService.MoveAsync(
-                owner.ExpectedProjectAdmission!.ProjectId,
-                new ProjectStructureGanttRowMoveRequest(
-                    request.TaskId.Value,
-                    request.AnchorTaskId.Value,
-                    placement),
-                owner,
-                lifetimeCancellation.Token);
-            mutationCommitted = true;
-            await MutationCommitted.InvokeAsync();
-            NotificationService.Success("Task order saved", "The Gantt row order was updated.");
-        }
-        catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
-        {
-        }
-        catch (ProjectStructureGanttRowOrderConflictException exception)
-        {
-            NotificationService.Error(
-                "Task order change rejected",
-                "The task rows changed before this order request could be applied. Try again.");
-            Logger.LogWarning(
-                "Rejected stale Gantt row order change for project {ProjectId}, task {TaskNodeId}, anchor {AnchorTaskNodeId}, placement {Placement}.",
-                Mask(ProjectId),
-                exception.TaskNodeId,
-                exception.AnchorTaskNodeId,
-                exception.Placement);
-        }
-        catch (Exception exception)
-        {
-            NotifyUnexpectedMutationFailure("task order", mutationCommitted);
-            Logger.LogError(
-                "Gantt row order change failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
-                Mask(ProjectId),
-                mutationCommitted,
-                exception.GetType().Name);
-        }
-        finally
-        {
-            mutationInFlight = false;
-        }
+        var move = new ProjectStructureGanttRowMoveRequest(request.TaskId.Value, request.AnchorTaskId.Value, placement);
+        await ExecuteMutationAsync("task order", async cancellationToken => {
+            try {
+                await RowOrderService.MoveAsync(owner.ExpectedProjectAdmission!.ProjectId, move, owner, cancellationToken);
+                return new([request.TaskId, request.AnchorTaskId], 0, 0);
+            } catch (ProjectStructureGanttRowOrderConflictException) {
+                throw new ProjectStructureGanttMutationException(ProjectStructureGanttMutationErrorCode.StaleTask,
+                    "The task rows changed before this order request could be applied. Read the current project before trying again.");
+            }
+        });
     }
 
-    private async Task<bool> ExecuteMutationAsync(
+    private async Task<PlanningCommitState> ExecuteMutationAsync(
         string operation,
         Func<CancellationToken, Task<ProjectStructureGanttMutationResult>> mutation,
         bool renewInsertionCandidate = false)
     {
         if (!EnsureMutationHostAvailable())
         {
-            return false;
+            return PlanningCommitState.Rejected;
         }
 
+        var origin = viewOrigin;
+        var operationId = Guid.NewGuid();
+        var projectId = ProjectId;
+        var reload = MutationCommitted;
+        mutationOperation = operationId;
         mutationInFlight = true;
         var mutationCommitted = false;
         try
         {
-            var result = await mutation(lifetimeCancellation.Token);
+            var result = await mutation(CancellationToken.None);
             mutationCommitted = true;
+            mutationReceipts[operationId] = new(origin, operationId, PlanningCommitState.Committed,
+                BuildMutationStatus(operation, result), result.AffectedTaskIds.ToArray());
+            if (!IsCurrent(origin)) {
+                return PlanningCommitState.Committed;
+            }
             if (renewInsertionCandidate)
             {
                 insertionCandidate = CreateInsertionCandidate(projectionOriginUtc);
             }
 
-            await MutationCommitted.InvokeAsync();
+            await reload.InvokeAsync();
+            if (!IsCurrent(origin)) {
+                return PlanningCommitState.Committed;
+            }
             NotificationService.Success(
                 "Project schedule saved",
                 BuildMutationStatus(operation, result));
-            return true;
+            return PlanningCommitState.Committed;
         }
         catch (ProjectStructureGanttMutationException exception)
         {
-            NotificationService.Error(
-                "Project schedule change rejected",
-                exception.Message);
+            if (IsCurrent(origin)) {
+                NotificationService.Error("Project schedule change rejected", exception.Message);
+            }
             Logger.LogWarning(
                 "Rejected Gantt {Operation} mutation for project {ProjectId} with code {ErrorCode}.",
                 operation,
-                Mask(ProjectId),
+                Mask(projectId),
                 exception.Code);
-            return false;
+            return PlanningCommitState.Rejected;
+        }
+        catch (ProjectWriteAdmissionRejectedException) {
+            if (IsCurrent(origin)) {
+                readbackRequired = true;
+                NotificationService.Error("Project schedule change rejected", "The original project lifetime is no longer available. Read the project again.");
+            }
+            return PlanningCommitState.Rejected;
         }
         catch (OperationCanceledException) when (lifetimeCancellation.IsCancellationRequested)
         {
-            return mutationCommitted;
+            return mutationCommitted ? PlanningCommitState.Committed : PlanningCommitState.Unknown;
         }
         catch (Exception exception)
         {
-            NotifyUnexpectedMutationFailure(operation, mutationCommitted);
+            if (IsCurrent(origin)) {
+                readbackRequired = true;
+                if (!mutationCommitted) {
+                    mutationReceipts[operationId] = new(origin, operationId, PlanningCommitState.Unknown,
+                        "The save outcome could not be confirmed. Read the project again before making another change.", []);
+                }
+                NotifyUnexpectedMutationFailure(operation, mutationCommitted);
+            }
             Logger.LogError(
                 "Gantt {Operation} processing failed for project {ProjectId} after commit state {MutationCommitted}; failure type {FailureType}.",
                 operation,
-                Mask(ProjectId),
+                Mask(projectId),
                 mutationCommitted,
                 exception.GetType().Name);
-            return mutationCommitted;
+            return mutationCommitted ? PlanningCommitState.Committed : PlanningCommitState.Unknown;
         }
         finally
         {
-            mutationInFlight = false;
+            if (mutationOperation == operationId) {
+                mutationInFlight = false;
+                mutationOperation = null;
+            }
         }
     }
 
@@ -654,6 +675,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
     private bool EnsureMutationHostAvailable()
     {
+        if (disposed || readbackRequired || loadError is not null) {
+            return false;
+        }
         if (!MutationCommitted.HasDelegate)
         {
             NotificationService.Error(
@@ -694,13 +718,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             return;
         }
 
-        NotificationService.Error(
-            "Project schedule save failed",
-            $"The {operation} change could not be saved. The chart remains unchanged.");
+        NotificationService.Warning(
+            "Project schedule outcome unconfirmed",
+            $"The {operation} save could not be confirmed. Read the project again before making another change.");
     }
-
-    private bool IsProjectionOnly(GanttTask task)
-        => projection?.IsProjectionOnly(task) == true;
 
     private static GanttDependencyId CreateDependencyId(GanttTaskId predecessorId, GanttTaskId successorId)
         => ProjectStructureGanttMutationConventions.CreatePendingDependencyId();
@@ -782,7 +803,9 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         }
         disposed = true;
         lifetimeCancellation.Cancel();
-        lifetimeCancellation.Dispose();
+        if (activeOperations == 0) {
+            lifetimeCancellation.Dispose();
+        }
         GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
     }

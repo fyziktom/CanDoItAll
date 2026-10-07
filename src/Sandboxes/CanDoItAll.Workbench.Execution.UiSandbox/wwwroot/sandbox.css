@@ -1,0 +1,4 @@
+body { margin: 0; background: #f3f6fc; }
+.execution-scenarios { padding: 1rem; }
+.execution-scenario-canvas { position: relative; height: 790px; min-height: 0; overflow: hidden; margin-top: .5rem; border-radius: 1rem; }
+[data-testid="execution-workflow-receipt"] { overflow-wrap: anywhere; }

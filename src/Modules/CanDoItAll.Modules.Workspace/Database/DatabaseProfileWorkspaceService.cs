@@ -93,6 +93,14 @@ public sealed class DatabaseProfileWorkspaceService(
         return profileService.SaveAsync(model, cancellationToken);
     }
 
+    public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default) {
+        return profileService.SaveEditorAsync(model, profileAccessor.ResolveCurrentProfile(), cancellationToken);
+    }
+
+    public Task<Result> DeleteEditorAsync(Guid id, CancellationToken cancellationToken = default) {
+        return profileService.DeleteEditorAsync(id, profileAccessor.ResolveCurrentProfile(), cancellationToken);
+    }
+
     public Task<Result> DeleteProfileAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return profileService.DeleteAsync(id, cancellationToken);
@@ -114,10 +122,11 @@ public sealed class DatabaseProfileWorkspaceService(
         }
         catch (Exception ex)
         {
+            logger.LogWarning("Resolving the schema profile failed for {ProfileId}; failure type {FailureType}.", id, ex.GetType().Name);
             return CreateSchemaHealth(
                 id,
                 DatabaseProfileSchemaStatus.Unavailable,
-                $"The data source profile could not be resolved: {ex.Message}",
+                "The data source profile could not be resolved.",
                 [],
                 canApplySchema: false);
         }
@@ -203,11 +212,11 @@ public sealed class DatabaseProfileWorkspaceService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Schema health check failed for database profile {ProfileId}.", id);
+            logger.LogWarning("Schema health check failed for database profile {ProfileId}; failure type {FailureType}.", id, ex.GetType().Name);
             return CreateSchemaHealth(
                 id,
                 DatabaseProfileSchemaStatus.Unavailable,
-                $"Schema check failed: {ex.Message}",
+                "Schema check failed. Inspect the saved profile and database availability.",
                 [],
                 canApplySchema);
         }
@@ -235,8 +244,8 @@ public sealed class DatabaseProfileWorkspaceService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Applying database schema failed for profile {ProfileId}.", id);
-            return Result.Failure(Error.Failure($"Applying the database schema failed: {ex.Message}"));
+            logger.LogError("Applying database schema failed for profile {ProfileId}; failure type {FailureType}.", id, ex.GetType().Name);
+            return Result.Failure(Error.Failure("Applying the database schema did not finish. Completed stages may remain."));
         }
     }
 
@@ -257,8 +266,8 @@ public sealed class DatabaseProfileWorkspaceService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Creating an empty database failed for profile {ProfileId}.", id);
-            return Result.Failure(Error.Failure($"Creating an empty database failed: {ex.Message}"));
+            logger.LogError("Creating an empty database failed for profile {ProfileId}; failure type {FailureType}.", id, ex.GetType().Name);
+            return Result.Failure(Error.Failure("Creating an empty database did not finish. Completed stages may remain."));
         }
     }
 
@@ -283,8 +292,8 @@ public sealed class DatabaseProfileWorkspaceService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Testing the PostgreSQL connection failed for profile {ProfileId}.", id);
-            return Result.Failure(Error.Failure($"PostgreSQL connection test failed: {ex.Message}"));
+            logger.LogWarning("Testing the PostgreSQL connection failed for profile {ProfileId}; failure type {FailureType}.", id, ex.GetType().Name);
+            return Result.Failure(Error.Failure("PostgreSQL connection test failed. Verify the saved connection and database availability."));
         }
     }
 

@@ -1,0 +1,14 @@
+{
+  "review_date": "2026-10-06",
+  "main": "42cd807dec761daa79fa8b48ff78c2330f615354",
+  "components": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+  "basis": "connected GitHub reads of implementation, configuration, selected native/tests and recorded implementation report",
+  "application_builds_executed": false,
+  "application_tests_executed": false,
+  "docker_browser_watch_executed": false,
+  "original_private_artifacts_available": false,
+  "dotnet_available_in_review_environment": false,
+  "docker_available_in_review_environment": false,
+  "finding": "WB5-P1 is source-derived in deferred party integration; runtime reproduction required",
+  "decision": "Preserve bounded WB4 and proceed to operator integration, not whole-Workbench closure"
+}

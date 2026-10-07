@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="../../Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
+    <ProjectReference Include="../CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj" />
+  </ItemGroup>
+</Project>

@@ -361,6 +361,7 @@ public partial class ProjectStructurePage
         if (blockMutationDialog is not null)
         {
             builder.Append("|block:")
+                .Append(blockMutationDialog.OpeningId).Append(':').Append(blockMutationDialog.IsBusy).Append(':').Append(blockMutationDialog.RequiresObservation).Append(':')
                 .Append(blockMutationDialog.Mode)
                 .Append(':')
                 .Append(blockMutationDialog.NodeId)
@@ -377,6 +378,7 @@ public partial class ProjectStructurePage
         if (subprojectTransferDialog is not null)
         {
             builder.Append("|subproject:")
+                .Append(subprojectTransferDialog.OpeningId).Append(':').Append(subprojectTransferDialog.IsBusy).Append(':').Append(subprojectTransferDialog.RequiresObservation).Append(':')
                 .Append(subprojectTransferDialog.SourceNodeId)
                 .Append(':')
                 .Append(subprojectTransferDialog.ProjectName)
@@ -405,6 +407,7 @@ public partial class ProjectStructurePage
         if (workflowAddDialog is not null)
         {
             builder.Append("|workflow-add:")
+                .Append(workflowAddDialog.OpeningId).Append(':').Append(workflowAddDialog.IsBusy).Append(':').Append(workflowAddDialog.RequiresObservation).Append(':')
                 .Append(workflowAddDialog.ParentNodeId)
                 .Append(':')
                 .Append(workflowAddDialog.SelectedWorkflowId?.ToString() ?? string.Empty)
@@ -447,6 +450,7 @@ public partial class ProjectStructurePage
         if (workflowStartDialog is not null)
         {
             builder.Append("|workflow-start:")
+                .Append(workflowStartDialog.OpeningId).Append(':').Append(workflowStartDialog.RequiresObservation).Append(':')
                 .Append(workflowStartDialog.NodeId)
                 .Append(':')
                 .Append(workflowStartDialog.IsBusy)
@@ -559,7 +563,7 @@ public partial class ProjectStructurePage
         if (quickActionDialog is not null)
         {
             builder.Append("|quick:")
-                .Append(quickActionDialog.NodeId)
+                .Append(quickActionDialog.OpeningId).Append(':').Append(quickActionDialog.NodeId)
                 .Append(':')
                 .Append(quickActionDialog.Title)
                 .Append(':')
@@ -589,7 +593,8 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(webPreviewDialog.CanStopRuntime)
                 .Append(':')
-                .Append(webPreviewDialog.RuntimeStopError);
+                .Append(webPreviewDialog.RuntimeStopError).Append(':').Append(webPreviewDialog.OpeningId)
+                .Append(':').Append(webPreviewDialog.IsBusy).Append(':').Append(webPreviewDialog.RuntimeIdentity);
         }
         else
         {
@@ -620,6 +625,7 @@ public partial class ProjectStructurePage
         if (summaryDialog is not null)
         {
             builder.Append("summary:")
+                .Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(summaryDialog))
                 .Append(summaryDialog.RootNodeId)
                 .Append(':')
                 .Append(summaryDialog.RootTitle)
@@ -648,7 +654,9 @@ public partial class ProjectStructurePage
                 .Append(':')
                 .Append(pendingDeletePrompt.Title)
                 .Append(':')
-                .Append(pendingDeletePrompt.ImpactCopy);
+                .Append(pendingDeletePrompt.ImpactCopy)
+                .Append(':')
+                .Append(deleteFailure);
         }
         else
         {
@@ -658,6 +666,7 @@ public partial class ProjectStructurePage
         if (pendingTranscriptAction is not null)
         {
             builder.Append("|transcript:")
+                .Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(pendingTranscriptAction))
                 .Append(pendingTranscriptAction.NodeId)
                 .Append(':')
                 .Append(pendingTranscriptAction.ActionKind)
@@ -674,6 +683,7 @@ public partial class ProjectStructurePage
         if (mermaidPreviewNode is not null)
         {
             builder.Append("|mermaid:")
+                .Append(mermaidOpening?.Id)
                 .Append(mermaidPreviewNode.Id)
                 .Append(':')
                 .Append(mermaidPreviewNode.Title);
@@ -695,6 +705,7 @@ public partial class ProjectStructurePage
         }
 
         builder.Append("hierarchy:")
+            .Append(projectHierarchyDialog.OpeningId).Append(':').Append(projectHierarchyDialog.IsBusy).Append(':').Append(projectHierarchyDialog.RequiresObservation).Append(':')
             .Append(projectHierarchyDialog.Mode)
             .Append(':')
             .Append(projectHierarchyDialog.SubjectProjectId)
@@ -712,74 +723,4 @@ public partial class ProjectStructurePage
         }
     }
 
-    private Task ApplySelectionProgressAsync(int progress)
-        => ApplyProgressAsync(selectedNodeIds, "progress", progress);
-
-    private Task ApplySelectionPriorityAsync(int priority)
-        => ApplyPriorityAsync(selectedNodeIds, priority);
-
-    private Task ApplySelectionMarkerAsync(ProjectStructureSelectionMarkerRequest request)
-        => ApplyMarkerAsync(selectedNodeIds, request.Badge, request.Tone, request.Label);
-
-    private Task UpdateSelectionBorderNameAsync(string value)
-    {
-        selectionBorderName = value;
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private Task ExecuteSelectedInspectorActionAsync(string actionId)
-        => selectedNode is null
-            ? Task.CompletedTask
-            : ExecuteInspectorActionAsync(selectedNode, actionId);
-
-    private Task OpenSelectedAttachmentLocallyAsync()
-        => selectedNode is null
-            ? Task.CompletedTask
-            : OpenAttachmentLocallyAsync(selectedNode);
-
-    private async Task OpenSelectedAttachmentPreviewAsync()
-    {
-        if (selectedNode is null)
-        {
-            return;
-        }
-
-        await OpenAttachmentPreviewAsync(selectedNode);
-    }
-
-    private async Task OpenSelectedMermaidViewerAsync()
-    {
-        if (selectedNode is null)
-        {
-            return;
-        }
-
-        await OpenMermaidViewerAsync(selectedNode);
-        await InvokeAsync(StateHasChanged);
-    }
-}
-
-public sealed record ProjectStructureSelectionBadgePresentation(
-    string Text,
-    ProjectStructureSelectionBadgeStyle Style,
-    string TestId);
-
-public enum ProjectStructureSelectionBadgeStyle
-{
-    Standard,
-    Uploaded,
-    Scheduled,
-    Synced,
-    FileGeneric,
-    FilePdf,
-    FileExcel,
-    FileDocx,
-    FileMarkdown,
-    FileMermaid,
-    FileScreenshot,
-    FileLog,
-    FileArchive,
-    FileAudio,
-    FileJson,
-    FileText
 }

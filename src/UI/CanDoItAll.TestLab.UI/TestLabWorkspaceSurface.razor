@@ -1,0 +1,321 @@
+@{
+    var origin = View.State.Draft;
+    var editor = origin?.Model ?? empty;
+    var originVersion = origin?.TargetVersion ?? 0;
+    var visiblePlans = View.State.VisiblePlans;
+    RenderFragment runActions = @<Button Text="Add run" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Edit(origin!, originVersion, () => editor.Runs.Add(new())))" />;
+    RenderFragment evidenceActions = @<Button Text="Add evidence" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Edit(origin!, originVersion, () => editor.Evidence.Add(new())))" />;
+    RenderFragment caseActions = @<Button Text="Add case" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Edit(origin!, originVersion, () => editor.Cases.Add(new())))" />;
+}
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="testlab-workspace" data-interactive="@Interactive.ToString().ToLowerInvariant()" data-section="@View.State.Section">
+    <Header>
+        <PageHeader Eyebrow="Test Lab"
+                    Title="Tests, evidence, and execution results"
+                    Description="Track planned coverage, linked cases, evidence artifacts, and the latest execution results for each phase."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="plans" Value="@View.State.Plans.Count.ToString()" TooltipText="Persisted test plans." />
+                <CompactStat Label="visible" Value="@visiblePlans.Count.ToString()" TooltipText="Plans matching the current filters." Tone="info" />
+                <CompactStat Label="cases" Value="@View.State.Plans.Sum(item => item.CaseCount).ToString()" TooltipText="Tracked test cases across all plans." />
+                <CompactStat Label="evidence" Value="@View.State.Plans.Sum(item => item.EvidenceCount).ToString()" TooltipText="Linked evidence records across all plans." />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="add"
+                                        Label="New test plan"
+                                        TooltipText="Create a new test plan."
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Click="View.NewAsync" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <ListDetailShell ListPaneWidth="25rem">
+            <ListHeader>
+                <ListPanelHeader Title="Test plans"
+                                 Description="Select a plan to continue editing it, or start a new plan with structured sections."
+                                 Count="@($"{visiblePlans.Count} plan(s)")">
+                    <Filters>
+                        <FilterBar ResultText="@($"{visiblePlans.Count} matching plan(s)")">
+                            <TextBox @bind-Value="View.State.Search" Immediate="true" Placeholder="Search test plans" data-testid="testlab-search" />
+                            <InputSelect @bind-Value="View.State.ProjectFilter" class="cda-input" data-testid="testlab-project-filter">
+                                <option value="">All projects</option>
+                                @foreach (var project in View.State.Projects.OrderBy(item => item.Name)) {
+                                    <option value="@project.Id.ToString()">@project.Name</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="View.State.PhaseFilter" class="cda-input" data-testid="testlab-phase-filter">
+                                <option value="">All phases</option>
+                                @foreach (var phase in View.State.Plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item)) {
+                                    <option value="@phase">@phase</option>
+                                }
+                            </InputSelect>
+                            <InputSelect @bind-Value="View.State.ResultFilter" class="cda-input" data-testid="testlab-result-filter">
+                                <option value="">All latest results</option>
+                                @foreach (var status in Enum.GetValues<TestCaseStatus>()) {
+                                    <option value="@status.ToString()">@status</option>
+                                }
+                            </InputSelect>
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="View.State.ResetFilters" />
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+
+            <ListContent>
+                <p role="status" data-testid="testlab-list-state">@ListStatus</p>
+                <Button Text="Retry refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="View.RetryAsync" data-testid="testlab-retry" />
+                @if (visiblePlans.Count == 0 && View.State.PlansRead is TestLabReadState.Ready or TestLabReadState.Empty or TestLabReadState.Stale) {
+                    <EmptyState Eyebrow="No plans"
+                                Title="@(View.State.PlansRead == TestLabReadState.Empty ? "Create the first test plan" : "No matching plans")"
+                                Description="Plans appear here after they have been saved with coverage, evidence, and run data.">
+                        <Actions>
+                            <Button Text="New test plan" Click="View.NewAsync" />
+                        </Actions>
+                    </EmptyState>
+                } else {
+                    <Stack GapScale="LayoutGap.Medium">
+                        @foreach (var plan in visiblePlans) {
+                            <SelectionListItem Title="@plan.Title"
+                                               Eyebrow="@plan.Phase"
+                                               Meta="@BuildPlanMeta(plan)"
+                                               Summary="@BuildPlanSummary(plan)"
+                                               IsSelected="@(editor.Id == plan.Id)"
+                                               OnSelect="@(() => View.SelectAsync(plan.Id))">
+                                <Status>
+                                    <StatusBadge Tone="@ResolveStatusTone(plan.LatestResult)" Text="@(plan.LatestResult?.ToString() ?? "No run")" />
+                                </Status>
+                            </SelectionListItem>
+                        }
+                    </Stack>
+                }
+            </ListContent>
+
+            <DetailHeader>
+                <Stack GapScale="LayoutGap.Medium">
+                    <Split Gap="LayoutGap.Medium">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <p class="cda-eyebrow">Plan editor</p>
+                            <h2 class="text-xl font-semibold text-slate-950">@(origin is null ? "No selected plan" : string.IsNullOrWhiteSpace(editor.Title) ? "New test plan" : editor.Title)</h2>
+                            <p class="text-sm leading-6 text-slate-600">Coverage, cases, evidence, and run history stay in one detail pane with predictable sections.</p>
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small">
+                            <StatusBadge Tone="info" Text="@($"{editor.Cases.Count} case(s)")" />
+                            <StatusBadge Tone="neutral" Text="@($"{editor.Evidence.Count} evidence")" />
+                            <StatusBadge Tone="@ResolveStatusTone(LatestRunResult)" Text="@(LatestRunResult?.ToString() ?? "No run")" />
+                        </Cluster>
+                    </Split>
+
+                    <SecondaryTabs Items="DetailTabs" SelectedKey="@View.State.Section.ToString()" SelectedKeyChanged="HandleDetailTabChanged" />
+                </Stack>
+            </DetailHeader>
+
+            <DetailContent>
+                <p role="status" data-testid="testlab-editor-state">@EditorStatus</p>
+                @if (origin is not null) {
+                <EditForm @key="origin" EditContext="origin.Context" OnValidSubmit="@(() => View.SaveAsync(origin, originVersion))">
+                    <fieldset disabled="@(!Interactive)" class="min-w-0 border-0 p-0 m-0">
+                    <ValidationSummary />
+                    <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                        @if (View.State.Section == TestLabSection.Overview) {
+                            <FormSection Title="Plan overview" Description="Anchor the plan to the correct project and phase before editing cases and evidence.">
+                                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                                    <div>
+                                        <label class="cda-field-label">Project</label>
+                                        <InputSelect Value="editor.ProjectId" ValueExpression="@(() => editor.ProjectId)" ValueChanged="@((Guid? value) => View.ChangeProjectAsync(origin, value, originVersion))" class="cda-input" data-testid="testlab-project-select">
+                                            <option value="">None</option>
+                                            @if (editor.ProjectId is { } unavailableProject && !View.State.Projects.Any(item => item.Id == unavailableProject)) {
+                                                <option value="@unavailableProject">Unavailable project; select explicitly to rebind</option>
+                                            }
+                                            @foreach (var project in View.State.Projects) {
+                                                <option value="@project.Id">@(editor.ProjectId == project.Id && editor.ExpectedProjectAdmission != project.Admission ? "Unavailable historical project" : project.Name)</option>
+                                            }
+                                        </InputSelect>
+                                        @if (View.State.Projects.Any(item => item.Id == editor.ProjectId && item.Admission != editor.ExpectedProjectAdmission)) {
+                                            <Button Text="Use current project" ButtonStyle="ButtonStyle.Light" Click="@(() => View.ChangeProjectAsync(origin, editor.ProjectId, originVersion))" />
+                                        }
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Phase</label>
+                                        <InputText @bind-Value:get="editor.Phase" @bind-Value:set="value => Edit(origin, originVersion, () => editor.Phase = value)" class="cda-input" data-testid="testlab-plan-phase" @oninput="@(args => Input(origin, originVersion, editor, nameof(editor.Phase), value => editor.Phase = value, args))" />
+                                    </div>
+                                </Grid>
+
+                                <div class="max-w-xl">
+                                    <label class="cda-field-label">Responsible party</label>
+                                    <p role="status" data-testid="testlab-references-state">@ReferenceStatus</p>
+                                    <InputSelect Value="editor.ResponsiblePartyId" ValueExpression="@(() => editor.ResponsiblePartyId)" ValueChanged="@((Guid? value) => View.ChangePartyAsync(origin, value, originVersion))" class="cda-input" data-testid="testlab-responsible-party-select">
+                                        <option value="">None</option>
+                                        @if (editor.ResponsiblePartyId is { } unavailableParty && View.State.Parties.All(item => item.PartyId != unavailableParty)) {
+                                            <option value="@unavailableParty">Unavailable responsible party</option>
+                                        }
+                                        @foreach (var option in View.State.Parties) {
+                                            <option value="@option.PartyId">@option.DisplayName</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Title</label>
+                                        <InputText @bind-Value:get="editor.Title" @bind-Value:set="value => Edit(origin, originVersion, () => editor.Title = value)" class="cda-input" data-testid="testlab-title-input" @oninput="@(args => Input(origin, originVersion, editor, nameof(editor.Title), value => editor.Title = value, args))" />
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Coverage goal</label>
+                                    <InputTextArea @bind-Value:get="editor.CoverageGoal" @bind-Value:set="value => Edit(origin, originVersion, () => editor.CoverageGoal = value)" class="cda-input cda-input--textarea min-h-24" data-testid="testlab-plan-coveragegoal" @oninput="@(args => Input(origin, originVersion, editor, nameof(editor.CoverageGoal), value => editor.CoverageGoal = value, args))" />
+                                </div>
+
+                                <div>
+                                    <label class="cda-field-label">Playwright spec path</label>
+                                    <InputText @bind-Value:get="editor.PlaywrightSpecPath" @bind-Value:set="value => Edit(origin, originVersion, () => editor.PlaywrightSpecPath = value)" class="cda-input" data-testid="testlab-plan-playwrightspecpath" @oninput="@(args => Input(origin, originVersion, editor, nameof(editor.PlaywrightSpecPath), value => editor.PlaywrightSpecPath = value, args))" />
+                                </div>
+                            </FormSection>
+                        } else if (View.State.Section == TestLabSection.Cases) {
+                            <FormSection Title="Test cases" Description="Track which scenarios are planned, implemented, blocked, or already passing."
+                                         Actions="caseActions">
+                                @if (editor.Cases.Count == 0) {
+                                    <EmptyState Eyebrow="No cases"
+                                                Title="Add the first case"
+                                                Description="Use cases to capture the stories or features the plan needs to cover." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var testCase in editor.Cases) {
+                                            <Grid @key="testCase" Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
+                                                <InputText @bind-Value:get="testCase.Name" @bind-Value:set="value => Edit(origin, originVersion, () => testCase.Name = value)" class="cda-input" data-testid="testlab-case-name" @oninput="@(args => Input(origin, originVersion, testCase, nameof(testCase.Name), value => testCase.Name = value, args))" />
+                                                <InputText @bind-Value:get="testCase.StoryOrFeature" @bind-Value:set="value => Edit(origin, originVersion, () => testCase.StoryOrFeature = value)" class="cda-input" data-testid="testlab-case-storyorfeature" @oninput="@(args => Input(origin, originVersion, testCase, nameof(testCase.StoryOrFeature), value => testCase.StoryOrFeature = value, args))" />
+                                                <InputSelect @bind-Value:get="testCase.Status" @bind-Value:set="value => Edit(origin, originVersion, () => testCase.Status = value)" class="cda-input" data-testid="testlab-case-status">
+                                                    @foreach (var status in Enum.GetValues<TestCaseStatus>()) {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </InputSelect>
+                                                <InputText @bind-Value:get="testCase.Notes" @bind-Value:set="value => Edit(origin, originVersion, () => testCase.Notes = value)" class="cda-input" data-testid="testlab-case-notes" @oninput="@(args => Input(origin, originVersion, testCase, nameof(testCase.Notes), value => testCase.Notes = value, args))" />
+                                            <Button Text="Remove case" ButtonStyle="ButtonStyle.Light" Click="@(() => Edit(origin, originVersion, () => editor.Cases.Remove(testCase)))" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        } else if (View.State.Section == TestLabSection.Evidence) {
+                            <FormSection Title="Evidence" Description="Store screenshot paths, artifact references, and notes alongside the plan."
+                                         Actions="evidenceActions">
+                                @if (editor.Evidence.Count == 0) {
+                                    <EmptyState Eyebrow="No evidence"
+                                                Title="Add the first evidence record"
+                                                Description="Evidence records keep screenshots, logs, or other artifacts tied to the plan." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var evidence in editor.Evidence) {
+                                            <Grid @key="evidence" Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
+                                                <InputText @bind-Value:get="evidence.EvidenceLabel" @bind-Value:set="value => Edit(origin, originVersion, () => evidence.EvidenceLabel = value)" class="cda-input" data-testid="testlab-evidence-evidencelabel" @oninput="@(args => Input(origin, originVersion, evidence, nameof(evidence.EvidenceLabel), value => evidence.EvidenceLabel = value, args))" />
+                                                <InputText @bind-Value:get="evidence.ArtifactPath" @bind-Value:set="value => Edit(origin, originVersion, () => evidence.ArtifactPath = value)" class="cda-input" data-testid="testlab-evidence-artifactpath" @oninput="@(args => Input(origin, originVersion, evidence, nameof(evidence.ArtifactPath), value => evidence.ArtifactPath = value, args))" />
+                                                <InputText @bind-Value:get="evidence.EvidenceKind" @bind-Value:set="value => Edit(origin, originVersion, () => evidence.EvidenceKind = value)" class="cda-input" data-testid="testlab-evidence-evidencekind" @oninput="@(args => Input(origin, originVersion, evidence, nameof(evidence.EvidenceKind), value => evidence.EvidenceKind = value, args))" />
+                                                <InputText @bind-Value:get="evidence.Notes" @bind-Value:set="value => Edit(origin, originVersion, () => evidence.Notes = value)" class="cda-input" data-testid="testlab-evidence-notes" @oninput="@(args => Input(origin, originVersion, evidence, nameof(evidence.Notes), value => evidence.Notes = value, args))" />
+                                            <Button Text="Remove evidence" ButtonStyle="ButtonStyle.Light" Click="@(() => Edit(origin, originVersion, () => editor.Evidence.Remove(evidence)))" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        } else {
+                            <FormSection Title="Execution runs" Description="Keep the latest run results and notes inside the same plan instead of a separate tracker."
+                                         Actions="runActions">
+                                @if (editor.Runs.Count == 0) {
+                                    <EmptyState Eyebrow="No runs"
+                                                Title="Record the first run"
+                                                Description="Run history appears here after at least one execution record has been added." />
+                                } else {
+                                    <Stack GapScale="LayoutGap.Medium">
+                                        @foreach (var run in editor.Runs) {
+                                            <Grid @key="run" Gap="LayoutGap.Medium" ColumnsMd="2" Class="cda-panel-card">
+                                                <TextBox Value="@origin.Timestamp(run)" ValueChanged="@(value => Edit(origin, originVersion, () => origin.InputTimestamp(run, value)))" Immediate="true" aria-label="Executed at (ISO 8601)" data-testid="testlab-run-timestamp" />
+                                                <InputText @bind-Value:get="run.Runner" @bind-Value:set="value => Edit(origin, originVersion, () => run.Runner = value)" class="cda-input" data-testid="testlab-run-runner" @oninput="@(args => Input(origin, originVersion, run, nameof(run.Runner), value => run.Runner = value, args))" />
+                                                <InputSelect @bind-Value:get="run.Result" @bind-Value:set="value => Edit(origin, originVersion, () => run.Result = value)" class="cda-input" data-testid="testlab-run-result">
+                                                    @foreach (var status in Enum.GetValues<TestCaseStatus>()) {
+                                                        <option value="@status">@status</option>
+                                                    }
+                                                </InputSelect>
+                                                <InputText @bind-Value:get="run.Summary" @bind-Value:set="value => Edit(origin, originVersion, () => run.Summary = value)" class="cda-input" data-testid="testlab-run-summary" @oninput="@(args => Input(origin, originVersion, run, nameof(run.Summary), value => run.Summary = value, args))" />
+                                            <Button Text="Remove run" ButtonStyle="ButtonStyle.Light" Click="@(() => Edit(origin, originVersion, () => editor.Runs.Remove(run)))" />
+                                            </Grid>
+                                        }
+                                    </Stack>
+                                }
+                            </FormSection>
+                        }
+
+                        <StickyActionFooter StatusLabel="Plan save state">
+                            <SecondaryActions>
+                                <p role="status" data-testid="testlab-save-state" data-state="@origin.SaveState" data-plan-id="@origin.Model.Id">@origin.Message</p>
+                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="View.NewAsync" />
+                            </SecondaryActions>
+                            <PrimaryActions>
+                                <Button Text="Save plan" Type="submit" data-testid="testlab-save-button" Disabled="@(!origin.CanSave || !Interactive)" />
+                            </PrimaryActions>
+                        </StickyActionFooter>
+                    </Stack>
+                    </fieldset>
+                </EditForm>
+                }
+            </DetailContent>
+        </ListDetailShell>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [Parameter, EditorRequired] public ITestLabWorkspaceView View { get; set; } = default!;
+    [Parameter] public bool Interactive { get; set; } = true;
+    private readonly TestPlanEditorModel empty = new();
+    private TestPlanEditorModel Editor => View.State.Draft?.Model ?? empty;
+    private IReadOnlyList<SecondaryTabItem> DetailTabs => [
+        new(nameof(TestLabSection.Overview), "Overview"),
+        new(nameof(TestLabSection.Cases), "Cases", Editor.Cases.Count.ToString()),
+        new(nameof(TestLabSection.Evidence), "Evidence", Editor.Evidence.Count.ToString()),
+        new(nameof(TestLabSection.Runs), "Runs", Editor.Runs.Count.ToString())
+    ];
+    private TestCaseStatus? LatestRunResult => Editor.Runs.OrderByDescending(run => run.ExecutedAtUtc).FirstOrDefault()?.Result;
+    private void HandleDetailTabChanged(string key) => View.State.Section = Enum.Parse<TestLabSection>(key);
+    private string BuildPlanMeta(TestPlanSummary plan) => $"{View.State.ProjectName(plan)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
+    private static string BuildPlanSummary(TestPlanSummary plan) => $"Updated {plan.UpdatedAtUtc.LocalDateTime:g}";
+    private string ListStatus => View.State.PlansRead switch {
+        TestLabReadState.Loading => "Loading plans...",
+        TestLabReadState.Unavailable => "Plans unavailable. Retry refresh.",
+        TestLabReadState.Stale => "Refresh failed. Previously loaded plans are shown.",
+        TestLabReadState.Empty => "No saved plans.",
+        _ => $"{View.State.VisiblePlans.Count} matching plans"
+    };
+    private string EditorStatus => View.State.EditorRead switch {
+        TestLabReadState.Loading => "Loading plan...",
+        TestLabReadState.Missing => "Requested plan was not found. Select another plan or start a new draft.",
+        TestLabReadState.Unavailable => "Plan unavailable. Retry refresh.",
+        TestLabReadState.Stale => "Saved plan refresh is incomplete. Your draft is retained.",
+        _ => string.Empty
+    };
+    private string ReferenceStatus => string.Join(" ", new[] {
+        ReferenceMessage(View.State.ProjectsRead, "Project choices"),
+        ReferenceMessage(View.State.PartiesRead, "Responsible parties")
+    }.Where(message => message.Length > 0));
+    private static string ReferenceMessage(TestLabReadState state, string label) => state switch {
+        TestLabReadState.Loading => $"{label} are loading...",
+        TestLabReadState.Unavailable => $"{label} are unavailable. Retry refresh.",
+        TestLabReadState.Stale => $"{label} could not be refreshed. Previously loaded choices are shown.",
+        _ => string.Empty
+    };
+    private void Input(TestLabDraft origin, long version, object model, string field, Action<string> assign, ChangeEventArgs args) {
+        if (ReferenceEquals(View.State.Draft, origin) && origin.TargetVersion == version) {
+            origin.Input(model, field, assign, args.Value?.ToString());
+        }
+    }
+    private void Edit(TestLabDraft origin, long version, Action edit) {
+        if (ReferenceEquals(View.State.Draft, origin) && origin.TargetVersion == version) {
+            edit();
+        }
+    }
+    private static string ResolveStatusTone(TestCaseStatus? status) => status switch {
+        TestCaseStatus.Passed => "success",
+        TestCaseStatus.Failed => "danger",
+        TestCaseStatus.Blocked => "warning",
+        TestCaseStatus.Implemented => "info",
+        _ => "neutral"
+    };
+}

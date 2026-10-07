@@ -1,12 +1,16 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Security;
 using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+using IProviderRuntimeProfileSnapshotLoader = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed record ProviderSecretReferences(IReadOnlyList<SecretListItem> Items, string? Error = null);
-public sealed record ProviderProfilesCatalog(IReadOnlyList<ProviderProfile> Providers, ProviderSecretReferences Secrets);
+public sealed record ProviderProfilesCatalog(IReadOnlyList<ProviderProfile> Providers, ProviderSecretReferences Secrets) {
+    public IReadOnlyDictionary<Guid, ProviderConfigurationRevision> Revisions { get; init; } = new Dictionary<Guid, ProviderConfigurationRevision>();
+}
 
 public interface IProviderProfilesReads {
     Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default);
@@ -15,13 +19,18 @@ public interface IProviderProfilesReads {
 
 public sealed class ProviderProfilesReads(
     IProviderRuntimeAdministrationService runtime,
-    IProviderAdministrationService administration) : IProviderProfilesReads {
+    IProviderAdministrationService administration,
+    IProviderRuntimeProfileSnapshotLoader snapshots) : IProviderProfilesReads {
     public async Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default) {
-        var providers = runtime.ListProvidersAsync(cancellationToken);
+        var providers = snapshots.LoadAllAsync(cancellationToken);
         var secrets = ReadSecretsAsync(cancellationToken);
         await Task.WhenAll(providers, secrets);
         cancellationToken.ThrowIfCancellationRequested();
-        return new(await providers, await secrets);
+        var loaded = await providers;
+        return new(loaded.Select(item => item.Profile).ToArray(), await secrets) {
+            Revisions = loaded.Where(item => item.ConfigurationRevision.HasValue)
+                .ToDictionary(item => item.Profile.Id, item => item.ConfigurationRevision!.Value)
+        };
     }
 
     public Task<ProviderProfileEditorModel> LoadEditorAsync(Guid providerId, CancellationToken cancellationToken = default)

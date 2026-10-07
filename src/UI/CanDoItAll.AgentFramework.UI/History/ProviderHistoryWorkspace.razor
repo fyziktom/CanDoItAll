@@ -1,0 +1,25 @@
+@using CanDoItAll.AgentFramework.ProviderHistory
+@{
+    var renderedOrigin = state.Origin;
+    var renderedContext = editContext;
+}
+@if (!disposed) {
+    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="provider-request-history">
+        <FormSection Title="Request history" Description="Current instance and database profile. Choose an interval, then Search. Opening this tab does not read history.">
+            <EditForm @key="renderedContext" EditContext="renderedContext" OnSubmit="@(() => SearchAsync(renderedOrigin, renderedContext))" data-testid="history-search-form">
+                <DataAnnotationsValidator />
+                <ProviderHistoryFilters Draft="draft" AllowProvider="@(Scope is HistoryProviderScope.AllAuthorized)"
+                                        Changed="@(() => MarkDraftChanged(renderedContext))" />
+                <ValidationSummary />
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Search" Type="submit" Icon="search" Disabled="@state.IsLoading" IsBusy="@state.IsLoading" data-testid="history-search" />
+                </Cluster>
+            </EditForm>
+        </FormSection>
+        <ProviderHistoryResultsSurface @ref="results" Presentation="state.Presentation(draftChanged)" OnIntent="DispatchAsync" />
+    </Stack>
+    @if (selectedEntry is { } selection) {
+        <ProviderHistoryDetailsDialog @ref="details" @key="selection.Origin" History="History" EntryId="selection.EntryId"
+                                      OnClose="@(() => CloseDetails(selection))" />
+    }
+}

@@ -30,9 +30,16 @@ public partial class ProjectStructurePage
     private string selectionBorderName = string.Empty;
     private string? reconnectNodeId;
     private ProjectStructureDeletePrompt? pendingDeletePrompt;
+    private string? deleteFailure;
+    private ProjectStructureActionContext? deleteActionContext;
+    private long deleteSelectionRevision;
+    private sealed record RetainedDeletionOutcome(ProjectStructureActionContext Origin,
+        ProjectStructureDeletionResult? Result = null, ProjectStructureDeletionBatchRecovery? Recovery = null, Exception? Failure = null);
+    private readonly Queue<RetainedDeletionOutcome> retainedDeletionOutcomes = new();
     private ProjectStructureSummaryDialogState? summaryDialog;
     private ProjectStructureTranscriptActionDialogState? pendingTranscriptAction;
     private ProjectStructureNode? mermaidPreviewNode;
+    private ProjectStructureAuthoringOpening? mermaidOpening;
     private string? workflowFeedback;
     private string workflowFeedbackTone = "neutral";
     private readonly List<ProjectStructureDeletionRecovery> pendingDeletionRecoveries = [];
@@ -109,50 +116,99 @@ public partial class ProjectStructurePage
 
     private async Task BeginReconnectAsync(string? nodeId = null)
     {
-        reconnectNodeId = nodeId ?? selectedNode?.Id;
+        var context = CaptureActionContext();
+        var source = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (source is null) {
+            return;
+        }
+        reconnectNodeId = source.Id;
+        reconnectOpening = new(context, source);
         await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DisconnectNodeAsync(string? nodeId = null)
-    {
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null)
-        {
+    private async Task DisconnectNodeAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
+        var context = capturedContext ?? CaptureActionContext();
+        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (!IsCurrentAction(context) || targetNode is null) {
             return;
         }
-
+        if (reconnectOpening is { } pending && IsCurrentAction(pending.Context) && (pending.IsBusy || pending.RequiresObservation)) {
+            return;
+        }
+        var opening = new ProjectStructureAuthoringOpening(context, targetNode) { IsBusy = true };
+        reconnectOpening = opening;
         reconnectNodeId = null;
-        await ProjectWorkbenchService.ReparentObjectAsync(ProjectId, targetNode.Id, null);
-        await ReloadSurfaceAsync(targetNode.Id);
+        await ReparentBranchAsync(opening, null);
     }
 
-    private async Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind)
-    {
-        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
-            string.IsNullOrWhiteSpace(targetNodeId) ||
-            !Enum.TryParse<ProjectObjectLinkKind>(linkKind, ignoreCase: true, out var parsedKind))
-        {
-            return;
-        }
+    private ProjectStructureAuthoringOpening? dependencyOpening;
+    private ProjectStructureAuthoringOpening? linkOperation;
+    private ProjectStructureAuthoringOpening? reconnectOpening;
 
-        var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, parsedKind);
-        if (!removed)
-        {
-            workflowFeedback = "The selected dependency could not be deleted.";
-            workflowFeedbackTone = "warn";
-            return;
+    private Task DeleteDependencyAsync(string? sourceNodeId, string? targetNodeId, string? linkKind) {
+        if (!Enum.TryParse<ProjectObjectLinkKind>(linkKind, ignoreCase: true, out var kind) || !Enum.IsDefined(kind)) {
+            return Task.CompletedTask;
         }
-
-        workflowFeedback = "The dependency link was deleted.";
-        workflowFeedbackTone = "mint";
-        await ReloadSurfaceAsync(sourceNodeId);
+        var context = CaptureActionContext();
+        var link = context.Surface.Links.FirstOrDefault(link => link.SourceId == sourceNodeId && link.TargetId == targetNodeId && link.Kind == kind);
+        var nodes = context.Surface.Nodes.Where(node => node.Id == sourceNodeId || node.Id == targetNodeId).ToArray();
+        return link is not { IsUserAuthored: true, RecordId: not null } || nodes.Length != 2 ? Task.CompletedTask :
+            ExecuteGraphLinkAsync(context, link, nodes, remove: true);
     }
 
-    private async Task DeleteNodeAsync(string? nodeId = null)
+    private async Task ExecuteGraphLinkAsync(ProjectStructureActionContext context, ProjectStructureLink requested,
+        IReadOnlyList<ProjectStructureNode> nodes, bool remove) {
+        if (!IsCurrentAction(context) || linkOperation is { } pending && IsCurrentAction(pending.Context) && (pending.IsBusy || pending.RequiresObservation)) {
+            return;
+        }
+        var opening = new ProjectStructureAuthoringOpening(context, nodes[0]) { IsBusy = true };
+        var selectionRevision = insightsSelectionRevision;
+        var mode = canvasToolMode;
+        linkOperation = opening;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            remove ? ProjectStructureAuthoringOperation.DisconnectNodes : ProjectStructureAuthoringOperation.ConnectNodes,
+            ProjectStructureAuthoringResultKind.Rejected, "The selected dependency could not be changed.") {
+            SourceNodeId = requested.SourceId, Link = requested
+        };
+        try {
+            if (remove) {
+                var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(context.Surface.ProjectId, requested.SourceId, requested.TargetId, requested.Kind,
+                    mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission }, expectedLink: requested);
+                if (!removed) {
+                    RecordAuthoringOutcome(opening, outcome);
+                    return;
+                }
+            } else {
+                var accepted = await ProjectWorkbenchService.LinkObjectsDetailedAsync(context.Admission, requested.SourceId, requested.TargetId, requested.Kind, nodes);
+                outcome = outcome with { Link = accepted };
+            }
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
+                Message = remove ? "The dependency link was deleted." : "The dependency link was added." };
+            RecordAuthoringOutcome(opening, outcome);
+            if (IsCurrentAuthoring(opening, linkOperation) && selectionRevision == insightsSelectionRevision) {
+                if (canvasToolMode == mode) {
+                    await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
+                }
+                await RefreshAuthoringSurfaceAsync(opening, outcome, requested.SourceId,
+                    () => ReferenceEquals(linkOperation, opening) && selectionRevision == insightsSelectionRevision);
+            }
+        } catch (Exception failure) {
+            opening.RequiresObservation = !IsKnownGraphRejection(failure);
+            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = opening.RequiresObservation ? "The dependency change is unconfirmed. Observe the original project before repeating it." : failure.Message });
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
+        }
+    }
+
+    private async Task DeleteNodeAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null)
     {
-        var targetNode = ResolveNode(nodeId);
-        if (targetNode is null)
+        var context = capturedContext ?? CaptureActionContext();
+        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
+        if (!IsCurrentAction(context) || targetNode is null)
         {
             return;
         }
@@ -164,7 +220,7 @@ public partial class ProjectStructurePage
                 [targetNode],
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
                 $"{targetNode.Title} was deleted.",
-                "The selected node could not be deleted.");
+                "The selected node could not be deleted.", context);
             if (!deleted)
             {
                 return;
@@ -173,49 +229,68 @@ public partial class ProjectStructurePage
             return;
         }
 
+        deleteFailure = null;
+        deleteActionContext = context;
+        deleteSelectionRevision = insightsSelectionRevision;
         pendingDeletePrompt = prompt;
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds)
+    private async Task DeleteNodesAsync(IReadOnlyCollection<string> nodeIds, ProjectStructureActionContext? capturedContext = null)
     {
-        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
-        if (targetNodes.Count == 0)
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
+        var targetNodes = context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id, StringComparer.Ordinal)).ToArray();
+        if (targetNodes.Length == 0)
         {
             return;
         }
 
-        if (targetNodes.Count == 1)
+        if (targetNodes.Length == 1)
         {
-            await DeleteNodeAsync(targetNodes[0].Id);
+            await DeleteNodeAsync(targetNodes[0].Id, context);
             return;
         }
 
+        deleteActionContext = context;
+        deleteSelectionRevision = insightsSelectionRevision;
+        deleteFailure = null;
         pendingDeletePrompt = BuildDeletePrompt(targetNodes);
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ConfirmDeleteAsync(
-        ProjectStructureManagedStorageDisposition managedStorageDisposition)
-    {
-        if (pendingDeletePrompt is null)
-        {
+    private async Task ConfirmDeleteAsync(ProjectStructureDeleteConfirmation confirmation) {
+        var deletePrompt = confirmation.Prompt;
+        var context = deleteActionContext;
+        if (!ReferenceEquals(pendingDeletePrompt, deletePrompt) || context is null ||
+            !IsCurrentAction(context) || deleteSelectionRevision != insightsSelectionRevision) {
             return;
         }
-
-        var deletePrompt = pendingDeletePrompt;
+        try {
+            await InsightsAdmissions.RequireCurrentAsync(context.Admission, deferredCompletionCts.Token);
+        } catch (Exception exception) {
+            RetainDeletionOutcome(new(context, Failure: exception));
+            Logger.LogWarning(exception, "Delete confirmation was not admitted for original project {ProjectId}, lifetime {LifetimeId}.",
+                context.Surface.ProjectId, context.Admission.LifetimeId);
+            if (ReferenceEquals(pendingDeletePrompt, deletePrompt) && IsCurrentAction(context)) {
+                deleteFailure = exception.Message;
+                await InvokeAsync(StateHasChanged);
+            }
+            return;
+        }
+        if (!ReferenceEquals(pendingDeletePrompt, deletePrompt) || !IsCurrentAction(context) ||
+            deleteSelectionRevision != insightsSelectionRevision) {
+            return;
+        }
+        var managedStorageDisposition = confirmation.Disposition;
         var nodeIds = ResolvePendingDeleteNodeIds(deletePrompt);
+        var targetNodes = context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList();
         pendingDeletePrompt = null;
+        deleteFailure = null;
+        deleteActionContext = null;
         reconnectNodeId = null;
-        var targetNodes = ResolveDeleteTargetNodes(nodeIds);
-        if (targetNodes.Count == 0)
-        {
-            workflowFeedback = "The selected node could not be found anymore.";
-            workflowFeedbackTone = "warn";
-            await ReloadSurfaceAsync();
-            return;
-        }
-
         var isBulk = targetNodes.Count > 1;
         var hasManagedAttachments = deletePrompt.ManagedAttachmentCount > 0;
         var retainedFiles = managedStorageDisposition ==
@@ -234,17 +309,23 @@ public partial class ProjectStructurePage
                 : isBulk
                     ? $"{targetNodes.Count} selected branches and eligible managed files were deleted."
                     : "The selected branch and its eligible managed files were deleted.",
-            isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.");
+            isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.", context);
     }
 
-    private void CancelDelete()
-        => pendingDeletePrompt = null;
+    private void CancelDelete(ProjectStructureDeletePrompt prompt) {
+        if (ReferenceEquals(pendingDeletePrompt, prompt)) {
+            pendingDeletePrompt = null;
+            deleteFailure = null;
+            deleteActionContext = null;
+        }
+    }
 
     private async Task<bool> DeleteSelectedNodesAsync(
         IReadOnlyList<ProjectStructureNode> targetNodes,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string successMessage,
-        string failureMessage)
+        string failureMessage,
+        ProjectStructureActionContext context)
     {
         var deletedAny = false;
         var failedAny = false;
@@ -253,21 +334,25 @@ public partial class ProjectStructurePage
         try
         {
             var deletion = await BatchDeletionCoordinator.DeleteNodesAsync(
-                ProjectId,
+                context.Surface.ProjectId,
                 targetNodes.Select(node => node.Id).ToArray(),
-                managedStorageDisposition);
+                managedStorageDisposition,
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+            RetainDeletionOutcome(new(context, Result: deletion));
             deletionWarnings.AddRange(deletion.DeletionWarnings);
             deletedAny = deletion.DeletedNodeCount > 0;
         }
         catch (ProjectStructureDeletionBatchPartialCommitException exception)
         {
+            RetainDeletionOutcome(new(context, Recovery: exception.Recovery));
             deletedAny = exception.Recovery.CompletedNodeCount > 0 ||
                          exception.Recovery.Recoveries.Count > 0;
             failedAny = true;
             deletionWarnings.AddRange(exception.Recovery.Warnings);
-            foreach (var recovery in exception.Recovery.Recoveries)
-            {
-                AddOrReplacePendingDeletionRecovery(recovery);
+            if (IsCurrentAction(context)) {
+                foreach (var recovery in exception.Recovery.Recoveries) {
+                    AddOrReplacePendingDeletionRecovery(recovery);
+                }
             }
 
             if (exception.Recovery.BranchFailures.Count > 0)
@@ -291,7 +376,7 @@ public partial class ProjectStructurePage
                 {
                     Logger.LogWarning(
                         "Project structure branch deletion failed. ProjectId={ProjectId} RootNodeId={RootNodeId} FailureKind={FailureKind} BindingId={BindingId} Disposition={Disposition}.",
-                        ProjectId,
+                        context.Surface.ProjectId,
                         branchFailure.RootNodeId,
                         branchFailure.Kind,
                         branchFailure.BindingId,
@@ -301,6 +386,7 @@ public partial class ProjectStructurePage
         }
         catch (ProjectManagedStorageBindingException exception)
         {
+            RetainDeletionOutcome(new(context, Failure: exception));
             failedAny = true;
             failureMessage = managedStorageDisposition ==
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
@@ -308,24 +394,41 @@ public partial class ProjectStructurePage
                     : failureMessage;
             Logger.LogWarning(
                 "Project structure deletion was blocked by managed-storage validation. ProjectId={ProjectId} BindingId={BindingId} Disposition={Disposition}.",
-                ProjectId,
+                context.Surface.ProjectId,
                 exception.BindingId,
                 managedStorageDisposition);
         }
         catch (Exception exception)
         {
+            RetainDeletionOutcome(new(context, Failure: exception));
+            failureMessage = "No additional deletion result was confirmed. Inspect the original project before retrying.";
             failedAny = true;
             Logger.LogWarning(
                 "Project structure deletion failed before durable completion. ProjectId={ProjectId} RootCount={RootCount} Disposition={Disposition} FailureType={FailureType}.",
-                ProjectId,
+                context.Surface.ProjectId,
                 targetNodes.Count,
                 managedStorageDisposition,
                 exception.GetType().Name);
         }
 
+        if (!IsCurrentAction(context)) {
+            return deletedAny && !failedAny;
+        }
         if (failedAny)
         {
-            await ReloadSurfaceAsync();
+            try {
+                await ReloadSurfaceAsync();
+            } catch (Exception exception) {
+                RetainDeletionOutcome(new(context, Failure: exception));
+                if (IsCurrentAction(context)) {
+                    workflowFeedback = "The original deletion outcome is retained, but the view could not refresh. Reload; do not repeat the deletion.";
+                    workflowFeedbackTone = "warn";
+                }
+                return false;
+            }
+            if (!IsCurrentAction(context)) {
+                return false;
+            }
             workflowFeedback = pendingDeletionRecoveries.Count > 0
                 ? AppendDeletionWarningFeedback(
                     string.Join(
@@ -341,7 +444,19 @@ public partial class ProjectStructurePage
 
         if (deletedAny)
         {
-            await ReloadSurfaceAsync();
+            try {
+                await ReloadSurfaceAsync();
+            } catch (Exception exception) {
+                RetainDeletionOutcome(new(context, Failure: exception));
+                if (IsCurrentAction(context)) {
+                    workflowFeedback = "The original deletion outcome is retained, but the view could not refresh. Reload; do not repeat the deletion.";
+                    workflowFeedbackTone = "warn";
+                }
+                return false;
+            }
+            if (!IsCurrentAction(context)) {
+                return false;
+            }
             if (pendingDeletionRecoveries.Count > 0)
             {
                 workflowFeedback =
@@ -361,6 +476,13 @@ public partial class ProjectStructurePage
         workflowFeedbackTone = "warn";
         await InvokeAsync(StateHasChanged);
         return false;
+    }
+
+    private void RetainDeletionOutcome(RetainedDeletionOutcome outcome) {
+        retainedDeletionOutcomes.Enqueue(outcome);
+        while (retainedDeletionOutcomes.Count > 16) {
+            retainedDeletionOutcomes.Dequeue();
+        }
     }
 
     private async Task RetryPendingDeletionCleanupAsync()
@@ -503,368 +625,89 @@ public partial class ProjectStructurePage
     private static IReadOnlyList<string> ResolvePendingDeleteNodeIds(ProjectStructureDeletePrompt prompt)
         => prompt.NodeIds.Count > 0 ? prompt.NodeIds : [prompt.NodeId];
 
-    private async Task OpenSummaryAsync(string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            return;
-        }
-        var targetNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
-        if (targetNode is null) {
-            return;
-        }
-
-        summaryActionContext = context;
-        summaryDialog = new ProjectStructureSummaryDialogState(
-            targetNode.Id, targetNode.Title,
-            ProjectStructureSummaryBuilder.Build(summaryActionContext.Surface, targetNode));
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void CloseSummary() {
-        summaryDialog = null;
-        summaryActionContext = null;
-    }
-
-    private async Task ChangeSummaryStatusAsync(string nodeId, ChangeEventArgs args) {
-        var status = args.Value?.ToString()?.Trim();
-        var context = summaryActionContext;
-        if (string.IsNullOrWhiteSpace(status) || summaryDialog is null || context is null) {
-            return;
-        }
-
-        var committed = false;
-        try {
-            var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
-                context.Surface.ProjectId, [nodeId], status, expectedProjectAdmission: context.Admission);
-            if (updatedNodes.Count == 0) {
-                ReportActionResult(context, "The original summary node is no longer available.", "warn");
-                return;
-            }
-            committed = true;
-            ReportActionResult(context, "The original summary status was updated.");
-            if (IsCurrentAction(context)) {
-                await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-            }
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, committed ? "The original summary status was saved." : null);
-        }
-    }
-
-    private async Task ExportSummaryWorkbookAsync() {
-        var dialog = summaryDialog;
-        var context = summaryActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        ProjectStructureNode? created = null;
-        try {
-            var payload = ProjectStructureSummaryExporter.BuildWorkbook(dialog.Summary);
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.File,
-                    $"{dialog.RootTitle} progress workbook",
-                    "Progress summary export",
-                    "Generated from the structure progress summary modal.",
-                    dialog.RootNodeId, null, null, null, null, "excel",
-                    new ProjectObjectMediaPayload(
-                        $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        Convert.ToBase64String(payload))) { ExpectedProjectAdmission = context.Admission });
-
-            ReportActionResult(context, $"{created.Title} was exported as an Excel attachment.");
-            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task ExportSummaryGanttAsync() {
-        var dialog = summaryDialog;
-        var context = summaryActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        ProjectStructureNode? created = null;
-        try {
-            var mermaidText = ProjectStructureSummaryExporter.BuildMermaidGantt(
-                dialog.Summary, DateOnly.FromDateTime(DateTime.UtcNow));
-            var media = await AssetCreationService.CreateTextAsync(
-                ProjectFileSubtype.Mermaid,
-                $"{SanitizeExportName(dialog.RootTitle)}-progress-summary.mmd",
-                mermaidText, deferredCompletionCts.Token);
-            var metadata = new ProjectObjectMetadataEnvelope {
-                File = new ProjectFileMetadata {
-                    FileSubtype = ProjectFileSubtype.Mermaid,
-                    MermaidDiagramKind = MermaidDiagramKind.Gantt
-                }
-            };
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.File,
-                    $"{dialog.RootTitle} gantt",
-                    "Progress summary export",
-                    "Generated from the structure progress summary modal.",
-                    dialog.RootNodeId, null, null, null, null, "mermaid", media,
-                    ProjectObjectMetadataSerializer.Serialize(metadata)) { ExpectedProjectAdmission = context.Admission },
-                deferredCompletionCts.Token);
-
-            ReportActionResult(context, $"{created.Title} was exported as a Mermaid Gantt node.");
-            await RefreshSummaryActionAsync(context, created, dialog.RootNodeId);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task ExportMindmapImageAsync(ProjectStructureNode? sourceNode = null, ProjectStructureActionContext? capturedContext = null) {
-        var targetNode = sourceNode ?? selectedNode;
-        var canvas = workbenchRef;
-        if (targetNode is null || canvas is null) {
-            return;
-        }
-
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            ReportActionResult(context, "The original canvas is no longer displayed. No image capture was started.", "warn");
-            return;
-        }
-        ProjectStructureNode? created = null;
-        try {
-            var base64 = await canvas.CaptureImageAsync();
-            if (string.IsNullOrWhiteSpace(base64)) {
-                ReportActionResult(context, "The canvas image could not be captured.", "warn");
-                return;
-            }
-
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.ImageAsset,
-                    $"{targetNode.Title} mindmap image",
-                    "Canvas export",
-                    "Generated from the current structure canvas viewport.",
-                    targetNode.Id, null, null, null, null, "png",
-                    new ProjectObjectMediaPayload(
-                        $"{SanitizeExportName(targetNode.Title)}-mindmap.png", "image/png", base64)) {
-                    ExpectedProjectAdmission = context.Admission
-                });
-            ReportActionResult(context, $"{created.Title} was exported as an image node.");
-            await RefreshCreatedActionAsync(context, created);
-        } catch (JSException) when (created is null) {
-            ReportActionResult(context, "The canvas image could not be captured.", "warn");
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"{created.Title} was saved.");
-        }
-    }
-
-    private async Task CreateTranscriptFromRecordingAsync(ProjectStructureNode? recordingNode = null, ProjectStructureActionContext? capturedContext = null) {
-        var targetNode = recordingNode ?? selectedNode;
-        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Recording) {
-            return;
-        }
-
-        var context = capturedContext ?? CaptureActionContext();
-        ProjectStructureNode? created = null;
-        try {
-            var metadata = new ProjectObjectMetadataEnvelope {
-                Transcript = new ProjectTranscriptMetadata { TranscriptText = string.Empty }
-            };
-            var nodeReferences = new ProjectNodeReferenceCollection {
-                TranscriptRecordingNodeId = TryParseCustomNodeArtifactId(targetNode.Id)
-            };
-            created = await ProjectWorkbenchService.CreateObjectAsync(
-                context.Surface.ProjectId,
-                new ProjectObjectCreateRequest(
-                    ProjectObjectType.Transcript,
-                    $"{targetNode.Title} transcript",
-                    "Generated from recording",
-                    $"Transcript scaffold created from recording '{targetNode.Title}'.",
-                    targetNode.Id, targetNode.X + 280, targetNode.Y + 120, null, null,
-                    string.Empty, null, ProjectObjectMetadataSerializer.Serialize(metadata), null, nodeReferences) {
-                    ExpectedProjectAdmission = context.Admission
-                });
-            await ProjectWorkbenchService.LinkObjectsAsync(
-                context.Surface.ProjectId, targetNode.Id, created.Id, ProjectObjectLinkKind.DerivedFrom,
-                expectedProjectAdmission: context.Admission);
-            ReportActionResult(context, $"{created.Title} was created and linked to its recording.");
-            await RefreshCreatedActionAsync(context, created);
-        } catch (Exception exception) {
-            ReportActionFailure(context, exception, created is null ? null : $"Transcript {created.Title} ({created.Id}) was saved.");
-        }
-    }
-
-    private async Task OpenTranscriptActionAsync(ProjectLlmActionKind actionKind, string? nodeId = null, ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => node.Id == (nodeId ?? selectedNode?.Id));
-        if (!IsCurrentAction(context) || transcriptNode is null || transcriptNode.ObjectType != ProjectObjectType.Transcript) {
-            return;
-        }
-
-        transcriptActionContext = context;
-        var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
-        var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync())
-            .Where(profile => profile.IsEnabled).ToList();
-        if (!IsCurrentAction(context) || !ReferenceEquals(transcriptActionContext, context)) {
-            return;
-        }
-
-        pendingTranscriptAction = new ProjectStructureTranscriptActionDialogState(
-            transcriptNode.Id, transcriptNode.Title, actionKind,
-            transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id,
-            metadata.Transcript?.LastProviderName ?? string.Empty, providers, string.Empty);
-    }
-
-    private void CancelTranscriptAction() {
-        pendingTranscriptAction = null;
-        transcriptActionContext = null;
-    }
-
-    private async Task ExecuteTranscriptActionAsync() {
-        var dialog = pendingTranscriptAction;
-        var context = transcriptActionContext;
-        if (dialog is null || context is null) {
-            return;
-        }
-
-        var transcriptNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, dialog.NodeId, StringComparison.Ordinal));
-        if (transcriptNode is null) {
-            CancelTranscriptAction();
-            return;
-        }
-
-        var provider = dialog.Providers.FirstOrDefault(item => item.Id == dialog.SelectedProviderId);
-        if (provider is null) {
-            pendingTranscriptAction = dialog with { Error = "Select an available provider profile before sending the transcript action." };
-            return;
-        }
-
-        var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
-        var transcriptText = string.IsNullOrWhiteSpace(metadata.Transcript?.TranscriptText)
-            ? transcriptNode.Notes : metadata.Transcript.TranscriptText;
-        if (string.IsNullOrWhiteSpace(transcriptText)) {
-            pendingTranscriptAction = dialog with { Error = "Transcript text is required before running an LLM action." };
-            return;
-        }
-
-        var providerCompleted = false;
-        var nativeCompleted = false;
-        try {
-            var result = await ProviderPromptExecutionService.ExecuteAsync(new ProviderPromptExecutionRequest(
-                provider.Id, BuildTranscriptPrompt(dialog.ActionKind, transcriptNode.Title, transcriptText), OutputFormat: "Markdown"));
-            if (result.IsFailure || result.Value is null) {
-                var error = result.Errors.FirstOrDefault()?.Message ?? "The provider request failed.";
-                if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
-                    pendingTranscriptAction = dialog with { Error = error };
-                } else {
-                    ReportActionResult(context, error, "warn");
-                }
-                return;
-            }
-
-            providerCompleted = true;
-            metadata.Transcript ??= new ProjectTranscriptMetadata();
-            metadata.Transcript.TranscriptText = transcriptText;
-            metadata.Transcript.LastActionKind = dialog.ActionKind;
-            metadata.Transcript.LastProviderName = provider.Name;
-            metadata.Transcript.LastGeneratedAtUtc = DateTimeOffset.UtcNow;
-            var updatedReferences = transcriptNode.NodeReferences?.Clone() ?? new ProjectNodeReferenceCollection();
-            updatedReferences.TranscriptProviderProfileId = provider.Id;
-            switch (dialog.ActionKind) {
-                case ProjectLlmActionKind.Summarize:
-                    metadata.Transcript.SummaryText = result.Value.OutputText.Trim();
-                    break;
-                case ProjectLlmActionKind.FindMyTasks:
-                    metadata.Transcript.MyTasksText = result.Value.OutputText.Trim();
-                    break;
-                case ProjectLlmActionKind.FindOthersDeliveries:
-                    metadata.Transcript.OthersDeliveriesText = result.Value.OutputText.Trim();
-                    break;
-            }
-
-            var updated = await ProjectWorkbenchService.UpdateObjectMetadataAsync(
-                context.Surface.ProjectId, transcriptNode.Id, ProjectObjectMetadataSerializer.Serialize(metadata),
-                status: "Review", nodeReferences: updatedReferences, expectedProjectAdmission: context.Admission);
-            nativeCompleted = updated is not null;
-            if (updated is null) {
-                throw new InvalidOperationException("The original transcript is no longer available for the completed provider result.");
-            }
-            ReportActionResult(context, $"{ResolveTranscriptActionLabel(dialog.ActionKind)} completed through {provider.Name}.",
-                result.Value.ContainsWarnings ? "warn" : "mint");
-            if (IsCurrentAction(context)) {
-                if (ReferenceEquals(transcriptActionContext, context)) {
-                    CancelTranscriptAction();
-                }
-                await ApplySurfaceNodeUpdatesAsync([updated]);
-            }
-        } catch (Exception exception) {
-            var completed = nativeCompleted ? "The transcript result was saved."
-                : providerCompleted ? "The provider request completed; saving its result to the original transcript could not be confirmed."
-                : null;
-            var failureMessage = ReportActionFailure(context, exception, completed);
-            if (IsCurrentAction(context) && ReferenceEquals(transcriptActionContext, context)) {
-                pendingTranscriptAction = dialog with { Error = failureMessage };
-            }
-        }
-    }
-
-    private void HandleTranscriptProviderChanged(ChangeEventArgs args)
-    {
-        if (pendingTranscriptAction is null)
-        {
-            return;
-        }
-
-        var selectedProviderId = Guid.TryParse(args.Value?.ToString(), out var parsedProviderId)
-            ? parsedProviderId
-            : (Guid?)null;
-        pendingTranscriptAction = pendingTranscriptAction with
-        {
-            SelectedProviderId = selectedProviderId,
-            Error = string.Empty
-        };
-    }
-
-    private async Task OpenMermaidViewerAsync(ProjectStructureNode node)
-    {
-        if (!HasMermaidViewer(node))
-        {
-            mermaidPreviewNode = null;
+    private async Task OpenMermaidViewerAsync(ProjectStructureNode node) {
+        if (!HasMermaidViewer(node)) {
+            CloseMermaidViewer();
             await OpenAttachmentPreviewAsync(node);
             return;
         }
-
+        var opening = new ProjectStructureAuthoringOpening(CaptureActionContext(), node);
+        mermaidOpening = opening;
+        mermaidPreviewNode = null;
         await CloseAttachmentPreviewAsync();
-        mermaidPreviewNode = node;
+        if (IsCurrentAuthoring(opening, mermaidOpening)) {
+            mermaidPreviewNode = node;
+        }
     }
 
-    private void CloseMermaidViewer()
-        => mermaidPreviewNode = null;
-
-    private async Task EditMermaidPreviewNodeAsync(ProjectStructureNode node)
-    {
-        CloseMermaidViewer();
-        await OpenEditDialogAsync(node);
+    private void CloseMermaidViewer() {
+        mermaidOpening = null;
+        mermaidPreviewNode = null;
     }
 
-    private async Task HandleReconnectSelectionAsync(string? nodeId)
-    {
-        if (string.IsNullOrWhiteSpace(reconnectNodeId) || string.IsNullOrWhiteSpace(nodeId))
-        {
+    private async Task EditMermaidPreviewNodeAsync(ProjectStructureAuthoringOpening? opening) {
+        if (opening is null || !TryBeginAuthoring(opening, mermaidOpening)) {
             return;
         }
+        try {
+            await ProjectWorkbenchService.RequireContentCurrentAsync(opening.Context.Admission, opening.Node, deferredCompletionCts.Token);
+            if (!IsCurrentAuthoring(opening, mermaidOpening)) {
+                return;
+            }
+            CloseMermaidViewer();
+            await OpenEditDialogAsync(opening.Node, opening.Context);
+        } catch (Exception failure) {
+            LogContentFailure(opening, ProjectStructureAuthoringOperation.EditNode, failure);
+            ReportActionResult(opening.Context, "The original Mermaid content changed or is unavailable. Reopen it before editing.", "warn");
+        } finally {
+            opening.IsBusy = false;
+        }
+    }
 
-        if (string.Equals(reconnectNodeId, nodeId, StringComparison.Ordinal))
-        {
-            reconnectNodeId = null;
+    private async Task HandleReconnectSelectionAsync(string? nodeId) {
+        var opening = reconnectOpening;
+        if (opening is null || string.IsNullOrWhiteSpace(reconnectNodeId) || !TryBeginAuthoring(opening, reconnectOpening)) {
             return;
         }
+        var target = surface?.Nodes.FirstOrDefault(node => node.Id == nodeId);
+        if (target is null || target.Id == opening.Node.Id) {
+            opening.IsBusy = false;
+            return;
+        }
+        await ReparentBranchAsync(opening, target);
+    }
 
-        await ProjectWorkbenchService.ReparentObjectAsync(ProjectId, reconnectNodeId, nodeId);
-        reconnectNodeId = null;
-        await ReloadSurfaceAsync(nodeId);
+    private async Task ReparentBranchAsync(ProjectStructureAuthoringOpening opening, ProjectStructureNode? target) {
+        var context = opening.Context;
+        var selectionRevision = insightsSelectionRevision;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            target is null ? ProjectStructureAuthoringOperation.DisconnectNodes : ProjectStructureAuthoringOperation.MoveNodes,
+            ProjectStructureAuthoringResultKind.Rejected, "The branch could not be reconnected.") {
+            SourceNodeId = opening.Node.Id
+        };
+        try {
+            var accepted = await ProjectWorkbenchService.ReparentObjectAsync(context.Surface.ProjectId, opening.Node.Id, target?.Id,
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission },
+                expectedNodes: target is null ? [opening.Node] : [opening.Node, target]);
+            if (accepted is not null) {
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = accepted,
+                    Message = target is null ? $"{opening.Node.Title} was disconnected." : $"{opening.Node.Title} was reconnected under {target.Title}." };
+            }
+            RecordAuthoringOutcome(opening, outcome);
+            if (accepted is not null && IsCurrentAuthoring(opening, reconnectOpening) && selectionRevision == insightsSelectionRevision) {
+                reconnectNodeId = null;
+                await RefreshAuthoringSurfaceAsync(opening, outcome, target?.Id ?? opening.Node.Id,
+                    () => ReferenceEquals(reconnectOpening, opening) && selectionRevision == insightsSelectionRevision);
+            }
+        } catch (Exception failure) {
+            opening.RequiresObservation = !IsKnownGraphRejection(failure);
+            RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = opening.RequiresObservation ? "Reconnection is unconfirmed. Observe the original project before repeating it." : failure.Message });
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
+        }
     }
 
     private async Task<bool> TryAdoptMovedNodesIntoBordersAsync(CanvasWorkbenchNodesMovedEventArgs args)

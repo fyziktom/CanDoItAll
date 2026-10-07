@@ -155,7 +155,7 @@ public sealed class AgentCatalogBoundaryTests {
         await cut.WaitForElement("[data-testid='agents-catalog-card']").ClickAsync();
         await cut.Find("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogHost.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Delayed catalog publication");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Delayed catalog publication");
         var pending = new TaskCompletionSource<AgentCatalogSnapshot>();
         operations.NextLoad = pending.Task;
         var submitted = editor.Find("form").SubmitAsync();
@@ -186,7 +186,7 @@ public sealed class AgentCatalogBoundaryTests {
         page.WaitForDashboardLoaded();
         await page.WaitForElement("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogHost.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Page save echo proof");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Page save echo proof");
         await editor.Find("form").SubmitAsync();
         var savedId = editor.Instance.CurrentTarget.AgentId;
         Assert.NotNull(savedId);
@@ -194,7 +194,7 @@ public sealed class AgentCatalogBoundaryTests {
             page.FindComponent<AgentCatalogPanel>().Instance.Selection.AgentId));
         Assert.Single(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);
         Assert.Same(editor.Instance, dialogHost.FindComponent<AgentDetailsDialog>().Instance);
-        editor.Find("[data-testid='agents-catalog-name']").Change("Page save echo updated");
+        editor.Find("[data-testid='agents-catalog-name']").Input("Page save echo updated");
         await editor.Find("form").SubmitAsync();
         Assert.Equal(savedId, editor.Instance.CurrentTarget.AgentId);
         Assert.Single(harness.Context.Services.GetRequiredService<DialogService>().Dialogs);
@@ -419,6 +419,75 @@ public sealed class AgentCatalogBoundaryTests {
         await replacement.InvokeAsync(() => replacement.Instance.Dispose());
         Assert.Equal(typeof(AgentTeamDetailsDialog), Assert.Single(dialogs.Dialogs).ComponentType);
         await dialogs.CloseAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Team_confirmed_mutation_with_failed_refresh_retries_only_read(bool failParentCallback) {
+        var team = new AgentTeamDefinition(Guid.NewGuid(), "Readback team", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        var operations = new RecordingCatalogOperations { Snapshot = new([AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Fixture agent", "")], [team], new Dictionary<Guid, bool>()) };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentCatalogOperations>(operations));
+        var failCallback = false;
+        var cut = harness.Context.Render<AgentCatalogHost>(p => p.Add(c => c.RequestedTeamId, team.Id)
+            .Add(c => c.SelectedTeamChanged, _ => {
+                if (failCallback) {
+                    throw new IOException("PRIVATE_TEAM_REFRESH_CANARY");
+                }
+            }));
+        cut.WaitForElement("[data-testid='agents-team-members']");
+        var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
+        await cut.Find("[data-testid='agents-team-members']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
+        failCallback = failParentCallback;
+        if (!failParentCallback) {
+            operations.NextLoad = Task.FromException<AgentCatalogSnapshot>(new IOException("PRIVATE_TEAM_REFRESH_CANARY"));
+        }
+        await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentTeamMembersDialogResult(team.Id, [])));
+        cut.WaitForElement("[data-testid='agents-team-retry-read']");
+        Assert.Equal(1, operations.MemberWrites);
+        Assert.Contains("was saved", cut.Find("[data-testid='agents-team-recovery']").TextContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_TEAM_REFRESH_CANARY", cut.Markup, StringComparison.Ordinal);
+        failCallback = false;
+        operations.NextLoad = null;
+        await cut.Find("[data-testid='agents-team-retry-read']").ClickAsync();
+        Assert.Equal(1, operations.MemberWrites);
+        Assert.Equal(3, operations.Loads);
+        Assert.Empty(cut.FindAll("[data-testid='agents-team-recovery']"));
+    }
+
+    [Fact]
+    public async Task Team_members_result_for_different_identity_is_refused() {
+        var team = new AgentTeamDefinition(Guid.NewGuid(), "Original team", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        var operations = new RecordingCatalogOperations { Snapshot = new([AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Fixture agent", "")], [team], new Dictionary<Guid, bool>()) };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentCatalogOperations>(operations));
+        var cut = harness.Context.Render<AgentCatalogHost>(p => p.Add(c => c.RequestedTeamId, team.Id));
+        await cut.WaitForElement("[data-testid='agents-team-members']").ClickAsync();
+        var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
+        cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
+        await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentTeamMembersDialogResult(Guid.NewGuid(), [])));
+        Assert.Equal(0, operations.MemberWrites);
+        Assert.Equal(1, operations.Loads);
+    }
+
+    [Fact]
+    public async Task Team_readback_does_not_navigate_back_after_selection_changes() {
+        var first = new AgentTeamDefinition(Guid.NewGuid(), "First team", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+        var second = first with { Id = Guid.NewGuid(), Name = "Second team" };
+        var operations = new RecordingCatalogOperations { Snapshot = new([AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Fixture agent", "")], [first, second], new Dictionary<Guid, bool>()) };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IAgentCatalogOperations>(operations));
+        var cut = harness.Context.Render<AgentCatalogHost>(p => p.Add(c => c.RequestedTeamId, first.Id));
+        await cut.WaitForElement("[data-testid='agents-team-members']").ClickAsync();
+        var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
+        var held = new TaskCompletionSource<AgentCatalogSnapshot>();
+        operations.NextLoad = held.Task;
+        await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentTeamMembersDialogResult(first.Id, [])));
+        cut.WaitForAssertion(() => Assert.Equal(2, operations.Loads));
+        await cut.InvokeAsync(() => cut.FindComponent<AgentCatalogPanel>().Instance.Intent.InvokeAsync(new AgentCatalogIntent.SelectTeam(second.Id)));
+        held.SetResult(operations.Snapshot);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='agents-team-recovery']")));
+        Assert.Equal(second.Id, cut.FindComponent<AgentCatalogPanel>().Instance.Selection.TeamId);
+        Assert.Equal(1, operations.MemberWrites);
     }
 
     private sealed class PendingChatLauncher : IAgentChatLauncher {

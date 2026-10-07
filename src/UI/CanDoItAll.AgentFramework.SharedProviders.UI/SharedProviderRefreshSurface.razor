@@ -1,0 +1,23 @@
+@{
+    var state = View.Presentation;
+    var origin = state.Origin;
+}
+<div class="shared-provider-refresh" data-testid="shared-provider-refresh">
+    <Cluster>
+        <Button Text="Refresh shared provider" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                IsBusy="state.Busy" Disabled="@(state.Busy || state.PendingSource)" Click="@(() => View.RefreshAsync(origin))" data-testid="shared-provider-refresh-capabilities" />
+        @if (state.PendingDelivery is { } attemptId) {
+            <Button Text="Retry workspace delivery" Disabled="state.Busy" Click="@(() => View.RetryDeliveryAsync(origin, attemptId))" data-testid="shared-provider-refresh-delivery" />
+        }
+    </Cluster>
+    @if (state.PendingSource) {
+        <Alert AlertStyle="AlertStyle.Warning">Resolve the pending source attempt in Shared provider connections before another refresh.</Alert>
+    }
+    @if (state.Message is not null) {
+        <Alert AlertStyle="@(state.Failed ? AlertStyle.Danger : AlertStyle.Success)" data-testid="shared-provider-refresh-result">@state.Message</Alert>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ISharedProviderRefreshView View { get; set; } = default!;
+}

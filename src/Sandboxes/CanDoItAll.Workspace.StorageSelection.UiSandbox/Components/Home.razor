@@ -1,0 +1,96 @@
+@page "/"
+@implements IDisposable
+@inject SelectionScenarioSource Source
+@inject DialogService Dialogs
+
+<PageTitle>Storage selection sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Large" Class="p-6" data-testid="selection-sandbox" @onkeydown="HandleKeysAsync">
+    <h1>Storage selection sandbox</h1>
+    <p>Real selection field, card picker, reference table and nested dialogs. All data is bounded fixture data.</p>
+    <Cluster Gap="LayoutGap.Medium">
+        <label>Catalog scenario
+            <select @bind="scenario" data-testid="selection-scenario">
+                @foreach (var item in Enum.GetValues<SelectionScenario>()) {
+                    <option value="@item">@item</option>
+                }
+            </select>
+        </label>
+        <Button Text="Reset catalog" Click="() => Source.Reset(scenario)" data-testid="selection-reset" />
+        <label><input type="checkbox" @bind="Source.Hold" data-testid="selection-hold" /> Hold reads</label>
+        <label><input type="checkbox" @bind="Source.IgnoreCancellation" data-testid="selection-ignore-cancellation" /> Ignore cancellation</label>
+        <Button Text="Release one read" Click="Source.Release" data-testid="selection-release" />
+        <Button Text="Recover source" Click="Source.Recover" data-testid="selection-recover" />
+    </Cluster>
+    <Cluster Gap="LayoutGap.Medium">
+        <Button Text="Open empty parent A" Disabled="@(!ready)" Click="() => OpenAsync(true, false)" data-testid="selection-open-primary" />
+        <Button Text="Open saved/missing parent A" Disabled="@(!ready)" Click="() => OpenAsync(true, true)" data-testid="selection-open-saved" />
+        <Button Text="Open parent B" Disabled="@(!ready)" Click="() => OpenAsync(false, true)" data-testid="selection-open-secondary" />
+        <Button Text="Retire parent A" Click="() => primary?.Dispose()" data-testid="selection-retire-primary" />
+        <Button Text="Replace profile" Click="() => Source.Reset(scenario)" data-testid="selection-profile" />
+    </Cluster>
+    <p data-testid="selection-counts">Owner reads: @Source.Reads; pending reads: @Source.PendingReads. No save or driver operations exist in this host.</p>
+    <Alert AlertStyle="AlertStyle.Info">For late reads: enable Hold and Ignore cancellation, open a parent, retire it, replace the profile or reopen it, then release the old read. While dialogs are open, Alt+Shift+R releases one read, P replaces the profile, A retires parent A, B opens parent B, and C recovers the source. Closing a child leaves its parent open. Reopening A creates a new lifetime even with identical IDs.</Alert>
+    <DialogHost />
+    <NotificationHost />
+</Stack>
+
+@code {
+    private SelectionScenario scenario;
+    private bool ready;
+    private SelectionParentDraft? primary;
+    private SelectionParentDraft? secondary;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            ready = true;
+            StateHasChanged();
+        }
+    }
+    private Task HandleKeysAsync(KeyboardEventArgs args) {
+        if (!args.AltKey || !args.ShiftKey) {
+            return Task.CompletedTask;
+        }
+        switch (args.Code) {
+            case "KeyR":
+                Source.Release();
+                break;
+            case "KeyP":
+                Source.Reset(scenario);
+                break;
+            case "KeyA":
+                primary?.Dispose();
+                break;
+            case "KeyB":
+                return OpenAsync(false, true);
+            case "KeyC":
+                Source.Recover();
+                break;
+        }
+        return Task.CompletedTask;
+    }
+    private async Task OpenAsync(bool first, bool saved) {
+        if (first) {
+            primary?.Dispose();
+        } else {
+            secondary?.Dispose();
+        }
+        var draft = new SelectionParentDraft(first ? "primary" : "secondary", saved
+            ? [SelectionScenarioSource.AlphaId, SelectionScenarioSource.DisabledId, SelectionScenarioSource.MissingId] : []);
+        if (first) {
+            primary = draft;
+        } else {
+            secondary = draft;
+        }
+        try {
+            await Dialogs.OpenAsync<SelectionParent>("Fixture parent " + draft.Name,
+                new Dictionary<string, object?> { [nameof(SelectionParent.Draft)] = draft },
+                new() { Size = ModalSize.Wide, TestId = "selection-parent-dialog-" + draft.Name }, draft.Token);
+        } catch (OperationCanceledException) when (draft.Token.IsCancellationRequested) {
+        } finally {
+            draft.Dispose();
+        }
+    }
+    public void Dispose() {
+        primary?.Dispose();
+        secondary?.Dispose();
+    }
+}

@@ -1,0 +1,141 @@
+@namespace CanDoItAll.Workbench.Content.UI.Generation
+@implements IDisposable
+@{
+    var state = State;
+    var opening = state.OpeningId;
+    var submit = Submit;
+    var close = Close;
+    var disabled = state.IsLoading || state.IsBusy || submitting || unconfirmed || !state.CanSubmit;
+    var provider = state.Providers.FirstOrDefault(item => item.Id == draft.ProviderId);
+}
+<CanvasOverlayDialog @key="opening" AriaLabel="Generate image" Kicker="Generated image" Title="Create an image asset"
+                     Summary="Choose a provider and confirm generation. The placeholder and final image are stored under the original project node."
+                     CanvasScoped="@CanvasScoped" Close="@(() => close.InvokeAsync())" DataTestId="content-image-dialog">
+    <Actions>
+        <Button Text="Generate image" ButtonStyle="ButtonStyle.Info" Disabled="@(disabled || provider is null || string.IsNullOrWhiteSpace(draft.Prompt))"
+                Click="@(() => SubmitAsync(opening, submit))" data-testid="content-image-submit" />
+        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => close.InvokeAsync())" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium">
+            @if (state.IsLoading) {
+                <TextBlock Value="Loading image providers and model choices…" />
+            } else if (state.Providers.Count == 0) {
+                <Alert AlertStyle="AlertStyle.Warning">No image-generation provider is available.</Alert>
+            }
+            <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+                <FormField Text="Image title">
+                    <TextBox Value="@draft.Title" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Title = value ?? string.Empty }))" data-testid="content-image-title" />
+                </FormField>
+                <FormField Text="Usage">
+                    <TextBox Value="@draft.Usage" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Usage = value ?? string.Empty }))" data-testid="content-image-usage" />
+                </FormField>
+                <FormField Text="Provider">
+                    <DropDown TValue="Guid?" Data="@state.Providers" Value="@draft.ProviderId" TextProperty="Name" ValueProperty="Id" Disabled="@disabled"
+                              data-testid="content-image-provider" Placeholder="Choose image provider" Change="@(value => Change(opening, () => draft = draft with { ProviderId = value is Guid id ? id : null, Model = string.Empty }))" />
+                </FormField>
+                <FormField Text="Model">
+                    <DropDown TValue="string" Data="@(provider?.Models ?? [])" Value="@draft.Model" TextProperty="Label" ValueProperty="Id" AllowClear="true" Disabled="@(disabled || provider is null)"
+                              data-testid="content-image-model" Placeholder="@(provider is null ? "Choose a provider first" : $"Default: {provider.DefaultModelLabel}")"
+                              Change="@(value => Change(opening, () => draft = draft with { Model = value?.ToString() ?? string.Empty }))" />
+                </FormField>
+            </Grid>
+            @if (provider is { AllowsCustomModel: true }) {
+                <FormField Text="Optional model override">
+                    <TextBox Value="@draft.Model" Immediate="true" Disabled="@disabled" Placeholder="Use provider default"
+                             ValueChanged="@(value => Change(opening, () => draft = draft with { Model = value ?? string.Empty }))" />
+                </FormField>
+            } else if (provider is { Models.Count: 0 }) {
+                <Alert AlertStyle="AlertStyle.Warning">This shared provider has no available model catalog. Refresh its source before generating.</Alert>
+            }
+            <FormField Text="Prompt">
+                <TextArea Value="@draft.Prompt" Rows="6" Immediate="true" Disabled="@disabled" Placeholder="Describe the image to generate"
+                          ValueChanged="@(value => Change(opening, () => draft = draft with { Prompt = value ?? string.Empty }))" data-testid="content-image-prompt" />
+            </FormField>
+            <Grid ColumnTemplate="repeat(3,minmax(0,1fr))" Gap="LayoutGap.Medium">
+                <FormField Text="Size">
+                    <DropDown TValue="ContentImageSize" Data="@Sizes" TextProperty="Label" ValueProperty="Value" Value="@draft.Size" Disabled="@disabled"
+                              Change="@(value => Change(opening, () => draft = draft with { Size = (ContentImageSize)value! }))" />
+                </FormField>
+                <FormField Text="Quality">
+                    <DropDown TValue="ContentImageQuality" Data="@(Enum.GetValues<ContentImageQuality>())" Value="@draft.Quality" Disabled="@disabled"
+                              Change="@(value => Change(opening, () => draft = draft with { Quality = (ContentImageQuality)value! }))" />
+                </FormField>
+                <FormField Text="Format">
+                    <DropDown TValue="ContentImageFormat" Data="@(Enum.GetValues<ContentImageFormat>())" Value="@draft.Format" Disabled="@disabled"
+                              Change="@(value => Change(opening, () => draft = draft with { Format = (ContentImageFormat)value! }))" />
+                </FormField>
+            </Grid>
+            @if (!string.IsNullOrWhiteSpace(state.Message)) {
+                <Alert AlertStyle="AlertStyle.Warning">@state.Message</Alert>
+            }
+            @if (state.Receipt is { } receipt) {
+                <Alert AlertStyle="@(receipt.Phase == ContentImagePhase.MediaSaved ? AlertStyle.Success : AlertStyle.Info)" data-testid="content-image-receipt">
+                    @receipt.Message
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Operation {receipt.OperationId:D}; node {receipt.NodeId ?? "not accepted"}.")" />
+                </Alert>
+            }
+            @if (localError is not null) {
+                <Alert AlertStyle="AlertStyle.Warning">@localError</Alert>
+            }
+            <TextBlock TextStyle="TextStyle.Caption" Value="The queue runs in memory. After an interruption, inspect the stored placeholder; generation is never restarted automatically." />
+        </Stack>
+    </Body>
+</CanvasOverlayDialog>
+
+@code {
+    private sealed record SizeOption(ContentImageSize Value, string Label);
+    private static readonly SizeOption[] Sizes = [new(ContentImageSize.Auto, "Auto"), new(ContentImageSize.Square, "1024 × 1024"),
+        new(ContentImageSize.Portrait, "1024 × 1536"), new(ContentImageSize.Landscape, "1536 × 1024")];
+    [Parameter, EditorRequired] public ContentImageSetup State { get; set; } = default!;
+    [Parameter] public ContentImageDraft InitialDraft { get; set; } = new("Generated image", "", "", null, "");
+    [Parameter, EditorRequired] public Func<ContentImageDraft, Task> Submit { get; set; } = default!;
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public bool CanvasScoped { get; set; } = true;
+    private Guid currentOpening;
+    private ContentImageDraft draft = new("Generated image", "", "", null, "");
+    private bool submitting;
+    private bool disposed;
+    private bool unconfirmed;
+    private string? localError;
+
+    protected override void OnParametersSet() {
+        if (currentOpening == State.OpeningId) {
+            return;
+        }
+        currentOpening = State.OpeningId;
+        draft = InitialDraft;
+        submitting = false;
+        unconfirmed = false;
+        localError = null;
+    }
+
+    private void Change(Guid opening, Action change) {
+        if (!disposed && opening == currentOpening && State.CanSubmit && !State.IsLoading && !State.IsBusy && !submitting && !unconfirmed) {
+            change();
+            localError = null;
+        }
+    }
+
+    private async Task SubmitAsync(Guid opening, Func<ContentImageDraft, Task> submit) {
+        if (disposed || opening != currentOpening || submitting || unconfirmed || !State.CanSubmit || State.IsLoading || State.IsBusy) {
+            return;
+        }
+        submitting = true;
+        var accepted = draft;
+        try {
+            await submit(accepted);
+        } catch {
+            if (!disposed && opening == currentOpening) {
+                unconfirmed = true;
+                localError = "The original request stopped without a confirmed outcome. Observe it before generating again.";
+            }
+        } finally {
+            if (!disposed && opening == currentOpening) {
+                submitting = false;
+            }
+        }
+    }
+
+    public void Dispose() => disposed = true;
+}

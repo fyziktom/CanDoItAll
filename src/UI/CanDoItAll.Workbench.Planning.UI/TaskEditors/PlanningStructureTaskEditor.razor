@@ -1,0 +1,646 @@
+@implements IDisposable
+@using Microsoft.Extensions.Logging
+@inject ILogger<PlanningStructureTaskEditor> Logger
+@namespace CanDoItAll.Workbench.Planning.UI
+@using System.Globalization
+@using CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+
+<Stack GapScale="LayoutGap.Large"
+       AlignItems="AlignItems.Stretch"
+       Class="project-structure-task-create-dialog"
+       data-testid="project-structure-task-create-content">
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy ? string.Empty : null)">
+    @if (ResourceWarnings.Count > 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-task-create-assignee-warning">
+            @string.Join(" ", ResourceWarnings)
+        </Alert>
+    }
+
+    @if (IsEditMode &&
+        !CanChangeDirectAssignee &&
+        ResourceWarnings.Count == 0)
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="project-structure-task-edit-assignee-readonly">
+            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved, and workflow or process definitions can be attached when available.
+        </Alert>
+    }
+
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+          Gap="LayoutGap.Medium"
+          Class="project-structure-task-create-dialog__grid">
+        <FormField Text="Task title"
+                   Class="project-structure-task-create-dialog__wide-field">
+            <TextBox Value="@title"
+                     ValueChanged="HandleTitleChangedAsync"
+                     Placeholder="Describe the task"
+                     Immediate="true"
+                     data-testid="project-structure-task-create-title" />
+        </FormField>
+
+        <FormField Text="Status lane">
+            <TextBox Value="@subtitle"
+                     ValueChanged="HandleSubtitleChangedAsync"
+                     Placeholder="Sprint, phase, or owner"
+                     Immediate="true"
+                     data-testid="project-structure-task-create-subtitle" />
+        </FormField>
+
+        <FormField Text="Due (UTC)">
+            <input type="text" placeholder="yyyy-MM-ddTHH:mm"
+                   class="cda-input"
+                   value="@dueText"
+                   aria-label="Task due date in UTC"
+                   data-testid="project-structure-task-create-due"
+                   @onchange="HandleDueChanged" />
+        </FormField>
+
+        <FormField Text="Repository">
+            <DropDown TValue="string"
+                      Data="@RepositoryOptions"
+                      TextProperty="Label"
+                      ValueProperty="Value"
+                      Value="@repositoryNodeId"
+                      ValueChanged="HandleRepositoryChangedAsync"
+                      Placeholder="Optional repository"
+                      AllowClear="true"
+                      data-testid="project-structure-task-create-repository" />
+        </FormField>
+
+        <FormField Text="Notes"
+                   Class="project-structure-task-create-dialog__wide-field">
+            <TextArea Value="@notes"
+                      ValueChanged="HandleNotesChangedAsync"
+                      Placeholder="Definition of done or context"
+                      Rows="4"
+                      Immediate="true"
+                      data-testid="project-structure-task-create-notes" />
+        </FormField>
+    </Grid>
+
+    <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
+                                        Value="@estimate"
+                                        ValueChanged="HandleEstimateChangedAsync"
+                                        InputChanged="EstimateInputChanged" InitialInput="initialEstimateInput"
+                                        DefaultCurrencyCode="@DefaultCurrencyCode"
+                                        ExpectedCostReadOnly="@(!ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(execution.State))"
+                                        DataTestId="project-structure-task-create-estimate" />
+
+    @if (IsEditMode)
+    {
+        <ProjectStructureTaskExecutionEditor @ref="executionEditor"
+                                             Value="@execution"
+                                             ValueChanged="HandleExecutionChangedAsync"
+                                             DataTestId="project-structure-task-edit-execution" />
+    }
+
+    <Stack GapScale="LayoutGap.Small"
+           AlignItems="AlignItems.Stretch">
+        <Cluster Gap="LayoutGap.Small"
+                 AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween"
+                 Wrap="FlexWrap.Wrap">
+            <Stack GapScale="LayoutGap.XSmall">
+                <TextBlock TextStyle="TextStyle.Subtitle2"
+                           Value="@(IsEditMode ? "Optional task resource" : "Optional person or agent")" />
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="@(IsEditMode
+                               ? "Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee."
+                               : "The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created.")" />
+            </Stack>
+            @if (CanClearSelectedResource)
+            {
+                <Button Text="Clear selection"
+                        Icon="close"
+                        Size="ButtonSize.Small"
+                        Variant="Variant.Text"
+                        ButtonStyle="ButtonStyle.Base"
+                        data-testid="project-structure-task-create-assignee-clear"
+                        Click="ClearResourceAsync" />
+            }
+        </Cluster>
+
+        <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
+                                            SelectedResource="@selectedResource"
+                                            SelectionChanged="SelectResourceAsync"
+                                            AllowedKinds="@SelectableResourceKinds"
+                                            SearchPlaceholder="@(IsEditMode
+                                                ? "Search people, agents, workflows, and processes"
+                                                : "Search CRM people and synchronized agents")"
+                                            EmptyEyebrow="@(IsEditMode ? "No resources" : "No assignees")"
+                                            EmptyTitle="@(IsEditMode
+                                                ? "No task resources match the current filters"
+                                                : "No people or agents match the current filters")"
+                                            EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
+                                            OptionTestIdPrefix="project-structure-task-create-assignee"
+                                            DataTestId="project-structure-task-create-assignee-picker" />
+
+        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                   ProjectId="@ProjectId"
+                                                   Context="@QuoteContext"
+                                                   SelectedResource="@selectedResource"
+                                                   Estimate="@estimate"
+                                                   EstimateChanged="HandleEstimateChangedAsync"
+                                                   InputRevision="estimateInputRevision" InputIsValid="estimateInputValid"
+                                                   ExecutionState="@execution.State"
+                                                   QuoteResolver="@QuoteResolver"
+                                                   DataTestId="project-structure-task-create-resource-cost" />
+    </Stack>
+
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <Alert AlertStyle="AlertStyle.Danger"
+               data-testid="project-structure-task-create-validation-error">
+            @validationError
+        </Alert>
+    }
+
+    </Stack>
+
+    <PlanningTaskFormActions Result="@submissionState.Result" IsBusy="@submissionState.IsBusy" IsEditMode="@IsEditMode"
+                             TestIdPrefix="project-structure-task-create" Submitted="SubmitAsync" Cancelled="Cancelled"
+                             Readback="@(Readback is null ? default : EventCallback.Factory.Create(this, ReadbackAsync))" />
+</Stack>
+
+@code {
+    private readonly TaskEditorSubmissionState submissionState = new();
+    private long estimateInputRevision;
+    private bool estimateInputValid = true;
+    private void EstimateInputChanged(bool valid) {
+        estimateInputRevision++;
+        estimateInputValid = valid;
+        estimateBeforeDefinitionSelection = null;
+        estimateBeforeDirectAssigneeSelection = null;
+    }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public Func<Task<PlanningTaskSaveResult>>? Readback { get; set; }
+    private Task ReadbackAsync() => Readback is { } read ? submissionState.ReadbackAsync(read, Logger) : Task.CompletedTask;
+    public void Dispose() => submissionState.Dispose();
+
+    private const string DateTimeLocalFormat = "yyyy-MM-ddTHH:mm";
+    private const string TaskSubtype = "task";
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DirectAssigneeKinds =
+        new HashSet<ProjectStructureTaskResourceKind>
+        {
+            ProjectStructureTaskResourceKind.Person,
+            ProjectStructureTaskResourceKind.Agent
+        };
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> AllResourceKinds =
+        Enum.GetValues<ProjectStructureTaskResourceKind>().ToHashSet();
+    private static readonly IReadOnlySet<ProjectStructureTaskResourceKind> DefinitionResourceKinds =
+        new HashSet<ProjectStructureTaskResourceKind>
+        {
+            ProjectStructureTaskResourceKind.Workflow,
+            ProjectStructureTaskResourceKind.Process
+        };
+    private static readonly HashSet<string> ControlledInputKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "workItemKind",
+        "assigneeRef",
+        "dueUtc",
+        "repositoryRef",
+        ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+        ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+        ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+        ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode
+    };
+
+    private bool initialized;
+    private TaskEstimateInputText? initialEstimateInput;
+    private CanvasWorkbenchCreateActionRequest acceptedRequest = default!;
+    private string title = string.Empty;
+    private string subtitle = string.Empty;
+    private string notes = string.Empty;
+    private DateTimeOffset? dueUtc;
+    private string dueText = string.Empty;
+    private string? repositoryNodeId;
+    private ProjectStructureTaskResourceSelection? proposedAssignee;
+    private ProjectStructureTaskResourceSelection? resourceToAttach;
+    private ProjectStructureTaskResourceSelection? selectedResource;
+    private ProjectTaskEstimate estimate = ProjectTaskEstimate.Empty();
+    private ProjectTaskEstimate? estimateBeforeDefinitionSelection;
+    private ProjectTaskEstimate? estimateBeforeDirectAssigneeSelection;
+    private ProjectTaskExecutionSnapshot execution = ProjectTaskExecutionSnapshot.NotStarted;
+    private ProjectStructureTaskEstimateEditor? estimateEditor;
+    private ProjectStructureTaskExecutionEditor? executionEditor;
+    private ProjectStructureTaskResourceCostEstimator? costEstimator;
+    private string validationError = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchCreateActionRequest CreateRequest { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public ProjectTaskQuoteContext QuoteContext { get; set; } = new(Guid.Empty, Guid.Empty, Guid.NewGuid());
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
+
+    [Parameter]
+    public ProjectStructureTaskResourceSelection? InitialAssignee { get; set; }
+
+    [Parameter]
+    public ProjectTaskExecutionSnapshot InitialExecution { get; set; } =
+        ProjectTaskExecutionSnapshot.Unknown;
+
+    [Parameter]
+    public bool CanChangeDirectAssignee { get; set; } = true;
+
+    [Parameter]
+    public IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ProjectStructureTaskResourceOption> ResourceOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<string> ResourceWarnings { get; set; } = [];
+
+    [Parameter]
+    public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
+
+    private bool CanClearSelectedResource =>
+        selectedResource is not null &&
+        (resourceToAttach is not null || CanChangeDirectAssignee);
+
+    private IReadOnlySet<ProjectStructureTaskResourceKind> SelectableResourceKinds =>
+        !IsEditMode
+            ? DirectAssigneeKinds
+            : CanChangeDirectAssignee
+                ? AllResourceKinds
+                : DefinitionResourceKinds;
+
+    protected override void OnParametersSet()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        initialized = true;
+        acceptedRequest = CreateRequest with {
+            InputValues = CreateRequest.InputValues?.Select(value => new CanvasWorkbenchInputValue { Key = value.Key, Value = value.Value }).ToArray()
+        };
+        title = CreateRequest.Title ?? string.Empty;
+        subtitle = CreateRequest.Subtitle ?? string.Empty;
+        notes = CreateRequest.Notes ?? string.Empty;
+        proposedAssignee = InitialAssignee;
+        selectedResource = CanChangeDirectAssignee
+            ? InitialAssignee
+            : null;
+        execution = IsEditMode ? InitialExecution : ProjectTaskExecutionSnapshot.NotStarted;
+        var inputValues = CreateRequest.InputValues ?? [];
+        estimate = ResolveEstimate(inputValues);
+        repositoryNodeId = inputValues
+            .LastOrDefault(value => string.Equals(value.Key, "repositoryRef", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+        var dueValue = inputValues
+            .LastOrDefault(value => string.Equals(value.Key, "dueUtc", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+        dueText = dueValue ?? string.Empty;
+        if (TryParseUtc(dueValue, out var parsedDue))
+        {
+            dueUtc = parsedDue;
+            dueText = FormatDateTimeLocal(parsedDue);
+        }
+    }
+
+    private Task HandleTitleChangedAsync(string? value)
+    {
+        title = value ?? string.Empty;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSubtitleChangedAsync(string? value)
+    {
+        subtitle = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNotesChangedAsync(string? value)
+    {
+        notes = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRepositoryChangedAsync(string? value)
+    {
+        repositoryNodeId = string.IsNullOrWhiteSpace(value) ? null : value;
+        return Task.CompletedTask;
+    }
+
+    private void HandleDueChanged(ChangeEventArgs args)
+    {
+        var text = Convert.ToString(args.Value, CultureInfo.InvariantCulture);
+        dueText = text ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            dueUtc = null;
+            validationError = string.Empty;
+            return;
+        }
+
+        if (!TryParseUtc(text, out var parsedDue))
+        {
+            validationError = "Enter a valid UTC due date and time.";
+            return;
+        }
+
+        dueUtc = parsedDue;
+        validationError = string.Empty;
+    }
+
+    private async Task SelectResourceAsync(ProjectStructureTaskResourceSelection selection)
+    {
+        if (!IsEditMode &&
+            selection.Kind is not (ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent))
+        {
+            return;
+        }
+
+        if (!CanChangeDirectAssignee &&
+            selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            return;
+        }
+
+        if (selection.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent)
+        {
+            selectedResource = selection;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (proposedAssignee != selection)
+            {
+                estimateBeforeDirectAssigneeSelection ??= estimate;
+            }
+
+            proposedAssignee = selection;
+            resourceToAttach = null;
+        }
+        else if (selection.Kind is ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process)
+        {
+            selectedResource = selection;
+            estimateBeforeDefinitionSelection ??= estimate;
+            resourceToAttach = selection;
+        }
+        else
+        {
+            return;
+        }
+
+        if (costEstimator is not null && estimateInputValid)
+        {
+            await costEstimator.EstimateSelectedAsync(selection, estimate);
+        }
+    }
+
+    private async Task ClearResourceAsync()
+    {
+        if (resourceToAttach is not null)
+        {
+            resourceToAttach = null;
+            selectedResource = CanChangeDirectAssignee
+                ? proposedAssignee
+                : null;
+            RestoreEstimateBeforeDefinitionSelection();
+            if (CanChangeDirectAssignee &&
+                proposedAssignee is not null &&
+                costEstimator is not null && estimateInputValid)
+            {
+                await costEstimator.EstimateSelectedAsync(proposedAssignee, estimate);
+            }
+
+            return;
+        }
+
+        if (!CanChangeDirectAssignee)
+        {
+            return;
+        }
+
+        proposedAssignee = null;
+        selectedResource = null;
+        RestoreEstimateBeforeDirectAssigneeSelection();
+    }
+
+    private void RestoreEstimateBeforeDefinitionSelection()
+    {
+        if (estimateBeforeDefinitionSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDefinitionSelection = null;
+    }
+
+    private void RestoreEstimateBeforeDirectAssigneeSelection()
+    {
+        if (estimateBeforeDirectAssigneeSelection is not { } previousEstimate)
+        {
+            return;
+        }
+
+        estimate = estimate with
+        {
+            ExpectedCostAmount = previousEstimate.ExpectedCostAmount,
+            ExpectedCostCurrencyCode = previousEstimate.ExpectedCostCurrencyCode
+        };
+        estimateBeforeDirectAssigneeSelection = null;
+    }
+
+    private Task HandleEstimateChangedAsync(ProjectTaskEstimate value)
+    {
+        estimate = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExecutionChangedAsync(ProjectTaskExecutionSnapshot value)
+    {
+        execution = value;
+        validationError = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!submissionState.CanSubmit) {
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(dueText) && !TryParseUtc(dueText, out _)) {
+            validationError = "Enter a valid UTC due date and time.";
+            return;
+        }
+        dueUtc = string.IsNullOrWhiteSpace(dueText) ? null : DateTimeOffset.Parse(dueText,
+            CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+        var normalizedTitle = title.Trim();
+        if (normalizedTitle.Length == 0)
+        {
+            validationError = "Task title is required.";
+            return;
+        }
+
+        if (normalizedTitle.Length > 200)
+        {
+            validationError = "Task title cannot exceed 200 characters.";
+            return;
+        }
+
+        if (estimateEditor is null)
+        {
+            validationError = "Task estimate details are not ready.";
+            return;
+        }
+
+        if (!estimateEditor.TryGetValue(out estimate, out var estimateError))
+        {
+            validationError = estimateError;
+            return;
+        }
+
+        if (IsEditMode)
+        {
+            var executionError = string.Empty;
+            if (executionEditor is null ||
+                !executionEditor.TryGetValue(out execution, out executionError))
+            {
+                validationError = string.IsNullOrWhiteSpace(executionError)
+                    ? "The task execution state is not ready."
+                    : executionError;
+                return;
+            }
+        }
+
+        var inputValues = (acceptedRequest.InputValues ?? [])
+            .Where(value => !ControlledInputKeys.Contains(value.Key))
+            .Select(value => new CanvasWorkbenchInputValue
+            {
+                Key = value.Key,
+                Value = value.Value
+            })
+            .ToList();
+        inputValues.Add(new CanvasWorkbenchInputValue
+        {
+            Key = "workItemKind",
+            Value = "task"
+        });
+        AddInputValue(inputValues, "dueUtc", dueUtc?.ToString("O", CultureInfo.InvariantCulture));
+        AddInputValue(inputValues, "repositoryRef", repositoryNodeId);
+        AddEstimateInputValues(inputValues, estimate);
+
+        var result = new ProjectStructureTaskDialogResult(
+            acceptedRequest with
+            {
+                Title = normalizedTitle,
+                Subtitle = subtitle.Trim(),
+                Notes = notes.Trim(),
+                CreateMode = ProjectStructureTaskActionIds.CreateMode,
+                ObjectSubtype = TaskSubtype,
+                InputValues = inputValues.ToArray()
+            },
+            proposedAssignee,
+            execution,
+            estimate,
+            IsEditMode ? resourceToAttach : null);
+        var submit = Submitted;
+        estimateInputRevision++;
+        await submissionState.SaveAsync(() => submit is null
+            ? Task.FromResult(new PlanningTaskSaveResult(PlanningTaskSaveStatus.Rejected,
+                "This task editor is not connected to a save owner.", [], [], [])) : submit(result), Logger);
+    }
+
+    [Parameter] public string DefaultCurrencyCode { get; set; } = string.Empty;
+    [Parameter] public Func<ProjectStructureTaskDialogResult, Task<PlanningTaskSaveResult>>? Submitted { get; set; }
+
+    private static void AddInputValue(List<CanvasWorkbenchInputValue> values, string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        values.Add(new CanvasWorkbenchInputValue
+        {
+            Key = key,
+            Value = value
+        });
+    }
+
+    private static void AddEstimateInputValues(
+        List<CanvasWorkbenchInputValue> values,
+        ProjectTaskEstimate value)
+    {
+        var effortValue = ProjectTaskEstimatePolicy.ToInputValue(value);
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedEffortValue,
+            effortValue?.ToString(CultureInfo.InvariantCulture));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
+            ToCamelCaseToken(value.ExpectedEffortUnit));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedCostAmount,
+            value.ExpectedCostAmount?.ToString(CultureInfo.InvariantCulture));
+        AddInputValue(
+            values,
+            ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode,
+            value.ExpectedCostAmount.HasValue ? value.ExpectedCostCurrencyCode : null);
+    }
+
+    private ProjectTaskEstimate ResolveEstimate(IReadOnlyList<CanvasWorkbenchInputValue> inputValues) {
+        var values = inputValues.Where(value => !string.IsNullOrWhiteSpace(value.Key))
+            .GroupBy(value => value.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Last().Value ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+        var unit = values.GetValueOrDefault(ProjectTaskEstimateInputKeys.ExpectedEffortUnit);
+        initialEstimateInput = new(values.GetValueOrDefault(ProjectTaskEstimateInputKeys.ExpectedEffortValue, "8"),
+            string.IsNullOrWhiteSpace(unit) ? nameof(ProjectWorkItemEffortUnit.Hours) : unit,
+            values.GetValueOrDefault(ProjectTaskEstimateInputKeys.ExpectedCostAmount, string.Empty),
+            values.GetValueOrDefault(ProjectTaskEstimateInputKeys.ExpectedCostCurrencyCode, DefaultCurrencyCode));
+        try {
+            return initialEstimateInput.Parse();
+        } catch (Exception exception) when (exception is InvalidOperationException or FormatException or ArgumentException or OverflowException) {
+            estimateInputValid = false;
+            validationError = exception.Message;
+            return ProjectTaskEstimate.Empty();
+        }
+    }
+
+    private static string ToCamelCaseToken(ProjectWorkItemEffortUnit value)
+    {
+        var token = value.ToString();
+        return char.ToLowerInvariant(token[0]) + token[1..];
+    }
+
+    private static string FormatDateTimeLocal(DateTimeOffset? value)
+        => value?.ToUniversalTime().ToString(value.Value.Ticks % TimeSpan.TicksPerMinute == 0
+            ? DateTimeLocalFormat : "yyyy-MM-ddTHH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static bool TryParseUtc(string? value, out DateTimeOffset result)
+    {
+        if (DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            result = parsed.ToUniversalTime();
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+}

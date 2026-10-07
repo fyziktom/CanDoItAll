@@ -75,11 +75,13 @@ public sealed partial class FileSandboxWorkspaceStore
                 currentWorkspaceIndex,
                 targetWorkspaceIndex);
             ValidateAgentDeletionCommitJournal(journal);
+            agentDeletionCommitBoundary?.Invoke(AgentDeletionCommitStage.Prepared);
             jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
             await jsonStore.WriteJsonAtomicallyAsync(
                 PendingAgentDeletionCommitJournalPath,
                 journal,
                 cancellationToken);
+            agentDeletionCommitBoundary?.Invoke(AgentDeletionCommitStage.JournalPersisted);
             await PersistAgentDeletionJournalAsync(
                 journal,
                 CancellationToken.None);
@@ -402,5 +404,7 @@ internal enum AgentDeletionCommitStage
 {
     ExecutionSlicesPersisted,
     CatalogPersisted,
-    WorkspaceIndexPersisted
+    WorkspaceIndexPersisted,
+    Prepared,
+    JournalPersisted
 }

@@ -1,0 +1,358 @@
+{
+  "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+  "repository": "fyziktom/CanDoItAll",
+  "reviewed_on": "2026-09-29",
+  "sources": [
+    {
+      "id": "EV01",
+      "kind": "git-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+      "coverage": "Live branch read at entry and rechecked before sealing on 2026-09-29; both returned 186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf. GitHub reports a verified signature. Commit title identifies Workspace Settings Core; provenance only, not an execution pin."
+    },
+    {
+      "id": "EV02",
+      "kind": "git-metadata",
+      "url": "https://github.com/fyziktom/CanDoItAll/compare/20d816dab0f10d4b55efe4b8ff7e0f6af26dc32d...186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "coverage": "Connector comparison: ahead by two commits, including archived previous handoff and the Core implementation. Changed-file statistics were used as inventory, not execution evidence."
+    },
+    {
+      "id": "EV03",
+      "kind": "repository-file",
+      "path": "docs/architecture/workspace-settings-core-ui-boundary.md",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/docs/architecture/workspace-settings-core-ui-boundary.md",
+      "coverage": "Read the returned implementation/architecture and focused-test passages from requested lines 1-250 (response truncated), and lines 250-477 through closure. Reported raw artifacts, graph counts, timing and test results were not independently reproduced. No claim of complete inspection of the truncated middle measurement passage.",
+      "observed_blob_sha": "c5e687ffcb8253171e2dd6b8a90c46add208b023"
+    },
+    {
+      "id": "EV04",
+      "kind": "git-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf&per_page=10",
+      "coverage": "Unfiltered-by-event Actions query for this SHA returned total_count 0. This does not disprove local tests."
+    },
+    {
+      "id": "AP01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
+      "coverage": "Entire status host: lazy status, unavailable callback, enabled/auth/key conditions, token and user production composition.",
+      "observed_blob_sha": "745032f460c7c0d0a6627e33539119a1c02ec066"
+    },
+    {
+      "id": "AP02",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokenAdministrationPanel.razor",
+      "coverage": "Entire issuance form, scopes, one-time result and nested dialogs; mutable request before permission await.",
+      "observed_blob_sha": "aead7a773a05260cbfaec79d4c5bdae43c7acc1c"
+    },
+    {
+      "id": "AP03",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiUserAdministrationPanel.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiUserAdministrationPanel.razor",
+      "coverage": "Entire user search/page/create/edit/reset/delete host, configured-admin name, password state and generation handling.",
+      "observed_blob_sha": "0f160e4fe1a1e50ab206e67a14b00429fab80c4d"
+    },
+    {
+      "id": "AP04",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokensDialog.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiTokensDialog.razor",
+      "coverage": "Entire paged registry dialog, Enter search, shared busy flag and nested confirmation; no independent request lifetime fencing.",
+      "observed_blob_sha": "f87ea4bccad219fb34ea308cb1dab65957cc14e1"
+    },
+    {
+      "id": "AP05",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ApiScopePickerDialog.razor",
+      "coverage": "Entire actual scope picker: user/machine filtering, clear/select-all, explicit confirm/cancel.",
+      "observed_blob_sha": "a8eee3180e02cf85c6f2c86c585effe322375103"
+    },
+    {
+      "id": "AP06",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiTokenAdministrationService.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiTokenAdministrationService.cs",
+      "coverage": "Entire service: access checked on each action; IssueAsync awaits access before reading mutable issue request.",
+      "observed_blob_sha": "57d154b8e280bf3c02638b13c951243ada31efd5"
+    },
+    {
+      "id": "AP07",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiUserAdministrationService.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiUserAdministrationService.cs",
+      "coverage": "Entire safe account wire DTOs and owner methods: scopes, expected versions, authentication revisions, durable store followed by logging.",
+      "observed_blob_sha": "b11dcb378d90b3188ff73e2737d75a839afe1124"
+    },
+    {
+      "id": "AP08",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccess.cs",
+      "coverage": "Read lines 1-260 and 259-end: mixed sensitive deployment options, safe status/request/result, issuer validation, JWT construction and registry registration.",
+      "observed_blob_sha": "3c68a0988e4ef4762cfb66b3b356ba02e6cb8d7e"
+    },
+    {
+      "id": "AP09",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiScopeCatalog.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiScopeCatalog.cs",
+      "coverage": "Entire canonical scope catalog/parser/validation and managed-credential claim constants. Product names are vocabulary, not module implementation dependencies.",
+      "observed_blob_sha": "250bccb42de5a6eecbab38b9809cec56d013ad26"
+    },
+    {
+      "id": "AP10",
+      "kind": "repository-file",
+      "path": "src/App/CanDoItAll.Web/Api/WebApiTokenAdministrationAccess.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/App/CanDoItAll.Web/Api/WebApiTokenAdministrationAccess.cs",
+      "coverage": "Entire real authority adapter: validated configured-administrator session or trusted local interactive operator; no broad-scope privilege inference.",
+      "observed_blob_sha": "56f4634d1af43ff873dbeef13288ca9a28263642"
+    },
+    {
+      "id": "AP11",
+      "kind": "repository-file",
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "coverage": "Entire instance-local private account store: lock, uniqueness/version checks, bounded catalog and durable writer. Not PostgreSQL persistence.",
+      "observed_blob_sha": "145b3099844d0a6c69ff5c705bb1ac6b4c8eba9f"
+    },
+    {
+      "id": "AP12",
+      "kind": "repository-file",
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiTokenRegistry.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiTokenRegistry.cs",
+      "coverage": "Entire instance-local registry: one private file per registration, CreateNew, kind-filtered paging, revoke/delete and validation. No bearer plaintext storage.",
+      "observed_blob_sha": "ab6a34976ed660c4142e127d1d8a61a29463ed61"
+    },
+    {
+      "id": "AP13",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ApiTokenAdministrationTests.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/tests/Components/CanDoItAll.Tests.Components/ApiTokenAdministrationTests.cs",
+      "coverage": "Entire five-Fact source: lazy list, confirm/cancel, actual scopes, denied owner actions and ordinary account. Source count only, not discovery/execution.",
+      "observed_blob_sha": "351dce624abec530e1c55c6b173074919ae8be6a"
+    },
+    {
+      "id": "AP14",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ApiUserAdministrationPanelTests.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/tests/Components/CanDoItAll.Tests.Components/ApiUserAdministrationPanelTests.cs",
+      "coverage": "Entire one-Fact source: held write duplicate admission and committed create with failed list followed by read-only retry. Preserve this regression.",
+      "observed_blob_sha": "1028e4d18b176a058f46f956ba494c22da665e3d"
+    },
+    {
+      "id": "AP15",
+      "kind": "repository-file",
+      "path": "src/App/CanDoItAll.Web/Api/ApiAccessEndpoints.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/App/CanDoItAll.Web/Api/ApiAccessEndpoints.cs",
+      "coverage": "Entire access endpoint/filter source: feature gates, login/session/admin separation, strict request/status semantics, no-store, versioned mutations and default machine filter.",
+      "observed_blob_sha": "f0c6c9130f5ad58988cc0534080d5c806a75273e"
+    },
+    {
+      "id": "AP16",
+      "kind": "repository-file",
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiTokenRegistry.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiTokenRegistry.cs",
+      "coverage": "Entire mixed registry contract file: safe ApiTokenSummary versus private ApiTokenRecord bindings, status precedence, numeric credential kinds and Machine default.",
+      "observed_blob_sha": "db5931e3385ecd7a209be5f18b6a109a71ec330e"
+    },
+    {
+      "id": "RS01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "coverage": "Lines 1-250 and 260-300 read: separate EditorAccess/catalogAccess, exact-selection retry and mutation admission. Other mutation tail not re-read in this iteration.",
+      "observed_blob_sha": "9cef43115893d5a775f5b25cdbfc64e988a6605d"
+    },
+    {
+      "id": "WS01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceDefaultsController.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceDefaultsController.cs",
+      "coverage": "Entire controller: first acquisition, independent provider reads, single-flight refresh, save reconciliation and metadata observation.",
+      "observed_blob_sha": "a9515c6b7f6a2f8bc8271e7cc63b42fe9d2f95ca"
+    },
+    {
+      "id": "WS02",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceSecretsController.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceSecretsController.cs",
+      "coverage": "Entire controller: explicit editor acquisition, command copies, sensitive-reference retirement, receipts and metadata-only review.",
+      "observed_blob_sha": "e3f2ccebda1f0261019864d2436943339b2d16c7"
+    },
+    {
+      "id": "WS03",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceFilesController.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceFilesController.cs",
+      "coverage": "Entire controller: captured file command, revision-wide result adoption, selected deletion target, refresh and receipts; WSC-R1 source.",
+      "observed_blob_sha": "d116d4145a49b6923affaaae76ffb023535c714f"
+    },
+    {
+      "id": "WS04",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceHistoryController.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Presentation/WorkspaceHistoryController.cs",
+      "coverage": "Entire controller: explicit policy load, expected version, preview validation, authority retirement and unknown-outcome handling.",
+      "observed_blob_sha": "235f7b3e129977b7e3185f158674a21565ab02dc"
+    },
+    {
+      "id": "WS05",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
+      "coverage": "Entire route code-behind: eight tokens, Providers redirect, database/caller retirement and lazy file activation.",
+      "observed_blob_sha": "736c13e2846b7621f88d1df8c64173cfff4b0227"
+    },
+    {
+      "id": "WS06",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+      "coverage": "Entire route markup: active deferred Data Sources/Storage/API hosts supplied by production, separate history host.",
+      "observed_blob_sha": "feef9b41f0dee2ec876c856827e3a471d348ce92"
+    },
+    {
+      "id": "WS07",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Workspace.UI/SettingsOperations.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/UI/CanDoItAll.Workspace.UI/SettingsOperations.cs",
+      "coverage": "Entire safe receipt and bounded ledger contract. No secret command stored in the ledger.",
+      "observed_blob_sha": "a9533dba89e995bf2999c508c0003c80b1799683"
+    },
+    {
+      "id": "WS08",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceSecretsOwner.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Presentation/WorkspaceSecretsOwner.cs",
+      "coverage": "Entire production adapter: original profile generation, editor-only save semantics and known owner stages.",
+      "observed_blob_sha": "60ccd663310289418d650ec97ce6522923271b86"
+    },
+    {
+      "id": "WS09",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+      "coverage": "Lines 230-450: captured Save/SaveEditor, staged vault write, unknown metadata acknowledgement, committed cleanup/Activity and deletion. Not a full audit of Security.",
+      "observed_blob_sha": "ce2db6bc331dc80b0d78e7f19fe0254ed34e8754"
+    },
+    {
+      "id": "WS10",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/UI/CanDoItAll.Workspace.UI/WorkspaceSecretsSurface.razor",
+      "coverage": "Entire renderer: actual SecretField, immediate inputs, draft-keyed editor, safe receipt list and exact review.",
+      "observed_blob_sha": "f35e10b6974f1e0899788f1f0a199e25947d62d8"
+    },
+    {
+      "id": "WS11",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceOwnerContracts.cs",
+      "coverage": "Entire light defaults/secrets/files ports and safe write diagnostic contracts.",
+      "observed_blob_sha": "3f2df4402b10133e51b1c7b33f238e4cb26ab6cc"
+    },
+    {
+      "id": "WS12",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/CanDoItAll.Modules.Workspace.Contracts.csproj",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace.Contracts/CanDoItAll.Modules.Workspace.Contracts.csproj",
+      "coverage": "Entire declared project graph root; only existing Security.Abstractions reference. Not an evaluated restore graph.",
+      "observed_blob_sha": "985ddf9aecc8bde6015c54dd51e76fcf7fdd3aed"
+    },
+    {
+      "id": "WS13",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
+      "coverage": "Entire declared UI references: Core Contracts, History.Abstractions and BaseLib/framework.",
+      "observed_blob_sha": "9182e15052bf51bbb5fe111d250c8f0d3788ae42"
+    },
+    {
+      "id": "WS14",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceBoundaryTests.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceBoundaryTests.cs",
+      "coverage": "Entire test source: transitive closure, forbidden/unresolved negatives and public contract exposure; not executed here.",
+      "observed_blob_sha": "8380f3c6e3a1bf0e3bd308403c97bdf068a60ace"
+    },
+    {
+      "id": "WS15",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "coverage": "Lines 95-180: persistence before currency publication, normalized returned snapshot, protected Activity/logging commit facts.",
+      "observed_blob_sha": "64ed63d57de84bce2de69e28a36bb49638b685c4"
+    },
+    {
+      "id": "WS16",
+      "kind": "repository-file",
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Configuration/CurrencyFormatting.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/Foundation/CanDoItAll.Infrastructure/Configuration/CurrencyFormatting.cs",
+      "coverage": "Entire source checked to confirm CurrencyDisplayState.Update is a locked assignment, not a subscriber notification. No defect inferred from a nonexistent event.",
+      "observed_blob_sha": "3bac6248c3a3ba1bd7c9d6e7df9bd33ec53422cd"
+    },
+    {
+      "id": "WS17",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/src/UI/CanDoItAll.Workspace.UI/WorkspaceFilesSurface.razor",
+      "coverage": "Entire renderer: editable immediate Extension/ExecutablePath and Use system default action bound to controller.Selected; WSC-R1 interaction path.",
+      "observed_blob_sha": "cb6e6027aa1a5d15c197c81b6c05c99e45ee1d65"
+    },
+    {
+      "id": "WS18",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceDraftTests.cs",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/tests/Components/CanDoItAll.Workspace.UI.Tests/WorkspaceDraftTests.cs",
+      "coverage": "Lines 145-313: secret retirement, unknown review, file new-successor and warning/list tests. Existing file test replaces the whole draft; it does not exercise a path-only edit of the same draft during destination-changing Save.",
+      "observed_blob_sha": "bb3d9b921b9ad684c3b3e70661547bbde71fbff6"
+    },
+    {
+      "id": "WS19",
+      "kind": "repository-file",
+      "path": "AGENTS.md",
+      "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf/AGENTS.md",
+      "coverage": "Entire current entry instructions: canonical UI seams, current Testing/CI and mandatory reviewed portability enforcement.",
+      "observed_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64"
+    }
+  ]
+}

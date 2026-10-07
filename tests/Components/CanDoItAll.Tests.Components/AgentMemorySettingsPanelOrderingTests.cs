@@ -42,7 +42,7 @@ public sealed class AgentMemorySettingsPanelOrderingTests : AgentMemorySettingsP
         var cut = Render(context, settings);
         cut.WaitForElement("[data-testid='agents-catalog-memory-new-provider'] option[value='provider.primary']");
 
-        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Change("primary");
+        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Input("primary");
         cut.Find("[data-testid='agents-catalog-memory-new-provider']").Change("provider.primary");
         cut.Find("[data-testid='agents-catalog-memory-new-requirement']").Change("Required");
         cut.Find("[data-testid='agents-catalog-memory-add-binding']").Click();

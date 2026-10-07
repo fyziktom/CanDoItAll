@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKBENCH-STRUCTURE-WB3",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Entry and preserved boundary/source-pair census",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "WB3-H1 hierarchy success/rejection after close or replacement",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Conversion/transfer opening lifetimes and partial facts",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Structure render dependency and public-type closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "Source sandbox actual canvas and two independent instances",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Published Fast/Parity assets and large-desktop geometry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Route, tabs and context transitions",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Selection, pan/zoom and original callback identity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Move/group/connection gestures and read-only enforcement",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Generic create identity, parent and placement",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Generic edit metadata and raw validation",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Generic composer replacement/unknown outcomes",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Native dynamic options and trusted setup routing",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Copy/paste forest and identity map",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Cut/reparent/dependency/recomposition semantics",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Hierarchy add/reconnect and existing Projects editor return",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Block type/note conversion",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Subtree-to-new-project multi-stage outcomes",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Delete prompts and original cleanup/recovery",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Viewport/window state queue and retirement",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "WB1 Planning continuity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "WB2 Insights continuity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Deferred native integrations retained",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Native operator graph journey",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "Actual Agent/file approval and refusal",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Workflow/Scheduler/History/Usage continuity",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Owned multi-instance final-image consumers",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Repeated measured watch cycle",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Current production builds and confirmed test discovery",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "title": "Final broad-checkpoint decision and failure dispositions",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G30",
+      "title": "Portability, scoped secrets and maintained documentation",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G31",
+      "title": "Signed checkpoints and complete WB3 handoff",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "structure_ui_boundary_complete": false,
+    "hierarchy_lifetimes_fixed": false,
+    "native_graph_authority_proven": false,
+    "native_consumer_campaign_passed": false,
+    "ready_for_next_workbench_slice": false,
+    "unresolved_blocking_findings": [],
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "paid_model_calls": 0,
+    "signed_commits": [],
+    "release_ready": false
+  }
+}

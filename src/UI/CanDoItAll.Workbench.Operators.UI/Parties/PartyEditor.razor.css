@@ -1,0 +1,3 @@
+.operator-party { min-width: 0; }
+.operator-party__choice { display: flex; align-items: center; gap: .65rem; padding: .65rem; border: 1px solid var(--cda-border, #dbe2ea); border-radius: .75rem; }
+.operator-party__choice input { flex: 0 0 auto; }

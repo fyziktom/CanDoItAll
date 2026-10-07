@@ -56,6 +56,10 @@ public sealed class ProjectStructureWorkflowNodeService(
         }
 
         var inputSettings = ProjectStructureWorkflowInputSettingsNormalizer.Normalize(request.InputSettings);
+        if (request.ExpectedProject is { } expectedProject && surface.ExpectedProjectAdmission != expectedProject ||
+            request.ExpectedParent is { } expectedParent && !IsSameParent(parentNode, expectedParent)) {
+            throw WorkflowNodeRejection(409, "WorkflowOptionsSourceChanged", "The original Workflow parent or project lifetime changed. Reopen the dialog.");
+        }
         if (request.SelectedNodeIds is not null)
         {
             inputSettings.SelectedNodeIds = ProjectStructureWorkflowInputSettingsNormalizer.NormalizeNodeIds(request.SelectedNodeIds);
@@ -81,6 +85,14 @@ public sealed class ProjectStructureWorkflowNodeService(
             preview,
             options.Count == 0 ? ["No workflow definitions are available."] : []);
     }
+
+    private static bool IsSameParent(ProjectStructureNode current, ProjectStructureNode expected)
+        => current.Id == expected.Id && current.ProjectId == expected.ProjectId &&
+           current.IsSystemManaged == expected.IsSystemManaged &&
+           (current.IsSystemManaged || current.RecordId == expected.RecordId) &&
+           current.ParentId == expected.ParentId && current.ObjectType == expected.ObjectType &&
+           current.ObjectSubtype == expected.ObjectSubtype && current.ArtifactKind == expected.ArtifactKind &&
+           current.ArtifactId == expected.ArtifactId && current.RelatedProjectId == expected.RelatedProjectId;
 
     public Task<ProjectStructureWorkflowNodeCreateResult> CreateAsync(
         Guid projectId,
@@ -164,6 +176,22 @@ public sealed class ProjectStructureWorkflowNodeService(
                 ReceiptObservationException = observationFailure
             };
         }
+    }
+
+    public async Task<ProjectStructureWorkflowNodeStartResult?> ObserveStartAsync(Guid projectId, string nodeId, Guid intentId,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken = default) {
+        var admission = await projectWorkbenchService.FindWorkflowAdmissionAsync(intentId, cancellationToken);
+        if (admission is null) {
+            return null;
+        }
+        if (admission.ProjectId != projectId || admission.NodeId != nodeId ||
+            !workflowAuthority.MatchesNodeProducer(admission.Binding.Authority, agent)) {
+            throw WorkflowNodeRejection(403, "WorkflowAdmissionOwnerMismatch", "The original Workflow admission belongs to a different source.");
+        }
+        await workflowAuthority.EnsureCurrentAsync(admission.Binding.Authority, null, cancellationToken);
+        var run = await workflowRunStore.GetRunAsync(admission.Binding.RunId, cancellationToken);
+        var status = await BuildAdmissionStatusAsync(admission, run, cancellationToken);
+        return StartResult(admission, run, status, []);
     }
 
     public async Task<IReadOnlyList<ProjectStructureWorkflowPreviewSimulationOption>> ListStartSimulationOptionsAsync(
@@ -263,6 +291,10 @@ public sealed class ProjectStructureWorkflowNodeService(
         if (parentNode is null)
         {
             throw WorkflowNodeRejection(404, "ParentNodeNotFound", $"Parent node '{parentNodeId}' was not found.");
+        }
+
+        if (request.ExpectedParent is { } expectedParent && !IsSameParent(parentNode, expectedParent)) {
+            throw WorkflowNodeRejection(409, "WorkflowCreateSourceChanged", "The original Workflow parent changed. Reopen the dialog.");
         }
 
         if (allowCanonicalTaskParent)
@@ -376,6 +408,14 @@ public sealed class ProjectStructureWorkflowNodeService(
             var authority = await workflowAuthority.CaptureForNodeAsync(projectId, agent, cancellationToken);
             var context = await LoadNodeContextAsync(projectId, nodeId, cancellationToken);
             var metadata = ResolveWorkflowMetadata(context.Node);
+            if (request.ExpectedNode is { } expected) {
+                var original = ResolveWorkflowMetadata(expected);
+                if (context.Node.RecordId != expected.RecordId || context.Node.ParentId != expected.ParentId ||
+                    metadata.WorkflowId != original.WorkflowId || metadata.WorkflowVersionId != original.WorkflowVersionId ||
+                    JsonSerializer.Serialize(metadata.InputSettings, JsonOptions) != JsonSerializer.Serialize(original.InputSettings, JsonOptions)) {
+                    throw WorkflowNodeRejection(409, "WorkflowStartSourceChanged", "The original Workflow node, saved version or inputs changed. Reopen its start dialog.");
+                }
+            }
             var detail = await LoadDefinitionAsync(metadata, cancellationToken);
             EnsureActiveDefinition(detail.Definition);
             EnsureValidDefinition(detail);

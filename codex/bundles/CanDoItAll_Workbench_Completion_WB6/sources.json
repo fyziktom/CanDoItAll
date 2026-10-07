@@ -1,0 +1,227 @@
+{
+  "review_date": "2026-10-06",
+  "method": "Connected GitHub source inspection",
+  "product_tests_run_by_reviewer": false,
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "refs/heads/components-decoupling",
+      "blob_sha": null,
+      "coverage": "Git ref and commit metadata; 6-commit compare from WB4; GitHub reports valid signature for current HEAD",
+      "source_url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/commits/12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "connector_citation": "turn1444file0; turn1480file0"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "revision": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+      "path": "refs/heads/development",
+      "blob_sha": null,
+      "coverage": "Git ref: required Components source is remotely available; no new Components code diff in WB5",
+      "source_url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/ref/heads/development",
+      "connector_citation": "turn1445file0"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "docs/architecture/workbench-operators-wb5.md",
+      "blob_sha": "737519bddb4687b44f6612e1990833154d06604c",
+      "coverage": "Maintained report, with final lines255-350 separately read; reported tests were not rerun, private artifacts not supplied",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/docs/architecture/workbench-operators-wb5.md",
+      "connector_citation": "turn1447file0; turn1448file0"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Operators/ProjectPartyEditorSession.cs",
+      "blob_sha": "89926bb7e429189759de595e2ecf205a6dc534e5",
+      "coverage": "Full fetched file; captured create, assignment and metadata/observation outcomes",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Operators/ProjectPartyEditorSession.cs",
+      "connector_citation": "turn1449file0"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Operators/ProjectSecretReferenceSession.cs",
+      "blob_sha": "8b82e2b0a4a51badfba1381cefecdf0db4b334d7",
+      "coverage": "Full fetched file; vault/reference phases, original root exception and retirement",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Operators/ProjectSecretReferenceSession.cs",
+      "connector_citation": "turn1450file0"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+      "blob_sha": "3ac3ed723a62085658e4c1a3522a5ceac3e4216e",
+      "coverage": "Full fetched file; approved plan, exact process identity, Stop/readiness and original context",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.RuntimeLaunch.cs",
+      "connector_citation": "turn1451file0"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj",
+      "blob_sha": "b7aefcf1cc2f5ebeb08a7e5065ec9368b8d75d09",
+      "coverage": "Full project declaration only; MSBuild transitive closure not executed by reviewer",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj",
+      "connector_citation": "turn1474file0"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure",
+      "blob_sha": "63157a511a3a15933c210f5668e987b4437e99df",
+      "coverage": "Directory git tree and Pages listing for remaining file families; not complete behavior review of every file",
+      "source_url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/trees/63157a511a3a15933c210f5668e987b4437e99df",
+      "connector_citation": "turn1456file0; turn1461file0"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.WorkflowNodes.cs",
+      "blob_sha": "be0a6ba9fdd222154bad7ec342bbd75cab6823d0",
+      "coverage": "Lines1-320 and290-600; source-derived Workflow opening/late-result finding and native orchestration",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.WorkflowNodes.cs",
+      "connector_citation": "turn1458file0; turn1459file0"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
+      "blob_sha": "f261da2771369a3dc30eb20e2309ec80016e88cc",
+      "coverage": "Lines1-235 and250-570; full-scope plan requires subsequent code review of remaining portions and descendants",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
+      "connector_citation": "turn1453file0; turn1472file0"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs",
+      "blob_sha": "4a26efb011afef1742b6f90fa9c8e127ec2f52bc",
+      "coverage": "Lines1-245: link catalog, original target, canonical-task/Uses distinction and Process entry points; remainder to inspect during implementation",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs",
+      "connector_citation": "turn1462file0"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProcessPreparations.cs",
+      "blob_sha": "c021d98aac42c1d937976e4a93eca899499b301e",
+      "coverage": "Full fetched file; caller intent, native restore/preparation/delivery and explicit new run",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProcessPreparations.cs",
+      "connector_citation": "turn1463file0"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
+      "blob_sha": "b7cce810f351c085ef5915509bc1d56413d9e697",
+      "coverage": "Lines1-195: actual staffing/role/HR review rendering; entire family remains execution scope",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
+      "connector_citation": "turn1464file0"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentPickerDialog.razor",
+      "blob_sha": "ec629aaa6d2c81cf8df2354a4d77e85063bb8db4",
+      "coverage": "Lines185-385 plus tree census for nested details/switch; not a full prior behavior audit of all children",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentPickerDialog.razor",
+      "connector_citation": "turn1473file0"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSupportDialogs.razor",
+      "blob_sha": "97a529aacbc713bf11e0648ee0bb809b726a28c1",
+      "coverage": "Lines1-180: existing Content composition plus unextracted native storage-disposition rendering",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSupportDialogs.razor",
+      "connector_citation": "turn1467file0"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.OverlayStates.cs",
+      "blob_sha": "d816ee31494784b526b25fe8fa00c61961efc496",
+      "coverage": "Lines130-360: mixed UI/native state, candidates/roles/authority; do not move wholesale to a leaf",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.OverlayStates.cs",
+      "connector_citation": "turn1476file0"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "AGENTS.md",
+      "blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "Full fetched root instructions; Codex must also read current referenced engineering, UI and shared guidance",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/AGENTS.md",
+      "connector_citation": "turn1477file0"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "docs/testing.md",
+      "blob_sha": "9dd1a8e0397096af0be65b09bcbd3262bd452225",
+      "coverage": "Lines1-120: isolated PostgreSQL18, current entry points and per-slice build/discovery rules; Codex must read full current file/CI",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/docs/testing.md",
+      "connector_citation": "turn1478file0"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
+      "blob_sha": "09ddd70a6ac182de34bffa5ad9fa523e29c3d366",
+      "coverage": "Lines1-210: original options, lease, reserved admission and status; reuse native protocol",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
+      "connector_citation": "turn1475file0"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureContextualWorkspacePolicy.cs",
+      "blob_sha": "80fd87852f839917e80248d7d66bf3a8c08b9fb6",
+      "coverage": "Full fetched file; native asset, raster analysis and text-node tool guidance",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureContextualWorkspacePolicy.cs",
+      "connector_citation": "turn1466file0"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "Templates/Capabilities/skills/instructions/svg-authoring.md",
+      "blob_sha": "340f44ef1199dc8373d4720ea6913f4f3b7082e9",
+      "coverage": "Full native skill; safe SVG, native create and readback",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/Templates/Capabilities/skills/instructions/svg-authoring.md",
+      "connector_citation": "turn1469file0"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "revision": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+      "path": "Templates/Capabilities/skills/instructions/spreadsheet.md",
+      "blob_sha": "efa33a669399c30f9ec3e5d01dd4e5e870867581",
+      "coverage": "Full native skill; real workbook write/inspect/range/cell tools and formula behavior",
+      "source_url": "https://github.com/fyziktom/CanDoItAll/blob/12322a72cd11a0de3ae98ad4dd1e0061964c9af2/Templates/Capabilities/skills/instructions/spreadsheet.md",
+      "connector_citation": "turn1471file0"
+    }
+  ]
+}

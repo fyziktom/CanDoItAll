@@ -1,0 +1,13 @@
+# Preserve and close existing Voice, Floating Settings and SimpleChats seams
+
+Global Voice already uses `VoiceSettingsSurface` (S19) and global floating settings already uses `FloatingChatSettingsSurface` (S21). They are not unfinished renderers merely because their effect host remains in Modules.AgentFramework. The session code is an integration audit target, not an instruction to recreate settings contracts.
+
+Voice currently reads settings/provider candidates separately, normalizes eligible provider selection and distinguishes native Save, synthesis and browser playback. **Play sample first saves settings** (S20). Preserve that observable behavior and the status of each accepted phase. A synthesis/playback failure is not proof Save failed. Read the current service and tests to establish whether its scope is selected-profile, installation or another owner before introducing any new invalidation subscription.
+
+Check actual provider eligibility, unavailable references, default versus explicit choices and source-managed audio capability restrictions. Avoid silent fallback to a personal provider when an imported source is unavailable. Normalize only with the owner's established rules; do not invent voice IDs or speech model defaults.
+
+Prove immutable submissions and the intended editable-during-save policy. Reject late old sample/playback activation after owner retirement; dispose audio URLs/resources and recording/transcription listeners at their actual owner. Test a deterministic non-sensitive WAV/other supported sample through real browser APIs where available, including permission denial and unsupported environment states. No physical microphone or paid speech credentials are required/authorized.
+
+Floating settings retain native lifecycle, preparation budgets and the distinction between stored settings and failed coordinator application. Same-generation intent and second-window independence must remain. Reuse existing sandbox cases and add missing public behavior rather than duplicate old tests with renamed classes.
+
+SimpleChats already has a separate domain/render foundation. Audit its product adapters and the actual source/provider selector/Prompt Gallery/usage/History/floating integrations, along with rendering ownership. Do not move SimpleChats domain into Agents, globally register a previously scoped persistence engine, or force a shared DbContext between operations. Preserve prior current-profile/owned-scope fixes. The final report explicitly lists which SimpleChats components remain legitimate native hosts and which actual renderer, if any, moved.

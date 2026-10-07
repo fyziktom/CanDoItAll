@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-04",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/agent-authoring-ui-ca1.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "bde2c1833cd298a1e3ef6c2da08fb9c0f838183f",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/docs/architecture/agent-authoring-ui-ca1.md",
+      "inspection": "Full CA1 implementation report; recorded results, not independently replayed artifacts.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringSession.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "bb84a5931570bcf2afe6f4a5164d134b4f400b17",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringSession.cs",
+      "inspection": "Full session; sequential setup-result carry-over finding.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilitySetupPanel.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "f6d4440834b6b3243da53b8964119d6e4eccf792",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilitySetupPanel.razor",
+      "inspection": "Full renderer; diagnostic/tool lists render independently of success.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests/CapabilityAuthoringStateTests.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "55dc7a32ba37d6b0171122595fdd2418e58af07d",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests/CapabilityAuthoringStateTests.cs",
+      "inspection": "Full state tests; immutable submissions and historical result coverage.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringDraft.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "6803a8ceb1d7c214a7308e06210aeb8490273bfd",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringDraft.cs",
+      "inspection": "Full draft; field revisions, raw repair and immutable preparation.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringForm.razor.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "673dae9c9984701ab81d4970acebef574fb8f2a8",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringForm.razor.cs",
+      "inspection": "Full component lifetime and completion handling.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/NativeCapabilityAuthoringHost.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "d337fc81ecefaa95e7c03befb74144338f546cc2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/NativeCapabilityAuthoringHost.razor",
+      "inspection": "Full native host and profile retirement.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMetadataEditor.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "53b867b54919c0f103ccf69d7491b331c58f82a2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMetadataEditor.razor",
+      "inspection": "Full metadata renderer and owned draft.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "1fa265c014a481fd51dfc4b1f4a6cfae6f0c30b1",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs",
+      "inspection": "Full native metadata/member coordination; legacy full upsert preserved.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "80ee9ccc56cc21f1d716e3b0fad3684bf28b35a3",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafToolProtocolCodec.cs",
+      "inspection": "Full installed-SDK raw-model codec including bounded MCP support.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/MafMcpProtocolCheckpointTests.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "1d88a74dce11e9321ce8975ace8d01787b7c9e3c",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/tests/Unit/CanDoItAll.Tests.Unit/MafMcpProtocolCheckpointTests.cs",
+      "inspection": "Full round-trip and unknown/foreign-shape rejection tests.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "b277df99ad788938864666859adde3575f530509",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj",
+      "inspection": "Full existing service-free shell rendering project.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/README.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "3e4b89a0c9d01108fd1026437de0c5c57e175b94",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/README.md",
+      "inspection": "Full existing shell/catalog/history/template/overview/analytics boundary.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "339e8143dca6ee8a9caa17abfbbcf8e6ecad9185",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
+      "inspection": "Page composition and remaining overlays; inspected main body and lines 360-440.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "72d3500b49680a838e26fa544fa4d8dfe964a324",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
+      "inspection": "Inspected lines 1-260 and 2000-2380; query targets, version-keyed editor, native context and ownership.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "17134be59b2fc1d3c995350938b5e27594862a22",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
+      "inspection": "Inspected lines 1-200; real canvas, windows, toolbox and component/Prompt integration. Remaining sections require entry census.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "a9278909a4396ddb99f8cd95261a6928f922c3d6",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+      "inspection": "Inspected lines 1-300, 400-1210 and 1800-2170; Save, preview, Prompt binding, local edits, trust and progress observer.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "ec7b4229bebffaf2cbe5cf03d05d480b75b12efa",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs",
+      "inspection": "Inspected lines 1-320; document, node and edge projections and ToDefinition/FromDefinition.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "eb588d36d52ff4d85794aa804965d07b37b1336d",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowImageGenerationSettingsRenderer.razor",
+      "inspection": "Full custom renderer, schema contract, native provider reads and fallback composition.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "4dacf5aba8a919d4ff826a9a717912557b7244e3",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "inspection": "Inspected lines 1-390; native head/version persistence, input snapshot, status and exchange entry points.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCatalogServices.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "01f5bf110ec09b824f3e9901ff98f24dcfe081d7",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCatalogServices.cs",
+      "inspection": "Inspected lines 1-230; in-memory implementation is not a substitute for native PostgreSQL proof.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "f18544b02caae155f2a06c5bb23b66fe284c3758",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/tests/Components/CanDoItAll.Tests.Components/WorkflowsPageTests.cs",
+      "inspection": "Inspected first 220 lines; real canvas preview, curator readiness and starter native owners.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/modules.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "d4ee12c0c20673fe45dc54de5939f7e1da17b661",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/docs/architecture/modules.md",
+      "inspection": "Inspected current rendering census and remaining roadmap, lines 95-260.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "AGENTS.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/AGENTS.md",
+      "inspection": "Full canonical repository entry instructions.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "path": ".github/copilot-instructions.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "dde5c2fdbcb56b7b5f48dfa17ed74fda238c2e1a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/.github/copilot-instructions.md",
+      "inspection": "Full engineering, component reuse, ownership and validation rules.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S26",
+      "repository": "fyziktom/CanDoItAll",
+      "path": ".github/workflows/ci.yml",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "003a5160a25b6687d854cd1f3b25e19f73582d95",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/.github/workflows/ci.yml",
+      "inspection": "Inspected first 85 lines; matching Components ref and FileTools pin.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S27",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/ui-component-seams.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/docs/architecture/ui-component-seams.md",
+      "inspection": "Inspected lines 1-210; authoritative UI separation and proof rules.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S28",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/testing.md",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "0892788f6ee815711f687eb46ce62f82220ca71c",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/docs/testing.md",
+      "inspection": "Inspected lines 1-155; current isolated PostgreSQL and focused test/discovery rules.",
+      "method": "GitHub connector source read; not execution"
+    },
+    {
+      "id": "S29",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringForm.razor",
+      "ref": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+      "git_blob_sha": "301bf45858ca94c7c3fe4ca4754afdbdabcb1bfc",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/ccca2fd3a7c4239d2869e8143617fd9ab04c3723/src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CapabilityAuthoringForm.razor",
+      "inspection": "Full actual wizard/detail form; not a session-only surface.",
+      "method": "GitHub connector source read; not execution"
+    }
+  ]
+}

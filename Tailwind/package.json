@@ -6,6 +6,8 @@
     "tailwindcss": "^4.1.7"
   },
   "scripts": {
+    "workflow-authoring:build": "tailwindcss -i ./workflow-authoring-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/wwwroot/css/workflow-authoring-fast.css",
+    "workflow-authoring:watch": "tailwindcss -i ./workflow-authoring-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/wwwroot/css/workflow-authoring-fast.css --watch",
     "build": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css",
     "watch": "tailwindcss -i ./input.css -o ../src/App/CanDoItAll.Web/wwwroot/css/output.css --watch",
     "catalog:build": "tailwindcss -i ./catalog-fast.css -o ../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/wwwroot/css/catalog-fast.css",
@@ -13,6 +15,12 @@
     "prompts:build": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css",
     "prompts:watch": "tailwindcss -i ./prompts-fast.css -o ../src/Sandboxes/CanDoItAll.Prompts.UiSandbox/wwwroot/css/prompts-fast.css --watch",
     "crmhr:build": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css",
-    "crmhr:watch": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css --watch"
+    "crmhr:watch": "tailwindcss -i ./crmhr-fast.css -o ../src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/wwwroot/css/crmhr-fast.css --watch",
+    "planning:build": "tailwindcss -i ./planning-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/wwwroot/css/planning-fast.css",
+    "insights:build": "tailwindcss -i ./insights-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/wwwroot/css/insights-fast.css",
+    "structure:build": "tailwindcss -i ./structure-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/wwwroot/css/structure-fast.css",
+    "content:build": "tailwindcss -i ./content-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/wwwroot/css/content-fast.css",
+    "operators:build": "tailwindcss -i ./operators-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/wwwroot/css/operators-fast.css",
+    "execution:build": "tailwindcss -i ./execution-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/wwwroot/css/execution-fast.css"
   }
 }

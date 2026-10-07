@@ -4,6 +4,8 @@
   "private": true,
   "description": "Private repository tooling for building CanDoItAll application Tailwind assets.",
   "scripts": {
+    "workflow-authoring:css:build": "npm --prefix Tailwind run workflow-authoring:build",
+    "workflow-authoring:css:watch": "npm --prefix Tailwind run workflow-authoring:watch",
     "tailwind:build": "npm --prefix Tailwind run build",
     "tailwind:watch": "npm --prefix Tailwind run watch",
     "watch": "dotnet watch --project ./src/App/CanDoItAll.Web",
@@ -18,7 +20,13 @@
     "crmhr:css:build": "npm --prefix Tailwind run crmhr:build",
     "crmhr:css:watch": "npm --prefix Tailwind run crmhr:watch",
     "crmhr:watch:parity": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox\" --property:CrmHrAssetMode=Parity",
-    "crmhr:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox Fast\" --property:CrmHrAssetMode=Fast"
+    "crmhr:watch:fast": "dotnet watch --project src/Sandboxes/CanDoItAll.CrmHr.UiSandbox --launch-profile \"CrmHr sandbox Fast\" --property:CrmHrAssetMode=Fast",
+    "planning:css:build": "npm run planning:build --prefix Tailwind",
+    "insights:css:build": "npm run insights:build --prefix Tailwind",
+    "structure:css:build": "npm run structure:build --prefix Tailwind",
+    "content:css:build": "npm run content:build --prefix Tailwind",
+    "operators:css:build": "npm run operators:build --prefix Tailwind",
+    "execution:css:build": "npm run execution:build --prefix Tailwind"
   },
   "repository": {
     "type": "git",

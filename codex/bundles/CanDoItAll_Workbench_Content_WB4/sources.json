@@ -1,0 +1,362 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-06",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "d7384b12f435978165b4b73b40cb39f03c377892",
+      "path": "git/commits/d7384b12f435978165b4b73b40cb39f03c377892",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/commits/d7384b12f435978165b4b73b40cb39f03c377892",
+      "kind": "metadata",
+      "review_scope": "Verified signed HEAD: commit old bundle; parent is the product checkpoint. Compare showed only historical WB3 input additions.",
+      "git_blob_sha": null,
+      "read_ranges": null
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "docs/architecture/workbench-structure-wb3.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/docs/architecture/workbench-structure-wb3.md",
+      "kind": "implementation_report",
+      "review_scope": "Complete implementation and evidence report, read lines 1-415. Counts are implementer-reported, not rerun by reviewer.",
+      "git_blob_sha": "1600bc2af5dd155020e25aa79b764575eecbac50",
+      "read_ranges": [
+        [
+          1,
+          415
+        ]
+      ]
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "24d182c664d0b1f293098643e52caed7384a5d50",
+      "path": "git/ref/heads/development",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/ref/heads/development",
+      "kind": "metadata",
+      "review_scope": "Connected remote resolves to 24d182c6, not the newer locally tested WB3 pair.",
+      "git_blob_sha": null,
+      "read_ranges": null
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
+      "kind": "code",
+      "review_scope": "Actual canvas construction, typed events and separate composition slots.",
+      "git_blob_sha": "9300f0fec6e8cbc01267afe42e1741533573989d",
+      "read_ranges": null
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
+      "kind": "code",
+      "review_scope": "Original composer opening, accepted identities, native expectations and bounded outcome handling.",
+      "git_blob_sha": "4c9649c9806bf228a89d592521c4ef350e4915c3",
+      "read_ranges": null
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
+      "kind": "code",
+      "review_scope": "Actor/project/lifetime/navigation context, tracked operations and outcome publication.",
+      "git_blob_sha": "357ee5eefdf4ac8b89fcae2d8fa51d7d01045ddb",
+      "read_ranges": null
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
+      "kind": "code",
+      "review_scope": "Captured hierarchy request and participant admissions; original opening survives successor completion.",
+      "git_blob_sha": "1ea7f8b034ee30a2fd12cf5f8976024d59d09a83",
+      "read_ranges": [
+        [
+          1,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectStructureNodeExpectations.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectStructureNodeExpectations.cs",
+      "kind": "code",
+      "review_scope": "Actual native row identity/kind/parent expectations; not claimed as a universal value-concurrency check.",
+      "git_blob_sha": "11416154df26f08521a3c46b89a515d390182d0e",
+      "read_ranges": null
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectStructureComposerLifetimeTests.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/tests/Components/CanDoItAll.Tests.Components/ProjectStructureComposerLifetimeTests.cs",
+      "kind": "code",
+      "review_scope": "Native gated writes, retired openings, fine values, unknown metadata and invalid input. Tests inspected, not executed.",
+      "git_blob_sha": "68089a90ad3a4fde91e406bf55dca699e0f80ce4",
+      "read_ranges": null
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
+      "kind": "code",
+      "review_scope": "Typed Structure integration and contrasting task vs text-asset original-context capture.",
+      "git_blob_sha": "80e1ef9e160ed8fc26446e9e22d08f8010e51748",
+      "read_ranges": [
+        [
+          1,
+          235
+        ],
+        [
+          255,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "kind": "code",
+      "review_scope": "Reload/retirement, dedicated text/image entry points, CreateObjectAsync current fallback, and secret owner integration.",
+      "git_blob_sha": "24963e11aefd1cad3c631777abaf6c3e47219016",
+      "read_ranges": [
+        [
+          920,
+          1150
+        ],
+        [
+          1480,
+          1720
+        ],
+        [
+          1880,
+          2110
+        ]
+      ]
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreationCoordinator.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreationCoordinator.cs",
+      "kind": "code",
+      "review_scope": "Context ProjectId is not the bound native creator; upload/adaptation, linked dialog lifetime and known post-commit warning.",
+      "git_blob_sha": "e7ad084830ef73cdba6b70fc51528773a76ce4e5",
+      "read_ranges": null
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
+      "kind": "code",
+      "review_scope": "Complete actual create/upload form; direct asset service dependency and mutable submission across await.",
+      "git_blob_sha": "18527f9333dfc760eab3430c5f77d200fdc41085",
+      "read_ranges": [
+        [
+          1,
+          340
+        ]
+      ]
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
+      "kind": "code",
+      "review_scope": "Provider choice labels, placeholder then queue then observer; original-scope and operation tests required.",
+      "git_blob_sha": "06da64196838470f35ab00d0354ba2578573c296",
+      "read_ranges": [
+        [
+          1,
+          300
+        ]
+      ]
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletion.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDeferredNodeCompletion.cs",
+      "kind": "code",
+      "review_scope": "Existing bounded in-memory Channel(64), worker scope and generated-image processor. No durable restart claim.",
+      "git_blob_sha": "734f69304c1ecce317d980a845f278a4884b3239",
+      "read_ranges": [
+        [
+          1,
+          285
+        ]
+      ]
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
+      "kind": "code",
+      "review_scope": "Complete browser rendering and operational lifetimes, stale catch and teardown paths, host actions.",
+      "git_blob_sha": "b54bf9f0d13e1bfe069c0404dba7107cbd139c38",
+      "read_ranges": null
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileActionCoordinator.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureFileActionCoordinator.cs",
+      "kind": "code",
+      "review_scope": "Bounded native scope collection, source ordering/fingerprints, read-only activation and download/local action owners.",
+      "git_blob_sha": "45b5ab4ec6f9f9213c7c1c1832cf0e3f9260a309",
+      "read_ranges": [
+        [
+          1,
+          270
+        ]
+      ]
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureAttachmentPreviewDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureAttachmentPreviewDialog.razor",
+      "kind": "code",
+      "review_scope": "Actual FileInteraction, editable mode conditional on native authority, dirty/conflict close guard and notes read.",
+      "git_blob_sha": "d0aa2632c9654f405f2a30fc967418a1d16147c9",
+      "read_ranges": [
+        [
+          1,
+          270
+        ]
+      ]
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureKnownFileInteractionCoordinator.cs",
+      "kind": "code",
+      "review_scope": "Native known-file activation, save target, exact file match, revision receipt and release.",
+      "git_blob_sha": "16759edd9b7659ec8487e55a03d604c780b44a05",
+      "read_ranges": null
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSupportDialogs.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureSupportDialogs.razor",
+      "kind": "code",
+      "review_scope": "Progress Summary, transcript confirmation, legitimate legacy Mermaid branch; preserve unrelated delete composition.",
+      "git_blob_sha": "8bd2386518162ca4c35889ca33ddad44f9cf421e",
+      "read_ranges": [
+        [
+          1,
+          255
+        ]
+      ]
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
+      "kind": "code",
+      "review_scope": "Admitted graph preservation plus persisted summary exports, transcript scaffold/LLM result, Mermaid integration.",
+      "git_blob_sha": "5116a436ce1d32f2a9284406fd0468d1b480bf33",
+      "read_ranges": [
+        [
+          1,
+          235
+        ],
+        [
+          520,
+          1020
+        ]
+      ]
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.PartyIntegration.cs",
+      "kind": "code",
+      "review_scope": "Bounded roadmap inspection of deferred participant/meeting family; not included as an extracted WB4 surface.",
+      "git_blob_sha": "cd1abb4729dc2021793544ab8ee3149a4aaab8af",
+      "read_ranges": [
+        [
+          1,
+          580
+        ]
+      ]
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "AGENTS.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/AGENTS.md",
+      "kind": "code",
+      "review_scope": "Canonical entry instructions, UI seams, SharedInfo and mandatory portability gate.",
+      "git_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "read_ranges": null
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "3957fe73e2a0736c042daa504a2767050423c36b",
+      "path": "docs/testing.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/3957fe73e2a0736c042daa504a2767050423c36b/docs/testing.md",
+      "kind": "code",
+      "review_scope": "Current narrow owning builds/discovery and bUnit dispatch/disposal rules.",
+      "git_blob_sha": "15a1eee0e9ee1f8774cbe535e861f3769159cd28",
+      "read_ranges": [
+        [
+          65,
+          155
+        ]
+      ]
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "a120106bc3d4576a40c16aac29b1b9654fb31d93",
+      "path": "git/commits/a120106bc3d4576a40c16aac29b1b9654fb31d93",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll.Components/git/commits/a120106bc3d4576a40c16aac29b1b9654fb31d93",
+      "kind": "unavailable_dependency",
+      "review_scope": "Exact required primary Components commit named by WB3 report; connected fetch returned 404. No source-content review of this missing ref is claimed.",
+      "git_blob_sha": null,
+      "read_ranges": null
+    }
+  ]
+}

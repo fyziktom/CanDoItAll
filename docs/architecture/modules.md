@@ -60,21 +60,79 @@ evidence.
 
 ## Rendering libraries and contracts assemblies
 
-Two modules have moved their rendering out of the module and into a feature UI library that binds to
-a contract the routed host implements:
+Current rendering boundaries, including Workspace closure R2 and Projects P1, are listed
+below. Routed hosts, production adapters, authorization and durable effects remain with
+their owners. The boundary records distinguish completed rendering from application acceptance.
 
 | Module | Contracts assembly | Rendering library | Scenario host |
 |---|---|---|---|
 | CRM / HR | `CanDoItAll.Modules.CrmHr.Contracts` | `CanDoItAll.CrmHr.UI` | `CanDoItAll.CrmHr.UiSandbox` |
 | Prompts | `CanDoItAll.Modules.Prompts.Contracts` | `CanDoItAll.Prompts.UI` | `CanDoItAll.Prompts.UiSandbox` |
+| Collaboration | `CanDoItAll.Modules.Collaboration.Contracts` | `CanDoItAll.Collaboration.UI` | `CanDoItAll.Collaboration.UiSandbox` |
+| TestLab | `CanDoItAll.Modules.TestLab.Contracts` | `CanDoItAll.TestLab.UI` | `CanDoItAll.TestLab.UiSandbox` |
+| Plugins | `CanDoItAll.Modules.Plugins.Contracts` | `CanDoItAll.Plugins.UI` | `CanDoItAll.Plugins.UiSandbox` |
+| Scheduler Planner | `CanDoItAll.Modules.SchedulerPlanner.Contracts` | `CanDoItAll.SchedulerPlanner.UI` | `CanDoItAll.SchedulerPlanner.UiSandbox` |
+| Memory | `CanDoItAll.Modules.Memory.Contracts` | `CanDoItAll.Memory.UI` | `CanDoItAll.Memory.UiSandbox` |
+| Resources | `CanDoItAll.Modules.Resources.Contracts` | `CanDoItAll.Resources.UI` | `CanDoItAll.Resources.UiSandbox` |
+| Workspace Core | `CanDoItAll.Modules.Workspace.Contracts` | `CanDoItAll.Workspace.UI` | `CanDoItAll.Workspace.UiSandbox` |
+| Workspace API Access | `CanDoItAll.Modules.Workspace.ApiAccess.Contracts` | `CanDoItAll.Workspace.ApiAccess.UI` | `CanDoItAll.Workspace.ApiAccess.UiSandbox` |
+| Workspace Storage catalog | `CanDoItAll.Modules.Workspace.StorageCatalog.Contracts` | `CanDoItAll.Workspace.StorageCatalog.UI` | `CanDoItAll.Workspace.StorageCatalog.UiSandbox` |
+| Workspace Storage selection | `CanDoItAll.Modules.Workspace.StorageSelection.Contracts` | `CanDoItAll.Workspace.StorageSelection.UI` | `CanDoItAll.Workspace.StorageSelection.UiSandbox` |
+| Workspace Storage recovery | `CanDoItAll.Modules.Workspace.StorageRecovery.Contracts` | `CanDoItAll.Workspace.StorageRecovery.UI` | `CanDoItAll.Workspace.StorageRecovery.UiSandbox` |
+| Workspace Data Sources | `CanDoItAll.Modules.Workspace.DataSources.Contracts` | `CanDoItAll.Workspace.DataSources.UI` | `CanDoItAll.Workspace.DataSources.UiSandbox` |
+| Projects P1 | `CanDoItAll.Modules.Projects.Contracts` | `CanDoItAll.Projects.UI` | `CanDoItAll.Projects.UiSandbox` |
+| Projects Files P2 | Existing typed FileTools contracts | `CanDoItAll.Projects.Files.UI` | `CanDoItAll.Projects.Files.UiSandbox` |
+| Agent Editor A2 | Existing Agent models and origin-bound presentation | `CanDoItAll.AgentFramework.Editor.UI` | `CanDoItAll.AgentFramework.Editor.UiSandbox` |
+| Provider Profiles PP1 | Existing provider models and narrow read ports | `CanDoItAll.AgentFramework.Providers.UI` | `CanDoItAll.AgentFramework.Providers.UiSandbox` |
+| Provider Sharing PP2 | `CanDoItAll.SharedProviders.Abstractions` and existing provider models | `CanDoItAll.AgentFramework.SharedProviders.UI` | `CanDoItAll.AgentFramework.SharedProviders.UiSandbox` |
+| Request History PP3 | `CanDoItAll.AgentFramework.ProviderHistory.Abstractions` | History family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| Capability authoring CA1 | Existing Models and light capability/MCP abstractions | `CanDoItAll.AgentFramework.CapabilityAuthoring.UI` | `CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox` |
+| Technical teams CA1 | Existing Agent models and origin-bound presentation | Teams family in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| Workflow authoring WF1 | Existing Workflow models and controlled authoring operations | `CanDoItAll.AgentFramework.WorkflowAuthoring.UI` | `CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox` |
+| Agents completion AC1 | Existing Models/Usage values and identity-bound presentation | Shell, Usage, Runtime, Chat and Avatars in `CanDoItAll.AgentFramework.UI` | `CanDoItAll.AgentFramework.UiSandbox` |
+| SimpleChats residual dialogs AC1 | Existing definition/conversation values and exact opening intents | Start/Rename/Archive in existing `CanDoItAll.AgentFramework.Llm.SimpleChats.UI` | `/simple-chat-dialogs` in `CanDoItAll.AgentFramework.UiSandbox` |
 
-`CanDoItAll.Modules.Projects.Contracts` exists for the same reason in the other direction: it lets a
-renderer or another module name a project, its write admission and its assignment queries without
-referencing the Projects implementation. A contracts assembly keeps the namespace of its module, so
-no consumer had to be rewritten when the types moved.
+The [Configuration renderer](../../src/UI/CanDoItAll.Configuration.UI/README.md) is a neutral
+schema loop over SharedKernel types, with Configuration.UiSandbox. Trusted renderer registration
+and adaptation remain production composition. The [Workspace census](workspace-closure-map.json)
+classifies its remaining wrappers and external render consumers; a retained Razor host is not
+automatically unfinished rendering work. See the [Workspace completion record](workspace-completion-ui-boundaries.md).
 
-The owners above are unchanged by that move: a rendering library performs no write and holds no
-session. [UI component seams](ui-component-seams.md) describes the seam, and the per-module records
+AgentFramework's [UI library](../../src/UI/CanDoItAll.AgentFramework.UI/README.md)
+and sandbox cover the catalog, capabilities and Overview. [Editor A2](agent-editor-completion-a2.md)
+completes all ten technical editor sections, actual Memory/root children and small confirmations.
+The actual capability list and Storage picker are composed through narrow slots; native Memory
+eligibility, root binding resolution, avatar generation and capability-definition operations
+remain host integrations. [CA1](agent-authoring-ui-ca1.md) completes the capability wizard/details
+renderers in their own light leaf and technical-team metadata/icons/members in AgentFramework.UI.
+Explicit setup effects, coordinated catalog writes, whole-agent assignment and authority remain
+with native owners. [PP1](provider-profiles-ui-pp1.md) completes the provider catalog and
+Connection, Prices, Runtime and Thinking editors. [PP2](provider-sharing-ui-pp2.md) completes
+Sharing, source connections and shared-provider refresh presentation while native delivery and
+reconciliation remain with their owners. [PP3](provider-history-ui-pp3.md) completes global and
+single-provider History filters, results, metadata and separately authorized content.
+[AC1](agents-completion-ac1.md) completes the remaining shell, Usage trio, runtime/log,
+floating context/close, attachment and avatar presentation. Its [current census](agents-renderer-census.csv)
+tracks 245 components, including the final inline SimpleChat dialog family being closed at A5, and its
+[asset closure](agents-renderer-assets.md) follows shared and native scripts, fonts and CSS.
+Native hosts retain routes, queries, safe projection, operations and original dialog/context
+lifetimes. Existing SimpleChats, Voice, provider and Workflow surfaces remain the product
+renderers. Completion and delivery evidence are separate from product-wide release readiness.
+
+The next large UI family is Workbench, beginning with bounded calendar/task/read views,
+then Structure and its cross-owner integrations. Processes remains last because its claims,
+streaming, admission and recovery boundaries require their own campaign. AC1 starts neither.
+
+`CanDoItAll.Modules.Projects.Contracts` lets renderers and other modules name portfolio/editor
+data, project write admissions and assignment queries without referencing the implementation.
+The [Projects P1 record](projects-portfolio-ui-p1.md) covers the portfolio, hierarchy inspection,
+overview, five-step editor, package presentation and deletion notices. Its typed Files slot
+retains the actual Files owners; [Files P2](projects-files-ui-decoupling.md) extracts both Files renderers and their independent sandbox. Contract namespaces and wire fields
+remain stable when their assembly changes.
+
+The owners above remain authoritative. Renderers and presentation controllers may own drafts
+and read lifetimes; production adapters own durable writes and authorization.
+[UI component seams](ui-component-seams.md) describes the seam, and the per-module records
 under this directory describe what each slice moved and what it deliberately left behind.
 
 Stable seams for the next UI decoupling are the owner application services and the
@@ -93,3 +151,52 @@ The Simple Chats domain remains under `src/MAF/SimpleChats`; the AgentFramework 
 product presentation adapter, route state, Prompt Gallery action, and shared usage projection. This is
 intentional composition, not a move of conversation rules into the Agent module. See
 [LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md).
+
+Workspace Settings Core shares its shell, defaults, Secrets, Files and provider history
+renderers through Workspace.Contracts, Workspace.Presentation and Workspace.UI, with a
+standalone Workspace.UiSandbox. Data Sources now has its own rendering and presentation leaf;
+the module retains its canonical profile, schema, secret, transfer and restart owners. See the
+[boundary and validation record](workspace-settings-core-ui-boundary.md).
+
+Workspace API Access has a separate ApiAccess.Contracts / ApiAccess.UI leaf and
+Workspace.ApiAccess.UiSandbox. Its status, issuance, token metadata and ordinary account
+editors share presentation controllers; the production module retains authorization,
+canonical scopes, signing, password and instance-local persistence owners. Core acquires
+no API dependency. See the [API boundary record](workspace-api-access-ui-boundary.md).
+
+Storage catalog administration has a separate StorageCatalog.Contracts / StorageCatalog.UI
+leaf and Workspace.StorageCatalog.UiSandbox. Its three-step wizard uses independent read
+lanes, stable drafts and explicit owner-stage receipts. Production retains credentials,
+drivers, routing, profile fences and persistence. Neither Core nor API gains a Storage edge.
+Recovery, Storage selection, Data Sources and generic Configuration rendering have completed
+their separate boundaries. Agent parent Save and runtime allow-lists still own applied storage
+selection; Recovery retains the original interrupted intent and continuation authority. See the
+[Storage boundary record](workspace-storage-catalog-ui-boundary.md).
+
+## Remaining rendering roadmap
+
+This is a source-backed planning order, not authorization to start another module during
+Workspace closure. Effort is relative architectural complexity (1–5), not elapsed time.
+A slice includes the production renderer and host seam, assets, representative independent
+sandbox, owner/consumer checks and browser proof. Counts are provisional until a complete
+caller, descendant, asset and evaluated-dependency census precedes that assignment.
+
+| Order | Family and current source | Proposed scope | Effort / provisional slices |
+|---|---|---|---|
+| 1 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md): P1 / Files P2 complete | Portfolio, hierarchy inspection, overview, editor and both Files renderers are extracted. File authorization, coordinators and content leases retain their original owners; see the P1 and P2 validation records | Completed selected surfaces; actual file owners retained |
+| 2 | [AgentFramework AC1](agents-completion-ac1.md): shell, complete Usage, runtime/floating adjuncts and SimpleChat dialogs join the existing A2/CA1/PP boundaries | The 247-entry current caller/renderer/asset census has no remaining product renderer; native routes, queries, context, approval, grants and durable operations retain their owners | Presentation complete; AC1 records native consumer, frozen regression and signed-delivery disposition separately |
+| 3 | [Workflow authoring WF1](workflow-authoring-ui-wf1.md): canvas, floating windows, inspectors, settings and page dialogs render through WorkflowAuthoring.UI | Native module retains catalog, Prompt/component persistence, trusted renderer selection, profile ownership and launch authority; the four-project Workflows.UI shell is unchanged | Complete: rendering, native consumers, independent publish, multi-instance proof, qualified frozen regression accounting and verified signed closure |
+| 4 | [Workbench](../../src/Modules/CanDoItAll.Modules.Workbench/README.md): calendar, assignments, native editors and Structure canvas/runtime/file composition remain | Smaller calendar/read panels first; Structure canvas and cross-module runtime/file context last within the family | 5/5; 4–6 slices |
+| 5 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md): thin routes still compose implementation-bound rendering and runtime services | Catalog/read panels, editor/configuration, launch/approval, monitoring/recovery and final integration; preserve SSE, claims, snapshots and receipts | 5/5; 4–6 slices; last major family |
+
+AC1 completes the bounded SimpleChats residual-dialog, adapter and scenario audit in its
+existing UI library; its domain and persistence owners are unchanged. Web Home/dashboard and runtime
+capability pages are composition surfaces; assess reusable rendering after the major feature
+cuts (2–3/5, roughly 1–2 possible slices). Security has no separate extraction assignment
+without an actual remaining screen: Secrets and API administration already belong to Workspace.
+Shared AppComponents, Conversations and Configuration retain their generic boundaries.
+
+These estimates inspect current projects, routes and representative remaining markup; they
+are not a line-by-line audit of every large module or a completion percentage. CRM/HR, Prompts,
+Collaboration, TestLab, Plugins, Scheduler Planner, Memory, Resources and Workspace retain
+their completed rendering work and require regression evidence, not new replacement projects.

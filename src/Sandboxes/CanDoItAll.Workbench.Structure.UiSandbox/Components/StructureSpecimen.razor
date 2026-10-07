@@ -1,0 +1,69 @@
+@implements IAsyncDisposable
+
+@if (scenario is not null) {
+    <section data-testid="structure-specimen" aria-label="@Name">
+        <Stack GapScale="LayoutGap.Small" Class="scenario-controls">
+            <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
+            <Cluster Wrap="FlexWrap.Wrap">
+                @foreach (var kind in Enum.GetValues<StructureScenarioKind>()) {
+                    <Button Text="@kind.ToString()" Click="@(() => scenario.Reset(kind))" />
+                }
+                <Button Text="Parameter echo" Click="@(() => scenario.Echo())" />
+                <Button Text="Hierarchy" Click="@(() => scenario.OpenDialog(StructureScenario.HierarchyAction, "root"))" />
+                <Button Text="Conversion" Click="@(() => scenario.OpenDialog(StructureScenario.ConversionAction, "note"))" />
+                <Button Text="Transfer" Click="@(() => scenario.OpenDialog(StructureScenario.TransferAction, "root"))" />
+                <label>Outcome <select @bind="scenario.Outcome">
+                    @foreach (var outcome in Enum.GetValues<StructureScenarioOutcome>()) { <option value="@outcome">@outcome</option> }
+                </select></label>
+                <label><input type="checkbox" @bind="scenario.HoldCompletion" /> Hold completion</label>
+                <Button Text="Release completion" Disabled="@(scenario.Pending is null)" Click="@(() => scenario.Pending?.TrySetResult())" />
+            </Cluster>
+        </Stack>
+        <StructureWorkspace @ref="workspace" @key="scenario.Presentation.ContextId" Presentation="scenario.Presentation"
+            SelectedView="scenario.View" Dispatch="DispatchAsync" Dialogs="scenario.Dialogs" DialogIntent="HandleDialogAsync">
+            <Planning><EmptyState Title="Planning slot" Description="The production host composes its existing Planning renderer here." /></Planning>
+            <Insights><EmptyState Title="Insights slot" Description="The production host composes its existing Insights renderer here." /></Insights>
+        </StructureWorkspace>
+        @if (scenario.NestedOpening is not null) {
+            <Dialog IsOpen="true" Title="Nested project editor return" TestId="structure-scenario-nested" OnClose="@(() => scenario.ReturnNestedProject())">
+                <ChildContent><Button Text="Return accepted project" Click="@(() => scenario.ReturnNestedProject())" /></ChildContent>
+            </Dialog>
+        }
+        <PanelCard Class="scenario-receipts" data-testid="structure-scenario-receipts">
+            @foreach (var receipt in scenario.Receipts) { <TextBlock Value="@receipt" /> }
+            @foreach (var input in scenario.LastInputs) { <TextBlock Value="@($"{input.Key}: {input.Value}")" /> }
+        </PanelCard>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private StructureScenario? scenario;
+    private StructureWorkspace? workspace;
+
+    protected override void OnInitialized() => scenario = new(Name);
+
+    private async Task DispatchAsync(StructureIntent intent) {
+        if (scenario is null) {
+            return;
+        }
+        if (intent is StructureToolboxActionIntent action && action.ContextId == scenario.Presentation.ContextId && action.ActionId == StructureScenario.NoteAction) {
+            scenario.HideToolbox();
+            await workspace!.OpenCreateDialogAsync(scenario.CreateAction, new(StructureScenario.NoteAction,
+                "root", 360, 220, "root", "", "", "", "child", "dialog", "", null));
+            return;
+        }
+        await scenario.ApplyAsync(intent);
+    }
+
+    private async Task HandleDialogAsync(StructureDialogIntent intent) {
+        var operation = scenario!.HandleDialogAsync(intent);
+        StateHasChanged();
+        await operation;
+    }
+
+    public ValueTask DisposeAsync() {
+        scenario?.ReleaseAll();
+        return ValueTask.CompletedTask;
+    }
+}

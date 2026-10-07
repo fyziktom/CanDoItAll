@@ -22,7 +22,7 @@ public sealed class SharedSourceRecoveryTests {
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-source-unresolved']"));
         Assert.Equal(1, proxy.Writes);
         Assert.Contains("Add shared provider source", cut.Markup, StringComparison.Ordinal);
-        Assert.False(cut.FindComponents<Button>().Single(button => button.Instance.Text == "Save source").Instance.IsBusy);
+        Assert.False(cut.FindComponents<Button>().Single(button => button.FindAll("[data-testid='shared-provider-source-save']").Count == 1).Instance.IsBusy);
     }
 
     [Fact]
@@ -150,8 +150,8 @@ public sealed class SharedSourceRecoveryTests {
 
     private static async Task StartCreateAsync(IRenderedComponent<SharedProviderSourcesDialog> cut) {
         await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
-        cut.Find("[data-testid='shared-provider-source-name']").Change("Recovery source");
-        cut.Find("[data-testid='shared-provider-source-uri']").Change("https://source.example.test/");
+        cut.Find("[data-testid='shared-provider-source-name']").Input("Recovery source");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
         await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
     }
 

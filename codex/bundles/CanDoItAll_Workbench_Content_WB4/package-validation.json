@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "scope": "Instruction-package integrity, links and evidence-shape checks only; no product execution.",
+  "files": 54,
+  "manifest_entries": 53,
+  "shared_files_byte_identical": 22,
+  "source_records": 25,
+  "local_markdown_links": 58,
+  "product_coverage_groups": 36,
+  "initial_product_status": "NOT_RUN",
+  "tooling_tests": {
+    "package": 42,
+    "shared": 14,
+    "total": 56,
+    "passed": 56
+  },
+  "retained_tooling_attempts": [
+    {
+      "passed": 40,
+      "failed": 2,
+      "reason": "Two package text-contract assertions used different vocabulary than the instructions. Explicit original-target and volatile-replay wording was aligned; no application code or product test was changed."
+    }
+  ],
+  "zip_crc": "PASS",
+  "fresh_extraction_validation": "PASS",
+  "unexecuted_template_closure": "REJECTED_AS_EXPECTED",
+  "reviewer_ran_dotnet": false,
+  "reviewer_ran_docker": false,
+  "reviewer_ran_browser": false
+}

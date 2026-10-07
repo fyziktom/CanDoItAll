@@ -19,7 +19,7 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
-public sealed class ProcessProjectAdmissionPersistenceTests {
+public sealed partial class ProcessProjectAdmissionPersistenceTests {
     [Fact]
     public async Task Project_projection_filters_retained_lifetimes_before_pagination_cached_selection_and_terminal_disclosure() {
         await using var application = await TestApplication.CreateAsync();

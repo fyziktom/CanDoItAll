@@ -17,6 +17,10 @@ public static class Program
             await File.WriteAllTextAsync(pidFile, Environment.ProcessId.ToString()).ConfigureAwait(false);
         }
 
+        if (mode is "--content-length") {
+            return await ContentLengthSetupServer.RunAsync().ConfigureAwait(false);
+        }
+
         if (mode is "--external-hang")
         {
             SignalReady(readyFile);

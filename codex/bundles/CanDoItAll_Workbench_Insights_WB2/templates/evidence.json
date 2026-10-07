@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKBENCH-INSIGHTS-WB2",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Current source pair, signed checkpoint setup and owned fixture isolation",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "Gantt canceled/faulted pending update cleanup",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "Gantt serialized newest-model and independent chart continuity",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Current complete renderer, caller and asset census",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "Lightweight graph and existing root preservation",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Summary lazy load and original options",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Preflight limits and captured scope confirmation",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Summary delayed reads, progress, errors and disposal",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Accepted report options and exact time window",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Bounded retained state versus per-view ownership",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Native report arithmetic and coverage",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Complete Activity kinds and filters",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Activity pagination, aggregate provenance and cursor ownership",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Activity reopening and old request rejection",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Object Index real tree and exact context menu",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Signals native marker, progress and priority behavior",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Canvas Health and actual validation dispatch",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Entire Selection Panel and advanced detail child",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Selection stale intents and render suppression",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Project lifetime, actor changes and native write refusal",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Partial/unknown effects and exact readback",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Source and independently published real sandbox",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Large-desktop geometry, focus and assets",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Repeated measured dotnet watch",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "WB1 task and native report consumer journey",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Native Agent/file and metadata/content separation",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Workflow/SimpleChat/Process and provider/report continuity",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Static gates, public contracts and impact-selected regression",
+      "phase": "Closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Signed delivery, full census and truthful closure",
+      "phase": "Closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "insights_ui_boundary_complete": false,
+    "gantt_cleanup_fixed": false,
+    "reporting_and_selection_native_proof": false,
+    "native_consumer_campaign_passed": false,
+    "ready_for_next_workbench_slice": false,
+    "release_ready": false,
+    "unresolved_blocking_findings": [],
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "paid_model_calls": 0,
+    "signed_commits": []
+  }
+}

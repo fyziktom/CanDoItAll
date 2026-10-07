@@ -20,6 +20,109 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureFileBrowserWindowTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_late_collection_activation_releases_its_own_grant_without_touching_the_successor(bool fail) {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var project = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(FileToolsSemanticScopeKind.Project, new(project.ToString("N")), "Files");
+        var factory = new HeldKnownFileSessionFactory();
+        var releaser = new RecordingKnownFileSessionReleaser();
+        RegisterServices(context, new(project, [scope], new string('c', 64)), new ThrowingNodeFileScopeProvider(),
+            new StaticBrowseItemActivator(), factory, sessionReleaser: releaser);
+        var request = new ProjectStructureProjectFileCollectionRequest(project, "Same files");
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "test-files")
+            .Add(component => component.Opening, new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask))
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
+        cut.WaitForElement(".ft-file-browser__item-main");
+        var original = cut.FindComponent<FileBrowser>().Instance;
+        var pending = cut.InvokeAsync(() => original.ItemInvoked.InvokeAsync(new(
+            Assert.Single(original.Session.Snapshot.Items), FileBrowserInvocationKind.PointerDoubleClick)));
+        await factory.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.Opening,
+            new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask))));
+        await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
+        var accepted = Assert.IsType<FileInteractionRequest>(cut.FindComponent<FileInteraction>().Instance.Request).File;
+        if (fail) {
+            factory.Finish.SetException(new IOException("Retired activation failed."));
+        } else {
+            factory.Finish.SetResult();
+        }
+        await pending;
+
+        Assert.Equal(accepted, Assert.IsType<FileInteractionRequest>(cut.FindComponent<FileInteraction>().Instance.Request).File);
+        Assert.Equal(factory.OriginalFile, Assert.Single(releaser.Released));
+        Assert.NotEqual(accepted, factory.OriginalFile);
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-file-browser-activation-error']"));
+        await cut.InvokeAsync(async () => await cut.Instance.DisposeAsync());
+        Assert.Equal(2, releaser.Released.Count);
+        Assert.Single(releaser.Released, file => file == accepted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reopening_the_same_request_fences_a_delayed_scope_result_or_ordinary_error(bool fail) {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var project = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(FileToolsSemanticScopeKind.ProjectNode, new("original-scope"), "Files");
+        var scopes = new HeldThenCurrentNodeScopeProvider(scope);
+        RegisterServices(context, new(project, [new(FileToolsSemanticScopeKind.Project, new(project.ToString("N")), "Project")], new string('a', 64)), scopes);
+        var request = new ProjectStructureNodeFileCollectionRequest(project, "same-node", "Same public request");
+        var first = new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask);
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "test-files")
+            .Add(component => component.Opening, first)
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
+        await scopes.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask);
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.Opening, second)));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<FileBrowser>()));
+        var accepted = cut.FindComponent<FileBrowser>().Instance.Session;
+        if (fail) {
+            scopes.Finish.SetException(new IOException("Retired ordinary scope failure"));
+        } else {
+            scopes.Finish.SetResult(scope);
+        }
+        await scopes.Returned.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await cut.InvokeAsync(() => Task.CompletedTask);
+        cut.WaitForAssertion(() => {
+            Assert.Same(accepted, cut.FindComponent<FileBrowser>().Instance.Session);
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-file-browser-loading']"));
+            Assert.DoesNotContain("Unable to open this file collection", cut.Markup, StringComparison.Ordinal);
+        });
+        Assert.Equal(2, scopes.Calls);
+    }
+
+    [Fact]
+    public async Task A_retired_browser_callback_cannot_acquire_a_successor_file_grant() {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var project = Guid.NewGuid();
+        var scope = new FileToolsSemanticScope(FileToolsSemanticScopeKind.Project, new(project.ToString("N")), "Files");
+        var activator = new StaticBrowseItemActivator();
+        RegisterServices(context, new(project, [scope], new string('b', 64)), new ThrowingNodeFileScopeProvider(), activator, new StaticKnownFileSessionFactory());
+        var request = new ProjectStructureProjectFileCollectionRequest(project, "Files");
+        var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
+            .Add(component => component.WindowId, "test-files")
+            .Add(component => component.Opening, new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask))
+            .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
+        cut.WaitForElement(".ft-file-browser__item-main");
+        var first = cut.FindComponent<FileBrowser>().Instance;
+        var invoked = first.ItemInvoked;
+        var item = Assert.Single(first.Session.Snapshot.Items);
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.Opening,
+            new ProjectStructureFileCollectionOpening(request, _ => Task.CompletedTask))));
+        await cut.InvokeAsync(() => invoked.InvokeAsync(new(item, FileBrowserInvocationKind.PointerDoubleClick)));
+        Assert.Equal(0, activator.Calls);
+        Assert.Empty(cut.FindComponents<FileInteraction>());
+    }
+
     [Fact]
     public void Node_collection_window_shows_loading_state_while_authorization_is_pending()
     {
@@ -47,8 +150,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"), _ => Task.CompletedTask))
             .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
 
         cut.WaitForAssertion(() =>
@@ -95,8 +198,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"), _ => Task.CompletedTask))
             .Add(component => component.State, state));
 
         cut.WaitForAssertion(() =>
@@ -136,8 +239,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureNodeFileCollectionRequest(projectId, "storage-node", "Reports"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureNodeFileCollectionRequest(projectId, "storage-node", "Reports"), _ => Task.CompletedTask))
             .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
 
         cut.WaitForAssertion(() =>
@@ -174,8 +277,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureNodeFileCollectionRequest(projectId, "run-output", "Run artifacts"), _ => Task.CompletedTask))
             .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true })
             .Add(component => component.CanOpenRootInExplorer, true)
             .Add(
@@ -206,8 +309,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"), _ => Task.CompletedTask))
             .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -242,8 +345,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         var cut = context.Render<ProjectStructureFileBrowserWindow>(parameters => parameters
             .Add(component => component.WindowId, "project-structure.fileBrowser")
             .Add(
-                component => component.Request,
-                new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"))
+                component => component.Opening,
+                new ProjectStructureFileCollectionOpening(new ProjectStructureProjectFileCollectionRequest(projectId, "Delivery files"), _ => Task.CompletedTask))
             .Add(component => component.State, new CanvasWorkbenchWindowState { IsVisible = true }));
 
         await cut.WaitForElement(".ft-file-browser__item-main").DoubleClickAsync(new MouseEventArgs());
@@ -261,7 +364,8 @@ public sealed class ProjectStructureFileBrowserWindowTests
         IProjectStructureNodeFileScopeProvider nodeScopes,
         IFileToolsBrowseItemActivator? itemActivator = null,
         IFileToolsKnownFileSessionFactory? knownFileSessionFactory = null,
-        IFileToolsBrowseItemActionService? itemActionService = null)
+        IFileToolsBrowseItemActionService? itemActionService = null,
+        IFileToolsKnownFileSessionReleaser? sessionReleaser = null)
     {
         context.Services.AddLogging();
         context.Services.AddSingleton(new FileInteractionComponentBuilder()
@@ -278,7 +382,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
         context.Services.AddSingleton(
             itemActionService ?? new UnavailableFileToolsBrowseItemActionService());
         context.Services.AddSingleton(knownFileSessionFactory ?? new ThrowingKnownFileSessionFactory());
-        context.Services.AddSingleton<IFileToolsKnownFileSessionReleaser, NoopKnownFileSessionReleaser>();
+        context.Services.AddSingleton(sessionReleaser ?? new NoopKnownFileSessionReleaser());
         context.Services.AddSingleton<ProjectStructureFileActionCoordinator>();
     }
 
@@ -372,16 +476,20 @@ public sealed class ProjectStructureFileBrowserWindowTests
 
     private sealed class StaticBrowseItemActivator : IFileToolsBrowseItemActivator
     {
+        public int Calls { get; private set; }
         public ValueTask<FileToolsKnownFileActivation> ActivateAsync(
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
             FileToolsKnownFileIntent intent,
             CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(new FileToolsKnownFileActivation(
-                new FileToolsKnownFileRequest(scope, new FileReference("authorized", "window-handle"), intent),
+        {
+            Calls++;
+            return ValueTask.FromResult(new FileToolsKnownFileActivation(
+                new FileToolsKnownFileRequest(scope, new FileReference("authorized", $"window-handle-{Calls}"), intent),
                 "README.md",
                 "text/markdown",
                 size: 3));
+        }
     }
 
     private sealed class ThrowingKnownFileSessionFactory : IFileToolsKnownFileSessionFactory
@@ -401,6 +509,29 @@ public sealed class ProjectStructureFileBrowserWindowTests
                 request.File,
                 new StaticContentSource(),
                 request.Intent));
+    }
+
+    private sealed class HeldKnownFileSessionFactory : IFileToolsKnownFileSessionFactory {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Finish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public FileReference? OriginalFile { get; private set; }
+
+        public async ValueTask<FileToolsKnownFileSession> CreateAsync(FileToolsKnownFileRequest request, CancellationToken cancellationToken = default) {
+            if (OriginalFile is null) {
+                OriginalFile = request.File;
+                Entered.SetResult();
+                await Finish.Task;
+            }
+            return new(request.File, new StaticContentSource(), request.Intent);
+        }
+    }
+
+    private sealed class RecordingKnownFileSessionReleaser : IFileToolsKnownFileSessionReleaser {
+        public List<FileReference> Released { get; } = [];
+        public ValueTask ReleaseAsync(FileReference file, CancellationToken cancellationToken = default) {
+            Released.Add(file);
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class StaticContentSource : IFileContentSource
@@ -479,6 +610,29 @@ public sealed class ProjectStructureFileBrowserWindowTests
             string nodeId,
             CancellationToken cancellationToken = default)
             => ValueTask.FromResult(scope);
+    }
+
+    private sealed class HeldThenCurrentNodeScopeProvider(FileToolsSemanticScope scope) : IProjectStructureNodeFileScopeProvider {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<FileToolsSemanticScope> Finish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Returned { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Calls { get; private set; }
+
+        public async ValueTask<FileToolsSemanticScope> ResolveNodeCollectionAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default) {
+            Calls++;
+            if (Calls != 1) {
+                return scope;
+            }
+            Entered.SetResult();
+            try {
+                return await Finish.Task;
+            } finally {
+                Returned.SetResult();
+            }
+        }
+
+        public ValueTask<FileToolsKnownFileScope> ResolveKnownFileAsync(Guid projectId, string nodeId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class DeferredNodeFileScopeProvider : IProjectStructureNodeFileScopeProvider

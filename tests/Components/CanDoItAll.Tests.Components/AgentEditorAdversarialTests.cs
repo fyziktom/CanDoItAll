@@ -28,7 +28,7 @@ public sealed class AgentEditorAdversarialTests {
                 target => lane == 2 && !target.IsNew ? Task.FromException(new IOException(Poison)) : Task.CompletedTask))
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this,
                 _ => lane == 3 ? Task.FromException(new IOException(Poison)) : Task.CompletedTask)));
-        cut.WaitForElement("[data-testid='agents-catalog-name']").Change("Retained adversarial draft");
+        cut.WaitForElement("[data-testid='agents-catalog-name']").Input("Retained adversarial draft");
         var editor = cut.FindComponent<EditForm>().Instance.EditContext!;
         await cut.Find("form").SubmitAsync();
         Assert.Equal(1, probe!.Writes);

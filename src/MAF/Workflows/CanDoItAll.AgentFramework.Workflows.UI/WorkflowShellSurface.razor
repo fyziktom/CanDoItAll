@@ -68,7 +68,7 @@
         </SurfaceCard>
     } else {
         <Tabs SelectedIndex="@((int)Presentation.ActiveTab)" SelectedIndexChanged="ChangeTabAsync"
-              RenderMode="TabRenderMode.Server" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap"
+              RenderMode="TabRenderMode.Client" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap"
               AriaLabel="Workflow workspace tabs" data-testid="workflows-tabs">
             <TabsItem Text="Dashboard" Icon="dashboard" data-testid="workflows-tab-dashboard">@Dashboard</TabsItem>
             <TabsItem Text="Workflows" Icon="list_alt" BadgeText="@Presentation.DefinitionCount" data-testid="workflows-tab-workflows">

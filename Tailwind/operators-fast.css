@@ -1,0 +1,4 @@
+@import "tailwindcss" source(none);
+@source "../src/UI/CanDoItAll.Workbench.Operators.UI";
+@source "../src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox";
+@import "./main/component-layout-utilities.css";

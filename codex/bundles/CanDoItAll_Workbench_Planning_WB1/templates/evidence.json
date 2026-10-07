@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKBENCH-PLANNING-WB1",
+  "source_pair": {
+    "main_head": null,
+    "components_head": null,
+    "filetools_head": null
+  },
+  "attempts": [],
+  "groups": [
+    {
+      "id": "G00",
+      "title": "Actual source pair, protected graphs, signing and fixture ownership",
+      "phase": "Entry",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G01",
+      "title": "Bounded AC1 Scheduler/preview and active UI continuity",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "title": "WB1-Q1 held quote versus execution eligibility through real parent",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "title": "Quote context/cache/manual edit/disposal negative matrix",
+      "phase": "S0",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "title": "Current Workbench caller, descendant, asset and owner census",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "title": "Light contract graph and unchanged protected UI dependencies",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "title": "Calendar real states, views, event identity and linked artifact route",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G07",
+      "title": "Calendar persisted state ordering and original project lifetime",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "title": "Calendar read-only controls, explicit timezone and real export",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "title": "Synthetic calendar specimen separation without new product CRUD",
+      "phase": "W1",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "title": "Real Gantt projection, coverage, warnings and bounded Agent observation",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "title": "Gantt native title, bar move/resize and expected dependent schedules",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "title": "Gantt dependency add/remove/reconnect and cycle/stale refusal",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "title": "Gantt insertion and row order with exact native IDs",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "title": "Original mutation/dialog/readback lifetimes and unknown outcomes",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "title": "Actual Mermaid/PNG export from the same accepted projection",
+      "phase": "W2",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "title": "Complete Gantt create/edit form and raw-input round-trip",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "title": "Complete general Structure create/edit form and intentional differences",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "title": "Real estimate/execution/resource children without implementation coupling",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "title": "Native assignee revisions, multiple assignees and additive definition attachment",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "title": "Authoritative pricing/history and hidden task metadata preservation",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "title": "Native partial commit, readback and compensation fault matrix",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G22",
+      "title": "Two independent stacked dialogs, queued submit and close/reopen",
+      "phase": "W3",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G23",
+      "title": "Source and independent published Parity/Fast planning sandbox",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G24",
+      "title": "Actual large-desktop gestures, focus, footers and asset byte identity",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G25",
+      "title": "Repeated measured dotnet-watch loop and byte-exact probe restoration",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G26",
+      "title": "Native project Calendar/Gantt/task operator end-to-end journey",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G27",
+      "title": "Agent Project Structure/file approvals and canonical content readback",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G28",
+      "title": "Workflow, finite enabled Scheduler restart, History and Usage continuity",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G29",
+      "title": "Owned multi-instance provider/consumer isolation on final affected image",
+      "phase": "W4",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G30",
+      "title": "Current direct builds, test discovery, Stable decision and honest dispositions",
+      "phase": "Closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G31",
+      "title": "Final portability/static/docs/secret-delta gates with preserved historical evidence",
+      "phase": "Closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    },
+    {
+      "id": "G32",
+      "title": "Verified signed delivery, complete WB1 census and remaining roadmap",
+      "phase": "Closure",
+      "status": "NOT_RUN",
+      "attempt_ids": [],
+      "notes": ""
+    }
+  ],
+  "closure": {
+    "planning_ui_boundary_complete": false,
+    "quote_lifetime_fixed": false,
+    "calendar_gantt_task_native_proof": false,
+    "native_consumer_campaign_passed": false,
+    "ready_for_next_workbench_slice": false,
+    "release_ready": false,
+    "unresolved_blocking_findings": [],
+    "dependency_delivery": "NOT_VERIFIED",
+    "dependency_delivery_notes": "",
+    "paid_model_calls": 0,
+    "signed_commits": []
+  }
+}

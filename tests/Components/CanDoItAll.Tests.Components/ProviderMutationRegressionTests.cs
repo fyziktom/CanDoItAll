@@ -25,7 +25,7 @@ public sealed class ProviderMutationRegressionTests {
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-name-input']");
         await cut.Find("[data-testid='providers-new']").ClickAsync();
-        cut.Find("[data-testid='providers-model-input']").Change("model");
+        cut.Find("[data-testid='providers-model-input']").Input("model");
         await cut.FindComponent<ProviderProfileEditorForm>().Find("form").SubmitAsync();
         var draft = Assert.IsType<ProviderProfileEditorModel>(cut.FindComponent<ProviderProfileEditorForm>().Instance.Context.Model);
         Assert.Equal(reads.Id, draft.Id);
@@ -52,13 +52,13 @@ public sealed class ProviderMutationRegressionTests {
         cut.WaitForElement("[data-testid='providers-name-input']");
         if (firstSave) {
             await cut.Find("[data-testid='providers-new']").ClickAsync();
-            cut.Find("[data-testid='providers-model-input']").Change("model");
+            cut.Find("[data-testid='providers-model-input']").Input("model");
         }
-        cut.Find("[data-testid='providers-name-input']").Change("Submitted");
+        cut.Find("[data-testid='providers-name-input']").Input("Submitted");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var save = cut.FindComponent<ProviderProfileEditorForm>().Find("form").SubmitAsync();
         cut.WaitForAssertion(() => Assert.NotNull(submitted));
-        cut.Find("[data-testid='providers-name-input']").Change("Later edit");
+        cut.Find("[data-testid='providers-name-input']").Input("Later edit");
         var capturedName = submitted!.Name;
         var independent = !ReferenceEquals(context.Model, submitted);
         await cut.InvokeAsync(() => pending.SetResult(reads.Id));

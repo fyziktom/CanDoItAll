@@ -1,0 +1,151 @@
+@namespace CanDoItAll.Workbench.Content.UI
+
+@{ var view = State; }
+<div class="content-file-collection" style="display:contents;">
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="project-structure-file-browser-window"
+                      AriaLabel="Project structure files"
+                      Kicker="Authorized files"
+                      Title="@view.Title"
+                      Summary="@view.Summary"
+                      BodyClass="project-structure-file-browser-window__body"
+                      DefaultPlacement="top-right"
+                      DefaultWidth="600"
+                      DefaultHeight="700"
+                      MinWidth="340"
+                      MinHeight="600"
+                      MaxWidth="760"
+                      MaxHeight="820"
+                      State="@WindowState"
+                      StateChanged="StateChanged">
+    <Stack GapScale="LayoutGap.Small"
+           AlignItems="AlignItems.Stretch"
+           Class="project-structure-file-browser-window__content h-full min-h-0 overflow-hidden">
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap"
+               Class="project-structure-file-browser-window__toolbar shrink-0">
+            <Cluster Gap="LayoutGap.XSmall"
+                     Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info"
+                             Text="@view.SourceStatus" />
+                <StatusBadge Tone="neutral"
+                             Text="Compact" />
+            </Cluster>
+            <Cluster Gap="LayoutGap.XSmall"
+                     AlignItems="AlignItems.Center"
+                     Wrap="FlexWrap.Wrap">
+                @if (view.OpenRoot.HasDelegate) {
+                    <Button Text="Open in Explorer"
+                            Icon="folder_open"
+                            Size="ButtonSize.Small"
+                            Variant="Variant.Outlined"
+                            ButtonStyle="ButtonStyle.Info"
+                            Disabled="@view.IsLoading"
+                            data-testid="project-structure-file-browser-open-root-explorer"
+                            Click="view.OpenRoot" />
+                }
+                @if (view.IsProjectCollection) {
+                    <label class="project-structure-file-browser-window__subprojects">
+                        <CheckBox TValue="bool"
+                                  Value="@view.IncludeSubprojects"
+                                  ValueChanged="view.IncludeSubprojectsChanged"
+                                  Disabled="@view.IsLoading"
+                                  aria-label="Include subprojects" />
+                        <TextBlock TextStyle="TextStyle.Caption"
+                                   Value="Include subprojects" />
+                    </label>
+                }
+            </Cluster>
+        </Split>
+
+        @if (view.IsLoading) {
+            <Cluster Gap="LayoutGap.XSmall"
+                     AlignItems="AlignItems.Center"
+                     JustifyContent="JustifyContent.Center"
+                     data-testid="project-structure-file-browser-loading"
+                     aria-live="polite"
+                     aria-busy="true">
+                <Icon Name="progress_activity"
+                      Class="animate-spin text-xl" />
+                <TextBlock TextStyle="TextStyle.Caption"
+                           Value="Loading files" />
+            </Cluster>
+            <LoadingState Eyebrow="Project Structure files"
+                          Title="Resolving authorized sources"
+                          Description="Building a bounded file collection from the current semantic scope." />
+        } else if (!string.IsNullOrWhiteSpace(view.OpenError)) {
+            <EmptyState Eyebrow="Files unavailable"
+                        Title="Unable to open this file collection"
+                        Description="@view.OpenError">
+                <Actions>
+                    <Button Text="Retry"
+                            data-testid="project-structure-file-browser-retry"
+                            Click="view.Retry" />
+                </Actions>
+            </EmptyState>
+        } else if (view.Preview is { } preview) {
+            <Stack GapScale="LayoutGap.Small"
+                   AlignItems="AlignItems.Stretch"
+                   Class="h-full min-h-0 overflow-hidden">
+                <Cluster Gap="LayoutGap.XSmall"
+                         Class="shrink-0">
+                    <Button ButtonStyle="ButtonStyle.Light"
+                            Icon="arrow_back"
+                            Text="Back to files"
+                            data-testid="project-structure-file-browser-back"
+                            Click="view.Back" />
+                    <StatusBadge Tone="info"
+                                 Text="Read only" />
+                </Cluster>
+                <FileInteraction Request="preview.Request"
+                                 ContentSource="preview.ContentSource"
+                                 Composition="preview.Composition"
+                                 OpenExternallyRequested="preview.OpenExternally"
+                                 OpenExternallyLabel="Open in preferred app"
+                                 AllowModeSwitch="false"
+                                 FillAvailableHeight="true"
+                                 MaximumContentBytes="preview.MaximumContentBytes"
+                                 AriaLabel="@($"Read-only project structure file {preview.Request.FileName}")" />
+            </Stack>
+        } else if (view.Browse is { } browse) {
+            @if (!string.IsNullOrWhiteSpace(view.ActivationError)) {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-file-browser-activation-error">
+                    @view.ActivationError
+                </Alert>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(view.ActionFeedback)) {
+                <Alert AlertStyle="AlertStyle.Info"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-file-browser-action-feedback">
+                    @view.ActionFeedback
+                </Alert>
+            }
+
+            <FileBrowser Session="browse.Session"
+                         HostActionCatalog="browse.Actions"
+                         Class="project-structure-file-browser-window__browser w-full flex-1 min-h-0"
+                         AriaLabel="Project structure file collection"
+                         DisplayMode="FileBrowserDisplayMode.Compact"
+                         InitialViewMode="FileBrowserViewMode.List"
+                         SearchDebounceMilliseconds="280"
+                         SnapshotChanged="browse.SnapshotChanged"
+                         ItemInvoked="browse.ItemInvoked"
+                         ActionRequested="browse.ActionRequested" />
+        }
+    </Stack>
+</CanvasFloatingWindow>
+</div>
+
+
+@code {
+    [Parameter, EditorRequired] public string WindowId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public CanvasWorkbenchWindowState WindowState { get; set; } = default!;
+    [Parameter] public EventCallback<CanvasWorkbenchWindowState> StateChanged { get; set; }
+    [Parameter, EditorRequired] public ContentFileCollectionState State { get; set; } = default!;
+}

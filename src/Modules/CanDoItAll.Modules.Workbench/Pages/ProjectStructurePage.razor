@@ -38,7 +38,6 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator
 @inject ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator
 @inject WorkspaceService WorkspaceService
-@inject SecretService SecretService
 @inject IProviderRuntimeProfileSource ProviderRuntimeProfileSource
 @inject IProviderPromptExecutionService ProviderPromptExecutionService
 @inject NavigationManager Navigation
@@ -46,6 +45,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ILogger<ProjectStructurePage> Logger
 @inject IConversationShellCoordinator ConversationShellCoordinator
 @implements IAsyncDisposable
+
+@{
+    var processLinkReceiver = processLinkDialog;
+    var processStartReceiver = processStartDialog;
+}
 
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
 
@@ -59,134 +63,18 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           ContextAccessState="@agentChatContextAccessState"
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
 
-@if (unavailableState is not null)
-{
-    <PageScaffold>
-        <Header>
-            <PageHeader Eyebrow="Workbench"
-                        Title="Project structure unavailable"
-                        Description="The requested project is not available in the active database profile." />
-        </Header>
-        <ChildContent>
-            <EmptyState Eyebrow="Switched profile"
-                        Title="@unavailableState.Title"
-                        Description="@unavailableState.Description">
-                <Actions>
-                    <Button Text="Open projects"
-                            Click="OpenUnavailableRouteAsync" />
-                </Actions>
-            </EmptyState>
-        </ChildContent>
-    </PageScaffold>
-}
-else if (surface is null || canvasSurface is null)
-{
-    <div class="project-structure-page">
-        <CanvasWorkbenchStage Eyebrow=""
-                              Title=""
-                              Description="">
-            <Canvas>
-                <SkeletonStateOverlay Snapshot="@LoadingSkeletonSnapshot" />
-            </Canvas>
-        </CanvasWorkbenchStage>
-    </div>
-}
-else
-{
-    <div class="project-structure-page">
-        <Stack Gap="1.5rem"
-               Class="project-structure-page__stack">
-
-        <Tabs @bind-SelectedIndex="structureViewIndex"
-              AriaLabel="Project structure views"
-              Variant="TabsVariant.WorkspaceSecondary"
-              RenderMode="TabRenderMode.Server">
-            <TabsItem Text="Canvas" Icon="account_tree">
-        <CanvasWorkbenchStage Eyebrow=""
-                              Title=""
-                              Description="">
-            <Canvas>
-                <CanvasWorkbench Surface="canvasSurface"
-                                 @ref="workbenchRef"
-                                 SelectionChanged="HandleSelectionChangedAsync"
-                                 NodesMoved="HandleNodesMovedAsync"
-                                 ContextActionRequested="HandleContextActionAsync"
-                                 CreateActionInvoked="HandleCreateActionAsync"
-                                 NodeEdited="HandleNodeEditedAsync"
-                                 NodeOpened="HandleNodeOpenedAsync"
-                                 StateChanged="HandleCanvasStateChangedAsync"
-                                 ClipboardRequested="HandleClipboardRequestedAsync">
-                    <ToolbarLeftContent>
-                        <ProjectStructureToolbarActions SelectionWindowVisible="@SelectionWindowState.IsVisible"
-                                                       HealthWindowVisible="@HealthWindowState.IsVisible"
-                                                       ToolboxWindowVisible="@ToolboxWindowState.IsVisible"
-                                                       ObjectIndexWindowVisible="@ObjectIndexWindowState.IsVisible"
-                                                       FileBrowserWindowVisible="@FileBrowserWindowState.IsVisible"
-                                                       SignalsWindowVisible="@SignalsWindowState.IsVisible"
-                                                       AgentWindowVisible="@ConversationShellCoordinator.Snapshot().IsCatalogVisible"
-                                                       GanttViewVisible="@IsGanttViewVisible"
-                                                       ActiveTool="@canvasToolMode"
-                                                       CanUseDependencyTool="@(selectedNode is not null)"
-                                                       CanRecomposeSelectedBranch="@CanRecomposeSelectedBranch"
-                                                       IsSubtreeRecompositionInProgress="@isSubtreeRecompositionInProgress"
-                                                       SelectToolClicked="SelectCanvasToolAsync"
-                                                       DependencyToolClicked="EnableLinkModeAsync"
-                                                       DeleteToolClicked="EnableDeleteModeAsync"
-                                                       ToggleSelectionWindow="ToggleSelectionWindowAsync"
-                                                       ToggleHealthWindow="ToggleHealthWindowAsync"
-                                                       ToggleToolboxWindow="ToggleToolboxWindowAsync"
-                                                       ToggleObjectIndexWindow="ToggleObjectIndexWindowAsync"
-                                                       OpenFileBrowserWindow="OpenProjectFileBrowserAsync"
-                                                       ToggleSignalsWindow="ToggleSignalsWindowAsync"
-                                                       ToggleAgentWindow="ToggleAgentWindowAsync"
-                                                       OpenGanttView="OpenGanttViewAsync"
-                                                       RecomposeBranch="RecomposeSelectedBranchAsync" />
-                        <div class="project-structure-toolbar-stats"
-                             data-testid="project-structure-canvas-loaded">
-                            <StatusBadge Tone="info" Text="@($"Nodes {surface.Nodes.Count}")" />
-                            <StatusBadge Tone="neutral" Text="@($"Selection {selectedNodeIds.Count}")" />
-                        </div>
-                    </ToolbarLeftContent>
-                    <OverlayContent>
-                        @if ((!SelectionWindowState.IsVisible || SelectionWindowState.IsMinimized) &&
-                            !string.IsNullOrWhiteSpace(workflowFeedback))
-                        {
-                            <PanelCard Class="project-structure-inline-feedback project-structure-clipboard-feedback"
-                                       role="status"
-                                       aria-live="polite"
-                                       data-testid="project-structure-clipboard-feedback"
-                                       data-tone="@workflowFeedbackTone">
-                                <Stack GapScale="LayoutGap.Small">
-                                    <TextBlock Value="@workflowFeedback" />
-                                    @if (pendingDeletionRecoveries.Count > 0)
-                                    {
-                                        <Button ButtonStyle="ButtonStyle.Light"
-                                                Text="Retry cleanup"
-                                                Disabled="@isRetryingDeletionCleanup"
-                                                data-testid="project-structure-deletion-retry"
-                                                Click="RetryPendingDeletionCleanupAsync" />
-                                    }
-                                </Stack>
-                            </PanelCard>
-                        }
-                        @if (ToolboxWindowState.IsVisible)
-                        {
-                            <ProjectStructureToolboxWindow WindowId="@ToolboxWindowKey"
-                                                           TestId="project-structure-toolbox-window"
-                                                           AriaLabel="Project structure standard blocks toolbox"
-                                                           Kicker="Standard Blocks Toolbox"
-                                                           Title=""
-                                                           Summary=""
-                                                           State="@ToolboxWindowState"
-                                                           StateChanged="HandleToolboxWindowStateChangedAsync"
-                                                           Groups="@ToolboxCreateGroups"
-                                                           SearchText="@structureToolboxSearchText"
-                                                           SearchTextChanged="@((string? value) => structureToolboxSearchText = value ?? string.Empty)"
-                                                           SourceLabel="@ToolboxSourceLabel"
-                                                           DefaultWidth="@ToolboxWindowDefaultWidth"
-                                                           OnToggleGroup="ExpandToolboxGroup"
-                                                           OnOpenAction="HandleToolboxActionSelectedAsync" />
-                        }
+<StructureWorkspace @ref="workbenchRef" @key="StructureContextId" Presentation="@BuildStructurePresentation()" SelectedView="@structureViewIndex" Dispatch="HandleStructureIntentAsync" Dialogs="@BuildStructureDialogs()" DialogIntent="HandleStructureDialogIntentAsync">
+    <Planning>
+                <ProjectStructureGanttPanel ProjectId="@ProjectId"
+                                            Surface="@surface"
+                                            OpenAgentCatalog="ToggleAgentWindowAsync"
+                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
+                                            ObservationChanged="HandleGanttObservationChanged" />
+    </Planning>
+    <Insights>
+                <ProjectManagerSummaryPanel ProjectId="@ProjectId" ExpectedProjectAdmission="@surface?.ExpectedProjectAdmission" />
+    </Insights>
+    <SupportWindows>
                         @if (ObjectIndexWindowState.IsVisible)
                         {
                             <ProjectStructureObjectIndexWindow WindowId="@ObjectIndexWindowKey"
@@ -196,21 +84,23 @@ else
                                                                Title="Project object index"
                                                                Summary="@ObjectIndexWindowSummary"
                                                                State="@ObjectIndexWindowState"
-                                                               StateChanged="HandleObjectIndexWindowStateChangedAsync"
+                                                               Origin="@CurrentInsights.Origin"
+                                                               StateChanged="HandleInsightsWindowAsync"
                                                                IsLoaded="@IsObjectIndexWindowLoaded"
-                                                               Nodes="@ObjectIndexWindowNodes"
+                                                               Nodes="@ObjectIndexWindowNodes.Select(PresentOutlineNode).ToArray()"
                                                                SelectedNodeIds="@selectedNodeIds"
                                                                SearchText="@objectIndexSearchText"
-                                                               SearchTextChanged="HandleObjectIndexSearchTextChangedAsync"
-                                                               OnSelectNode="SelectNodeAsync"
-                                                               ResolveContextActions="ResolveSupportPanelContextActions"
-                                                               OnExecuteNodeContextAction="ExecuteOutlineContextActionAsync"
+                                                               SearchTextChanged="HandleInsightsSearchAsync"
+                                                               OnSelectNode="HandleInsightsFocusAsync"
+                                                               OpenMenu="OpenInsightsMenuAsync"
+                                                               OnExecuteNodeContextAction="ExecuteInsightsMenuAsync"
                                                                DefaultWidth="@ObjectIndexWindowDefaultWidth" />
                         }
                         @if (FileBrowserWindowState.IsVisible)
                         {
                             <ProjectStructureFileBrowserWindow WindowId="@FileBrowserWindowKey"
-                                                               Request="@CurrentFileBrowserRequest"
+                                                               Opening="@CurrentFileBrowserOpening"
+                                                               ActionCompleted="RecordFileActionOutcome"
                                                                State="@FileBrowserWindowState"
                                                                StateChanged="HandleFileBrowserWindowStateChangedAsync"
                                                                CanOpenRootInExplorer="@CanOpenCurrentFileBrowserNodeInExplorer"
@@ -222,10 +112,11 @@ else
                                                                 TestId="project-structure-validation-window"
                                                                 AriaLabel="Project structure canvas health"
                                                                 State="@HealthWindowState"
-                                                                StateChanged="HandleHealthWindowStateChangedAsync"
+                                                                Origin="@CurrentInsights.Origin"
+                                                                SelectedNodeIds="@selectedNodeIds.ToArray()"
+                                                                StateChanged="HandleInsightsWindowAsync"
                                                                 SummaryState="@canvasValidationOverlay"
-                                                                CanValidateSelected="false"
-                                                                ValidateSelected="RunSelectedValidationAsync" />
+                                                                CanValidateSelected="false" />
                         }
                         @if (SignalsWindowState.IsVisible)
                         {
@@ -236,100 +127,75 @@ else
                                                            Title="Signals toolbox"
                                                            Summary="Keep markers, progress, and priority close to the current selection without reopening the right-click menu every time."
                                                            State="@SignalsWindowState"
-                                                           StateChanged="HandleSignalsWindowStateChangedAsync"
-                                                           Sections="@SignalsWindowSections"
+                                                           Origin="@CurrentInsights.Origin"
+                                                           SelectedNodeIds="@selectedNodeIds.ToArray()"
+                                                           StateChanged="HandleInsightsWindowAsync"
+                                                           Sections="@CurrentInsights.Signals"
                                                            CanApplySignals="@CanApplySignals"
                                                            SelectionLabel="@SignalsSelectionLabel"
                                                            SelectionHint="@SignalsSelectionHint"
                                                            DefaultWidth="@SignalsWindowDefaultWidth"
-                                                           OnApplyAction="HandleSignalsToolboxActionAsync" />
+                                                           OnApplyAction="HandleInsightsSignalAsync" />
                         }
                         @if (SelectionWindowState.IsVisible)
                         {
-                            <CanvasFloatingWindow WindowId="@SelectionWindowKey"
-                                                  TestId="project-structure-selection-window"
-                                                  AriaLabel="Project structure selection panel"
-                                                  Kicker="Selection panel"
-                                                  Title="@SelectionWindowTitle"
-                                                  Summary="@SelectionWindowSummary"
-                                                  DefaultPlacement="top-right"
-                                                  DefaultWidth="360"
-                                                  DefaultHeight="360"
-                                                  MinWidth="320"
-                                                  MinHeight="240"
-                                                  MaxWidth="520"
-                                                  State="@SelectionWindowState"
-                                                  StateChanged="HandleSelectionWindowStateChangedAsync">
-                                <ProjectStructureSelectionPanel State="@SelectionPanelState"
-                                                               ClearSelectionAsync="ClearSelectionAsync"
-                                                               SelectNodeAsync="SelectNodeAsync"
-                                                               ApplySelectionStatusAsync="ApplySelectionStatusAsync"
-                                                               ApplySelectionProgressAsync="ApplySelectionProgressAsync"
-                                                               ApplySelectionMarkerAsync="ApplySelectionMarkerAsync"
-                                                               ApplySelectionPriorityAsync="ApplySelectionPriorityAsync"
-                                                               SelectionBorderNameChangedAsync="UpdateSelectionBorderNameAsync"
-                                                               CreateSelectionBorderAsync="CreateSelectionBorderAsync"
-                                                               ClearSelectionBordersAsync="ClearSelectionBordersAsync"
-                                                               ExecuteInspectorActionAsync="ExecuteSelectedInspectorActionAsync"
-                                                               OpenToolboxAsync="OpenToolboxAsync"
-                                                               OpenAttachmentLocallyAsync="OpenSelectedAttachmentLocallyAsync"
-                                                               OpenAttachmentPreviewAsync="OpenSelectedAttachmentPreviewAsync"
-                                                               OpenMermaidViewerAsync="OpenSelectedMermaidViewerAsync"
-                                                               AdvancedDetailsHelpBody="@AdvancedDetailsHelpBody"
-                                                               AdvancedDetailsHelpTip="@AdvancedDetailsHelpTip" />
-                            </CanvasFloatingWindow>
+                            <CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow
+                                WindowId="@SelectionWindowKey" Origin="@CurrentInsights.Origin"
+                                Title="@SelectionWindowTitle" Summary="@SelectionWindowSummary"
+                                WindowState="@SelectionWindowState" WindowChanged="HandleInsightsWindowAsync"
+                                Selection="@CurrentInsights.Selection" Dispatch="HandleInsightsSelectionAsync"
+                                Help="@AdvancedDetailsHelpBody" Tip="@AdvancedDetailsHelpTip" />
                         }
+
+    </SupportWindows>
+    <DeferredDialogs>
+                            @{
+                                var quickOpening = quickActionDialog;
+                                var webOpening = webPreviewDialog;
+                                var addWorkflowOpening = workflowAddOpening;
+                                var startWorkflowOpening = workflowStartOpening;
+                            }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
-                            <ProjectStructureCanvasDialogs ProjectHierarchyDialog="@projectHierarchyDialog"
-                                                           RenderProcessStartDialog="false"
-                                                           CloseProjectHierarchy="CloseProjectHierarchyDialog"
-                                                           ProjectHierarchySelectionChanged="HandleProjectHierarchySelectionChanged"
-                                                           ExecuteProjectHierarchyCommand="ExecuteProjectHierarchyCommandAsync"
-                                                           BlockMutationDialog="@blockMutationDialog"
-                                                           CloseBlockMutation="CloseBlockMutationDialog"
-                                                           BlockMutationSelectionChanged="HandleBlockMutationSelectionChanged"
-                                                           ExecuteBlockMutation="ExecuteBlockMutationAsync"
-                                                           SubprojectTransferDialog="@subprojectTransferDialog"
-                                                           CloseSubprojectTransfer="CloseSubprojectTransferDialog"
-                                                           SubprojectTransferNameChanged="HandleSubprojectTransferNameChanged"
-                                                           ExecuteSubprojectTransfer="ExecuteSubprojectTransferAsync"
-                                                           OpenProjectCreateDialog="OpenProjectCreateDialogAsync"
+                            <ProjectStructureCanvasDialogs RenderProcessStartDialog="false"
                                                            ProcessLinkDialog="@processLinkDialog"
-                                                           CloseProcessLink="CloseProcessLinkDialog"
-                                                           ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
-                                                           ExecuteProcessLink="ExecuteProcessLinkAsync"
+                                                           CloseProcessLink="@(() => DispatchProcessLinkAsync(processLinkReceiver, () => { CloseProcessLinkDialog();
+                                                               return Task.CompletedTask; }))"
+                                                           ProcessLinkSelectionChanged="@(id => DispatchProcessLinkAsync(processLinkReceiver, () => { HandleProcessLinkSelectionChanged(id);
+                                                               return Task.CompletedTask; }))"
+                                                           ExecuteProcessLink="@(() => DispatchProcessLinkAsync(processLinkReceiver, ExecuteProcessLinkAsync))"
                                                            WorkflowAddDialog="@workflowAddDialog"
-                                                           CloseWorkflowAdd="CloseWorkflowAddDialog"
-                                                           WorkflowAddSelectionChanged="HandleWorkflowAddSelectionChanged"
-                                                           WorkflowAddIncludeParentSubtreeChanged="HandleWorkflowAddIncludeParentSubtreeChanged"
-                                                           WorkflowAddIncludeAssetsChanged="HandleWorkflowAddIncludeAssetsChanged"
-                                                           WorkflowAddManualInputChanged="HandleWorkflowAddManualInputChanged"
-                                                           WorkflowAddSourceKindChanged="HandleWorkflowAddSourceKindChanged"
-                                                           WorkflowAddSourceKeyChanged="HandleWorkflowAddSourceKeyChanged"
-                                                           WorkflowAddSourceLabelChanged="HandleWorkflowAddSourceLabelChanged"
-                                                           WorkflowAddSourceValueChanged="HandleWorkflowAddSourceValueChanged"
-                                                           ExecuteWorkflowAdd="ExecuteWorkflowAddAsync"
+                                                           CloseWorkflowAdd="@(() => ChangeAuthoringDialog(addWorkflowOpening, workflowAddOpening, CloseWorkflowAddDialog))"
+                                                           WorkflowAddSelectionChanged="@(id => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSelectionChanged(id)))"
+                                                           WorkflowAddIncludeParentSubtreeChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddIncludeParentSubtreeChanged(args)))"
+                                                           WorkflowAddIncludeAssetsChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddIncludeAssetsChanged(args)))"
+                                                           WorkflowAddManualInputChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddManualInputChanged(args)))"
+                                                           WorkflowAddSourceKindChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceKindChanged(args)))"
+                                                           WorkflowAddSourceKeyChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceKeyChanged(args)))"
+                                                           WorkflowAddSourceLabelChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceLabelChanged(args)))"
+                                                           WorkflowAddSourceValueChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceValueChanged(args)))"
+                                                           ExecuteWorkflowAdd="@(() => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, ExecuteWorkflowAddAsync))"
                                                            WorkflowStartDialog="@workflowStartDialog"
-                                                           CloseWorkflowStart="CloseWorkflowStartDialog"
-                                                           WorkflowStartSimulationChanged="HandleWorkflowStartSimulationChanged"
-                                                           ExecuteWorkflowStart="ExecuteWorkflowStartAsync"
+                                                           CloseWorkflowStart="@(() => ChangeAuthoringDialog(startWorkflowOpening, workflowStartOpening, CloseWorkflowStartDialog))"
+                                                           WorkflowStartSimulationChanged="@(change => ChangeAuthoringDialog(startWorkflowOpening, workflowStartOpening, () => HandleWorkflowStartSimulationChanged(change)))"
+                                                           ExecuteWorkflowStart="@(() => DispatchAuthoringDialogAsync(startWorkflowOpening, workflowStartOpening, ExecuteWorkflowStartAsync))"
                                                            ProcessStartDialog="@processStartDialog"
-            CloseProcessStart="CloseProcessStartDialog"
-            ExecuteProcessStart="ExecuteProcessStartAsync"
-            ReviewAndStartProcess="ReviewAndStartProcessAsync"
-                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
-            SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
-            AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
-            ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
-            RequestHrManagerMatch="RequestHrManagerMatchAsync"
-            CancelHrManagerMatch="CancelHrManagerMatchAsync"
-            ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+            CloseProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, () => { CloseProcessStartDialog();
+                                                               return Task.CompletedTask; }))"
+            ExecuteProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteProcessStartAsync))"
+            ReviewAndStartProcess="@(() => DispatchProcessStartAsync(processStartReceiver, ReviewAndStartProcessAsync))"
+                                   PrepareAnotherProcessLaunch="@(() => DispatchProcessStartAsync(processStartReceiver, PrepareAnotherProcessLaunchAsync))"
+            SelectProcessStartCandidate="@(value => DispatchProcessStartAsync(processStartReceiver, () => SelectProcessStartCandidateAsync(value)))"
+            AssignProcessStartAgent="@(value => DispatchProcessStartAsync(processStartReceiver, () => OpenManualProcessStartAgentPickerAsync(value)))"
+            ProcessStartAssignmentsReviewedChanged="@(value => DispatchProcessStartAsync(processStartReceiver, () => HandleProcessStartAssignmentsReviewedChanged(value)))"
+            RequestHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, RequestHrManagerMatchAsync))"
+            CancelHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, CancelHrManagerMatchAsync))"
+            ExecuteHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteHrManagerMatchAsync))"
                                                            QuickActionDialog="@quickActionDialog"
-                                                           CloseQuickActionDialog="CloseQuickActionDialog"
-                                                           ExecuteQuickAction="ExecuteQuickActionAsync"
+                                                           CloseQuickActionDialog="@(() => CloseQuickActionDialog(quickOpening))"
+                                                           ExecuteQuickAction="@(action => ExecuteQuickActionAsync(quickOpening, action))"
                                                            WebPreviewDialog="@webPreviewDialog"
-                                                           StopWebPreviewRuntime="StopWebPreviewRuntimeAsync"
-                                                           CloseWebPreviewDialog="CloseWebPreviewDialog"
+                                                           StopWebPreviewRuntime="@(_ => StopWebPreviewRuntimeAsync(webOpening))"
+                                                           CloseWebPreviewDialog="@(() => CloseWebPreviewDialog(webOpening))"
                                                            PreviewNode="@previewNode"
                                                            PreviewInteraction="@PreviewInteraction"
                                                            CloseAttachmentPreview="CloseAttachmentPreviewAsync"
@@ -340,230 +206,49 @@ else
                                                            CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                                            CanEditPreviewNode="CanEditNode" />
                         </ProjectStructureDeferredSurface>
-                    </OverlayContent>
-                </CanvasWorkbench>
-            </Canvas>
-        </CanvasWorkbenchStage>
-            </TabsItem>
-            <TabsItem Text="Gantt" Icon="view_timeline">
-                <ProjectStructureGanttPanel ProjectId="@ProjectId"
-                                            Surface="@surface"
-                                            OpenAgentCatalog="ToggleAgentWindowAsync"
-                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
-                                            ObservationChanged="HandleGanttObservationChanged" />
-            </TabsItem>
-            <TabsItem Text="Manager Summary" Icon="monitoring">
-                <ProjectManagerSummaryPanel ProjectId="@ProjectId" />
-            </TabsItem>
-        </Tabs>
+    </DeferredDialogs>
+</StructureWorkspace>
 
-        @if (structureViewIndex == CanvasViewIndex && CanShowPartyEditor)
-        {
-            <SectionCard Title="@PartyEditorTitle"
-                         Description="@PartyEditorDescription">
-                <div class="space-y-5"
-                     data-testid="project-structure-party-editor">
-                    <SurfaceCard Soft="true">
-                        <Stack GapScale="LayoutGap.Small">
-                            <Cluster>
-                                <StatusBadge Tone="@PartyEditorTone"
-                                             Text="@PartyEditorStatus" />
-                                @if (!string.IsNullOrWhiteSpace(PartyEditorLinkedPartyName))
-                                {
-                                    <Pill Tone="PillTone.Info"
-                                          Text="@PartyEditorLinkedPartyName" />
-                                }
-                            </Cluster>
-                            <p class="text-sm text-slate-600">@PartyEditorLead</p>
-                        </Stack>
-                    </SurfaceCard>
-
-                    @if (isPartyEditorLoading)
-                    {
-                        <SurfaceCard Soft="true"
-                                     data-testid="project-structure-party-editor-loading">
-                            <p class="text-sm text-slate-600">Loading party relationships for the selected node.</p>
-                        </SurfaceCard>
-                    }
-                    else if (!string.IsNullOrWhiteSpace(partyEditor.Message))
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="text-sm @(partyEditor.MessageTone == "danger" ? "text-rose-700" : "text-slate-700")"
-                               data-testid="project-structure-party-editor-message">@partyEditor.Message</p>
-                        </SurfaceCard>
-                    }
-
-                    @if (isPartyEditorLoading)
-                    {
-                        <SurfaceCard Soft="true">
-                            <p class="text-sm text-slate-600">Preparing the directory linkage controls.</p>
-                        </SurfaceCard>
-                    }
-                    else if (IsParticipantPartyEditor)
-                    {
-                        <SurfaceCard>
-                            <Stack GapScale="LayoutGap.Large">
-                                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                                    <InputCheckbox @bind-Value="partyEditor.KeepProjectLocalOnly"
-                                                   data-testid="project-structure-participant-local-only" />
-                                    <span>Keep project-local only</span>
-                                </label>
-
-                                @if (!partyEditor.KeepProjectLocalOnly)
-                                {
-                                    <Stack GapScale="LayoutGap.Small">
-                                        <TextBlock TextStyle="TextStyle.Footer"
-                                                   Value="Existing party" />
-                                        <ResourceCardPicker TItem="Guid"
-                                                            Options="@ParticipantPartyPickerOptions"
-                                                            SelectionChanged="HandleParticipantPartySelectedAsync"
-                                                            SearchPlaceholder="Search people, agents, and organizations"
-                                                            EmptyTitle="No parties match the current search"
-                                                            DataTestId="project-structure-participant-party" />
-                                        <Cluster>
-                                            <Button Text="Clear selection"
-                                                    Variant="Variant.Text"
-                                                    ButtonStyle="ButtonStyle.Base"
-                                                    Disabled="@(!partyEditor.SelectedPartyId.HasValue)"
-                                                    data-testid="project-structure-participant-party-clear"
-                                                    Click="ClearPartySelectionAsync" />
-                                        </Cluster>
-                                        <TextBlock TextStyle="TextStyle.Note"
-                                                   Value="The synced party can drive reusable staffing, AI-agent reuse, and meeting defaults without forcing every participant node into the central directory." />
-                                    </Stack>
-
-                                    <SurfaceCard Soft="true">
-                                        <Stack GapScale="LayoutGap.Medium">
-                                            <div>
-                                                <p class="cda-eyebrow">Quick create</p>
-                                                <p class="mt-1 text-sm text-slate-600">Create a directory record from the selected participant node when nothing reusable exists yet.</p>
-                                            </div>
-
-                                            <Grid Gap="LayoutGap.Medium"
-                                                  ColumnsLg="2">
-                                                <FormField Text="Kind">
-                                                    <InputSelect @bind-Value="partyEditor.QuickCreate.PartyKind"
-                                                                 class="cda-input"
-                                                                 data-testid="project-structure-participant-quick-kind">
-                                                        @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
-                                                        {
-                                                            <option value="@kind">@ResolveQuickCreateKindLabel(kind)</option>
-                                                        }
-                                                    </InputSelect>
-                                                </FormField>
-                                                <FormField Text="Name">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.DisplayName"
-                                                               class="cda-input"
-                                                               data-testid="project-structure-participant-quick-name" />
-                                                </FormField>
-                                            </Grid>
-
-                                            <Grid Gap="LayoutGap.Medium"
-                                                  ColumnsLg="2">
-                                                <FormField Text="Email">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.Email"
-                                                               class="cda-input"
-                                                               data-testid="project-structure-participant-quick-email" />
-                                                </FormField>
-                                                <FormField Text="Phone">
-                                                    <InputText @bind-Value="partyEditor.QuickCreate.Phone"
-                                                               class="cda-input"
-                                                               data-testid="project-structure-participant-quick-phone" />
-                                                </FormField>
-                                            </Grid>
-
-                                            <FormField Text="Summary">
-                                                <InputTextArea @bind-Value="partyEditor.QuickCreate.Summary"
-                                                               class="cda-input cda-input--textarea min-h-24"
-                                                               data-testid="project-structure-participant-quick-summary" />
-                                            </FormField>
-
-                                            <Cluster>
-                                                <Button ButtonStyle="ButtonStyle.Light"
-                                                        Text="Create party"
-                                                        Disabled="@isPartyEditorBusy"
-                                                        data-testid="project-structure-participant-quick-create"
-                                                        Click="CreateParticipantPartyAsync" />
-                                            </Cluster>
-                                        </Stack>
-                                    </SurfaceCard>
-                                }
-
-                                <Cluster>
-                                    <Button Text="Save participant sync"
-                                            Disabled="@isPartyEditorBusy"
-                                            data-testid="project-structure-participant-save"
-                                            Click="SaveParticipantPartyAsync" />
-                                </Cluster>
-                            </Stack>
-                        </SurfaceCard>
-                    }
-                    else if (IsMeetingPartyEditor)
-                    {
-                        <SurfaceCard>
-                            <Stack GapScale="LayoutGap.Large">
-                                <Cluster>
-                                    <Button ButtonStyle="ButtonStyle.Light"
-                                            Text="Use project defaults"
-                                            Disabled="@isPartyEditorBusy"
-                                            data-testid="project-structure-meeting-project-defaults"
-                                            Click="ApplyMeetingProjectDefaultsAsync" />
-                                    <Pill Tone="PillTone.Neutral"
-                                          Text="@($"{partyEditor.SelectedMeetingPartyIds.Count} selected")" />
-                                </Cluster>
-
-                                <Grid Gap="LayoutGap.Medium"
-                                      ColumnsLg="2">
-                                    @foreach (var option in partyEditorOptions)
-                                    {
-                                        <label class="flex items-start gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                                               data-testid="project-structure-meeting-party-option">
-                                            <input type="checkbox"
-                                                   checked="@partyEditor.SelectedMeetingPartyIds.Contains(option.PartyId)"
-                                                   data-testid="project-structure-meeting-party-checkbox"
-                                                   @onchange="args => HandleMeetingPartyChanged(option.PartyId, args)" />
-                                            <span>
-                                                <span class="block font-semibold text-slate-950">@option.DisplayName</span>
-                                                <span class="block">@option.PartyTypeLabel</span>
-                                            </span>
-                                        </label>
-                                    }
-                                </Grid>
-
-                                <Cluster>
-                                    <Button Text="Save meeting parties"
-                                            Disabled="@isPartyEditorBusy"
-                                            data-testid="project-structure-meeting-save"
-                                            Click="SaveMeetingPartiesAsync" />
-                                </Cluster>
-                            </Stack>
-                        </SurfaceCard>
-                    }
-                </div>
-            </SectionCard>
-        }
-
-        </Stack>
+@if (surface is not null && canvasSurface is not null && structureViewIndex == CanvasViewIndex && partySession is { } parties) {
+    <div class="project-structure-integrations">
+        <CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor @key="parties.State.OpeningId" State="@parties.State"
+            Create="@(input => TrackAuthoringOperationAsync(parties.CreateAsync(input)))"
+            Save="@(selection => TrackAuthoringOperationAsync(parties.SaveAsync(selection)))" Retry="@parties.RetryAsync" />
     </div>
 }
 
+@if (imageOpening is { } imageSetup) {
+    <CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog State="@imageSetup.State" CanvasScoped="false"
+        InitialDraft="@(new(imageSetup.Request.Title, imageSetup.Request.Subtitle, imageSetup.Request.Notes, null, string.Empty))"
+        Submit="@(draft => TrackAuthoringOperationAsync(GenerateImageAsync(imageSetup, draft)))" Close="@(() => CloseImageSetup(imageSetup))" />
+}
+
 <ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
+    @{
+        var summaryReceiver = summaryOpening;
+        var summarySnapshot = summaryDialog;
+        var transcriptReceiver = transcriptOpening;
+        var transcriptSnapshot = pendingTranscriptAction;
+        var mermaidReceiver = mermaidOpening;
+    }
     <ProjectStructureSupportDialogs SummaryDialog="@summaryDialog"
-                                    CloseSummary="CloseSummary"
-                                    ExportSummaryWorkbook="ExportSummaryWorkbookAsync"
-                                    ExportSummaryGantt="ExportSummaryGanttAsync"
-                                    ChangeSummaryStatus="HandleSummaryStatusChangedAsync"
+                                    CloseSummary="@(() => ChangeAuthoringDialog(summaryReceiver, summaryOpening, CloseSummary))"
+                                    ExportSummaryWorkbook="@(() => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.ExportWorkbook)))"
+                                    ExportSummaryGantt="@(() => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.ExportGantt)))"
+                                    ChangeSummaryStatus="@(value => TrackAuthoringOperationAsync(RunSummaryActionAsync(summaryReceiver, summarySnapshot, ProjectStructureAuthoringOperation.SummaryStatus, value.NodeId, value.Status)))"
                                     SummaryStatuses="@SummaryStatusOptions"
                                     PendingDeletePrompt="@pendingDeletePrompt"
+                                    DeleteFailure="@deleteFailure"
                                     ConfirmDelete="ConfirmDeleteAsync"
                                     CancelDelete="CancelDelete"
                                     PendingTranscriptAction="@pendingTranscriptAction"
-                                    ExecuteTranscriptAction="ExecuteTranscriptActionAsync"
-                                    CancelTranscriptAction="CancelTranscriptAction"
-                                    HandleTranscriptProviderChanged="HandleTranscriptProviderChanged"
+                                    ExecuteTranscriptAction="@(() => TrackAuthoringOperationAsync(ExecuteTranscriptActionAsync(transcriptReceiver, transcriptSnapshot)))"
+                                    CancelTranscriptAction="@(() => ChangeAuthoringDialog(transcriptReceiver, transcriptOpening, CancelTranscriptAction))"
+                                    HandleTranscriptProviderChanged="@(value => ChangeAuthoringDialog(transcriptReceiver, transcriptOpening, () => HandleTranscriptProviderChanged(value)))"
                                     MermaidPreviewNode="@MermaidViewerNode"
-                                    CloseMermaidViewer="CloseMermaidViewer"
-                                    EditMermaidNode="EditMermaidPreviewNodeAsync"
+                                    MermaidOpeningId="@(mermaidOpening?.Id ?? Guid.Empty)"
+                                    CloseMermaidViewer="@(() => ChangeAuthoringDialog(mermaidReceiver, mermaidOpening, CloseMermaidViewer))"
+                                    EditMermaidNode="@(_ => TrackAuthoringOperationAsync(EditMermaidPreviewNodeAsync(mermaidReceiver)))"
                                     CanEditMermaidNode="CanEditNode"
                                     ResolveTranscriptActionLabel="ResolveTranscriptActionLabel" />
 </ProjectStructureDeferredSurface>
@@ -571,165 +256,39 @@ else
 <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
     <ProjectStructureCanvasDialogs RenderProcessStartDialog="true"
                                    ProcessStartDialog="@processStartDialog"
-                                   CloseProcessStart="CloseProcessStartDialog"
-                                   ExecuteProcessStart="ExecuteProcessStartAsync"
-                                   ReviewAndStartProcess="ReviewAndStartProcessAsync"
-                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
-                                   SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
-                                   AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
-                                   ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
-                                   RequestHrManagerMatch="RequestHrManagerMatchAsync"
-                                   CancelHrManagerMatch="CancelHrManagerMatchAsync"
-                                   ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+                                   CloseProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, () => { CloseProcessStartDialog();
+                                                               return Task.CompletedTask; }))"
+                                   ExecuteProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteProcessStartAsync))"
+                                   ReviewAndStartProcess="@(() => DispatchProcessStartAsync(processStartReceiver, ReviewAndStartProcessAsync))"
+                                   PrepareAnotherProcessLaunch="@(() => DispatchProcessStartAsync(processStartReceiver, PrepareAnotherProcessLaunchAsync))"
+                                   SelectProcessStartCandidate="@(value => DispatchProcessStartAsync(processStartReceiver, () => SelectProcessStartCandidateAsync(value)))"
+                                   AssignProcessStartAgent="@(value => DispatchProcessStartAsync(processStartReceiver, () => OpenManualProcessStartAgentPickerAsync(value)))"
+                                   ProcessStartAssignmentsReviewedChanged="@(value => DispatchProcessStartAsync(processStartReceiver, () => HandleProcessStartAssignmentsReviewedChanged(value)))"
+                                   RequestHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, RequestHrManagerMatchAsync))"
+                                   CancelHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, CancelHrManagerMatchAsync))"
+                                   ExecuteHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteHrManagerMatchAsync))"
                                    EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
                                    CanOpenInPreferredApplication="CanOpenInPreferredApplication"
                                    CanEditPreviewNode="CanEditNode" />
 </ProjectStructureDeferredSurface>
 
-@if (isSecretReferenceDialogOpen)
-{
-    <ProjectStructureOverlayDialog AriaLabel="Select stored secret for project structure"
-                                   Kicker="Secret reference"
-                                   Title="@SecretReferenceDialogTitle"
-                                   Summary="@SecretReferenceDialogSummary"
-                                   DialogClass="project-structure-summary-dialog"
-                                   Close="CloseSecretReferenceDialog">
-        <Actions>
-            <Button Text="Close"
-                    Icon="close"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="CloseSecretReferenceDialog" />
-        </Actions>
-        <Body>
-            <Stack GapScale="LayoutGap.Large"
-                   AlignItems="AlignItems.Stretch"
-                   data-testid="project-structure-secret-dialog">
-                @if (!string.IsNullOrWhiteSpace(secretReferenceDialogError))
-                {
-                    <Alert AlertStyle="AlertStyle.Warning">
-                        <p>@secretReferenceDialogError</p>
-                    </Alert>
-                }
-
-                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                    <FormField Text="Stored secret">
-                        <select class="cda-input"
-                                value="@selectedSecretReferenceId"
-                                @onchange="HandleSelectedSecretReferenceChanged"
-                                disabled="@isSecretReferenceDialogBusy"
-                                data-testid="project-structure-secret-select">
-                            <option value="">Select stored secret</option>
-                            @foreach (var secret in SecretReferenceSelectItems)
-                            {
-                                <option value="@secret.Id.ToString("D")">@secret.Name (@secret.Kind)</option>
-                            }
-                        </select>
-                    </FormField>
-                    <FormField Text="Search stored secrets">
-                        <input class="cda-input"
-                               value="@secretReferenceSearch"
-                               @oninput="HandleSecretReferenceSearchChanged"
-                               data-testid="project-structure-secret-search" />
-                    </FormField>
-                </Grid>
-
-                @if (!string.IsNullOrWhiteSpace(SecretReferenceSelectMessage))
-                {
-                    <Alert AlertStyle="AlertStyle.Info">
-                        <p>@SecretReferenceSelectMessage</p>
-                    </Alert>
-                }
-
-                <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                    <FormField Text="Purpose">
-                        <input class="cda-input"
-                               value="@secretReferencePurpose"
-                               @oninput="HandleSecretReferencePurposeChanged"
-                               data-testid="project-structure-secret-purpose" />
-                    </FormField>
-                    <FormField Text="Reference note">
-                        <input class="cda-input"
-                               value="@secretReferenceExternalReference"
-                               @oninput="HandleSecretReferenceExternalReferenceChanged"
-                               data-testid="project-structure-secret-external-reference" />
-                    </FormField>
-                </Grid>
-
-                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <Button Text="@SecretReferenceUseSelectedButtonText"
-                            Icon="shield"
-                            ButtonStyle="ButtonStyle.Info"
-                            Disabled="@(isSecretReferenceDialogBusy || !SelectedSecretReferenceGuid.HasValue)"
-                            IsBusy="@isSecretReferenceDialogBusy"
-                            Click="UseSelectedProjectStructureSecretAsync"
-                            data-testid="project-structure-secret-use-selected" />
-                    <CopyButton Value="@SelectedSecretReferenceName"
-                                Text="Copy selected name"
-                                Size="CopyButtonSize.Small"
-                                Disabled="@string.IsNullOrWhiteSpace(SelectedSecretReferenceName)" />
-                    @if (isSecretReferenceEditMode)
-                    {
-                        <Button Text="Cancel"
-                                Icon="close"
-                                Variant="Variant.Text"
-                                ButtonStyle="ButtonStyle.Base"
-                                Disabled="@isSecretReferenceDialogBusy"
-                                Click="CloseSecretReferenceDialog" />
-                    }
-                </Cluster>
-
-                <FormSection Title="Create new secret"
-                             Icon="shield"
-                             Description="@SecretReferenceCreateSectionDescription">
-                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                        <div>
-                            <label class="cda-field-label">Name</label>
-                            <InputText @bind-Value="secretReferenceCreateModel.Name" class="cda-input" data-testid="project-structure-secret-create-name" />
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Kind</label>
-                            <InputSelect @bind-Value="secretReferenceCreateModel.Kind" class="cda-input">
-                                @foreach (var kind in Enum.GetValues<SecretKind>())
-                                {
-                                    <option value="@kind">@kind</option>
-                                }
-                            </InputSelect>
-                        </div>
-                    </Grid>
-                    <div class="mt-3">
-                        <label class="cda-field-label">Value</label>
-                        <SecretField @bind-Value="secretReferenceCreateModel.SecretValue"
-                                     SecretName="@secretReferenceCreateModel.Name"
-                                     ShowNameCopy="true"
-                                     ShowValueCopy="true"
-                                     RevealDurationSeconds="30"
-                                     data-testid="project-structure-secret-create-value" />
-                    </div>
-                    <div class="mt-3">
-                        <label class="cda-field-label">Purpose</label>
-                        <InputText @bind-Value="secretReferenceCreateModel.RotationNote" class="cda-input" />
-                    </div>
-                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-                        <Button Text="Create and use"
-                                Icon="save"
-                                ButtonStyle="ButtonStyle.Info"
-                                Disabled="@isSecretReferenceDialogBusy"
-                                IsBusy="@isSecretReferenceDialogBusy"
-                                Click="CreateAndUseProjectStructureSecretAsync"
-                                data-testid="project-structure-secret-create-use" />
-                    </Cluster>
-                </FormSection>
-            </Stack>
-        </Body>
-    </ProjectStructureOverlayDialog>
+@if (secretSession is { } referenceOpening) {
+    <CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor @key="referenceOpening.State.OpeningId"
+        State="@referenceOpening.State" Use="@(input => TrackSecretOperationAsync(referenceOpening.UseAsync(input)))"
+        Create="@((input, model) => TrackSecretOperationAsync(referenceOpening.CreateAsync(input, model)))"
+        Retry="@(() => TrackSecretOperationAsync(referenceOpening.RetryAsync()))"
+        Finish="@(() => TrackSecretOperationAsync(referenceOpening.FinishAsync()))"
+        Close="@(() => CloseSecretReferenceDialog(referenceOpening))" />
 }
 
-<ProjectModalHost IsOpen="@showProjectCreateModal"
+@{
+    var creatingOpening = projectCreateOpening;
+    var creatingDraft = projectCreateDraft;
+}
+<ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
                   IsEditorMode="true"
-                  Editor="@projectCreateEditor"
-                  StarterObjects="@projectCreateStarterObjects"
+                  Draft="@projectCreateDraft"
                   StarterObjectKinds="@ProjectCreateStarterObjectKinds"
                   ProjectSummaries="@projectCreateProjectSummaries"
                   WizardStep="@projectCreateWizardStep"
@@ -737,7 +296,7 @@ else
                   WizardTabs="@ProjectCreateWizardTabs"
                   Message="@projectCreateMessage"
                   IsErrorMessage="@IsProjectCreateErrorMessage"
-                  Close="CloseProjectCreateDialogAsync"
+                  Close="@(() => CloseProjectCreateDialogAsync(creatingOpening))"
                   SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
                   SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
                   WizardTabChanged="HandleProjectCreateWizardTabChangedAsync"
@@ -747,8 +306,8 @@ else
                   RemoveStarterObject="RemoveProjectCreateStarterObject"
                   PreviousStep="PreviousProjectCreateStep"
                   NextStep="NextProjectCreateStep"
-                  Save="SaveProjectCreateAsync"
-                  SaveAndOpenStructure="SaveProjectCreateAndOpenStructureAsync"
+                  Save="@((ProjectEditorSubmission submitted) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => SaveProjectCreateAsync(creatingOpening, creatingDraft, submitted)))"
+                  SaveAndOpenStructure="@((ProjectEditorSubmission submitted) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => SaveProjectCreateAsync(creatingOpening, creatingDraft, submitted, true)))"
                   Delete="DeleteProjectCreateAsync"
                   OpenProjectDashboard="OpenProjectCreateDashboardAsync"
                   OpenStructure="OpenStructure"
@@ -785,7 +344,7 @@ else
 
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
-    private CanvasWorkbench? workbenchRef;
+    private StructureWorkspace? workbenchRef;
     private int structureViewIndex;
     private AgentContext.ProjectStructureGanttObservation? ganttObservation;
 
@@ -815,7 +374,16 @@ else
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
     private readonly ProjectStructurePlacementPolicy placementPolicy = new();
-    private List<string> selectedNodeIds = [];
+    private List<string> insightSelectedNodeIds = [];
+    private List<string> selectedNodeIds {
+        get => insightSelectedNodeIds;
+        set {
+            if (!insightSelectedNodeIds.SequenceEqual(value, StringComparer.Ordinal)) {
+                insightsSelectionRevision++;
+            }
+            insightSelectedNodeIds = value;
+        }
+    }
     private string canvasToolMode = CanvasAuthoringMode.Select;
     private string? linkModeSourceId;
     private string? currentViewStateJson;
@@ -836,20 +404,6 @@ else
     private ProjectWorkbenchUnavailableState? unavailableState;
     private readonly SemaphoreSlim nodeMoveCommitGate = new(1, 1);
     private readonly CancellationTokenSource deferredCompletionCts = new();
-    private bool isSecretReferenceDialogOpen;
-    private bool isSecretReferenceDialogBusy;
-    private bool isSecretReferenceEditMode;
-    private CanvasWorkbenchAction? secretReferenceAction;
-    private CanvasWorkbenchCreateActionRequest? secretReferenceRequest;
-    private string? secretReferenceEditNodeId;
-    private IReadOnlyList<SecretListItem> secretReferenceItems = [];
-    private string secretReferenceSearch = string.Empty;
-    private string secretReferenceDialogError = string.Empty;
-    private string selectedSecretReferenceId = string.Empty;
-    private string secretReferencePurpose = "Project structure reference";
-    private string secretReferenceExternalReference = string.Empty;
-    private SecretEditorModel secretReferenceCreateModel = NewProjectStructureSecretModel();
-
     private SkeletonStateOverlaySnapshot LoadingSkeletonSnapshot
         => SkeletonStateOverlayFactory.CreateLoadingSnapshot(
             "Loading project structure",
@@ -870,74 +424,6 @@ else
         surface?.Nodes.Where(node => selectedNodeIds.Contains(node.Id, StringComparer.Ordinal)).ToList() ?? [];
 
     private ProjectStructureNode? selectedNode => selectedNodes.FirstOrDefault();
-    private IReadOnlyList<SecretListItem> SecretReferenceSelectItems
-    {
-        get
-        {
-            var items = secretReferenceItems
-                .Where(MatchesSecretReferenceSearch)
-                .ToList();
-            if (SelectedSecretReferenceItem is { } selectedSecret &&
-                items.All(secret => secret.Id != selectedSecret.Id))
-            {
-                items.Add(selectedSecret);
-            }
-
-            return items
-                .DistinctBy(secret => secret.Id)
-                .OrderBy(secret => secret.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-    }
-
-    private Guid? SelectedSecretReferenceGuid
-        => Guid.TryParse(selectedSecretReferenceId, out var secretId) && secretId != Guid.Empty
-            ? secretId
-            : null;
-
-    private SecretListItem? SelectedSecretReferenceItem
-        => SelectedSecretReferenceGuid is { } selectedSecretId
-            ? secretReferenceItems.FirstOrDefault(secret => secret.Id == selectedSecretId)
-            : null;
-
-    private string? SelectedSecretReferenceName => SelectedSecretReferenceItem?.Name;
-
-    private string SecretReferenceSelectMessage
-        => secretReferenceItems.Count == 0
-            ? "No stored secrets are available in the active database. Create a new secret below."
-            : SecretReferenceSelectItems.Count == 0
-                ? "No stored secrets match the current search. Clear the search or create a new secret below."
-                : string.Empty;
-
-    private bool MatchesSecretReferenceSearch(SecretListItem secret)
-    {
-        if (string.IsNullOrWhiteSpace(secretReferenceSearch))
-        {
-            return true;
-        }
-
-        var search = secretReferenceSearch.Trim();
-        return secret.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               secret.Scope.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               secret.Kind.ToString().Contains(search, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string SecretReferenceDialogTitle
-        => isSecretReferenceEditMode ? "Edit secret reference" : "Add secret reference";
-
-    private string SecretReferenceDialogSummary
-        => isSecretReferenceEditMode
-            ? "Change which stored secret this node references. The node still stores only reference metadata."
-            : "Select an existing secret or create one. The node stores only reference metadata.";
-
-    private string SecretReferenceUseSelectedButtonText
-        => isSecretReferenceEditMode ? "Save selected secret" : "Use selected secret";
-
-    private string SecretReferenceCreateSectionDescription
-        => isSecretReferenceEditMode
-            ? "Create the vault record and update this reference node in one step."
-            : "Create the vault record and add a reference node in one step.";
-
     private CanvasWorkbenchWindowState SelectionWindowState => ResolveWindowState(SelectionWindowKey);
     private CanvasWorkbenchWindowState HealthWindowState => ResolveHealthWindowState();
     private string SelectionWindowTitle
@@ -960,12 +446,10 @@ else
             Navigation.BaseUri,
             Navigation.Uri);
 
-    private Task RunSelectedValidationAsync()
-        => Task.CompletedTask;
-
     protected override async Task OnParametersSetAsync()
     {
         ApplyRequestedStructureView();
+        RetireInactiveAuthoring();
 
         var processNavigation = AgentChatNavigationFence;
         if (loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation) {
@@ -973,10 +457,21 @@ else
             CancelRuntimePreviewWait();
             CloseProcessStartDialog();
             CloseProcessLinkDialog();
+            CloseWorkflowAddDialog();
+            CloseWorkflowStartDialog();
             actionNavigationRevision++;
+            partySession?.Retire();
+            partySession = null;
             CloseSummary();
             CancelTranscriptAction();
             CloseSecretReferenceDialog();
+            CloseProjectHierarchyDialog();
+            CloseBlockMutationDialog();
+            CloseSubprojectTransferDialog();
+            projectHierarchyDialogBeforeCreate = null;
+            projectCreateOpening = null;
+            showProjectCreateModal = false;
+            await CloseAttachmentPreviewAsync();
         }
 
         if (loadedProjectId != ProjectId)
@@ -1034,15 +529,18 @@ else
 
     private readonly record struct StructureViewNavigationIdentity(Guid ProjectId, StructureView View);
 
-    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null)
+    private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null)
     {
         IReadOnlyList<string>? liveSelectionSnapshot = surface?.ProjectId == ProjectId
             ? selectedNodeIds.ToArray()
             : null;
         var request = new SurfaceReloadRequest(
             ProjectId,
-            Interlocked.Increment(ref surfaceReloadGeneration));
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            Interlocked.Increment(ref surfaceReloadGeneration), canPublish);
+        if (canPublish is null) {
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+            structureLoadError = null;
+        }
         try
         {
             CancelPendingCanvasViewStatePersistence();
@@ -1107,6 +605,7 @@ else
                 storageCatalog = nextStorageCatalog;
                 unavailableState = loadResult.UnavailableState;
                 surface = null;
+                RetireInactiveAuthoring();
                 canvasSurface = null;
                 clipboardState = null;
                 quickActionDialog = null;
@@ -1203,6 +702,7 @@ else
             selectedNodeIds = nextSelectedNodeIds;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
             surface = nextSurface;
+            RetireInactiveAuthoring();
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();
             InvalidateClipboardStateForCurrentSurface();
@@ -1212,7 +712,7 @@ else
                 agentChatContextAccessState = AgentChatContextAccessState.Ready;
             }
         }
-        catch
+        catch (Exception exception)
         {
             if (!IsCurrentSurfaceReload(request))
             {
@@ -1220,17 +720,24 @@ else
             }
 
             agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            throw;
+            if (canPublish is not null) {
+                throw;
+            }
+            structureLoadError = "The project structure could not be loaded. Retry after the connection or project access is restored.";
+            Logger.LogWarning("Structure read failed for project {ProjectId}. FailureType={FailureType}.",
+                request.ProjectId, exception.GetType().Name);
         }
     }
 
     private bool IsCurrentSurfaceReload(SurfaceReloadRequest request)
         => request.ProjectId == ProjectId &&
-           request.Generation == Volatile.Read(ref surfaceReloadGeneration);
+           request.Generation == Volatile.Read(ref surfaceReloadGeneration) &&
+           (request.CanPublish?.Invoke() ?? true);
 
     private readonly record struct SurfaceReloadRequest(
         Guid ProjectId,
-        long Generation);
+        long Generation,
+        Func<bool>? CanPublish = null);
 
     private Task OpenUnavailableRouteAsync()
     {
@@ -1476,81 +983,78 @@ else
         if (!string.IsNullOrWhiteSpace(reconnectNodeId) &&
             !string.IsNullOrWhiteSpace(args.PrimaryNodeId))
         {
+            selectedNodeIds = args.SelectedNodeIds.ToList();
+            pendingClientSelectionId = null;
             await HandleReconnectSelectionAsync(args.PrimaryNodeId);
             return;
         }
 
         selectedNodeIds = args.SelectedNodeIds.ToList();
         pendingClientSelectionId = null;
+        var actionContext = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
         await RefreshSelectedWorkflowStatusAsync(args.PrimaryNodeId ?? selectedNodeIds.FirstOrDefault());
-        await LoadPartyEditorAsync();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
-    {
-        var requestedPositions = args.Positions
-            .Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y))
-            .ToList();
-        if (requestedPositions.Count == 0)
-        {
+        if (!IsCurrentAction(actionContext) || insightsSelectionRevision != selectionRevision) {
             return;
         }
-
-        await nodeMoveCommitGate.WaitAsync();
-        try
-        {
-            var requestedNodeIds = requestedPositions
-                .Select(position => position.NodeId)
-                .ToHashSet(StringComparer.Ordinal);
-            var originalPositions = surface?.Nodes
-                .Where(node => requestedNodeIds.Contains(node.Id))
-                .Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y))
-                .ToList() ?? [];
-            TryPatchSurfaceNodePositions(args.Positions);
-
-            IReadOnlyList<string> updatedNodeIds;
-            try
-            {
-                updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(ProjectId, requestedPositions);
-            }
-            catch
-            {
-                TryPatchSurfaceNodePositions(originalPositions);
-                await InvokeAsync(StateHasChanged);
-                throw;
-            }
-
-            if (updatedNodeIds.Count == 0)
-            {
-                TryPatchSurfaceNodePositions(originalPositions);
-                return;
-            }
-
-            var updatedNodeIdSet = updatedNodeIds.ToHashSet(StringComparer.Ordinal);
-            var rejectedPositions = originalPositions
-                .Where(position => !updatedNodeIdSet.Contains(position.NodeId))
-                .ToList();
-            TryPatchSurfaceNodePositions(rejectedPositions);
-            var committedPositions = args.Positions
-                .Where(position => updatedNodeIdSet.Contains(position.NodeId))
-                .ToList();
-            var requiresReload = surface is null ||
-                committedPositions.Count != updatedNodeIdSet.Count ||
-                committedPositions.Any(position => !surface.Nodes.Any(node => string.Equals(node.Id, position.NodeId, StringComparison.Ordinal)));
-            if (requiresReload)
-            {
-                await ReloadSurfaceAsync();
-                return;
-            }
-
-            TryPatchSurfaceNodePositions(committedPositions);
-            await TryAdoptMovedNodesIntoBordersAsync(new CanvasWorkbenchNodesMovedEventArgs(committedPositions));
+        await LoadPartyEditorAsync();
+        if (IsCurrentAction(actionContext) && insightsSelectionRevision == selectionRevision) {
             await InvokeAsync(StateHasChanged);
         }
-        finally
-        {
+    }
+
+    private async Task HandleNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args) {
+        var context = CaptureActionContext();
+        var requestedPositions = args.Positions.Select(position => new ProjectNodeMoveRequest(position.NodeId, position.X, position.Y)).ToArray();
+        var targets = context.Surface.Nodes.Where(node => requestedPositions.Any(position => position.NodeId == node.Id)).ToArray();
+        if (targets.Length == 0) {
+            return;
+        }
+        var opening = new ProjectStructureAuthoringOpening(context, targets[0]);
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            ProjectStructureAuthoringOperation.MoveNodes, ProjectStructureAuthoringResultKind.Rejected, "The original movement was rejected.") {
+            SourceNodeId = targets[0].Id
+        };
+        await nodeMoveCommitGate.WaitAsync();
+        try {
+            if (!IsCurrentAction(context)) {
+                return;
+            }
+            var originalPositions = targets.Select(node => new CanvasWorkbenchNodePositionChange(node.Id, node.X, node.Y)).ToArray();
+            TryPatchSurfaceNodePositions(args.Positions);
+            IReadOnlyList<string> updatedNodeIds;
+            try {
+                updatedNodeIds = await ProjectWorkbenchService.MoveObjectsAsync(context.Surface.ProjectId, requestedPositions,
+                    expectedProjectAdmission: context.Admission, expectedNodes: targets);
+            } catch (Exception failure) {
+                if (IsCurrentAction(context)) {
+                    TryPatchSurfaceNodePositions(originalPositions);
+                }
+                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    Kind = IsKnownGraphRejection(failure) ? ProjectStructureAuthoringResultKind.Rejected : ProjectStructureAuthoringResultKind.Unconfirmed,
+                    Message = IsKnownGraphRejection(failure) ? failure.Message : "The original movement is unconfirmed. Observe the original project before repeating it." });
+                return;
+            }
+            var committed = args.Positions.Where(position => updatedNodeIds.Contains(position.NodeId)).ToArray();
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, NodeIds = updatedNodeIds,
+                Positions = requestedPositions.Where(position => updatedNodeIds.Contains(position.NodeId)).ToArray(),
+                Message = $"Saved {updatedNodeIds.Count} original node positions." };
+            RecordAuthoringOutcome(opening, outcome);
+            if (!IsCurrentAction(context)) {
+                return;
+            }
+            TryPatchSurfaceNodePositions(originalPositions.Where(position => !updatedNodeIds.Contains(position.NodeId)).ToArray());
+            TryPatchSurfaceNodePositions(committed);
+            try {
+                await TryAdoptMovedNodesIntoBordersAsync(new(committed));
+            } catch (Exception failure) {
+                RecordAuthoringOutcome(opening, outcome with { Failure = failure,
+                    Kind = ProjectStructureAuthoringResultKind.PartialCommit,
+                    Message = "The original positions were saved, but border-state reconciliation failed. Do not repeat the movement." });
+            }
+        } finally {
             nodeMoveCommitGate.Release();
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
@@ -1682,6 +1186,13 @@ else
 
     private async Task HandleCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
     {
+        if (request.ComposerOpeningId.HasValue) {
+            await SubmitComposerAsync(request, null);
+            return;
+        }
+        if (TryResolveEditAction(request.ActionId, out _)) {
+            return;
+        }
         if (IsSecretReferenceCreateRequest(request))
         {
             if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition("add-secret-reference", out var secretDefinition))
@@ -1694,11 +1205,6 @@ else
                 });
             }
 
-            return;
-        }
-
-        if (await TryApplyNodeEditAsync(request))
-        {
             return;
         }
 
@@ -1754,27 +1260,8 @@ else
         }
     }
 
-    private async Task HandleNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)
-    {
-        var targetNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.NodeId, StringComparison.Ordinal));
-        if (targetNode is null || targetNode.ObjectType != ProjectObjectType.Note)
-        {
-            return;
-        }
-
-        var updatedNode = await ProjectWorkbenchService.UpdateObjectAsync(
-            ProjectId,
-            targetNode.Id,
-                ProjectStructureNodeHelpers.BuildSimpleNoteTitle(request.Notes),
-            string.Empty,
-            request.Notes);
-        if (updatedNode is null)
-        {
-            return;
-        }
-
-        await ApplySurfaceNodeUpdatesAsync([updatedNode]);
-    }
+    private Task HandleNodeEditedAsync(CanvasWorkbenchNodeEditRequest request)
+        => SubmitComposerAsync(null, request);
 
     private async Task HandleCanvasActionAsync(string actionId, string? nodeId, double x, double y)
     {
@@ -2024,15 +1511,20 @@ else
         ProjectStructureCommandKind commandKind,
         string? nodeId = null,
         bool allowQuickActionDialog = false,
-        bool openInNewTab = false)
+        bool openInNewTab = false,
+        ProjectStructureActionContext? capturedContext = null)
     {
+        var context = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         var targetNodeId = nodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(targetNodeId))
         {
             return;
         }
 
-        var attachmentNode = surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
+        var attachmentNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, targetNodeId, StringComparison.Ordinal));
         if (commandKind == ProjectStructureCommandKind.Open &&
             attachmentNode is not null &&
             ProjectStructureNodeHelpers.CanRenderAttachmentPreview(attachmentNode))
@@ -2053,9 +1545,25 @@ else
         }
 
         CloseQuickActionDialog();
-        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(ProjectId, targetNodeId, commandKind);
+        var artifact = await ProjectWorkbenchService.ExecuteNodeCommandAsync(context.Surface.ProjectId, targetNodeId, commandKind,
+            mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+        committedInsightCommands.Enqueue((context.Admission, targetNodeId, commandKind, artifact));
+        while (committedInsightCommands.Count > 16) {
+            committedInsightCommands.Dequeue();
+        }
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         linkModeSourceId = null;
-        await ReloadSurfaceAsync(targetNodeId);
+        try {
+            await ReloadSurfaceAsync(targetNodeId);
+        } catch (Exception exception) {
+            ReportActionFailure(context, exception, "The native command completed; reload the view instead of repeating it.");
+            return;
+        }
+        if (!IsCurrentAction(context)) {
+            return;
+        }
         if (artifact is not null)
         {
             if (openInNewTab)
@@ -2075,7 +1583,8 @@ else
         CancellationToken cancellationToken = default,
         Action<ProjectStructureNode>? onNodeCommitted = null,
         ProjectStructureSurface? capturedSurface = null,
-        long? capturedNavigationRevision = null)
+        long? capturedNavigationRevision = null,
+        Func<bool>? canPublish = null)
     {
         var mutationNavigationRevision = capturedNavigationRevision ?? actionNavigationRevision;
         var mutationSurface = capturedSurface ?? surface;
@@ -2123,7 +1632,7 @@ else
                 cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
         }
 
-        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission) {
+        if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission && canPublish?.Invoke() != false) {
             await ApplyCreatedSurfaceNodeAsync(created, parentNodeId, prepared.PendingLinks, placementPlan.FollowUpMoves);
         }
         return created;
@@ -2131,11 +1640,6 @@ else
 
     private async Task OpenCreateDialogAsync(CanvasWorkbenchAction action)
     {
-        if (IsGeneratedImageAssetCreateAction(action.ActionId))
-        {
-            action = await RefreshGeneratedImageCreateActionAsync(action);
-        }
-
         var sourceNode = selectedNode;
         var request = new CanvasWorkbenchCreateActionRequest(
             action.ActionId,
@@ -2150,6 +1654,11 @@ else
             action.CreateMode,
             action.ObjectSubtype,
             null);
+
+        if (IsGeneratedImageAssetCreateAction(action.ActionId) && ProjectStructureCanvasCatalog.TryResolveCreateDefinition(action.ActionId, out var imageDefinition)) {
+            await TryCreateGeneratedImageAssetAsync(imageDefinition, request);
+            return;
+        }
 
         if (IsSecretReferenceCreateAction(action.ActionId))
         {
@@ -2182,296 +1691,6 @@ else
         }
     }
 
-    private async Task OpenSecretReferenceDialogAsync(
-        CanvasWorkbenchAction action,
-        CanvasWorkbenchCreateActionRequest request,
-        ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            return;
-        }
-        secretReferenceActionContext = context;
-        isSecretReferenceEditMode = false;
-        secretReferenceAction = action;
-        secretReferenceRequest = request;
-        secretReferenceEditNodeId = null;
-        secretReferenceSearch = string.Empty;
-        secretReferenceDialogError = string.Empty;
-        selectedSecretReferenceId = string.Empty;
-        secretReferencePurpose = "Project structure reference";
-        secretReferenceExternalReference = string.Empty;
-        secretReferenceCreateModel = NewProjectStructureSecretModel();
-        var items = await WorkspaceService.ListSecretsAsync();
-        if (IsCurrentSecretReferenceDialog(context)) {
-            secretReferenceItems = items;
-            isSecretReferenceDialogOpen = true;
-        }
-    }
-
-    private async Task OpenSecretReferenceEditDialogAsync(ProjectStructureNode node, ProjectStructureActionContext? capturedContext = null) {
-        var context = capturedContext ?? CaptureActionContext();
-        if (!IsCurrentAction(context)) {
-            return;
-        }
-        secretReferenceActionContext = context;
-        var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
-        var secretReference = metadata.SecretReference;
-        isSecretReferenceEditMode = true;
-        secretReferenceAction = null;
-        secretReferenceRequest = null;
-        secretReferenceEditNodeId = node.Id;
-        secretReferenceSearch = string.Empty;
-        secretReferenceDialogError = string.Empty;
-        selectedSecretReferenceId = secretReference?.SecretId is { } secretId && secretId != Guid.Empty
-            ? secretId.ToString("D") : string.Empty;
-        secretReferencePurpose = string.IsNullOrWhiteSpace(secretReference?.Purpose)
-            ? string.IsNullOrWhiteSpace(node.Notes) ? "Project structure reference" : node.Notes
-            : secretReference.Purpose;
-        secretReferenceExternalReference = secretReference?.ExternalReference ?? node.Subtitle ?? string.Empty;
-        secretReferenceCreateModel = NewProjectStructureSecretModel();
-        var items = await WorkspaceService.ListSecretsAsync();
-        if (IsCurrentSecretReferenceDialog(context)) {
-            secretReferenceItems = items;
-            isSecretReferenceDialogOpen = true;
-        }
-    }
-
-    private void CloseSecretReferenceDialog() {
-        secretReferenceActionContext = null;
-        isSecretReferenceDialogOpen = false;
-        isSecretReferenceDialogBusy = false;
-        isSecretReferenceEditMode = false;
-        secretReferenceAction = null;
-        secretReferenceRequest = null;
-        secretReferenceEditNodeId = null;
-        secretReferenceDialogError = string.Empty;
-        selectedSecretReferenceId = string.Empty;
-        secretReferencePurpose = "Project structure reference";
-        secretReferenceExternalReference = string.Empty;
-        secretReferenceCreateModel = NewProjectStructureSecretModel();
-    }
-
-    private void HandleSecretReferenceSearchChanged(ChangeEventArgs args)
-        => secretReferenceSearch = args.Value?.ToString() ?? string.Empty;
-
-    private void HandleSelectedSecretReferenceChanged(ChangeEventArgs args)
-        => selectedSecretReferenceId = args.Value?.ToString() ?? string.Empty;
-
-    private void HandleSecretReferencePurposeChanged(ChangeEventArgs args)
-        => secretReferencePurpose = args.Value?.ToString() ?? string.Empty;
-
-    private void HandleSecretReferenceExternalReferenceChanged(ChangeEventArgs args)
-        => secretReferenceExternalReference = args.Value?.ToString() ?? string.Empty;
-
-    private Task UseSelectedProjectStructureSecretAsync() {
-        var selectedSecretId = SelectedSecretReferenceGuid;
-        var selectedSecret = selectedSecretId.HasValue
-            ? secretReferenceItems.FirstOrDefault(secret => secret.Id == selectedSecretId.Value) : null;
-        if (selectedSecret is null) {
-            secretReferenceDialogError = "Select a stored secret first.";
-            return Task.CompletedTask;
-        }
-        return SelectProjectStructureSecretAsync(selectedSecret);
-    }
-
-    private sealed record SecretReferenceAction(
-        ProjectStructureActionContext Context,
-        ProjectStructureNode? EditedNode,
-        ProjectStructureCreateLeafDefinition? Definition,
-        CanvasWorkbenchCreateActionRequest? Request,
-        string Purpose,
-        string ExternalReference);
-
-    private SecretReferenceAction CaptureSecretReferenceAction() {
-        var context = secretReferenceActionContext
-            ?? throw new InvalidOperationException("Reopen the secret reference dialog to capture its original project.");
-        ProjectStructureNode? editedNode = null;
-        ProjectStructureCreateLeafDefinition? definition = null;
-        CanvasWorkbenchCreateActionRequest? request = null;
-        if (isSecretReferenceEditMode) {
-            editedNode = context.Surface.Nodes.FirstOrDefault(node => string.Equals(node.Id, secretReferenceEditNodeId, StringComparison.Ordinal))
-                ?? throw new InvalidOperationException("The original secret reference node is no longer available.");
-        } else if (TryResolvePendingSecretCreateRequest(out var resolvedDefinition, out var resolvedRequest)) {
-            definition = resolvedDefinition;
-            request = resolvedRequest;
-        } else {
-            throw new InvalidOperationException(secretReferenceDialogError);
-        }
-        return new(context, editedNode, definition, request,
-            NormalizeSecretReferencePurpose(), secretReferenceExternalReference.Trim());
-    }
-
-    private bool IsCurrentSecretReferenceDialog(ProjectStructureActionContext context)
-        => ReferenceEquals(secretReferenceActionContext, context) && IsCurrentAction(context);
-
-    private void ReportSecretReferenceFailure(SecretReferenceAction action, Exception exception, string? completed) {
-        var failureMessage = ReportActionFailure(action.Context, exception, completed);
-        if (IsCurrentSecretReferenceDialog(action.Context)) {
-            secretReferenceDialogError = failureMessage;
-        }
-    }
-
-    private async Task SelectProjectStructureSecretAsync(SecretListItem secret) {
-        var action = CaptureSecretReferenceAction();
-        selectedSecretReferenceId = secret.Id.ToString("D");
-        isSecretReferenceDialogBusy = true;
-        secretReferenceDialogError = string.Empty;
-        ProjectStructureNode? committed = null;
-        try {
-            await SaveProjectStructureSecretReferenceAsync(action, secret, node => committed = node);
-        } catch (Exception exception) {
-            ReportSecretReferenceFailure(action, exception, committed is null ? null : $"Secret reference {committed.Title} ({committed.Id}) was saved.");
-        } finally {
-            if (IsCurrentSecretReferenceDialog(action.Context)) {
-                isSecretReferenceDialogBusy = false;
-            }
-        }
-    }
-
-    private async Task CreateAndUseProjectStructureSecretAsync() {
-        var action = CaptureSecretReferenceAction();
-        var model = new SecretEditorModel {
-            Id = secretReferenceCreateModel.Id,
-            Name = secretReferenceCreateModel.Name,
-            Kind = secretReferenceCreateModel.Kind,
-            SecretValue = secretReferenceCreateModel.SecretValue,
-            Scope = secretReferenceCreateModel.Scope,
-            RotationNote = secretReferenceCreateModel.RotationNote,
-            MetadataJson = secretReferenceCreateModel.MetadataJson
-        };
-        isSecretReferenceDialogBusy = true;
-        secretReferenceDialogError = string.Empty;
-        Guid? createdSecretId = null;
-        ProjectStructureNode? committed = null;
-        try {
-            var result = await SecretService.SaveAsync(model);
-            if (!result.IsSuccess) {
-                throw new InvalidOperationException(string.Join(" ", result.Errors.Select(error => error.Message)));
-            }
-            createdSecretId = result.Value;
-            var items = await WorkspaceService.ListSecretsAsync();
-            var createdSecret = items.FirstOrDefault(secret => secret.Id == result.Value)
-                ?? throw new InvalidOperationException("The picker could not reload the created secret's catalog entry.");
-            if (IsCurrentSecretReferenceDialog(action.Context)) {
-                secretReferenceItems = items;
-                selectedSecretReferenceId = createdSecret.Id.ToString("D");
-            }
-            await SaveProjectStructureSecretReferenceAsync(action, createdSecret, node => committed = node);
-        } catch (Exception exception) {
-            var completed = committed is not null ? $"Secret reference {committed.Title} ({committed.Id}) was saved."
-                : createdSecretId is { } id ? $"Secret {id:D} was created; completion of its original project reference could not be confirmed."
-                : null;
-            ReportSecretReferenceFailure(action, exception, completed);
-        } finally {
-            if (IsCurrentSecretReferenceDialog(action.Context)) {
-                isSecretReferenceDialogBusy = false;
-            }
-        }
-    }
-
-    private async Task SaveProjectStructureSecretReferenceAsync(
-        SecretReferenceAction action, SecretListItem secret, Action<ProjectStructureNode> onCommitted) {
-        ProjectStructureNode updated;
-        if (action.EditedNode is { } targetNode) {
-            var metadata = ProjectObjectMetadataSerializer.Parse(targetNode.MetadataJson);
-            metadata.SecretReference = new ProjectSecretReferenceMetadata {
-                SecretId = secret.Id,
-                SecretNameSnapshot = secret.Name,
-                Purpose = action.Purpose,
-                ExternalReference = action.ExternalReference
-            };
-            updated = await ProjectWorkbenchService.UpdateObjectAsync(
-                action.Context.Surface.ProjectId, targetNode.Id,
-                new ProjectObjectEditRequest(secret.Name, action.ExternalReference, action.Purpose,
-                    targetNode.StartUtc, targetNode.EndUtc, ProjectObjectMetadataSerializer.Serialize(metadata),
-                    targetNode.DurationSeconds, targetNode.NodeReferences) { ExpectedProjectAdmission = action.Context.Admission })
-                ?? throw new InvalidOperationException("The original secret reference node could not be updated.");
-            onCommitted(updated);
-            if (IsCurrentAction(action.Context)) {
-                await ApplySurfaceNodeUpdatesAsync([updated]);
-            }
-        } else {
-            var request = BuildSecretReferenceCreateRequest(action.Request!, secret, action.Purpose, action.ExternalReference);
-            updated = await CreateObjectAsync(action.Definition!, request,
-                configureRequest: prepared => prepared with { ExpectedProjectAdmission = action.Context.Admission },
-                onNodeCommitted: onCommitted, capturedSurface: action.Context.Surface,
-                capturedNavigationRevision: action.Context.NavigationRevision)
-                ?? throw new InvalidOperationException("The original secret reference node could not be created.");
-        }
-        ReportActionResult(action.Context, $"{updated.Title} was {(action.EditedNode is null ? "created" : "updated")}.");
-        if (IsCurrentSecretReferenceDialog(action.Context)) {
-            CloseSecretReferenceDialog();
-        }
-    }
-
-    private bool TryResolvePendingSecretCreateRequest(
-        out ProjectStructureCreateLeafDefinition definition,
-        out CanvasWorkbenchCreateActionRequest request)
-    {
-        definition = default!;
-        request = default!;
-        if (secretReferenceAction is null ||
-            secretReferenceRequest is null)
-        {
-            secretReferenceDialogError = "Secret reference create state is no longer available.";
-            return false;
-        }
-
-        if (!ProjectStructureCanvasCatalog.TryResolveCreateDefinition(secretReferenceAction.ActionId, out definition))
-        {
-            secretReferenceDialogError = "Secret reference create action is not registered.";
-            return false;
-        }
-
-        request = secretReferenceRequest;
-        return true;
-    }
-
-    private static CanvasWorkbenchCreateActionRequest BuildSecretReferenceCreateRequest(
-        CanvasWorkbenchCreateActionRequest request,
-        SecretListItem secret,
-        string purpose,
-        string externalReference)
-    {
-        return request with
-        {
-            Title = secret.Name,
-            Subtitle = externalReference,
-            Notes = purpose,
-            InputValues =
-            [
-                new CanvasWorkbenchInputValue
-                {
-                    Key = "secretId",
-                    Value = secret.Id.ToString("D")
-                },
-                new CanvasWorkbenchInputValue
-                {
-                    Key = "secretName",
-                    Value = secret.Name
-                }
-            ]
-        };
-    }
-
-    private string NormalizeSecretReferencePurpose()
-        => string.IsNullOrWhiteSpace(secretReferencePurpose)
-            ? "Project structure reference"
-            : secretReferencePurpose.Trim();
-
-    private static bool IsSecretReferenceCreateRequest(CanvasWorkbenchCreateActionRequest request)
-        => IsSecretReferenceCreateAction(request.ActionId) ||
-           string.Equals(request.CreateMode, "secret-reference-picker", StringComparison.Ordinal);
-
-    private static SecretEditorModel NewProjectStructureSecretModel()
-        => new()
-        {
-            Kind = SecretKind.Generic,
-            Scope = "project-structure",
-            MetadataJson = "{}",
-            RotationNote = "Project structure reference"
-        };
-
     private async Task SelectNodeAsync(string nodeId)
     {
         if (IsDependencyMode &&
@@ -2491,7 +1710,7 @@ else
 
     private async Task ClearSelectionAsync()
     {
-        selectedNodeIds.Clear();
+        selectedNodeIds = [];
         selectedWorkflowStatus = null;
         await PersistSelectionAsync();
         await LoadPartyEditorAsync();
@@ -2529,11 +1748,14 @@ else
 
     private async Task EnableLinkModeAsync()
     {
+        var context = CaptureActionContext();
         var selectedNodeId = await ResolveCurrentSelectedNodeIdAsync();
-        await EnterDependencyModeAsync(selectedNodeId);
+        if (IsCurrentAction(context)) {
+            await EnterDependencyModeAsync(selectedNodeId, context);
+        }
     }
 
-    private async Task EnterDependencyModeAsync(string? sourceNodeId = null)
+    private async Task EnterDependencyModeAsync(string? sourceNodeId = null, ProjectStructureActionContext? capturedContext = null)
     {
         var resolvedSourceNodeId = sourceNodeId ?? selectedNode?.Id;
         if (string.IsNullOrWhiteSpace(resolvedSourceNodeId))
@@ -2541,7 +1763,13 @@ else
             return;
         }
 
+        var context = capturedContext ?? CaptureActionContext();
+        var original = context.Surface.Nodes.FirstOrDefault(node => node.Id == resolvedSourceNodeId);
+        if (original is null || !IsCurrentAction(context)) {
+            return;
+        }
         reconnectNodeId = null;
+        dependencyOpening = new(context, original);
         linkModeSourceId = resolvedSourceNodeId;
         await SetCanvasToolModeAsync(CanvasAuthoringMode.Dependency, keepDependencySource: true);
     }
@@ -2564,20 +1792,19 @@ else
         return selectedNodeIds.FirstOrDefault();
     }
 
-    private async Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId)
-    {
-        if (string.IsNullOrWhiteSpace(sourceNodeId) ||
-            string.IsNullOrWhiteSpace(targetNodeId) ||
-            string.Equals(sourceNodeId, targetNodeId, StringComparison.Ordinal))
-        {
-            return;
+    private Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId) {
+        if (string.IsNullOrWhiteSpace(sourceNodeId) || string.IsNullOrWhiteSpace(targetNodeId) || sourceNodeId == targetNodeId) {
+            return Task.CompletedTask;
         }
-
-        await ProjectWorkbenchService.LinkObjectsAsync(ProjectId, sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn);
-        workflowFeedback = "The dependency link was added.";
-        workflowFeedbackTone = "mint";
-        await SetCanvasToolModeAsync(CanvasAuthoringMode.Select);
-        await ReloadSurfaceAsync(sourceNodeId);
+        var sourceOpening = dependencyOpening?.Node.Id == sourceNodeId ? dependencyOpening : null;
+        var context = sourceOpening?.Context ?? CaptureActionContext();
+        if (!IsCurrentAction(context)) {
+            return Task.CompletedTask;
+        }
+        var source = sourceOpening?.Node ?? context.Surface.Nodes.FirstOrDefault(node => node.Id == sourceNodeId);
+        var target = surface?.Nodes.FirstOrDefault(node => node.Id == targetNodeId);
+        return source is null || target is null ? Task.CompletedTask : ExecuteGraphLinkAsync(context,
+            new(sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn, true), [source, target], remove: false);
     }
 
     private async Task SetCanvasToolModeAsync(string mode, bool keepDependencySource = false)
@@ -2766,68 +1993,59 @@ else
         return true;
     }
 
-    private void ScheduleCanvasViewStatePersistence()
-    {
-        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson))
-        {
-            CancelPendingCanvasViewStatePersistence();
+    private readonly SemaphoreSlim canvasViewStateCommitGate = new(1, 1);
+
+    private void ScheduleCanvasViewStatePersistence() {
+        CancelPendingCanvasViewStatePersistence();
+        if (surface is null || string.IsNullOrWhiteSpace(currentViewStateJson)) {
             return;
         }
-
-        CancelPendingCanvasViewStatePersistence();
+        var context = CaptureActionContext();
         var persistCts = new CancellationTokenSource();
         pendingCanvasViewStatePersistCts = persistCts;
-        _ = PersistCanvasViewStateWhenIdleAsync(persistCts, currentViewStateJson);
+        _ = TrackAuthoringOperationAsync(PersistCanvasViewStateWhenIdleAsync(context, persistCts, currentViewStateJson));
     }
 
-    private async Task PersistCanvasViewStateWhenIdleAsync(CancellationTokenSource persistCts, string? stateJson)
-    {
-        try
-        {
+    private async Task PersistCanvasViewStateWhenIdleAsync(ProjectStructureActionContext context, CancellationTokenSource persistCts, string stateJson) {
+        try {
             await Task.Delay(CanvasViewStatePersistDelayMs, persistCts.Token);
-            if (persistCts.IsCancellationRequested || string.IsNullOrWhiteSpace(stateJson))
-            {
-                return;
-            }
-
-            await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", stateJson);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts))
-            {
+            await PersistCapturedViewStateAsync(context, stateJson, persistCts.Token);
+        } catch (OperationCanceledException) when (persistCts.IsCancellationRequested) {
+        } catch (Exception failure) {
+            ReportActionFailure(context, failure, "The original canvas state could not be confirmed.");
+            await RenderAuthoringOutcomeAsync();
+        } finally {
+            if (ReferenceEquals(pendingCanvasViewStatePersistCts, persistCts)) {
                 pendingCanvasViewStatePersistCts = null;
             }
-
             persistCts.Dispose();
         }
     }
 
-    private void CancelPendingCanvasViewStatePersistence()
-    {
-        var persistCts = pendingCanvasViewStatePersistCts;
-        pendingCanvasViewStatePersistCts = null;
-        if (persistCts is null)
-        {
-            return;
+    private async Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default) {
+        await canvasViewStateCommitGate.WaitAsync(cancellationToken);
+        try {
+            if (!IsCurrentAction(context)) {
+                return false;
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProjectWorkbenchService.SaveViewStateAsync(context.Admission, "structure", stateJson);
+            return true;
+        } finally {
+            canvasViewStateCommitGate.Release();
         }
-
-        persistCts.Cancel();
-        persistCts.Dispose();
     }
 
-    private async Task PersistCurrentViewStateAsync()
-    {
-        CancelPendingCanvasViewStatePersistence();
-        if (string.IsNullOrWhiteSpace(currentViewStateJson))
-        {
-            return;
-        }
+    private void CancelPendingCanvasViewStatePersistence() {
+        var persistCts = pendingCanvasViewStatePersistCts;
+        pendingCanvasViewStatePersistCts = null;
+        persistCts?.Cancel();
+    }
 
-        await ProjectWorkbenchService.SaveViewStateAsync(ProjectId, "structure", currentViewStateJson);
+    private Task PersistCurrentViewStateAsync() {
+        CancelPendingCanvasViewStatePersistence();
+        return string.IsNullOrWhiteSpace(currentViewStateJson) ? Task.CompletedTask :
+            TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(CaptureActionContext(), currentViewStateJson));
     }
 
     private static CanvasWorkbenchUiState NormalizePersistedCanvasUiState(CanvasWorkbenchUiState uiState)
@@ -2879,12 +2097,6 @@ else
             SignalsWindowKey => ResolveSignalsWindowState(),
             _ => ResolveWindowState(key)
         };
-
-    private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(SelectionWindowKey, state);
-
-    private Task HandleHealthWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(HealthWindowKey, state);
 
     private async Task ToggleWindowAsync(string key)
     {
@@ -2978,38 +2190,35 @@ else
         => string.Equals(localOpenFeedbackNodeId, node.Id, StringComparison.Ordinal) &&
             !string.IsNullOrWhiteSpace(localOpenFeedback);
 
-    private async Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
-    {
-        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
-            node,
-            FileToolsLocalFileAction.OpenContainingFolder);
-        localOpenFeedbackNodeId = node.Id;
-        localOpenFeedback = result.Message;
-        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
-        await InvokeAsync(StateHasChanged);
-    }
+    private Task OpenAttachmentLocallyAsync(ProjectStructureNode node)
+        => OpenAttachmentLocalActionAsync(node, FileToolsLocalFileAction.OpenContainingFolder);
 
-    private async Task OpenAttachmentInPreferredApplicationAsync(ProjectStructureNode node)
-    {
-        ProjectStructureLocalFileOpenResult result = await LaunchAttachmentLocalActionAsync(
-            node,
-            FileToolsLocalFileAction.OpenInPreferredApplication);
-        localOpenFeedbackNodeId = node.Id;
-        localOpenFeedback = result.Message;
-        localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
-        await InvokeAsync(StateHasChanged);
+    private Task OpenAttachmentInPreferredApplicationAsync(ProjectStructureNode node)
+        => OpenAttachmentLocalActionAsync(node, FileToolsLocalFileAction.OpenInPreferredApplication);
+
+    private async Task OpenAttachmentLocalActionAsync(ProjectStructureNode node, FileToolsLocalFileAction action) {
+        var context = CaptureActionContext();
+        var result = await LaunchAttachmentLocalActionAsync(context, node, action);
+        if (IsCurrentAction(context)) {
+            localOpenFeedbackNodeId = node.Id;
+            localOpenFeedback = result.Message;
+            localOpenFeedbackTone = result.IsSuccess ? "mint" : "warn";
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task<ProjectStructureLocalFileOpenResult> LaunchAttachmentLocalActionAsync(
+        ProjectStructureActionContext context,
         ProjectStructureNode requestedNode,
         FileToolsLocalFileAction action)
     {
         try
         {
             return await LocalFileActionCoordinator.LaunchAsync(
-                ProjectId,
+                context.Admission.ProjectId,
                 requestedNode.Id,
-                action);
+                action,
+                ensureOrigin: cancellationToken => EnsureFileOriginAsync(context, context.Admission.ProjectId, requestedNode, cancellationToken));
         }
         catch (Exception exception)
         {
@@ -3036,55 +2245,54 @@ else
     private ProjectStructureKnownFileInteraction? PreviewInteraction
         => previewInteractionSlot?.Current;
 
-    private async Task OpenAttachmentPreviewAsync(ProjectStructureNode node)
-    {
-        if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node))
-        {
+    private async Task OpenAttachmentPreviewAsync(ProjectStructureNode node) {
+        if (!ProjectStructureNodeHelpers.CanRenderAttachmentPreview(node)) {
             return;
         }
-
+        var context = CaptureActionContext();
+        var opening = new ProjectStructureAuthoringOpening(context, node);
+        previewOpening = opening;
         webPreviewDialog = null;
         previewNode = null;
         isOpeningAttachmentPreview = true;
-        try
-        {
-            ProjectStructureKnownFileInteraction? opened = await PreviewInteractionSlot.OpenAsync(
-                ProjectId,
-                node.Id);
-            if (opened is null)
-            {
+        var slot = PreviewInteractionSlot;
+        try {
+            var opened = await slot.OpenAsync(cancellationToken => KnownFileInteractionCoordinator.OpenBoundAsync(
+                context.Admission.ProjectId, node.Id,
+                token => EnsureFileOriginAsync(context, context.Admission.ProjectId, node, token), cancellationToken));
+            if (opened is null) {
                 return;
             }
-
+            if (!IsCurrentAuthoring(opening, previewOpening)) {
+                await slot.CloseIfCurrentAsync(opened);
+                return;
+            }
             previewNode = node;
-        }
-        catch (Exception exception)
-        {
-            Logger.LogWarning(
-                "Project Structure file interaction failed. ProjectId={ProjectId} NodeId={NodeId} FailureType={FailureType}.",
-                ProjectId,
-                node.Id,
-                exception.GetType().Name);
-            workflowFeedback = exception switch
-            {
-                FileBrowserProviderException providerException => providerException.Error.Message,
-                FileAccessDeniedException deniedException => deniedException.Message,
-                _ => "Unable to authorize this project asset."
-            };
-            workflowFeedbackTone = "warn";
-        }
-        finally
-        {
-            isOpeningAttachmentPreview = false;
+        } catch (Exception exception) {
+            Logger.LogWarning("Project file interaction failed. ProjectId={ProjectId} NodeId={NodeId} OpeningId={OpeningId} FailureType={FailureType}.",
+                context.Admission.ProjectId, node.Id, opening.Id, exception.GetType().Name);
+            if (IsCurrentAuthoring(opening, previewOpening)) {
+                workflowFeedback = exception switch {
+                    FileBrowserProviderException provider => provider.Error.Message,
+                    FileAccessDeniedException denied => denied.Message,
+                    _ => "Unable to authorize this project asset."
+                };
+                workflowFeedbackTone = "warn";
+            }
+        } finally {
+            if (ReferenceEquals(previewOpening, opening)) {
+                isOpeningAttachmentPreview = false;
+            }
         }
     }
 
-    private async Task CloseAttachmentPreviewAsync()
-    {
+    private async Task CloseAttachmentPreviewAsync() {
+        previewOpening = null;
         previewNode = null;
-        if (previewInteractionSlot is not null)
-        {
-            await previewInteractionSlot.CloseAsync();
+        isOpeningAttachmentPreview = false;
+        var slot = previewInteractionSlot;
+        if (slot is not null) {
+            await slot.CloseAsync();
         }
     }
 
@@ -3101,19 +2309,27 @@ else
         CancelRuntimePreviewWait();
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
+        foreach (var authority in imageAuthorities.Keys) {
+            authority.Revoke();
+        }
+        CloseSecretReferenceDialog();
         deferredCompletionCts.Cancel();
-        deferredCompletionCts.Dispose();
-        nodeMoveCommitGate.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
         DisposeAgentWindowState();
         DisposeSynchronousState();
-        if (previewInteractionSlot is not null)
-        {
-            await previewInteractionSlot.DisposeAsync();
-            previewInteractionSlot = null;
+        try {
+            await Task.WhenAll(authoringOperations.ToArray());
+            if (previewInteractionSlot is not null) {
+                await previewInteractionSlot.DisposeAsync();
+                previewInteractionSlot = null;
+            }
+        } finally {
+            nodeMoveCommitGate.Dispose();
+            canvasViewStateCommitGate.Dispose();
+            deferredCompletionCts.Dispose();
         }
     }
 

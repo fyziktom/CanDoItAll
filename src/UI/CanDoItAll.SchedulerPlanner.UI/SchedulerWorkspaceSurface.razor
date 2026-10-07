@@ -1,0 +1,117 @@
+@implements IDisposable
+
+<div class="scheduler-workspace-root">
+    <PageScaffold MaxWidthClass="max-w-full">
+        <Header>
+            <PageHeader Eyebrow="Scheduler" Title="Scheduler and planner" Description="Plan workflow runs with scheduler-owned Quartz CRON triggers and calendar visibility." Compact="true">
+                <Stats>
+                    <CompactStat Label="schedules" Value="@Plans.Count.ToString()" Tone="info" />
+                    <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" Tone="success" />
+                    <CompactStat Label="bounded events" Value="@(Workspace.Data?.CalendarSurface.Events.Count.ToString() ?? "0")" Tone="accent" />
+                    <CompactStat Label="failures" Value="@(Workspace.Data?.History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString() ?? "0")" Tone="warning" />
+                    <CompactStat Label="no action" Value="@(Workspace.Data?.History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString() ?? "0")" Tone="neutral" />
+                    <CompactStat Label="waiting" Value="@(Workspace.Data?.History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString() ?? "0")" Tone="info" />
+                </Stats>
+                <Actions>
+                    @AgentAction
+                    <PageHeaderActionButton Icon="refresh" Label="Refresh" TooltipText="Read current scheduler state without resubmitting writes." Click="Workspace.RefreshAsync" data-testid="scheduler-refresh" />
+                </Actions>
+            </PageHeader>
+        </Header>
+        <ChildContent>
+            @if (Workspace.Error.Length > 0) {
+                <SurfaceCard Soft="true" data-testid="scheduler-error"><p role="alert">@Workspace.ReadStatus: @Workspace.Error</p></SurfaceCard>
+            }
+            @if (Workspace.Data is null) {
+                <SurfaceCard data-testid="scheduler-loading"><TextBlock Value="@($"Scheduler: {Workspace.ReadStatus}")" /></SurfaceCard>
+            } else {
+                <Tabs SelectedIndex="@((int)Workspace.Tab)" SelectedIndexChanged="index => Workspace.Tab = (SchedulerTab)index" RenderMode="TabRenderMode.Server" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Scheduler planner tabs" data-testid="scheduler-tabs">
+                    <TabsItem Text="Calendar" Icon="calendar_month" data-testid="scheduler-tab-calendar"><SchedulerCalendar Workspace="Workspace" Surface="Workspace.Data.CalendarSurface" /></TabsItem>
+                    <TabsItem Text="Schedules" Icon="event_note" data-testid="scheduler-tab-schedules"><SchedulerSchedules Workspace="Workspace" Filters="scheduleFilters" /></TabsItem>
+                    <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new"><SchedulerDraftForm Workspace="Workspace" Draft="Workspace.NewDraft" @key="Workspace.NewDraft.Origin" /></TabsItem>
+                    <TabsItem Text="History" Icon="history" data-testid="scheduler-tab-history"><SchedulerHistory Workspace="Workspace" /></TabsItem>
+                </Tabs>
+                <SchedulerTargetPicker Workspace="Workspace" />
+                @if (Workspace.EditorLoading) {
+                    <SurfaceCard><TextBlock Value="Loading the exact plan…" /></SurfaceCard>
+                }
+                @if (Workspace.EditDraft is { } draft) {
+                    <Dialog IsOpen="true" Title="Edit schedule" Eyebrow="Schedule" Size="ModalSize.Wide" DenseChrome="true" TestId="scheduler-edit-dialog" OnClose="Workspace.CloseEdit">
+                        <ChildContent><SchedulerDraftForm Workspace="Workspace" Draft="draft" Editing="true" @key="draft.Origin" /></ChildContent>
+                        <Footer>
+                            <div class="scheduler-dialog-footer">
+                                @if (Plans.FirstOrDefault(plan => plan.Id == draft.Values.Id) is { } plan) {
+                                    <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => Workspace.AskDelete(plan))" Disabled="@Workspace.IsPlanLocked(plan.Id)" data-testid="scheduler-edit-delete" />
+                                }
+                                <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="Workspace.CloseEdit" data-testid="scheduler-edit-cancel" />
+                            </div>
+                        </Footer>
+                    </Dialog>
+                }
+                @if (Workspace.DeletePlan is { } deleting) {
+                    <Dialog IsOpen="true" Eyebrow="Danger action" Title="Remove schedule" Subtitle="Remove the plan and its display history, then update its trigger projection." Size="ModalSize.Compact" TestId="scheduler-delete-dialog" OnClose="Workspace.CloseDelete">
+                        <ChildContent><div class="scheduler-delete-summary"><h3>@deleting.Name</h3><p>@deleting.TargetName</p><p>Display run history is deleted. Retained fire admissions remain. This does not delete Workflow runs. Future trigger removal is confirmed only when projection succeeds.</p></div></ChildContent>
+                        <Footer><div class="scheduler-dialog-footer"><Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Workspace.CloseDelete" data-testid="scheduler-delete-cancel" /><Button Text="Remove" ButtonStyle="ButtonStyle.Danger" Disabled="@Workspace.IsPlanLocked(deleting.Id)" Click="Workspace.DeleteAsync" data-testid="scheduler-delete-confirm" /></div></Footer>
+                    </Dialog>
+                }
+            }
+            @foreach (var receipt in Workspace.PlanReceipts.Values.Where(item => item.Kind != SchedulerMutationKind.Save || item.Status is SchedulerMutationStatus.Unknown or SchedulerMutationStatus.CommittedWithWarning)) {
+                <SurfaceCard Soft="true" data-testid="scheduler-plan-receipt">
+                    <p>@receipt.Kind / @receipt.Status / @receipt.PlanId: @receipt.Message</p>
+                    @if (receipt.PlanId is { } acknowledgedId && receipt.Status is SchedulerMutationStatus.Committed or SchedulerMutationStatus.CommittedWithWarning or SchedulerMutationStatus.Refused) {
+                        <Button Text="Acknowledge notice" Click="@(() => Workspace.AcknowledgeReceipt(acknowledgedId))" ButtonStyle="ButtonStyle.Light" />
+                    }
+                    @if (receipt.PlanId is { } id && receipt.Status == SchedulerMutationStatus.Unknown && receipt.Kind != SchedulerMutationKind.Save) {
+                        <Button Text="Read and review exact persisted state" Click="@(() => Workspace.ReviewPlanAsync(id))" Disabled="@Workspace.IsPlanReviewing(id)" IsBusy="@Workspace.IsPlanReviewing(id)" ButtonStyle="ButtonStyle.Light" />
+                    } else if (receipt.PlanId is { } savedId && receipt.Kind == SchedulerMutationKind.Save) {
+                        <Button Text="Open exact plan" Click="@(() => Workspace.EditAsync(savedId))" ButtonStyle="ButtonStyle.Light" />
+                    }
+                </SurfaceCard>
+            }
+            @if (Workspace.RetainedDrafts.Count > 0) {
+                <SurfaceCard Soft="true" data-testid="scheduler-retained-drafts">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Retained drafts and operations" />
+                    @foreach (var retained in Workspace.RetainedDrafts) {
+                        <Button Text="@($"Review {retained.Values.Name} ({retained.Receipt?.Status.ToString() ?? "unsaved"})")" ButtonStyle="ButtonStyle.Light" Click="@(() => Workspace.ResumeDraft(retained))" />
+                    }
+                </SurfaceCard>
+            }
+        </ChildContent>
+    </PageScaffold>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
+    [Parameter] public RenderFragment? AgentAction { get; set; }
+    private ISchedulerWorkspace? subscribed;
+    private SchedulerScheduleFilters scheduleFilters = new();
+    private bool disposed;
+    private IReadOnlyList<SchedulerPlanSummary> Plans => Workspace.Data?.Plans ?? [];
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(subscribed, Workspace)) {
+            return;
+        }
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+        subscribed = Workspace;
+        scheduleFilters = new();
+        subscribed.Changed += Changed;
+    }
+    private async void Changed() {
+        try {
+            if (!disposed) {
+                await InvokeAsync(StateHasChanged);
+            }
+        } catch (Exception) when (disposed) {
+        } catch (Exception exception) {
+            await DispatchExceptionAsync(exception);
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+    }
+}

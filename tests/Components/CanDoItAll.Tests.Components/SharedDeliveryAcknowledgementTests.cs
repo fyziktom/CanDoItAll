@@ -9,6 +9,34 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class SharedDeliveryAcknowledgementTests {
     [Fact]
+    public async Task Own_committed_revision_refresh_does_not_cancel_import_delivery_acknowledgement() {
+        var id = Guid.NewGuid();
+        var import = SharedProviderSourceAndImportComponentTests.CreateImport(id);
+        var service = new RecordingSharedProviderManagementService(new(id, SharedProviderProfileOwnership.Imported,
+            null, null, import) { Change = new(SharedProviderChangeKind.ImportedSettings, [id]) });
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.AddSingleton<ISharedProviderManagementService>(service));
+        var recovery = harness.Context.Services.GetRequiredService<SharedProviderRecovery>();
+        IRenderedComponent<SharedProviderManagementPanel>? cut = null;
+        cut = harness.Context.Render<SharedProviderManagementPanel>(p => p
+            .Add(x => x.ProviderProfileId, id)
+            .Add(x => x.ProviderRevision, import.ProviderConcurrencyToken)
+            .Add(x => x.ProvidersChanged, (SharedProviderChangeDelivery delivery) => delivery.ReconcileAsync(() => {
+                cut!.Render(p => p.Add(x => x.ProviderRevision, service.State.Import!.ProviderConcurrencyToken));
+                return Task.CompletedTask;
+            })));
+        cut.WaitForElement("[data-testid='shared-provider-import-alias']").Input("Committed alias");
+        await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
+        cut.WaitForAssertion(() => {
+            Assert.Null(recovery.FindTarget(id));
+            Assert.Empty(cut.FindAll("[data-testid='shared-provider-warning']"));
+            Assert.False(cut.Find("[data-testid='shared-provider-import-save']").HasAttribute("disabled"));
+            Assert.Equal("Committed alias", cut.Instance.Presentation.Draft!.LocalAlias);
+        });
+        Assert.Equal("Committed alias", service.ImportedUpdate!.LocalAlias);
+    }
+
+    [Fact]
     public async Task No_op_receiver_keeps_known_target_delivery_pending() {
         var id = Guid.NewGuid();
         var service = new RecordingSharedProviderManagementService(

@@ -99,11 +99,11 @@ public sealed class SharedDeliveryReconstructionTests {
             services.AddSingleton<IProviderProfilesReads>(reads);
         });
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-name-input']").Change("Unsaved local name");
+        cut.WaitForElement("[data-testid='providers-name-input']").Input("Unsaved local name");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         await cut.FindAll("button[role='tab']").Single(x => x.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
         var raw = "first\n\n second \n first";
-        cut.Find("[data-testid='providers-suggested-models']").Change(raw);
+        cut.Find("[data-testid='providers-suggested-models']").Input(raw);
         await cut.Find("[data-testid='providers-connections']").ClickAsync();
         reads.FailCatalog = true;
         await cut.WaitForElement("[data-testid='shared-provider-source-sync']").ClickAsync();
@@ -114,7 +114,7 @@ public sealed class SharedDeliveryReconstructionTests {
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         Assert.Same(context, cut.FindComponent<ProviderProfileEditorForm>().Instance.Context);
         Assert.Equal("Unsaved local name", ((Editor)context.Model).Name);
-        Assert.Equal(raw, cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
+        Assert.Equal(raw, ((AngleSharp.Html.Dom.IHtmlTextAreaElement)cut.Find("[data-testid='providers-suggested-models']")).Value);
         Assert.Equal(1, proxy.Operations);
     }
 

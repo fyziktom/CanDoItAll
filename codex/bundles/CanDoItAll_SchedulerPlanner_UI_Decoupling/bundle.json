@@ -1,0 +1,70 @@
+{
+  "id": "CDA-SCHEDULERPLANNER-UI-DECOUPLING-v1",
+  "title": "Plugins review fixes, then complete SchedulerPlanner UI decoupling",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "language": "en",
+  "executable": true,
+  "product_changes_authorized_by_this_bundle": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+  "review_date": "2026-09-28",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/bundle.json",
+  "documents": [
+    "README.md",
+    "PLUGINS_REVIEW.md",
+    "SCHEDULER_REVIEW_NOTES.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "SOURCES.md",
+    "PROOF_STATUS.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "stages": [
+    {
+      "id": "S0",
+      "purpose": "Reproduce/repair missing catalog selection and package double-fault stage loss; continue to Scheduler."
+    },
+    {
+      "id": "S1-S5",
+      "purpose": "Complete four-tab Scheduler rendering cut, narrow owner result fixes, real sandbox and layered proof."
+    }
+  ],
+  "authorization": {
+    "local_signed_commits": true,
+    "remote_push": false,
+    "merge": false,
+    "force_checkout_or_reset": false,
+    "sibling_changes_without_separate_authorization": false,
+    "ordinary_app_restart_or_database_use": false
+  },
+  "suggested_projects": [
+    "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts",
+    "src/UI/CanDoItAll.SchedulerPlanner.UI",
+    "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox"
+  ],
+  "excluded_scope": [
+    "Database schema/migration",
+    "Scheduler/fire/idempotency protocol redesign",
+    "API-only UI or authentication redesign",
+    "Production Process scheduling enablement",
+    "General legacy-fire reconciliation UI",
+    "Third module extraction",
+    "Broad sibling/runtime rewrites"
+  ],
+  "reviewer_execution": {
+    "product_builds": false,
+    "product_tests": false,
+    "product_watch_measurement": false,
+    "implementer_raw_artifacts_inspected": false
+  },
+  "previous_implementer_receipt": {
+    "source_id": "EV02",
+    "reported_plugins_consumer_cases": 160,
+    "reported_testlab_entry_cases": 21,
+    "independently_rerun": false
+  }
+}

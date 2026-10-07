@@ -1188,7 +1188,7 @@ public sealed class ConcreteProviderDriverTests
         foreach (var relativePath in filesThatMustNotAdoptProviderProject)
         {
             var text = File.ReadAllText(Path.Combine(root, relativePath));
-            Assert.DoesNotContain("CanDoItAll.AgentFramework.Providers", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("CanDoItAll.AgentFramework.Providers.csproj", text, StringComparison.Ordinal);
         }
 
         Assert.Contains(

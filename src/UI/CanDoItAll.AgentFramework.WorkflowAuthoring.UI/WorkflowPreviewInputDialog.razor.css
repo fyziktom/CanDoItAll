@@ -1,0 +1,8 @@
+.workflow-canvas-node-dialog { padding: .25rem; }
+.workflow-canvas-node-dialog__main { display: grid; gap: 1rem; min-width: 0; }
+.workflow-canvas-dialog-section { display: grid; gap: .6rem; }
+.workflow-canvas-field { display: grid; gap: .4rem; min-width: 0; }
+.workflow-canvas-help { color: var(--cda-text-muted, #94a3b8); }
+.workflow-canvas-error { color: var(--cda-danger, #f87171); overflow-wrap: anywhere; }
+.workflow-canvas-textarea { min-height: 10rem; width: 100%; }
+.workflow-canvas-check-field { display: flex; align-items: start; gap: .5rem; }

@@ -20,6 +20,8 @@ internal sealed class AgentEditorReadFixture : IAgentEditorReads {
     public Func<AgentEditorTarget, CancellationToken, Task<AgentEditorLoadResult>>? Load { get; set; }
     public Func<CancellationToken, Task<IReadOnlyList<AgentEditorProject>>>? ReadProjects { get; set; }
     public Func<CancellationToken, Task<IReadOnlyList<CapabilityCatalogItem>>>? ReadCapabilities { get; set; }
+    public Func<CancellationToken, Task<IReadOnlyList<ProviderProfile>>>? ReadProviders { get; set; }
+    public Func<CancellationToken, Task<IReadOnlyList<AgentEditorSecret>>>? ReadSecrets { get; set; }
 
     public Task<AgentEditorLoadResult> LoadAsync(AgentEditorTarget target,
         IReadOnlyList<ProviderProfile>? initialProviders = null, CancellationToken cancellationToken = default) {
@@ -38,9 +40,12 @@ internal sealed class AgentEditorReadFixture : IAgentEditorReads {
     public Task<IReadOnlyList<CapabilityCatalogItem>> ReadCapabilitiesAsync(CancellationToken cancellationToken = default)
         => ReadCapabilities?.Invoke(cancellationToken) ?? Task.FromResult(Capabilities);
 
+    public Task<IReadOnlyList<AgentEditorSecret>> ReadSecretsAsync(CancellationToken cancellationToken = default)
+        => ReadSecrets?.Invoke(cancellationToken) ?? Task.FromResult(Secrets);
+
     public Task<IReadOnlyList<ProviderProfile>> ReadProvidersAsync(CancellationToken cancellationToken = default) {
         ProviderReads++;
-        return Task.FromResult(Providers);
+        return ReadProviders?.Invoke(cancellationToken) ?? Task.FromResult(Providers);
     }
 
     public Task<IReadOnlyList<AgentEditorProject>> ReadProjectsAsync(CancellationToken cancellationToken = default) {

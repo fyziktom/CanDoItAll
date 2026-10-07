@@ -64,6 +64,9 @@ public partial class AgentChatPanel : IAsyncDisposable {
     public IFloatingAgentChatCoordinator FloatingChatCoordinator { get; set; } = default!;
 
     [Inject]
+    public IAgentChatLauncher ChatLauncher { get; set; } = default!;
+
+    [Inject]
     public IAgentChatExecutionOrchestrator ChatExecutionOrchestrator { get; set; } = default!;
 
     [Inject]
@@ -265,7 +268,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         isBusy = true;
         try {
             if (handle.HasValue) {
-                await FloatingChatCoordinator.StartNewChatAsync(agentId);
+                await ChatLauncher.StartNewChatAsync(agentId);
                 return;
             }
             var created = await WorkspaceService.GetOrCreateChatSessionAsync(agentId);
@@ -759,8 +762,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private async Task CancelPendingApprovalsCoreAsync(Guid runId, Guid agentId, Guid sessionId,
         AgentChatHandleId? handleId, long owner, DatabaseProfileGeneration profileGeneration) {
         var committed = false;
+        var previousStream = activeActivityStreamId;
+        var operationId = AgentExecutionOperationId.New();
         try {
-            var result = await WorkspaceService.CancelPendingExecutionApprovalsAsync(runId, AgentExecutionOperationId.New());
+            var result = await WorkspaceService.CancelPendingExecutionApprovalsAsync(runId, operationId);
             if (result.Run.Id != runId || result.Run.AgentId != agentId || result.Run.ChatSessionId != sessionId ||
                 result.Run.Outcome != RunOutcome.Cancelled) {
                 throw new InvalidOperationException("Cancellation returned an unexpected execution receipt.");
@@ -769,6 +774,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
             if (!IsOperationTargetCurrent(agentId, sessionId, handleId, owner) ||
                 ProfileGenerationSource.GetGeneration() != profileGeneration) {
                 return;
+            }
+            if (previousStream is not null) {
+                activeActivityStreamId = new(previousStream.DatabaseProfileId, previousStream.WorkspaceScope,
+                    previousStream.DatabaseProfileGeneration, operationId);
             }
             await LoadWorkspaceAsync(agentId, sessionId);
             if (IsOperationTargetCurrent(agentId, sessionId, handleId, owner) &&
@@ -1233,13 +1242,33 @@ public partial class AgentChatPanel : IAsyncDisposable {
             ?? throw new InvalidOperationException("Agent was not found after saving favorite state.");
     }
 
+    private AgentChatActionOrigin ActionOrigin => new(chatSession.Generation, selectedAgentId, selectedSessionId, workspace?.SelectedRun?.Id);
+
+    private AgentChatActionState ActionPresentation => new(ActionOrigin, sessionStartRejection?.Message,
+        CanShowRunRecovery, CanShowRunRecovery && IsRunRecoveryBlocked,
+        workspace?.SelectedRun is { PendingApprovals.Count: > 0, CompletedAtUtc: null },
+        IsChatInteractionBusy, IsFocusedFloating, isBusy || selectedAgentId is null, CanOpenRuntimeDetails);
+
+    private Task HandleActionIntentAsync(AgentChatActionIntent intent) {
+        if (isDisposed || intent.Origin != ActionOrigin) {
+            return Task.CompletedTask;
+        }
+        return intent.Action switch {
+            AgentChatAction.RecoverOriginalRun => StartRunRecoveryAsync(),
+            AgentChatAction.CancelPendingRun => CancelPendingApprovalsAsync(),
+            AgentChatAction.NewThread => CreateThreadAsync(),
+            AgentChatAction.OpenRuntime => OpenRuntimeDetailsDialogAsync(),
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
+    }
+
     private Task OpenRuntimeDetailsDialogAsync() {
         if (!CanOpenRuntimeDetails) {
             SetMessage("Heads up", "warning", "Send a prompt first so runtime evidence can be opened.");
             return Task.CompletedTask;
         }
 
-        _ = DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
+        _ = ObserveRuntimeDialogAsync(DialogService.OpenAsync<AgentRuntimeDetailsDialog>(
             "Runtime details",
             new Dictionary<string, object?> {
                 [nameof(AgentRuntimeDetailsDialog.Run)] = workspace?.SelectedRun,
@@ -1256,9 +1285,19 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 TestId = "agent-runtime-details-dialog",
                 AriaLabel = "Agent runtime details",
                 Style = "max-height:calc(100vh - 2rem);"
-            }, chatSession.TargetCancellation);
+            }, chatSession.TargetCancellation), chatSession.TargetCancellation, ActionOrigin);
 
         return Task.CompletedTask;
+    }
+
+    private async Task ObserveRuntimeDialogAsync(Task<object?> opening, CancellationToken token, AgentChatActionOrigin origin) {
+        try {
+            await opening;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("Runtime detail dialog failed ({FailureType}); agent {AgentId}, session {SessionId}, run {RunId}.",
+                exception.GetType().Name, origin.AgentId, origin.SessionId, origin.RunId);
+        }
     }
 
     private void HandleExecutionUpdated(object? sender, ExecutionLogEntry entry) {

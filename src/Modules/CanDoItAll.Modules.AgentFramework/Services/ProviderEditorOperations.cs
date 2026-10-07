@@ -24,8 +24,11 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         if (WritesBlocked || !session.CanEdit || session.IsSourceManaged) {
             return null;
         }
+        if (!session.Editor.Validate()) {
+            return new(ProviderFeedbackKind.Error, "Provider save rejected", "Correct the invalid provider fields before saving.");
+        }
         var submission = Unresolved is { RetryAllowed: true, Submission: { } retry }
-            ? retry : ProviderEditorSubmission.CaptureForSave(session.Draft);
+            ? retry : ProviderEditorSubmission.CaptureForSave(session.Draft, session.Editor);
         var request = submission.CreateRequest();
         if (string.IsNullOrWhiteSpace(request.DefaultModel) ||
             (request.SuggestedModels.Count > 0 && !request.SuggestedModels.Contains(request.DefaultModel.Trim(), StringComparer.OrdinalIgnoreCase))) {
@@ -151,7 +154,7 @@ public sealed class ProviderEditorOperations(ProviderProfilesSession session, IP
         if (WritesBlocked || !session.CanEdit || session.IsSourceManaged) {
             return null;
         }
-        var submission = ProviderEditorSubmission.Capture(session.Draft);
+        var submission = ProviderEditorSubmission.Capture(session.Draft, session.Editor);
         var operation = Begin();
         try {
             var result = await commands.DiscoverModelsAsync(submission, operation.Token);

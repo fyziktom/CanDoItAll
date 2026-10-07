@@ -22,6 +22,32 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 public sealed class LlmChatConversationWorkspaceTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Queued_dialog_title_from_a_closed_opening_cannot_edit_its_successor(bool rename) {
+        var conversation = CreateConversation();
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        using var context = CreateContext(conversations, new StubOperationGateway());
+        var cut = context.Render<LlmChatConversationWorkspace>();
+        var open = rename ? $"llm-chat-rename-{ConversationId:D}" : "llm-chat-new";
+        var title = rename ? "llm-chat-rename-title" : "llm-chat-start-title";
+        await cut.WaitForElement($"[data-testid='{open}']").ClickAsync();
+        var queued = cut.FindComponents<TextBox>().Single(component =>
+            component.Find("input").GetAttribute("data-testid") == title).Instance.ValueChanged;
+        await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
+        await cut.Find($"[data-testid='{open}']").ClickAsync();
+        cut.Find($"[data-testid='{title}']").Change("Current opening title");
+
+        await cut.InvokeAsync(() => queued.InvokeAsync("Retired opening title"));
+
+        Assert.Equal("Current opening title", cut.Find($"[data-testid='{title}']").GetAttribute("value"));
+        Assert.Null(conversations.CreatedDefinitionId);
+        Assert.Null(conversations.RenamedTitle);
+    }
+
+    [Theory]
     [InlineData("cs-CZ", false)]
     [InlineData("ar-SA", true)]
     public void Simple_chat_thread_and_message_times_are_UTC_in_full_and_focused_views(string culture, bool focused) {

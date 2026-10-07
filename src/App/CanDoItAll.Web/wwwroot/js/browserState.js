@@ -4,8 +4,7 @@ const databaseSwitchStorageKey = "candoitall.database-switch";
 const databaseSwitchAlertStorageKey = "candoitall.database-switch-alert";
 const databaseStartupPromptStorageKey = "candoitall.database-startup-dismissed";
 const databaseSwitchChannelName = "candoitall.database-switch";
-let databaseSwitchStorageListener = null;
-let databaseSwitchChannel = null;
+const databaseSwitchListeners = new Map();
 
 window.CanDoItAll.browserState = {
     load: function (key) {
@@ -20,46 +19,46 @@ window.CanDoItAll.browserState = {
     publishDatabaseSwitch: function (payload) {
         window.localStorage.setItem(databaseSwitchStorageKey, payload);
         if (typeof window.BroadcastChannel === "function") {
-            if (databaseSwitchChannel === null) {
-                databaseSwitchChannel = new window.BroadcastChannel(databaseSwitchChannelName);
-            }
-
-            databaseSwitchChannel.postMessage(payload);
+            const channel = new window.BroadcastChannel(databaseSwitchChannelName);
+            channel.postMessage(payload);
+            channel.close();
         }
     },
-    registerDatabaseSwitchListener: function (dotNetRef) {
-        const notify = function (payload) {
-            if (typeof payload !== "string" || payload.length === 0) {
+    registerDatabaseSwitchListener: function (listenerId, dotNetRef) {
+        window.CanDoItAll.browserState.unregisterDatabaseSwitchListener(listenerId);
+        const owner = { channel: null, storage: null };
+        const notify = async function (payload) {
+            if (databaseSwitchListeners.get(listenerId) !== owner || typeof payload !== "string" || payload.length === 0) {
                 return;
             }
-
-            dotNetRef.invokeMethodAsync("HandleBrowserDatabaseSwitchAsync", payload);
-        };
-
-        if (databaseSwitchStorageListener !== null) {
-            window.removeEventListener("storage", databaseSwitchStorageListener);
-            databaseSwitchStorageListener = null;
-        }
-
-        databaseSwitchStorageListener = function (event) {
-            if (event.key === databaseSwitchStorageKey && typeof event.newValue === "string" && event.newValue.length > 0) {
-                notify(event.newValue);
-            }
-        };
-        window.addEventListener("storage", databaseSwitchStorageListener);
-
-        if (typeof window.BroadcastChannel === "function") {
-            if (databaseSwitchChannel !== null) {
-                databaseSwitchChannel.close();
-            }
-
-            databaseSwitchChannel = new window.BroadcastChannel(databaseSwitchChannelName);
-            databaseSwitchChannel.onmessage = function (event) {
-                if (typeof event.data === "string" && event.data.length > 0) {
-                    notify(event.data);
+            try {
+                await dotNetRef.invokeMethodAsync("HandleBrowserDatabaseSwitchAsync", payload);
+            } catch {
+                if (databaseSwitchListeners.get(listenerId) === owner) {
+                    window.CanDoItAll.browserState.unregisterDatabaseSwitchListener(listenerId);
                 }
-            };
+            }
+        };
+        owner.storage = function (event) {
+            if (event.key === databaseSwitchStorageKey) {
+                void notify(event.newValue);
+            }
+        };
+        databaseSwitchListeners.set(listenerId, owner);
+        window.addEventListener("storage", owner.storage);
+        if (typeof window.BroadcastChannel === "function") {
+            owner.channel = new window.BroadcastChannel(databaseSwitchChannelName);
+            owner.channel.onmessage = event => { void notify(event.data); };
         }
+    },
+    unregisterDatabaseSwitchListener: function (listenerId) {
+        const owner = databaseSwitchListeners.get(listenerId);
+        if (!owner) {
+            return;
+        }
+        databaseSwitchListeners.delete(listenerId);
+        window.removeEventListener("storage", owner.storage);
+        owner.channel?.close();
     },
     rememberDatabaseSwitchAlert: function (payload) {
         window.sessionStorage.setItem(databaseSwitchAlertStorageKey, payload);

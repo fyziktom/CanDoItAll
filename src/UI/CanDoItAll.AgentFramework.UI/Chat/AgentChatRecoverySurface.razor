@@ -1,0 +1,17 @@
+@{ var rendered = State; }
+
+@if (rendered.StartRejection is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-start-rejected">
+        @rendered.StartRejection
+        @if (rendered.CanRecover) {
+            <Button Text="Recover original run" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                    Disabled="@rendered.RecoveryBlocked" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.RecoverOriginalRun)))"
+                    data-testid="agents-chat-recover-original-run" />
+        }
+    </Alert>
+}
+
+@code {
+    [Parameter, EditorRequired] public AgentChatActionState State { get; set; } = default!;
+    [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
+}

@@ -1,0 +1,154 @@
+@namespace CanDoItAll.Workbench.Structure.UI
+@{
+    var shell = Presentation;
+}
+<div class="project-structure-page" data-testid="structure-workspace" data-context-id="@shell.ContextId">
+    @if (shell.UnavailableTitle is not null) {
+        <PageScaffold>
+            <Header><PageHeader Eyebrow="Workbench" Title="Project structure unavailable" Description="The requested project is not available in the active database profile." /></Header>
+            <ChildContent><EmptyState Eyebrow="Switched profile" Title="@shell.UnavailableTitle" Description="@shell.UnavailableDescription">
+                <Actions><Button Text="Open projects" Click="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(shell.ContextId, StructureToolbarCommand.Projects)))" /></Actions>
+            </EmptyState></ChildContent>
+        </PageScaffold>
+    } else if (shell.Error is not null) {
+        <EmptyState Eyebrow="Structure" Title="Unable to load project structure" Description="@shell.Error">
+            <Actions><Button Text="Retry" data-testid="structure-load-retry" Click="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(shell.ContextId, StructureToolbarCommand.Retry)))" /></Actions>
+        </EmptyState>
+    } else if (shell.Canvas is null) {
+        <CanvasWorkbenchStage Eyebrow="" Title="" Description=""><Canvas><SkeletonStateOverlay Snapshot="@shell.Loading" /></Canvas></CanvasWorkbenchStage>
+    } else {
+        <Stack Gap="1.5rem" Class="project-structure-page__stack">
+            <Tabs SelectedIndex="SelectedView" SelectedIndexChanged="@(value => Dispatch.InvokeAsync(new StructureViewIntent(shell.ContextId, value)))"
+                  AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Server">
+                <TabsItem Text="Canvas" Icon="account_tree">
+        @{
+            var view = Presentation;
+        }
+        <CanvasWorkbenchStage Eyebrow=""
+                              Title=""
+                              Description="">
+            <Canvas>
+                <CanvasWorkbench @key="view.ContextId" Surface="view.Canvas"
+                                 @ref="canvas"
+                                 SelectionChanged="@(value => Dispatch.InvokeAsync(new StructureSelectionIntent(view.ContextId, value)))"
+                                 NodesMoved="@(value => Dispatch.InvokeAsync(new StructureNodesMovedIntent(view.ContextId, value)))"
+                                 ContextActionRequested="@(value => Dispatch.InvokeAsync(new StructureContextIntent(view.ContextId, value)))"
+                                 CreateActionInvoked="@(value => Dispatch.InvokeAsync(new StructureCreateIntent(view.ContextId, value)))"
+                                 ComposerOpened="@(value => Dispatch.InvokeAsync(new StructureComposerOpenedIntent(view.ContextId, value)))"
+                                 ComposerClosed="@(value => Dispatch.InvokeAsync(new StructureComposerClosedIntent(view.ContextId, value)))"
+                                 NodeEdited="@(value => Dispatch.InvokeAsync(new StructureNoteEditIntent(view.ContextId, value)))"
+                                 NodeOpened="@(value => Dispatch.InvokeAsync(new StructureOpenIntent(view.ContextId, value)))"
+                                 StateChanged="@(value => Dispatch.InvokeAsync(new StructureStateIntent(view.ContextId, value)))"
+                                 ClipboardRequested="@(value => Dispatch.InvokeAsync(new StructureClipboardIntent(view.ContextId, value)))">
+                    <ToolbarLeftContent>
+                        <ProjectStructureToolbarActions SelectionWindowVisible="@view.Toolbar.SelectionVisible"
+                                                       HealthWindowVisible="@view.Toolbar.HealthVisible"
+                                                       ToolboxWindowVisible="@view.Toolbox.State.IsVisible"
+                                                       ObjectIndexWindowVisible="@view.Toolbar.ObjectIndexVisible"
+                                                       FileBrowserWindowVisible="@view.Toolbar.FilesVisible"
+                                                       SignalsWindowVisible="@view.Toolbar.SignalsVisible"
+                                                       AgentWindowVisible="@view.Toolbar.AgentsVisible"
+                                                       GanttViewVisible="@(SelectedView == 1)"
+                                                       ActiveTool="@view.Toolbar.Mode"
+                                                       CanUseDependencyTool="@view.Toolbar.CanConnect"
+                                                       CanRecomposeSelectedBranch="@view.Toolbar.CanRecompose"
+                                                       IsSubtreeRecompositionInProgress="@view.Toolbar.IsRecomposing"
+                                                       SelectToolClicked="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Select)))"
+                                                       DependencyToolClicked="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Dependency)))"
+                                                       DeleteToolClicked="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Delete)))"
+                                                       ToggleSelectionWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Inspector)))"
+                                                       ToggleHealthWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Health)))"
+                                                       ToggleToolboxWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Toolbox)))"
+                                                       ToggleObjectIndexWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.ObjectIndex)))"
+                                                       OpenFileBrowserWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Files)))"
+                                                       ToggleSignalsWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Signals)))"
+                                                       ToggleAgentWindow="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Agents)))"
+                                                       OpenGanttView="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Gantt)))"
+                                                       RecomposeBranch="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Recompose)))" />
+                        <div class="project-structure-toolbar-stats"
+                             data-testid="project-structure-canvas-loaded">
+                            <StatusBadge Tone="info" Text="@($"Nodes {view.Canvas.Nodes.Count}")" />
+                            <StatusBadge Tone="neutral" Text="@($"Selection {view.SelectionCount}")" />
+                        </div>
+                    </ToolbarLeftContent>
+                    <OverlayContent>
+                        @if (view.ShowFeedback &&
+                            !string.IsNullOrWhiteSpace(view.Feedback))
+                        {
+                            <PanelCard Class="project-structure-inline-feedback project-structure-clipboard-feedback"
+                                       role="status"
+                                       aria-live="polite"
+                                       data-testid="project-structure-clipboard-feedback"
+                                       data-tone="@view.FeedbackTone">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock Value="@view.Feedback" />
+                                    @if (view.HasPendingCleanup)
+                                    {
+                                        <Button ButtonStyle="ButtonStyle.Light"
+                                                Text="Retry cleanup"
+                                                Disabled="@view.IsRetryingCleanup"
+                                                data-testid="project-structure-deletion-retry"
+                                                Click="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.RetryCleanup)))" />
+                                    }
+                                </Stack>
+                            </PanelCard>
+                        }
+                        @if (view.Toolbox.State.IsVisible)
+                        {
+                            <ProjectStructureToolboxWindow WindowId="@view.Toolbox.WindowId"
+                                                           TestId="project-structure-toolbox-window"
+                                                           AriaLabel="Project structure standard blocks toolbox"
+                                                           Kicker="Standard Blocks Toolbox"
+                                                           Title=""
+                                                           Summary=""
+                                                           State="@view.Toolbox.State"
+                                                           StateChanged="@(value => Dispatch.InvokeAsync(new StructureToolboxWindowIntent(view.ContextId, value)))"
+                                                           Groups="@view.Toolbox.Groups"
+                                                           SearchText="@view.Toolbox.Search"
+                                                           SearchTextChanged="@(value => Dispatch.InvokeAsync(new StructureToolboxSearchIntent(view.ContextId, value ?? string.Empty)))"
+                                                           SourceLabel="@view.Toolbox.SourceLabel"
+                                                           DefaultWidth="@view.Toolbox.DefaultWidth"
+                                                           OnToggleGroup="@(value => Dispatch.InvokeAsync(new StructureToolboxGroupIntent(view.ContextId, value)))"
+                                                           OnOpenAction="@(value => Dispatch.InvokeAsync(new StructureToolboxActionIntent(view.ContextId, value)))" />
+                        }
+                        @SupportWindows
+                        <StructureStructuralDialogs Presentation="Dialogs" Dispatch="DialogIntent" />
+                        @DeferredDialogs
+
+                    </OverlayContent>
+                </CanvasWorkbench>
+            </Canvas>
+        </CanvasWorkbenchStage>
+                </TabsItem>
+                <TabsItem Text="Gantt" Icon="view_timeline">@Planning</TabsItem>
+                <TabsItem Text="Manager Summary" Icon="monitoring">@Insights</TabsItem>
+            </Tabs>
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public StructurePresentation Presentation { get; set; } = default!;
+    [Parameter] public int SelectedView { get; set; }
+    [Parameter] public EventCallback<StructureIntent> Dispatch { get; set; }
+    [Parameter] public RenderFragment? Planning { get; set; }
+    [Parameter] public RenderFragment? Insights { get; set; }
+    [Parameter] public RenderFragment? SupportWindows { get; set; }
+    [Parameter] public StructureDialogsPresentation Dialogs { get; set; } = new();
+    [Parameter] public EventCallback<StructureDialogIntent> DialogIntent { get; set; }
+    [Parameter] public RenderFragment? DeferredDialogs { get; set; }
+
+    private CanvasWorkbench? canvas;
+
+    public Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
+        => (canvas ?? throw new InvalidOperationException("The Structure canvas is not mounted.")).OpenCreateDialogAsync(action, request);
+
+    public Task SelectNodesAsync(IReadOnlyList<string> nodeIds, string? primaryNodeId = null)
+        => canvas?.SelectNodesAsync(nodeIds, primaryNodeId) ?? Task.CompletedTask;
+
+    public Task<IReadOnlyList<string>> GetSelectedNodeIdsAsync()
+        => canvas?.GetSelectedNodeIdsAsync() ?? Task.FromResult<IReadOnlyList<string>>([]);
+
+    public Task<string?> CaptureImageAsync()
+        => (canvas ?? throw new InvalidOperationException("The Structure canvas is not mounted.")).CaptureImageAsync();
+}

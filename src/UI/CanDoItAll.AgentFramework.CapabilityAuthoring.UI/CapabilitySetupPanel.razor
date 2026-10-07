@@ -1,0 +1,50 @@
+@using CanDoItAll.AgentFramework.Capabilities.Abstractions
+<FormSection Title="Setup test" Description="Run an explicit diagnostic against this draft. A setup test can execute a process or make a network request; it does not save or publish verification proof.">
+    @if (Draft.Model.Kind == CanDoItAll.AgentFramework.Models.CapabilityKind.Tool) {
+        <div>
+            <label class="cda-field-label">Tool test input JSON</label>
+            <AuthoringTextArea @bind-Value="Draft.Tool.TestInputJson" class="cda-input capability-authoring__small-textarea" data-testid="@($"{TestId}-tool-test-input")" />
+        </div>
+    }
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Test setup" Icon="play_arrow" ButtonStyle="ButtonStyle.Light" Disabled="@Busy" IsBusy="@Busy" Click="Test" data-testid="@TestButtonId" />
+        @if (Succeeded.HasValue) {
+            <StatusBadge Tone="@(Succeeded.Value ? "success" : "danger")" Text="@(Succeeded.Value ? "Setup passed" : "Setup failed")" />
+        }
+        @if (Historical) {
+            <StatusBadge Tone="warning" Text="Configuration changed; the previous diagnostic does not apply." />
+        }
+    </Cluster>
+    @if (Tools.Count > 0) {
+        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+            @foreach (var tool in Tools.Take(8)) {
+                <StatusBadge Tone="info" Text="@tool" />
+            }
+        </Cluster>
+    }
+    @if (Diagnostics.Count > 0) {
+        <SurfaceCard Soft="true" data-testid="@($"{TestId}-setup-diagnostics")">
+            <Stack GapScale="LayoutGap.Small">
+                @foreach (var diagnostic in Diagnostics.Take(4)) {
+                    <div>
+                        <p class="cda-field-label">@diagnostic.Category.ToString()</p>
+                        <p>@diagnostic.MaskedDetail</p>
+                        <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                    </div>
+                }
+            </Stack>
+        </SurfaceCard>
+    }
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string TestButtonId { get; set; } = string.Empty;
+    [Parameter] public EventCallback Test { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool? Succeeded { get; set; }
+    [Parameter] public bool Historical { get; set; }
+    [Parameter] public IReadOnlyList<CapabilityDiagnostic> Diagnostics { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> Tools { get; set; } = [];
+}

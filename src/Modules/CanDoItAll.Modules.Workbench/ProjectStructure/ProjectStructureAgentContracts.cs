@@ -33,6 +33,9 @@ public sealed record ProjectStructureAgentContext(
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
     [JsonIgnore]
+    public IReadOnlyCollection<ProjectStructureNode>? ExpectedTransferRoots { get; init; }
+
+    [JsonIgnore]
     public System.Collections.Immutable.ImmutableArray<ProjectWriteAdmission> ExpectedProjectAdmissions { get; init; } = [];
 
     [JsonIgnore]
@@ -1436,7 +1439,9 @@ public sealed record ProjectStructureWorkflowNodeCreateInput(
     ProjectStructureWorkflowInputSettings? InputSettings = null,
     double? X = null,
     double? Y = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    internal ProjectStructureNode? ExpectedParent { get; init; }
+}
 
 /// <summary>Result of a committed workflow node creation.</summary>
 /// <param name="ProjectId">Identifier of the project that contains the node.</param>
@@ -1469,7 +1474,10 @@ public sealed record ProjectStructureWorkflowAddOptionsInput(
     WorkflowId? WorkflowId = null,
     WorkflowVersionId? VersionId = null,
     ProjectStructureWorkflowInputSettings? InputSettings = null,
-    IReadOnlyList<string>? SelectedNodeIds = null);
+    IReadOnlyList<string>? SelectedNodeIds = null) {
+    internal ProjectWriteAdmission? ExpectedProject { get; init; }
+    internal ProjectStructureNode? ExpectedParent { get; init; }
+}
 
 /// <summary>One workflow definition that can be added to a project structure.</summary>
 /// <param name="WorkflowId">Identifier of the workflow definition, a GUID string.</param>
@@ -1591,7 +1599,9 @@ public sealed record ProjectStructureWorkflowNodeStartInput(
     string RequestedBy = "project-structure",
     string? LeaseToken = null,
     IReadOnlyList<string>? SimulatedNodeIds = null,
-    Guid? IntentId = null);
+    Guid? IntentId = null) {
+    internal ProjectStructureNode? ExpectedNode { get; init; }
+}
 
 /// <summary>One recorded event of a workflow run.</summary>
 /// <param name="Kind">

@@ -1,0 +1,103 @@
+{
+  "bundle_id": "CDA-WORKSPACE-API-ACCESS-UI-DECOUPLING-v1",
+  "title": "Bounded Workspace Files identity repair and isolated API Access UI decoupling",
+  "created_on": "2026-09-29",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "186ab60a8e1a2dd7ab79c71e1a256cb0b2fdaedf",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "README.md",
+    "prompt.md",
+    "CORE_REVIEW.md",
+    "MODULE_SELECTION.md",
+    "ARCHITECTURE.md",
+    "API_ACCESS_REVIEW_NOTES.md",
+    "SENSITIVE_STATE.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "PROOF_STATUS.md",
+    "SOURCES.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "execution_policy": "Use the current checkout and current repository instructions. No checkout pin/reset, push, merge, deployment or third slice.",
+  "phases": [
+    {
+      "id": "S0",
+      "scope": "Reproduce/repair WSC-R1 and confirm bounded prior closure; do not repeat Core extraction."
+    },
+    {
+      "id": "A1",
+      "scope": "Inventory actual API tree/owners/consumers and baseline real UI/development loop."
+    },
+    {
+      "id": "A2",
+      "scope": "Extract independent API leaf contracts/renderers and production adapters without growing Core dependencies."
+    },
+    {
+      "id": "A3",
+      "scope": "Complete request, query, overlay, disclosure and outcome lifetimes; retain real authority and wire compatibility."
+    },
+    {
+      "id": "A4",
+      "scope": "Faithful independent API sandbox using the actual feature tree, no production runtime."
+    },
+    {
+      "id": "A5",
+      "scope": "Fresh targeted/triggered-wide validation, publish/browser/graph/watch evidence, mandatory gates and exact cleanup."
+    }
+  ],
+  "completion_scope": {
+    "prior_fix": [
+      "WSC-R1"
+    ],
+    "extracted": [
+      "API effective-status host",
+      "Machine token issuance and one-time disclosure",
+      "Lazy token search/paging and revoke/delete dialogs",
+      "Ordinary account create/edit/reset/delete UI",
+      "Scope picker and nested-overlay lifetimes"
+    ],
+    "protected_completed_core": [
+      "Defaults",
+      "Secrets",
+      "Files",
+      "Provider history",
+      "Generic Settings shell"
+    ],
+    "deferred_but_preserved": [
+      "Data Sources and database transfer",
+      "Storage, recovery and pickers"
+    ],
+    "core_sandbox_must_not_gain_api_dependency": true,
+    "entire_workspace_module_complete": false
+  },
+  "out_of_scope": [
+    "API-only transport rewrite",
+    "New authentication/roles/grants policy",
+    "Token/session/crypto redesign",
+    "New database/file schema",
+    "Global Workspace contract reshuffle",
+    "Data Sources/Storage/Projects/Processes/Workbench extraction"
+  ],
+  "review_proof": {
+    "type": "source-and-metadata",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "watch_measured": false,
+    "reported_stable": {
+      "executed": 15571,
+      "passed": 15567,
+      "failed": 4,
+      "skipped": 0,
+      "followed_by": "reported focused repairs; not a new all-green broad run"
+    }
+  },
+  "artifact_proof_is_product_proof": false
+}

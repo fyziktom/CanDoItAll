@@ -102,7 +102,8 @@ public sealed class CrmHrRegressionTests
             await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
             await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
             await page.GetByTestId("resource-save-button").ClickAsync();
-            var saved = page.GetByText("Resource saved.", new() { Exact = true });
+            var saved = page.GetByTestId("resource-mutation-receipt").Filter(new() { HasText = resourceName })
+                .GetByText("Resource saved.", new() { Exact = true });
             await saved
                 .Or(page.GetByText("Resource was not saved", new() { Exact = true }))
                 .Or(page.GetByText("Resource save failed", new() { Exact = true }))

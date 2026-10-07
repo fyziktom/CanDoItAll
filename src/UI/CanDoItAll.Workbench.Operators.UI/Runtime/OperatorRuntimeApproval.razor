@@ -1,0 +1,41 @@
+@namespace CanDoItAll.Workbench.Operators.UI.Runtime
+@{ var decide = Decide; }
+<Stack GapScale="LayoutGap.Medium"
+       data-testid="project-structure-runtime-launch-approval-content">
+    <Alert AlertStyle="AlertStyle.Warning"
+           Title="Explicit script execution">
+        This node runs an explicitly configured shell script. Review the node metadata before approving this one launch.
+    </Alert>
+    <TextBlock TextStyle="TextStyle.Subtitle2"
+               Value="@DisplayName" />
+    <TextBlock TextStyle="TextStyle.Note" Value="@Review" Class="whitespace-pre-wrap break-words" />
+    <TextBlock TextStyle="TextStyle.Note"
+               Value="Approval is not remembered and does not change workspace or external-target authority." />
+    <Stack Orientation="Orientation.Horizontal"
+           JustifyContent="JustifyContent.End"
+           GapScale="LayoutGap.Small">
+        <Button Disabled="answered" Text="Cancel"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                Click="@(() => DecideAsync(false, decide))"
+                data-testid="project-structure-runtime-launch-approval-cancel" />
+        <Button Disabled="answered" Text="Approve this launch"
+                ButtonStyle="ButtonStyle.Warning"
+                Click="@(() => DecideAsync(true, decide))"
+                data-testid="project-structure-runtime-launch-approval-confirm" />
+    </Stack>
+</Stack>
+
+@code {
+    [Parameter] public string DisplayName { get; set; } = string.Empty;
+    [Parameter] public string Review { get; set; } = string.Empty;
+    [Parameter] public EventCallback<bool> Decide { get; set; }
+    private bool answered;
+    private async Task DecideAsync(bool approved, EventCallback<bool> callback) {
+        if (answered) {
+            return;
+        }
+        answered = true;
+        await callback.InvokeAsync(approved);
+    }
+}

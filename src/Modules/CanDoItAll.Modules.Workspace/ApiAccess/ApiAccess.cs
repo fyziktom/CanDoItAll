@@ -254,7 +254,10 @@ public sealed record ApiTokenIssueResult(
     DateTimeOffset ExpiresAtUtc,
     string Subject,
     string DisplayName,
-    IReadOnlyList<string> Scopes);
+    IReadOnlyList<string> Scopes) {
+    internal ApiTokenSummary? Registration { get; init; }
+    public override string ToString() => $"API token issuance for {Subject}; bearer omitted.";
+}
 
 public interface IApiTokenService
 {
@@ -313,7 +316,11 @@ public sealed class ApiTokenService(
 
         var record = new ApiTokenRecord(tokenId, subject, displayName, issuedAt, expiresAt, scopes);
         var token = ApiJwtTokenWriter.Write(value.Authorization, record);
-        registry.Register(record);
+        try {
+            registry.Register(record);
+        } catch (Exception exception) {
+            throw new ApiDurableAcknowledgementException(tokenId, exception.GetType().Name);
+        }
 
         return new ApiTokenIssueResult(
             token,
@@ -321,7 +328,7 @@ public sealed class ApiTokenService(
             expiresAt,
             subject,
             displayName,
-            scopes);
+            scopes) { Registration = ApiTokenSummary.FromRecord(record) };
     }
 
     private static int ResolveLifetimeMinutes(

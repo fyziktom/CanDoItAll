@@ -33,8 +33,7 @@ public sealed class AgentCapabilityCommands(IAgentFrameworkWorkspaceService work
             return new(CapabilityVerificationDisposition.CanceledBeforeDiagnostic);
         }
         try {
-            await workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
-            return new(CapabilityVerificationDisposition.Committed);
+            return await workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
         } catch (CapabilityVerificationException exception) {
             return exception.Outcome;
         } catch (Exception exception) {

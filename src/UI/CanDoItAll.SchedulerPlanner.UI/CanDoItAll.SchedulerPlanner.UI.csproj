@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
+    <ProjectReference Include="../../Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/CanDoItAll.Modules.SchedulerPlanner.Contracts.csproj" />
+  </ItemGroup>
+</Project>

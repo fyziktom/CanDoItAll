@@ -1,0 +1,37 @@
+@namespace CanDoItAll.Resources.UI
+
+@if (Workspace.Receipts.Count > 0) {
+    <details class="resource-mutation-history" open>
+    <summary>Resource mutation history</summary>
+    @foreach (var receipt in Workspace.Receipts.Reverse()) {
+    <Alert AlertStyle="@(receipt.State == ResourceEffectState.Committed ? AlertStyle.Success : AlertStyle.Info)" data-testid="resource-mutation-receipt">
+        <TextBlock TextStyle="TextStyle.Body2" Value="@($"{receipt.Kind}: {receipt.Command.Name} · {receipt.ResourceId?.ToString() ?? "identity unacknowledged"} · {receipt.State}")" />
+        <TextBlock TextStyle="TextStyle.Caption" Value="@receipt.Message" />
+        @if (receipt.State == ResourceEffectState.Unknown && receipt.ResourceId.HasValue) {
+            <Button Text="Review stored identity" Disabled="@receipt.IsReviewing" Click="() => Workspace.ReviewAsync(receipt)" />
+        } else if (receipt.State == ResourceEffectState.Unknown) {
+            <Cluster Gap="LayoutGap.Small">
+                <TextBox Value="@ReviewId(receipt.Id)" ValueChanged="value => reviewIds[receipt.Id] = value" Immediate="true" Placeholder="Exact resource ID to review" />
+                <Button Text="Review identity" Disabled="@(receipt.IsReviewing || !Guid.TryParse(ReviewId(receipt.Id), out _))" Click="() => ReviewAsync(receipt)" />
+            </Cluster>
+        }
+        @if (receipt.ReviewedResource is { Id: { } id } observed) {
+            <TextBlock TextStyle="TextStyle.Caption" Value="@($"Observed {id:D}: {observed.Name} · {observed.ConnectorPluginKey} · {observed.LocationOrIdentifier}")" />
+            <Button Text="Open observed resource" Click="() => Workspace.SelectAsync(id)" />
+        }
+    </Alert>
+    }
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired] public IResourceRegistryWorkspace Workspace { get; set; } = default!;
+    private readonly Dictionary<Guid, string> reviewIds = [];
+    protected override void OnParametersSet() {
+        foreach (var id in reviewIds.Keys.Where(id => !Workspace.Receipts.Any(receipt => receipt.Id == id)).ToArray()) {
+            reviewIds.Remove(id);
+        }
+    }
+    private string ReviewId(Guid id) => reviewIds.GetValueOrDefault(id, string.Empty);
+    private Task ReviewAsync(ResourceMutationReceipt receipt) => Guid.TryParse(ReviewId(receipt.Id), out var id) ? Workspace.ReviewIdentityAsync(receipt, id) : Task.CompletedTask;
+}

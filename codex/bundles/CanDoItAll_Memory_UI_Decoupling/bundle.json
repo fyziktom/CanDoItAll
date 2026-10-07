@@ -1,0 +1,74 @@
+{
+  "id": "CDA-MEMORY-UI-DECOUPLING-v1",
+  "title": "Scheduler review fixes, then complete Memory management UI decoupling",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "language": "en",
+  "executable": true,
+  "product_changes_authorized_by_this_bundle": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "14f07bffa30ddb124011869e38bc5b264b8bce42",
+  "observed_branch_head": "b55baa3a94ff216353768f0a4ac9a50e89463d08",
+  "history_commit_has_product_changes": false,
+  "review_date": "2026-09-28",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/bundle.json",
+  "documents": [
+    "README.md",
+    "SCHEDULER_REVIEW.md",
+    "MEMORY_REVIEW_NOTES.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "SOURCES.md",
+    "PROOF_STATUS.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "stages": [
+    {
+      "id": "S0",
+      "purpose": "Reproduce and close SC-R1 recovery-request ownership and SC-R2 dependent validation invalidation."
+    },
+    {
+      "id": "M1-M5",
+      "purpose": "Complete the seven-tab Memory UI boundary, faithful sandbox and current layered validation; preserve shipped capability refusals."
+    }
+  ],
+  "authorization": {
+    "local_signed_commits": true,
+    "remote_push": false,
+    "merge": false,
+    "force_checkout_or_reset": false,
+    "sibling_changes_without_separate_authorization": false,
+    "ordinary_app_restart_or_database_use": false
+  },
+  "suggested_projects": [
+    "src/Modules/CanDoItAll.Modules.Memory.Contracts",
+    "src/UI/CanDoItAll.Memory.UI",
+    "src/Sandboxes/CanDoItAll.Memory.UiSandbox"
+  ],
+  "excluded_scope": [
+    "Memory runtime/driver redesign",
+    "Enabling unsupported ingestion/feedback/event acknowledgement/cancellation",
+    "Database schema/migrations",
+    "API-only UI or auth redesign",
+    "Native Cognitive Memory/Qdrant installation",
+    "New durable idempotency or distributed concurrency protocol",
+    "Third module extraction",
+    "Unrelated shared component or runtime rewrites"
+  ],
+  "reviewer_execution": {
+    "product_builds": false,
+    "product_tests": false,
+    "product_watch_measurement": false,
+    "implementer_raw_artifacts_inspected": false
+  },
+  "previous_implementer_receipt": {
+    "source_id": "EV05",
+    "reported_plugins_cases": 72,
+    "reported_scheduler_cases": 173,
+    "reported_total_selected_cases": 245,
+    "independently_rerun": false
+  }
+}

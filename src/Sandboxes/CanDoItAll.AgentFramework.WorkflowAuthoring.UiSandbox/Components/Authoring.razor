@@ -1,0 +1,126 @@
+@page "/"
+@implements IDisposable
+<PageTitle>Workflow authoring scenarios</PageTitle>
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Independent scenario host" Title="Workflow authoring" Description="Deterministic presentation fixtures. Native journeys are validated separately." />
+    </Header>
+    <ChildContent>
+    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+        <SurfaceCard>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <FormField Text="Scenario">
+                    <select class="cda-input" value="@mode" @onchange="ChangeScenario" data-testid="scenario-mode">
+                        @foreach (var value in Enum.GetValues<WorkflowScenarioMode>()) {
+                            <option value="@value">@value</option>
+                        }
+                    </select>
+                </FormField>
+                <Button Text="Second workspace" Click="ToggleSecond" data-testid="scenario-second" />
+                <Button Text="Release pending" Click="Release" data-testid="scenario-release" />
+                <Button Text="Replace first workspace" Click="Replace" data-testid="scenario-replace" />
+                <Button Text="Template preview" Click="OpenTemplate" data-testid="scenario-template" />
+                <Button Text="Template catalogue" Click="OpenCatalogue" data-testid="scenario-catalogue" />
+                <Button Text="Run details" Click="OpenRun" data-testid="scenario-run-details" />
+                <Button Text="Event details" Click="OpenEvent" data-testid="scenario-event-details" />
+                <StatusBadge Tone="info" Text="@($"Saves {first.SaveCount} · previews {first.RunCount} · bindings {first.BindingCount}")" />
+            </Cluster>
+        </SurfaceCard>
+        <div data-testid="scenario-first"><ScenarioCanvas Scenario="first" Changed="Refresh" /></div>
+        @if (showSecond) {
+            <div data-testid="scenario-second-editor"><ScenarioCanvas Scenario="second" Changed="Refresh" /></div>
+        }
+    </Stack>
+    </ChildContent>
+</PageScaffold>
+@if (templateOpen) {
+    <WorkflowTemplatePreviewDialog Template="@(new("Scenario template", "Read-only inspection; no execution."))"
+        Definition="first.Definition" Component="WorkflowScenario.Component" Executors="first.Executors"
+        Closed="CloseTemplate" AddDraft="CloseTemplate" />
+}
+@if (runPresentation is { } run) {
+    <WorkflowRunDetailDialog Presentation="run" Closed="CloseRun" />
+}
+@if (eventPresentation is { } detail) {
+    <WorkflowEventDetailDialog Presentation="detail" Closed="CloseEvent" />
+}
+@if (catalogueOpen) {
+    <WorkflowTemplateCatalogDialog Presentation="templates" Intent="HandleTemplateIntent" Closed="CloseCatalogue" />
+}
+@code {
+    private WorkflowScenarioMode mode;
+    private WorkflowScenario first = new(WorkflowScenarioMode.Ready);
+    private WorkflowScenario second = new(WorkflowScenarioMode.Ready);
+    private bool showSecond;
+    private bool templateOpen;
+    private WorkflowRunDetailPresentation? runPresentation;
+    private WorkflowEventDetailPresentation? eventPresentation;
+    private bool catalogueOpen;
+    private WorkflowTemplatePresentation templates = new() {
+        TotalCount = 1,
+        Templates = [new(new("scenario-template"), "Scenario template", "Read-only fixture pack", "Start, LLM, Executor, End",
+            6, 5, 0, "InProcess", [], false)]
+    };
+    private void ChangeScenario(ChangeEventArgs args) {
+        if (!Enum.TryParse<WorkflowScenarioMode>(args.Value?.ToString(), out var value)) {
+            return;
+        }
+        mode = value;
+        Replace();
+    }
+    private void Replace() {
+        first.Dispose();
+        first = new(mode);
+    }
+    private void ToggleSecond() {
+        showSecond = !showSecond;
+    }
+    private void Release() {
+        first.Release();
+        second.Release();
+    }
+    private void Refresh() {
+        StateHasChanged();
+    }
+    private void OpenTemplate() {
+        templateOpen = true;
+    }
+    private void CloseTemplate() {
+        templateOpen = false;
+    }
+    private void OpenRun() {
+        var snapshot = first.Run ?? new(WorkflowRunId.New(), first.Definition.Id, first.Definition.VersionId,
+            WorkflowRunState.Completed, WorkflowRuntimeBackendKind.InProcess, "scenario", "Fixture run.", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+        runPresentation = new(snapshot, snapshot.Summary, "Fixture output", [], []);
+    }
+    private void CloseRun() {
+        runPresentation = null;
+    }
+    private void OpenEvent() {
+        var value = new WorkflowEventView(Guid.NewGuid(), "Executor completed", "info", "Just now", "Fixture event");
+        eventPresentation = new(value, first.Run?.RunId ?? WorkflowRunId.New(), new("image"), "Fixture event", "{\"fixture\":true}", string.Empty);
+    }
+    private void CloseEvent() {
+        eventPresentation = null;
+    }
+    private void OpenCatalogue() {
+        catalogueOpen = true;
+    }
+    private void CloseCatalogue() {
+        catalogueOpen = false;
+    }
+    private void HandleTemplateIntent(WorkflowIntent intent) {
+        if (intent.Action == WorkflowAction.TemplateSearch) {
+            templates = templates with { Search = intent.Text ?? string.Empty };
+        } else if (intent.Action == WorkflowAction.SelectTemplate) {
+            templates = templates with { Selected = templates.Templates[0] };
+        } else if (intent.Action == WorkflowAction.PreviewTemplate) {
+            catalogueOpen = false;
+            templateOpen = true;
+        }
+    }
+    public void Dispose() {
+        first.Dispose();
+        second.Dispose();
+    }
+}

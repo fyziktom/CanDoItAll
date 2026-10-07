@@ -25,7 +25,8 @@ public sealed class WorkflowExecutorFoundationExtractionTests
                 "CanDoItAll.AgentFramework.Models",
                 "CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions",
                 "CanDoItAll.AgentFramework.Workflows.Abstractions",
-                "CanDoItAll.SharedKernel"
+                "CanDoItAll.SharedKernel",
+                "CanDoItAll.AgentFramework.Workflows.Definitions"
             ],
             coreReferences.ProjectReferences);
         Assert.Equal(

@@ -50,7 +50,13 @@ internal static class WorkspaceSettingsApi {
             DefaultPromptOutputFormat = request.DefaultPromptOutputFormat, CurrencyCode = request.CurrencyCode,
             CurrencyCultureName = request.CurrencyCultureName, Notes = request.Notes
         };
-        var saved = await workspace.SaveSettingsAsync(model, cancellationToken);
+        WorkspaceSettingsModel saved;
+        try {
+            saved = await workspace.SaveSettingsAsync(model, cancellationToken);
+        } catch (WorkspaceSettingsCommittedException committed) {
+            context.Response.Headers["X-CanDoItAll-Read-Back"] = "pending";
+            return Results.Ok(committed.Saved);
+        }
         try {
             return Results.Ok(await workspace.GetSettingsAsync(cancellationToken));
         } catch (Exception exception) when (exception is not OperationCanceledException) {

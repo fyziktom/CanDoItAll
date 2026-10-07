@@ -1,0 +1,30 @@
+@implements IDisposable
+@inject SelectionScenarioSource Source
+
+<Stack GapScale="LayoutGap.Medium" data-testid="@($"selection-{Draft.Name}-parent")">
+    <Alert AlertStyle="AlertStyle.Info">This is a fixture parent draft. Apply changes its explicit ID list; there is no persistence or runtime authority here.</Alert>
+    <TextBox @bind-Value="notes" Immediate="true" data-testid="@($"selection-{Draft.Name}-notes")" aria-label="Fixture parent notes" />
+    <Cluster Gap="LayoutGap.Small">
+        <label><input type="checkbox" @bind="Draft.AllowAll" data-testid="selection-allow-all" /> Allow all (preserves IDs)</label>
+        <label><input type="checkbox" @bind="Draft.Disabled" data-testid="selection-disabled" /> Externally disabled</label>
+        <Button Text="Replace source profile" Click="() => Source.Reset(SelectionScenario.Representative)" data-testid="selection-replace-source" />
+    </Cluster>
+    <StorageCatalogSelectionField Value="Draft.Ids" ValueChanged="Apply" OwnerLifetime="Draft.Token"
+                                  AllowAll="Draft.AllowAll" Disabled="Draft.Disabled" DataTestId="@($"selection-{Draft.Name}")" />
+    <p data-testid="selection-parent-counts">Applied lists: @Draft.Applies; owner reads: @Source.Reads; pending reads: @Source.PendingReads.</p>
+    <Button Text="Close parent" Click="Close" data-testid="@($"selection-{Draft.Name}-close")" />
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public SelectionParentDraft Draft { get; set; } = default!;
+    [CascadingParameter] private DialogReference? DialogReference { get; set; }
+    private string notes = "Parent notes survive the chooser.";
+    private void Apply(IReadOnlyList<Guid> ids) {
+        if (!Draft.Token.IsCancellationRequested) {
+            Draft.Ids = ids;
+            Draft.Applies++;
+        }
+    }
+    private Task Close() => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    public void Dispose() => Draft.Dispose();
+}

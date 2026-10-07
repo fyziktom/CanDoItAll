@@ -157,7 +157,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
             string.Empty,
             upload);
 
-        await page.InvokeAsync(() => canvas.Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+        await page.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvas.Instance, JsonSerializer.Serialize(request)));
 
         page.WaitForAssertion(() => Assert.Contains(
             canvas.Instance.Surface.Nodes,
@@ -179,7 +179,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
             }
         };
 
-        await page.InvokeAsync(() => canvas.Instance.OnCreateAction(JsonSerializer.Serialize(invalidRequest)));
+        await page.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvas.Instance, JsonSerializer.Serialize(invalidRequest)));
 
         Assert.DoesNotContain(
             canvas.Instance.Surface.Nodes,

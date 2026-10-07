@@ -1,0 +1,223 @@
+@page "/"
+@using CanDoItAll.SharedKernel
+<PageTitle>Projects P1 sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Medium">
+    <FormSection Title="Projects portfolio scenarios" Description="Synthetic state only. The production host owns Files, packages and native mutations.">
+        <Cluster Gap="LayoutGap.Small">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+                @foreach (var value in Enum.GetValues<ProjectsScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="Reset" />
+            <Button Text="Hold next save" Click="() => store.HoldNextSave()" Disabled="@store.IsHeld" />
+            <Button Text="Release save" Click="() => store.Release()" Disabled="@(!store.IsHeld)" />
+            <Button Text="Hold next read" Click="() => store.HoldNextRead()" Disabled="@store.IsReadHeld" />
+            <Button Text="Release read" Click="() => store.ReleaseRead()" Disabled="@(!store.IsReadHeld)" />
+        </Cluster>
+        <TextBlock Value="@($"Simulated writes: {store.Writes}; seed batches: {store.SeedBatches}. {notice}")" data-testid="scenario-effects" />
+    </FormSection>
+    <ProjectDeletionStatusSurface Message="@cleanupMessage" IsError="true" Pending="cleanups" Retry="RetryCleanup" />
+    <ProjectsBoard ProjectSummaries="store.Summaries" ProjectProjection="Projection" HierarchyLinks="store.Hierarchy"
+                   ProjectSearch="@search" ProjectSearchChanged="value => search = value"
+                   StatusFilter="status" StatusFilterChanged="value => status = value"
+                   RelatedPartyCategoryFilter="partyCategory" RelatedPartyCategoryFilterChanged="value => partyCategory = value"
+                   RelatedPartyValueFilter="@partyValue" RelatedPartyValueFilterChanged="value => partyValue = value"
+                   HierarchyFilterProjectId="hierarchyId" HierarchyFilterProjectIdChanged="value => hierarchyId = value"
+                   HierarchyFilterMode="hierarchyMode" HierarchyFilterModeChanged="value => hierarchyMode = value"
+                   IncludeSubprojects="includeSubprojects" IncludeSubprojectsChanged="value => includeSubprojects = value"
+                   LatestUpdatedProjectLabel="Synthetic portfolio" LatestUpdatedProjectHelper="Large desktop scenario"
+                   OpenNewProject="() => Acquire(null)" OpenProjectPreview="id => Acquire(id)"
+                   ResetFilters="ResetFilters" NavigateHome='() => notice = "Home navigation intent."'
+                   OpenHierarchyModal="OpenHierarchy" OpenProjectFiles='id => Handoff(id, "Files")'
+                   OpenProjectDashboard='id => Handoff(id, "Dashboard")' OpenProcesses='id => Handoff(id, "Processes")'
+                   OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")'
+                   OpenGantt='id => Handoff(id, "Gantt")' PortfolioViewChanged='view => notice = $"Selected {view}."'
+                   ProjectPackagePath="@packagePath" ProjectPackagePathChanged="value => packagePath = value"
+                   ProjectPackageTargetProfiles="packageTargets" ProjectPackageTargetProfileId="packageTarget"
+                   ProjectPackageTargetProfileIdChanged="value => packageTarget = value"
+                   ProjectPackageMessage="@packageMessage" ExportProjectsPackage="PackageHandoff" ImportProjectsPackage="PackageHandoff">
+        <FilesContent Context="projection">
+            <EmptyState Title="Files is supplied by the production host" Description="This slot receives the exact shared Cards and Files projection. It does not simulate file authorization or storage.">
+                <Actions><TextBlock Value="@($"{projection.Projects.Count} scoped projects · {projection.Fingerprint}")" data-testid="sandbox-files-scope" /></Actions>
+            </EmptyState>
+        </FilesContent>
+    </ProjectsBoard>
+</Stack>
+<ProjectModalHost @key="draft" IsOpen="open" IsEditorMode="editing" Draft="draft"
+                  StarterObjectKinds="starterKinds" ProjectSummaries="store.Summaries" WizardStep="step"
+                  WizardSteps="steps" WizardTabs="tabs" Message="@draft.Message" IsErrorMessage="draft.IsError"
+                  Close="Close" SwitchToOverview="() => editing = false" SwitchToEditor="() => editing = true"
+                  WizardTabChanged="value => step = int.Parse(value, System.Globalization.CultureInfo.InvariantCulture)"
+                  AddPhase="AddPhase" RemovePhase="RemovePhase"
+                  AddStarterObject="AddStarterObject" RemoveStarterObject="RemoveStarterObject"
+                  PreviousStep="() => step = Math.Max(0, step - 1)" NextStep="() => step = Math.Min(4, step + 1)"
+                  Save="submitted => SaveAsync(submitted, false)" SaveAndOpenStructure="submitted => SaveAsync(submitted, true)" Delete="Delete"
+                  OpenProjectDashboard='() => Handoff(draft.Model.Id, "Dashboard")'
+                  OpenProcesses='() => Handoff(draft.Model.Id, "Processes")'
+                  OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")' />
+<ProjectHierarchyModal State="hierarchy" Close="() => hierarchy = null" OpenHierarchy="OpenHierarchy"
+                       OpenProjectPreview="OpenFromHierarchyAsync" OpenStructure='id => Handoff(id, "Structure")' />
+
+@code {
+    private static readonly string[] steps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
+    private static readonly SecondaryTabItem[] tabs = steps.Select((label, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {label}")).ToArray();
+    private static readonly ProjectObjectType[] starterKinds = [ProjectObjectType.Note, ProjectObjectType.Decision, ProjectObjectType.Milestone, ProjectObjectType.Repository, ProjectObjectType.Link];
+    private static readonly ProjectPackageTargetOption[] packageTargets = [new(ProjectsScenarioStore.ProfileId, "Synthetic inactive target", "Scenario only")];
+    private ProjectsScenario scenario;
+    private ProjectsScenarioStore store = new(ProjectsScenario.Portfolio);
+    private ProjectEditorDraft draft = new(new());
+    private bool open;
+    private bool editing;
+    private long acquisition;
+    private int step;
+    private string search = string.Empty;
+    private ProjectStatus? status;
+    private ProjectPartyPortfolioCategory? partyCategory;
+    private string partyValue = string.Empty;
+    private Guid? hierarchyId;
+    private ProjectHierarchyFilterMode hierarchyMode;
+    private bool includeSubprojects = true;
+    private ProjectHierarchyDialogState? hierarchy;
+    private string? notice;
+    private string packagePath = string.Empty;
+    private Guid? packageTarget;
+    private string? packageMessage;
+    private string? cleanupMessage;
+    private IReadOnlyList<ProjectCleanupStatus> cleanups = [];
+    private ProjectFileFilterProjection Projection => ProjectFileFilterProjection.Create(store.Summaries, store.Hierarchy,
+        new(search, status, partyCategory, partyValue, hierarchyId, hierarchyMode, includeSubprojects));
+
+    private void Reset() {
+        store.Release();
+        store.ReleaseRead();
+        store = new(scenario);
+        Close();
+        ResetFilters();
+        cleanups = [];
+        cleanupMessage = null;
+        notice = "Scenario reset.";
+    }
+
+    private void ResetFilters() {
+        search = string.Empty;
+        status = null;
+        partyCategory = null;
+        partyValue = string.Empty;
+        hierarchyId = null;
+        hierarchyMode = ProjectHierarchyFilterMode.Descendants;
+        includeSubprojects = true;
+    }
+
+    private async Task Acquire(Guid? id) {
+        long current = ++acquisition;
+        var owner = store;
+        notice = "Acquiring the selected synthetic editor.";
+        try {
+            var loaded = await owner.AcquireAsync(id);
+            if (current != acquisition || !ReferenceEquals(owner, store)) {
+                return;
+            }
+            draft = loaded;
+            step = 0;
+            editing = !id.HasValue;
+            open = true;
+        } catch (InvalidOperationException exception) {
+            if (current == acquisition && ReferenceEquals(owner, store)) {
+                notice = exception.Message;
+            }
+        }
+    }
+
+    private void Close() {
+        acquisition++;
+        open = false;
+        draft = new(new());
+    }
+
+    private Task OpenFromHierarchyAsync(Guid id) {
+        hierarchy = null;
+        return Acquire(id);
+    }
+
+    private void AddPhase() {
+        draft.Model.Phases.Add(new());
+        draft.RecordStructureEdit();
+    }
+
+    private void RemovePhase(ProjectPhaseEditorModel phase) {
+        if (draft.Model.Phases.Remove(phase)) {
+            draft.RecordStructureEdit();
+        }
+    }
+
+    private void AddStarterObject() {
+        draft.StarterObjects.Add(new());
+        draft.RecordStructureEdit();
+    }
+
+    private void RemoveStarterObject(StarterObjectDraft row) {
+        if (draft.StarterObjects.Remove(row)) {
+            draft.RecordStructureEdit();
+        }
+    }
+
+    private void OpenHierarchy(Guid id) {
+        var projects = store.Summaries;
+        hierarchy = new(id, projects.Single(project => project.Id == id).Name,
+            projects.Where(project => store.Hierarchy.Any(link => link.ParentProjectId == project.Id && link.ChildProjectId == id)).ToArray(),
+            projects.Where(project => store.Hierarchy.Any(link => link.ChildProjectId == project.Id && link.ParentProjectId == id)).ToArray());
+    }
+
+    private async Task SaveAsync(ProjectEditorSubmission submitted, bool navigate) {
+        var target = draft;
+        var owner = store;
+        if (!target.CanMutate || !target.Validate()) {
+            return;
+        }
+        target.Mutation = ProjectEditorMutationState.Saving;
+        var result = await owner.SaveAsync(submitted.Model);
+        if (result.IsFailure) {
+            target.Mutation = ProjectEditorMutationState.Ready;
+            target.Message = string.Join(" ", result.Errors.Select(error => error.Message));
+            target.IsError = true;
+            return;
+        }
+        target.Acknowledge(submitted, result.Value!);
+        target.Message = "Project saved in the synthetic scenario.";
+        if (submitted.Seeds.Count > 0) {
+            owner.Seed();
+            if (owner.Scenario == ProjectsScenario.UnknownSeed) {
+                target.Mutation = ProjectEditorMutationState.SeedOutcomeUnknown;
+                target.Message = "Project saved. Seed acknowledgement is unknown; inspect the simulated effect count before any further action.";
+                target.IsError = true;
+                return;
+            }
+            target.AcknowledgeSeeds(submitted);
+        }
+        target.Mutation = ProjectEditorMutationState.Ready;
+        if (navigate && open && target.EditRevision == submitted.EditRevision && ReferenceEquals(draft, target) && ReferenceEquals(owner, store)) {
+            Handoff(result.Value!.Project.ProjectId, "Structure");
+        }
+    }
+
+    private void Delete() {
+        if (!draft.CanMutate || draft.Model.Id is not { } id) {
+            return;
+        }
+        store.Delete(id);
+        if (scenario == ProjectsScenario.PartialDeletion) {
+            cleanups = [new(new(id, new("scenario-cleanup"), Guid.NewGuid()), "Pending", true, null, "Synthetic exact cleanup operation.")];
+            cleanupMessage = "Project deleted; synthetic cleanup remains pending.";
+        }
+        Close();
+    }
+
+    private void RetryCleanup(ProjectCleanupTarget target) {
+        cleanups = cleanups.Where(row => row.Target != target).ToArray();
+        cleanupMessage = "Synthetic exact cleanup completed.";
+    }
+
+    private void Handoff(Guid? id, string surface) => notice = $"{surface} intent for project {id:D}; its production owner is outside this sandbox.";
+    private void PackageHandoff() => packageMessage = $"Package intent for target {packageTarget:D}. The production package owner performs this operation.";
+}

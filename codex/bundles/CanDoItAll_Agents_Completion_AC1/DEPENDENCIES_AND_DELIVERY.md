@@ -1,0 +1,11 @@
+# Source and dependency delivery
+
+Current review: main `33007c1c693c8ae6591ee0f201ed9526bbaaac78`; public Components development `2eccdddd05a9b1b0c90935ddee49dc559fd5eec1`. The Components commit's parent is `b495d4c4a28f0a6588ba10bfaa7be6e8409eae18`, so both Tooltip cleanup and read-only drag repairs are now remotely reachable. The old local-only report text is historical. Do not request another push or rewrite those earlier checkpoint notes. Add a current delivery addendum to maintained docs if needed.
+
+Verify actual restored package-to-sibling substitution, requested refs and loaded assemblies/assets on each host. WF1 used FileTools `3a080ecd31068a77c1e1bd639f7a78e21c93db85` locally while CI names `498b36825bd5a5222429972af120b04becf4b3f6`; inspect the current workflow, prove compatibility/source selection and report any actual difference rather than assume this review author checked it. Do not change the dependency pin gratuitously.
+
+Before edits record evaluated project/path graphs for AgentFramework.UI, old MAF Components, candidate leaf/sandbox, Workflow shell and authoring, A2/CA1, Providers/SharedProviders, Workspace variants and Projects variants. After edits assert forbidden transitive references, unexpected unresolved references and cycles; complement source/reference guards with actual publish assets and independent render tests. Do not loosen existing negative guards because a type moved.
+
+Targets: same-renderer sandbox without Web, production module, EF, provider runtime or secrets; no new UI dependency into native Foundations/owners; no Core/Voice/Canvas linkage merely to obtain a runtime details card. Preserve exported namespaces where established callers depend on them and avoid duplicating authoritative shared components. Test at least one bad transitive edge and unresolved relevant edge in each changed guard.
+
+Record source and independently published asset hashes, actual chart/voice/attachment scripts and browser loading. A matching version number alone is not proof of the repaired source. If a new sibling fix is unavoidable, make and verify a coherent signed commit and declare local/remote delivery separately; this bundle does not authorize publishing it.

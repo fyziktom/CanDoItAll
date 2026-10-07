@@ -18,13 +18,13 @@ public sealed class ProviderCatalogRefreshTests {
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='provider-editor-tabs']");
         await cut.InvokeAsync(() => cut.Find("[data-testid='providers-new']").ClickAsync());
-        cut.Find("[data-testid='providers-name-input']").Change("Real inventory test");
-        cut.Find("[data-testid='providers-model-input']").Change("gpt-5.4-mini");
+        cut.Find("[data-testid='providers-name-input']").Input("Real inventory test");
+        cut.Find("[data-testid='providers-model-input']").Input("gpt-5.4-mini");
         cut.Find("[data-testid='providers-kind-select']").Change(ProviderKind.Ollama.ToString());
 
         Assert.Equal(string.Empty, Input(cut, "providers-model-input"));
         Assert.Equal(string.Empty, Input(cut, "providers-base-url-input"));
-        cut.Find("[data-testid='providers-base-url-input']").Change("http://127.0.0.1:11434");
+        cut.Find("[data-testid='providers-base-url-input']").Input("http://127.0.0.1:11434");
         await OpenTabAsync(cut, "Prices");
         Assert.Empty(cut.FindComponent<ProviderModelPricingEditor>().Instance.Model.ModelPrices);
         await cut.WaitForElement("[data-testid='provider-pricing-refresh-button']").ClickAsync(new());
@@ -37,7 +37,7 @@ public sealed class ProviderCatalogRefreshTests {
         Assert.Empty(cut.FindComponent<ProviderModelPricingEditor>().Instance.Model.ModelPrices);
 
         await OpenTabAsync(cut, "Connection");
-        cut.Find("[data-testid='providers-model-input']").Change("gpt-oss:20b");
+        cut.Find("[data-testid='providers-model-input']").Input("gpt-oss:20b");
         await cut.Find("form").SubmitAsync();
         var runtime = harness.Context.Services.GetRequiredService<IProviderRuntimeAdministrationService>();
         var saved = Assert.Single(await runtime.ListProvidersAsync(), provider => provider.Name == "Real inventory test");

@@ -1,0 +1,95 @@
+@namespace CanDoItAll.AgentFramework.Llm.SimpleChats.UI
+@implements IDisposable
+@{
+    var rendered = Presentation;
+    var notify = Intent;
+    var kind = rendered.Origin.Kind;
+}
+@if (kind is ConversationDialogKind.Start or ConversationDialogKind.Rename) {
+    var start = kind == ConversationDialogKind.Start;
+    var prefix = start ? "llm-chat-start" : "llm-chat-rename";
+    <Dialog IsOpen="true" Eyebrow="Simple Chat"
+            Title="@(start ? "Start a conversation" : "Rename conversation")"
+            Subtitle="@(start ? "Choose an active definition. The new conversation pins its current revision." : "The current transcript revision is checked when the title is saved.")"
+            Size="@(start ? ModalSize.Medium : ModalSize.Compact)" DenseChrome="true" CloseOnBackdrop="false"
+            TestId="@(prefix + "-dialog")" @key="rendered.Origin"
+            OnClose="@(() => SendAsync(rendered, notify, ConversationDialogAction.Close))">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Large">
+                @if (start) {
+                    <ConversationParticipantPicker Participants="@Participants(rendered)" Text="@PickerText"
+                                                   SearchTestId="llm-chat-start-definition-search"
+                                                   TagFilterTestId="llm-chat-start-definition-tags"
+                                                   TagFilterInputTestId="llm-chat-start-definition-tags-input">
+                        <ParticipantTemplate Context="definition">
+                            <ConversationParticipantCard Participant="@definition" Layout="ParticipantCardLayout.Compact"
+                                                         Selected="key => SelectAsync(rendered, notify, key)"
+                                                         SelectTestId="@($"llm-chat-start-definition-{DefinitionId(definition.Key):D}")" />
+                        </ParticipantTemplate>
+                    </ConversationParticipantPicker>
+                    @if (rendered.HasMoreDefinitions) {
+                        <Button Text="Load more definitions" Icon="expand_more" Variant="Variant.Outlined"
+                                Click="@(() => SendAsync(rendered, notify, ConversationDialogAction.LoadMoreDefinitions))"
+                                Disabled="@(rendered.IsLoading || rendered.IsMutating)" data-testid="llm-chat-start-definitions-load-more" />
+                    }
+                }
+                <FormField Text="Conversation title">
+                    <TextBox Value="@rendered.Title"
+                             ValueChanged="value => SendAsync(rendered, notify, ConversationDialogAction.TitleChanged, value)"
+                             Disabled="@rendered.IsMutating" data-testid="@(prefix + "-title")" />
+                </FormField>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                <Button Text="Cancel" Variant="Variant.Outlined" Disabled="@rendered.IsMutating"
+                        Click="@(() => SendAsync(rendered, notify, ConversationDialogAction.Close))" />
+                <Button Text="@(start ? "Start chat" : "Rename")" Icon="@(start ? "add" : "edit")"
+                        Click="@(() => SendAsync(rendered, notify, ConversationDialogAction.Confirm))"
+                        Disabled="@(string.IsNullOrWhiteSpace(rendered.Title) || start && rendered.SelectedDefinitionId is null)"
+                        IsBusy="@rendered.IsMutating" data-testid="@(prefix + "-confirm")" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+} else if (kind == ConversationDialogKind.Archive) {
+    <Dialog IsOpen="true" AriaLabel="Archive Simple Chat conversation" Size="ModalSize.Compact"
+            DenseChrome="true" ShowCloseButton="false" CloseOnBackdrop="false"
+            TestId="llm-chat-archive-dialog" @key="rendered.Origin">
+        <DangerActionDialog Eyebrow="Archive conversation" Title="@($"Archive {rendered.Title}")"
+                            Description="Archiving keeps the canonical transcript but makes this conversation read-only."
+                            RequiredConfirmation="@rendered.Title" ConfirmButtonText="Archive"
+                            Confirmed="@(() => SendAsync(rendered, notify, ConversationDialogAction.Confirm))"
+                            Cancelled="@(() => SendAsync(rendered, notify, ConversationDialogAction.Close))"
+                            TestId="llm-chat-archive-confirmation" />
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired] public ConversationDialogPresentation Presentation { get; set; } = new(new(0, ConversationDialogKind.None));
+    [Parameter] public EventCallback<ConversationDialogIntent> Intent { get; set; }
+    private bool disposed;
+    private static readonly ConversationParticipantPickerText PickerText = new(
+        EmptyEyebrow: "Active definitions", EmptyTitle: "No active definitions",
+        EmptyDescription: "Activate a reusable definition before starting a conversation.",
+        SearchPlaceholder: "Search active definitions", SearchAriaLabel: "Search active Simple Chat definitions",
+        TagPlaceholder: "Filter definition tags", ItemNoun: "definitions", NoMatchesEyebrow: "Active definitions",
+        NoMatchesTitle: "No matching definitions", NoMatchesDescription: "Change the search or tag filters.",
+        FavoritesFirstLabel: "Favorites first");
+
+    private static IReadOnlyList<ConversationParticipantPresentation> Participants(ConversationDialogPresentation state)
+        => state.Definitions.IsDefault ? [] : state.Definitions.Select(item => item.ToParticipant(state.SelectedDefinitionId)).ToArray();
+
+    private static Guid DefinitionId(ConversationPresentationKey key)
+        => DefinitionCatalogMapping.TryGetDefinitionId(key, out var id)
+            ? id : throw new InvalidOperationException("The start dialog requires a definition identity.");
+
+    private Task SelectAsync(ConversationDialogPresentation rendered, EventCallback<ConversationDialogIntent> notify, ConversationPresentationKey key)
+        => SendAsync(rendered, notify, ConversationDialogAction.SelectDefinition, definitionId: DefinitionId(key));
+
+    private Task SendAsync(ConversationDialogPresentation rendered, EventCallback<ConversationDialogIntent> notify,
+        ConversationDialogAction action, string? text = null, Guid? definitionId = null)
+        => disposed || rendered.Origin != Presentation.Origin || rendered.IsMutating && action != ConversationDialogAction.Close
+            ? Task.CompletedTask : notify.InvokeAsync(new(rendered.Origin, action, text, definitionId));
+
+    public void Dispose() => disposed = true;
+}

@@ -53,12 +53,27 @@ internal interface IProjectStructureRuntimeSessionRegistry
 {
     bool IsRunning(string nodeId);
 
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => null;
+
+    WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
+
+    Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken)
+        => Task.FromResult<ProjectStructureRuntimeExitRecord?>(null);
+
+    Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        CancellationToken cancellationToken)
+        => Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "Expected-session stop is unavailable."));
+
     ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId);
+
+    ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner) => null;
 
     Task<ProjectStructureRuntimeSessionStartResult> StartSessionAsync(
         string nodeId,
         WorkspaceProcessSessionRequest request,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        ProjectStructureRuntimeSessionOwner? owner = null);
 
     Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
@@ -76,11 +91,12 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
 {
     private readonly IServiceScopeFactory? scopeFactory;
     private readonly ILogger<ProjectStructureRuntimeSessionRegistry> logger;
-    private readonly ConcurrentDictionary<string, IWorkspaceProcessSession> sessions =
+    private sealed record OwnedSession(IWorkspaceProcessSession Process, ProjectStructureRuntimeSessionOwner? Owner);
+    private readonly ConcurrentDictionary<string, OwnedSession> sessions =
         new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Task<ProjectStructureRuntimeExitRecord?>> completions =
+    private readonly ConcurrentDictionary<string, (WorkspaceOwnedProcessIdentity Identity, Task<ProjectStructureRuntimeExitRecord?> Completion)> completions =
         new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, ProjectStructureRuntimeExitRecord> lastExits =
+    private readonly ConcurrentDictionary<string, (ProjectStructureRuntimeSessionOwner? Owner, ProjectStructureRuntimeExitRecord Exit)> lastExits =
         new(StringComparer.Ordinal);
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly object stopSync = new();
@@ -106,21 +122,31 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
     }
 
     public bool IsRunning(string nodeId)
-        => sessions.TryGetValue(nodeId, out var session) && !session.HasExited;
+        => sessions.TryGetValue(nodeId, out var session) && !session.Process.HasExited;
+
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId)
+        => sessions.TryGetValue(nodeId, out var session) && !session.Process.HasExited ? session.Process.Identity : null;
+
+    public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => sessions.TryGetValue(nodeId, out var session) && session.Owner == owner && !session.Process.HasExited ? session.Process.Identity : null;
 
     public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId)
-        => lastExits.TryGetValue(nodeId, out var exit) ? exit : null;
+        => lastExits.TryGetValue(nodeId, out var exit) && exit.Owner is null ? exit.Exit : null;
+
+    public ProjectStructureRuntimeExitRecord? GetLastExit(string nodeId, ProjectStructureRuntimeSessionOwner owner)
+        => lastExits.TryGetValue(nodeId, out var exit) && exit.Owner == owner ? exit.Exit : null;
 
     public async Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(
         string nodeId,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        if (!completions.TryGetValue(nodeId, out var completion))
+        if (!completions.TryGetValue(nodeId, out var observed))
         {
             return GetLastExit(nodeId);
         }
 
+        var completion = observed.Completion;
         if (timeout <= TimeSpan.Zero)
         {
             return completion.IsCompleted ? await completion.ConfigureAwait(false) : null;
@@ -136,13 +162,28 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         }
     }
 
+    public async Task<ProjectStructureRuntimeExitRecord?> WaitForExitAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
+        TimeSpan timeout, CancellationToken cancellationToken) {
+        if (!completions.TryGetValue(nodeId, out var observed) || observed.Identity != expected) {
+            return null;
+        }
+        try {
+            return timeout <= TimeSpan.Zero
+                ? observed.Completion.IsCompleted ? await observed.Completion.ConfigureAwait(false) : null
+                : await observed.Completion.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        } catch (TimeoutException) {
+            return null;
+        }
+    }
+
     public Task StartAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 
     public async Task<ProjectStructureRuntimeSessionStartResult> StartSessionAsync(
         string nodeId,
         WorkspaceProcessSessionRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ProjectStructureRuntimeSessionOwner? owner = null)
     {
         if (Volatile.Read(ref stopping) != 0)
         {
@@ -157,7 +198,7 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
                 return new(null, "Workbench runtime sessions are stopping; no new process was launched.");
             }
 
-            if (sessions.TryGetValue(nodeId, out var existing) && !existing.HasExited)
+            if (sessions.TryGetValue(nodeId, out var existing) && !existing.Process.HasExited)
             {
                 return new(
                     null,
@@ -167,13 +208,13 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
             if (existing is not null)
             {
                 sessions.TryRemove(nodeId, out _);
-                await existing.DisposeAsync().ConfigureAwait(false);
+                await existing.Process.DisposeAsync().ConfigureAwait(false);
             }
 
             var session = await ResolveProcessHost().StartSessionAsync(request, cancellationToken).ConfigureAwait(false);
-            sessions[nodeId] = session;
+            sessions[nodeId] = new(session, owner);
             lastExits.TryRemove(nodeId, out _);
-            completions[nodeId] = ObserveCompletionAsync(nodeId, session);
+            completions[nodeId] = (session.Identity, ObserveCompletionAsync(nodeId, session));
             return new(session.Identity, "Workbench runtime session started.");
         }
         finally
@@ -182,17 +223,26 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         }
     }
 
-    public async Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(
-        string nodeId,
+    public Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(string nodeId, CancellationToken cancellationToken)
+        => StopCoreAsync(nodeId, null, cancellationToken);
+
+    public Task<ProjectStructureRuntimeLaunchResult> StopSessionAsync(string nodeId, WorkspaceOwnedProcessIdentity expected,
         CancellationToken cancellationToken)
-    {
+        => StopCoreAsync(nodeId, expected, cancellationToken);
+
+    private async Task<ProjectStructureRuntimeLaunchResult> StopCoreAsync(string nodeId, WorkspaceOwnedProcessIdentity? expected,
+        CancellationToken cancellationToken) {
         IWorkspaceProcessSession? session;
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (!sessions.TryGetValue(nodeId, out session))
+            if (!sessions.TryGetValue(nodeId, out var owned))
             {
                 return new(false, "This runtime node has no Workbench-owned process to stop.");
+            }
+            session = owned.Process;
+            if (expected is not null && session.Identity != expected) {
+                return new(false, "The original owned runtime has been replaced. No successor process was stopped.") { Identity = expected };
             }
         }
         finally
@@ -204,10 +254,13 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
             WorkspaceProcessTerminationReason.CallerCanceled,
             "The Workbench operator stopped the runtime node.",
             cancellationToken).ConfigureAwait(false);
+        if (result.ResidualProcessPossible) {
+            return new(false, "The original process could not be confirmed stopped; its ownership is retained for observation.") { Identity = session.Identity };
+        }
         await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
-            if (sessions.TryGetValue(nodeId, out var current) && ReferenceEquals(current, session))
+            if (sessions.TryGetValue(nodeId, out var current) && ReferenceEquals(current.Process, session))
             {
                 sessions.TryRemove(nodeId, out _);
             }
@@ -218,9 +271,7 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
         }
 
         await session.DisposeAsync().ConfigureAwait(false);
-        return result.ResidualProcessPossible
-            ? new(false, "The runtime process could not be confirmed stopped; a residual process may remain.")
-            : new(true, "The Workbench-owned runtime process was stopped.");
+        return new(true, "The original Workbench-owned runtime process was stopped.") { Identity = session.Identity, ObservationCompleted = true };
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -240,7 +291,7 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
                 "Workbench runtime shutdown cancellation was requested before cleanup; owned sessions will still receive bounded termination attempts.");
         }
 
-        KeyValuePair<string, IWorkspaceProcessSession>[] ownedSessions;
+        KeyValuePair<string, OwnedSession>[] ownedSessions;
         await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
@@ -252,8 +303,9 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
             gate.Release();
         }
 
-        foreach (var (nodeId, session) in ownedSessions)
+        foreach (var (nodeId, owned) in ownedSessions)
         {
+            var session = owned.Process;
             try
             {
                 var result = await session.TerminateAsync(
@@ -351,12 +403,12 @@ internal sealed class ProjectStructureRuntimeSessionRegistry :
             await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
             try
             {
-                if (sessions.TryGetValue(nodeId, out var current) && ReferenceEquals(current, session))
+                if (sessions.TryGetValue(nodeId, out var current) && ReferenceEquals(current.Process, session))
                 {
                     sessions.TryRemove(nodeId, out _);
                     if (exit is not null && !stoppedByOwner)
                     {
-                        lastExits[nodeId] = exit;
+                        lastExits[nodeId] = (current.Owner, exit);
                     }
                 }
             }

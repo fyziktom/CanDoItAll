@@ -9,6 +9,33 @@ using RuntimeKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderEditorOperationsTests {
+    [Fact]
+    public void Confirmation_reconciles_unchanged_fields_without_erasing_later_notes_or_price_input() {
+        var row = new ProviderModelTokenPriceEditorModel { Model = " model ", InputPerMillionTokensUsd = 1, OutputPerMillionTokensUsd = 2 };
+        var draft = new EditorModel { Name = " Provider ", DefaultModel = " model ", ModelPrices = [row] };
+        var submission = ProviderEditorSubmission.Capture(draft);
+        var accepted = ProviderEditorSubmission.Copy(draft);
+        accepted.Id = Guid.NewGuid();
+        accepted.ExpectedConcurrencyToken = Guid.NewGuid();
+        accepted.Name = "Provider";
+        accepted.DefaultModel = "model";
+        accepted.ModelPrices[0].Model = "model";
+        accepted.ModelPrices[0].OutputPerMillionTokensUsd = 3;
+        draft.Notes = "Typed after Save";
+        row.InputPerMillionTokensUsd = 7;
+
+        submission.Reconcile(draft, accepted);
+
+        Assert.Equal("Provider", draft.Name);
+        Assert.Equal("model", draft.DefaultModel);
+        Assert.Equal("Typed after Save", draft.Notes);
+        Assert.Same(row, Assert.Single(draft.ModelPrices));
+        Assert.Equal("model", row.Model);
+        Assert.Equal(7, row.InputPerMillionTokensUsd);
+        Assert.Equal(3, row.OutputPerMillionTokensUsd);
+        Assert.Equal(accepted.ExpectedConcurrencyToken, draft.ExpectedConcurrencyToken);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

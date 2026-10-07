@@ -1,0 +1,112 @@
+{
+  "bundle_id": "CDA-WORKSPACE-COMPLETION-REGRESSION-v1",
+  "title": "Complete remaining Workspace UI boundaries and deep application regression campaign",
+  "created_on": "2026-09-29",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "fbfba65de9d3118729b73ce9dcf97f28a219c84c",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "ARCHITECTURE.md",
+    "DEV_LOOP.md",
+    "EVIDENCE.md",
+    "LIVE_AGENT_JOURNEYS.md",
+    "PACKAGE_VALIDATION.md",
+    "PHASE_CONFIGURATION.md",
+    "PHASE_DATA_SOURCES.md",
+    "PHASE_RECOVERY.md",
+    "README.md",
+    "REGRESSION_CAMPAIGN.md",
+    "REVIEW.md",
+    "SAFE_ENVIRONMENT.md",
+    "SOURCES.md",
+    "TRIAGE.md",
+    "VALIDATION_MATRIX.md",
+    "WORKSPACE_COMPLETION_MAP.md",
+    "prompt.md"
+  ],
+  "phases": [
+    {
+      "id": "S0",
+      "scope": "Verify current Storage Selection and SCAT-R1; establish owned environment and original graph"
+    },
+    {
+      "id": "W1",
+      "scope": "Complete Recovery and exact owner continuation UI boundary"
+    },
+    {
+      "id": "W2",
+      "scope": "Complete Data Sources/schema/transfer/restart-activation UI boundary"
+    },
+    {
+      "id": "W3",
+      "scope": "Complete neutral configuration rendering and classify trusted host"
+    },
+    {
+      "id": "W4",
+      "scope": "Final Workspace surface census and frozen checkpoint"
+    },
+    {
+      "id": "V1",
+      "scope": "Fresh full Stable and non-live browser/application campaign"
+    },
+    {
+      "id": "V2",
+      "scope": "Bounded actual live Agent/Project Structure/files/CRM/Workflow journeys"
+    },
+    {
+      "id": "V3",
+      "scope": "Small fixes, complex causal mappings, invalidation-aware retests and safe closure"
+    }
+  ],
+  "completion_scope": {
+    "entire_workspace_module_complete_at_review": false,
+    "goal_workspace_ui_complete": true,
+    "full_backend_rewrite": false,
+    "prior_slices_to_preserve": [
+      "Core",
+      "API Access",
+      "Storage Catalog",
+      "Storage Selection"
+    ],
+    "next_remaining_slices": [
+      "Storage Recovery",
+      "Data Sources",
+      "Configuration fallback and trusted-host closure"
+    ],
+    "comprehensive_application_regression": true,
+    "required_campaign_groups": 29,
+    "repair_small_reproduced_regressions": true,
+    "map_complex_problems_for_follow_up_bundles": true
+  },
+  "live_budget": {
+    "maximum_model_requests_per_execution": 10,
+    "maximum_model_requests_total": 40,
+    "never_override_smaller_existing_limit": true
+  },
+  "out_of_scope": [
+    "New module UI extraction outside Workspace",
+    "New database schema/migration or canonical runtime protocol",
+    "New authority/role/capability semantics",
+    "Real mail/payment/deployment or unowned remote mutation",
+    "Global auto approval or broad workspace access",
+    "Automatic push/merge/deployment",
+    "Unbounded live inference or timed background monitoring"
+  ],
+  "review_proof": {
+    "type": "connected-source-and-metadata",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "watch_measured": false,
+    "runtime_regressions_reproduced": false,
+    "raw_implementer_artifacts_available": false,
+    "branch_rechecked_same_sha": true
+  },
+  "artifact_proof_is_product_proof": false
+}

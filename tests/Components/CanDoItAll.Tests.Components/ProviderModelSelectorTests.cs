@@ -9,6 +9,32 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class ProviderModelSelectorTests
 {
     [Fact]
+    public async Task Shared_workflow_options_keep_source_names_saved_choices_and_route_identity() {
+        using var context = new BunitContext();
+        var provider = new WorkflowProviderOption(Guid.NewGuid(), "Shared workflow", ProviderKind.OpenAi,
+            ProviderTransportKind.Responses, ProviderProfilePurpose.Chat, "route-default", ["route-default", "route-next"],
+            true, true, true, true, true, false) {
+            IsSourceManaged = true,
+            ModelCatalog = [new("route-default", "Custom default"), new("route-next", "Model 2"), new("route-dated", "Model dated")]
+        };
+        string? selected = "route-dated";
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.WorkflowProvider, provider)
+            .Add(component => component.Value, selected)
+            .Add(component => component.UseEmptyValueForProviderDefault, false)
+            .Add(component => component.ValueChanged, value => selected = value));
+        Assert.Equal(["Provider default (Custom default)", "Model 2", "Model dated"], cut.FindAll("option").Select(option => option.TextContent));
+        Assert.Empty(cut.FindAll("input"));
+        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = "1" }));
+        Assert.Equal("route-next", selected);
+        cut.Render(parameters => parameters.Add(component => component.Value, "removed-route"));
+        Assert.Contains("Unavailable shared model", cut.Markup);
+        Assert.DoesNotContain("removed-route", cut.Markup);
+        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = "0" }));
+        Assert.Equal(provider.DefaultModel, selected);
+    }
+
+    [Fact]
     public void SharedThinkingEffort_Model_suggestions_are_curated_but_legacy_selection_survives() {
         using var context = new BunitContext();
         var provider = CreateProvider("gpt-5.4-mini",

@@ -165,7 +165,9 @@ public sealed class WorkbenchOwnerProjectionIntegrationTests {
         Assert.Equal(absent, await bridge.ResolveAsync(project.Id, new($"resource:{Guid.NewGuid()}")));
         Assert.Equal(absent, await bridge.ResolveAsync(project.Id, new($"test-plan:{Guid.NewGuid()}")));
         Assert.Equal(absent, await bridge.ResolveAsync(project.Id, new($"test-plan:{unassigned.Id}")));
-        Assert.Equal(new ProjectNodeScopeResolution(true, false, true, ProjectObjectType.ProjectBlock, "architecture"),
+        Assert.Equal(new ProjectNodeScopeResolution(true, false, true, ProjectObjectType.ProjectBlock, "architecture") {
+            Occurrence = new(canonical.Id, canonical.ObjectType, canonical.ObjectSubtype, canonical.ParentNodeKey)
+        },
             await bridge.ResolveAsync(project.Id, new(canonical.NodeKey)));
     }
 

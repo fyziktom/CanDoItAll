@@ -1,0 +1,36 @@
+@page "/"
+<PageTitle>Agent Editor Completion A2 sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Small" data-testid="editor-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
+    <FormSection Title="Agent Editor Completion A2" Description="One ten-section editor with the real memory rows, root list, storage chooser, capability list and confirmations. Native effects are simulated with in-memory fixture state.">
+        <Cluster Gap="LayoutGap.Small">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario" data-testid="editor-scenario">
+                @foreach (var value in Enum.GetValues<AgentEditorScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="() => revision++" data-testid="editor-reset" />
+            <Button Text="Two independent editors" Click="() => twoEditors = !twoEditors" data-testid="editor-two" />
+        </Cluster>
+    </FormSection>
+    <Grid ColumnsMd="@(twoEditors ? 2 : 1)" Gap="LayoutGap.Medium" @key="revision">
+        <ScenarioEditor Scenario="scenario" Name="Fixture agent A" TestId="editor-a" />
+        @if (twoEditors) {
+            <ScenarioEditor Scenario="scenario" Name="Fixture agent B" TestId="editor-b" />
+        }
+    </Grid>
+    <DialogHost />
+    <NotificationHost />
+</Stack>
+
+@code {
+    private AgentEditorScenario scenario;
+    private int revision;
+    private bool twoEditors;
+    private bool interactive;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+}

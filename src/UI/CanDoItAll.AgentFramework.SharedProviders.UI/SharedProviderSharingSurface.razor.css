@@ -1,0 +1,4 @@
+.shared-provider-management {
+    display: grid;
+    gap: var(--cad-space-section-gap, 1.25rem);
+}

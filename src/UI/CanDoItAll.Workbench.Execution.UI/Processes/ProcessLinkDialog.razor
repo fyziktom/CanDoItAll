@@ -1,0 +1,94 @@
+@namespace CanDoItAll.Workbench.Execution.UI.Processes
+@{
+    var processDialog = View;
+    var actions = Actions;
+    var selectedOption = processDialog.Options.FirstOrDefault(option => option.DefinitionId == processDialog.SelectedDefinitionId);
+}
+    <CanvasOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@processDialog.Title"
+                                   Kicker="Process link"
+                                   Title="@processDialog.Title"
+                                   Summary="@processDialog.Copy"
+                                   DataTestId="project-structure-process-link-dialog"
+                                   Close="@(() => actions.Close())">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="@(() => actions.Close())" />
+            <Button Text="@processDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-process-link-submit"
+                    IsBusy="@processDialog.IsBusy"
+                    Disabled="@(processDialog.IsBusy || processDialog.Options.Count == 0 || !processDialog.SelectedDefinitionId.HasValue)"
+                    Click="@(() => actions.Submit())" />
+        </Actions>
+        <Body>
+            <Stack GapScale="LayoutGap.Medium"
+                   AlignItems="AlignItems.Stretch">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Process" Class="cw-panel-copy" />
+                        <ResourceCardPicker TItem="Guid"
+                                            Options="@BuildProcessLinkPickerOptions(processDialog)"
+                                            SelectionChanged="@(id => actions.Select(id))"
+                                            SearchPlaceholder="Search process definitions"
+                                            EmptyTitle="No processes match the current search"
+                                            UseBoundedResultsViewport="false"
+                                            DataTestId="project-structure-process-link-select" />
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null) {
+                    <PanelCard>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected process" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.ScopeLabel} scope · {selectedOption.Status}")"
+                                       Class="cw-panel-copy" />
+                            @if (!selectedOption.HasPublishedVersion) {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="This process is not published yet, so execution will fail until a published version exists."
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(processDialog.Error)) {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="warn">
+                        @processDialog.Error
+                    </PanelCard>
+                }
+            </Stack>
+        </Body>
+    </CanvasOverlayDialog>
+@code {
+    [Parameter, EditorRequired]
+    public ProcessLinkView View { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public ProcessLinkActions Actions { get; set; } = default!;
+    private static IReadOnlyList<ResourceCardPickerOption<Guid>> BuildProcessLinkPickerOptions(
+        ProcessLinkView dialog) {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<Guid>(
+                option.DefinitionId,
+                option.DisplayName,
+                "Process") {
+                Subtitle = $"{option.ScopeLabel} scope",
+                Description = option.HasPublishedVersion
+                    ? "A published version is available."
+                    : "No published version is available yet.",
+                Meta = option.Status,
+                Icon = "account_tree",
+                Tags = [option.Status],
+                IsDisabled = dialog.IsBusy || dialog.RequiresObservation,
+                IsSelected = dialog.SelectedDefinitionId == option.DefinitionId,
+                TestId = $"project-structure-process-link-option-{option.DefinitionId:N}"
+            })
+            .ToList();
+    }
+
+}

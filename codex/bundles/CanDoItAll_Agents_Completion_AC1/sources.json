@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-04",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "docs/architecture/workflow-authoring-ui-wf1.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/docs/architecture/workflow-authoring-ui-wf1.md",
+      "kind": "implementation-report",
+      "blob_sha": "1b56e9afb7602f8d804348345089ad0e0d347bb7",
+      "inspected": "Full staged implementation and qualified final test report, including unresolved exhausted-CRON startup defect."
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerScheduling.cs",
+      "kind": "source",
+      "blob_sha": "da686b3f61b9c273c93b686be982e1110e42f4a5",
+      "inspected": "Full native Quartz projection, destructive replacement order, startup await and unclassified exhausted trigger."
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
+      "kind": "source",
+      "blob_sha": "bc49cade4c901e287ec5af5583109c29ec437626",
+      "inspected": "Installed Quartz.Extensions.Hosting 3.13.1; current project references."
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowPreviewOwner.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowPreviewOwner.cs",
+      "kind": "source",
+      "blob_sha": "e929a4534dad1c163322d3b99ff1c927148d5353",
+      "inspected": "Persistent owner across repeated previews; stale ReservedRunId possible on a later generic post-dispatch exception."
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
+      "kind": "source",
+      "blob_sha": "556a544bd2a73132bff59730794426ed4e647de2",
+      "inspected": "Preview/document/binding owner construction and native host lifetime."
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
+      "kind": "source",
+      "blob_sha": "7aa0a8704549f2476c106a70a6fa49601d58058a",
+      "inspected": "Inspected parameters/acquisition, Save, preview, progress and graph edit paths; not a complete line-by-line audit of every helper."
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowDocumentAcceptance.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowDocumentAcceptance.cs",
+      "kind": "source",
+      "blob_sha": null,
+      "inspected": "Identity/baseline adoption and later-edit preservation."
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowAuthoringContracts.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowAuthoringContracts.cs",
+      "kind": "source",
+      "blob_sha": null,
+      "inspected": "Explicit document/preview/Prompt result shapes and safe settings/secret presentation."
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowDocumentOwner.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Authoring/WorkflowDocumentOwner.cs",
+      "kind": "source",
+      "blob_sha": "a5faa31715639ab07ed2332c38f71ac173aff136",
+      "inspected": "Native typed validation/conflict/retirement, accepted identity and unknown guard."
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+      "kind": "source",
+      "blob_sha": "f6f647fc31684c5e645a26b48a813e8afea9b4a0",
+      "inspected": "Full remaining header/stats/navigation renderer and active tab composition."
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentUsageDialog.razor",
+      "kind": "source",
+      "blob_sha": "f0c3b88c57696a617eef49632381f76798baa79c",
+      "inspected": "Full actual consumer ranking, chart/grid, exact accepted usage query and read cleanup."
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ModelUsageDialog.razor",
+      "kind": "source",
+      "blob_sha": "c637a49ea92a551a241f17277997c5888cd2e44d",
+      "inspected": "Renderer and query/state declarations; remaining methods must be reread by executor."
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderUsageDialog.razor",
+      "kind": "tree-confirmed-candidate",
+      "blob_sha": "0188f2f1f807fd4602a3212028b313810ebfc57d",
+      "inspected": "Current tree verifies actual residual file and blob; body review is required in the executor census."
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "kind": "source",
+      "blob_sha": "64bc25942744c99f7e90b5a17d1a6ebb4fc952b8",
+      "inspected": "Full composition of existing ChatWorkspacePanel, Prompt action and native runtime/recovery controls."
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "kind": "source",
+      "blob_sha": null,
+      "inspected": "Inspected existing AgentChatSurface composition, attachment input and runtime log dialog ownership; tail requires executor census."
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentRuntimeDetailsDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentRuntimeDetailsDialog.razor",
+      "kind": "source",
+      "blob_sha": "6d7efe76e0e169269444508d29c0e715b4dd67a0",
+      "inspected": "Full remaining runtime details renderer, native compatibility evidence and existing timeline/metrics composition."
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionLogDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionLogDialog.razor",
+      "kind": "source",
+      "blob_sha": "e2baf67c84bb08dbb407ce1d11babf1576d0ef2a",
+      "inspected": "Full remaining execution log renderer, safe formatted copy text and highlighted identity."
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
+      "kind": "source",
+      "blob_sha": "2366f8806c1776c9fb4d2c53041df279a0a7844a",
+      "inspected": "Full context badges/affinity renderer and actual registry/follow/detach ownership."
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsPanel.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsPanel.razor",
+      "kind": "source",
+      "blob_sha": "9ac18b2e6458194aff8eb23ae874cd80f5df7d19",
+      "inspected": "Already extracted VoiceSettingsSurface; retains provider eligibility, JS playback and native service ownership."
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsSession.cs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsSession.cs",
+      "kind": "source",
+      "blob_sha": "b168a0d055d748d896a4d4a48679f4c5473cc6a8",
+      "inspected": "Full global Voice read/save/sample sequence, saved-before-synthesis distinction and request ownership."
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatSettingsPanel.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatSettingsPanel.razor",
+      "kind": "source",
+      "blob_sha": "092c415baa439ecae152fc7c0f239a5b837a2d17",
+      "inspected": "Already extracted FloatingChatSettingsSurface; native lifecycle budgets and saved/runtime-warning separation."
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "kind": "source",
+      "blob_sha": "3922611e7b630fb741ed151925a3f7d6b06a27c4",
+      "inspected": "Existing light UI already references Usage, Models, ProviderHistory abstractions and neutral Conversations/BaseLib/Charts."
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/README.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/MAF/Common/CanDoItAll.AgentFramework.Components/README.md",
+      "kind": "source",
+      "blob_sha": "2da8bf0a887761f5fd23a88d861dc4fe82f778f5",
+      "inspected": "Sequenced activity stream ownership, gap/terminal semantics and separation from canonical execution state."
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentOverviewUsageList.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentOverviewUsageList.razor",
+      "kind": "tree-confirmed-candidate",
+      "blob_sha": "4cff2294c7284395371b902fa0e2f1fc2ab5eb0d",
+      "inspected": "Tree-confirmed candidate; executor must resolve current actual callers before extraction."
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor",
+      "kind": "tree-confirmed-candidate",
+      "blob_sha": "d831d9559776f407e12b608879b69da602067ac7",
+      "inspected": "Tree-confirmed large legacy/developer candidate; no complete reachability proof in this review."
+    },
+    {
+      "id": "S26",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
+      "kind": "tree-confirmed-candidate",
+      "blob_sha": "3f46dad292494f612eca4035d1d367444f25ddd8",
+      "inspected": "Tree-confirmed close-choice renderer; preserve exact current choices and coordinator contracts."
+    },
+    {
+      "id": "S27",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDefaultsConfirmationDialog.razor",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDefaultsConfirmationDialog.razor",
+      "kind": "tree-confirmed-candidate",
+      "blob_sha": "09f14e5da3fe6e50475515c34a8b5614ad57fa03",
+      "inspected": "Tree-confirmed header-action confirmation; must not replay default feeding on dialog/navigation retries."
+    },
+    {
+      "id": "S28",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "2eccdddd05a9b1b0c90935ddee49dc559fd5eec1",
+      "path": "tools/canvaslib/readonly-drag.test.cjs",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/2eccdddd05a9b1b0c90935ddee49dc559fd5eec1/tools/canvaslib/readonly-drag.test.cjs",
+      "kind": "source",
+      "blob_sha": "b80259daab2153e34bd40954c7a4e6e1dd647f14",
+      "inspected": "Published shared read-only direct/frame/dependency/mixed-selection regression cases."
+    },
+    {
+      "id": "S29",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "AGENTS.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/AGENTS.md",
+      "kind": "execution-rule-entry",
+      "blob_sha": null,
+      "inspected": "Canonical entry rules read in preceding review; current checkout takes precedence."
+    },
+    {
+      "id": "S30",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "docs/architecture/ui-component-seams.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/docs/architecture/ui-component-seams.md",
+      "kind": "execution-rule-entry",
+      "blob_sha": null,
+      "inspected": "Read current canonical seam guidance before source edits; retained shared v3 is a historical foundation."
+    },
+    {
+      "id": "S31",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": "docs/testing.md",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/docs/testing.md",
+      "kind": "execution-rule-entry",
+      "blob_sha": null,
+      "inspected": "Use current exact discovery, owning lanes and mandatory portability procedure."
+    },
+    {
+      "id": "S32",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "33007c1c693c8ae6591ee0f201ed9526bbaaac78",
+      "path": ".github/workflows/ci.yml",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/33007c1c693c8ae6591ee0f201ed9526bbaaac78/.github/workflows/ci.yml",
+      "kind": "execution-rule-entry",
+      "blob_sha": null,
+      "inspected": "Resolve actual sibling dependency and test project selection; current checkout governs."
+    }
+  ]
+}

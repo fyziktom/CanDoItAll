@@ -14,11 +14,17 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         "CANDOITALL_PLAYWRIGHT_HEADLESS_RUNTIME_PRESENTATION";
 
     private readonly ConcurrentQueue<string> _logs = new();
+    private readonly object _cleanupLock = new();
+    private Task? _stopTask;
+    private Task? _disposeTask;
     private Process? _process;
     private Task? _stdoutPump;
     private Task? _stderrPump;
     private CanDoItAllTestEnvironment? _testEnvironment;
     private TestDatabaseProfile? _activeProfile;
+
+    public IReadOnlyDictionary<string, string?> RuntimeConfiguration { get; init; } = new Dictionary<string, string?>();
+    internal bool EnableBackgroundWorkers { get; init; }
 
     public string BaseUrl { get; } = ResolveBaseUrl();
 
@@ -57,6 +63,8 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
             _logs.Reverse().Take(maxLines).Reverse());
     }
 
+    internal string[] GetLogLines() => _logs.ToArray();
+
     public async Task InitializeAsync()
     {
         if (await IsRuntimeReadyAsync(TimeSpan.FromSeconds(3)))
@@ -85,11 +93,14 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
         processStartInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         processStartInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
-        foreach (var pair in _activeProfile.CreateEnvironmentVariables(new Dictionary<string, string?>
-        {
+        var configuration = new Dictionary<string, string?>(RuntimeConfiguration) {
             ["DevelopmentManager:TuningModeEnabled"] = "false",
-            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
-        }))
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.RemoteNavigationManager"] = "Debug",
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.CircuitHost"] = "Debug",
+            ["Logging:LogLevel:Microsoft.AspNetCore.Components.Server.Circuits.CircuitRegistry"] = "Debug",
+            [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = EnableBackgroundWorkers ? "" : LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+        };
+        foreach (var pair in _activeProfile.CreateEnvironmentVariables(configuration))
         {
             processStartInfo.Environment[pair.Key] = pair.Value;
         }
@@ -112,34 +123,54 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         });
     }
 
-    public async Task DisposeAsync()
-    {
-        if (Browser is not null)
-        {
-            await Browser.DisposeAsync();
+    public Task DisposeAsync() {
+        lock (_cleanupLock) {
+            return _disposeTask ??= DisposeCoreAsync();
         }
+    }
 
-        Playwright?.Dispose();
+    private async Task DisposeCoreAsync() {
+        var failures = new List<Exception>();
+        Func<Task>[] cleanup = [
+            () => Browser?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+            () => {
+                Playwright?.Dispose();
+                return Task.CompletedTask;
+            },
+            StopOwnedApplicationAsync,
+            () => _testEnvironment?.DisposeAsync().AsTask() ?? Task.CompletedTask
+        ];
+        foreach (var release in cleanup) {
+            try {
+                await release();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+        }
+        _process?.Dispose();
+        if (failures.Count > 0) {
+            throw new AggregateException("Playwright fixture cleanup failed.", failures);
+        }
+    }
 
-        if (_process is not null && !_process.HasExited)
-        {
+    internal Task StopOwnedApplicationAsync() {
+        lock (_cleanupLock) {
+            return _stopTask ??= StopOwnedApplicationCoreAsync();
+        }
+    }
+
+    private async Task StopOwnedApplicationCoreAsync() {
+        if (_process is not null && !_process.HasExited) {
             _process.Kill(entireProcessTree: true);
             await _process.WaitForExitAsync();
         }
 
-        if (_stdoutPump is not null)
-        {
+        if (_stdoutPump is not null) {
             await _stdoutPump;
         }
 
-        if (_stderrPump is not null)
-        {
+        if (_stderrPump is not null) {
             await _stderrPump;
-        }
-
-        if (_testEnvironment is not null)
-        {
-            await _testEnvironment.DisposeAsync();
         }
     }
 
@@ -147,7 +178,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     {
         while (await reader.ReadLineAsync() is { } line)
         {
-            _logs.Enqueue(line);
+            _logs.Enqueue($"{DateTimeOffset.UtcNow:O} [host:{_process?.Id}] {line}");
         }
     }
 

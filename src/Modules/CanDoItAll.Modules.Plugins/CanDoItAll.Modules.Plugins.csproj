@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
+    <InternalsVisibleTo Include="CanDoItAll.Tests.Integration" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj" />
     <ProjectReference Include="..\..\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj" />

@@ -12,6 +12,33 @@ using static CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsive
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentPendingApprovalCancellationUiTests {
+    [Fact]
+    public async Task Confirmed_cancellation_selects_its_own_activity_stream_instead_of_the_previous_approval() {
+        var fixture = Create();
+        using var context = fixture.Context;
+        var effects = (AgentChatEffectOwnershipTests.EffectsProxy)(object)context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>();
+        var cut = Render(context, fixture.Agent, fixture.Session);
+        await cut.WaitForElement("[data-testid='chat-approve-once-button']").ClickAsync(new MouseEventArgs());
+        effects.Approval.SetException(new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Unavailable));
+        cut.WaitForAssertion(() => Assert.False(CancelButton(cut).Disabled));
+        var previous = cut.FindComponent<ChatWorkspacePanel>().Instance.ActivityStreamId!;
+        Assert.NotNull(previous);
+        var pending = cut.InvokeAsync(() => CancelButton(cut).Click.InvokeAsync());
+        cut.WaitForAssertion(() => Assert.Single(fixture.Commands));
+        var cancelled = Cancelled(fixture.Run, fixture.Session);
+        fixture.Reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(fixture.Agent.Id, fixture.Session, cancelled.Run));
+        fixture.Reads.Detail = (_, _) => Task.FromResult(cancelled);
+        fixture.Completion.SetResult(cancelled);
+        await pending;
+
+        var current = cut.FindComponent<ChatWorkspacePanel>().Instance.ActivityStreamId!;
+        Assert.Equal(fixture.Reads.CancellationOperationId, current.OperationId);
+        Assert.NotEqual(previous.OperationId, current.OperationId);
+        Assert.Equal(previous.DatabaseProfileId, current.DatabaseProfileId);
+        Assert.Equal(previous.WorkspaceScope, current.WorkspaceScope);
+        Assert.Equal(previous.DatabaseProfileGeneration, current.DatabaseProfileGeneration);
+    }
+
     [Theory]
     [InlineData(AgentApprovalCheckpointFailure.Missing)]
     [InlineData(AgentApprovalCheckpointFailure.Corrupt)]

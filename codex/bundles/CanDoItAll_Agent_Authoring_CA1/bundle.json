@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "CDA-AGENT-AUTHORING-CA1-TEAMS",
+  "title": "Agent capability authoring and team administration completion",
+  "language": "en",
+  "review_language": "cs",
+  "entrypoint": "prompt.md",
+  "reviewed_head": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+  "required_group_ids": [
+    "G00",
+    "G01",
+    "G02",
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07",
+    "G08",
+    "G09",
+    "G10",
+    "G11",
+    "G12",
+    "G13",
+    "G14",
+    "G15",
+    "G16",
+    "G17",
+    "G18",
+    "G19",
+    "G20",
+    "G21",
+    "G22",
+    "G23"
+  ],
+  "viewport": {
+    "width": 1920,
+    "height": 1080,
+    "scale": 1
+  },
+  "local_signed_commits_required": true,
+  "push_authorized": false,
+  "paid_model_calls_authorized": false,
+  "historical_bundles_preserved": true,
+  "shared_foundation": "CDA-UI-DECOUPLING-SHARED-v3",
+  "scope": [
+    "PP3 bounded follow-up",
+    "Complete capability definition wizard/details",
+    "Technical-agent teams",
+    "Native integration proof"
+  ],
+  "excluded": [
+    "Workflow canvas extraction",
+    "Workbench extraction",
+    "Processes extraction",
+    "New runtime or authority protocol",
+    "Mobile tuning"
+  ]
+}

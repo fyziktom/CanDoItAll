@@ -1,0 +1,379 @@
+{
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+  "observed_branch_head": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+  "review_date": "2026-09-28",
+  "review_timezone": "America/Curacao",
+  "sources": [
+    {
+      "id": "EV01",
+      "kind": "connector-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+      "coverage": "Branch HEAD observed as the reviewed Memory implementation SHA; branch is mutable and is not an execution pin."
+    },
+    {
+      "id": "EV02",
+      "kind": "connector-metadata",
+      "url": "https://github.com/fyziktom/CanDoItAll/compare/b55baa3a94ff216353768f0a4ac9a50e89463d08...5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "coverage": "Connected compare returned three commits ahead, zero behind, with bundle archival, Scheduler fixes and Memory extraction file inventory. Not every diff hunk was independently executed or inspected."
+    },
+    {
+      "id": "EV03",
+      "kind": "repository-file",
+      "path": "docs/architecture/memory-ui-boundary.md",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/docs/architecture/memory-ui-boundary.md",
+      "coverage": "Complete maintained implementer receipt, read in overlapping ranges 1-240 and 238-430. Test/graph/watch/publish claims are reported evidence, not reviewer reruns; raw artifacts were unavailable.",
+      "observed_blob_sha": "1c6e6587236d67a6a4e53bbc501e445f04a23a34"
+    },
+    {
+      "id": "EV04",
+      "kind": "connector-metadata",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=5f7f8329e3e3e30bd1451fc72757e04847579754&per_page=10",
+      "coverage": "Current Actions API lookup returned total_count 0. This does not disprove local implementer testing."
+    },
+    {
+      "id": "EV05",
+      "kind": "repository-file",
+      "path": "AGENTS.md",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/AGENTS.md",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64"
+    },
+    {
+      "id": "EV06",
+      "kind": "repository-file",
+      "path": ".github/copilot-instructions.md",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/.github/copilot-instructions.md",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "dde5c2fdbcb56b7b5f48dfa17ed74fda238c2e1a"
+    },
+    {
+      "id": "EV07",
+      "kind": "repository-file",
+      "path": "docs/testing.md",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/docs/testing.md",
+      "coverage": "Current lines 1-189: prerequisites, isolated PostgreSQL, test entry points, discovery and component interaction rules. Full remaining test guide and actual CI must be read at implementation entry; not claimed fully audited here.",
+      "observed_blob_sha": "8672878053700ccc93ad26af3ca719a494509b06"
+    },
+    {
+      "id": "SC01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/SchedulerMutations.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/SchedulerMutations.cs",
+      "coverage": "Current lines 100-265, including full ReviewPlanAsync and ReviewUnknownAsync paths and reconciliation tail. New review-lane setup/disposal outside this range was not independently read in this turn.",
+      "observed_blob_sha": "58aaabc6a62b81a931d23ff16e519a38f6d75240"
+    },
+    {
+      "id": "SC02",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/SchedulerInputSession.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/SchedulerInputSession.cs",
+      "coverage": "Current lines 65-103: raw parsing guards, typed value update, dependent issue/value removal. Focused correction review, not a fresh full-file audit.",
+      "observed_blob_sha": "98adb63411e8b1ed9fd7066cc8fd6b3bf375fd30"
+    },
+    {
+      "id": "ME01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Presentation/MemoryProvidersPageController.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory.Presentation/MemoryProvidersPageController.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "fa76e82f743bd366e4f92b7a9fdfa245be91c47f"
+    },
+    {
+      "id": "ME02",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceContract.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceContract.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "d11f5214e2a945968d184e7bb673e045e98e3d40"
+    },
+    {
+      "id": "ME03",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceSurface.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceSurface.razor",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "411806b7eced54474ebe9399dbdcb23eb7640a74"
+    },
+    {
+      "id": "ME04",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderQueryPanel.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderQueryPanel.razor",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "22ad29b4087464874efc00330421848851bfd665"
+    },
+    {
+      "id": "ME05",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderSnapshotReader.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderSnapshotReader.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "658d5ef6538d4a7bf408d04081c5416772b33929"
+    },
+    {
+      "id": "ME06",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderRevision.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderRevision.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "80598320b2929f293dcf1ab83d40bd24da269d67"
+    },
+    {
+      "id": "ME07",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Memory.UI.Tests/MemoryWorkspaceTests.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/tests/Components/CanDoItAll.Memory.UI.Tests/MemoryWorkspaceTests.cs",
+      "coverage": "Complete file read in overlapping ranges 1-245 and 240-420. Tests inspected as source, not executed by reviewer.",
+      "observed_blob_sha": "7526dfb9461d47fa3f355f9df0e087c9fc9e2e7a"
+    },
+    {
+      "id": "ME08",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderProfileEditorModel.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "1aad35c039bc0a04442b0ced0e9754e25db93910"
+    },
+    {
+      "id": "ME09",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderManagementUiService.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderManagementUiService.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "d43c81b86e7b8ff6e713e92c509861313235da05"
+    },
+    {
+      "id": "ME10",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileUiService.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory/Services/MemoryProviderProfileUiService.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "2ed9e1fa54cbeac53e8a5e4e2c4adbae9f716a11"
+    },
+    {
+      "id": "ME11",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/CanDoItAll.Modules.Memory.Contracts.csproj",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory.Contracts/CanDoItAll.Modules.Memory.Contracts.csproj",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "19917046f22da9d77d4650ad757052fd652933c6"
+    },
+    {
+      "id": "ME12",
+      "kind": "repository-file",
+      "path": "src/UI/CanDoItAll.Memory.UI/CanDoItAll.Memory.UI.csproj",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/UI/CanDoItAll.Memory.UI/CanDoItAll.Memory.UI.csproj",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "902d4759469ee619d62b7da91a9cf4993fa02e76"
+    },
+    {
+      "id": "ME13",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderActionStatus.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Memory.Contracts/Services/MemoryProviderActionStatus.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "5e60a003cb378452bc1a4597e7bdb9af10ec1b35"
+    },
+    {
+      "id": "RS01",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/README.md",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/README.md",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "983321e8f1f4db28c94264d5a3ce492733e977ca"
+    },
+    {
+      "id": "RS02",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "0e7b6d2b68c6ded5c5c3220fab4a5e6ee0750063"
+    },
+    {
+      "id": "RS03",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
+      "coverage": "Complete markup read through line 500, including both tabs and all Registry fields.",
+      "observed_blob_sha": "c25441907b111f38326a22d207d8d49107dd35e3"
+    },
+    {
+      "id": "RS04",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
+      "coverage": "Complete file read in overlapping ranges 1-340 and 340-750.",
+      "observed_blob_sha": "788473d4b6cf839e7174a30c5392fdb36b43305e"
+    },
+    {
+      "id": "RS05",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Components/ResourceFileBrowsePane.razor",
+      "coverage": "Complete file read in overlapping ranges 1-280, 280-550 and 550-920.",
+      "observed_blob_sha": "5aa0fe593b642fc218a11ef4f0aebf726988bd29"
+    },
+    {
+      "id": "RS06",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Components/ResourceStorageObjectPromotionDialog.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Components/ResourceStorageObjectPromotionDialog.razor",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "e270f242fd125b259b00569b7136e1da9734bf05"
+    },
+    {
+      "id": "RS07",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourceRouteContextSelection.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Pages/ResourceRouteContextSelection.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "d1639946de709078df318a3112866f19d0bfc7aa"
+    },
+    {
+      "id": "RS08",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "coverage": "Complete mixed models/mappings/service source read in overlapping ranges 1-330 and 325-680.",
+      "observed_blob_sha": "e08eee3ccefb96d157d4d870b6b9689049ac2a4f"
+    },
+    {
+      "id": "RS09",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceFileBrowseCoordinator.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourceFileBrowseCoordinator.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "8334e3c440481b56cf8029fdd3fe87f81b612852"
+    },
+    {
+      "id": "RS10",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "b7021666661ac82b7fc58b5e08f6511f21659b9c"
+    },
+    {
+      "id": "RS11",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectInteraction.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectInteraction.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "ec713791cbbc43fc8b6544487013df9076b476af"
+    },
+    {
+      "id": "RS12",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceFileSourceCatalog.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourceFileSourceCatalog.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "649e3533426cd5e0c62e1b616c9ef9db1b596825"
+    },
+    {
+      "id": "RS13",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ConnectorConfigFieldEditor.razor",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ConnectorConfigFieldEditor.razor",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "b3fc2bfa874bd31d763e635d3d648a65421d0db1"
+    },
+    {
+      "id": "RS14",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Tests.Components/OwnerPostcommitPageTests.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/tests/Components/CanDoItAll.Tests.Components/OwnerPostcommitPageTests.cs",
+      "coverage": "Lines 1-220: Resource/TestLab shared postcommit/refresh/navigation cases and some TestLab-specific continuation. Remainder not freshly read; current full test must be inspected before adapting helpers.",
+      "observed_blob_sha": "5850d6d32a37fb3181401d870b16a967e75cfa74"
+    },
+    {
+      "id": "RS15",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourceFileBrowsePaneTests.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/tests/Components/CanDoItAll.Tests.Components/ResourceFileBrowsePaneTests.cs",
+      "coverage": "Lines 1-160: stale source disposal, source groups, governed promotion, supported PDF versus local activation, beginning of keyboard case. Remainder/fixtures not claimed fully reviewed.",
+      "observed_blob_sha": "48c79db63c77e12273a31e9a11681af920db9534"
+    },
+    {
+      "id": "RS16",
+      "kind": "repository-file",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceStorageObjectIntegrationTests.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/tests/Integration/CanDoItAll.Tests.Integration/ResourceStorageObjectIntegrationTests.cs",
+      "coverage": "Complete source read. Actual file/PG/promotion/reopen journey inspected, not run.",
+      "observed_blob_sha": "b320eb18e3fd75e3b48b53faf71228180e523c0f"
+    },
+    {
+      "id": "RS17",
+      "kind": "repository-file",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesPageAgentChatContextTests.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/tests/Components/CanDoItAll.Tests.Components/ResourcesPageAgentChatContextTests.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "532de165dbbbc772f3f2ac1f26272c0f2b19c9c7"
+    },
+    {
+      "id": "RS18",
+      "kind": "repository-file",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcesAgentChatContextBuilder.cs",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/ResourcesAgentChatContextBuilder.cs",
+      "coverage": "Full source text read through the connected GitHub tool.",
+      "observed_blob_sha": "c2435fa098becc041bf23ea1165bfc003496eafb"
+    },
+    {
+      "id": "RS19",
+      "kind": "repository-tree",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Pages",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/tree/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Pages",
+      "observed_tree_sha": "e95764f3efe5707c395c92a52226c5fb5bc1a9fd",
+      "coverage": "Complete four-file Pages tree returned by connected Git tree read. File content coverage is registered separately."
+    },
+    {
+      "id": "RS20",
+      "kind": "repository-tree",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Components",
+      "review_commit": "5f7f8329e3e3e30bd1451fc72757e04847579754",
+      "url": "https://github.com/fyziktom/CanDoItAll/tree/5f7f8329e3e3e30bd1451fc72757e04847579754/src/Modules/CanDoItAll.Modules.Resources/Components",
+      "observed_tree_sha": "8db40369df248dab9f1f4128763826aa06b940c9",
+      "coverage": "Complete three-file Components tree returned by connected Git tree read. Scoped CSS bytes not separately audited; move/publish visual proof remains mandatory."
+    }
+  ]
+}

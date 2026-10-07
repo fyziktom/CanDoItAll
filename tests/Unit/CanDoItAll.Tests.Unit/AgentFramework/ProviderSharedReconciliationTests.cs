@@ -119,6 +119,7 @@ public sealed class ProviderSharedReconciliationTests {
 
     private sealed class Reads : IProviderProfilesReads {
         public Guid Id { get; } = Guid.NewGuid();
+        public Guid Revision { get; } = Guid.NewGuid();
         public bool Imported { get; init; }
         public bool Missing { get; set; }
         public bool Malformed { get; set; }
@@ -128,12 +129,14 @@ public sealed class ProviderSharedReconciliationTests {
                 true, true, true, false, true, "{}", "", "", null, ["model"]) {
                 ConnectorPluginKey = Imported ? ProviderConnectorKeys.SharedImport : ProviderConnectorKeys.OpenAi
             };
-            return Task.FromResult(new ProviderProfilesCatalog(Missing ? [] : [profile], new([])));
+            return Task.FromResult(new ProviderProfilesCatalog(Missing ? [] : [profile], new([])) {
+                Revisions = new Dictionary<Guid, CanDoItAll.AgentFramework.Core.ProviderConfigurationRevision> { [Id] = new(Revision) }
+            });
         }
         public Task<Editor> LoadEditorAsync(Guid id, CancellationToken token = default) {
             EditorReads++;
             return Malformed ? Task.FromException<Editor>(new InvalidOperationException("Malformed projection"))
-                : Task.FromResult(new Editor { Id = id, Name = "Saved provider", DefaultModel = "model", ExpectedConcurrencyToken = Guid.NewGuid() });
+                : Task.FromResult(new Editor { Id = id, Name = "Saved provider", DefaultModel = "model", ExpectedConcurrencyToken = Revision });
         }
     }
 }

@@ -253,6 +253,31 @@ public sealed class ProviderHistoryQueryIntegrationTests(ITestOutputHelper outpu
         Assert.Null(await store.GetMetadataAsync(fixture.Access.Context, start.EntryId, default));
     }
 
+    [Theory]
+    [InlineData(HistorySourceKind.SimpleChat, HistoryOwnerRole.ContentOwner, true)]
+    [InlineData(HistorySourceKind.AgentConversation, HistoryOwnerRole.ContentOwner, true)]
+    [InlineData(HistorySourceKind.Workflow, HistoryOwnerRole.PrimaryEvidence, true)]
+    [InlineData(HistorySourceKind.Workflow, HistoryOwnerRole.Lineage, false)]
+    [InlineData(HistorySourceKind.SimpleChat, HistoryOwnerRole.PrimaryEvidence, false)]
+    public async Task Detail_recheck_retains_the_exact_readable_owner_role(HistorySourceKind kind, HistoryOwnerRole role, bool readable) {
+        await using var fixture = await HistoryPersistenceTestDatabase.CreateAsync();
+        var start = fixture.Start();
+        await fixture.Capture.BeginAsync(start, null, default);
+        await fixture.Capture.CompleteAsync(start, fixture.Completion(), null, default);
+        var source = new CanonicalEvidenceReference(fixture.Partition, kind, new("owner"), new("evidence"));
+        await fixture.Projection.ApplyAsync(new(source, new(1), HistorySourceMutationKind.Upsert, null, [start.EntryId]) {
+            Role = role
+        }, default);
+        var store = Store(fixture);
+        var metadata = await store.GetMetadataAsync(fixture.Access.Context, start.EntryId, default);
+        Assert.NotNull(metadata);
+        Assert.Equal(readable, Assert.Single(metadata.Owners).CanReadContent);
+        Assert.Equal(readable, await store.IsCurrentAsync(fixture.Access.Context, metadata, source, default));
+        await using var db = fixture.Factory.CreateDbContext();
+        await db.Set<HistoryOwnerRow>().ExecuteUpdateAsync(update => update.SetProperty(row => row.Role, HistoryOwnerRole.Lineage));
+        Assert.False(await store.IsCurrentAsync(fixture.Access.Context, metadata, source, default));
+    }
+
     private static ProviderRequestHistoryQuery Query(HistoryPersistenceTestDatabase fixture) =>
         new(new HistoryProviderScope.AllAuthorized(), fixture.Clock.Now.AddHours(-1), fixture.Clock.Now.AddHours(1));
 

@@ -8,11 +8,17 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ProviderHistoryPolicyPanelTests {
+    private static BunitContext CreateHostContext(ProviderHistoryUiFixture history) {
+        var context = history.CreateContext();
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
+        return context;
+    }
+
     [Fact]
     public void Policy_load_and_future_only_update_are_explicit_and_versioned() {
         var history = new ProviderHistoryUiFixture();
         var policy = new PolicyBackend();
-        using var context = history.CreateContext();
+        using var context = CreateHostContext(history);
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         Assert.Equal(0, policy.Reads);
@@ -20,7 +26,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
         Assert.Contains("Policy not requested", cut.Markup);
         cut.Find("[data-testid='history-policy-load']").Click();
         cut.WaitForElement("[data-testid='history-policy-form']");
-        cut.Find("[data-testid='history-policy-metadata-days']").Change("20");
+        cut.Find("[data-testid='history-policy-metadata-days']").Input("20");
         Assert.Empty(policy.Updates);
         Assert.Equal(0, policy.Previews);
         cut.Find("[data-testid='history-policy-form']").Submit();
@@ -37,11 +43,11 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [InlineData(true)]
     public void Existing_expiry_changes_require_preview_then_confirmation_and_conflicts_are_visible(bool conflict) {
         var policy = new PolicyBackend { Conflict = conflict };
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();
-        cut.WaitForElement("[data-testid='history-policy-metadata-days']").Change("10");
+        cut.WaitForElement("[data-testid='history-policy-metadata-days']").Input("10");
         cut.Find("[data-testid='history-policy-preview']").Click();
         cut.WaitForElement("[data-testid='history-policy-confirmation']");
         Assert.Equal(1, policy.Previews);
@@ -59,7 +65,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [Fact]
     public void Oversized_preview_cannot_apply_existing_retention() {
         var policy = new PolicyBackend { ExceedsLimit = true };
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();
@@ -78,11 +84,11 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [InlineData("batch", "invalid")]
     public void Invalid_policy_values_are_not_clamped_or_submitted(string field, string value) {
         var policy = new PolicyBackend();
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();
-        cut.WaitForElement($"[data-testid='history-policy-{field}']").Change(value);
+        cut.WaitForElement($"[data-testid='history-policy-{field}']").Input(value);
         cut.Find("[data-testid='history-policy-form']").Submit();
         cut.Find("[data-testid='history-policy-preview']").Click();
         Assert.NotEmpty(cut.FindAll(".validation-message"));
@@ -93,7 +99,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [Fact]
     public async Task Profile_change_cancels_and_discards_a_late_policy_read() {
         var policy = new PolicyBackend { PendingRead = new() };
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         var pending = cut.Find("[data-testid='history-policy-load']").ClickAsync(new());
@@ -109,7 +115,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [Fact]
     public void Authentication_change_clears_loaded_policy_without_an_automatic_reload() {
         var policy = new PolicyBackend();
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         var authorization = context.AddAuthorization();
         authorization.SetAuthorized("operator");
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
@@ -141,7 +147,7 @@ public sealed class ProviderHistoryPolicyPanelTests {
     [Fact]
     public void Denied_management_does_not_display_a_policy_editor() {
         var policy = new PolicyBackend { Denied = true };
-        using var context = new ProviderHistoryUiFixture().CreateContext();
+        using var context = CreateHostContext(new());
         context.Services.AddSingleton<IProviderHistoryPolicyService>(policy);
         var cut = context.Render<ProviderHistoryPolicyPanel>();
         cut.Find("[data-testid='history-policy-load']").Click();

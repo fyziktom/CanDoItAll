@@ -447,6 +447,8 @@
     private ProcessAgentChatContextPublication? agentChatPublication;
     private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
     private bool isDisposed;
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private static readonly TimeSpan LiveRefreshInterval = TimeSpan.FromSeconds(10);
 
     private ProcessAgentChatContextPublication ResolveAgentChatPublication()
     {
@@ -618,6 +620,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender) {
+            _ = RefreshLiveProjectionAsync(lifetimeCancellation.Token);
+        }
+
         var legacyStorageKey = LegacyHiddenRunGroupsStorageKey;
         if (string.Equals(hiddenRunGroupsLoadedScopeKey, legacyStorageKey, StringComparison.Ordinal))
         {
@@ -631,6 +637,27 @@
 
     private Task ForceRefreshAsync()
         => LoadAsync(forceRefresh: true);
+
+    private async Task RefreshLiveProjectionAsync(CancellationToken cancellationToken) {
+        try {
+            using var timer = new PeriodicTimer(LiveRefreshInterval, TimeProvider);
+            while (await timer.WaitForNextTickAsync(cancellationToken)) {
+                await InvokeAsync(async () => {
+                    if (isDisposed || isLoading || IsMockProjection || runtimeHistoryWindow != ProcessRuntimeHistoryWindow.LiveHour) {
+                        return;
+                    }
+
+                    await LoadAsync(forceRefresh: true);
+                    if (!isDisposed) {
+                        StateHasChanged();
+                    }
+                });
+            }
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogError(exception, "Live process refresh stopped for project {ProjectId} and run {RunId}.", ProjectId, selectedRuntimeRunId);
+        }
+    }
 
     private async Task RefreshCancelledRunAsync(ProcessRunId runId) {
         await ForceRefreshAsync();
@@ -656,7 +683,7 @@
             var loadedShell = await LoadShellProjectionAsync(
                 forceRefresh,
                 selectedRuntimeRunId ?? RunIdQuery);
-            if (generation != Volatile.Read(ref loadGeneration))
+            if (isDisposed || generation != Volatile.Read(ref loadGeneration))
             {
                 return;
             }
@@ -693,7 +720,7 @@
                 var filteredShell = await LoadShellProjectionAsync(
                     forceRefresh: false,
                     selectedRuntimeRunId);
-                if (generation != Volatile.Read(ref loadGeneration))
+                if (isDisposed || generation != Volatile.Read(ref loadGeneration))
                 {
                     return;
                 }
@@ -708,16 +735,27 @@
             {
                 selectedRuntimeRunId = resolvedRunId;
             }
+
+            if (runDetailDialogOpen && runDetailSnapshot is { } openRun) {
+                runDetailSnapshot = shell.Runtime.Runs.FirstOrDefault(run => run.RunId == openRun.RunId);
+                runDetailDialogOpen = runDetailSnapshot is not null;
+            }
+            if (agentDetailDialogOpen && agentDetailAgent is { } openAgent) {
+                agentDetailAgent = shell.Runtime.ActiveAgents.FirstOrDefault(agent =>
+                    agent.RunId == openAgent.RunId && agent.StepInstanceId == openAgent.StepInstanceId);
+                agentDetailDialogOpen = agentDetailAgent is not null;
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            if (generation != Volatile.Read(ref loadGeneration))
+            if (isDisposed || generation != Volatile.Read(ref loadGeneration))
             {
                 return;
             }
 
             errorMessage = exception.Message;
             shell = null;
+            Logger.LogError(exception, "Could not load live processes for project {ProjectId} and run {RunId}.", ProjectId, selectedRuntimeRunId);
         }
         finally
         {
@@ -763,7 +801,7 @@
             },
             ProcessDefinitionWorkspaceLoadOptions.CatalogOnly) { ProjectBinding = shell?.ProjectBinding };
 
-        var baseline = await ProjectionClient.GetShellAsync(request).ConfigureAwait(false);
+        var baseline = await ProjectionClient.GetShellAsync(request, lifetimeCancellation.Token).ConfigureAwait(false);
         if (!MockProjectionFactory.TryParseScenario(MockScenarioQuery, out var scenario))
         {
             return baseline;
@@ -3240,6 +3278,9 @@
         }
 
         isDisposed = true;
+        Interlocked.Increment(ref loadGeneration);
+        lifetimeCancellation.Cancel();
+        lifetimeCancellation.Dispose();
         agentChatFreshnessLease?.Dispose();
         agentChatFreshnessLease = null;
     }

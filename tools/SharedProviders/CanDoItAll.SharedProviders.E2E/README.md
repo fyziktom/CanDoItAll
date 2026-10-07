@@ -105,8 +105,42 @@ Credential files are written atomically with `DurableFileWriteOptions.Private`; 
 enforces owner-only directory and file modes. On Windows, the exact artifact tree uses protected,
 non-inherited ACLs that allow only the current identity, SYSTEM, and built-in Administrators, and
 new credential files inherit that restricted boundary. Point the artifact root at the repository's
-ignored `.artifacts/shared-providers-e2e` location when running from the checkout. The program
-never prints credential, key, password, prompt, response, or generated-content values.
+ignored `.artifacts/shared-providers-e2e` location when running from the checkout. Scenario commands
+never print credential, key, password, prompt, response, or generated-content values.
+
+## Deterministic native consumer proof
+
+The completion browser lane uses the same three application containers and their real API,
+approval, tool and persistence owners. The upstream alone supplies bounded scripted responses.
+`consumer-upstream script` accepts its plan through standard input; `progress`, `clear` and
+`captures` operate through the upstream's authenticated control network. A script requires its
+exact model and per-journey marker, verifies that requested tools were actually offered, and
+fails on unexpected or exhausted calls. Streamed tool calls include their native output-item
+events so the real AgentFramework adapter can consume them.
+
+`read-consumer-agent <id> --role client-a` reads the latest run through the native workspace
+owner. It requires the owned completion-agent naming convention and refuses tools outside the
+file/image journey's explicit allowlist. The optional `--planning` flag additionally permits
+inspection of `project_task_update` for an owned agent with a single-project task-write grant;
+the default file allowlist is unchanged. Its JSON contains exact admission, proposal and receipt
+identities for the browser's approval checks; it performs no mutation. These explicit consumer
+commands can return generated fixture content and tool arguments. Capture their output only in
+the ignored task evidence directory, review it and scan it before export. Credentials remain in
+the existing private secret-file boundary.
+
+The browser fixture requires the task-owned root, host metadata and explicit fixture-write opt-in.
+It uses 1920×1080 at scale 1. Run the native-default class first, before the custom metadata tests,
+and independently check captured upstream model names. The untouched native presets are the
+oracle; create independent profiles through New provider and retain the reserved bootstrap seed
+identities and configuration. Renaming a reserved seed is not a substitute for an operator-owned
+profile: bootstrap still owns its canonical settings and may refuse a conflicting seed identity.
+The subsequent bounded selection covers
+`SharedProviderCustomMetadataTests`, `SharedProviderFinalUiTests` and
+`SharedProviderNativeConsumerTests`: custom metadata/restart, two-circuit concurrency, source
+lifecycle, History, Simple Chat, file approvals, Workflow/TestLab and image/vision bytes. Build
+the browser assembly and freshly discover the selection before execution. A test-only upstream
+change also requires rebuilding that image and repeating the final protocol and consumer campaign;
+an earlier successful image is stage evidence only.
 
 ## Frozen backend checkpoint scenarios
 

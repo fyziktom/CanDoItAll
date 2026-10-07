@@ -1,0 +1,37 @@
+@namespace CanDoItAll.Workbench.Planning.UI
+
+@if (Result is { } result) {
+    <Alert AlertStyle="@(result.Status == PlanningTaskSaveStatus.Committed ? AlertStyle.Info : AlertStyle.Warning)"
+           data-testid="planning-task-save-result">
+        <TextBlock Value="@result.Message" />
+        @foreach (var phase in result.Phases) {
+            <TextBlock Value="@phase.Message" />
+        }
+        @if (result.TaskIds.Count > 0) {
+            <TextBlock Value="@($"Task: {string.Join(", ", result.TaskIds)}")" />
+        }
+        @if (result.ResourceNodeIds.Count > 0) {
+            <TextBlock Value="@($"Resource: {string.Join(", ", result.ResourceNodeIds)}")" />
+        }
+        @if (result.RequiresReadback && Readback.HasDelegate) {
+            <Button Text="Read current project" Click="Readback" Disabled="@IsBusy" data-testid="planning-task-readback" />
+        }
+    </Alert>
+}
+<Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+    <Button Text="@(Result is null ? "Cancel" : "Close")" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Base"
+            data-testid="@($"{TestIdPrefix}-cancel")" Click="Cancelled" />
+    <Button Text="@(IsEditMode ? "Save task" : "Create task")" Icon="@(IsEditMode ? "save" : "add_task")"
+            ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || Result is { CanRetry: false })"
+            data-testid="@($"{TestIdPrefix}-submit")" Click="Submitted" />
+</Cluster>
+
+@code {
+    [Parameter] public PlanningTaskSaveResult? Result { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public string TestIdPrefix { get; set; } = string.Empty;
+    [Parameter] public EventCallback Submitted { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback Readback { get; set; }
+}

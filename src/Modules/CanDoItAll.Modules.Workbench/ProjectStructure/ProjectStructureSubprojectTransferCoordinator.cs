@@ -8,6 +8,8 @@ public sealed record ProjectStructureCreatedSubprojectTransferResult(
     ProjectStructureSubprojectTransferResult Transfer)
 {
     public Guid TargetProjectId => Transfer.TargetProjectId;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ProjectCreationReceipt? CreationReceipt { get; init; }
 }
 
 public sealed class ProjectStructureSubprojectTransferCoordinator
@@ -72,6 +74,17 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             ProjectStructureTransferRejectionReason.DescendantsUnavailable,
             "The descendants could not be moved to the new subproject.",
             cancellationToken, mutationOwner: mutationOwner, authorization: authorization);
+    }
+
+    public Task<ProjectStructureCreatedSubprojectTransferResult> MoveDescendantsToNewSubprojectAsync(
+        Guid sourceProjectId, ProjectCreationReservation reservation, ProjectEditorModel targetProject, string sourceNodeId,
+        CancellationToken cancellationToken = default, ProjectStructureAgentContext? mutationOwner = null) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceNodeId);
+        return ExecuteAsync(sourceProjectId, reservation.ProjectId, targetProject,
+            (owner, token) => operations.MoveDescendantsAsync(sourceProjectId, sourceNodeId.Trim(), reservation.ProjectId, token, owner),
+            ProjectStructureTransferRejectionReason.DescendantsUnavailable,
+            "The descendants could not be moved to the new subproject.", cancellationToken, reservation, mutationOwner);
     }
 
     public Task<ProjectStructureCreatedSubprojectTransferResult> MoveNodesToNewSubprojectAsync(
@@ -197,10 +210,11 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
 
             return new ProjectStructureCreatedSubprojectTransferResult(
                 sourceProjectId,
-                transfer);
+                transfer) { CreationReceipt = creationReceipt };
         }
-        catch (ProjectStructureTransferPartialCommitException)
+        catch (ProjectStructureTransferPartialCommitException exception)
         {
+            exception.CreationReceipt = creationReceipt;
             throw;
         }
         catch (Exception transferFailure)
@@ -220,10 +234,10 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
             {
                 throw new ProjectStructureCompensatedSubprojectTransferException(
                     targetProjectId,
-                    transferFailure);
+                    transferFailure) { CreationReceipt = creationReceipt };
             }
 
-            throw ProjectCreationPartialCompletionFailure.Create(targetProjectId, true, transferFailure);
+            throw ProjectCreationPartialCompletionFailure.Create(targetProjectId, true, transferFailure, creationReceipt);
         }
     }
 
@@ -241,7 +255,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
         } catch (Exception compensationFailure) {
             throw ProjectCreationPartialCompletionFailure.Create(receipt.Project.ProjectId, true, new AggregateException(
                 $"Node transfer failed and the original creation of subproject '{receipt.Project.ProjectId:D}' could not be compensated.",
-                transferFailure, compensationFailure));
+                transferFailure, compensationFailure), receipt);
         }
     }
 

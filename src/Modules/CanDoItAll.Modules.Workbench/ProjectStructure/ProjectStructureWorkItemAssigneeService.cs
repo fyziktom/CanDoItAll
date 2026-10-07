@@ -129,7 +129,8 @@ public sealed class ProjectStructureWorkItemAssigneeService(
             IReadOnlyList<ProjectPartyAssignmentDetail> expectedAssignments,
             long expectedDirectAssignmentRevision,
             CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        ProjectStructureNode? expectedTask = null)
     {
         var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
         if (previousAssignment is not null && previousAssignment.ProjectLifetimeId != expected.LifetimeId) {
@@ -181,7 +182,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
                     .ToArray(),
                 new ProjectWorkItemDirectAssignmentRevision(
                     expectedDirectAssignmentRevision),
-                cancellationToken, mutationOwner);
+                cancellationToken, mutationOwner, expectedTask);
         if (assignmentResult.IsFailure)
         {
             throw BuildAssignmentException(assignmentResult.Errors);
@@ -293,7 +294,7 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
         IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null,
         ProjectWorkItemDirectAssignmentRevision? expectedRevision = null, CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null) {
+        ProjectStructureAgentContext? mutationOwner = null, ProjectStructureNode? expectedTask = null) {
         var expected = ProjectAssignmentAdmission.Require(projectId, mutationOwner?.ExpectedProjectAdmission);
         var requests = ProjectAssignmentAdmission.Snapshot(projectId, desiredAssignments, expected);
         var ids = requests.Select(_ => Guid.NewGuid()).ToArray();
@@ -302,6 +303,19 @@ public sealed class ProjectStructureWorkItemAssigneeService(
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
         await using var scope = await mutationScopes.BeginAsync(context, keys, cancellationToken, [expected], mutationOwner?.ProcessMutationAdmission, mutationOwner?.AgentMutationAdmission);
         using var entry = transactions.Enter(context);
+        if (expectedTask is not null) {
+            var task = await context.Set<ProjectObjectRecord>().SingleOrDefaultAsync(
+                item => item.ProjectId == projectId && item.NodeKey == expectedTask.Id, cancellationToken)
+                ?? throw new InvalidOperationException("The task disappeared before compensation.");
+            await ProjectNodeBindingStorage.LoadAsync(context, [task], cancellationToken);
+            if (task.Title != expectedTask.Title || task.Subtitle != expectedTask.Subtitle ||
+                task.Status != expectedTask.Status || task.Notes != expectedTask.Notes ||
+                task.StartUtc != expectedTask.StartUtc || task.EndUtc != expectedTask.EndUtc ||
+                task.ProgressPercent != expectedTask.ProgressPercent || task.ProgressMode != expectedTask.ProgressMode ||
+                task.DurationSeconds != expectedTask.DurationSeconds || task.MetadataJson != expectedTask.MetadataJson) {
+                throw new InvalidOperationException("The task changed after persistence began. Its assignment and pricing were not compensated.");
+            }
+        }
         var result = await workAssignments.StageReplaceAsync(projectId, node, requests, ids, expectedAssignments,
             expectedRevision, cancellationToken, expected);
         if (result.IsSuccess) {

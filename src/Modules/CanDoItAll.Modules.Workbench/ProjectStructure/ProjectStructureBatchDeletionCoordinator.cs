@@ -66,6 +66,9 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
         var requestedNodeIds = selection.NodeIds;
         var surface = await operations.GetStructureAsync(projectId, cancellationToken);
+        if (mutationOwner?.ExpectedProjectAdmission is { } admission && surface.ExpectedProjectAdmission != admission) {
+            throw new CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException(admission);
+        }
         var visibleNodeIds = surface.Nodes
             .Select(node => node.Id)
             .ToHashSet(StringComparer.Ordinal);

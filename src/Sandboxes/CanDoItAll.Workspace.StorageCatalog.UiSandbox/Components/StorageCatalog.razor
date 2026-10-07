@@ -1,0 +1,88 @@
+@page "/"
+@page "/storage-catalog"
+@implements IDisposable
+
+<PageTitle>Storage catalog UI sandbox</PageTitle>
+<main class="p-6" data-testid="storage-sandbox">
+    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Large">
+        <FormSection Title="Storage catalog UI sandbox" Description="The shipped three-step renderer with simulated metadata, routing and remote health. No database, vault or storage driver is loaded.">
+            <details open style="position:fixed;top:1rem;right:1rem;z-index:60;background:white;border:1px solid #cbd5e1;border-radius:1rem;padding:1rem;max-width:24rem;max-height:70vh;overflow:auto" data-testid="storage-scenario-controls">
+                <summary>Scenario controls</summary>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <select class="cda-input" @bind="scenario" aria-label="Scenario" data-testid="storage-scenario">
+                        @foreach (var item in Enum.GetValues<CatalogScenario>()) {
+                            <option value="@item">@item</option>
+                        }
+                    </select>
+                    <Button Text="Reset scenario" Click="ResetAsync" data-testid="storage-scenario-reset" />
+                    <select class="cda-input" @bind="stage" aria-label="Controlled stage" data-testid="storage-scenario-stage">
+                        @foreach (var item in Enum.GetValues<CatalogScenarioStage>()) {
+                            <option value="@item">@item</option>
+                        }
+                    </select>
+                    <Button Text="Hold stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].Hold())" data-testid="storage-stage-hold" />
+                    <Button Text="Release stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].Release())" data-testid="storage-stage-release" />
+                    <Button Text="Fail next stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].FailNext = true)" data-testid="storage-stage-fail" />
+                    <Button Text="Release retired stores" ButtonStyle="ButtonStyle.Light" Click="ReleaseRetired" data-testid="storage-retired-release" />
+                </Cluster>
+                <p role="status">@message</p>
+                <p data-testid="storage-scenario-counts">Catalog writes: @store.CatalogWrites; driver tests: @store.DriverCalls; routing writes: @store.RoutingWrites; Activity: @store.ActivityCalls; retained stores: @retired.Count.</p>
+            </details>
+        </FormSection>
+        @if (session is not null) {
+            <CatalogSurface @key="session" Session="session" RecoveryRequested="Recovery" />
+        }
+    </Stack>
+</main>
+
+@code {
+    private CatalogScenario scenario;
+    private CatalogScenarioStage stage = CatalogScenarioStage.Persistence;
+    private CatalogScenarioStore store = new();
+    private CatalogSession? session;
+    private readonly List<CatalogScenarioStore> retired = [];
+    private string message = "Recovery is a deferred production-host action.";
+    protected override Task OnInitializedAsync() => ResetAsync();
+    private async Task ResetAsync() {
+        retired.RemoveAll(item => item.PendingCommands == 0 && item.Gates.Values.All(gate => !gate.IsHeld));
+        if (session is not null) {
+            if (retired.Count == 4) {
+                message = "Release retained work before resetting again; unresolved stores are never silently evicted.";
+                return;
+            }
+            session.Changed -= Changed;
+            session.Dispose();
+            store.IsCurrent = false;
+            if (store.PendingCommands > 0 || store.Gates.Values.Any(gate => gate.IsHeld)) {
+                retired.Add(store);
+            }
+        }
+        store = new(scenario);
+        session = new(store, new());
+        session.Changed += Changed;
+        message = "Scenario reset. All health is simulated. Recovery remains a deferred host action.";
+        await session.LoadAsync();
+        if (scenario == CatalogScenario.InvalidNumbers && session.Draft is { } draft) {
+            draft.Name = "Unfinished numeric draft";
+            draft.EndpointOrRoot = "/scenario/artifacts";
+            draft.DisplayOrderText = "-";
+        }
+    }
+    private void Recovery(Guid? id) => message = id.HasValue
+        ? $"Deferred host Recovery for exact catalog {id}. No recovery service was called."
+        : "Deferred catalog-wide Recovery (no selected persisted target). No recovery service was called.";
+    private void ReleaseRetired() {
+        foreach (var item in retired) {
+            item.ReleaseAll();
+        }
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        if (session is not null) {
+            session.Changed -= Changed;
+            session.Dispose();
+        }
+        store.ReleaseAll();
+        ReleaseRetired();
+    }
+}

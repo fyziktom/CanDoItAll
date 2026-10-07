@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
@@ -417,6 +418,95 @@ public sealed class ProjectStructureRuntimeAdapterTests
         Assert.Equal(["-e"], options.LinuxTerminalArgumentPrefix);
     }
 
+    [Fact]
+    public async Task Cancellation_after_acquisition_retains_exact_session_for_explicit_stop() {
+        using var cancellation = new CancellationTokenSource();
+        var host = new RecordingLongRunningProcessHost { Started = cancellation.Cancel };
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(registry, new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance, TimeSpan.FromMinutes(1));
+        var result = await adapter.LaunchAsync(CreatePlan(), "owned", cancellation.Token);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(host.Session.Identity, result.Identity);
+        Assert.False(result.ObservationCompleted);
+        Assert.Equal(result.Identity, registry.GetIdentity("owned"));
+        Assert.True(registry.IsRunning("owned"));
+        var stopped = await registry.StopSessionAsync("owned", result.Identity!, CancellationToken.None);
+        Assert.True(stopped.IsSuccess);
+        Assert.Equal(result.Identity, stopped.Identity);
+        Assert.False(registry.IsRunning("owned"));
+    }
+
+    [Fact]
+    public async Task Old_identity_cannot_stop_a_replacement_even_when_its_numeric_PID_is_reused() {
+        var host = new RecordingLongRunningProcessHost();
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(registry, new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance, TimeSpan.Zero);
+        var original = await adapter.LaunchAsync(CreatePlan(), "same-node", CancellationToken.None);
+        host.Session.Exit(0, string.Empty);
+        await registry.WaitForExitAsync("same-node", original.Identity!, TimeSpan.FromSeconds(5), CancellationToken.None);
+        var replacement = await adapter.LaunchAsync(CreatePlan(), "same-node", CancellationToken.None);
+        Assert.Equal(original.Identity!.ProcessId, replacement.Identity!.ProcessId);
+        Assert.NotEqual(original.Identity, replacement.Identity);
+        var refused = await registry.StopSessionAsync("same-node", original.Identity, CancellationToken.None);
+        Assert.False(refused.IsSuccess);
+        Assert.False(host.Sessions[1].Terminated);
+        Assert.Equal(replacement.Identity, registry.GetIdentity("same-node"));
+        Assert.Null(await registry.WaitForExitAsync("same-node", original.Identity, TimeSpan.Zero, CancellationToken.None));
+        Assert.True((await registry.StopSessionAsync("same-node", replacement.Identity, CancellationToken.None)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task Late_stop_completion_leaves_a_new_same_node_session_and_neighbor_owned() {
+        var host = new RecordingLongRunningProcessHost();
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(registry, new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance, TimeSpan.Zero);
+        var original = await adapter.LaunchAsync(CreatePlan(), "same-node", CancellationToken.None);
+        var neighbor = await adapter.LaunchAsync(CreatePlan(), "neighbor", CancellationToken.None);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.Session.TerminationGate = gate.Task;
+        var stopping = registry.StopSessionAsync("same-node", original.Identity!, CancellationToken.None);
+        Assert.Equal(1, host.Session.TerminationAttempts);
+        host.Session.Exit(0, string.Empty);
+        await registry.WaitForExitAsync("same-node", original.Identity!, TimeSpan.FromSeconds(5), CancellationToken.None);
+        var replacement = await adapter.LaunchAsync(CreatePlan(), "same-node", CancellationToken.None);
+        gate.SetResult();
+        var stopped = await stopping;
+        Assert.True(stopped.IsSuccess);
+        Assert.Equal(original.Identity, stopped.Identity);
+        Assert.Equal(replacement.Identity, registry.GetIdentity("same-node"));
+        Assert.Equal(neighbor.Identity, registry.GetIdentity("neighbor"));
+        Assert.All(host.Sessions.Skip(1), session => Assert.False(session.Terminated));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_new_view_cannot_adopt_another_project_lifetime_or_profile_session(bool changeProfile) {
+        var host = new RecordingLongRunningProcessHost();
+        await using var registry = CreateRegistry(host);
+        var adapter = new ProjectStructureRuntimeExecutionAdapter(registry, new StubExecutableResolver("/tools/dotnet"),
+            NullLogger<ProjectStructureRuntimeExecutionAdapter>.Instance, TimeSpan.Zero);
+        var admission = new ProjectWriteAdmission(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var owner = new ProjectStructureRuntimeSessionOwner(admission, Guid.NewGuid());
+        var foreign = owner with { Admission = new(changeProfile ? Guid.NewGuid() : admission.DatabaseProfileId,
+            admission.ProjectId, changeProfile ? admission.LifetimeId : Guid.NewGuid()) };
+        var result = await adapter.LaunchAsync(CreatePlan() with { Owner = owner }, "shared-node-key", CancellationToken.None);
+        Assert.Equal(result.Identity, registry.GetIdentity("shared-node-key", owner));
+        Assert.Null(registry.GetIdentity("shared-node-key", foreign));
+        Assert.Null(registry.GetIdentity("shared-node-key", owner with { NodeRecordId = Guid.NewGuid() }));
+        Assert.True(registry.IsRunning("shared-node-key"));
+        Assert.False(host.Session.Terminated);
+        host.Session.Exit(7, "original owner's bounded output");
+        await registry.WaitForExitAsync("shared-node-key", result.Identity!, TimeSpan.FromSeconds(5), CancellationToken.None);
+        Assert.Contains("original owner's bounded output", registry.GetLastExit("shared-node-key", owner)!.OutputTail, StringComparison.Ordinal);
+        Assert.Null(registry.GetLastExit("shared-node-key", foreign));
+        Assert.Null(registry.GetLastExit("shared-node-key", owner with { NodeRecordId = Guid.NewGuid() }));
+        Assert.Null(registry.GetLastExit("shared-node-key"));
+    }
+
     private static ProjectStructureRuntimeLaunchPlan CreatePlan(
         IReadOnlyList<string>? arguments = null,
         IReadOnlyDictionary<string, string?>? environment = null,
@@ -462,6 +552,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
 
         public bool CancelStart { get; init; }
 
+        public Action? Started { get; init; }
+
         public bool CancelEveryTermination { get; init; }
 
         public (int ExitCode, string Stderr)? ExitImmediately { get; init; }
@@ -501,6 +593,7 @@ public sealed class ProjectStructureRuntimeAdapterTests
                 session.Exit(exit.ExitCode, exit.Stderr);
             }
 
+            Started?.Invoke();
             return Task.FromResult<IWorkspaceProcessSession>(session);
         }
 
@@ -525,6 +618,8 @@ public sealed class ProjectStructureRuntimeAdapterTests
 
         public int TerminationAttempts { get; private set; }
 
+        public Task? TerminationGate { get; set; }
+
         public WorkspaceOwnedProcessIdentity Identity { get; } = new(
             1234,
             DateTimeOffset.Parse("2026-08-10T00:00:00Z"),
@@ -532,7 +627,7 @@ public sealed class ProjectStructureRuntimeAdapterTests
             new WorkspaceOwnedProcessBoundary(
                 WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
                 1234,
-                Guid.Empty));
+                Guid.NewGuid()));
 
         public bool HasExited => completion.Task.IsCompleted;
 
@@ -548,7 +643,7 @@ public sealed class ProjectStructureRuntimeAdapterTests
         public Task<WorkspaceProcessExecutionResult> WaitForExitAsync(CancellationToken cancellationToken = default)
             => completion.Task.WaitAsync(cancellationToken);
 
-        public Task<WorkspaceProcessExecutionResult> TerminateAsync(
+        public async Task<WorkspaceProcessExecutionResult> TerminateAsync(
             WorkspaceProcessTerminationReason reason,
             string failureMessage,
             CancellationToken cancellationToken = default)
@@ -559,10 +654,13 @@ public sealed class ProjectStructureRuntimeAdapterTests
                 throw new OperationCanceledException(cancellationToken);
             }
 
+            if (TerminationGate is { } wait) {
+                await wait.WaitAsync(cancellationToken);
+            }
             Terminated = true;
             var result = CreateExecutionResult(reason, failureMessage);
             completion.TrySetResult(result);
-            return Task.FromResult(result);
+            return result;
         }
 
         public WorkspaceOwnedProcessIdentity Detach()

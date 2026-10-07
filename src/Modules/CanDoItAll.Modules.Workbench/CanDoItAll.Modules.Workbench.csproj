@@ -9,6 +9,8 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
+
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
@@ -18,6 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Execution.UI/CanDoItAll.Workbench.Execution.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Structure.UI/CanDoItAll.Workbench.Structure.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
     <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />

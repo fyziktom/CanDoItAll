@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-WORKSPACE-CLOSURE-R2-v1",
+  "authorized": false,
+  "operator_reference": null,
+  "authorized_at_utc": null,
+  "campaign_id": null,
+  "allowed_provider": null,
+  "allowed_model": null,
+  "max_requests_total": 0,
+  "max_requests_per_execution": 0,
+  "max_output_tokens": null,
+  "cost_limit": null,
+  "old_campaign_journal_must_remain_unchanged": true,
+  "note": "Template only. A new explicit operator instruction is required; Codex cannot authorize on the operator's behalf."
+}

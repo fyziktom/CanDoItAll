@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
@@ -23,6 +24,11 @@ public sealed record ProjectStructureProjectHierarchyDialogState(
     Guid? SelectedProjectId,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+    internal IReadOnlyDictionary<Guid, ProjectWriteAdmission> Admissions { get; init; } = new Dictionary<Guid, ProjectWriteAdmission>();
+
     public string Title => Mode switch
     {
         ProjectStructureProjectHierarchyDialogMode.AddSubproject => $"Add subproject under {SubjectProjectTitle}",
@@ -57,6 +63,10 @@ public sealed record ProjectStructureBlockMutationDialogState(
     string SelectedActionId,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+
     public string Title => Mode switch
     {
         ProjectStructureBlockMutationDialogMode.ChangeBlockType => $"Change block type for {NodeTitle}",
@@ -91,6 +101,10 @@ public sealed record ProjectStructureSubprojectTransferDialogState(
     string ProjectName,
     string Error)
 {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+
     public string Title => $"Move descendants from {SourceNodeTitle}";
 
     public string Copy => DescendantCount == 1
@@ -100,13 +114,6 @@ public sealed record ProjectStructureSubprojectTransferDialogState(
     public string SubmitLabel => "Create subproject";
 }
 
-public sealed record ProjectStructureProcessLinkOption(
-    Guid DefinitionId,
-    string DisplayName,
-    string ScopeLabel,
-    string Status,
-    bool HasPublishedVersion);
-
 public sealed record ProjectStructureProcessLinkDialogState(
     string SourceNodeId,
     string SourceNodeTitle,
@@ -114,6 +121,9 @@ public sealed record ProjectStructureProcessLinkDialogState(
     Guid? SelectedDefinitionId,
     string Error)
 {
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
+    internal bool RequiresObservation { get; init; }
+    internal bool IsLinked { get; init; }
     public ProjectStructureSurface? OpenedSurface { get; init; }
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 
@@ -129,7 +139,7 @@ public sealed record ProjectStructureProcessLinkDialogState(
 
     public string Copy => "Choose an existing process definition to link to this node. The link stays explicit in the project structure and does not create a new process.";
 
-    public string SubmitLabel => "Add process";
+    public string SubmitLabel => RequiresObservation ? "Observe original link" : "Add process";
 }
 
 public sealed record ProjectStructureWorkflowAddDialogState(
@@ -143,6 +153,9 @@ public sealed record ProjectStructureWorkflowAddDialogState(
     string Error)
 {
     public ProjectStructureSurface? OpenedSurface { get; init; }
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 
     public string Title => $"Add workflow for {ParentNodeTitle}";
@@ -167,71 +180,21 @@ public sealed record ProjectStructureWorkflowStartDialogState(
 {
     public Guid ProjectId { get; init; }
     public Guid IntentId { get; init; }
+    public Guid OpeningId { get; init; }
+    public bool RequiresObservation { get; init; }
+    internal ProjectStructureWorkflowNodeStartResult? AcceptedStart { get; init; }
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 
     public string Title => $"Start {NodeTitle}";
 
     public string Copy => "Confirm the workflow start. The workflow definition owns its execution settings, so this starts directly without resource matching.";
 
-    public string SubmitLabel => "Start workflow";
+    public string SubmitLabel => RequiresObservation ? "Observe original start" : "Start workflow";
 }
 
 public sealed record ProjectStructureWorkflowStartSimulationChange(
     string NodeId,
     bool IsEnabled);
-
-public enum ProjectStructureProcessStartStage
-{
-    Confirm,
-    Staffing
-}
-
-public sealed record ProjectStructureProcessStartCandidateSelection(
-    Guid LaunchPlanRoleId,
-    Guid CandidateId);
-
-public sealed record ProjectStructureProcessStartCandidateState(
-    Guid CandidateId,
-    Guid? TechnicalAgentId,
-    string DisplayName,
-    string CandidateKindLabel,
-    string ExecutorKind,
-    string ScoreLabel,
-    bool IsSelected,
-    bool IsRecommended,
-    bool RequiresProvisioning,
-    bool IsResolvable,
-    string RecommendationSummary,
-    string AvailabilitySummary,
-    string SourceRegistryKey,
-    string AgentProviderName = "",
-    string AgentModel = "",
-    string AgentRoleTitle = "",
-    string AgentSummary = "",
-    string AgentStatusLabel = "",
-    string AgentWorkloadLabel = "",
-    string AgentAvatarImageUrl = "",
-    IReadOnlyList<string>? ToolNames = null,
-    IReadOnlyList<string>? SkillNames = null,
-    int MatchScore = 0);
-
-public sealed record ProjectStructureProcessStartRoleState(
-    Guid LaunchPlanRoleId,
-    string DisplayName,
-    string PreferredExecutorKind,
-    bool IsRequired,
-    bool IsResolved,
-    bool RequiresProvisioning,
-    string SelectionSummary,
-    string ReadinessSummary,
-    IReadOnlyList<ProjectStructureProcessStartCandidateState> Candidates)
-{
-    public string StepKey { get; init; } = string.Empty;
-    public string RoleKey { get; init; } = string.Empty;
-    public IReadOnlyList<ProjectStructureProcessStartCandidateState> DirectoryCandidates { get; init; } = [];
-
-    public bool HasBlockingGap => IsRequired && !IsResolved;
-}
 
 public sealed record ProjectStructureProcessStartDialogState(
     Guid ProjectId,
@@ -252,6 +215,7 @@ public sealed record ProjectStructureProcessStartDialogState(
     bool AssignmentsReviewed,
     string Error)
 {
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
     public string Title => Stage switch
     {
         ProjectStructureProcessStartStage.Staffing when EstimateOnlyMode => $"Estimate and assign roles for {TargetNodeTitle}",
@@ -319,14 +283,6 @@ public sealed record ProjectStructureProcessStartDialogState(
     internal bool IsAccepted => LaunchObservation?.AcceptedRunId is not null;
 }
 
-public sealed record ProjectStructureProcessEstimateSummary(
-    decimal EstimatedCostUsd,
-    int EstimatedElapsedMinutes,
-    int EstimatedTouchMinutes,
-    string ConfidenceLabel,
-    string SourceLabel,
-    string Summary);
-
 public sealed record ProjectStructureQuickActionDialogState(
     string NodeId,
     string Title,
@@ -337,6 +293,11 @@ public sealed record ProjectStructureQuickActionDialogState(
     ProjectStructureQuickActionButton PrimaryAction,
     IReadOnlyList<ProjectStructureQuickActionButton> SecondaryActions)
 {
+    public Guid OpeningId { get; init; } = Guid.NewGuid();
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
+    internal ProjectStructureNode? OriginalNode { get; init; }
+    internal long SelectionRevision { get; init; }
+    internal WorkspaceOwnedProcessIdentity? RuntimeIdentity { get; init; }
     public IReadOnlyList<ProjectStructureQuickActionButton> Actions => [EditAction, PrimaryAction, .. SecondaryActions];
 }
 
@@ -349,7 +310,13 @@ public sealed record ProjectStructureWebPreviewDialogState(
     bool CanEmbed,
     string EmbedUnavailableReason,
     bool CanStopRuntime = false,
-    string RuntimeStopError = "");
+    string RuntimeStopError = "") {
+    public Guid OpeningId { get; init; } = Guid.NewGuid();
+    public bool IsBusy { get; init; }
+    internal ProjectStructurePage.ProjectStructureActionContext? Context { get; init; }
+    internal ProjectStructureNode? OriginalNode { get; init; }
+    internal WorkspaceOwnedProcessIdentity? RuntimeIdentity { get; init; }
+}
 
 public sealed record ProjectStructureQuickActionButton(
     ProjectStructureQuickActionExecutionKind ExecutionKind,
@@ -381,10 +348,18 @@ public sealed record ProjectStructureDeletePrompt(
     public bool IsBulk => NodeIds.Count > 1;
 }
 
+public sealed record ProjectStructureDeleteConfirmation(ProjectStructureDeletePrompt Prompt, ProjectStructureManagedStorageDisposition Disposition);
+
 public sealed record ProjectStructureSummaryDialogState(
     string RootNodeId,
     string RootTitle,
-    ProjectStructureSummary Summary);
+    ProjectStructureSummary Summary) {
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
+    public string Message { get; init; } = string.Empty;
+    public TimeZoneInfo DisplayTimeZone { get; init; } = TimeZoneInfo.Local;
+}
 
 public sealed record ProjectStructureTranscriptActionDialogState(
     string NodeId,
@@ -393,4 +368,8 @@ public sealed record ProjectStructureTranscriptActionDialogState(
     Guid? SelectedProviderId,
     string LastProviderName,
     IReadOnlyList<ProviderProfile> Providers,
-    string Error);
+    string Error) {
+    public Guid OpeningId { get; init; }
+    public CanDoItAll.Workbench.Content.UI.Analysis.ContentConfirmationPhase Phase { get; init; }
+        = CanDoItAll.Workbench.Content.UI.Analysis.ContentConfirmationPhase.Ready;
+}

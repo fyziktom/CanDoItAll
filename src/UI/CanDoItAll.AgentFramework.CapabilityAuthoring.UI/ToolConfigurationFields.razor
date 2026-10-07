@@ -1,0 +1,172 @@
+<FormSection Title="Tool configuration"
+                 Description="Edit external process or HTTP runtime parameters, bounded execution, and setup-test input.">
+        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+            <div>
+                <label class="cda-field-label">Tool setup kind</label>
+                <InputSelect @bind-Value="Draft.ToolKind"
+                             class="cda-input"
+                             disabled="@Locked"
+                             data-testid="@($"{TestId}-tool-kind")">
+                    <option value="externalProcess">External process</option>
+                    <option value="externalHttp">External HTTP</option>
+                </InputSelect>
+            </div>
+            <div>
+                <label class="cda-field-label">Runtime tool name</label>
+                <AuthoringText @bind-Value="Draft.RuntimeToolName"
+                           class="cda-input"
+                           disabled="@Locked"
+                           data-testid="@($"{TestId}-tool-runtime-name")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Implementation key</label>
+                <AuthoringText @bind-Value="Draft.ImplementationKey"
+                           class="cda-input"
+                           disabled="@Locked"
+                           data-testid="@($"{TestId}-tool-implementation-key")" />
+            </div>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+            <div>
+                <label class="cda-field-label">Operation classifications</label>
+                <AuthoringTextArea @bind-Value="Draft.OperationClassificationsText"
+                               class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                               disabled="@Locked"
+                               data-testid="@($"{TestId}-tool-classifications")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Side-effect kind</label>
+                <AuthoringText @bind-Value="Draft.SideEffectKind"
+                           class="cda-input"
+                           disabled="@Locked"
+                           data-testid="@($"{TestId}-tool-side-effect")" />
+            </div>
+            <Stack Gap="0.5rem">
+                <label class="cda-inline-option capability-authoring__inline-option">
+                    <InputCheckbox @bind-Value="Draft.RequiresApprovalByDefault"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-approval")" />
+                    Requires approval
+                </label>
+                <label class="cda-inline-option capability-authoring__inline-option">
+                    <InputCheckbox @bind-Value="Draft.IsStateChanging"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-state-changing")" />
+                    State changing
+                </label>
+            </Stack>
+        </Grid>
+
+        @if (string.Equals(Draft.ToolKind, "externalHttp", StringComparison.OrdinalIgnoreCase)) {
+            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                <div>
+                    <label class="cda-field-label">HTTP method</label>
+                    <AuthoringText @bind-Value="Draft.HttpMethod"
+                               class="cda-input"
+                               disabled="@Locked"
+                               data-testid="@($"{TestId}-tool-http-method")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Endpoint</label>
+                    <AuthoringText @bind-Value="Draft.Endpoint"
+                               class="cda-input"
+                               disabled="@Locked"
+                               data-testid="@($"{TestId}-tool-http-endpoint")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Timeout seconds</label>
+                    <AuthoringText inputmode="numeric" @bind-Value="Draft.HttpTimeoutSecondsText"
+                                 class="cda-input"
+                                 disabled="@Locked"
+                                 data-testid="@($"{TestId}-tool-http-timeout")" />
+                </div>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                <div>
+                    <label class="cda-field-label">Header bindings</label>
+                    <AuthoringTextArea @bind-Value="Draft.HeaderBindingsText"
+                                   class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-http-header-bindings")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Required output properties</label>
+                    <AuthoringTextArea @bind-Value="Draft.HttpRequiredOutputPropertiesText"
+                                   class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-http-output")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Max response bytes</label>
+                    <AuthoringText inputmode="numeric" @bind-Value="Draft.MaxResponseBytesText"
+                                 class="cda-input"
+                                 disabled="@Locked"
+                                 data-testid="@($"{TestId}-tool-http-max-response")" />
+                </div>
+            </Grid>
+        } else {
+            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                <div>
+                    <label class="cda-field-label">Command</label>
+                    <AuthoringText @bind-Value="Draft.Command"
+                               class="cda-input"
+                               disabled="@Locked"
+                               data-testid="@($"{TestId}-tool-process-command")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Working directory</label>
+                    <AuthoringText @bind-Value="Draft.WorkingDirectory"
+                               class="cda-input"
+                               disabled="@Locked"
+                               data-testid="@($"{TestId}-tool-process-working-directory")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Timeout seconds</label>
+                    <AuthoringText inputmode="numeric" @bind-Value="Draft.ProcessTimeoutSecondsText"
+                                 class="cda-input"
+                                 disabled="@Locked"
+                                 data-testid="@($"{TestId}-tool-process-timeout")" />
+                </div>
+            </Grid>
+
+            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                <div>
+                    <label class="cda-field-label">Arguments</label>
+                    <AuthoringTextArea @bind-Value="Draft.ArgumentsText"
+                                   class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-process-arguments")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Allowed executable names</label>
+                    <AuthoringTextArea @bind-Value="Draft.AllowedExecutableNamesText"
+                                   class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-process-allowed-executables")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Required output properties</label>
+                    <AuthoringTextArea @bind-Value="Draft.ProcessRequiredOutputPropertiesText"
+                                   class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                                   disabled="@Locked"
+                                   data-testid="@($"{TestId}-tool-process-output")" />
+                </div>
+            </Grid>
+
+            <div>
+                <label class="cda-field-label">Max output bytes</label>
+                <AuthoringText inputmode="numeric" @bind-Value="Draft.MaxOutputBytesText"
+                             class="cda-input"
+                             disabled="@Locked"
+                             data-testid="@($"{TestId}-tool-process-max-output")" />
+            </div>
+        }
+    </FormSection>
+
+@code {
+    [Parameter, EditorRequired] public ToolCapabilityDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    [Parameter] public bool Locked { get; set; }
+}

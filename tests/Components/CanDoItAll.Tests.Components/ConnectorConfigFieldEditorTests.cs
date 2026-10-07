@@ -1,6 +1,8 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
+using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Modules.Workspace;
-using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.Configuration.UI;
 using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Tests.Components.Shell;
@@ -8,9 +10,57 @@ namespace CanDoItAll.Tests.Components.Shell;
 public sealed class ConnectorConfigFieldEditorTests
 {
     [Fact]
+    public void Workspace_fallback_keeps_raw_number_json_validation_and_reference_only_secret_selection() {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        var secret = Guid.NewGuid();
+        var state = new ConfigurationState();
+        var schema = new ConfigurationSchema("1.0", [
+            new("count", "Count", ConfigurationFieldType.Number, false, ""),
+            new("payload", "Payload", ConfigurationFieldType.Json, false, ""),
+            new("secret", "Secret", ConfigurationFieldType.SecretReference, false, "")
+        ]);
+        ConfigurationState? changed = null;
+        var cut = context.Render<CanDoItAll.Modules.Workspace.Pages.Components.ConfigurationSchemaFallbackRenderer>(p => p
+            .Add(c => c.Schema, schema).Add(c => c.State, state)
+            .Add(c => c.Secrets, [new CanDoItAll.Modules.Security.SecretListItem(secret, "Reference metadata", CanDoItAll.Modules.Security.SecretKind.ApiKey, "fixture", DateTimeOffset.UnixEpoch)])
+            .Add(c => c.StateChanged, value => changed = value));
+        cut.Find("[data-testid='configuration-field-count']").Input(" 1e- ");
+        cut.Find("[data-testid='configuration-field-payload']").Input("{ unfinished");
+        cut.Find("[data-testid='configuration-field-secret']").Change(secret.ToString());
+        var validation = new ConfigurationSchemaValidator().Validate(schema, state);
+        cut.Render(p => p.Add(c => c.Validation, validation));
+        Assert.Same(state, changed);
+        Assert.Equal(" 1e- ", cut.Find("[data-testid='configuration-field-count']").GetAttribute("value"));
+        Assert.Equal("{ unfinished", state.GetText("payload"));
+        Assert.Equal(secret.ToString(), state.GetText("secret"));
+        Assert.Equal(2, cut.FindAll(".workflow-canvas-error").Count);
+        Assert.Contains("Reference metadata", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Shared_secret_field_keeps_unavailable_reference_until_an_explicit_selection() {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        var state = new ConfigurationState();
+        var missing = Guid.NewGuid().ToString();
+        state.SetText("secret", missing);
+        var cut = context.Render<ConnectorConfigFieldEditor>(p => p.Add(c => c.State, state)
+            .Add(c => c.Field, new ConfigurationFieldDescriptor("secret", "Secret", ConfigurationFieldType.SecretReference, false, "")));
+        Assert.Contains($"Unavailable secret ({missing})", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(missing, state.GetText("secret"));
+        cut.Find("select").Change(string.Empty);
+        Assert.Equal(string.Empty, state.GetText("secret"));
+    }
+
+    [Fact]
     public void ConnectorConfigFieldEditor_updates_text_state_from_canonical_field_descriptor()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "endpointUrl",
@@ -24,7 +74,7 @@ public sealed class ConnectorConfigFieldEditorTests
             .Add(component => component.State, state)
             .Add(component => component.TestId, "connector-config-endpoint"));
 
-        cut.Find("[data-testid='connector-config-endpoint']").Change("https://example.test/hooks");
+        cut.Find("[data-testid='connector-config-endpoint']").Input("https://example.test/hooks");
 
         Assert.Equal("https://example.test/hooks", state.GetText("endpointUrl"));
     }
@@ -33,6 +83,8 @@ public sealed class ConnectorConfigFieldEditorTests
     public void ConnectorConfigFieldEditor_updates_boolean_state_from_canonical_field_descriptor()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "enabled",
@@ -55,6 +107,8 @@ public sealed class ConnectorConfigFieldEditorTests
     public void ConnectorConfigFieldEditor_preserves_int64_numeric_state()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
         var state = new ConnectorConfigState();
         var field = new ConfigurationFieldDescriptor(
             "maxBytes",
@@ -71,7 +125,7 @@ public sealed class ConnectorConfigFieldEditorTests
             .Add(component => component.State, state)
             .Add(component => component.TestId, "connector-config-max-bytes"));
 
-        cut.Find("[data-testid='connector-config-max-bytes']").Change("1099511627776");
+        cut.Find("[data-testid='connector-config-max-bytes']").Input("1099511627776");
 
         Assert.Equal("1099511627776", state.GetText("maxBytes"));
     }

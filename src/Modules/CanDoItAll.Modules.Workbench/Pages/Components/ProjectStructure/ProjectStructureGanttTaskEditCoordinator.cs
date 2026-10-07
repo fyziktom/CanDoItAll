@@ -1,3 +1,4 @@
+using CanDoItAll.Workbench.Planning.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Configuration;
@@ -12,7 +13,9 @@ public sealed record ProjectStructureGanttTaskEditContext(
     ProjectStructureSurface Surface,
     ProjectStructureGanttProjectionResult Projection,
     IReadOnlyList<ProjectPartyAssignmentDetail> Assignments,
-    ProjectStructureAgentContext MutationOwner);
+    ProjectStructureAgentContext MutationOwner) {
+    public Func<bool> IsCurrent { get; init; } = static () => true;
+}
 
 public sealed class ProjectStructureGanttTaskEditCoordinator(
     ProjectStructureTaskResourceService taskResourceService,
@@ -32,15 +35,18 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(reloadAuthoritativeProject);
+        var admission = ProjectAssignmentAdmission.Require(context.ProjectId, context.MutationOwner.ExpectedProjectAdmission);
 
         var projectedTask = context.Projection.Tasks.FirstOrDefault(task => task.Id == taskId);
         var taskNode = context.Surface.Nodes.FirstOrDefault(node =>
             string.Equals(node.Id, taskId.Value, StringComparison.Ordinal));
         if (projectedTask is null || taskNode is null)
         {
-            notificationService.Error(
-                "Task details unavailable",
-                "The selected task is no longer present in the authoritative project structure. Reload the project and try again.");
+            if (context.IsCurrent()) {
+                notificationService.Error(
+                    "Task details unavailable",
+                    "The selected task is no longer present in the authoritative project structure. Reload the project and try again.");
+            }
             return;
         }
 
@@ -63,7 +69,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         }
         catch (Exception exception) when (exception is InvalidOperationException or ProjectStructureTaskDetailsException)
         {
-            notificationService.Error("Task details unavailable", exception.Message);
+            if (context.IsCurrent()) {
+                notificationService.Error("Task details unavailable", exception.Message);
+            }
             logger.LogWarning(
                 "Could not prepare Gantt task details for project {ProjectId}, task {TaskId}; failure type {FailureType}.",
                 Mask(context.ProjectId),
@@ -76,6 +84,9 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             context,
             assigneeResolution,
             cancellationToken);
+        if (!context.IsCurrent()) {
+            return;
+        }
         var editModel = new ProjectStructureGanttTaskEditModel(
             taskId,
             taskNode.Title,
@@ -89,11 +100,20 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             execution,
             expectedCostBasis,
             directAssignmentRevision);
-        var result = await dialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
+        var session = new ProjectTaskDialogSession(context.IsCurrent, reloadAuthoritativeProject, logger, [taskId.Value]);
+        await dialogService.OpenAsync<ProjectStructureGanttTaskDialog>(
             "Edit project task",
             new Dictionary<string, object?>
             {
+                [nameof(ProjectStructureGanttTaskDialog.EditSubmitted)] =
+                    new Func<ProjectStructureTaskEditDialogResult, Task<PlanningTaskSaveResult>>(draft =>
+                        session.SubmitAsync(() => SaveAsync(context, editModel, draft, session))),
+                [nameof(ProjectStructureGanttTaskDialog.Readback)] = new Func<Task<PlanningTaskSaveResult>>(session.ReadbackAsync),
                 [nameof(ProjectStructureGanttTaskDialog.ProjectId)] = context.ProjectId,
+                [nameof(ProjectStructureGanttTaskDialog.QuoteContext)] = new ProjectTaskQuoteContext(
+                    admission.DatabaseProfileId,
+                    admission.LifetimeId,
+                    Guid.NewGuid()),
                 [nameof(ProjectStructureGanttTaskDialog.DefaultStartUtc)] = projectedTask.Start,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultEndUtc)] = projectedTask.End,
                 [nameof(ProjectStructureGanttTaskDialog.DefaultCurrencyCode)] = currencyFormatter.CurrencyCode,
@@ -116,233 +136,54 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             },
             cancellationToken);
 
-        if (result is ProjectStructureTaskEditDialogResult editResult)
-        {
-            await SaveAsync(context, editModel, editResult, reloadAuthoritativeProject, cancellationToken);
-        }
     }
 
-    private async Task SaveAsync(
-        ProjectStructureGanttTaskEditContext context,
-        ProjectStructureGanttTaskEditModel current,
-        ProjectStructureTaskEditDialogResult proposed,
-        Func<Task> reloadAuthoritativeProject,
-        CancellationToken cancellationToken)
-    {
-        if (proposed.TaskId != current.TaskId)
-        {
-            notificationService.Error(
-                "Task details could not be saved",
-                "The task detail result does not belong to the selected task.");
+    private async Task SaveAsync(ProjectStructureGanttTaskEditContext context,
+        ProjectStructureGanttTaskEditModel current, ProjectStructureTaskEditDialogResult proposed, ProjectTaskDialogSession session) {
+        if (proposed.TaskId != current.TaskId) {
+            session.Reject("The task submission does not belong to this editor.");
             return;
         }
-
-        if (proposed.ResourceToAttach is { } resourceToAttach)
-        {
-            try
-            {
-                ProjectStructureTaskResourceSelectionPolicy
-                    .ValidateDefinitionAttachment(resourceToAttach);
-            }
-            catch (ProjectStructureAgentException exception)
-            {
-                notificationService.Error(
-                    "Task resource could not be attached",
-                    exception.Message);
-                return;
-            }
+        if (proposed.ResourceToAttach is { } resource) {
+            ProjectStructureTaskResourceSelectionPolicy.ValidateDefinitionAttachment(resource);
         }
-
         GanttTaskScheduleChangeRequest? scheduleChange = null;
-        if (proposed.StartUtc != current.StartUtc || proposed.EndUtc != current.EndUtc)
-        {
-            try
-            {
-                scheduleChange = GanttSchedulePlanner.PlanInterval(
-                    context.Projection.Tasks,
-                    context.Projection.Dependencies,
-                    current.TaskId,
-                    proposed.StartUtc,
-                    proposed.EndUtc,
-                    minimumTaskDuration: TimeSpan.FromMinutes(15));
+        if (proposed.StartUtc != current.StartUtc || proposed.EndUtc != current.EndUtc) {
+            if (current.ScheduleReadOnly) {
+                session.Reject("The projected interval is read-only in this editor.");
+                return;
             }
-            catch (Exception exception) when (exception is GanttScheduleException or ArgumentOutOfRangeException)
-            {
-                notificationService.Error("Task schedule change rejected", exception.Message);
+            try {
+                scheduleChange = GanttSchedulePlanner.PlanInterval(context.Projection.Tasks, context.Projection.Dependencies,
+                    current.TaskId, proposed.StartUtc, proposed.EndUtc, minimumTaskDuration: TimeSpan.FromMinutes(15));
+            } catch (Exception failure) when (failure is GanttScheduleException or ArgumentOutOfRangeException) {
+                session.Reject("The proposed schedule is invalid. Review the interval and dependencies.");
                 return;
             }
         }
-
+        if (!current.CanChangeDirectAssignee && proposed.AssigneeChanged) {
+            session.Reject("The complete direct-assignment set must be preserved.");
+            return;
+        }
         var currentExecution = current.Execution ?? ProjectTaskExecutionSnapshot.Unknown;
-        var request = new ProjectStructureTaskDetailsUpdateRequest(
-            current.TaskId,
-            current.Title,
-            proposed.Title,
-            current.ProgressPercent,
-            proposed.ProgressPercent,
-            current.Estimate,
-            proposed.Estimate,
-            scheduleChange,
-            proposed.AssigneeChanged,
-            proposed.Assignee,
-            currentExecution,
-            proposed.Execution ?? currentExecution,
-            current.ExpectedCostBasis,
-            current.DirectAssignmentRevision) { ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, MutationOwner = context.MutationOwner };
-        var mutationCommitted = false;
-        ProjectStructureTaskEstimateRefreshResult? committedPricing = null;
-        try
-        {
-            var update = await taskDetailsService.UpdateWithPricingAsync(
-                context.ProjectId,
-                request,
-                cancellationToken);
-            committedPricing = update.Pricing;
-            mutationCommitted = true;
-            if (proposed.ResourceToAttach is not null)
-            {
-                try
-                {
-                    var attachmentResult = await taskResourceAttachmentService.AttachAfterTransitionAsync(
-                        context.ProjectId,
-                        current.TaskId.Value,
-                        proposed.ResourceToAttach,
-                        currentExecution,
-                        proposed.Execution ?? currentExecution,
-                        context.MutationOwner,
-                        cancellationToken);
-                    committedPricing = attachmentResult.Pricing;
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    await TryReloadAfterPartialSaveAsync(
-                        context.ProjectId,
-                        current.TaskId.Value,
-                        proposed.ResourceToAttach.Kind,
-                        reloadAuthoritativeProject);
-                    notificationService.Warning(
-                        "Task details partially saved",
-                        "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
-                    logger.LogWarning(
-                        "Task details were committed before resource attachment pricing completed. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
-                        Mask(context.ProjectId),
-                        Mask(current.TaskId.Value),
-                        proposed.ResourceToAttach.Kind);
-                    return;
-                }
-                catch (Exception exception)
-                {
-                    await TryReloadAfterPartialSaveAsync(
-                        context.ProjectId,
-                        current.TaskId.Value,
-                        proposed.ResourceToAttach.Kind,
-                        reloadAuthoritativeProject);
-                    if (exception is ProjectStructureAgentException
-                        {
-                            ErrorCode: ProjectStructureTaskResourceAttachmentService.CompensationFailedErrorCode
-                        })
-                    {
-                        notificationService.Error(
-                            "Task resource requires attention",
-                            exception.Message);
-                    }
-                    else
-                    {
-                        notificationService.Warning(
-                            "Task details partially saved",
-                            "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
-                    }
-
-                    logger.LogWarning(
-                        exception,
-                        "Task details were committed but attached-resource pricing did not complete. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind} FailureType={FailureType}",
-                        Mask(context.ProjectId),
-                        Mask(current.TaskId.Value),
-                        proposed.ResourceToAttach.Kind,
-                        exception.GetType().Name);
-                    return;
-                }
-            }
-
-            await reloadAuthoritativeProject();
-            notificationService.Success(
-                "Task details saved",
-                proposed.ResourceToAttach is null
-                    ? $"{proposed.Title} was saved; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}"
-                    : $"{proposed.Title} was saved with its selected {proposed.ResourceToAttach.Kind.ToString().ToLowerInvariant()}; {update.Mutation.AffectedTaskIds.Count} project task(s) were affected.{BuildPricingSummary(committedPricing)}");
+        var request = new ProjectStructureTaskDetailsUpdateRequest(current.TaskId, current.Title, proposed.Title,
+            current.ProgressPercent, proposed.ProgressPercent, current.Estimate, proposed.Estimate, scheduleChange,
+            proposed.AssigneeChanged, proposed.Assignee, currentExecution, proposed.Execution ?? currentExecution,
+            current.ExpectedCostBasis, current.DirectAssignmentRevision) {
+            ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission, MutationOwner = context.MutationOwner
+        };
+        var update = await taskDetailsService.UpdateWithPricingAsync(context.ProjectId, request, CancellationToken.None);
+        session.TaskCommitted(update.Mutation.AffectedTaskIds.Select(id => id.Value).ToArray(), update.Pricing, proposed.AssigneeChanged);
+        if (proposed.ResourceToAttach is not null && context.IsCurrent()) {
+            var attachment = await taskResourceAttachmentService.AttachAfterTransitionAsync(context.ProjectId, current.TaskId.Value,
+                proposed.ResourceToAttach, currentExecution, proposed.Execution ?? currentExecution, context.MutationOwner, CancellationToken.None);
+            session.AttachmentCommitted(attachment);
+        } else if (proposed.ResourceToAttach is not null) {
+            throw new InvalidOperationException("The task committed, but the original view retired before attachment began.");
         }
-        catch (ProjectStructureGanttMutationException exception)
-        {
-            notificationService.Error("Task details change rejected", exception.Message);
-            logger.LogWarning(
-                "Rejected Gantt task detail update for project {ProjectId}, task {TaskId}, with code {ErrorCode}.",
-                Mask(context.ProjectId),
-                Mask(current.TaskId.Value),
-                exception.Code);
-        }
-        catch (ProjectStructureTaskDetailsException exception)
-        {
-            notificationService.Error("Task details could not be saved", exception.Message);
-            logger.LogWarning(
-                "Rejected Gantt task detail orchestration for project {ProjectId}, task {TaskId}, with code {ErrorCode}.",
-                Mask(context.ProjectId),
-                Mask(current.TaskId.Value),
-                exception.Code);
-        }
-        catch (ProjectStructureAgentException exception)
-        {
-            notificationService.Error("Task details could not be saved", exception.Message);
-            logger.LogWarning(
-                "Rejected Gantt task detail update for project {ProjectId}, task {TaskId}, with application error {ErrorCode}.",
-                Mask(context.ProjectId),
-                Mask(current.TaskId.Value),
-                exception.ErrorCode);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            if (mutationCommitted)
-            {
-                notificationService.Warning(
-                    "Task details saved; reload required",
-                    $"The change was saved, but the authoritative project could not be reloaded.{BuildPricingSummary(committedPricing)} Reload this page before making another change.");
-            }
-            else
-            {
-                notificationService.Error(
-                    "Task details save failed",
-                    "The task details could not be saved. The project remains unchanged.");
-            }
-
-            logger.LogError(
-                "Gantt task detail update failed for project {ProjectId}, task {TaskId}, after commit state {MutationCommitted}; failure type {FailureType}.",
-                Mask(context.ProjectId),
-                Mask(current.TaskId.Value),
-                mutationCommitted,
-                exception.GetType().Name);
-        }
-    }
-
-    private async Task TryReloadAfterPartialSaveAsync(
-        Guid projectId,
-        string taskNodeId,
-        ProjectStructureTaskResourceKind resourceKind,
-        Func<Task> reloadAuthoritativeProject)
-    {
-        try
-        {
-            await reloadAuthoritativeProject();
-        }
-        catch (Exception reloadFailure)
-        {
-            logger.LogError(
-                reloadFailure,
-                "Task details were partially saved and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskId={TaskId} ResourceKind={ResourceKind}",
-                Mask(projectId),
-                Mask(taskNodeId),
-                resourceKind);
+        await session.RefreshAfterCommitAsync();
+        if (context.IsCurrent()) {
+            notificationService.Success("Task details saved", session.Result!.Message);
         }
     }
 

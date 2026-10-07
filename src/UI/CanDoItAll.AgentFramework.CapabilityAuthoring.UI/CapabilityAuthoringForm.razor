@@ -1,0 +1,98 @@
+@namespace CanDoItAll.AgentFramework.CapabilityAuthoring.UI
+@{
+    var owner = session;
+}
+@if (owner is not null) {
+    @if (!owner.IsCurrent) {
+        <Alert AlertStyle="AlertStyle.Warning">This editor is no longer active. Reopen it in the current workspace.</Alert>
+    } else if (owner.IsLoading) {
+        <SurfaceCard Soft="true" data-testid="agents-capability-details-loading">
+            <p class="cda-eyebrow">Loading capability</p>
+            <h3 class="cda-title-md">Preparing capability details</h3>
+        </SurfaceCard>
+    } else if (owner.LoadFailed) {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-capability-details-load-failed">The requested capability could not be loaded.</Alert>
+        <Cluster>
+            <Button Text="Retry" Click="() => RetryAsync(owner)" />
+            <Button Text="Close" Click="() => CancelAsync(owner)" />
+        </Cluster>
+    } else {
+        <EditForm @key="owner.Draft" EditContext="owner.Draft.Context" OnSubmit="() => SaveAsync(owner)">
+            <div class="capability-authoring" data-testid="capability-authoring-form">
+                @if (owner.Draft.RemovedPlaintext) {
+                    <Alert AlertStyle="AlertStyle.Warning">Stored plaintext environment or header values were removed from this draft. Use binding references before saving.</Alert>
+                }
+                @if (owner.Draft.ConfigurationError is not null) {
+                    <Alert AlertStyle="AlertStyle.Danger" data-testid="capability-configuration-invalid">@owner.Draft.ConfigurationError</Alert>
+                }
+                @if (owner.Status is not null) {
+                    <Alert AlertStyle="@(owner.SaveUnknown ? AlertStyle.Danger : AlertStyle.Info)" data-testid="capability-authoring-status">@owner.Status</Alert>
+                }
+                <ValidationSummary />
+                @if (Mode == CapabilityAuthoringMode.Wizard) {
+                    <Steps Value="step" ValueChanged="value => SelectStep(owner, value)" CanSelect="false" data-testid="agents-capability-setup-wizard">
+                        <StepsItem Text="Identity" Icon="badge">
+                            <CapabilityIdentityFields Draft="owner.Draft" TestId="@TestId" TagSuggestions="TagSuggestions" />
+                        </StepsItem>
+                        <StepsItem Text="Configure" Icon="settings">
+                            <CapabilityConfigurationFields Session="owner" TestId="@TestId" />
+                        </StepsItem>
+                        <StepsItem Text="Review" Icon="fact_check">
+                            <FormSection Title="Review" Description="Confirm the definition before creating it. Assignment remains explicit per agent.">
+                                <FactTable>
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <p class="cda-field-label">Type</p>
+                                        <p>@owner.Draft.Model.Kind</p>
+                                        <p class="cda-field-label">Name</p>
+                                        <p>@owner.Draft.Model.Name</p>
+                                        <p class="cda-field-label">Key</p>
+                                        <p class="capability-authoring__mono">@owner.Draft.Model.Key</p>
+                                        <p class="cda-field-label">Configuration</p>
+                                        <p>@ConfigurationSummary(owner.Draft)</p>
+                                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                            @foreach (var tag in owner.Draft.Model.Tags) {
+                                                <StatusBadge Tone="neutral" Text="@tag" />
+                                            }
+                                        </Cluster>
+                                    </Stack>
+                                </FactTable>
+                            </FormSection>
+                        </StepsItem>
+                    </Steps>
+                } else {
+                    <Tabs SelectedIndex="tab" SelectedIndexChanged="value => SelectTab(owner, value)" Variant="TabsVariant.ModalCompact" BorderMode="TabsBorderMode.Soft" Tone="TabsTone.Info" OverflowMode="TabsOverflowMode.Scroll" PanelOverflowMode="TabsPanelOverflowMode.Auto" FillHeight="true" Class="capability-authoring__tabs" AriaLabel="Capability details sections">
+                        <TabItems>
+                            <TabsItem Text="Identity">
+                                <CapabilityIdentityFields Draft="owner.Draft" TestId="@TestId" TagSuggestions="TagSuggestions" />
+                            </TabsItem>
+                            <TabsItem Text="Configuration">
+                                <CapabilityConfigurationFields Session="owner" TestId="@TestId" />
+                            </TabsItem>
+                            <TabsItem Text="Raw">
+                                <CapabilityRawFields Draft="owner.Draft" TestId="@TestId" />
+                            </TabsItem>
+                        </TabItems>
+                    </Tabs>
+                }
+                <StickyActionFooter StatusLabel="Capability catalog">
+                    <SecondaryActions>
+                        <Button Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Light" Click="() => CancelAsync(owner)" />
+                        @if (Mode == CapabilityAuthoringMode.Wizard) {
+                            <Button Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="() => SelectStep(owner, step - 1)" data-testid="agents-capability-setup-back" />
+                        }
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        @if (owner.AcceptedId.HasValue) {
+                            <Button Text="Use saved capability" ButtonStyle="ButtonStyle.Light" Click="() => CompleteAsync(owner)" data-testid="capability-use-saved" />
+                        }
+                        @if (Mode == CapabilityAuthoringMode.Wizard && step < 2) {
+                            <Button Text="Next" Icon="arrow_forward" Disabled="@owner.Busy" Click="() => Next(owner)" data-testid="agents-capability-setup-next" />
+                        } else {
+                            <Button Text="@(owner.Draft.Model.Id.HasValue ? "Save capability" : "Create capability")" Icon="check" Type="submit" Disabled="@(owner.Busy || owner.SaveUnknown)" IsBusy="@owner.Busy" data-testid="@(Mode == CapabilityAuthoringMode.Wizard ? "agents-capability-setup-create" : "agents-capability-details-save")" />
+                        }
+                    </PrimaryActions>
+                </StickyActionFooter>
+            </div>
+        </EditForm>
+    }
+}

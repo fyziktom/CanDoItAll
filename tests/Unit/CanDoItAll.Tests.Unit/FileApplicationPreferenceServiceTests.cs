@@ -3,6 +3,8 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using CanDoItAll.Modules.Workspace;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
@@ -12,6 +14,71 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Path.GetTempPath(),
         nameof(FileApplicationPreferenceServiceTests),
         Guid.NewGuid().ToString("N"));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Workspace_files_adopts_saved_destination_and_deletes_only_that_real_preference(bool warning) {
+        var executable = CreateExecutable("never-execute-captured.exe");
+        var laterExecutable = CreateExecutable("never-execute-later.exe");
+        var service = CreateService();
+        await service.SaveAsync(new(new(".sample"), executable));
+        var owner = new HeldFilesOwner(new WorkspaceFilesOwner(warning ? CreateService(new ThrowingLogger()) : service));
+        using var state = new WorkspaceFilesController(owner);
+        await state.RefreshAsync();
+        state.Select(Assert.Single(state.Preferences));
+        state.Draft.Extension = " NEXT ";
+        state.Draft.Edited();
+        var pending = state.SaveAsync();
+        await owner.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        state.Draft.ExecutablePath = laterExecutable;
+        state.Draft.Edited();
+        owner.Release.SetResult();
+        await pending;
+        Assert.Equal(new WorkspaceFileExtension(".next"), state.Draft.Selected);
+        Assert.Equal(laterExecutable, state.Draft.ExecutablePath);
+        var saved = await CreateService().ListAsync();
+        Assert.Equal(executable, saved.Single(item => item.Extension.Value == ".next").ExecutablePath);
+        Assert.Equal(2, saved.Count);
+        await state.DeleteAsync();
+        Assert.Equal(".next", owner.Deleted!.Value.Value);
+        Assert.Equal(".sample", Assert.Single(await CreateService().ListAsync()).Extension.Value);
+    }
+
+    private sealed class HeldFilesOwner(IWorkspaceFilesOwner owner) : IWorkspaceFilesOwner {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public WorkspaceFileExtension? Deleted { get; private set; }
+        public WorkspaceFileCommand Capture(string extension, string path) => owner.Capture(extension, path);
+        public Task<IReadOnlyList<WorkspaceFilePreference>> ListAsync(CancellationToken token) => owner.ListAsync(token);
+        public async Task<SettingsWriteResult<WorkspaceFileExtension>> SaveAsync(WorkspaceFileCommand command, CancellationToken token) {
+            var result = await owner.SaveAsync(command, token);
+            Entered.SetResult();
+            await Release.Task;
+            return result;
+        }
+        public Task<SettingsWriteResult<WorkspaceFileExtension>> DeleteAsync(WorkspaceFileExtension extension, CancellationToken token) {
+            Deleted = extension;
+            return owner.DeleteAsync(extension, token);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Logging_failure_preserves_known_durable_preference_effect(bool delete) {
+        var executable = CreateExecutable("never-execute-fixture.exe");
+        var preference = new FileApplicationPreference(new(".owned"), executable);
+        await CreateService().SaveAsync(preference);
+        var service = CreateService(new ThrowingLogger());
+        var warning = await Assert.ThrowsAsync<FileApplicationPreferenceCommittedException>(() => delete
+            ? service.DeleteAsync(preference.Extension) : service.SaveAsync(preference));
+        Assert.Equal(preference.Extension, warning.Extension);
+        Assert.Equal(delete, warning.Deleted);
+        var stored = await CreateService().ListAsync();
+        Assert.Equal(delete, stored.Count == 0);
+        Assert.DoesNotContain(executable, warning.ToString(), StringComparison.Ordinal);
+    }
 
     [Theory]
     [InlineData("xlsx", ".xlsx")]
@@ -275,11 +342,18 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
 
     private string SettingsPath => Path.Combine(rootPath, "file-application-preferences.json");
 
-    private FileApplicationPreferenceService CreateService()
+    private FileApplicationPreferenceService CreateService(ILogger<FileApplicationPreferenceService>? logger = null)
         => new(
             new StaticControlPlanePathResolver(rootPath),
             new DurableFileWriter(TestWorkspaceServices.PhysicalPathPolicyFactory),
-            NullLogger<FileApplicationPreferenceService>.Instance);
+            logger ?? NullLogger<FileApplicationPreferenceService>.Instance);
+
+    private sealed class ThrowingLogger : ILogger<FileApplicationPreferenceService> {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => throw new IOException("Owned logging failure.");
+    }
 
     private string CreateExecutable(string fileName)
     {

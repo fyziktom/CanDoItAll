@@ -31,3 +31,10 @@ The architecture documentation is intentionally small:
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.
+
+[TestLab UI boundary](testlab-ui-boundary.md) records the full workspace extraction,
+form and submission lifetimes, production owner proof and standalone development loop.
+
+[Plugins UI boundary](plugins-ui-boundary.md) records the six-section workspace,
+connection lifetimes, staged owner receipts, real upload/OAuth/restart proof and
+[standalone sandbox](../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md).

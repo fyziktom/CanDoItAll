@@ -46,21 +46,6 @@ public enum ProjectWorkItemKind
     Send
 }
 
-/// <summary>
-/// Recorded execution state of a canonical task. In HTTP request and response bodies it is a JSON integer:
-/// 0 Unknown (no state recorded yet), 1 NotStarted, 2 Started, 3 Completed, 4 Cancelled. Inside a node's
-/// <c>metadataJson</c> string it appears as the text tokens <c>unknown</c>, <c>notStarted</c>, <c>started</c>,
-/// <c>completed</c> and <c>cancelled</c>. Completed and Cancelled are final.
-/// </summary>
-public enum ProjectTaskExecutionState
-{
-    Unknown,
-    NotStarted,
-    Started,
-    Completed,
-    Cancelled
-}
-
 public enum ProjectSendKind
 {
     File,
@@ -751,9 +736,17 @@ public static class ProjectObjectMetadataSerializer
             StringComparer.OrdinalIgnoreCase);
         foreach (var property in originalRoot)
         {
-            if (EnvelopePropertyNames.Contains(property.Key) ||
-                additionalRecognizedNames?.Contains(property.Key) == true)
-            {
+            if (EnvelopePropertyNames.Contains(property.Key)) {
+                var member = typeof(ProjectObjectMetadataEnvelope).GetProperties().FirstOrDefault(candidate =>
+                    string.Equals(SerializerOptions.PropertyNamingPolicy?.ConvertName(candidate.Name) ?? candidate.Name,
+                        property.Key, StringComparison.OrdinalIgnoreCase));
+                if (member is not null && property.Value is JsonObject originalChild &&
+                    canonicalRoot.FirstOrDefault(candidate => string.Equals(candidate.Key, property.Key, StringComparison.OrdinalIgnoreCase)).Value is JsonObject canonicalChild) {
+                    PreserveUnknownChildren(originalChild, canonicalChild, member.PropertyType);
+                }
+                continue;
+            }
+            if (additionalRecognizedNames?.Contains(property.Key) == true) {
                 continue;
             }
 
@@ -761,6 +754,19 @@ public static class ProjectObjectMetadataSerializer
         }
 
         return canonicalRoot.ToJsonString(SerializerOptions);
+    }
+
+    private static void PreserveUnknownChildren(JsonObject original, JsonObject canonical, Type type) {
+        var members = type.GetProperties().ToDictionary(property => property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name
+            ?? SerializerOptions.PropertyNamingPolicy?.ConvertName(property.Name) ?? property.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var property in original) {
+            if (!members.TryGetValue(property.Key, out var member)) {
+                canonical[property.Key] = property.Value?.DeepClone();
+            } else if (property.Value is JsonObject originalChild &&
+                canonical.FirstOrDefault(candidate => string.Equals(candidate.Key, property.Key, StringComparison.OrdinalIgnoreCase)).Value is JsonObject canonicalChild) {
+                PreserveUnknownChildren(originalChild, canonicalChild, member.PropertyType);
+            }
+        }
     }
 
     public static ProjectNodeMarker? NormalizeMarker(string? icon, string? tone, string? label)

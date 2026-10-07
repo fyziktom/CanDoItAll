@@ -16,8 +16,11 @@ public partial class ProjectStructurePage
     private void OpenQuickActionDialog(ProjectStructureNode node)
         => quickActionDialog = BuildQuickActionDialog(node);
 
-    private void CloseQuickActionDialog()
-        => quickActionDialog = null;
+    private void CloseQuickActionDialog(ProjectStructureQuickActionDialogState? opening = null) {
+        if (opening is null || quickActionDialog?.OpeningId == opening.OpeningId) {
+            quickActionDialog = null;
+        }
+    }
 
     private ProjectStructureQuickActionDialogState BuildQuickActionDialog(ProjectStructureNode node)
     {
@@ -25,7 +28,8 @@ public partial class ProjectStructurePage
         var copy = $"Choose the next step for this {nodeLabel.ToLowerInvariant()} without leaving the canvas.";
         if (ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) &&
             !RuntimeLauncher.IsRunning(node.Id) &&
-            RuntimeLauncher.GetLastExit(node.Id) is { ExitCode: not 0 } lastExit)
+            surface?.ExpectedProjectAdmission is { } admission &&
+            RuntimeLauncher.GetLastExit(node.Id, new(admission, node.RecordId)) is { ExitCode: not 0 } lastExit)
         {
             copy = $"{copy} The last run failed. {lastExit.Describe()}";
         }
@@ -38,7 +42,10 @@ public partial class ProjectStructurePage
             node.Notes,
             BuildEditQuickAction(node),
             ResolvePrimaryQuickAction(node),
-            ResolveSecondaryQuickActions(node));
+            ResolveSecondaryQuickActions(node)) {
+                Context = CaptureActionContext(), OriginalNode = node, SelectionRevision = insightsSelectionRevision,
+                RuntimeIdentity = CurrentRuntimeIdentity(node)
+            };
     }
 
     private void OpenWebPreviewDialog(ProjectStructureNode node, ProjectStructureWebLink link)
@@ -48,6 +55,7 @@ public partial class ProjectStructurePage
             return;
         }
 
+        CancelRuntimePreviewWait();
         webPreviewDialog = BuildWebPreviewDialog(node, link);
     }
 
@@ -62,8 +70,9 @@ public partial class ProjectStructurePage
             node.Notes,
             link.CanEmbed,
             link.EmbedUnavailableReason,
-            CanStopRuntime: ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) &&
-                            RuntimeLauncher.IsRunning(node.Id));
+            CanStopRuntime: ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node) && CurrentRuntimeIdentity(node) is not null) {
+                Context = CaptureActionContext(), OriginalNode = node, RuntimeIdentity = CurrentRuntimeIdentity(node)
+            };
 
     private ProjectStructureWebPreviewDialogState? RebuildWebPreviewDialog(
         IReadOnlyList<ProjectStructureNode> nodes)
@@ -78,12 +87,18 @@ public partial class ProjectStructurePage
         return node is not null &&
                ProjectStructureWebLinkResolver.TryResolve(node, out ProjectStructureWebLink? link) &&
                link is not null
-            ? BuildWebPreviewDialog(node, link)
+            && webPreviewDialog.OriginalNode?.RecordId == node.RecordId && link.Uri == webPreviewDialog.Url
+            ? webPreviewDialog with { Title = node.Title, Notes = node.Notes, SourceLabel = link.SourceLabel,
+                CanStopRuntime = webPreviewDialog.RuntimeIdentity is { } owned && CurrentRuntimeIdentity(node) == owned }
             : null;
     }
 
-    private void CloseWebPreviewDialog()
-        => webPreviewDialog = null;
+    private void CloseWebPreviewDialog(ProjectStructureWebPreviewDialogState? opening = null) {
+        if (opening is null || webPreviewDialog?.OpeningId == opening.OpeningId) {
+            webPreviewDialog = null;
+            CancelRuntimePreviewWait();
+        }
+    }
 
     private ProjectStructureQuickActionButton BuildEditQuickAction(ProjectStructureNode node)
         => CanEditNode(node)
@@ -138,7 +153,7 @@ public partial class ProjectStructurePage
                     "Stop the process identity owned by this Workbench runtime node.",
                     "stop_circle",
                     "warn",
-                    "runtime:stop");
+                    "runtime:stop", isDisabled: CurrentRuntimeIdentity(node) is null);
             }
 
             var capabilities = runtimeLaunch.EffectiveCapabilities;
@@ -385,31 +400,34 @@ public partial class ProjectStructurePage
             tone,
             CommandKind: commandKind);
 
-    private async Task ExecuteQuickActionAsync(ProjectStructureQuickActionButton action)
-    {
-        if (quickActionDialog is null || action.IsDisabled)
-        {
+    private async Task ExecuteQuickActionAsync(ProjectStructureQuickActionDialogState? opening, ProjectStructureQuickActionButton action) {
+        if (opening is null || quickActionDialog?.OpeningId != opening.OpeningId || action.IsDisabled ||
+            !opening.Actions.Contains(action) || opening.Context is not { } context || opening.OriginalNode is not { } targetNode ||
+            !IsCurrentAction(context) || !HasOriginalContentAuthority(context) || opening.SelectionRevision != insightsSelectionRevision) {
             return;
         }
-
-        var targetNode = ResolveNode(quickActionDialog.NodeId);
         quickActionDialog = null;
-        if (targetNode is null)
-        {
-            return;
-        }
-
-        switch (action.ExecutionKind)
-        {
-            case ProjectStructureQuickActionExecutionKind.Edit:
-                await OpenEditDialogAsync(targetNode);
-                break;
-            case ProjectStructureQuickActionExecutionKind.InspectorAction:
-                await ExecuteInspectorActionAsync(targetNode, action.ActionId);
-                break;
-            case ProjectStructureQuickActionExecutionKind.CommandInNewTab when action.CommandKind.HasValue:
-                await ExecuteCommandAsync(action.CommandKind.Value, targetNode.Id, openInNewTab: true);
-                break;
+        try {
+            await ProjectWorkbenchService.RequireContentCurrentAsync(context.Admission, targetNode);
+            if (!IsCurrentAction(context) || !HasOriginalContentAuthority(context) || opening.SelectionRevision != insightsSelectionRevision) {
+                return;
+            }
+            switch (action.ExecutionKind) {
+                case ProjectStructureQuickActionExecutionKind.Edit:
+                    await OpenEditDialogAsync(targetNode, context);
+                    break;
+                case ProjectStructureQuickActionExecutionKind.InspectorAction when action.ActionId == "runtime:stop":
+                    await StopRuntimeAsync(targetNode, opening.RuntimeIdentity, context);
+                    break;
+                case ProjectStructureQuickActionExecutionKind.InspectorAction:
+                    await ExecuteInspectorActionAsync(targetNode, action.ActionId, context);
+                    break;
+                case ProjectStructureQuickActionExecutionKind.CommandInNewTab when action.CommandKind.HasValue:
+                    await ExecuteCommandAsync(action.CommandKind.Value, targetNode.Id, openInNewTab: true, capturedContext: context);
+                    break;
+            }
+        } catch (Exception failure) when (failure is CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException or ProjectStructureEditConflictException) {
+            ReportActionResult(context, "The original quick-action target changed. Reopen its actions.", "warn");
         }
     }
 

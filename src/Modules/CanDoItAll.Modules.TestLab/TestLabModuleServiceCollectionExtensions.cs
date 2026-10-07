@@ -17,6 +17,7 @@ public static class TestLabModuleServiceCollectionExtensions
             IProjectTransferTargetStateParticipant,
             TestLabProjectTransferTargetStateParticipant>());
         services.AddScoped<TestLabService>();
+        services.AddScoped<ITestLabWorkspaceOwner, TestLabWorkspaceOwner>();
         return services;
     }
 }

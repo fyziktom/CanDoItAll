@@ -1,0 +1,121 @@
+@{ var editorModel = State.Draft; }
+<FormSection Title="Capabilities" Description="Attach cataloged tools, skills, and MCP servers to this agent, or open the guided setup flow to create and assign one.">
+    <TextBlock Value="@(editorModel.Id.HasValue ? "Assigning or removing a capability saves the complete current agent draft." : "Assignments are staged until you save this new agent.")" />
+    <div data-testid="agents-details-capability-summary">
+        <CompactStatStrip>
+            <CompactStat Label="attached"
+                         Value="@editorModel.SelectedCapabilityIds.Count.ToString()"
+                         TooltipText="Capabilities currently assigned to this agent."
+                         Tone="info" />
+            <CompactStat Label="skills"
+                         Value="@State.Capabilities.Count(item => item.Kind == CapabilityKind.Skill).ToString()"
+                         TooltipText="Prompt and workflow skills in the catalog."
+                         Tone="success" />
+            <CompactStat Label="tools"
+                         Value="@State.Capabilities.Count(item => item.Kind == CapabilityKind.Tool).ToString()"
+                         TooltipText="Runtime tools in the catalog."
+                         Tone="accent" />
+            <CompactStat Label="MCP servers"
+                         Value="@State.Capabilities.Count(item => item.Kind == CapabilityKind.McpServer).ToString()"
+                         TooltipText="MCP tool surfaces in the catalog."
+                         Tone="warning" />
+            <CompactStat Label="verified"
+                         Value="@State.Capabilities.Count(item => item.ProofStatus == CapabilityProofStatus.Verified).ToString()"
+                         TooltipText="Capabilities with successful proof status."
+                         Tone="success" />
+        </CompactStatStrip>
+    </div>
+
+    <Cluster Gap="LayoutGap.Small"
+             Wrap="FlexWrap.Wrap"
+             Class="agent-details-dialog__capability-actions"
+         data-testid="agents-details-new-capability">
+        <Button Text="New tool"
+                Icon="build"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Disabled="@(State.MutationBlocked || State.OpeningCapabilityWizard || State.CreatedCapabilityId.HasValue)"
+                Click="@(() => State.Changed.InvokeAsync(new AgentEditorAccessIntent.CreateCapability(CapabilityKind.Tool)))"
+                data-testid="agents-details-new-tool" />
+        <Button Text="New MCP"
+                Icon="hub"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Disabled="@(State.MutationBlocked || State.OpeningCapabilityWizard || State.CreatedCapabilityId.HasValue)"
+                Click="@(() => State.Changed.InvokeAsync(new AgentEditorAccessIntent.CreateCapability(CapabilityKind.McpServer)))"
+                data-testid="agents-details-new-mcp" />
+        <Button Text="New skill"
+                Icon="psychology"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Disabled="@(State.MutationBlocked || State.OpeningCapabilityWizard || State.CreatedCapabilityId.HasValue)"
+                Click="@(() => State.Changed.InvokeAsync(new AgentEditorAccessIntent.CreateCapability(CapabilityKind.Skill)))"
+                data-testid="agents-details-new-skill" />
+    </Cluster>
+
+    @if (State.CreatedCapabilityMessage is { } creationMessage) {
+        <Alert AlertStyle="AlertStyle.Info" data-testid="agents-created-capability-result">
+            @creationMessage
+            @if (State.CreatedCapabilityId is { } createdId) {
+                <TextBlock Value="@createdId.ToString()" />
+                @if (State.CreatedCapabilityNeedsRead) {
+                    <Button Text="Review created capability" Type="button" Disabled="State.MutationBlocked"
+                        Click="() => State.Changed.InvokeAsync(new AgentEditorAccessIntent.ReviewCreatedCapability())" data-testid="agents-created-capability-review" />
+                } else {
+                    <Button Text="Assign created capability" Type="button" Disabled="State.MutationBlocked"
+                        Click="() => State.Changed.InvokeAsync(new AgentEditorAccessIntent.AssignCreatedCapability())" data-testid="agents-created-capability-assign" />
+                }
+            }
+        </Alert>
+    }
+    @if (State.AssignableCapabilities.Count > 0) {
+        <FilterBar ResultText="@($"{State.FilteredAssignableCapabilities.Count} matching capability(s)")">
+            <div class="agent-details-dialog__capability-filters">
+                <input form="@($"agent-search-{State.Origin.Value:N}")" @bind="State.CapabilitySearch"
+                       @bind:event="oninput"
+                       class="cda-input agent-details-dialog__capability-filter-input"
+                       placeholder="Search capabilities"
+                       data-testid="agents-details-capability-search" />
+                <InputSelect @bind-Value="State.CapabilityAssignmentFilter"
+                             class="cda-input agent-details-dialog__capability-filter-select"
+                             data-testid="agents-details-capability-assignment-filter">
+                    <option value="@CapabilityDialogAssignmentFilter.All">All assignments</option>
+                    <option value="@CapabilityDialogAssignmentFilter.Attached">Attached</option>
+                    <option value="@CapabilityDialogAssignmentFilter.Available">Available</option>
+                </InputSelect>
+                <InputSelect @bind-Value="State.CapabilityKindFilter"
+                             class="cda-input agent-details-dialog__capability-filter-select"
+                             data-testid="agents-details-capability-kind-filter">
+                    <option value="@CapabilityDialogKindFilter.All">All kinds</option>
+                    <option value="@CapabilityDialogKindFilter.Tool">Tool</option>
+                    <option value="@CapabilityDialogKindFilter.Skill">Skill</option>
+                    <option value="@CapabilityDialogKindFilter.Mcp">MCP server</option>
+                </InputSelect>
+                <Button Text="Reset"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="State.ResetCapabilityFilters"
+                        data-testid="agents-details-capability-filter-reset" />
+            </div>
+        </FilterBar>
+    }
+
+    @if (State.AssignableCapabilities.Count == 0) {
+        <EmptyState Eyebrow="No capabilities"
+                    Title="No tools, skills, or MCP servers are cataloged yet"
+                    Description="Use the guided setup actions above to create the first capability for this agent." />
+    }
+    else if (State.FilteredAssignableCapabilities.Count == 0) {
+        <EmptyState Eyebrow="No matches"
+                    Title="No capabilities match the current filters"
+                    Description="Clear search, assignment, or kind filters to broaden the catalog." />
+    }
+    else {
+        @CapabilityList?.Invoke(State.FilteredAssignableCapabilities)
+    }
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public AgentEditorAccessState State { get; set; } = default!;
+    [Parameter] public RenderFragment<IReadOnlyList<CapabilityCatalogItem>>? CapabilityList { get; set; }
+}

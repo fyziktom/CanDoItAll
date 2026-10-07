@@ -636,17 +636,41 @@ networks:
           gateway: ${E2E_LOCAL_INGRESS_GATEWAY:-10.245.0.1}
   app-mesh:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_APP_MESH_SUBNET:-10.245.1.0/24}
   central-db:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_CENTRAL_DB_SUBNET:-10.245.2.0/24}
   client-a-db:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_CLIENT_A_DB_SUBNET:-10.245.3.0/24}
   client-b-db:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_CLIENT_B_DB_SUBNET:-10.245.4.0/24}
   upstream-data:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_UPSTREAM_DATA_SUBNET:-10.245.5.0/24}
   upstream-control:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_UPSTREAM_CONTROL_SUBNET:-10.245.6.0/24}
   client-a-personal:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_CLIENT_A_PERSONAL_SUBNET:-10.245.7.0/24}
   personal-control:
     internal: true
+    ipam:
+      config:
+        - subnet: ${E2E_PERSONAL_CONTROL_SUBNET:-10.245.8.0/24}

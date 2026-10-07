@@ -144,6 +144,25 @@ public sealed class WorkflowLlmLightweightPathTests
         Assert.Null(port.LastRequest!.Settings?.Temperature);
     }
 
+    [Theory]
+    [InlineData(150)]
+    [InlineData(null)]
+    public async Task Invoker_preserves_the_components_output_token_limit_in_provider_parameters(int? maximum) {
+        var port = new RecordingLlmInvocationPort((request, _) =>
+            Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
+        var component = CreateComponent();
+        component = component with { ModelSettings = component.ModelSettings with { MaxOutputTokens = maximum } };
+        var node = CreateNode(component.Id);
+
+        await invoker.ExecuteAsync(CreateDefinition(node), node, component, new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(port.LastRequest);
+        Assert.Equal(maximum, AgentProviderModelParameterPolicy.ResolveMaxOutputTokens(provider.Kind, provider.DefaultModel,
+            provider.ConfigurationJson, port.LastRequest.Settings!.ModelParameterConfigurationJson));
+    }
+
     [Fact]
     public async Task InvokerPreservesZeroedUsageObservationOnPortFailure()
     {

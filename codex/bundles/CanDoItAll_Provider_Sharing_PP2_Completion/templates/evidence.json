@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CDA-PROVIDER-SHARING-PP2-COMPLETION",
+  "review_commit": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+  "reviewer_product_execution": "NOT_RUN",
+  "history": {
+    "s0_commit": "9052b2a443a4fdce1ac24dd0ccfce236fd35ab74",
+    "reported_protocol_result": "19/19",
+    "reported_browser_result": "1/1",
+    "assurance": "IMPLEMENTER_REPORT_NOT_REEXECUTED",
+    "raw_local_receipts_verified": false
+  },
+  "final_source": {
+    "application_commit": null,
+    "worktree_digest": null,
+    "components_commit": null,
+    "filetools_commit": null,
+    "application_image_digest": null,
+    "source_manifest": null
+  },
+  "gates": {
+    "local_settings_concurrency_resolved": false,
+    "pp2_rendering_complete": false,
+    "independent_sandbox_validated": false,
+    "final_multi_instance_validated": false,
+    "native_consumers_validated": false,
+    "static_gates_passed": false,
+    "final_stable_checkpoint_accounted": false,
+    "signed_delivery_verified": false,
+    "pp2_complete": false
+  },
+  "all_provider_ui_complete": false,
+  "application_release_ready": false,
+  "groups": [
+    {
+      "id": "PP2-ENTRY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-FIXTURE",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-PROTOCOL",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-DEFAULTS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-CUSTOM",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-OLLAMA",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-IMAGES",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-ROUTING",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-COLLISIONS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-PARITY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-R1",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-R2",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-LOCAL",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-COLD",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-RESYNC",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-RESTART",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-UNAVAILABLE",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-AUTH",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-BASELINE",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-SHARING",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-SOURCES",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-DISCOVERY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-RECEIPTS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-LIFETIMES",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-DRAFTS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-BOUNDARY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-SANDBOX",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-AGENT",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-CHAT",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-WORKFLOW",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-HISTORY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-NEIGHBORS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-FINAL_IMAGE",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-CHECKPOINT",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-STATIC",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-WATCH",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-COMMITS",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-CLOSURE",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    },
+    {
+      "id": "PP2-LOCAL-CONCURRENCY",
+      "status": "NOT_RUN",
+      "attempts": [],
+      "evidence": [],
+      "qualification": null
+    }
+  ],
+  "signed_commits": [],
+  "open_findings": [],
+  "owned_resources": []
+}

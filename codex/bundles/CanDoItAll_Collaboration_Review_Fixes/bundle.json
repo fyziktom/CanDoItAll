@@ -1,0 +1,20 @@
+{
+  "id": "CDA-COLLABORATION-UI-REVIEW-FIXES-v1",
+  "date": "2026-09-28",
+  "entrypoint": "prompt.md",
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_head": "e55a780b36e75db39a05b7400408d8267d0f32d5",
+  "checkout_pinned": false,
+  "scope": "Collaboration corrective closure only",
+  "next_module_implementation_authorized": false,
+  "follow_up_candidate": "TestLab",
+  "findings": [
+    "R1",
+    "R2a",
+    "R2b",
+    "R3"
+  ],
+  "foundation": "reference/original-assignment/shared",
+  "prior_assignment": "reference/original-assignment"
+}

@@ -1,0 +1,300 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.CanvasLib
+@implements IDisposable
+
+@{
+    var origin = Origin;
+    var loaded = IsLoaded;
+    var search = SearchText;
+    var count = VisibleNodeCountLabel;
+    var selectedCount = SelectedNodeCountLabel;
+    var windowReceiver = StateChanged;
+    var selectReceiver = OnSelectNode;
+    var searchReceiver = SearchTextChanged;
+    var openMenu = OpenMenu;
+    var executeMenu = OnExecuteNodeContextAction;
+    var outline = BuildOutlineNodes();
+}
+<CanvasFloatingWindow WindowId="@WindowId"
+                      TestId="@TestId"
+                      AriaLabel="@AriaLabel"
+                      Kicker="@Kicker"
+                      Title="@Title"
+                      Summary="@Summary"
+                      BodyClass="project-structure-object-index-window__body"
+                      DefaultPlacement="top-left"
+                      DefaultWidth="@DefaultWidth"
+                      DefaultHeight="560"
+                      MinWidth="320"
+                      MinHeight="280"
+                      MaxWidth="520"
+                      MaxHeight="760"
+                      State="@State"
+                      StateChanged="@(state => windowReceiver.InvokeAsync(new InsightsWindowIntent(origin, InsightsWindow.ObjectIndex, state)))">
+    @if (loaded)
+    {
+        <div class="project-structure-object-index-window"
+             data-testid="project-structure-object-index-content">
+            <div class="project-structure-object-index-window__toolbar">
+                <input type="search"
+                       class="cda-input project-structure-object-index-window__search"
+                       placeholder="Search nodes, status, or type"
+                       aria-label="Search project object index"
+                       value="@search"
+                       @oninput="@((ChangeEventArgs args) => searchReceiver.InvokeAsync(new InsightsSearchIntent(origin, args.Value?.ToString() ?? string.Empty)))"
+                       data-testid="project-structure-object-index-search" />
+                <div class="project-structure-object-index-window__badges"
+                     aria-label="Project object index summary">
+                    <StatusBadge Tone="info" Text="@count" />
+                    <StatusBadge Tone="neutral" Text="@selectedCount" />
+                </div>
+            </div>
+
+            @if (outline.Count == 0)
+            {
+                <div class="project-structure-object-index-window__empty"
+                     data-testid="project-structure-object-index-empty">
+                    No nodes match the current search.
+                </div>
+            }
+            else
+            {
+                <div class="project-structure-object-index-window__tree-scroller"
+                     data-testid="project-structure-object-index-tree-scroller">
+                    <TreeView Items="@outline"
+                              AriaLabel="Project object index"
+                              Class="project-structure-object-index-window__tree"
+                              OnSelect="@(id => selectReceiver.InvokeAsync(new InsightsFocusIntent(origin, id)))"
+                              OnToggle="HandleIgnoredToggleAsync"
+                              OnContextMenu="@(request => OpenCapturedMenuAsync(origin, openMenu, executeMenu, request))" />
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="project-structure-object-index-window__unloaded"
+             data-testid="project-structure-object-index-unloaded">
+            Object index loading is paused.
+        </div>
+    }
+</CanvasFloatingWindow>
+
+@if (outlineContextMenu is { } menu)
+{
+    <button type="button"
+            class="project-structure-outline-context-menu__scrim"
+            aria-label="Close outline context menu"
+            @onclick="@(() => CloseOutlineContextMenu(menu))" />
+    <div class="project-structure-outline-context-menu"
+         data-testid="project-structure-outline-context-menu"
+         style="@BuildOutlineContextMenuStyle(menu)">
+        <div class="project-structure-outline-context-menu__header">
+            <span class="project-structure-outline-context-menu__eyebrow">Node actions</span>
+            <strong class="project-structure-outline-context-menu__title">@menu.Title</strong>
+        </div>
+        <div class="project-structure-outline-context-menu__actions">
+            @foreach (var action in menu.Actions)
+            {
+                <button type="button"
+                        class="project-structure-outline-context-menu__action"
+                        data-tone="@action.Tone"
+                        data-testid="@($"project-structure-outline-context-action-{BuildActionTestId(action.ActionId)}")"
+                        @onclick="@(() => ExecuteOutlineContextActionAsync(menu, action.ActionId))">
+                    <Icon Name="@InsightsActionIcons.Resolve(action.Icon)" />
+                    <span>@action.Label</span>
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string TestId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Kicker { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Summary { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public CanvasWorkbenchWindowState State { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<InsightsWindowIntent> StateChanged { get; set; }
+
+    [Parameter]
+    public bool IsLoaded { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<InsightsOutlineNode> Nodes { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> SelectedNodeIds { get; set; } = [];
+
+    [Parameter]
+    public string SearchText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<InsightsSearchIntent> SearchTextChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<InsightsFocusIntent> OnSelectNode { get; set; }
+
+    [Parameter]
+    public Func<InsightsMenuRequest, Task<InsightsMenu?>> OpenMenu { get; set; } = _ => Task.FromResult<InsightsMenu?>(null);
+
+    [Parameter]
+    public EventCallback<InsightsMenuIntent> OnExecuteNodeContextAction { get; set; }
+
+    [Parameter]
+    public double DefaultWidth { get; set; } = 380;
+
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+
+    private int SelectedCount => SelectedNodeIds.Count;
+
+    private string VisibleNodeCountLabel
+        => HasSearch
+            ? $"{FilteredNodes.Count} of {Nodes.Count} nodes"
+            : $"{Nodes.Count} nodes";
+
+    private string SelectedNodeCountLabel
+        => $"{SelectedCount} selected";
+
+    private bool HasSearch
+        => !string.IsNullOrWhiteSpace(SearchText);
+
+    private InsightsMenu? outlineContextMenu;
+
+    private IReadOnlyList<InsightsOutlineNode> FilteredNodes
+        => Nodes
+            .Where(MatchesSearch)
+            .ToList();
+
+    private IReadOnlyList<TreeViewNode> BuildOutlineNodes()
+        => FilteredNodes
+            .Select(node => new TreeViewNode
+            {
+                Id = node.Id,
+                Text = node.Title,
+                Icon = node.Icon,
+                Tooltip = $"{node.KindLabel} - {node.Status}",
+                IsSelected = SelectedNodeIds.Contains(node.Id, StringComparer.Ordinal),
+                BadgeText = node.Status,
+                DataTestId = BuildOutlineNodeTestId(node.Id)
+            })
+            .ToList();
+
+    private bool MatchesSearch(InsightsOutlineNode node)
+    {
+        if (!HasSearch)
+        {
+            return true;
+        }
+
+        var search = SearchText.Trim();
+        return node.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               node.Status.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               node.KindLabel.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               (!string.IsNullOrWhiteSpace(node.Subtitle) && node.Subtitle.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+               (!string.IsNullOrWhiteSpace(node.Subtype) && node.Subtype.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private EventCallback<InsightsMenuIntent> menuReceiver;
+    private long opening;
+    private bool disposed;
+
+    protected override void OnParametersSet() {
+        if (outlineContextMenu is { } menu && (menu.Origin != Origin || !menuReceiver.Equals(OnExecuteNodeContextAction))) {
+            outlineContextMenu = null;
+        }
+    }
+
+    private async Task OpenCapturedMenuAsync(InsightsOrigin origin, Func<InsightsMenuRequest, Task<InsightsMenu?>> opener,
+        EventCallback<InsightsMenuIntent> receiver, TreeViewNodeContextMenuRequest request) {
+        if (disposed || origin != Origin) {
+            return;
+        }
+        var generation = ++opening;
+        var openingId = Guid.NewGuid();
+        outlineContextMenu = null;
+        var menu = await opener(new(origin, openingId, request.NodeId, request.ClientX, request.ClientY));
+        if (!disposed && generation == opening && opener.Equals(OpenMenu) && receiver.Equals(OnExecuteNodeContextAction) &&
+            menu is not null && menu.OpeningId == openingId && menu.Origin == Origin) {
+            outlineContextMenu = menu;
+            menuReceiver = receiver;
+        }
+    }
+
+    private Task HandleIgnoredToggleAsync(string _) => Task.CompletedTask;
+
+    private void CloseOutlineContextMenu(InsightsMenu expected) {
+        if (ReferenceEquals(outlineContextMenu, expected)) {
+            outlineContextMenu = null;
+            opening++;
+        }
+    }
+
+    private async Task ExecuteOutlineContextActionAsync(InsightsMenu menu, string actionId) {
+        if (disposed || !ReferenceEquals(outlineContextMenu, menu) || menu.Origin != Origin ||
+            !menu.Actions.Any(action => action.ActionId == actionId)) {
+            return;
+        }
+        var receiver = menuReceiver;
+        CloseOutlineContextMenu(menu);
+        await receiver.InvokeAsync(new(menu, actionId));
+    }
+
+    public void Dispose() {
+        disposed = true;
+        opening++;
+        outlineContextMenu = null;
+    }
+
+    private static string BuildOutlineContextMenuStyle(InsightsMenu state)
+        => $"left:min(max(0.75rem, {Math.Round(state.ClientX)}px), calc(100vw - 21rem));top:min(max(0.75rem, {Math.Round(state.ClientY)}px), calc(100vh - 24rem));max-height:min(24rem, calc(100vh - 1.5rem));";
+
+    private static string BuildActionTestId(string actionId)
+    {
+        var sanitized = string.Concat(
+            actionId
+                .Trim()
+                .ToLowerInvariant()
+                .Select(character => char.IsLetterOrDigit(character) ? character : '-'));
+
+        while (sanitized.Contains("--", StringComparison.Ordinal))
+        {
+            sanitized = sanitized.Replace("--", "-", StringComparison.Ordinal);
+        }
+
+        sanitized = sanitized.Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized) ? "action" : sanitized;
+    }
+
+    private static string BuildOutlineNodeTestId(string nodeId)
+    {
+        var buffer = new char[nodeId.Length];
+        for (var index = 0; index < nodeId.Length; index++)
+        {
+            var character = nodeId[index];
+            buffer[index] = char.IsLetterOrDigit(character)
+                ? char.ToLowerInvariant(character)
+                : '-';
+        }
+
+        return $"project-structure-outline-node-{new string(buffer)}";
+    }
+}

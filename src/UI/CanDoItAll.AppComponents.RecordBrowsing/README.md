@@ -25,3 +25,8 @@ The authoritative dependency list is in
 `CanDoItAll.Components.BaseLib` and `Microsoft.AspNetCore.Components.Web`. It exists so a
 lightweight feature UI can compose the browser without AppComponents' canvas, file and
 conversation dependencies.
+
+The neutral `ResourceCardPicker` and `SelectedReferenceTable` families also live here.
+Their namespaces and public types are unchanged; AppComponents forwards the old assembly
+types. StorageSelection and the Agent editor reuse these actual controls without acquiring
+AppComponents' runtime dependencies. Their scoped styles travel with this Razor library.

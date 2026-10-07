@@ -1,0 +1,31 @@
+@{ var rendered = State; }
+
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="floating-agent-chat-close-dialog">
+    <TextBlock TextStyle="TextStyle.Body1"
+               Value="@($"Keep {rendered.AgentName}'s chat ready for another action, or stop its active handle now. The saved conversation remains in chat history.")" />
+    @if (!rendered.CanStop) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            This chat is still working. Keep it active now; it can be stopped after the current model call completes.
+        </Alert>
+    } else if (rendered.AwaitingApproval) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            Stopping removes the quick-access handle, but does not reject the durable pending approval. Reopen the saved thread from history to decide it later.
+        </Alert>
+    }
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
+        <Button Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Cancel)))"
+                data-testid="floating-agent-chat-cancel-close" />
+        <Button Text="Keep active" Icon="schedule" ButtonStyle="ButtonStyle.Light"
+                Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.KeepActive)))"
+                data-testid="floating-agent-chat-keep-active" />
+        <Button Text="Stop chat" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger" Disabled="@(!rendered.CanStop)"
+                Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Stop)))"
+                data-testid="floating-agent-chat-stop" />
+    </Cluster>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public AgentFloatingCloseState State { get; set; } = default!;
+    [Parameter] public EventCallback<AgentFloatingCloseIntent> Intent { get; set; }
+}

@@ -1,0 +1,139 @@
+    <Dialog IsOpen="true"
+            Title="Preview inputs"
+            Eyebrow="Workflow preview"
+            Subtitle="@WorkflowPreviewInputSupport.BuildRequirementSummary(State.Requirements)"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            OnClose="Closed"
+            TestId="@($"{TestIdPrefix}-input-dialog")">
+        <ChildContent>
+            <div class="workflow-canvas-node-dialog workflow-canvas-node-dialog--single">
+                <main class="workflow-canvas-node-dialog__main">
+                    <section class="workflow-canvas-dialog-section">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Required context" />
+                        <p class="workflow-canvas-help">@WorkflowPreviewInputSupport.BuildRequirementSummary(State.Requirements)</p>
+                        @if (!string.IsNullOrWhiteSpace(State.ProjectLoadError))
+                        {
+                            <p class="workflow-canvas-error">@State.ProjectLoadError</p>
+                        }
+                    </section>
+
+                    <section class="workflow-canvas-dialog-section">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+                            @if (Projects.Count > 0)
+                            {
+                                <label class="workflow-canvas-field">
+                                    <span>Project</span>
+                                    <select class="cda-input"
+                                            value="@State.ProjectId"
+                                            @onchange="HandlePreviewProjectChanged"
+                                            data-testid="@($"{TestIdPrefix}-project-select")">
+                                        <option value="">Choose project</option>
+                                        @foreach (var project in Projects)
+                                        {
+                                            <option value="@project.Id.ToString("D")">@project.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+
+                            <label class="workflow-canvas-field">
+                                <span>Project id</span>
+                                <input class="cda-input"
+                                       @bind="State.ProjectId" @bind:after="NotifyChangedAsync"
+                                       data-testid="@($"{TestIdPrefix}-project-id")" />
+                            </label>
+
+                            <label class="workflow-canvas-field">
+                                <span>Parent node id</span>
+                                <input class="cda-input"
+                                       @bind="State.ParentNodeId" @bind:after="NotifyChangedAsync"
+                                       data-testid="@($"{TestIdPrefix}-node-id")" />
+                            </label>
+                        </Grid>
+                    </section>
+
+                    @if (State.Requirements.SimulationRequirements.Count > 0)
+                    {
+                        <section class="workflow-canvas-dialog-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Simulation" />
+                            <p class="workflow-canvas-help">Select steps to replace with simulated output during this preview.</p>
+                            <Stack Gap="LayoutGap.XSmall">
+                                @foreach (var requirement in State.Requirements.SimulationRequirements)
+                                {
+                                    <label class="workflow-canvas-check-field">
+                                        <input type="checkbox"
+                                               checked="@IsPreviewSimulationEnabled(requirement)"
+                                               @onchange="args => HandlePreviewSimulationChanged(requirement, args)"
+                                               data-testid="@BuildPreviewSimulationTestId(requirement)" />
+                                        <span>@requirement.NodeName: @requirement.Description</span>
+                                    </label>
+                                }
+                            </Stack>
+                        </section>
+                    }
+
+                    <section class="workflow-canvas-dialog-section">
+                        <label class="workflow-canvas-field">
+                            <span>Input JSON</span>
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                                      @bind="State.InputJson" @bind:after="NotifyChangedAsync"
+                                      data-testid="@($"{TestIdPrefix}-input-json")"></textarea>
+                        </label>
+                    </section>
+
+                    @if (!string.IsNullOrWhiteSpace(Error))
+                    {
+                        <p class="workflow-canvas-error" data-testid="@($"{TestIdPrefix}-input-error")">@Error</p>
+                    }
+                </main>
+            </div>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="Closed"
+                        data-testid="@($"{TestIdPrefix}-input-cancel")" />
+                <Button Text="Run preview"
+                        Icon="play_arrow"
+                        Click="Run"
+                        Disabled="@Busy"
+                        IsBusy="@Busy"
+                        data-testid="@($"{TestIdPrefix}-input-run")" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+
+@code {
+    [Parameter, EditorRequired] public WorkflowPreviewInputState State { get; set; } = default!;
+    [Parameter] public IReadOnlyList<WorkflowPreviewProject> Projects { get; set; } = [];
+    [Parameter] public string Error { get; set; } = string.Empty;
+    [Parameter] public string TestIdPrefix { get; set; } = "workflow-canvas-preview";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback Run { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private Task NotifyChangedAsync() => Changed.InvokeAsync();
+
+    private Task HandlePreviewProjectChanged(ChangeEventArgs args) {
+        State.ProjectId = args.Value?.ToString() ?? string.Empty;
+        return NotifyChangedAsync();
+    }
+
+    private bool IsPreviewSimulationEnabled(WorkflowPreviewSimulationRequirement requirement)
+        => State.SimulatedNodeIds.Contains(requirement.NodeId.Value);
+
+    private Task HandlePreviewSimulationChanged(WorkflowPreviewSimulationRequirement requirement, ChangeEventArgs args) {
+        if (args.Value is true) {
+            State.SimulatedNodeIds.Add(requirement.NodeId.Value);
+        } else {
+            State.SimulatedNodeIds.Remove(requirement.NodeId.Value);
+        }
+        return NotifyChangedAsync();
+    }
+
+    private string BuildPreviewSimulationTestId(WorkflowPreviewSimulationRequirement requirement)
+        => $"{TestIdPrefix}-simulate-{requirement.NodeId.Value}";
+}

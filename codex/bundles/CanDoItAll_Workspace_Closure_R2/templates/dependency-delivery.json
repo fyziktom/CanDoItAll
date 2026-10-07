@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "application": {
+    "commit": null,
+    "tree": null,
+    "dirty": false
+  },
+  "components": {
+    "commit": null,
+    "tree": null,
+    "dirty": false,
+    "signature_verified": false
+  },
+  "filetools": {
+    "commit": null,
+    "tree": null
+  },
+  "dependency_mode": null,
+  "evaluated_graph_manifest": null,
+  "published_asset_manifest": null,
+  "local_source_pair_status": "NOT_RUN",
+  "remote_consumption_status": "NOT_RUN",
+  "intended_ci_target": null,
+  "resolved_ci_components_commit": null,
+  "operator_delivery_steps": [],
+  "evidence": []
+}

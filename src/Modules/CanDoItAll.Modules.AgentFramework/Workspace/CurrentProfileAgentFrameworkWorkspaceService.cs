@@ -240,6 +240,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().SaveAgentTeamAsync(model, cancellationToken);
     }
 
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveAgentTeamMetadataAsync(model, cancellationToken);
+
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
     {
         return ResolveService().UpdateAgentTeamMembersAsync(teamId, agentIds, cancellationToken);
@@ -394,12 +397,15 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().SaveCapabilityAsync(model, cancellationToken);
     }
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
     {
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
     }
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         IAgentFrameworkWorkspaceService workspace;
         try {
             cancellationToken.ThrowIfCancellationRequested();

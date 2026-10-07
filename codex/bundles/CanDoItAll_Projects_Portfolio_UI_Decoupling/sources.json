@@ -1,0 +1,239 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-01",
+  "review_commit_is_execution_pin": false,
+  "application_ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+  "components_ref": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+  "sources": [
+    {
+      "id": "R01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "docs/architecture/workspace-closure-r2.md",
+      "coverage": "Complete maintained report; test results are implementer-reported, not rerun by this review.",
+      "role": "Current closure disposition, clean Stable, mixed browser accounting, remaining selector case.",
+      "observed_blob_sha": "1b6bf9c79c7b3ec8d781761fa853c5ff69cef4a2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/docs/architecture/workspace-closure-r2.md"
+    },
+    {
+      "id": "R02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "docs/architecture/workspace-agent-deletion-closure-finding.md",
+      "coverage": "Complete current finding including R2 update.",
+      "role": "Deletion attribution and retained-state validation.",
+      "observed_blob_sha": "a5b4130988dfe01afe821860253e4f2049c0f351",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/docs/architecture/workspace-agent-deletion-closure-finding.md"
+    },
+    {
+      "id": "R03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+      "coverage": "Lines 20–200.",
+      "role": "Derived count reconciliation and active/unresolved-effect refusal.",
+      "observed_blob_sha": "97db391b8a4074a65a6f29fe793921f96d511563",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs"
+    },
+    {
+      "id": "R04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/NavigationAcknowledgementProbe.cs",
+      "coverage": "Complete file.",
+      "role": "Exact test-only navigation acknowledgements rather than URL visibility.",
+      "observed_blob_sha": "2bbe4359b5c44bc9658c738f5fc61d0ef9ec55a5",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/tests/Playwright/CanDoItAll.Tests.Playwright/NavigationAcknowledgementProbe.cs"
+    },
+    {
+      "id": "R05",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+      "path": "src/CanDoItAll.Components.BaseLib/Components/Modals/DialogInterop.cs",
+      "coverage": "Complete file.",
+      "role": "Published repaired interop implementation; active faults remain observable.",
+      "observed_blob_sha": "de537ce79079015415a40356c20b3426e6d507ed",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/4a858412d2c2a3f6123bf23d8c4584f05b47627d/src/CanDoItAll.Components.BaseLib/Components/Modals/DialogInterop.cs"
+    },
+    {
+      "id": "R06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderTwoInstanceUiAcceptanceTests.cs",
+      "coverage": "Lines 1–260.",
+      "role": "Exact empty-client acceptance path; distinct existing-catalog control.",
+      "observed_blob_sha": "65bc963eef51a87ce4f78ef4663c5778e66c63d2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderTwoInstanceUiAcceptanceTests.cs"
+    },
+    {
+      "id": "R07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderMetadataUiChecks.cs",
+      "coverage": "Requested lines 1–310; reviewed complete model-selection setup and ExerciseSimpleChatAsync; trailing source was truncated.",
+      "role": "Shared metadata, three model options and actual persisted selection proof.",
+      "observed_blob_sha": null,
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderMetadataUiChecks.cs"
+    },
+    {
+      "id": "R08",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorSession.cs",
+      "coverage": "Complete session file.",
+      "role": "Independent provider loading and original editor/source generation.",
+      "observed_blob_sha": "1a8b2286b9cb91e7e929df1dbfb508926256c271",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorSession.cs"
+    },
+    {
+      "id": "R09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
+      "coverage": "Lines 1–470, covering complete renderer.",
+      "role": "Actual provider/model callbacks and preservation of the local immutable form.",
+      "observed_blob_sha": "b4315698b82a798423b7eb9aa2ece9e01820c1b8",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor"
+    },
+    {
+      "id": "R10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+      "coverage": "Lines 1–400, 401–850 and 835–EOF; complete page reviewed.",
+      "role": "Production composition, route and query handling, saves, starter seeding, deletion, hierarchy and package effects.",
+      "observed_blob_sha": "a73819697d30bdd7a66af2ffb315587e4c36ccc0",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
+    },
+    {
+      "id": "R11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPageLoadGeneration.cs",
+      "coverage": "Complete file.",
+      "role": "Existing publication fence; not a write admission protocol.",
+      "observed_blob_sha": "4bae2d5184d70d4514b1fae2ea5c4c3c94fe91cb",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPageLoadGeneration.cs"
+    },
+    {
+      "id": "R12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor",
+      "coverage": "Lines 1–320 and 320–EOF; complete renderer reviewed.",
+      "role": "Full five-step editor, overview, actual submit and alternate Save actions.",
+      "observed_blob_sha": "65fc787fd7b8ec39f5260033bc818775e5bf4d96",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor"
+    },
+    {
+      "id": "R13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor",
+      "coverage": "Lines 1–270 and 271–EOF; complete renderer reviewed.",
+      "role": "Portfolio filters/tree/cards, package dialog, hidden direct Files descendant.",
+      "observed_blob_sha": "c9d730551eb16a65f37beb42d1d7d0366268790f",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsBoard.razor"
+    },
+    {
+      "id": "R14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj",
+      "coverage": "Complete project.",
+      "role": "Existing light Projects contracts reference only SharedKernel.",
+      "observed_blob_sha": "7c3ec809819a4787feacfd9216de55b6c1ff0045",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects.Contracts/CanDoItAll.Modules.Projects.Contracts.csproj"
+    },
+    {
+      "id": "R15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs",
+      "coverage": "Lines 1–430 (last constructor tail truncated), 431–860 (tail truncated), 860–1160. Entity/model definitions, editor read and complete save/commit region reviewed; later deletion code not claimed read.",
+      "role": "Mixed EF/DTO/service file; lifetime, child identities, owner commit and postcommit follow-ups.",
+      "observed_blob_sha": "b911f122385a9f824af0a80d963b11440d9591a9",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs"
+    },
+    {
+      "id": "R16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs",
+      "coverage": "Lines 1–130, 650–960 and decoded resource lines 963–1071. Seed batch implementation and interface adapter reviewed; not the entire large file.",
+      "role": "Separate seed transaction, real node creation, existing mutation scopes.",
+      "observed_blob_sha": "b98582c0e6d7e3557b366cc2357faa415a6bec99",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchModels.cs"
+    },
+    {
+      "id": "R17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsAgentChatContextProvider.razor",
+      "coverage": "Lines 1–330, through parameter validation.",
+      "role": "Retained production context registry, reference reads, original subscription and active scope protection.",
+      "observed_blob_sha": "38e7f44dda9c8cec91d540e96ce3b82378ab7c03",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsAgentChatContextProvider.razor"
+    },
+    {
+      "id": "R18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectsPageTests.cs",
+      "coverage": "Lines 1–310 and 440–930; latter response truncated at package target tests.",
+      "role": "Real file/owner tests, lifecycle conflict, partial deletion, filters/hierarchy, package constraints.",
+      "observed_blob_sha": "eb2810bdb0dae2c70aee92d9a8cbbc5cdcf93a4d",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/tests/Components/CanDoItAll.Tests.Components/ProjectsPageTests.cs"
+    },
+    {
+      "id": "R19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs",
+      "coverage": "Lines 1–170.",
+      "role": "Shared card/file projection, bounds, filter identity and ordering; later fingerprint implementation not claimed fully reviewed.",
+      "observed_blob_sha": "b16a7a639568bb5cebd82d7eb21ca7d7f20cda08",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/ProjectFileFilterProjection.cs"
+    },
+    {
+      "id": "R20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": ".github/copilot-instructions.md",
+      "coverage": "Complete current instructions.",
+      "role": "Owner boundaries, large-desktop proof and validation triggers.",
+      "observed_blob_sha": "dde5c2fdbcb56b7b5f48dfa17ed74fda238c2e1a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/.github/copilot-instructions.md"
+    },
+    {
+      "id": "R21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "docs/architecture/ui-component-seams.md",
+      "coverage": "Lines 1–240.",
+      "role": "Canonical rendering/effect/contract/receipt/asset guidance.",
+      "observed_blob_sha": "0b1d045b818ab05b623d94bf4796d1ab9e9b5f18",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/docs/architecture/ui-component-seams.md"
+    },
+    {
+      "id": "R22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectHierarchyModal.razor",
+      "coverage": "Complete file.",
+      "role": "Read-only hierarchy inspection, drill-down and navigation callbacks.",
+      "observed_blob_sha": "73b88eb79a63ce8a6aac90ce66d420ddd37f8d46",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectHierarchyModal.razor"
+    },
+    {
+      "id": "R23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "fea6001813a10b9da212c60b77f8e5f77d59d7c2",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor.css",
+      "coverage": "Complete scoped stylesheet.",
+      "role": "Actual modal styling to relocate, not a responsive redesign.",
+      "observed_blob_sha": "bdd095089265c755edaa7121f7cce77285da553d",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/fea6001813a10b9da212c60b77f8e5f77d59d7c2/src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectModalHost.razor.css"
+    }
+  ]
+}

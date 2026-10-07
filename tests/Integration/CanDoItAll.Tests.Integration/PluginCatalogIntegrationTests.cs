@@ -426,6 +426,37 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, executor.Source.Kind);
         Assert.Equal(manifest.Plugin.Id.Value, executor.Source.PluginId);
         Assert.Equal(manifest.Plugin.Package!.PackageId.Value, executor.Source.PackageId);
+
+        Assert.True((await catalogService.InstallAsync(manifest.Plugin.Id, new(Enable: true, Actor: "integration-test"))).IsSuccess);
+        var settings = scope.ServiceProvider.GetRequiredService<PluginSettingsService>();
+        Assert.True((await settings.UpdateGrantAsync(manifest.Plugin.Id,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Granted), "integration-test")).IsSuccess);
+        var node = CreateSimulationExecutorNode("fixture", executor);
+        var definition = CreateSingleExecutorSimulationWorkflow(node) with {
+            Name = "Actual inert package invocation", Description = "Registered package executor with the real grant and observer."
+        };
+        await using (var invocationScope = services.CreateAsyncScope()) {
+            var result = await invocationScope.ServiceProvider.GetRequiredService<IWorkflowExecutorInvoker>()
+                .ExecuteAsync(definition, node, new("{}"));
+            using var payload = JsonDocument.Parse(result.PayloadJson);
+            Assert.True(payload.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Equal(node.Id, result.NodeId);
+            Assert.Contains(await invocationScope.ServiceProvider.GetRequiredService<PluginLogStore>()
+                .ListAsync(new(PluginLogStreamKind.Runtime, manifest.Plugin.Id)), item => item.OperationKind == PluginLogOperationKind.ExecutorCompleted);
+        }
+        Assert.True((await settings.UpdateGrantAsync(manifest.Plugin.Id,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied), "integration-test")).IsSuccess);
+        await using var deniedScope = services.CreateAsyncScope();
+        Assert.False(deniedScope.ServiceProvider.GetRequiredService<PluginGrantEvaluator>()
+            .Evaluate(manifest.Plugin.Id, PluginCapabilityKind.WorkflowExecutor).Allowed);
+        Assert.True((await catalogService.InstallAsync(Office365PluginConstants.PluginId,
+            new(Enable: true, Actor: "integration-test"))).IsSuccess);
+        Assert.True((await settings.UpdateGrantAsync(Office365PluginConstants.PluginId,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied), "integration-test")).IsSuccess);
+        var deniedNode = CreateSimulationExecutorNode("denied-office365",
+            executorCatalog.GetRequiredExecutor(Office365PluginConstants.DownloadByCategoryExecutorId));
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => deniedScope.ServiceProvider.GetRequiredService<IWorkflowExecutorInvoker>()
+            .ExecuteAsync(CreateSingleExecutorSimulationWorkflow(deniedNode), deniedNode, new("{}")).AsTask());
     }
 
     [Fact]
@@ -560,11 +591,17 @@ public sealed class PluginCatalogIntegrationTests
         var lifetime = services.GetRequiredService<TestHostApplicationLifetime>();
 
         await restartService.MarkRestartRequiredAsync("Integration restart proof.", "integration-test");
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = lifetime.ApplicationStopping.Register(() => stopped.TrySetResult());
         var restartResult = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("integration-test"));
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        var repeated = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("duplicate-test"));
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(restartResult.IsSuccess, FormatErrors(restartResult.Errors));
         Assert.True(restartResult.Value!.IsRestartRequested);
+        Assert.True(repeated.IsSuccess);
+        Assert.Equal(restartResult.Value.RequestedAtUtc, repeated.Value!.RequestedAtUtc);
+        Assert.Equal("integration-test", repeated.Value.RequestedBy);
         Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 

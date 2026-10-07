@@ -1,0 +1,92 @@
+{
+  "bundle_id": "CDA-WORKSPACE-SETTINGS-CORE-UI-DECOUPLING-v1",
+  "title": "Resources readiness correction and Workspace Settings Core UI decoupling",
+  "created_on": "2026-09-29",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "20d816dab0f10d4b55efe4b8ff7e0f6af26dc32d",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "README.md",
+    "prompt.md",
+    "RESOURCES_REVIEW.md",
+    "MODULE_SELECTION.md",
+    "WORKSPACE_REVIEW_NOTES.md",
+    "SENSITIVE_STATE.md",
+    "VALIDATION_MATRIX.md",
+    "DEV_LOOP.md",
+    "PROOF_STATUS.md",
+    "SOURCES.md",
+    "PACKAGE_VALIDATION.md"
+  ],
+  "execution_policy": "Use the current checkout and current repository instructions; no reset, checkout pin, remote push or merge.",
+  "phases": [
+    {
+      "id": "S0",
+      "scope": "Reproduce/fix RS-R1; preserve Memory result-origin closure and existing Resources boundaries."
+    },
+    {
+      "id": "W1",
+      "scope": "Inventory four Settings sections, shell, actual consumers and original development-loop baseline."
+    },
+    {
+      "id": "W2",
+      "scope": "Extract real lightweight contracts/renderers and production composition; reuse appropriate existing seams."
+    },
+    {
+      "id": "W3",
+      "scope": "Implement independent origin/state/outcome handling with sensitive data and owner safeguards."
+    },
+    {
+      "id": "W4",
+      "scope": "Build faithful four-section sandbox and keep all deferred production hosts reachable."
+    },
+    {
+      "id": "W5",
+      "scope": "Run targeted current validation, published browser proof, measurements and repository gates; document partial Workspace completion."
+    }
+  ],
+  "completion_scope": {
+    "prior_fix": [
+      "RS-R1"
+    ],
+    "extracted": [
+      "Settings shell",
+      "Workspace defaults",
+      "Secrets",
+      "Files",
+      "Provider history policy"
+    ],
+    "deferred_but_preserved_in_production": [
+      "Data Sources",
+      "Storage and recovery/pickers",
+      "API token/user/access administration"
+    ],
+    "redirect_preserved": "/settings?tab=providers -> /agents?tab=providers",
+    "entire_workspace_module_complete": false
+  },
+  "out_of_scope": [
+    "HTTP-only UI rewrite",
+    "Database schema/migration redesign",
+    "Vault or cryptography replacement",
+    "New API access policy",
+    "Local application launch feature",
+    "New provider/runtime implementation",
+    "Processes/Workbench extraction"
+  ],
+  "review_proof": {
+    "type": "source-and-metadata",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "watch_measured": false,
+    "reported_prior_cases": 315,
+    "reported_prior_source": "EV03"
+  },
+  "artifact_proof_is_product_proof": false
+}

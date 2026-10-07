@@ -196,6 +196,9 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             var outputFormat = NormalizeOption(request.OutputFormat, providerConfiguration.DefaultOutputFormat, "png", ValidImageOutputFormats, "image output format");
             var outputPath = ResolveImageGenerationOutputPath(workspacePaths, request.OutputWorkspacePath, outputFormat);
             var sourceImages = await ResolveSourceImagesAsync(agent, request, workspacePaths, cancellationToken);
+            foreach (var source in sourceImages) {
+                ValidateSourceImage(source);
+            }
             // An unexpected provider failure stays opaque: its detail may name private endpoints, so it is neither
             // mapped nor shown to the model.
             var generated = await owner.imageGenerationService.GenerateAsync(
@@ -406,6 +409,23 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
             }
 
             return sourceImages;
+        }
+
+        private static void ValidateSourceImage(AgentImageGenerationSource source) {
+            ReadOnlySpan<byte> bytes = source.Bytes;
+            var contentType = source.ContentType.Split(';', 2, StringSplitOptions.TrimEntries)[0].ToLowerInvariant();
+            var supported = contentType switch {
+                "image/png" => bytes.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+                "image/jpeg" => bytes.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]),
+                "image/webp" => bytes.Length >= 12 && bytes[..4].SequenceEqual("RIFF"u8) && bytes.Slice(8, 4).SequenceEqual("WEBP"u8),
+                _ => false
+            };
+            if (!supported) {
+                throw new ImageGenerationToolException(
+                    "SourceImageFormatUnsupported",
+                    $"Image generation accepts PNG, JPEG or WebP raster sources with matching content. For SVG project assets, use {ProjectStructureToolPolicy.ProjectStructureAssetTextGet}, include the relevant layout details in the prompt and omit the SVG source, or provide a rasterized source image. Retry with corrected input.",
+                    canRetryWithCorrectedInput: true);
+            }
         }
 
         private static void EnsureProjectAssetReadAllowed(AgentDefinition agent, Guid projectId)
@@ -891,7 +911,9 @@ public sealed record ImageGenerationCreateInput(
     string? Quality = null,
     [property: Description("Image output format: png, jpeg, or webp. Omit to use the provider default.")]
     string? OutputFormat = null,
+    [property: Description("Optional PNG, JPEG or WebP raster source files. SVG and GIF are unsupported. For SVG, read its text, describe the relevant layout in Prompt and omit the source, or first provide a rasterized PNG/JPEG/WebP image.")]
     IReadOnlyList<string>? SourceWorkspacePaths = null,
+    [property: Description("Optional PNG, JPEG or WebP raster project assets. For SVG assets, use project_structure_asset_text_get, describe the relevant layout in Prompt and omit the SVG source, or first provide a rasterized PNG/JPEG/WebP asset.")]
     IReadOnlyList<ImageGenerationProjectAssetSource>? SourceProjectAssets = null,
     ImageGenerationProjectAssetTarget? ProjectAssetTarget = null);
 

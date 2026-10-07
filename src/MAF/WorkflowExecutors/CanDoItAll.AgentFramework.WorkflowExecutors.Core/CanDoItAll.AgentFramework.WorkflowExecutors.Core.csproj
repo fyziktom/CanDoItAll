@@ -17,4 +17,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../Workflows/CanDoItAll.AgentFramework.Workflows.Definitions/CanDoItAll.AgentFramework.Workflows.Definitions.csproj" />
+  </ItemGroup>
 </Project>

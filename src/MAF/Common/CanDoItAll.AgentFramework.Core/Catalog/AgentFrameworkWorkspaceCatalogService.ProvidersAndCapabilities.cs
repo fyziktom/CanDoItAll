@@ -182,31 +182,43 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     public async Task<Guid> SaveCapabilityAsync(
         CapabilityEditorModel model,
         CancellationToken cancellationToken = default)
-    {
+        => (await SaveCapabilityEditorAsync(model, cancellationToken)).Id!.Value;
+
+    public async Task<CapabilityEditorModel> SaveCapabilityEditorAsync(
+        CapabilityEditorModel model,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(model);
+        model = new() {
+            Id = model.Id,
+            ExpectedFingerprint = model.ExpectedFingerprint,
+            Kind = model.Kind,
+            Key = model.Key,
+            Name = model.Name,
+            Description = model.Description,
+            EndpointOrPath = model.EndpointOrPath,
+            ConfigurationJson = model.ConfigurationJson,
+            IsBuiltIn = model.IsBuiltIn,
+            Tags = model.Tags.ToList()
+        };
         LegacyMemoryCapabilityPolicy.EnsureNotRetired(model.Kind, model.Name);
         Guid capabilityId = Guid.Empty;
-        await UpdateCatalogAsync(catalog =>
-        {
+        var saved = await UpdateCatalogAsync(catalog => {
             var current = model.Id.HasValue
                 ? catalog.Capabilities.FirstOrDefault(item => item.Id == model.Id.Value)
                 : null;
 
-            if (model.Id.HasValue && current is null)
-            {
+            if (model.Id.HasValue && current is null) {
                 throw new CapabilityCatalogRejectedException($"Capability '{model.Id.Value:D}' was not found.");
             }
 
-            if (!model.Id.HasValue && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
-            {
+            if (!model.Id.HasValue && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint)) {
                 throw new CapabilityCatalogRejectedException("A capability create cannot specify an expected fingerprint.");
             }
 
-            if (current is not null && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint))
-            {
+            if (current is not null && !string.IsNullOrWhiteSpace(model.ExpectedFingerprint)) {
                 var actualFingerprint = CapabilityEditorConcurrency.ComputeFingerprint(
                     CapabilityEditorModel.FromDefinition(current));
-                if (!string.Equals(actualFingerprint, model.ExpectedFingerprint.Trim(), StringComparison.Ordinal))
-                {
+                if (!string.Equals(actualFingerprint, model.ExpectedFingerprint.Trim(), StringComparison.Ordinal)) {
                     throw new CapabilityCatalogRejectedException(
                         $"Capability '{current.Id:D}' changed after it was read. Reload it before saving.",
                         isConcurrencyConflict: true);
@@ -228,15 +240,13 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 ProofStatus: current?.ProofStatus ?? CapabilityProofStatus.NotRun,
                 ProofNotes: current?.ProofNotes ?? string.Empty,
                 LastVerifiedAtUtc: current?.LastVerifiedAtUtc,
-                IsBuiltIn: model.IsBuiltIn)
-            {
+                IsBuiltIn: model.IsBuiltIn) {
                 Tags = NormalizeTags(model.Tags)
             };
             capabilityId = capability.Id;
             EnsureUniqueCapabilityIdentity(catalog.Capabilities, capability);
 
-            return catalog with
-            {
+            return catalog with {
                 Capabilities = catalog.Capabilities
                     .Where(item => item.Id != capability.Id)
                     .Append(capability)
@@ -245,7 +255,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             };
         }, cancellationToken);
 
-        return capabilityId;
+        var accepted = CapabilityEditorModel.FromDefinition(saved.Capabilities.Single(item => item.Id == capabilityId));
+        accepted.ExpectedFingerprint = CapabilityEditorConcurrency.ComputeFingerprint(accepted);
+        return accepted;
     }
 
     public async Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) {
@@ -260,7 +272,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         }, cancellationToken);
     }
 
-    public async Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+    public async Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         if (providerSource is not IProviderRuntimeProfileSnapshotSource snapshots) {
             throw new CapabilityVerificationException(new(CapabilityVerificationDisposition.InfrastructureUnavailable));
         }
@@ -269,6 +281,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         if (outcome.Disposition != CapabilityVerificationDisposition.Committed) {
             throw new CapabilityVerificationException(outcome);
         }
+        return outcome;
     }
 
     private static void EnsureUniqueCapabilityIdentity(IEnumerable<CapabilityCatalogItem> existingCapabilities, CapabilityCatalogItem capability)

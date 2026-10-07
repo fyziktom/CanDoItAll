@@ -611,6 +611,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         }
 
         var (movedNodeKeys, movedRootKeys) = CollectEditableMoveKeys(sourceRecords, sourceNodeKey);
+        ProjectStructureNodeExpectations.EnsureCurrent(mutationOwner?.ExpectedTransferRoots, sourceRecords);
         if (movedNodeKeys.Count == 0)
         {
             return new ProjectStructureSubprojectTransferResult(targetProjectId, [], 0, 0, []);
@@ -668,6 +669,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         }
 
         var (movedNodeKeys, movedRootKeys) = CollectEditableSelectedMoveKeys(sourceRecords, normalizedSourceNodeKeys, includeDescendants);
+        ProjectStructureNodeExpectations.EnsureCurrent(mutationOwner?.ExpectedTransferRoots, sourceRecords);
         if (movedNodeKeys.Count == 0)
         {
             return new ProjectStructureSubprojectTransferResult(targetProjectId, [], 0, 0, []);

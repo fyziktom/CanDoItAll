@@ -10,10 +10,12 @@ namespace CanDoItAll.Web.Components.Layout;
 
 public partial class MainLayout
 {
-    private async Task HandleNavigateAsync(string route)
+    private Task HandleNavigateAsync(string route)
     {
-        Navigation.NavigateTo(route);
-        await ResolveAndTrackCurrentTabAsync();
+        if (IsLayoutCurrent) {
+            Navigation.NavigateTo(route);
+        }
+        return Task.CompletedTask;
     }
 
     private Task OpenSettingsFromShellAsync()
@@ -26,6 +28,9 @@ public partial class MainLayout
 
     private Task HandleSelectWorkspaceAsync(string workspaceId)
     {
+        if (!IsLayoutCurrent) {
+            return Task.CompletedTask;
+        }
         activeWorkspaceId = workspaceId;
         var workspace = workspaces.FirstOrDefault(item => item.Id == workspaceId);
         if (workspace is not null)
@@ -36,8 +41,7 @@ public partial class MainLayout
         return Task.CompletedTask;
     }
 
-    private async Task HandleSelectTabAsync(string tabId)
-    {
+    private Task HandleSelectTabAsync(string tabId) => RunLayoutWorkAsync(nameof(HandleSelectTabAsync), async () => {
         var tab = Workbench.Tabs.FirstOrDefault(candidate => string.Equals(candidate.TabId, tabId, StringComparison.Ordinal));
         if (tab is null)
         {
@@ -45,78 +49,85 @@ public partial class MainLayout
         }
 
         Navigation.NavigateTo(tab.Route);
-        await Workbench.ActivateAsync(tab.TabId);
-    }
+        if (IsLayoutCurrent) {
+            await Workbench.ActivateAsync(tab.TabId, layoutLifetime.Token);
+        }
+    });
 
-    private async Task HandleCloseTabAsync(string tabId)
-    {
-        await Workbench.CloseAsync(tabId);
+    private Task HandleCloseTabAsync(string tabId) => RunLayoutWorkAsync(nameof(HandleCloseTabAsync), async () => {
+        var originalUri = CurrentUri;
+        await Workbench.CloseAsync(tabId, layoutLifetime.Token);
+        if (!IsLayoutCurrent || CurrentUri != originalUri) {
+            return;
+        }
         var activeTab = Workbench.GetActiveTab();
         if (activeTab is not null && !string.Equals(CurrentRouteDisplay, activeTab.Route, StringComparison.OrdinalIgnoreCase))
         {
             Navigation.NavigateTo(activeTab.Route);
         }
-    }
+    });
 
-    private Task HandleMoveLeftAsync(string tabId) => Workbench.MoveAsync(tabId, -1);
+    private Task HandleMoveLeftAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.MoveAsync), () => Workbench.MoveAsync(tabId, -1, layoutLifetime.Token));
 
-    private Task HandleMoveRightAsync(string tabId) => Workbench.MoveAsync(tabId, 1);
+    private Task HandleMoveRightAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.MoveAsync), () => Workbench.MoveAsync(tabId, 1, layoutLifetime.Token));
 
-    private Task HandleTogglePinAsync(string tabId) => Workbench.TogglePinAsync(tabId);
+    private Task HandleTogglePinAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.TogglePinAsync), () => Workbench.TogglePinAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleToggleSleepAsync(string tabId) => Workbench.ToggleSleepAsync(tabId);
+    private Task HandleToggleSleepAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.ToggleSleepAsync), () => Workbench.ToggleSleepAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseOthersAsync(string tabId) => Workbench.CloseOthersAsync(tabId);
+    private Task HandleCloseOthersAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseOthersAsync), () => Workbench.CloseOthersAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseRightAsync(string tabId) => Workbench.CloseRightAsync(tabId);
+    private Task HandleCloseRightAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseRightAsync), () => Workbench.CloseRightAsync(tabId, layoutLifetime.Token));
 
-    private Task HandleCloseBackgroundAsync(string tabId) => Workbench.CloseAllBackgroundAsync(tabId);
+    private Task HandleCloseBackgroundAsync(string tabId) => RunLayoutWorkAsync(nameof(Workbench.CloseAllBackgroundAsync), () => Workbench.CloseAllBackgroundAsync(tabId, layoutLifetime.Token));
 
-    private async Task HandleReopenRecentAsync(string tabId)
-    {
-        await Workbench.ReopenRecentAsync(tabId);
+    private Task HandleReopenRecentAsync(string tabId) => RunLayoutWorkAsync(nameof(HandleReopenRecentAsync), async () => {
+        var originalUri = CurrentUri;
+        await Workbench.ReopenRecentAsync(tabId, layoutLifetime.Token);
+        if (!IsLayoutCurrent || CurrentUri != originalUri) {
+            return;
+        }
         var reopened = Workbench.GetActiveTab();
         if (reopened is not null)
         {
             Navigation.NavigateTo(reopened.Route);
         }
+    });
+
+    private Task HandleClearRecentTabsAsync() => RunLayoutWorkAsync(nameof(Workbench.ClearRecentTabsAsync), () => Workbench.ClearRecentTabsAsync(layoutLifetime.Token));
+
+    private void HandleWorkbenchChanged()
+        => _ = RunLayoutWorkAsync(nameof(HandleWorkbenchChanged), () => InvokeAsync(() => {
+            if (IsLayoutCurrent) {
+                StateHasChanged();
+            }
+        }));
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) {
+        if (!IsLayoutCurrent || !workbenchInitialized) {
+            return;
+        }
+        var read = BeginNavigationRead();
+        NavigationCompletion = RunLayoutWorkAsync(nameof(HandleLocationChanged), () => InvokeAsync(() => TrackNavigationAsync(read)));
+        _ = RunLayoutWorkAsync(nameof(LoadCollaborationShellStateAsync), LoadCollaborationShellStateAsync);
     }
 
-    private Task HandleClearRecentTabsAsync() => Workbench.ClearRecentTabsAsync();
+    private void HandleCollaborationChanged(object? sender, EventArgs e) => _ = RefreshCollaborationBadgeAsync();
 
-    private void HandleWorkbenchChanged() => _ = InvokeAsync(StateHasChanged);
-
-    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        _ = InvokeAsync(async () =>
-        {
-            activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
-            await ResolveAndTrackCurrentTabAsync();
-            await LoadCollaborationShellStateAsync();
-            StateHasChanged();
-        });
+    private async Task RefreshCollaborationBadgeAsync() {
+        try {
+            await InvokeAsync(LoadCollaborationShellStateAsync);
+        } catch (Exception exception) {
+            CollaborationLogger.LogWarning(exception, "Unable to dispatch the Collaboration shell badge refresh.");
+        }
     }
 
-    private void HandleCollaborationChanged(object? sender, EventArgs e)
+    private async Task CloseDeletedProjectTabsAsync(NavigationRead read)
     {
-        _ = InvokeAsync(async () =>
-        {
-            await LoadCollaborationShellStateAsync();
-            StateHasChanged();
-        });
-    }
-
-    private async Task ResolveAndTrackCurrentTabAsync()
-    {
-        var descriptor = await ResolveCurrentTabDescriptorAsync(CurrentUri);
-        await Workbench.TrackTabAsync(descriptor);
-    }
-
-    private async Task CloseDeletedProjectTabsAsync()
-    {
-        var projectIds = (await ProjectsService.ListAsync())
+        var projectIds = (await ProjectsService.ListAsync(read.Cancellation.Token))
             .Select(project => project.Id)
             .ToHashSet();
+        EnsureCurrent(read);
         var staleProjectTabIds = Workbench.Tabs
             .Where(tab => IsProjectScopedWorkbenchTab(tab) && !projectIds.Contains(tab.ProjectId!.Value))
             .Select(tab => tab.TabId)
@@ -129,7 +140,8 @@ public partial class MainLayout
 
         var staleActiveTab = Workbench.ActiveTabId is not null &&
             staleProjectTabIds.Contains(Workbench.ActiveTabId, StringComparer.Ordinal);
-        await Workbench.CloseTabsAsync(staleProjectTabIds, rememberRecent: false);
+        await Workbench.CloseTabsAsync(staleProjectTabIds, rememberRecent: false, cancellationToken: read.Cancellation.Token);
+        EnsureCurrent(read);
 
         if (staleActiveTab)
         {
@@ -137,8 +149,9 @@ public partial class MainLayout
         }
     }
 
-    private async Task<WorkbenchTabDescriptor> ResolveCurrentTabDescriptorAsync(Uri uri)
+    private async Task<WorkbenchTabDescriptor> ResolveCurrentTabDescriptorAsync(NavigationRead read)
     {
+        var uri = read.Uri;
         var path = uri.AbsolutePath;
         var query = QueryHelpers.ParseQuery(uri.Query);
         var route = $"{path}{uri.Query}";
@@ -146,7 +159,7 @@ public partial class MainLayout
         if (string.Equals(path, "/projects", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "projectId", out var projectId))
         {
-            var project = await LoadExistingProjectForWorkbenchAsync(projectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(projectId, read);
             if (project is null)
             {
                 Navigation.NavigateTo("/projects", replace: true);
@@ -172,7 +185,7 @@ public partial class MainLayout
 
         if (TryReadProjectSurface(path, "structure", out var structureProjectId))
         {
-            var project = await LoadExistingProjectForWorkbenchAsync(structureProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(structureProjectId, read);
             if (project is null)
             {
                 Navigation.NavigateTo("/projects", replace: true);
@@ -198,7 +211,7 @@ public partial class MainLayout
 
         if (TryReadProjectSurface(path, "calendar", out var calendarProjectId))
         {
-            var project = await LoadExistingProjectForWorkbenchAsync(calendarProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(calendarProjectId, read);
             if (project is null)
             {
                 Navigation.NavigateTo("/projects", replace: true);
@@ -224,7 +237,7 @@ public partial class MainLayout
 
         if (TryReadProjectProcessesSurface(path, out var processProjectId, out var isProjectLiveProcesses))
         {
-            var project = await LoadExistingProjectForWorkbenchAsync(processProjectId);
+            var project = await LoadExistingProjectForWorkbenchAsync(processProjectId, read);
             if (project is null)
             {
                 Navigation.NavigateTo("/projects", replace: true);
@@ -352,9 +365,10 @@ public partial class MainLayout
         return isLive;
     }
 
-    private async Task<ProjectEditorModel?> LoadExistingProjectForWorkbenchAsync(Guid projectId)
+    private async Task<ProjectEditorModel?> LoadExistingProjectForWorkbenchAsync(Guid projectId, NavigationRead read)
     {
-        var project = await ProjectsService.GetAsync(projectId);
+        var project = await ProjectsService.GetAsync(projectId, read.Cancellation.Token);
+        EnsureCurrent(read);
         return project.Id.HasValue ? project : null;
     }
 

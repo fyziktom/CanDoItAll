@@ -1,0 +1,232 @@
+@{
+    var state = View.Presentation;
+    var viewId = state.ViewId;
+}
+<Dialog IsOpen="true" Title="Shared provider connections"
+        Subtitle="Connect another CanDoItAll instance and import its shared providers."
+        Size="ModalSize.Wide" OnClose="@(() => View.CloseAsync(viewId))" TestId="shared-provider-connections-dialog">
+    <ChildContent>
+        @if (state.Recovery is { } unresolved) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-source-unresolved">
+                @if (unresolved.DeliveryPending) {
+                    <text>The source write is resolved; workspace reconciliation delivery is pending.</text>
+                } else if (unresolved.RetryAllowed) {
+                    <text>The source write was not applied. A deliberate retry keeps the same attempt identity.</text>
+                } else {
+                    <text>Source attempt @unresolved.SourceId requires verification before another operation.</text>
+                }
+                <Button Text="@(unresolved.DeliveryPending ? "Retry source delivery" : "Verify source attempt")"
+                        Click="@(() => View.VerifyAsync(unresolved.AttemptId))" Disabled="state.OperationBusy" data-testid="shared-provider-source-verify" />
+                @if (unresolved.RetryAllowed) {
+                    <Button Text="Retry verified source operation" Click="@(() => View.RetryVerifiedAsync(unresolved.AttemptId))"
+                            Disabled="state.OperationBusy" data-testid="shared-provider-source-retry-verified" />
+                }
+            </Alert>
+        }
+        @if (!string.IsNullOrEmpty(state.Error)) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="shared-provider-sources-error">@state.Error</Alert>
+            <Button Text="Retry" Icon="refresh" Click="@(() => View.RefreshAsync(viewId))" Disabled="state.OperationBusy" />
+        }
+        @if (state.Loading && state.Sources.Count == 0) {
+            <EmptyState Title="Loading connections" Description="Reading shared provider sources." />
+        } else {
+            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                <Split Breakpoint="LayoutBreakpoint.None" Gap="LayoutGap.Small" AlignItems="AlignItems.Center"
+                       JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="info" Text="@($"{state.Sources.Count} source(s)")" />
+                        <StatusBadge Tone="neutral" Text="@($"{state.Sources.Sum(source => source.ImportCount)} import(s)")" />
+                    </Cluster>
+                    <Cluster Gap="LayoutGap.Small">
+                        <Button Text="Add source" Icon="add_link" Size="ButtonSize.Small" Disabled="@(state.Loading || state.WritesBlocked)"
+                                Click="@(() => View.NewSource(viewId))" data-testid="shared-provider-source-add" />
+                        <Button Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                Disabled="@(state.OperationBusy || state.Loading)" Click="@(() => View.RefreshAsync(viewId))" data-testid="shared-provider-source-refresh" />
+                    </Cluster>
+                </Split>
+                @if (state.Sources.Count == 0) {
+                    <EmptyState Eyebrow="No sources" Title="No remote CanDoItAll instances are connected"
+                                Description="Add a source using the other instance's base URL and a stored source credential. Open APIs ignore it; JWT-enabled APIs use it as a Bearer token." />
+                } else {
+                    <div class="shared-provider-source-list" data-testid="shared-provider-source-list">
+                        @foreach (var source in state.Sources) {
+                            <SurfaceCard Soft="true" data-testid="shared-provider-source-card" data-source-id="@source.Origin.SourceId">
+                                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                                    <Split Breakpoint="LayoutBreakpoint.None" Gap="LayoutGap.Small" AlignItems="AlignItems.Start"
+                                           JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
+                                        <div class="min-w-0">
+                                            <p class="font-semibold">@source.Name</p>
+                                            <p class="cda-body-muted break-all">@source.BaseUri.AbsoluteUri</p>
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Tiny">
+                                            <StatusBadge Tone="@SourceTone(source.Status)" Text="@FormatStatus(source.Status)" />
+                                            <StatusBadge Tone="@(source.IsEnabled ? "success" : "neutral")" Text="@(source.IsEnabled ? "Enabled" : "Disabled")" />
+                                            <StatusBadge Tone="info" Text="@($"{source.ImportCount} import(s)")" />
+                                        </Cluster>
+                                    </Split>
+                                    @if (!string.IsNullOrWhiteSpace(source.StatusMessage)) {
+                                        <p class="shared-provider-status-note">@source.StatusMessage</p>
+                                    }
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Text="Edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                                Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.Edit)))" data-testid="shared-provider-source-edit" />
+                                        <Button Text="Test" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Disabled="state.WritesBlocked"
+                                                Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.Test)))" data-testid="shared-provider-source-test" />
+                                        <Button Text="Discover and import" Icon="travel_explore" Size="ButtonSize.Small" Disabled="@(state.WritesBlocked || !source.IsEnabled)"
+                                                Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.Discover)))" data-testid="shared-provider-source-discover" />
+                                        @if (source.ImportCount > 0) {
+                                            <Button Text="Sync selected" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                                    Disabled="@(state.WritesBlocked || !source.IsEnabled)"
+                                                    Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.Synchronize)))" data-testid="shared-provider-source-sync" />
+                                        }
+                                        <Button Text="@(source.IsEnabled ? "Disable" : "Enable")" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                                Disabled="state.WritesBlocked" Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.ToggleEnabled)))" data-testid="shared-provider-source-toggle" />
+                                        @if (source.ImportCount == 0) {
+                                            <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Disabled="state.WritesBlocked"
+                                                    Click="@(() => View.ExecuteAsync(new(source.Origin, SharedProviderSourceAction.Delete)))" data-testid="shared-provider-source-delete" />
+                                        }
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                    </div>
+                }
+                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                    Catalog and inference access follow the remote instance's API Access settings. The source model always references a stored credential; open APIs ignore it and JWT-enabled APIs use it as a Bearer token. Upstream provider credentials never leave the publishing instance.
+                </Alert>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseAsync(viewId))" data-testid="shared-provider-connections-close" />
+    </Footer>
+</Dialog>
+
+@if (state.Editor is { } draft) {
+    <Dialog IsOpen="true" Title="@(draft.ExpectedToken.HasValue ? "Edit shared provider source" : "Add shared provider source")"
+            Eyebrow="Shared providers" Subtitle="Use the base URL of another CanDoItAll instance." Size="ModalSize.Medium"
+            OnClose="@(() => View.CloseEditor(draft.Id))" TestId="shared-provider-source-dialog">
+        <ChildContent>
+            <EditForm EditContext="draft.Context" OnSubmit="@(() => View.SaveAsync(draft.Capture()))">
+                <Button Type="submit" Text="Save source" Style="display: none" tabindex="-1" aria-hidden="true" />
+                <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                    <FormField Text="Source name">
+                        <TextBox Immediate="true" Value="@draft.Name" ValueChanged="@(value => draft.Name = value ?? string.Empty)" data-testid="shared-provider-source-name" />
+                        <ValidationMessage For="@(() => draft.Name)" />
+                    </FormField>
+                    <FormField Text="CanDoItAll base URL">
+                        <TextBox Immediate="true" Value="@draft.BaseUri" ValueChanged="@(value => draft.BaseUri = value ?? string.Empty)"
+                                 placeholder="https://candoitall.example.net/" data-testid="shared-provider-source-uri" />
+                        <ValidationMessage For="@(() => draft.BaseUri)" />
+                        <p class="cda-body-muted">Use the instance root; catalog and OpenAI-compatible paths are resolved automatically.</p>
+                    </FormField>
+                    <FormField Text="Source credential secret">
+                        <InputSelect @bind-Value="draft.CredentialReference" class="cda-input" disabled="@(state.MetadataError is not null)" data-testid="shared-provider-source-secret">
+                            <option value="@Guid.Empty">Select a stored token</option>
+                            @if (draft.CredentialReference != Guid.Empty && !state.Credentials.Any(item => item.Id == draft.CredentialReference)) {
+                                <option value="@draft.CredentialReference">Unavailable credential reference</option>
+                            }
+                            @foreach (var secret in state.Credentials) {
+                                <option value="@secret.Id">@secret.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => draft.CredentialReference)" />
+                        <p class="cda-body-muted">Create the credential in Settings → Secrets first. For an open API it can be a dedicated placeholder; JWT-enabled APIs require the actual token. Secret values are never rendered here.</p>
+                    </FormField>
+                    @if (state.MetadataError is not null) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-secret-metadata-error">Credential metadata is unavailable. Your selected reference is retained.</Alert>
+                    }
+                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="draft.IsEnabled" data-testid="shared-provider-source-enabled" /> Enabled</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="draft.AllowPrivateNetwork" data-testid="shared-provider-source-private" /> Allow HTTP on a private network</label>
+                    </Grid>
+                    @if (!string.IsNullOrWhiteSpace(state.EditorError)) {
+                        <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="shared-provider-source-editor-error">@state.EditorError</Alert>
+                    }
+                </Stack>
+            </EditForm>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseEditor(draft.Id))" data-testid="shared-provider-source-cancel" />
+                <Button Text="Save source" Disabled="@(state.WritesBlocked || draft.ReadbackConflict || state.MetadataError is not null)" IsBusy="state.OperationBusy"
+                        Click="@(() => View.SaveAsync(draft.Capture()))" data-testid="shared-provider-source-save" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (state.Catalog is { } catalog) {
+    <Dialog IsOpen="true" Title="Published providers" Eyebrow="Shared provider catalog"
+            Subtitle="@($"{catalog.SourceName} · {catalog.Publications.Count} published provider(s)")" Size="ModalSize.Wide"
+            OnClose="@(() => View.CloseCatalog(catalog.Id))" TestId="shared-provider-catalog-dialog">
+        <ChildContent>
+            @if (catalog.ReadbackConflict) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-catalog-conflict">The selection was saved, then its source changed or became unavailable. Your choices are retained. Close this catalog and discover it again to review the current state.</Alert>
+            }
+            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                @if (catalog.Publications.Count == 0) {
+                    <EmptyState Eyebrow="Empty catalog" Title="This instance has no published providers"
+                                Description="Publish an eligible local provider on the remote instance, then refresh discovery." />
+                } else {
+                    <Split Breakpoint="LayoutBreakpoint.None" Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
+                        <p class="cda-body-muted">Select the remote providers that should be available in this instance.</p>
+                        <StatusBadge Tone="info" Text="@($"{catalog.SelectedCount} selected")" />
+                    </Split>
+                    <div class="shared-provider-catalog-list" data-testid="shared-provider-catalog-list">
+                        @foreach (var publication in catalog.Publications) {
+                            <label class="shared-provider-catalog-item">
+                                <input type="checkbox" checked="@catalog.IsSelected(publication.PublicationId)"
+                                       @onchange="@(args => catalog.Select(publication.PublicationId, args.Value is true))" data-testid="shared-provider-catalog-selection" />
+                                <span class="min-w-0">
+                                    <strong>@publication.DisplayName</strong>
+                                    <span>@FormatStatus(publication.Purpose) · @FormatStatus(publication.Transport) · @publication.Models.Count model(s)</span>
+                                    <small>@string.Join(", ", publication.Models.SelectMany(model => model.Capabilities).Distinct())</small>
+                                </span>
+                                <StatusBadge Tone="@HealthTone(publication.Health.State)" Text="@FormatStatus(publication.Health.State)" />
+                            </label>
+                        }
+                    </div>
+                }
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseCatalog(catalog.Id))" data-testid="shared-provider-catalog-cancel" />
+                <Button Text="Apply selection" Disabled="@(state.WritesBlocked || catalog.ReadbackConflict)" IsBusy="state.OperationBusy"
+                        Click="@(() => View.ApplyCatalogAsync(catalog.Capture()))" data-testid="shared-provider-catalog-apply" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@if (state.Confirmation is { } confirmation) {
+    <Dialog IsOpen="true" Title="Delete shared provider source?" Subtitle="@confirmation.SourceName" Size="ModalSize.Compact"
+            OnClose="@(() => View.CloseConfirmation(confirmation))" TestId="shared-provider-source-confirmation">
+        <ChildContent>The source connection will be removed. Sources with retained imports cannot be deleted.</ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseConfirmation(confirmation))" />
+                <Button Text="Delete source" ButtonStyle="ButtonStyle.Danger" Disabled="state.WritesBlocked"
+                        Click="@(() => View.ConfirmDeleteAsync(confirmation))" data-testid="shared-provider-source-confirm-apply" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired] public ISharedProviderSourcesView View { get; set; } = default!;
+    private static string SourceTone(SharedProviderSourceAvailability status) => status switch {
+        SharedProviderSourceAvailability.Available => "success",
+        SharedProviderSourceAvailability.NeverSynchronized => "neutral",
+        SharedProviderSourceAvailability.SourceOffline => "warning",
+        _ => "danger"
+    };
+    private static string HealthTone(SharedProviderHealthState state) => state switch {
+        SharedProviderHealthState.Available => "success",
+        SharedProviderHealthState.Degraded => "warning",
+        _ => "danger"
+    };
+    private static string FormatStatus<T>(T value) where T : struct, Enum => string.Concat(value.ToString().Select((character, index) =>
+        index > 0 && char.IsUpper(character) ? $" {char.ToLowerInvariant(character)}" : char.ToLowerInvariant(character).ToString()));
+}

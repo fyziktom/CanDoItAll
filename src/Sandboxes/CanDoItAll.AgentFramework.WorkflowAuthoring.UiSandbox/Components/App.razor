@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" data-asset-mode="@WorkflowAuthoringAssets.Mode">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-symbols.css"]" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
+    <link rel="stylesheet" href="@Assets[WorkflowAuthoringAssets.ThemePath]" />
+    <link rel="stylesheet" href="@Assets["CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox.styles.css"]" />
+    <CanvasLibHeadAssets />
+    <ImportMap />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+<body>
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <CanvasLibBodyAssets IncludeRuntimeAssets="true" IncludePreviewAssets="true" />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+</html>

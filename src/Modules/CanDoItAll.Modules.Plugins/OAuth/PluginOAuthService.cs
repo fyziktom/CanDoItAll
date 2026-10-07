@@ -40,12 +40,30 @@ public sealed class PluginOAuthService(
         EnvironmentVariableTarget.Machine
     ];
 
-    public async Task<Result<PluginOAuthStartResponse>> StartAsync(
+    public Task<Result<PluginOAuthStartResponse>> StartAsync(
         PluginId pluginId,
         PluginOAuthStartRequest request,
         Uri requestBaseUri,
         string actor,
         CancellationToken cancellationToken = default)
+        => StartCoreAsync(pluginId, request, requestBaseUri, actor, null, cancellationToken);
+
+    public Task<Result<PluginOAuthStartResponse>> StartObservedAsync(
+        PluginId pluginId,
+        PluginOAuthStartRequest request,
+        Uri requestBaseUri,
+        string actor,
+        Action<PluginOAuthProgress> progress,
+        CancellationToken cancellationToken = default)
+        => StartCoreAsync(pluginId, request, requestBaseUri, actor, progress, cancellationToken);
+
+    private async Task<Result<PluginOAuthStartResponse>> StartCoreAsync(
+        PluginId pluginId,
+        PluginOAuthStartRequest request,
+        Uri requestBaseUri,
+        string actor,
+        Action<PluginOAuthProgress>? progress,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(requestBaseUri);
@@ -70,6 +88,7 @@ public sealed class PluginOAuthService(
         }
 
         var connection = connectionResult.Value!;
+        progress?.Invoke(new(connection.Id, PluginOAuthStage.ConnectionResolved));
         var connectionSettings = ConfigurationState.FromJson(connection.SettingsJson);
         var clientId = ResolveClientId(oauth, connectionSettings);
         if (string.IsNullOrWhiteSpace(clientId))
@@ -110,6 +129,7 @@ public sealed class PluginOAuthService(
         };
         dbContext.Set<PluginOAuthSessionRecord>().Add(session);
         await dbContext.SaveChangesAsync(cancellationToken);
+        progress?.Invoke(new(connection.Id, PluginOAuthStage.SessionCreated));
 
         var authorizationUrl = BuildAuthorizationUrl(oauth, clientId, redirectUri, requestedScopes, state, codeVerifier);
         logger.LogInformation(

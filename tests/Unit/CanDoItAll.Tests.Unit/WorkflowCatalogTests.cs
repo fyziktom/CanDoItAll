@@ -341,7 +341,11 @@ public sealed class WorkflowCatalogTests
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
             "gpt-5.4",
-            ["gpt-5.4-mini"]);
+            ["gpt-5.4-mini"]) with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("gpt-5.4", "Exact default / custom"), new("gpt-5.4-mini", "Exact second / custom")]
+        };
         var imageProvider = CreateProvider(
             "OpenAI image",
             ProviderKind.OpenAi,
@@ -359,6 +363,8 @@ public sealed class WorkflowCatalogTests
         Assert.Contains("gpt-5.4", option.ModelOptions);
         Assert.Contains("gpt-5.4-mini", option.ModelOptions);
         Assert.True(option.SupportsStructuredOutput);
+        Assert.True(option.IsSourceManaged);
+        Assert.Equal(chatProvider.ModelCatalog, option.ModelCatalog);
     }
 
     [Fact]

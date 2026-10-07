@@ -134,6 +134,117 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### Scheduler UI slice
+
+Build SchedulerPlanner.Contracts, SchedulerPlanner.UI, SchedulerPlanner.Presentation, the
+SchedulerPlanner module, Web and the [sandbox](../src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md)
+directly in an isolated configuration such as `SchedulerUiProof`. Set
+`CANDOITALL_TEST_CONFIGURATION` to the same configuration for browser child hosts.
+Use task-owned PostgreSQL for owner/page/browser lanes. Never reuse the ordinary application.
+Build-backed `--list-tests --filter` must confirm the expected count before execution.
+
+| Owning project | Filter | Proof |
+| --- | --- | --- |
+| `tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.SchedulerPlanner` | Light renderer, draft revisions, read fences, admission, scenarios and dependency guard |
+| `tests/Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~SchedulerPlannerPageTests` | Real production composition and contextual Agent integration |
+| `tests/Unit/CanDoItAll.Tests.Unit` | `FullyQualifiedName~Scheduler` | Contract forwarding, installed Quartz boundaries, Agent acknowledgement and existing authorization consumers |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `FullyQualifiedName~Scheduler` | Actual persistence/transaction, post-commit faults, cascade/admission and existing fire/source authority consumers |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~SchedulerBrowserTests` | Real Web owner journey and sandbox native canvas, multiple surfaces, raw input, lifecycle and assets |
+
+The lightweight project is included in Components/Stable solutions and all CI component
+selections, never the product solution. See the [boundary evidence](architecture/scheduler-ui-boundary.md)
+for the exact last executed counts and development-loop samples. Broad Stable remains
+subject to the named invalidation rules below.
+
+### Plugins UI slice
+
+Build Plugins.Contracts, Plugins.UI, Plugins.Presentation, the Plugins module,
+Web and the [sandbox](../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md) directly.
+Use an isolated configuration such as `PluginsUiProof`, setting
+`CANDOITALL_TEST_CONFIGURATION` to the same value for browser child hosts.
+
+| Owning project | Focused selection | Proof |
+| --- | --- | --- |
+| `tests/Components/CanDoItAll.Plugins.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.Plugins` | Complete renderer, raw drafts, reads, effect admission, scenarios and dependency guards |
+| `tests/Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~PluginsPageTests\|FullyQualifiedName~PluginsPageDraftRegressionTests` | Existing real-owner page journeys and failing-first draft regressions |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `FullyQualifiedName~PluginsUiOwnerReceiptTests` | Actual package/connection/grant/OAuth/restart commit stages, limits, cleanup and HTTP contract compatibility |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `(FullyQualifiedName~PluginCatalogIntegrationTests&FullyQualifiedName!~Docker_qdrant_plugin_workflow_live_proof)\|FullyQualifiedName~PluginsOwnerPersistenceTests` | Existing production permission, OAuth, package, runtime activation and persistence behaviors |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~PluginsBrowserTests` | Real `/plugins` route, controlled EF read-back, bounded actual InputFile upload, owned restart and complete sandbox |
+
+Derive counts from source and confirm discovery before each changed selection.
+The existing simulation MemberData uses complex descriptors: discovery lists one
+theory, while execution expands its six source rows. Record both counts explicitly.
+The opt-in Docker live proof's early return is not live evidence; select it only
+with its explicit host prerequisite. Use isolated PostgreSQL 18 and package paths
+for owner/page/browser tests. The lightweight project is selected by Components,
+Stable and current component CI shards. See the [receipt](architecture/plugins-ui-boundary.md).
+
+### TestLab UI slice
+
+Build the TestLab.Contracts, TestLab.UI and TestLab module projects directly, followed by
+affected composition/consumer projects and Web. The standalone
+[TestLab sandbox](../src/Sandboxes/CanDoItAll.TestLab.UiSandbox/README.md) uses the same
+renderer and Parity assets without production DI or a database.
+
+| Owning project | Focused filter | Proof |
+| --- | --- | --- |
+| `tests/Unit/CanDoItAll.TestLab.Tests/CanDoItAll.TestLab.Tests.csproj` | `FullyQualifiedName~TestLabSessionTests` | Production session, controlled reads/writes, origin and admission fencing, reconciliation |
+| `tests/Components/CanDoItAll.TestLab.UI.Tests/CanDoItAll.TestLab.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.TestLab` | Real renderer, form input/validation, scenario storage and dependency closure |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~TestLabNotificationTests\|FullyQualifiedName~TestLabReconciliationTests\|FullyQualifiedName~OwnerPostcommitPageTests` | Real page/session notification semantics with a controlled owner; real owner form, postcommit identity, refusal and controlled read-back |
+| `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~TestLabOwnerPersistenceTests\|FullyQualifiedName~ResourceTestLabAdmissionIntegrationTests\|FullyQualifiedName~OwnerPostcommitPersistenceTests` | PostgreSQL schema, restart, profiles, lifetimes and postcommit behavior |
+| `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~TestLabBrowserTests` | Production aggregate and navigation, held read-back, real Activity failure, standalone assets |
+
+Also discover the affected CRM/HR responsible-party, Workbench projection and Project
+Structure tests from current references. Keep the bounded shell lifecycle regressions and
+production Collaboration browser journey when changing the shared shell. Confirm actual
+case counts with `--list-tests` before execution. The mixed owner classes intentionally
+retain Resources rows; running a bounded whole class avoids silently missing theory data.
+
+Use the explicit isolated PostgreSQL 18 endpoint and leave external browser base URLs
+unset. A task configuration such as `TestLabProof` keeps project outputs separate from a
+running application; set `CANDOITALL_TEST_CONFIGURATION` to match browser child outputs.
+The test-only TestLabBrowserFixture uses the real Web entry point and standard-input
+controls, with no fault routes or production switches. The light test project is included
+in Components/Stable and the actual CI shards. See the
+[boundary record](architecture/testlab-ui-boundary.md) for proof and measurement provenance.
+
+The light lane also covers a real responsible-party selector change during committed
+read-back, later explicit save versus read-only retry, global saved-party fallback and
+stale reference completion. The sandbox browser journey checks those controls and fresh
+operation completion. Keep the historical extraction receipt separate from corrective
+test runs; unchanged persistence or shell cases are not new proof unless executed.
+
+### Collaboration UI slice
+
+Build the affected contracts, UI, module and Web projects directly, then the standalone
+`src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj`.
+The sandbox is outside the product solution; its browser test project reference builds it
+for browser proof. The lightweight suites are included in Unit/Components/Stable and the
+component CI shards. They do not depend on a running production host.
+
+| Project | Bounded filter | Purpose |
+|---|---|---|
+| `tests/Unit/CanDoItAll.Collaboration.Tests/CanDoItAll.Collaboration.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Unit.Collaboration.` | Scripted read/write races, drafts, selection and navigation policy |
+| `tests/Components/CanDoItAll.Collaboration.UI.Tests/CanDoItAll.Collaboration.UI.Tests.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Components.Collaboration.` | Real renderer, scenarios, validation and dependency guards |
+| `tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj` | `FullyQualifiedName~CollaborationHostTests\|FullyQualifiedName~MainLayoutCollaborationTests\|FullyQualifiedName~CollaborationReconciliationTests` | Real page, owner and shell over PostgreSQL; controlled real-form draft retention and accepted mark-read completion |
+| `tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj` | `FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.CollaborationIntegrationTests` | Save boundary, observers, schema, restart and local reply semantics |
+| `tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj` | `FullyQualifiedName~CollaborationBrowserTests\|FullyQualifiedName~CollaborationSandboxBrowserTests` | Production writes/read-back and independent sandbox journeys at 1600 × 1000 |
+
+Use `--list-tests` and compare source-derived counts before each new filter, then execute
+the same filter on current assemblies. The existing `CollaborationDbContextTests` is the
+five-case mapping/token compatibility baseline. PostgreSQL lanes use only the isolated
+server described above. The browser fixture owns its random port and disposable database;
+leave `CANDOITALL_PLAYWRIGHT_BASEURL` unset to prevent attaching to another application.
+
+When a running developer app locks the ordinary output, a task-specific configuration
+such as `--configuration CollaborationProof` on the **project** commands avoids those
+outputs. Solution files support their declared configurations. Set
+`CANDOITALL_TEST_CONFIGURATION=CollaborationProof` for the browser child host. This is a
+local validation choice, not a new repository configuration or changed SDK/dependency mode.
+
+See [the boundary record](architecture/collaboration-ui-boundary.md) and
+[sandbox README](../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md).
+
 ### Prompt Gallery UI slice
 
 For changes under `src/UI/CanDoItAll.Prompts.UI`, `src/Modules/CanDoItAll.Modules.Prompts.Contracts`,
@@ -288,6 +399,53 @@ batches of at most 1,000, with positive progress and a two-minute cancellation g
 Use the opt-in `SharedProviderPremergePerformanceTests` for allocation and timing
 measurements; retain its bounded-cleanup and revocation checks.
 
+## Capability authoring CA1
+
+The independent capability authoring host renders both the creation wizard and details
+with the same production fields, setup presentation, bounded upload and assets. Generate
+production CSS before building or publishing. Use only 1920×1080 at scale 1 for this slice.
+
+```powershell
+npm run tailwind:build
+dotnet build src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox -c Release /m:1
+dotnet test tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests -c Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests -c Release --no-build --no-restore /m:1
+dotnet watch --project src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox run --no-launch-profile --urls http://127.0.0.1:58741
+dotnet publish src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox -c Release -o artifacts/capability-authoring-published /m:1
+```
+
+The fixture's setup responses are simulations. Native validation separately runs the
+catalog submission and MCP portability tests, `AgentChildAdversarialTests`,
+`CapabilityAuthoringRegressionTests`, `AgentEditorCapabilityCompositionTests`,
+`AgentCapabilitiesHostTests`, `AgentDetailsDialogCapabilityTests`,
+`CapabilitySetupFlowServiceTests`, `AgentCapabilitiesReadLifecycleTests`,
+`AgentCapabilityMutationBoundaryTests`, `CapabilityVerificationRaceIntegrationTests`
+and `CapabilityProofPublicationIntegrationTests`. Build production and discover the exact
+owning assembly/filter before each changed selection. Native harnesses require the isolated
+PostgreSQL setting below. A2 assignment still saves the entire dirty existing-agent draft;
+new-agent assignment stages locally. Explicit setup is separate from published proof.
+
+The lightweight capability tests belong to Components/Stable solutions and all three CI
+component project lists. `TeamAuthoringTests` in AgentFramework.UI.Tests covers the actual
+metadata/member/icon renderers; native `TeamMetadataOwnershipTests` covers coordinated writes.
+Discover `FullyQualifiedName~AgentAuthoring` in the Playwright project for the independent
+source/published sandbox and native definition, parent and team journeys. They use the
+final production controls at 1920×1080, scale 1.
+
+The shared consumer campaign separately selects `SharedProviderNativeDefaultsUiTests`,
+`SharedProviderNativeConsumerTests`, `SharedProviderCustomMetadataTests` and
+`SharedProviderFinalUiTests`. Its owned fixture name must use the existing
+`shared-providers-e2e-pp2-` prefix and matching marker, metadata root and Compose project.
+Provision a fresh unique root using the native runbook; never reset a retained fixture to
+satisfy that guard. Native helpers wait for accepted searches and confirmed mutations.
+
+The [CA1 architecture record](architecture/agent-authoring-ui-ca1.md) records the final
+source pair, original/follow-up attempts and signed checkpoints. Shared catalog/Core changes
+triggered one final broad Stable run. Isolated configurations keep ordinary application
+outputs untouched; a temporary solution must declare its custom configuration and preserve
+the exact Stable project set. Short configuration names avoid Windows copy path limits.
+Independent rendering tests do not replace that scope decision or portability enforcement.
+
 ## PostgreSQL 18 migration and installer proof
 
 Set `CANDOITALL_TESTS_POSTGRES_CONNECTION` to a separately provisioned PostgreSQL 18
@@ -324,7 +482,217 @@ launcher. It uses unique fixture resource names through test-only seams; a diffe
 InstallRoot by itself would not isolate the production installer's fixed Docker names.
 Without `-RunDocker` or `-NativeBinPath`, only non-provisioning native rejection cases run.
 
+## Workspace Settings Core
+
+For the Workspace Settings Core slice, use `FullyQualifiedName~WorkspaceUi` in
+`tests/Components/CanDoItAll.Workspace.UI.Tests` for standalone renderer/controller proof,
+`FullyQualifiedName~WorkspaceCoreOwnerOutcomeTests|FullyQualifiedName~WorkspaceSettingsHttpOutcomeTests`
+in Integration for real owner outcomes and the unchanged six-field HTTP contract, and
+`FullyQualifiedName~WorkspaceSettingsBrowserTests` in Playwright for the owned full Web
+and standalone sandbox journeys. Run build-backed `--list-tests` before the same-filter
+execution. PostgreSQL selections require the isolated PostgreSQL 18 fixture described
+above; do not supply the ordinary application's Playwright base URL. Current counts,
+dependent consumer filters, publish commands and development-loop observations are in
+[the maintained proof record](architecture/workspace-settings-core-ui-boundary.md).
+
+## Workspace API Access boundary proof
+
+`tests/Components/CanDoItAll.Workspace.ApiAccess.UI.Tests` is included in Components,
+Stable and all three actual component CI project lists. Select
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceApiUi` for backend-free controller,
+renderer and dependency proof. Build-backed discovery must precede same-filter execution.
+
+The main component project retains the production `ApiTokenAdministrationTests`,
+`ApiUserAdministrationPanelTests`, `ApiIssuanceCaptureTests` and `WorkspaceApiStatusTests`.
+Unit `ApiAdministrationOutcomeTests` and `ApiAdministrationDurabilityTests` use real
+private control-plane owners. Integration `ApiAdministrationOutcomeHttpTests` extends
+the existing API authorization/contract/session selections with real durable faults.
+`ApiAccessSettingsBrowserTests` uses a disposable secured production host;
+`ApiAccessSandboxBrowserTests` exercises the independent Development and published
+Production sandbox. These are distinct proof layers, not interchangeable mocks.
+See the [API boundary record](architecture/workspace-api-access-ui-boundary.md) for exact
+filters, current counts, failed attempts, graph/watch samples and the broad-gate decision.
+
+## Workspace Storage catalog boundary proof
+
+`tests/Components/CanDoItAll.Workspace.StorageCatalog.UI.Tests` belongs to Components,
+Stable and the three component CI project lists. Its
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceStorageCatalogUi` filter exercises
+the actual wizard, captured submissions, read lifetimes, staged receipts, scenario owners
+and forbidden dependency guards without a database. Use build-backed discovery before
+identical filtered execution.
+
+`StorageCatalogUiOwnerTests` in Integration uses private PostgreSQL, real catalog/routing
+and credential owners, and fault injection at the actual persistence and driver boundaries.
+`StorageCatalogHostTests` in Components uses production Settings and Recovery composition.
+`StorageCatalogBrowserTests` in Playwright covers the private production route and the
+source/published independent sandbox. Publish the sandbox into
+`artifacts/workspace-storage-catalog-ui/published` using the same configuration as the
+browser tests before the published case. Keep the ordinary application's base URL unset.
+The sandbox itself requires no database, vault or production driver.
+
+The [maintained Storage boundary record](architecture/workspace-storage-catalog-ui-boundary.md)
+records AP-R1/AP-R2 failing-first proof, exact application consumer selections, counts,
+owner semantics, graph/watch measurements and the broad Stable trigger. Recovery and
+Data Sources retain their existing owners and validation lanes. The subsequent selection
+slice is recorded below.
+
+## Workspace Storage selection boundary proof
+
+`tests/Components/CanDoItAll.Workspace.StorageSelection.UI.Tests` is included in Components,
+Stable and all three component CI project lists. Discover and then execute
+`FullyQualifiedName~CanDoItAll.Tests.Components.WorkspaceStorageSelectionUi` with the same
+configuration. It preserves the original eight picker cases and adds controlled lifetime,
+real dialog and evaluated boundary proof. `CatalogReselectionTests` in the catalog UI
+project covers SCAT-R1; API read-lifetime and Core Files identity suites remain separate.
+
+Main Components retains the actual Agent host and generic picker/table tests. Integration
+`StorageSelectionAdapterIntegrationTests` checks the registered read adapter against real
+private catalog/bootstrap/profile owners. Storage runtime, attachment, disclosure and
+routing selections remain in Unit/Integration. `StorageSelectionBrowserTests` verifies
+actual Agent child Apply, parent Cancel, explicit Save and persisted read-back. The
+`StorageSelectionSandboxBrowserTests` theory separately builds/runs the source host and
+publishes/runs its DLL in Production without database/vault configuration.
+
+Keep `CANDOITALL_PLAYWRIGHT_BASEURL` unset and use the owned PostgreSQL 18 fixture for
+production cases. The [selection boundary record](architecture/workspace-storage-selection-ui-boundary.md)
+contains the exact filters, discovery/execution counts, application matrix, graph/watch
+comparisons, reversible edit measurements and broad Stable assessment. Sandbox Apply
+is evidence of staged selection only, never a substitute for Agent persistence/authority.
+
+## Projects portfolio P1
+
+`CanDoItAll.Projects.UI.Tests` is registered in Components, Stable and all three CI component
+project lists. It exercises the actual five-step form, retained EditContext/raw input,
+submission capture before asynchronous validation, acknowledgement reconciliation and the
+renderer/sandbox dependency boundary. Discover its current cases before executing:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --no-build --no-restore
+```
+
+The real PostgreSQL composition topic is
+`FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests|FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests`.
+It retains Files leases/filter scope, package constraints, exact lifetime refusal and partial
+cleanup checks alongside held native save/seed/read/deletion regressions. Use an owned test
+environment and isolated configuration; fake seed acknowledgements are not persistence proof.
+
+The production browser entry is `ProjectsPortfolioBrowserTests`, with the shared five-step
+journey also used by deterministic File Agent and Workflow asset acceptance. New checks run
+at 1920×1080, wait for interactive readiness, retain navigation acknowledgements and verify
+native IDs/bytes. Scripted external model tests do not authorize paid inference. See the
+[P1 record](architecture/projects-portfolio-ui-p1.md) for exact executed counts, the qualified
+S0 disposition, package/source pair, development-loop observations and final integration gate.
+Moved public contracts and the native acknowledgement/admitted seed seam trigger Stable;
+Files P2 remains outside this extraction.
+
+## Projects Files P2
+
+The separate `CanDoItAll.Projects.Files.UI.Tests` leaf is registered in Components,
+Stable and all three CI component selections. It checks both real renderers, supported
+fixture content, independent session/content ownership and forbidden dependency edges.
+Discover current cases using the same configuration and filter before execution:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --no-build --no-restore
+```
+
+`ProjectFilesSurfaceSessionTests` and `ProjectFilesActionInteropTests` control delayed
+owners and JS boundaries. Native `ProjectsFilesHostLifecycleTests` uses actual project
+scopes/grants alongside the retained `ProjectsPageTests`, `ProjectsEditorMutationTests`
+and FileTools authorization/lease suites. The P1 modal tests retain failed-import and
+retirement controls. Use isolated PostgreSQL resources and current build-backed discovery.
+
+`ProjectsFilesSandboxBrowserTests` validates source and standalone publish without
+backend dependencies. `ProjectsPortfolioBrowserTests` verifies saved browser downloads.
+The deterministic File Agent and Workflow/TestLab journeys reopen their actual produced
+assets through Projects Files and compare downloaded bytes. These use 1920×1080; no paid
+model calls are permitted. Never build into an output directory while its owned test
+host is running. See [the P2 record](architecture/projects-files-ui-decoupling.md) for
+actual counts, limitations, graph/watch evidence and the wider-gate decision.
+
+## Agent Editor A2
+
+The [Editor.UI light tests](../tests/Components/CanDoItAll.AgentFramework.Editor.UI.Tests/README.md)
+exercise all ten sections, actual child renderers and neutral widgets through the independent sandbox. They are
+included in the Components/Stable solutions and the three component CI lists. Assembly guards
+check transitive/public dependencies and reject forbidden or unresolved edges.
+
+Build the AgentFramework module directly before discovering the owning `AgentEditor*`,
+`AgentDetailsDialog*`, thinking-effort/model selector, catalog and conversation component
+selections. `AgentEditorCoreRoundTripTests` saves through the actual rendered host and native
+commands in separate core-only and access-section edits, preserving project lifetimes, host bindings, extension JSON,
+Favorite tags and another agent. Native adapters and unit snapshot/policy tests remain necessary.
+
+`AgentEditorSandboxBrowserTests` checks source and standalone publish at 1920×1080 without
+product DI/database. The positive `FileJourneyHarnessBrowserTests` case traverses all ten
+sections through the real application, validates actual model/effort/instructions requests,
+and proves scoped approved file writes, attachments, read-backs and downloads. Its denial
+and retained-evidence controls remain part of the consumer selection. Only the external model
+response is scripted; this lane authorizes zero paid model requests. See the
+[A2 record](architecture/agent-editor-completion-a2.md) for current results and the Stable decision.
+
+`AgentEditorVerificationTests` exercises the real native proof publisher, exact receipt/version
+reconciliation, unsaved-before-Verify data, competing edits and read-only recovery. Template
+read-back must include the saved definition. `AgentMemoryReadLifetimeTests` and
+`AgentEditorAccessLifetimeTests` cover independent read and confirmation lifetimes;
+`AgentEditorMemoryRuntimeTests` verifies saved bindings through actual Memory policy/dispatch.
+Use build-backed discovery and the identical filter/configuration for execution. The complete
+owning editor selection includes retained capability/confirmation controls and the relocated
+RecordBrowsing widgets. Run actual StorageSelection, file/approval/download, Workflow/TestLab
+and neighboring shell journeys at 1920×1080 on the final source pair, with no paid requests.
+
+## Provider Profiles PP1
+
+The [Providers.UI light tests](../tests/Components/CanDoItAll.AgentFramework.Providers.UI.Tests/README.md)
+build the independent sandbox and actual catalog/Connection/Prices/Runtime/Thinking renderers.
+They are included in Components/Stable solutions and all three component CI lists. They check
+raw input and validation across tabs, price row identity, stale Thinking origins, separate
+editors and transitive/public dependency boundaries, including cycle and unresolved controls.
+
+Build the AgentFramework module directly, then discover the provider session, submission,
+operation, verification, reads, shared reconciliation, pricing/thinking and native mutation
+families. The module component selection also covers retained Sharing, source-dialog/delivery
+and request-History hosts. Use the same exact discovered filter for execution and an owned
+PostgreSQL 18 fixture for native tests. Reference refresh now preserves an acquired draft;
+initial acquisition failure and missing targets retain explicit retry coverage.
+
+`ProviderProfilesSandboxBrowserTests` validates source and standalone Production publish at
+1920×1080. The positive `FileJourneyHarnessBrowserTests` case creates its provider through the
+actual UI, reads all four sections back through native owners, then uses it in A2 and Simple
+Chat. Exact file approvals, committed IDs, terminal statuses, read-back/download hashes and
+unchanged siblings remain required. Workflow/TestLab accepted and incomplete-output cases
+exercise actual runtime paths with only external model output scripted; no paid calls occur.
+See [the PP1 record](architecture/provider-profiles-ui-pp1.md) for current results, provenance,
+graph/watch measurements and the bounded Stable decision. Final portability enforcement
+without `--write-baseline` remains mandatory.
+
+## Request History PP3
+
+The complete Request History UI is exercised independently in
+`tests/Components/CanDoItAll.AgentFramework.UI.Tests`. The existing `ProviderHistorySearchStateTests`
+and `ProviderHistorySeamTests` moved into that project; they are not also executed from Unit or the
+broad component assembly. The bounded `FullyQualifiedName~ProviderHistory` filter covers search,
+filters, stale rendered callbacks, sensitive-reference retirement and all sandbox scenarios.
+`ProviderRequestHistoryPanelTests` remains in the broad component project for native host context
+notifications. Discover current theory counts before each changed selection.
+
+`ProviderHistorySandboxBrowserTests` runs source and independently published Parity hosts at
+1920×1080, scale 1. Its shared host helper also serves `ProviderProfilesSandboxBrowserTests`, so
+select both when changing that helper. Native three-instance History and canonical-owner journeys
+remain separate from synthetic sandbox checks. See the [PP3 record](architecture/provider-history-ui-pp3.md)
+for source/dependency provenance, retained attempts and closure status.
+
 ## Broad Stable Gate
+
+The Workbench Structure renderer suite is included in Components, Stable and all
+three component CI selections. `CanDoItAll.Workbench.Structure.UI.Tests` exercises
+the real canvas and structural dialogs without native services. Native composer,
+hierarchy and transfer lifetime cases remain in `CanDoItAll.Tests.Components`.
+See [the WB3 record](architecture/workbench-structure-wb3.md) for frozen inputs,
+mixed attempts, independent sandbox proof and the final Stable checkpoint status.
 
 Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
 operator or reviewer request, or a named invalidation trigger in the work plan. Typical
@@ -655,3 +1023,214 @@ Do not report the full suite as green unless both exact no-filter commands pass 
 required browsers, hosts, databases, and sibling processes are available. Expected
 quarantine failures and missing environment dependencies are still failures of this
 gate and must be reported as such.
+
+## Memory UI boundary proof
+
+`tests/Components/CanDoItAll.Memory.UI.Tests` is in Components, Stable and the actual component
+CI shards. It builds the standalone sandbox and tests the shared controller, raw controls,
+request and effect identity, extension lifetime and negative dependency closure. Its stable
+filter is `FullyQualifiedName~CanDoItAll.Tests.Components.Memory` in that owning project.
+
+The existing Memory page/editor/round-trip/validation/surface tests remain in the main
+component project. `MemoryWorkspaceOwnerTests` exercises the real production facade and
+PostgreSQL stores, including read-back failures, partial demo writes, pre-dispatch capture,
+profile changes and unsupported claims. `MemoryBrowserTests` uses an owned production host
+with explicitly enabled shipped Mock/HTTP drivers and a held loopback HTTP response, plus
+the backend-free sandbox. These test settings do not change application defaults.
+
+Use current source-derived discovery counts and the same filtered, newly built assemblies
+for execution. Transport/protocol/Agent/API consumers are selected by actual impact.
+[The Memory boundary record](architecture/memory-ui-boundary.md) contains the extraction's
+current evidence, measurements, scope decisions and standalone asset proof.
+
+## Resources UI boundary proof
+
+`tests/Components/CanDoItAll.Resources.UI.Tests` is registered in Components, Stable and
+all three actual CI component-shard project lists. It tests the shared presentation
+controllers and complete Registry/Browse renderer with real BaseLib, FileBrowser and
+read-only FileInteraction descendants. It needs no production database or file provider.
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+```
+
+Derive the expected count from current facts and expanded theory rows before discovery.
+The main component project retains the existing Resources page, browse and postcommit
+tests, with the real Workspace configuration fallback and FileTools action/picker consumers.
+Do not drop shared TestLab rows from owner regression selections because Resources moved.
+
+`ResourcePromotionOutcomeTests` uses actual PostgreSQL commits and task-owned files.
+Only revision/log/cleanup and acknowledgement fault boundaries are substituted. A real
+transaction-committed interceptor proves that a lost acknowledgement stays unknown;
+exact identity review does not replay the write. Existing admission, owner persistence,
+connector, Memory source and Workbench projection tests cover the unchanged owner rules.
+
+`ResourcesBrowserTests` uses its owned production Web host for registry CRUD and real
+file promotion/reopen/download, and an independent database-free sandbox for focus, raw
+fields, held operations and retirement. Set the browser child-host configuration to the
+configuration actually built; use the isolated PostgreSQL prerequisite above. Local
+application launches and external FTP/IPFS transports are not exercised by these tests.
+
+The [Resources boundary receipt](architecture/resources-ui-boundary.md) records exact
+executed selections, source and published asset proof, source-mode graph/watch and
+three-sample edit measurements. Portability, documentation/evidence and secret gates
+remain mandatory; targeted test success does not replace them.
+
+## Workspace completion proof
+
+`tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests` belongs to Components,
+Stable and all three CI component shards. It exercises the real renderer, independent
+read lifetimes, command admission, retained acknowledgements and the backend-free
+sandbox dependency closure. The existing `StoragePlacementRecoveryDialogTests` still
+tests the production composition wrapper.
+
+`StorageRecoveryBrowserTests` prepares genuine interrupted Workflow outputs in a private
+PostgreSQL host, continues them through the production UI and independently compares
+file hashes, original receipts and run state. It also checks a real read-only managed
+credential. Its authenticated browser circuit uses the server-advertised LongPolling
+transport so the test credential's HTTP header reaches the circuit; authorization
+services are unchanged. `StorageRecoverySandboxBrowserTests` covers source and published
+Production assets without a backend. Neither is live-model evidence.
+
+Use build-backed discovery and the same filter for execution:
+
+```powershell
+dotnet test tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.StorageRecovery.UI.Tests --configuration Release --no-build --no-restore /m:1
+dotnet test tests/Playwright/CanDoItAll.Tests.Playwright --configuration Release --filter "FullyQualifiedName~StorageRecoveryBrowserTests|FullyQualifiedName~StorageRecoverySandboxBrowserTests" /m:1
+```
+
+The PostgreSQL, browser and private-root prerequisites above apply to the production
+journey. The [Workspace completion record](architecture/workspace-completion-ui-boundaries.md)
+keeps stage proof distinct from the later frozen full-application campaign.
+
+The corresponding Data Sources leaf suite covers stable drafts, one-use password input,
+independent reads, scoped operation receipts and held transfers. `DataSourcesOwnerTests`
+uses real private PostgreSQL/control-plane owners; `DataSourcesBrowserTests` exercises
+profile save, physical schema creation, partial transfer and actual owned-host restart.
+`DataSourcesSandboxBrowserTests` runs source and published Production with no backend.
+
+Configuration's renderer stays in the existing Configuration.UI project. Main Components
+contains `ConfigurationSchemaRendererTests`, `ConnectorConfigFieldEditorTests`,
+`SettingsRendererTests` and the real `WorkflowImageGenerationSettingsRendererTests`.
+`ConfigurationSandboxBrowserTests` covers its independent source/published host;
+`ConfigurationWorkflowBrowserTests` saves and reads back actual generic and registered
+settings without executing external effects. See the [Workspace closure map](architecture/workspace-closure-map.json).
+
+Live UI proof additionally requires an existing absolute `CANDOITALL_LIVE_REQUEST_BUDGET_FILE`
+containing a JSON reservation list, initially `[]`. Keep the same file across campaign
+retries. A test-only loopback proxy reserves before each outbound Responses request,
+refuses after ten in an execution or forty in the campaign, and forwards only to the
+configured OpenAI Responses destination. It never records credentials or message bodies.
+The private provider catalog is changed through its normal owner; application authority
+and provider/runtime implementations stay unchanged. `LiveRequestBudgetTests` verifies
+concurrent and persisted admission without sending model requests. Evidence separately
+records outbound reservations, HTTP success and actual provider-history journal rows;
+tool-admission batches are no longer represented as request counts.
+
+## Agents completion proof
+
+[AC1](architecture/agents-completion-ac1.md) records the shell, complete Usage family,
+runtime/log, floating context/close and avatar presentation boundaries. The independent
+`CanDoItAll.AgentFramework.UI.Tests` suite exercises the actual light components; native
+`AgentsShellTests`, Usage lifetime tests, conversation/dialog tests and Voice/SimpleChats
+tests remain in their owning assemblies. Scheduler projection/startup and Workflow preview
+identity repairs additionally require native PostgreSQL integration tests. Discover each
+focused selection from freshly built binaries and retain its TRX and exact source state.
+
+The Simple Chat dialog family uses `ConversationDialogSurfaceTests` in the
+light AgentFramework.UI.Tests project and `LlmChatConversationWorkspaceTests` in native
+Components. After changing that leaf, also run the three
+`LlmChatUiRegistrationAndArchitectureTests` in Unit against the final source; their
+forbidden-service/reference scan must include newly added files. The native browser
+Simple Chat case separately proves create/send/rename/archive/reload with accepted
+conversation identities and definition revisions.
+
+The final external-fixture browser selection includes `SharedProviderNativeDefaultsUiTests`,
+`SharedProviderNativeConsumerTests`, `SharedProviderCustomMetadataTests` and
+`SharedProviderFinalUiTests`. These require the owned three-instance runner's explicit
+write gate and fixture/evidence directories. They script only the remote model response;
+native definitions, chats, approvals, files, usage and History use real owners. Run these
+sequentially because they share the deterministic upstream script. A failed setup is not
+permission to replay it: inspect committed identities and effects before any correction.
+Use unique attempt directories and preserve the first failure.
+
+The consumer fixture retains an unconfirmed deterministic response plan when a browser
+assertion or native continuation fails. It clears only its own confirmed completed plan
+at disposal and refuses an unconfirmed replacement. Inspect the original native run and
+script progress before another campaign changes the upstream. Clearing a response plan
+while an approval continuation is still preparing changes that run's eventual input.
+`SharedProviderConsumerFixtureTests` exercises this cleanup boundary against the actual
+owned control endpoint without dispatching an Agent run.
+
+The AC1 Scheduler case leaves its completed finite plan enabled through two restarts on
+the same store, compares original run/detail records, and then fires a separate future
+plan. The older WF1 Quartz browser case pauses its own plan for cleanup; it does not prove
+the AC1 restart requirement. Settings reloads use the full shared navigation helper,
+including the interactive-render barrier after the startup prompt has been dismissed.
+
+New AC1 browser validation uses only 1920×1080 at scale 1. The source and independently
+published `/completion`, `/adjuncts` and `/simple-chat-dialogs` specimens exercise real Charts, Dialog, CopyButton,
+InputFile and avatar assets, independent views, footer/focus and error/retry states. Voice
+media lifecycle proof uses owned audio bytes and actual browser Audio/object URLs, with
+no paid synthesis. Controlled specimens do not substitute for native effect proof.
+
+One final frozen Stable checkpoint is justified by the startup-owner correction and public
+presentation boundary. Do not rerun the broad suite after each dialog. Keep original full
+run failures and later focused qualifications separate, account for nonserializable theory
+expansion, and compare measured elapsed time with current CI budgets. The portability
+gate, source/delta secret-scan coverage and documentation validation remain mandatory.
+
+AC1 freezes Stable at signed `f9dd2b02`. Its later bounded SimpleChat dialog delta
+is qualified by seven fresh owning builds, the 20/5/3 native/leaf/boundary selections,
+source/published specimens and the exact-source native image. No composition, root-build,
+schema, persistence, project-reference or shared Stable-infrastructure change follows
+that checkpoint. The separate external-browser fixture cleanup fix has its own
+failing-first native control-endpoint regression. Preserve the original Stable failure
+and per-assembly results; a scoped secret-scan pass does not turn the full run green.
+
+Native Usage proof must inspect source coverage before interpreting totals. A fresh
+file-backed Agent workspace can require explicit initialization through the existing
+`tools/UsageIndex` maintenance executable; Overview/API reads do not backfill history.
+Use the actual owned workspace root and organization scope. Preserve the original
+partial snapshot, run the resumable command without rebuild/migration flags unless
+independently required, and verify canonical execution/observation payloads are unchanged.
+Then compare real Agent and SimpleChat aggregate totals with all three native dialogs,
+retaining the accepted workload and UTC interval and the independent dialog lifetimes.
+
+## Workbench Content UI WB4
+
+The independent renderer tests are in `tests/Components/CanDoItAll.Workbench.Content.UI.Tests`.
+They are registered in Components/Stable and the three explicit CI component lists.
+Build the owning test assembly, verify discovery with `--list-tests`, then execute the
+selected cases with `--no-build --no-restore`. Native text owner coverage is in
+`ProjectStructureTextAssetLifetimeTests`, `ProjectStructureTextAssetCreateDialogTests` and
+`ProjectStructureTextAssetCreationCoordinatorTests` in the main Components test project.
+The lifetime cases require the native PostgreSQL harness. The independent sandbox and
+its Fast/Parity commands are documented in
+[the sandbox README](../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md).
+See [WB4's boundary and evidence record](architecture/workbench-content-wb4.md) for current
+proof and incomplete groups. Only 1920×1080/DPR1 is in the WB4 visual campaign.
+
+### Workbench Execution completion (WB6)
+
+The remaining Workflow and full Process staffing renderer family lives in
+`src/UI/CanDoItAll.Workbench.Execution.UI`. The actual nested picker/details/switch dialogs
+are in the same leaf. The native Workbench module retains authority, preparation, execution,
+accepted identities and durable cleanup receipts. Managed-file disposition belongs to
+Content.UI. See [the full census and boundary record](architecture/workbench-execution-ui.md).
+
+Build the native Workbench module and affected light leaf/sandbox first. Refresh the owning
+assemblies, then confirm discovery for `ProjectStructurePageWorkflowNodeTests`,
+`ProjectStructurePageProcessLaunchScopeTests`, `ProjectStructurePageProcessLinkTests`,
+`ProjectStructureProcessAssignmentDialogTests`, `ContentDeleteTests` and the independent
+Execution suite. The two existing Insights deletion-lifetime cases cover the original native
+prompt through the new Content renderer. PostgreSQL remains explicitly isolated.
+
+The Execution test project is included in Components/Stable and all explicit component CI
+selections. The independent host exposes `/workflow` and `/process`; the Content host adds
+`/deletion`. Use 1920x1080/DPR1 for this completion checkpoint. Provider fixtures, genuine
+model rehearsal, published asset checks, watch measurements and native recovery are separate
+proof lanes. A full Stable checkpoint is explicitly required by the WB6 package after source
+settles, without repeating the aggregate for each renderer phase.

@@ -1,0 +1,90 @@
+@page "/"
+@page "/sharing/{Scenario}"
+@implements IDisposable
+
+<PageTitle>Provider sharing sandbox</PageTitle>
+<div class="sharing-sandbox" data-testid="sharing-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()" data-scenario="@selected">
+<Stack GapScale="LayoutGap.Medium" FillHeight="true" AlignItems="AlignItems.Stretch">
+    <Cluster Gap="LayoutGap.Medium">
+        <h1>Provider sharing sandbox</h1>
+        <label>Scenario
+            <select class="cda-input" value="@selected" @onchange="ChangeScenario" data-testid="sharing-scenario">
+                @foreach (var value in Enum.GetValues<SharingScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <Button Text="Source connections" Click="session.OpenSources" data-testid="open-sources" />
+        <Button Text="Second editor" Click="@(() => secondOpen = true)" data-testid="open-second-editor" />
+        <Button Text="Concurrent local edit" Click="session.OtherOperator" data-testid="other-operator" />
+        <Button Text="Metadata-only update" Click="session.MetadataOnly" data-testid="metadata-only" />
+        <Button Text="Read stored fixture" Click="session.CompleteRead" data-testid="complete-read" />
+        @if (selected == SharingScenario.Held) {
+            <Button Text="Release held operation" Click="session.Release" data-testid="release-held" />
+        }
+    </Cluster>
+    <Alert AlertStyle="AlertStyle.Info">Deterministic, independent stored fixtures. Credentials are metadata references. No external requests are made.</Alert>
+    <p role="status" data-testid="fixture-outcome">@session.Outcome</p>
+    <div class="sharing-sandbox-content">
+        <SharedProviderRefreshSurface View="session" />
+        <SharedProviderSharingSurface @key="session" View="session" />
+    </div>
+</Stack>
+</div>
+@if (session.SourcesOpen) {
+    <SharedProviderSourcesSurface View="session" />
+}
+@if (secondOpen) {
+    <Dialog IsOpen="true" Title="Independent second editor" Size="ModalSize.Wide" OnClose="@(() => secondOpen = false)" TestId="sharing-second-editor">
+        <ChildContent>
+            <Button Text="Read stored fixture" Click="second.CompleteRead" data-testid="second-read" />
+            <SharedProviderSharingSurface View="second" />
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public string? Scenario { get; set; }
+    private SharingScenario selected = SharingScenario.Imported;
+    private SharedProviderScenarioSession session = new();
+    private SharedProviderScenarioSession second = null!;
+    private bool secondOpen;
+    private bool interactive;
+    protected override void OnInitialized() {
+        session.Changed += Changed;
+        second = new(selected, session.Store);
+        second.Changed += Changed;
+    }
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    protected override void OnParametersSet() {
+        if (Enum.TryParse<SharingScenario>(Scenario, true, out var value) && value != selected) {
+            selected = value;
+            ReplaceSession();
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) {
+        selected = Enum.Parse<SharingScenario>(args.Value!.ToString()!);
+        ReplaceSession();
+    }
+    private void ReplaceSession() {
+        Detach();
+        session = new(selected);
+        second = new(selected, session.Store);
+        session.Changed += Changed;
+        second.Changed += Changed;
+        secondOpen = false;
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    private void Detach() {
+        session.Changed -= Changed;
+        second.Changed -= Changed;
+        session.Release();
+        second.Release();
+    }
+    public void Dispose() => Detach();
+}

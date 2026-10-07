@@ -71,13 +71,3 @@ public static class ProjectStructureValidationOverlay
     public static bool RequiresValidationReview(ProjectStructureNode node, string status)
         => false;
 }
-
-public sealed record ProjectStructureValidationOverlaySummary(
-    bool IsVisible,
-    int BlockedCount,
-    int ReviewCount,
-    int PriorityCount,
-    int SelectedIssueCount,
-    IReadOnlyList<string> SpotlightNodes);
-
-

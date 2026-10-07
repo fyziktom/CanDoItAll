@@ -1,0 +1,75 @@
+@page "/"
+@implements IDisposable
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <ChildContent>
+        <FormSection Title="Plugins sandbox" Description="The complete production renderer with deterministic local storage and harmless effects.">
+            <Cluster Gap="LayoutGap.Small">
+                <label class="cda-field-label" for="plugins-scenario">Scenario</label>
+                <select id="plugins-scenario" class="cda-input" style="width: 18rem; max-width: 100%;" data-testid="plugins-scenario" @onchange="ChangeScenarioAsync">
+                    @foreach (var scenario in Enum.GetValues<PluginScenario>()) {
+                        <option value="@scenario">@scenario</option>
+                    }
+                </select>
+                <Button Text="Release pending operations" data-testid="plugins-release" Click="Release" />
+                <Button Text="Restore settings reads" data-testid="plugins-restore-reads" Click="RestoreReadsAsync" />
+                <label class="cda-field-label" for="plugins-catalog-scenario">Catalog visibility</label>
+                <select id="plugins-catalog-scenario" class="cda-input" style="width: 10rem;" data-testid="plugins-catalog-scenario"
+                        value="@host.Store.CatalogScenario" @onchange="ChangeCatalogAsync">
+                    @foreach (var scenario in Enum.GetValues<PluginCatalogScenario>()) {
+                        <option value="@scenario">@scenario</option>
+                    }
+                </select>
+                <span data-testid="plugins-store-counts" data-scenario="@host.Store.Scenario" data-saves="@host.Store.SaveWrites" data-grants="@host.Store.GrantWrites"
+                      data-packages="@host.Store.PackageWrites" data-oauth="@host.Store.OAuthStarts" data-popups="@host.Store.BrowserEffects"
+                      data-restarts="@host.Store.RestartRequests">@host.Store.SaveWrites saved connections; @host.Store.PackageWrites package writes</span>
+            </Cluster>
+        </FormSection>
+    </ChildContent>
+</PageScaffold>
+<PluginsWorkspaceSurface @key="host.Workspace" Workspace="@host.Workspace" />
+
+@code {
+    private readonly PluginScenarioHost host = new();
+    private bool disposed;
+
+    protected override async Task OnInitializedAsync() {
+        host.Workspace.Changed += Changed;
+        await host.Workspace.RefreshAsync();
+    }
+
+    private async Task ChangeScenarioAsync(ChangeEventArgs args) {
+        host.Workspace.Changed -= Changed;
+        await host.ChangeAsync(Enum.Parse<PluginScenario>(args.Value!.ToString()!));
+        host.Workspace.Changed += Changed;
+    }
+
+    private void Release() => host.Store.ReleaseAll();
+    private Task ChangeCatalogAsync(ChangeEventArgs args) {
+        host.Store.CatalogScenario = Enum.Parse<PluginCatalogScenario>(args.Value!.ToString()!);
+        return host.Workspace.RefreshAsync();
+    }
+    private Task RestoreReadsAsync() {
+        host.Store.Scenario = PluginScenario.Normal;
+        host.Store.FailSettings = false;
+        return host.Workspace.RefreshAsync();
+    }
+    private void Changed() => _ = RenderAsync();
+    private async Task RenderAsync() {
+        try {
+            await InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
+                }
+            });
+        } catch (ObjectDisposedException) when (disposed) {
+        } catch (Exception exception) {
+            host.Store.ReportFailure("sandbox rendering", exception);
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        host.Workspace.Changed -= Changed;
+        host.Dispose();
+    }
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-04",
+  "main": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "components-decoupling",
+    "head": "ccca2fd3a7c4239d2869e8143617fd9ab04c3723",
+    "comparison_base": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+    "commits_ahead": 7,
+    "head_signature_verified_by_github": true,
+    "head_message": "test(agent-authoring): close final validation and delivery"
+  },
+  "components": {
+    "repository": "fyziktom/CanDoItAll.Components",
+    "remote_branch": "development",
+    "remote_head": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+    "reported_local_tested_head": "b495d4c4a28f0a6588ba10bfaa7be6e8409eae18",
+    "local_code_reviewed_this_turn": false,
+    "publication": "not established",
+    "commit_fetch_status": 404
+  },
+  "method": "Connected GitHub source review and reported implementation evidence; no product execution.",
+  "limitations": [
+    "No .NET SDK or Docker runtime available in the review environment",
+    "No private original TRX/log/image/watch artifacts supplied",
+    "Workflow source review is a scoped architectural/read-path review, not a line-by-line full runtime audit"
+  ],
+  "checkout_policy": "No reset or fixed checkout; reconcile actual run entry sources.",
+  "final_ref_recheck": {
+    "main_unchanged": true,
+    "components_remote_unchanged": true
+  },
+  "github_actions_for_reviewed_head": {
+    "total_count": 0,
+    "interpretation": "Does not establish or refute recorded local test results."
+  }
+}

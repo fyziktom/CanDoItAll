@@ -1,0 +1,115 @@
+@{
+    var draft = Draft;
+    var reviewed = draft.Latest;
+    var save = Save;
+}
+<EditForm EditContext="draft.Context" OnSubmit="@(() => SaveAsync(draft, save))">
+<FormSection Title="Imported shared provider"
+             Description="Only the local alias and local enabled intent are editable. Remote-owned routing and capability fields follow the source catalog.">
+    <Stack GapScale="LayoutGap.Medium">
+        <Cluster Gap="LayoutGap.Small">
+            <StatusBadge Tone="info" Text="Shared" />
+            <StatusBadge Tone="@ResolveAvailabilityTone(Import.Availability)"
+                         Text="@FormatStatus(Import.Availability)"
+                         data-testid="shared-provider-import-availability" />
+            <StatusBadge Tone="@(Import.IsSelected ? "success" : "neutral")"
+                         Text="@(Import.IsSelected ? "Selected" : "Retired")" />
+        </Cluster>
+
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <FormField Text="Local alias">
+                <TextBox Immediate="true" Value="@draft.LocalAlias" ValueChanged="@(value => draft.LocalAlias = value ?? string.Empty)"
+                         data-testid="shared-provider-import-alias" />
+                <ValidationMessage For="@(() => draft.LocalAlias)" />
+            </FormField>
+            <label class="cda-inline-option self-end">
+                <InputCheckbox @bind-Value="draft.IsEnabled" data-testid="shared-provider-import-enabled" />
+                Enabled locally
+            </label>
+        </Grid>
+
+        @if (draft.HasConflict) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="shared-provider-import-conflict">
+                Another operator changed the local settings. Your edits are retained. Saved alias: @reviewed.Settings.LocalAlias;
+                enabled: @(reviewed.Settings.IsEnabled ? "yes" : "no"). Review before saving.
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Use saved settings" ButtonStyle="ButtonStyle.Light" Disabled="@IsBusy"
+                            Click="@(() => ResolveConflict(draft, reviewed, false))" data-testid="shared-provider-import-use-saved" />
+                    <Button Text="Keep my edited fields" Disabled="@IsBusy"
+                            Click="@(() => ResolveConflict(draft, reviewed, true))" data-testid="shared-provider-import-keep-edits" />
+                </Cluster>
+            </Alert>
+        }
+
+        <FactTable>
+            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                <dl><dt class="cda-eyebrow">Source</dt><dd>@Import.SourceName</dd></dl>
+                <dl><dt class="cda-eyebrow">Remote display name</dt><dd>@Import.RemoteDisplayName</dd></dl>
+                <dl><dt class="cda-eyebrow">Purpose</dt><dd>@FormatStatus(Import.Purpose)</dd></dl>
+                <dl><dt class="cda-eyebrow">Transport</dt><dd>@FormatStatus(Import.Transport)</dd></dl>
+                <dl><dt class="cda-eyebrow">Default model</dt><dd>@(Import.Models.FirstOrDefault(model => model.Id == Import.DefaultModelId)?.DisplayName ?? "Unavailable shared model")</dd></dl>
+                <dl><dt class="cda-eyebrow">Published models</dt><dd>@Import.Models.Count</dd></dl>
+            </Grid>
+        </FactTable>
+
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Save local settings"
+                    Disabled="@(IsBusy || draft.HasConflict)"
+                    IsBusy="@IsBusy"
+                    Click="@(() => SaveAsync(draft, save))"
+                    data-testid="shared-provider-import-save" />
+            @if (Import.IsSelected)
+            {
+                <Button Text="Retire import"
+                        ButtonStyle="ButtonStyle.Danger"
+                        Disabled="@IsBusy"
+                        Click="Retire"
+                        data-testid="shared-provider-import-retire" />
+            }
+        </Cluster>
+    </Stack>
+</FormSection>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public required SharedProviderImportPresentation Import { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<SharedProviderImportSubmission> Save { get; set; }
+
+    [Parameter]
+    public EventCallback Retire { get; set; }
+
+    [Parameter, EditorRequired]
+    public SharedProviderImportDraft Draft { get; set; } = default!;
+
+    private Task SaveAsync(SharedProviderImportDraft draft, EventCallback<SharedProviderImportSubmission> save) =>
+        !IsBusy && ReferenceEquals(draft, Draft) && !draft.HasConflict && draft.Context.Validate()
+            ? save.InvokeAsync(draft.Capture()) : Task.CompletedTask;
+
+    private void ResolveConflict(SharedProviderImportDraft draft, SharedProviderImportBaseline reviewed, bool keepEdits) {
+        if (!IsBusy && ReferenceEquals(draft, Draft)) {
+            draft.ResolveConflict(reviewed, keepEdits);
+        }
+    }
+
+    private static string ResolveAvailabilityTone(SharedProviderImportAvailability state) => state switch
+    {
+        SharedProviderImportAvailability.Available => "success",
+        SharedProviderImportAvailability.SourceOffline => "warning",
+        _ => "danger"
+    };
+
+    private static string FormatStatus<T>(T value) where T : struct, Enum
+    {
+        var text = value.ToString();
+        return string.Concat(text.Select((character, index) =>
+            index > 0 && char.IsUpper(character)
+                ? $" {char.ToLowerInvariant(character)}"
+                : char.ToLowerInvariant(character).ToString()));
+    }
+}

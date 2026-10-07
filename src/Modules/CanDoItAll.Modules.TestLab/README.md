@@ -45,6 +45,13 @@ reference facts do not replace current actor permissions or supply launch author
 
 ## Focused Validation
 
+The route delegates reads, writes and notifications to a per-page `TestLabWorkspaceSession`
+through the narrow `ITestLabWorkspaceOwner` adapter. The shared renderer and pure draft
+policy live in TestLab.UI, and pure DTOs live in TestLab.Contracts. The owner still owns
+all four tables, transaction/admission rules, child synchronization and postcommit effects.
+See the [UI boundary](../../../docs/architecture/testlab-ui-boundary.md) for lifetime,
+reconciliation, sandbox and validation details.
+
 `TestLabOwnerPersistenceTests` covers the exact owner model, complete-schema mapping parity, foreign-query rejection, historical aggregate readback after restart, owner edits preserving IDs, and profile isolation. Existing callers remain covered by `CrmHrCrossModuleIntegrationTests`, `ProjectStructureAgentIntegrationTests`, and `ProjectStructureAutomaticPlacementIntegrationTests`.
 
 Follow [the repository testing procedure](../../../docs/testing.md) to build, confirm discovery counts, and execute the focused filters. Source changes also require portability-static enforcement; this README does not assert that any test has passed.

@@ -1,0 +1,66 @@
+{
+  "bundle_id": "CDA-WORKSPACE-CLOSURE-CRITICAL-FIXES-v1",
+  "title": "Close Workspace and critical shared lifetimes; no next module",
+  "created_on": "2026-09-30",
+  "target_agent": "Codex GPT-6 Astra Max",
+  "executable": true,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "d9273a88973d28d73c4d29f8686f2b3d68ef8f3a",
+  "review_commit_is_execution_pin": false,
+  "entry_point": "prompt.md",
+  "source_register": "sources.json",
+  "shared_foundation": "shared/README.md",
+  "documents": [
+    "CLOSURE.md",
+    "DEPENDENCY_DELIVERY.md",
+    "FIX_DATA_SOURCES.md",
+    "FIX_SHARED_LIFETIMES.md",
+    "LIVE_VALIDATION.md",
+    "PACKAGE_VALIDATION.md",
+    "README.md",
+    "REVIEW.cs.md",
+    "REVIEW.md",
+    "SAFE_EXECUTION.md",
+    "SOURCES.md",
+    "TEST_RESULTS_REVIEW.md",
+    "TOOLS.md",
+    "VALIDATION_MATRIX.md",
+    "WORKSPACE_STATUS.md",
+    "prompt.md"
+  ],
+  "additional_repository_scope": {
+    "fyziktom/CanDoItAll.Components": "Bounded BaseLib Dialog/interop/owner tests and required dependency delivery only"
+  },
+  "phases": [
+    "C0 entry/proof preflight",
+    "C1 exact profile correction",
+    "C2 Simple Chat ownership",
+    "C3 shared Dialog",
+    "C4 MainLayout browser-state lifetime",
+    "C5 reliable safe harness",
+    "C6 final non-live campaign",
+    "C7 separately authorized live proof",
+    "C8 honest closure"
+  ],
+  "required_campaign_groups": 35,
+  "new_module_extraction": false,
+  "live_policy": {
+    "previous_campaign_reserved": 40,
+    "previous_campaign_limit": 40,
+    "new_requests_authorized_by_bundle": 0,
+    "maximum_if_separately_authorized": 40,
+    "per_execution_maximum_if_separately_authorized": 10
+  },
+  "review_proof": {
+    "type": "connected-source-and-maintained-report-review",
+    "product_build_run": false,
+    "product_tests_run": false,
+    "browser_run": false,
+    "runtime_reproductions_run": false,
+    "raw_implementer_artifacts_available": false,
+    "external_primary_documentation_checked": true,
+    "branch_rechecked_same_sha": true
+  },
+  "artifact_proof_is_product_proof": false
+}

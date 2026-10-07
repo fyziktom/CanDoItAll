@@ -1,0 +1,71 @@
+@using CanDoItAll.Modules.Workspace.ApiAccess
+@using CanDoItAll.Modules.Workspace.ApiAccess.Contracts
+@using CanDoItAll.Workspace.ApiAccess.UI
+@using Microsoft.AspNetCore.Components.Authorization
+@implements IDisposable
+@inject IApiAccessConfigurationOwner ConfigurationOwner
+@inject IApiTokenOwner TokenOwner
+@inject IApiAccountOwner AccountOwner
+@inject ApiOperationLedger Ledger
+
+@if (session is not null) {
+    <ApiAccessSurface @key="session" Session="session" />
+}
+
+@code {
+    [Parameter] public EventCallback<ApiAccessStatus?> StatusChanged { get; set; }
+    [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
+    private Task<AuthenticationState>? previousAuthentication;
+    private ApiAccessSession? session;
+    private ApiAccessConfiguration? reportedConfiguration;
+    private bool reported;
+    private bool disposed;
+
+    protected override async Task OnInitializedAsync() {
+        previousAuthentication = AuthenticationState;
+        await ActivateAsync();
+    }
+    protected override async Task OnParametersSetAsync() {
+        if (!ReferenceEquals(previousAuthentication, AuthenticationState)) {
+            previousAuthentication = AuthenticationState;
+            Retire();
+            await ActivateAsync();
+        }
+    }
+    private async Task ActivateAsync() {
+        reported = false;
+        session = new(ConfigurationOwner, TokenOwner, AccountOwner, Ledger);
+        session.Changed += Changed;
+        await session.LoadAsync();
+    }
+    private void Changed() => _ = InvokeAsync(async () => {
+        if (disposed || session is null) {
+            return;
+        }
+        var configuration = session.Configuration;
+        if (!reported || !ReferenceEquals(reportedConfiguration, configuration)) {
+            reported = true;
+            reportedConfiguration = configuration;
+            var status = configuration is null ? null : new ApiAccessStatus(configuration.ApiEnabled, configuration.OpenApiEnabled,
+                configuration.SwaggerUiEnabled, configuration.AuthorizationEnabled, configuration.SigningKeyConfigured,
+                configuration.Issuer, configuration.Audience, configuration.DefaultTokenLifetimeMinutes, configuration.MaxTokenLifetimeMinutes) {
+                UserAuthenticationEnabled = configuration.UserAuthenticationEnabled,
+                AccessManagementEnabled = configuration.AccessManagementEnabled,
+                UserTokenLifetimeMinutes = configuration.UserTokenLifetimeMinutes
+            };
+            await StatusChanged.InvokeAsync(status);
+        }
+        StateHasChanged();
+    });
+    private void Retire() {
+        if (session is not null) {
+            session.Changed -= Changed;
+            session.Dispose();
+            session = null;
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        Retire();
+    }
+}

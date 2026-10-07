@@ -269,7 +269,7 @@ public sealed partial class ProjectStructureAgentService(
             : [];
 
         var mappedNodes = selectedNodes
-            .Select(node => MapNodeSummary(node, effectivePriorities.GetValueOrDefault(node.Id), request))
+            .Select(node => MapNodeSummary(node, effectivePriorities.GetValueOrDefault(node.Id), request, surface.ExpectedProjectAdmission))
             .ToList();
 
         return new ProjectStructureReadResponse(surface.ProjectId, surface.ProjectName, mappedNodes, links, warnings) { ExpectedProjectAdmission = surface.ExpectedProjectAdmission };
@@ -2474,7 +2474,8 @@ public sealed partial class ProjectStructureAgentService(
     private ProjectStructureNodeSummary MapNodeSummary(
         ProjectStructureNode node,
         int effectivePriority,
-        ProjectStructureReadRequest options)
+        ProjectStructureReadRequest options,
+        ProjectWriteAdmission? runtimeAdmission = null)
     {
         return new ProjectStructureNodeSummary(
             node.Id,
@@ -2512,7 +2513,8 @@ public sealed partial class ProjectStructureAgentService(
                 node,
                 runtimeLauncher,
                 localFileOpener,
-                ProjectStructureRuntimePathAuthorityMode.AgentExecution));
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution,
+                runtimeAdmission is null ? null : new(runtimeAdmission, node.RecordId)));
     }
 
     private static ProjectStructureDependencyItem MapDependencyItem(ProjectStructureDependencyNodeAnalysis analysis)

@@ -29,20 +29,18 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
     }
 
     public async Task<ExecutionStorageIndex> LoadIndexForAgentDeletionAsync(
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var currentIndex = await ResolveExecutionIndexAsync(cancellationToken);
-        var persistedSessionCount = CountJsonFiles(
-            layout.ExecutionSessionsRoot);
-        if (currentIndex.SessionCount == persistedSessionCount)
-        {
+        // The audit writer persists receipts/artifacts independently of run-detail index deltas.
+        var reconciledIndex = currentIndex with {
+            SessionCount = CountJsonFiles(layout.ExecutionSessionsRoot),
+            ReceiptCount = CountRunScopedJsonFiles(layout.RunReceiptsRoot) + CountJsonFiles(layout.OrphanReceiptsRoot),
+            ArtifactCount = CountRunScopedJsonFiles(layout.RunArtifactsRoot) + CountJsonFiles(layout.OrphanArtifactsRoot)
+        };
+        if (currentIndex == reconciledIndex) {
             return currentIndex;
         }
 
-        var reconciledIndex = currentIndex with
-        {
-            SessionCount = persistedSessionCount
-        };
         await jsonStore.WriteJsonAtomicallyAsync(
             layout.ExecutionIndexPath,
             reconciledIndex,
@@ -164,8 +162,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                     $"Execution run '{runId:N}' does not match its canonical chat index summary.");
             }
 
-            if (IsIndexedActiveState(detail.Run.State) || detail.Run.ToolAdmission?.HasUnresolvedEffects == true)
-            {
+            EnsureRunDetailConsistency(detail);
+            if (IsIndexedActiveState(detail.Run.State) || detail.Run.PendingApprovals.Count > 0 ||
+                detail.Run.ToolAdmission?.HasUnresolvedEffects == true) {
                 throw new AgentDeletionConflictException(
                     agentId,
                     AgentDeletionConflictKind.ActiveExecution,

@@ -26,6 +26,19 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
+Projects P1 rendering is in
+[CanDoItAll.Projects.UI](../../UI/CanDoItAll.Projects.UI/README.md): portfolio/cards/tree,
+hierarchy inspection, overview, all five editor steps, package controls and deletion notices.
+`ProjectsPage` retains acquisition, mutation admission, native services, agent context,
+navigation and real Files composition. See the
+[P1 boundary and evidence record](../../../docs/architecture/projects-portfolio-ui-p1.md).
+
+Files P2 is deferred. `ProjectFilesPortfolioPane`, `ProjectFilesDialog`, their coordinators,
+the directory catalog, access state and managed viewer leases remain here. The extracted
+board supplies a typed Files slot using the existing shared Cards/Files projection; package
+transfer and profile safety remain in their existing owners. Workbench owns the native
+starter transaction through the compatible Projects-owned admitted seed port.
+
 This module owns project portfolio records and their product semantics. Keep that
 
 behavior here and expose it through typed services, Razor components, and module

@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+  "review_date": "2026-09-28",
+  "review_commit_is_execution_pin": false,
+  "method": "Read-only authorized GitHub connector source and metadata inspection.",
+  "local_product_execution": false,
+  "limitations": [
+    "No .NET SDK/product build or tests in reviewer environment.",
+    "No implementer raw ignored TRX/browser artifacts supplied.",
+    "Not an exhaustive audit of Scheduler runtime/admission/transfer or all remaining modules."
+  ],
+  "input_bundle": {
+    "name": "CanDoItAll_Plugins_UI_Decoupling_Codex_Max.zip",
+    "sha256": "8c5cea0912cb16b43da3643bf31d70edb243d9142e7b6e5f769f418731c22b49"
+  },
+  "sources": [
+    {
+      "id": "EV01",
+      "kind": "connector-metadata",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/branches/components-decoupling",
+      "coverage": "Returned GitHub metadata inspected.",
+      "purpose": "Observed current branch HEAD and GitHub commit signature verification; dynamic URL, observation pinned in this register.",
+      "observed_head": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "observed_signature_verified": true,
+      "end_of_review_head_rechecked_unchanged": true
+    },
+    {
+      "id": "EV02",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "docs/architecture/plugins-ui-boundary.md",
+      "observed_blob_sha": "cb8581584f416a02c49bf9e97d6ef768fbfcb78f",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/docs/architecture/plugins-ui-boundary.md",
+      "coverage": "Architecture, stage/behavior, reported test/graph and final closure sections inspected; local raw execution evidence not available; benchmark portion not independently verified.",
+      "purpose": "Implementer-reported closure and test totals, not reviewer product execution."
+    },
+    {
+      "id": "EV03",
+      "kind": "connector-metadata",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/compare/dd050d5a1489537207e073cac0838f40cde4340f...0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "coverage": "Returned GitHub metadata inspected.",
+      "purpose": "Compared baseline and implementation change inventory.",
+      "observed_ahead_by": 2
+    },
+    {
+      "id": "EV04",
+      "kind": "connector-metadata",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=0e176a3b99270cdc9a86a57d6276d05979d7352e&per_page=10",
+      "coverage": "Returned GitHub metadata inspected.",
+      "purpose": "No matching GitHub Actions runs available for review.",
+      "observed_total_count": 0
+    },
+    {
+      "id": "EV05",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/README.md",
+      "observed_blob_sha": "6dc4a076bd048fbf8c25cfaec5582c473604f461",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/README.md",
+      "coverage": "Complete returned file.",
+      "purpose": "Current application UI index; context for next module selection."
+    },
+    {
+      "id": "PL01",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginsWorkspace.cs",
+      "observed_blob_sha": "d5419bce1f15754117d85ee3938d11d6dbe05fad",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginsWorkspace.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Production/scenario shared workspace, exact submission and effect ownership."
+    },
+    {
+      "id": "PL02",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceOperations.cs",
+      "observed_blob_sha": "102c10f58b7cdea7575bf2a1309bc4dad06cf6a2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceOperations.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Receipt application before refresh, status/replay and completed-operation retention."
+    },
+    {
+      "id": "PL03",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginDraftRegistry.cs",
+      "observed_blob_sha": "ebc3965b1ccbc9df1eb4753dddf67c11a3a3c01a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginDraftRegistry.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Bounded draft reconciliation, exact reset and origin lifetime."
+    },
+    {
+      "id": "PL04",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceReads.cs",
+      "observed_blob_sha": "66c0e60678661e75e621d140e9445dab4a8a01e0",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceReads.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Catalog selection and independent reads; PL-R1."
+    },
+    {
+      "id": "PL05",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginReadLane.cs",
+      "observed_blob_sha": "15b0a11925cf81d86dee603b5e7e6f2dc9e3fd08",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginReadLane.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Read generation/cancellation and current-state acceptance."
+    },
+    {
+      "id": "PL06",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceOwner.cs",
+      "observed_blob_sha": "0366197e6c2ca98d493c66f3d20cf455b972473b",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/PluginWorkspaceOwner.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Light owner port and typed receipt semantics."
+    },
+    {
+      "id": "PL07",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginConnectionEditorState.cs",
+      "observed_blob_sha": "50cb6134e916c869dd9fa98f9bfa4f78e7ab4109",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginConnectionEditorState.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Frozen values, ID/token acceptance and field-aware later-edit reconciliation."
+    },
+    {
+      "id": "PL08",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginWorkspaceContracts.cs",
+      "observed_blob_sha": "e1a24bb4a95c8c0ba82fc9701df9b865c5dfb81b",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginWorkspaceContracts.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "SelectedPlugin lookup, target identities and operation replay policy."
+    },
+    {
+      "id": "PL09",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginSettingsTab.razor",
+      "observed_blob_sha": "0bc4831b0418ffa46a246e164332fc5a73f69760",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginSettingsTab.razor",
+      "coverage": "Complete returned file.",
+      "purpose": "Actual oninput and explicit target/reset controls."
+    },
+    {
+      "id": "PL10",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginConnectionsTab.razor",
+      "observed_blob_sha": "5457a7417e09656c4a3c0c00bfa8fbd7b6db71f2",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginConnectionsTab.razor",
+      "coverage": "Complete returned file.",
+      "purpose": "Current OAuth section and owner effect intents."
+    },
+    {
+      "id": "PL11",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginDetails.razor",
+      "observed_blob_sha": "5e0cddc9b97bad6797b2fbc9134889634efcc0b8",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginDetails.razor",
+      "coverage": "Complete returned file.",
+      "purpose": "Six sections and identity-matched settings composition."
+    },
+    {
+      "id": "PL12",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/PluginsWorkspaceSurface.razor",
+      "observed_blob_sha": "8cde19d2b3715d767ab11bd81e7dd00a8b1070b3",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/PluginsWorkspaceSurface.razor",
+      "coverage": "Complete returned file.",
+      "purpose": "Real top-level list conditional, InputFile, package/restart state; PL-R1."
+    },
+    {
+      "id": "PL13",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginWorkspaceSession.cs",
+      "observed_blob_sha": "39ceb6832574b86e9e969f8c70b7caccb719e231",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginWorkspaceSession.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Real owner adapter, failure/result/stage mapping and safe diagnostics."
+    },
+    {
+      "id": "PL14",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginCommittedException.cs",
+      "observed_blob_sha": "577d75d7cb1ce021841b8fe8ed6db99a88441a7f",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginCommittedException.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Committed exception and package-stage wrappers."
+    },
+    {
+      "id": "PL15",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs",
+      "observed_blob_sha": "0a52ea9de5f349fa7965387aee992e75f6d26980",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs",
+      "coverage": "Partial file: lines 1–650, including install result handling, extraction/replacement/cleanup and some manifest validation. Runtime loader tail not fully audited.",
+      "purpose": "PL-R2 double-fault control flow and preserved package stage semantics.",
+      "inspected_line_ranges": [
+        [
+          1,
+          650
+        ]
+      ]
+    },
+    {
+      "id": "PL16",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsWorkspaceTests.cs",
+      "observed_blob_sha": "5e99516c9008e77711fec2d0338670583156e054",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsWorkspaceTests.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Existing draft, read, receipt and scenario test source; not rerun."
+    },
+    {
+      "id": "PL17",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsEffectTests.cs",
+      "observed_blob_sha": "2cb54cc7bce5e7d79039743e8a93daff1edb5a6d",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsEffectTests.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Existing partial read/effect/scope/descriptor tests; not rerun."
+    },
+    {
+      "id": "PL18",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsBoundaryTests.cs",
+      "observed_blob_sha": "bcc0a391dfd5a61c73c260732dfbb66ec936d1d8",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/tests/Components/CanDoItAll.Plugins.UI.Tests/PluginsBoundaryTests.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Actual transitive/public-type guard source and its limits; not rerun."
+    },
+    {
+      "id": "PL19",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/PluginsUiOwnerReceiptTests.cs",
+      "observed_blob_sha": "ed19444595fea462be912ac758fca6596fbd0a1a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/tests/Integration/CanDoItAll.Tests.Integration/PluginsUiOwnerReceiptTests.cs",
+      "coverage": "Returned integration tests and fixture tail read in two requests.",
+      "purpose": "Existing isolated invalid upload, stage logging, OAuth and wire receipt proofs in source; double-fault path not covered there."
+    },
+    {
+      "id": "PL20",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj",
+      "observed_blob_sha": "6ab1a4476d82f7879ea2f980f9d63cfa8d803d6f",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj",
+      "coverage": "Complete returned file.",
+      "purpose": "Declared Presentation dependency on UI; not a newly evaluated build graph."
+    },
+    {
+      "id": "PL21",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/UI/CanDoItAll.Plugins.UI/CanDoItAll.Plugins.UI.csproj",
+      "observed_blob_sha": "79c261198efe333d20a5c9bfca487e857cfb199c",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/UI/CanDoItAll.Plugins.UI/CanDoItAll.Plugins.UI.csproj",
+      "coverage": "Complete returned file.",
+      "purpose": "Declared UI Razor, BaseLib and Contracts boundary; not a newly evaluated build graph."
+    },
+    {
+      "id": "SC01",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
+      "observed_blob_sha": "b7e653cbc2f88b7f795be5fe5cbd1a8a53a7a8e7",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
+      "coverage": "Complete main page read in contiguous line-range requests 1–2700; final request extends beyond EOF.",
+      "purpose": "Complete rendered surface and mutation/input/interop/lifecycle paths.",
+      "inspected_line_ranges": [
+        [
+          1,
+          2700
+        ]
+      ]
+    },
+    {
+      "id": "SC02",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerModels.cs",
+      "observed_blob_sha": "ed48e0bb10613fa2ae990b2932f956aecdd36679",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerModels.cs",
+      "coverage": "Returned entities, EF mappings, summaries, workspace, editor/query/schema and launch context/result definitions inspected.",
+      "purpose": "Contract extraction, authority separation, history cascade and retained fields."
+    },
+    {
+      "id": "SC03",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs",
+      "observed_blob_sha": "6aebd787021cb02362590f23f56f48e4cb1d648a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs",
+      "coverage": "Partial file: lines 1–650; interface/read/default/save/toggle/delete, targets/input validation, history and calendar projection. Later validation/description/other tail not fully audited.",
+      "purpose": "Durable mutation before projection; exact targets and bounded query/calendar semantics.",
+      "inspected_line_ranges": [
+        [
+          1,
+          650
+        ]
+      ]
+    },
+    {
+      "id": "SC04",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
+      "observed_blob_sha": "1b4d0348eb301e51e210ae2f9c371f240cbda2e3",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
+      "coverage": "Complete returned file.",
+      "purpose": "Declared current dependencies, including Quartz hosting and broad application/runtime references."
+    },
+    {
+      "id": "SC05",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/wwwroot/js/schedulerPlannerCalendarInterop.js",
+      "observed_blob_sha": "2debf8b393106d341c669f983e430e591e74b5a5",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/wwwroot/js/schedulerPlannerCalendarInterop.js",
+      "coverage": "Complete returned file.",
+      "purpose": "Single global listener/binding and missing host containment; two-host regression obligation."
+    },
+    {
+      "id": "SC06",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor.css",
+      "observed_blob_sha": "a7cfc4a7d51a2cd6474b4c0a05ac3117eede0670",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor.css",
+      "coverage": "Returned calendar, layout, form and dialog/card scoped CSS rules inspected; no browser/computed-style proof.",
+      "purpose": "Asset/scoping preservation and applicable CSS watch measurement."
+    },
+    {
+      "id": "SC07",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/README.md",
+      "observed_blob_sha": "82574189527dad2b1b1e91f221eb52a4b630e643",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/README.md",
+      "coverage": "Complete returned file.",
+      "purpose": "Current Workflow-only scheduling, retained admission and source-authority invariants; remaining wider obligations."
+    },
+    {
+      "id": "SC08",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "tests/Components/CanDoItAll.Tests.Components/SchedulerPlannerPageTests.cs",
+      "observed_blob_sha": "56a0324ab7017037fcd152ad4247c777fb5eb31a",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/tests/Components/CanDoItAll.Tests.Components/SchedulerPlannerPageTests.cs",
+      "coverage": "Partial file: first 280 lines; existing Agent, tabs/calendar, history, picker and typed input cases. Remaining cases require current discovery.",
+      "purpose": "Existing owning component tests and entry characterization; not a full test-suite audit.",
+      "inspected_line_ranges": [
+        [
+          1,
+          280
+        ]
+      ]
+    },
+    {
+      "id": "SC09",
+      "kind": "repository-file",
+      "repository": "fyziktom/CanDoItAll",
+      "review_commit": "0e176a3b99270cdc9a86a57d6276d05979d7352e",
+      "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerAgentChatContextBuilder.cs",
+      "observed_blob_sha": "d1919f0bc184f7b9e8ba89c77de07f0340992257",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/0e176a3b99270cdc9a86a57d6276d05979d7352e/src/Modules/CanDoItAll.Modules.SchedulerPlanner/SchedulerAgentChatContextBuilder.cs",
+      "coverage": "Complete returned file.",
+      "purpose": "Current Agent source/view/selection/overlay/context-access presentation contract."
+    }
+  ]
+}

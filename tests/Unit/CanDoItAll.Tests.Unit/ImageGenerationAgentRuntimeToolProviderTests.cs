@@ -12,6 +12,8 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly byte[] SourcePngBytes = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
     [Theory]
     [InlineData("1536x864", null, null, "image size")]
@@ -73,6 +75,8 @@ public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
         Assert.Contains("provider default", properties.GetProperty("size").GetProperty("description").GetString());
         Assert.Contains("medium", properties.GetProperty("quality").GetProperty("description").GetString());
         Assert.Contains("webp", properties.GetProperty("outputFormat").GetProperty("description").GetString());
+        Assert.Contains("SVG", properties.GetProperty("sourceWorkspacePaths").GetProperty("description").GetString());
+        Assert.Contains("project_structure_asset_text_get", properties.GetProperty("sourceProjectAssets").GetProperty("description").GetString());
     }
 
     [Theory]
@@ -505,7 +509,7 @@ public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
 
         var failure = Assert.IsAssignableFrom<IAgentToolFailure>(exception);
         Assert.True(failure.CanRetryWithCorrectedInput);
-        File.WriteAllBytes(Path.Combine(workspace.Path, "corrected-source.png"), [1, 2, 3]);
+        File.WriteAllBytes(Path.Combine(workspace.Path, "corrected-source.png"), SourcePngBytes);
 
         var result = await InvokeImageGenerationToolAsync(
             tool,
@@ -644,8 +648,10 @@ public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
         var hostScope = WorkspaceScopeDescriptor.Organization("host-organization");
         var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
         var sketch = TestWorkspaceServices
-            .CreateFileService(workspace.Path, projectScope)
-            .WriteTextFile("artifacts/sketches/sketch.png", "sketch");
+            .CreatePathResolutionService(workspace.Path, projectScope)
+            .ResolveFilePath("artifacts/sketches/sketch.png", allowMissing: true);
+        Directory.CreateDirectory(Path.GetDirectoryName(sketch.FullPath)!);
+        File.WriteAllBytes(sketch.FullPath, SourcePngBytes);
         var imageService = new FakeAgentImageGenerationService();
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
@@ -666,10 +672,10 @@ public sealed partial class ImageGenerationAgentRuntimeToolProviderTests
             OutputFormat: "png",
             SourceWorkspacePaths: ["artifacts/sketches/sketch.png"]));
 
-        Assert.True(sketch.Succeeded);
+        Assert.True(sketch.IsWorkspacePath);
         Assert.Equal(projectScope.CombineArtifactPath("generated", "concept.png"), result.OutputWorkspacePath);
         Assert.True(File.Exists(Path.Combine(workspace.Path, result.OutputWorkspacePath)));
-        Assert.Equal($"workspace:{sketch.Path}", Assert.Single(Assert.Single(imageService.Requests).Sources).Summary);
+        Assert.Equal($"workspace:{sketch.RelativePath}", Assert.Single(Assert.Single(imageService.Requests).Sources).Summary);
     }
 
     private static (string OutputPath, IReadOnlyList<string>? SourcePaths) PreparePathFailureScenario(

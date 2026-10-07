@@ -1,0 +1,83 @@
+@namespace CanDoItAll.Workspace.UI
+@implements IDisposable
+<Stack GapScale="LayoutGap.Medium">
+    <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="defaults-refresh" />
+    @if (State.Error is { } error) {
+        <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
+    }
+    <EditForm EditContext="State.Draft.EditContext" OnSubmit="State.SaveAsync">
+        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+            <FormSection Title="Workspace defaults"
+                         Icon="settings"
+                         Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
+                <div>
+                    <label class="cda-field-label">Workspace name</label>
+                    <TextBox Immediate="true" @bind-Value="State.Draft.Model.WorkspaceName" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Name)" data-testid="defaults-name" class="cda-input" />
+                </div>
+                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                    <div>
+                        <label class="cda-field-label">Default output format</label>
+                        <TextBox Immediate="true" @bind-Value="State.Draft.Model.DefaultPromptOutputFormat" @bind-Value:after="() => State.Draft.Edited(DefaultsField.OutputFormat)" data-testid="defaults-outputformat" class="cda-input" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Default provider</label>
+                        <InputSelect @bind-Value="State.Draft.Model.DefaultProviderProfileId" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Provider)" data-testid="defaults-provider" class="cda-input">
+                            <option value="">None</option>
+                            @if (State.Draft.Model.DefaultProviderProfileId is { } missing && !State.Providers.Any(item => item.Id == missing)) {
+                                <option value="@missing">Unavailable provider (@missing)</option>
+                            }
+                            @foreach (var provider in State.Providers) {
+                                <option value="@provider.Id" disabled="@(!provider.IsEnabled)">@provider.Name @(!provider.IsEnabled ? "(disabled)" : "")</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </Grid>
+                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                    <div>
+                        <label class="cda-field-label">Currency code</label>
+                        <TextBox Immediate="true" @bind-Value="State.Draft.Model.CurrencyCode" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Currency)" data-testid="defaults-currency" class="cda-input" maxlength="3" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">Currency culture</label>
+                        <TextBox Immediate="true" @bind-Value="State.Draft.Model.CurrencyCultureName" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Culture)" data-testid="defaults-culture" class="cda-input" />
+                    </div>
+                </Grid>
+            </FormSection>
+
+            <FormSection Title="Workspace notes"
+                         Icon="note"
+                         Description="Keep any operating notes or setup caveats close to the defaults.">
+                <div>
+                    <label class="cda-field-label">Notes</label>
+                    <TextArea Immediate="true" @bind-Value="State.Draft.Model.Notes" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Notes)" data-testid="defaults-notes" class="cda-input cda-input--textarea min-h-32" />
+                </div>
+            </FormSection>
+
+            <StickyActionFooter StatusLabel="Workspace defaults">
+                <PrimaryActions>
+                    <Button Text="Save defaults" Disabled="@(!State.CanSave)" data-testid="defaults-save" Icon="save" Type="submit" />
+                </PrimaryActions>
+            </StickyActionFooter>
+        </Stack>
+    </EditForm>
+    <SettingsReceipts Entries="State.Receipts" Review="State.ReviewAsync" />
+</Stack>
+@code {
+    [Parameter, EditorRequired] public IWorkspaceDefaultsState State { get; set; } = default!;
+    private IWorkspaceDefaultsState? subscribed;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribed, State)) {
+            if (subscribed is not null) {
+                subscribed.Changed -= Changed;
+            }
+            subscribed = State;
+            subscribed.Changed += Changed;
+        }
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+    }
+}

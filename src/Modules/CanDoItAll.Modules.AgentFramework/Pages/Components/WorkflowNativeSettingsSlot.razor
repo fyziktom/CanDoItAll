@@ -1,0 +1,49 @@
+@using CanDoItAll.AgentFramework.WorkflowAuthoring.UI
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.Modules.Workspace
+
+@if (descriptor is not null) {
+    <SettingsRendererHost RendererKey="@ResolveSettingsRendererKey(descriptor)"
+                          RendererOwnerId="@ResolveSettingsRendererOwnerId(descriptor)"
+                          RendererTrustLevel="@ResolveSettingsRendererTrustLevel(descriptor)"
+                          Schema="descriptor.ConfigurationSchema" State="Context.State" Secrets="Secrets"
+                          StateChanged="Context.StateChanged" TestIdPrefix="@Context.TestIdPrefix" />
+} else {
+    <Alert AlertStyle="AlertStyle.Danger">The executor is no longer registered in this host.</Alert>
+}
+
+@code {
+    [Parameter, EditorRequired] public WorkflowExecutorSettingsContext Context { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<WorkflowExecutorDescriptor> Executors { get; set; } = [];
+    [Parameter] public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
+    private WorkflowExecutorDescriptor? descriptor;
+    protected override void OnParametersSet() {
+        descriptor = Executors.SingleOrDefault(item => item.Id == Context.Descriptor.Id);
+    }
+    private static string? ResolveSettingsRendererKey(WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode == WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? descriptor.SetupRendererKey
+            : null;
+
+    private static string ResolveSettingsRendererOwnerId(WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode != WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? string.Empty
+            : descriptor.Source.TrustLevel switch
+        {
+            WorkflowExecutorTrustLevel.Application => descriptor.Source.SourceId,
+            WorkflowExecutorTrustLevel.BundledPlugin => descriptor.Source.PluginId,
+            _ => string.Empty
+        };
+
+    private static SettingsRendererTrustLevel? ResolveSettingsRendererTrustLevel(
+        WorkflowExecutorDescriptor descriptor)
+        => descriptor.SettingsPresentationMode != WorkflowExecutorSettingsPresentationMode.CustomRenderer
+            ? null
+            : descriptor.Source.TrustLevel switch
+        {
+            WorkflowExecutorTrustLevel.Application => SettingsRendererTrustLevel.Application,
+            WorkflowExecutorTrustLevel.BundledPlugin => SettingsRendererTrustLevel.BundledPlugin,
+            _ => null
+        };
+
+}

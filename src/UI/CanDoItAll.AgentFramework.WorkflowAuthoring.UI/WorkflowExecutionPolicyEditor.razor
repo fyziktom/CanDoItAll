@@ -1,0 +1,35 @@
+<Grid Gap="LayoutGap.Small" ColumnsLg="3">
+    @foreach (var field in Fields) {
+        <FormField Text="@field.Label">
+            <input class="cda-input" type="number" min="@field.Minimum" max="@field.Maximum"
+                value="@RawInputs.GetValueOrDefault(field.Kind, field.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                @onchange="args => InputChanged.InvokeAsync(new(field.Kind, args.Value?.ToString() ?? string.Empty))"
+                aria-invalid="@InvalidInputs.Contains(field.Kind)" data-testid="@($"{TestIdPrefix}-{field.Suffix}")" />
+            @if (InvalidInputs.Contains(field.Kind)) {
+                <Alert AlertStyle="AlertStyle.Warning">Enter a whole number from @field.Minimum to @field.Maximum. The original input is retained.</Alert>
+            }
+        </FormField>
+    }
+</Grid>
+<label class="workflow-canvas-check-field">
+    <input type="checkbox" checked="@Policy.CaptureOutputArtifact"
+        @onchange="args => CaptureChanged.InvokeAsync(args.Value is true)" data-testid="@($"{TestIdPrefix}-capture-output")" />
+    <span>Capture output as workflow artifact</span>
+</label>
+@code {
+    [Parameter, EditorRequired] public WorkflowExecutorExecutionPolicy Policy { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyDictionary<WorkflowNodeInputField, string> RawInputs { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlySet<WorkflowNodeInputField> InvalidInputs { get; set; } = default!;
+    [Parameter] public EventCallback<WorkflowPolicyInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> CaptureChanged { get; set; }
+    [Parameter] public string TestIdPrefix { get; set; } = "workflow-canvas-executor";
+    private sealed record PolicyField(WorkflowNodeInputField Kind, string Label, string Suffix, int Value, int Minimum, int Maximum);
+    private IReadOnlyList<PolicyField> Fields => [
+        new(WorkflowNodeInputField.TimeoutSeconds, "Timeout seconds", "timeout", Policy.TimeoutSeconds,
+            WorkflowExecutionPolicyRules.MinTimeoutSeconds, WorkflowExecutionPolicyRules.MaxTimeoutSeconds),
+        new(WorkflowNodeInputField.RetryAttempts, "Retries", "retries", Policy.MaxRetryAttempts,
+            WorkflowExecutionPolicyRules.MinRetryAttempts, WorkflowExecutionPolicyRules.MaxRetryAttempts),
+        new(WorkflowNodeInputField.RetryDelay, "Retry delay ms", "retry-delay", Policy.RetryDelayMilliseconds,
+            WorkflowExecutionPolicyRules.MinRetryDelayMilliseconds, WorkflowExecutionPolicyRules.MaxRetryDelayMilliseconds)
+    ];
+}

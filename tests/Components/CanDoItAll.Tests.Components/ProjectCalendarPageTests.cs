@@ -19,7 +19,7 @@ public sealed class ProjectCalendarPageTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task Page_renders_calendar_boundary_validation_cards()
+    public async Task Page_renders_the_read_only_native_calendar_and_accepted_detail()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -53,14 +53,12 @@ public sealed class ProjectCalendarPageTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Calendar boundary validation", cut.Markup);
-            Assert.Single(cut.FindAll("[data-testid='calendar-selection-panel']"));
-            Assert.Single(cut.FindAll("[data-testid='calendar-event-editor-modal']"));
-            Assert.Single(cut.FindAll("[data-testid='calendar-crud-bridge']"));
-            Assert.Single(cut.FindAll("[data-testid='calendar-mini-month-navigator']"));
-            Assert.Single(cut.FindAll("[data-testid='calendar-export-menu']"));
-            Assert.Single(cut.FindAll("[data-testid='project-calendar-state-parser']"));
-            Assert.Single(cut.FindAll("[data-testid='calendar-time-grid-renderer']"));
+            Assert.Single(cut.FindComponents<CanvasCalendar>());
+            Assert.Single(cut.FindAll("[data-testid='planning-calendar-detail']"));
+            Assert.Contains("Weekly review", cut.Markup);
+            Assert.Contains("UTC", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid='calendar-crud-bridge']"));
+            Assert.Empty(cut.FindAll("[data-testid='calendar-event-editor-modal']"));
         });
     }
 

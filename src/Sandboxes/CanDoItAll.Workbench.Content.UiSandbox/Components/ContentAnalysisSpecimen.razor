@@ -1,0 +1,86 @@
+<SurfaceCard data-testid="content-analysis-specimen" data-name="@Name">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
+        <DropDown TValue="ContentAnalysisSpecimenKind" Data="@(Enum.GetValues<ContentAnalysisSpecimenKind>())" @bind-Value="kind" Change="@(_ => Reopen())" aria-label="Analysis kind" Style="width:11rem" />
+        <DropDown TValue="ContentScenarioState" Data="@(Enum.GetValues<ContentScenarioState>())" @bind-Value="scenario" Change="@(_ => Reopen())" aria-label="Analysis state" Style="width:11rem" />
+        <Button Text="New opening" Click="Reopen" />
+    </Cluster>
+    <div class="cw-stage-surface content-scenario-canvas">
+        @if (visible) {
+            if (kind == ContentAnalysisSpecimenKind.Summary && summary is { } accepted) {
+                <ContentProgressSummaryDialog CanvasScoped="true" State="accepted" Actions="@(new((node, status) => Status(accepted, node, status),
+                    () => Export(accepted, "XLSX"), () => Export(accepted, "Mermaid"), Close))" />
+            } else if (kind == ContentAnalysisSpecimenKind.Transcript && transcript is { } acceptedTranscript) {
+                <ContentTranscriptDialog CanvasScoped="true" State="acceptedTranscript" Actions="@(new(id => SelectProvider(acceptedTranscript, id), () => Submit(acceptedTranscript), Close))" />
+            } else if (kind == ContentAnalysisSpecimenKind.LegacyMermaid) {
+                <ContentLegacyMermaidDialog CanvasScoped="true" State="@(new(Name, "flowchart LR\n A[Legacy content] --> B[Strict rendering]", "Flowchart", true) { OpeningId = openingId })" Edit="EditLegacy" Close="Close" />
+            }
+        }
+    </div>
+    <TextBlock TextStyle="TextStyle.Note" Value="@($"Scenario actions: {actions}. {message}")" data-testid="content-analysis-receipt" />
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private ContentAnalysisSpecimenKind kind;
+    private ContentScenarioState scenario;
+    private ContentProgressSummary? summary;
+    private ContentTranscriptConfirmation? transcript;
+    private bool visible = true;
+    private Guid openingId = Guid.NewGuid();
+    private int actions;
+    private string message = "No action sent.";
+
+    protected override void OnInitialized() => Reopen();
+    private void Reopen() {
+        visible = true;
+        openingId = Guid.NewGuid();
+        summary = ContentAnalysisFixtures.Summary(Name, scenario);
+        transcript = new(Guid.NewGuid(), Name, ContentTranscriptAction.FindMyTasks,
+            scenario == ContentScenarioState.Empty ? [] : [new(ContentAnalysisFixtures.ProviderId, "Scenario analysis provider")],
+            scenario == ContentScenarioState.Empty ? null : ContentAnalysisFixtures.ProviderId, "",
+            scenario switch {
+                ContentScenarioState.Loading => ContentConfirmationPhase.Loading,
+                ContentScenarioState.Pending => ContentConfirmationPhase.Submitting,
+                ContentScenarioState.Partial or ContentScenarioState.Unconfirmed => ContentConfirmationPhase.ObservationRequired,
+                _ => ContentConfirmationPhase.Ready
+            }, summary.Message);
+        message = "New independent opening.";
+    }
+    private Task Close() {
+        visible = false;
+        return InvokeAsync(StateHasChanged);
+    }
+    private Task Status(ContentProgressSummary accepted, string node, string status) {
+        if (summary?.OpeningId == accepted.OpeningId) {
+            actions++;
+            summary = accepted with { Rows = accepted.Rows.Select(row => row.NodeId == node ? row with { Status = status } : row).ToArray() };
+            message = $"Scenario status {node}: {status}.";
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+    private Task Export(ContentProgressSummary accepted, string format) {
+        if (summary?.OpeningId == accepted.OpeningId) {
+            actions++;
+            message = $"Scenario {format} export requested for {accepted.Rows.Count} accepted rows. Native exports are verified separately.";
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+    private Task SelectProvider(ContentTranscriptConfirmation accepted, Guid? id) {
+        if (transcript?.OpeningId == accepted.OpeningId) {
+            transcript = accepted with { SelectedProviderId = id };
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+    private Task Submit(ContentTranscriptConfirmation accepted) {
+        if (transcript?.OpeningId == accepted.OpeningId && accepted.Phase == ContentConfirmationPhase.Ready) {
+            actions++;
+            transcript = accepted with { Phase = ContentConfirmationPhase.Completed, Message = "Scenario analysis accepted. No provider was invoked and no task was created." };
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+    private void EditLegacy() {
+        actions++;
+        message = "The legacy owner received its explicit edit command.";
+    }
+}

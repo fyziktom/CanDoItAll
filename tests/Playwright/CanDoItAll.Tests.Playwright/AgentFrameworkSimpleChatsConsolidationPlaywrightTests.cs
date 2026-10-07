@@ -90,6 +90,7 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         await session.Page.WaitForURLAsync(url => !url.Contains("usageScope=", StringComparison.Ordinal));
         await Assertions.Expect(session.Page.GetByTestId("agents-overview-provider-bar")).ToBeVisibleAsync();
         await Assertions.Expect(session.Page.GetByTestId("agents-overview-provider-distribution")).ToBeVisibleAsync();
+        await session.WaitForNavigationCompletionAsync(fixture);
         session.AssertNoErrors();
     }
 
@@ -132,12 +133,13 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         {
             ViewportSize = new ViewportSize
             {
-                Width = 1600,
-                Height = 1000
+                Width = 1920,
+                Height = 1080
             }
         });
+        await NavigationAcknowledgementProbe.InstallAsync(context);
         var page = await context.NewPageAsync();
-        var session = new BrowserSession(context, page);
+        var session = new BrowserSession(context, page, fixture.GetLogLines().Length);
         var response = await page.GotoAsync($"{fixture.BaseUrl}{path}");
         Assert.True(response?.Ok, $"Expected '{path}' to return 2xx, got {response?.Status}.");
         await DismissStartupModalIfPresentAsync(page);
@@ -199,9 +201,12 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         private readonly IBrowserContext context;
         private readonly List<string> errors = [];
 
-        public BrowserSession(IBrowserContext context, IPage page)
+        private readonly int logStart;
+
+        public BrowserSession(IBrowserContext context, IPage page, int logStart)
         {
             this.context = context;
+            this.logStart = logStart;
             Page = page;
             page.Console += (_, message) =>
             {
@@ -214,6 +219,9 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         }
 
         public IPage Page { get; }
+
+        public Task WaitForNavigationCompletionAsync(PlaywrightAppFixture host)
+            => NavigationAcknowledgementProbe.WaitForCompletionAsync(Page, host, logStart);
 
         public void AssertNoErrors()
             => Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));

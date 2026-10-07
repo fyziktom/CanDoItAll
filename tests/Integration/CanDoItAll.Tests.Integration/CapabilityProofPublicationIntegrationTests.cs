@@ -45,7 +45,7 @@ public sealed class CapabilityProofPublicationIntegrationTests {
     public async Task Successful_diagnostic_persists_agent_and_catalog_proof_once() {
         using var fixture = await CapabilityFileFixture.CreateAsync();
         fixture.Proof.Release.SetResult();
-        var result = await fixture.Verification.ExecuteAsync(fixture.Agent.Id, fixture.Capability.Id, CancellationToken.None);
+        var result = await fixture.Catalog.VerifyCapabilityAsync(fixture.Agent.Id, fixture.Capability.Id, CancellationToken.None);
         Assert.Equal(CapabilityVerificationDisposition.Committed, result.Disposition);
         var receipt = Assert.IsType<CapabilityProofReceipt>(result.Receipt);
         var canonical = await fixture.Store.LoadCatalogAsync();

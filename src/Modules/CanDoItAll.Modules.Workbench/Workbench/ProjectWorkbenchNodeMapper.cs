@@ -141,6 +141,6 @@ internal static class ProjectWorkbenchNodeMapper
             record.DurationSeconds,
             record.NodeReferences.Clone(),
             record.IsSystemManaged,
-            record.ProjectId);
+            record.ProjectId) { RecordId = record.Id };
     }
 }

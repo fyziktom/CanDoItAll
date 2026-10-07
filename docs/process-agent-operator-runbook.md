@@ -24,6 +24,13 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 7. If ready work is not progressing, dispatch once, then repeat the reads before dispatching again.
 8. Cancel or request rework only with a concrete, evidence-backed reason.
 
+The Live Processes page refreshes the **Last hour** view every ten seconds through the
+existing projection client. Run and agent detail dialogs follow the refreshed records;
+changing the project lifetime closes the old details. Reads do not overlap, and leaving
+the page cancels its outstanding read and timer. Historical windows and mock scenarios
+remain under manual Refresh control. This UI refresh only reads projections; it never
+dispatches, retries or approves process work.
+
 ## Route Contract
 
 `GET /api/processes/contract` returns this source-backed set:

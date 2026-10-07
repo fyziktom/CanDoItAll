@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "review_kind": "source_review_and_report_evaluation",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "docs/architecture/provider-history-ui-pp3.md",
+      "git_blob_sha": "2806b11522f66acab42a9237a2fbfdaac37a6044",
+      "inspected_ranges": "1-170",
+      "purpose": "PP3 structure and first-stage evidence",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/docs/architecture/provider-history-ui-pp3.md"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "docs/architecture/provider-history-ui-pp3.md",
+      "git_blob_sha": "2806b11522f66acab42a9237a2fbfdaac37a6044",
+      "inspected_ranges": "170-310",
+      "purpose": "Final evidence qualifications and open documentation/delivery",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/docs/architecture/provider-history-ui-pp3.md"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor.cs",
+      "git_blob_sha": "d37e4611875dae6d17df2070c67b2517507bca2f",
+      "inspected_ranges": "full",
+      "purpose": "Production profile/auth lifetime",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor.cs"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryWorkspace.razor.cs",
+      "git_blob_sha": "94132599d597373220a090ad0bed81548b65af46",
+      "inspected_ranges": "full",
+      "purpose": "Applied query and bound intents",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryWorkspace.razor.cs"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryDetailsDialog.razor.cs",
+      "git_blob_sha": "77bfe50c636532f62d822ce59d09e800920bd22b",
+      "inspected_ranges": "full",
+      "purpose": "Metadata/content reads and disposal",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryDetailsDialog.razor.cs"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryDetailsDialog.razor",
+      "git_blob_sha": "adcd5b0cd6f9f5706d536db2b683c90102c1b3aa",
+      "inspected_ranges": "full",
+      "purpose": "Explicit bound content controls",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryDetailsDialog.razor"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryReadStore.cs",
+      "git_blob_sha": "27dd145d5c5f56d09e4c3c2401e844d7c4c0b756",
+      "inspected_ranges": "full",
+      "purpose": "Native exact-role and state recheck",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/HistoryReadStore.cs"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "ref": "4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+      "path": null,
+      "purpose": "Remote development observed; tested local Tooltip ref unavailable",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/commit/4a858412d2c2a3f6123bf23d8c4584f05b47627d",
+      "observation": "Branch resolved to 4a858412d2c2a3f6123bf23d8c4584f05b47627d; fetch of TooltipInterop.cs at b495d4c4a28f0a6588ba10bfaa7be6e8409eae18 returned no commit."
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs",
+      "git_blob_sha": "475ef451518ec0c822a82c2d628a8b8c8c3a191a",
+      "inspected_ranges": "1-380",
+      "purpose": "Details load/save/setup/raw transitions",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor.cs"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor.cs",
+      "git_blob_sha": "12645029b831a921bdaf823305f1bbbc7bbff502",
+      "inspected_ranges": "1-420",
+      "purpose": "Wizard three steps, create and bounded upload",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.razor.cs"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs",
+      "git_blob_sha": "72fdf8ab3bd8bdce8dffd159089a879e3df07fd6",
+      "inspected_ranges": "full",
+      "purpose": "Actual effectful setup event path",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilitySetupWizardDialog.SetupTests.cs"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor",
+      "git_blob_sha": "14589931b9158821231ac478e967d173a990c5d0",
+      "inspected_ranges": "1-135",
+      "purpose": "Identity and configuration markup",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityConfigurationEditorSupport.cs",
+      "git_blob_sha": "dd6c36554389d2942000d91f9c31aadf784dd83e",
+      "inspected_ranges": "1-210",
+      "purpose": "Typed configuration mapping and Core policy edge",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityConfigurationEditorSupport.cs"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+      "git_blob_sha": "9a10b52cb851e4910bb47cda738a42779ebcc5b3",
+      "inspected_ranges": "1-320",
+      "purpose": "Native create/update/fingerprint/key and Verify semantics",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs",
+      "git_blob_sha": "98699b338544303e1f205fdb283651af908744a2",
+      "inspected_ranges": "full",
+      "purpose": "Native HTTP/process/MCP setup effects versus pure validation",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Services/CapabilitySetup/AgentCapabilitySetupFlowService.cs"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamDetailsDialog.razor",
+      "git_blob_sha": "f7b38994be2bec0867fb693eff5e5f2ae9f33de7",
+      "inspected_ranges": "full",
+      "purpose": "Metadata form, mutable save and icon lifetime",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamDetailsDialog.razor"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamMembersDialog.razor",
+      "git_blob_sha": "72bd41592fc6bbed89a7c8d9ebebb043c8b081b7",
+      "inspected_ranges": "full",
+      "purpose": "Actual member picker and return target",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamMembersDialog.razor"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChildAdversarialTests.cs",
+      "git_blob_sha": "8cf17d0dab9344a191f6f7b4e1364d105262881b",
+      "inspected_ranges": "full",
+      "purpose": "Existing child errors and deferred token disposal tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/tests/Components/CanDoItAll.Tests.Components/AgentChildAdversarialTests.cs"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEditorCapabilityCompositionTests.cs",
+      "git_blob_sha": "5cf4366c9b342e4d7482747dbc27c261a7c85465",
+      "inspected_ranges": "full",
+      "purpose": "Whole-agent assignment and post-create recovery tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/tests/Components/CanDoItAll.Tests.Components/AgentEditorCapabilityCompositionTests.cs"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs",
+      "git_blob_sha": "dd591666f0bb456e4e492584538c396b51cbd870",
+      "inspected_ranges": "200-430",
+      "purpose": "Original wizard/details launch, Verify and preview ownership",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs",
+      "git_blob_sha": "393ca22f72d1119d3e8fff69d13f39016d385ae1",
+      "inspected_ranges": "full",
+      "purpose": "Whole-team upsert and membership owner",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Teams.cs"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs",
+      "git_blob_sha": "1c4562b1ab4c4f9904894b528a6603830718449b",
+      "inspected_ranges": "1-160;205-305;320-500",
+      "purpose": "Existing XML docs and two undocumented provider-option properties",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/MAF/Common/CanDoItAll.AgentFramework.Models/Workflows/WorkflowCatalogModels.cs"
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor",
+      "git_blob_sha": "14589931b9158821231ac478e967d173a990c5d0",
+      "inspected_ranges": "390-590",
+      "purpose": "Raw/config/setup controls and footer",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityDetailsDialog.razor"
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityConfigurationEditorSupport.cs",
+      "git_blob_sha": "dd6c36554389d2942000d91f9c31aadf784dd83e",
+      "inspected_ranges": "610-820",
+      "purpose": "Configuration DTOs, extension data and states",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/CapabilityConfigurationEditorSupport.cs"
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
+      "git_blob_sha": "3f091485a4ec2e4f36bc74b442586adfc4caa9e5",
+      "inspected_ranges": "450-625",
+      "purpose": "Parent membership write and catalog refresh",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
+    },
+    {
+      "id": "S26",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "AGENTS.md",
+      "git_blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "inspected_ranges": "full",
+      "purpose": "Current mandatory instructions and seam reference",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/AGENTS.md"
+    },
+    {
+      "id": "S27",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": "docs/testing.md",
+      "git_blob_sha": "19c2da17a6e314836797daf929aa3bc248000eb3",
+      "inspected_ranges": "1-175",
+      "purpose": "Current test lanes, bootstrap and discovery rules",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/b3aec979eae708edd0a53b42cef41b9d52fbb49b/docs/testing.md"
+    },
+    {
+      "id": "S28",
+      "repository": "fyziktom/CanDoItAll",
+      "ref": "b3aec979eae708edd0a53b42cef41b9d52fbb49b",
+      "path": null,
+      "purpose": "Main git commit metadata and remote signature verified valid",
+      "url": "https://github.com/fyziktom/CanDoItAll/commit/b3aec979eae708edd0a53b42cef41b9d52fbb49b"
+    }
+  ]
+}

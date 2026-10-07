@@ -1,0 +1,40 @@
+.scheduler-history-root ::deep .scheduler-list-toolbar {
+    display: grid;
+    grid-template-columns: minmax(14rem, auto) minmax(22rem, 1fr) minmax(10rem, 12rem) minmax(9rem, 11rem) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 0.5rem;
+    background: rgba(248, 250, 252, 0.82);
+}
+
+.scheduler-history-root ::deep .scheduler-list-toolbar h2 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.scheduler-history-root ::deep .scheduler-list-toolbar__search,
+.scheduler-history-root ::deep .scheduler-list-toolbar__select {
+    min-height: 2.35rem;
+}
+
+.scheduler-history-root ::deep .scheduler-list-toolbar__result {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.scheduler-history-root ::deep .scheduler-list-toolbar__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.scheduler-history-root ::deep .scheduler-list-toolbar .scheduler-list-toolbar__button {
+    width: auto;
+    min-width: 5.75rem;
+}

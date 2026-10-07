@@ -1,0 +1,169 @@
+@using System.Collections.Immutable
+
+@{
+    var rendered = State;
+    var rows = rendered.Snapshot is { } accepted ? BuildRows(accepted) : [];
+    var barSeries = BuildSeries(rows, CdaChartType.Bar, "Provider usage");
+    var donutSeries = BuildSeries(rows, CdaChartType.Donut, "Provider share");
+    var totalUsage = rows.Sum(item => item.Totals.UsageObservationCount);
+}
+
+<UsageDetailFrame State="rendered" Title="Provider usage" Intent="Intent">
+    @if (rendered.Snapshot is { } snapshot) {
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch"
+           data-testid="provider-usage-dialog">
+        @if (!snapshot.IsComplete) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="usage-dialog-partial">
+                Some usage evidence is unavailable. Displayed totals are partial.
+            </Alert>
+        }
+        <Grid Gap="LayoutGap.Medium"
+              ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
+            <MetricCard Label="Providers" Value="@AgentUsageDisplay.FormatCount(snapshot.Providers.Count)" />
+            <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
+            <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.Tokens.TotalTokens)" />
+            <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+            <MetricCard Label="Unpriced" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnpricedObservationCount)" />
+            <MetricCard Label="Failed executions" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.FailedExecutionCount)" />
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large"
+              ColumnsLg="2">
+            <CdaChart Title="Provider usage"
+                      Description="Provider usage observations captured from technical executions."
+                      Series="@barSeries"
+                      Options="@ProviderUsageBarChartOptions"
+                      Height="320"
+                      EmptyText="No provider usage has been recorded in this interval." />
+            <CdaChart Title="Provider share"
+                      Description="Distribution across total provider usage observations in the accepted workload and interval."
+                      Series="@donutSeries"
+                      Options="@ProviderUsageDonutChartOptions"
+                      Height="320"
+                      EmptyText="Provider share is not available yet." />
+        </Grid>
+
+        <SurfaceCard Soft="true">
+            @if (snapshot.Providers.Count == 0) {
+                <EmptyState Eyebrow="No usage"
+                            Title="No provider usage rows"
+                            Description="No provider usage was recorded for the accepted workload and interval." />
+            }
+            else {
+                <DataGrid TItem="ProviderUsageProviderRow"
+                          Data="@rows"
+                          AllowPaging="true"
+                          PageSize="10"
+                          data-testid="provider-usage-dialog-grid">
+                    <Columns>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Provider">
+                            <Template Context="provider">
+                                <Stack Gap="0.15rem">
+                                    <span class="font-medium text-slate-950">@provider.ProviderName</span>
+                                    <span class="text-xs text-slate-500">@provider.ProviderKind</span>
+                                </Stack>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Share">
+                            <Template Context="provider">
+                                <span>@AgentUsageDisplay.FormatUsageShare(provider.Totals.UsageObservationCount, totalUsage)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Observations">
+                            <Template Context="provider">
+                                <span>@AgentUsageDisplay.FormatCount(provider.Totals.UsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Unknown">
+                            <Template Context="provider">
+                                <span>@AgentUsageDisplay.FormatCount(provider.Totals.UnknownUsageObservationCount)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Tokens">
+                            <Template Context="provider">
+                                <span>@AgentUsageDisplay.FormatTokens(provider.Totals.Tokens.TotalTokens)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Known cost">
+                            <Template Context="provider">
+                                <span>@AgentUsageDisplay.FormatCost(provider.Totals.KnownCostUsd)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Unpriced">
+                            <Template Context="provider">
+                                <StatusBadge Tone="@(provider.Totals.UnpricedObservationCount > 0 ? "warning" : "success")"
+                                             Text="@AgentUsageDisplay.FormatCount(provider.Totals.UnpricedObservationCount)"
+                                             NoWrap="true" />
+                            </Template>
+                        </DataGridColumn>
+                    </Columns>
+                </DataGrid>
+            }
+        </SurfaceCard>
+
+    </Stack>
+    }
+</UsageDetailFrame>
+
+@code {
+    private readonly CdaChartOptions ProviderUsageBarChartOptions = new() {
+        Type = CdaChartType.Bar,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        YAxisTitle = "Usage observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = false,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        Palette = CdaChartPalette.Calm.ToImmutableArray()
+    };
+
+    private readonly CdaChartOptions ProviderUsageDonutChartOptions = new() {
+        Type = CdaChartType.Donut,
+        XAxisType = CdaChartAxisType.Category,
+        Unit = "observations",
+        ShowToolbar = false,
+        EnableZoom = false,
+        ShowLegend = true,
+        ShowDataLabels = true,
+        ValuePrecision = 0,
+        TooltipPrecision = 0,
+        LegendPosition = CdaChartLegendPosition.Bottom,
+        Palette = CdaChartPalette.Energetic.ToImmutableArray()
+    };
+
+    [Parameter, EditorRequired]
+    public UsageDetailState State { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<UsageDetailIntent> Intent { get; set; }
+
+    private static IReadOnlyList<ProviderUsageProviderRow> BuildRows(ProviderUsageSnapshot snapshot) =>
+        snapshot.Providers
+            .OrderByDescending(item => item.Totals.UsageObservationCount)
+            .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static IReadOnlyList<CdaChartSeries> BuildSeries(IReadOnlyList<ProviderUsageProviderRow> rows, CdaChartType chartType, string name) {
+        if (rows.Count == 0) {
+            return [];
+        }
+
+        return
+        [
+            new CdaChartSeries {
+                Name = name,
+                Type = chartType,
+                Points = rows
+                    .Take(12)
+                    .Select(item => new CdaChartPoint(
+                        AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
+                        item.Totals.UsageObservationCount))
+                    .ToArray()
+            }
+        ];
+    }
+
+}

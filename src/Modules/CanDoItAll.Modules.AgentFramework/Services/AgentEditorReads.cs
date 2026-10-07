@@ -5,8 +5,6 @@ using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed record AgentEditorProject(Guid Id, string Name);
-public sealed record AgentEditorSecret(Guid Id, string Name, string KindLabel);
 public sealed record AgentEditorReferenceResult<T>(IReadOnlyList<T> Items, string? Error = null);
 
 public sealed record AgentEditorLoadResult(
@@ -23,6 +21,7 @@ public interface IAgentEditorReads {
         IReadOnlyList<ProviderProfile>? initialProviders = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ProviderProfile>> ReadProvidersAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AgentEditorProject>> ReadProjectsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AgentEditorSecret>> ReadSecretsAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class AgentEditorReads(
@@ -59,6 +58,9 @@ public sealed class AgentEditorReads(
 
     public Task<IReadOnlyList<AgentEditorProject>> ReadProjectsAsync(CancellationToken cancellationToken = default)
         => access.ReadProjectsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<AgentEditorSecret>> ReadSecretsAsync(CancellationToken cancellationToken = default)
+        => access.ReadSecretsAsync(cancellationToken);
 
     private static async Task<AgentEditorReferenceResult<T>> CaptureReferenceAsync<T>(
         Func<Task<IReadOnlyList<T>>> read, CancellationToken cancellationToken) {

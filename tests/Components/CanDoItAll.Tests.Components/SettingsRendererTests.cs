@@ -10,6 +10,34 @@ namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class SettingsRendererTests
 {
+    [Theory]
+    [InlineData(SettingsRendererResolutionStatus.IncompleteRequest)]
+    [InlineData(SettingsRendererResolutionStatus.NotRegistered)]
+    [InlineData(SettingsRendererResolutionStatus.OwnerMismatch)]
+    [InlineData(SettingsRendererResolutionStatus.TrustMismatch)]
+    [InlineData(SettingsRendererResolutionStatus.SchemaVersionMismatch)]
+    public void Real_renderer_claim_failures_never_render_a_permissive_fallback(SettingsRendererResolutionStatus expected) {
+        using var context = new BunitContext();
+        var source = new CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowSettingsRendererSource();
+        var renderer = Assert.Single(source.ListRenderers());
+        context.Services.AddSingleton<ISettingsRendererRegistry>(new SettingsRendererRegistry([source]));
+        var schema = new ConfigurationSchema(expected == SettingsRendererResolutionStatus.SchemaVersionMismatch ? "unsupported" : renderer.SupportedSchemaVersion,
+            [new("title", "Title", ConfigurationFieldType.Text, false, "")]);
+        var cut = context.Render<SettingsRendererHost>(p => p
+            .Add(c => c.RendererKey, expected == SettingsRendererResolutionStatus.NotRegistered ? "missing.renderer" : renderer.RendererKey)
+            .Add(c => c.RendererOwnerId, expected switch {
+                SettingsRendererResolutionStatus.IncompleteRequest => string.Empty,
+                SettingsRendererResolutionStatus.OwnerMismatch => "other.owner",
+                _ => renderer.OwnerId
+            })
+            .Add(c => c.RendererTrustLevel, expected == SettingsRendererResolutionStatus.TrustMismatch ? SettingsRendererTrustLevel.BundledPlugin : renderer.TrustLevel)
+            .Add(c => c.Schema, schema).Add(c => c.State, new()).Add(c => c.TestIdPrefix, "rejected-settings"));
+        Assert.Contains($"data-settings-renderer-resolution=\"{expected}\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("input,select,textarea"));
+        Assert.Empty(cut.FindComponents<CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowImageGenerationSettingsRenderer>());
+        Assert.Empty(cut.FindComponents<CanDoItAll.Configuration.UI.ConfigurationSchemaRenderer>());
+    }
+
     [Fact]
     public void ConfigurationField_fallback_renderer_updates_canonical_state()
     {
@@ -36,7 +64,7 @@ public sealed class SettingsRendererTests
             .Add(component => component.TestIdPrefix, "settings-renderer"));
 
         Assert.Contains("settings-renderer", cut.Markup, StringComparison.Ordinal);
-        cut.Find("[data-testid='settings-renderer-endpointUrl']").Change("https://example.test/hooks");
+        cut.Find("[data-testid='settings-renderer-endpointUrl']").Input("https://example.test/hooks");
         cut.Find("[data-testid='settings-renderer-operation']").Change("WriteText");
         cut.Find("[data-testid='settings-renderer-enabled']").Change(true);
 

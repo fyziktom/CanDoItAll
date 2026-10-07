@@ -1,0 +1,16 @@
+@{ var generation = Generation; }
+
+<label class="@(Disabled ? "chat-attachment-upload-button chat-attachment-upload-button--disabled" : "chat-attachment-upload-button")"
+       aria-disabled="@Disabled" title="Attach image file" data-testid="chat-image-attachment-button">
+    <Icon Name="image" />
+    <InputFile @key="generation" class="chat-attachment-file-input" aria-label="Attach image file"
+               OnChange="@(args => Selected.InvokeAsync(new(generation, args)))"
+               accept="image/png,image/jpeg,image/gif,image/webp" multiple disabled="@Disabled"
+               data-testid="chat-image-attachment-input" />
+</label>
+
+@code {
+    [Parameter] public long Generation { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<AgentImageSelection> Selected { get; set; }
+}

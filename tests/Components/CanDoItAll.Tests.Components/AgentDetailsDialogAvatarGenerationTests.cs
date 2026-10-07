@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.StorageSelection.Contracts;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;

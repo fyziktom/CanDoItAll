@@ -47,6 +47,9 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
             context = new BunitContext();
             context.JSInterop.Mode = JSRuntimeMode.Loose;
+            context.JSInterop.SetupModule("./_content/CanDoItAll.Projects.UI/project-editor.js")
+                .Setup<CanDoItAll.Modules.Projects.Pages.Components.ProjectFormValidity>("inspect", _ => true)
+                .SetResult(new(true, null, null));
             context.AddAuthorization();
             var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 

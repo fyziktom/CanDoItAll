@@ -1,0 +1,94 @@
+<div class="scheduler-history-root">
+<SurfaceCard data-testid="scheduler-history">
+    <div class="scheduler-list-toolbar" data-testid="scheduler-history-toolbar">
+        <div>
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
+            <h2 class="text-base font-semibold text-slate-900">Dispatched scheduled runs</h2>
+        </div>
+        <InputText @bind-Value="historyQuery.Search"
+                   class="cda-input scheduler-list-toolbar__search"
+                   placeholder="Search history"
+                   data-testid="scheduler-history-search" />
+        <InputSelect @bind-Value="historyQuery.Status"
+                     class="cda-input scheduler-list-toolbar__select"
+                     data-testid="scheduler-history-status">
+            <option value="">All statuses</option>
+            @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>()) {
+                <option value="@status">@status</option>
+            }
+        </InputSelect>
+        <InputSelect @bind-Value="historyQuery.TargetKind"
+                     class="cda-input scheduler-list-toolbar__select"
+                     data-testid="scheduler-history-kind">
+            <option value="">All targets</option>
+            @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>()) {
+                <option value="@kind">@kind</option>
+            }
+        </InputSelect>
+        <span class="scheduler-list-toolbar__result">@($"{History.Count} run(s)")</span>
+        <div class="scheduler-list-toolbar__actions">
+            <Button Text="Search"
+                    Icon="search"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Disabled="@(Workspace.ReadStatus == SchedulerReadStatus.Loading)"
+                    Click="Workspace.RefreshAsync"
+                    class="scheduler-list-toolbar__button" />
+        </div>
+    </div>
+
+    @if (History.Count == 0) {
+        <div class="mt-4">
+            <EmptyState Eyebrow="No history"
+                        Title="No scheduled run history"
+                        Description="Triggered runs and dispatch failures appear here after the scheduler fires a schedule." />
+        </div>
+    } else {
+        <div class="mt-4">
+            <DataGrid TItem="SchedulerPlanRunSummary"
+                      Data="@History"
+                      AllowPaging="true"
+                      PageSize="12">
+                <Columns>
+                    <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Run">
+                        <Template Context="run">
+                            <div>
+                                <p class="font-semibold text-slate-900">@run.PlanName</p>
+                                <p class="text-xs text-slate-500">@run.TargetKind / @run.TargetName</p>
+                            </div>
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Fired">
+                        <Template Context="run">@run.FiredAtUtc.LocalDateTime.ToString("g")</Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Status">
+                        <Template Context="run">
+                            <StatusBadge Tone="@ResolveRunTone(run.Status)" Text="@run.Status.ToString()" />
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Route">
+                        <Template Context="run">
+                            <StatusBadge Tone="@ResolveRouteTone(run)" Text="@FormatRunRoute(run.Route)" />
+                        </Template>
+                    </DataGridColumn>
+                    <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Result">
+                        <Template Context="run">
+                            <div class="space-y-1">
+                                <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None) {
+                                    <p class="text-xs font-medium text-slate-500">@FormatRunPolicy(run.RetryCategory)</p>
+                                }
+                            </div>
+                        </Template>
+                    </DataGridColumn>
+                </Columns>
+            </DataGrid>
+        </div>
+    }
+</SurfaceCard>
+</div>
+@code {
+    [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
+    private SchedulerHistoryQuery historyQuery => Workspace.HistoryQuery;
+    private IReadOnlyList<SchedulerPlanRunSummary> History => Workspace.Data?.History ?? [];
+}

@@ -1,0 +1,17 @@
+{
+  "review_date": "2026-10-06",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "remote_head": "d7384b12f435978165b4b73b40cb39f03c377892",
+  "product_checkpoint": "3957fe73e2a0736c042daa504a2767050423c36b",
+  "last_commit_scope": "Historical WB3 input only; exact parent-to-head compare performed.",
+  "components_remote": "24d182c664d0b1f293098643e52caed7384a5d50",
+  "components_required_reported": "a120106bc3d4576a40c16aac29b1b9654fb31d93",
+  "components_required_remote_fetch": "404",
+  "filetools_reported": "3a080ecd31068a77c1e1bd639f7a78e21c93db85",
+  "review_method": "Connected exact-ref source and test-code inspection; report evidence appraisal.",
+  "product_execution_performed": false,
+  "private_original_test_artifacts_available": false,
+  "source_bounded_conclusion": "WB3 rendering boundary preserved; WB4 original text-asset target issue requires native reproduction before correction.",
+  "reset_to_review_commit": false
+}

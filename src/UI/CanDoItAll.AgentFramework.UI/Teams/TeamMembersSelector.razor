@@ -1,0 +1,97 @@
+@using System.Collections.Immutable
+@implements IDisposable
+@{
+    var owner = current;
+}
+@if (owner is not null && IsCurrent(owner)) {
+    <div class="agent-team-members-dialog" data-testid="agents-team-members-dialog">
+        <Stack GapScale="LayoutGap.Medium">
+            <FilterBar ResultText="@($"{Filtered(owner).Count} of {owner.Agents.Count} agent(s)")">
+                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="cda-input min-w-[14rem] flex-1" placeholder="Search agents" data-testid="agents-team-members-search" />
+                <StatusBadge Tone="info" Text="@($"{owner.Selected.Count} selected")" />
+            </FilterBar>
+            @foreach (var missing in owner.Selected.Where(id => owner.Agents.All(agent => agent.Id != id)).Order()) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-team-unavailable-member">
+                    Unavailable agent reference: @missing
+                    <Button Text="Remove unavailable reference" Click="() => Toggle(owner, missing)" />
+                </Alert>
+            }
+            @if (Filtered(owner).Count == 0) {
+                <EmptyState Eyebrow="No matches" Title="No agents match the current filters" Description="Clear the search filter to choose agents for this team." />
+            } else {
+                <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))" Class="agent-team-members-dialog__grid">
+                    @foreach (var agent in Filtered(owner)) {
+                        <AgentSelectionCard Agent="agent" IsSelected="@owner.Selected.Contains(agent.Id)" IsPrivateProvider="@owner.PrivateAgents.Contains(agent.Id)"
+                                            SelectedLabel="In team" Compact="true" CenterContent="true" ShowDetailsTooltip="true" ShowWorkload="false" ShowUpdatedAt="false"
+                                            ShellTestId="agents-team-member-card-shell" SelectTestId="agents-team-member-card" OnSelect="() => Toggle(owner, agent.Id)" />
+                    }
+                </Grid>
+            }
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
+                <Button Text="Cancel" Icon="close" Variant="Variant.Outlined" Click="() => CancelAsync(owner)" />
+                <Button Text="Save membership" Icon="check" Disabled="@owner.Completed" Click="() => ConfirmAsync(owner)" data-testid="agents-team-members-confirm" />
+            </Cluster>
+        </Stack>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AgentTeamDefinition Team { get; set; } = default!;
+    [Parameter] public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+    [Parameter] public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public EventCallback<TeamMembershipSelection> Completed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private Selection? current;
+    private bool disposed;
+
+    protected override void OnParametersSet() {
+        if (!disposed && (current is null || current.TeamId != Team.Id || current.Token != OwnerCancellationToken)) {
+            current = new(Team.Id, Team.AgentIds.ToHashSet(), Agents.ToImmutableArray(), PrivateAgentIds.ToHashSet(), OwnerCancellationToken);
+        }
+    }
+    private bool IsCurrent(Selection owner) => !disposed && ReferenceEquals(current, owner) && !owner.Token.IsCancellationRequested;
+    private void Search(Selection owner, ChangeEventArgs args) {
+        if (IsCurrent(owner)) {
+            owner.Search = args.Value?.ToString() ?? string.Empty;
+        }
+    }
+    private void Toggle(Selection owner, Guid id) {
+        if (IsCurrent(owner) && !owner.Completed && !owner.Selected.Add(id)) {
+            owner.Selected.Remove(id);
+        }
+    }
+    private async Task ConfirmAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Completed) {
+            return;
+        }
+        owner.Completed = true;
+        var selection = new TeamMembershipSelection(owner.TeamId, owner.Selected.Order().ToImmutableArray());
+        await Completed.InvokeAsync(selection);
+    }
+    private async Task CancelAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Completed) {
+            return;
+        }
+        owner.Completed = true;
+        await Cancelled.InvokeAsync();
+    }
+    private static IReadOnlyList<AgentDefinition> Filtered(Selection owner) {
+        var query = owner.Search.Trim();
+        return owner.Agents.Where(agent => query.Length == 0 || agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(agent => owner.Selected.Contains(agent.Id)).ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+    public void Dispose() => disposed = true;
+
+    private sealed class Selection(Guid teamId, HashSet<Guid> selected, IReadOnlyList<AgentDefinition> agents, HashSet<Guid> privateAgents, CancellationToken token) {
+        public Guid TeamId { get; } = teamId;
+        public HashSet<Guid> Selected { get; } = selected;
+        public IReadOnlyList<AgentDefinition> Agents { get; } = agents;
+        public HashSet<Guid> PrivateAgents { get; } = privateAgents;
+        public CancellationToken Token { get; } = token;
+        public string Search { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
+}

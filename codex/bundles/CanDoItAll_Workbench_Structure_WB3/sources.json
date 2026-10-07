@@ -1,0 +1,256 @@
+{
+  "review_kind": "source-only",
+  "review_date": "2026-10-05",
+  "sources": [
+    {
+      "id": "S01",
+      "repository": "fyziktom/CanDoItAll",
+      "path": null,
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": null,
+      "reviewed_ranges": "Commit metadata and current components-decoupling ref",
+      "notes": "Exact branch/ref, final documentation commit and verified signature.",
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/git/commits/bbd9e8de96dc7895abdecc04406766f7aea94c8e"
+    },
+    {
+      "id": "S02",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/workbench-insights-wb2.md",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "9305a5d8ac9402d4f0b0812ea8b5cf4ba2f4de82",
+      "reviewed_ranges": "1-453",
+      "notes": "Full implementer report. Results were not rerun; local-only Components note is historical.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/docs/architecture/workbench-insights-wb2.md"
+    },
+    {
+      "id": "S03",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "path": null,
+      "ref": "24d182c664d0b1f293098643e52caed7384a5d50",
+      "blob_sha": null,
+      "reviewed_ranges": "Commit diff including GanttChart, gantt runtime and GanttCleanupTests",
+      "notes": "Actual independent cleanup and per-instance JS owner change; published commit now readable.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/commit/24d182c664d0b1f293098643e52caed7384a5d50"
+    },
+    {
+      "id": "S04",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ManagerSummarySession.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "28530402944cc7c28867b1d61120acc0104daca1",
+      "reviewed_ranges": "full",
+      "notes": "Options/report separation and originating read lifetime.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ManagerSummarySession.cs"
+    },
+    {
+      "id": "S05",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ManagerActivitySession.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "d3c22ffb6daa07bc7e01979d53348d6d7a643af3",
+      "reviewed_ranges": "full",
+      "notes": "Per-opening Activity query and CTS ownership.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ManagerActivitySession.cs"
+    },
+    {
+      "id": "S06",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummarySource.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "df06b58a7c8a32f4d7527b2c3e91207770216962",
+      "reviewed_ranges": "full",
+      "notes": "Native root/descendant admission, report preparation and retained snapshot.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerSummarySource.cs"
+    },
+    {
+      "id": "S07",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerActivitySource.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "916fa74a8ff79c0fe4da920e7441c7a9c172fc40",
+      "reviewed_ranges": "full",
+      "notes": "Native report cutoff, cursor/aggregate provenance and request retirement.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectManagerActivitySource.cs"
+    },
+    {
+      "id": "S08",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerSummaryPanel.razor",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "d7f068fa31eb399b778a3ba2e1eea911d649b5ff",
+      "reviewed_ranges": "full",
+      "notes": "Actual host profile/actor/parameter lifetime and session composition.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectManagerSummaryPanel.razor"
+    },
+    {
+      "id": "S09",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": null,
+      "reviewed_ranges": "1-326",
+      "notes": "Native captured selection/menu intents and known results; tool display truncation, no blob hash recorded.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs"
+    },
+    {
+      "id": "S10",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "bf396c5e1017cc6bec88e358b2441f383edb438c",
+      "reviewed_ranges": "full",
+      "notes": "Declared UI project/package references, not a newly executed MSBuild evaluation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj"
+    },
+    {
+      "id": "S11",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProjectStructurePageInsightsTests.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "c1cae40cbe673e5ddf0adb6168d8d917181e376f",
+      "reviewed_ranges": "full",
+      "notes": "Native test source for precise effects, ABA/recreation, deletion and grouping; not run here.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/tests/Components/CanDoItAll.Tests.Components/ProjectStructurePageInsightsTests.cs"
+    },
+    {
+      "id": "S12",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "a019fa8ff06a3445dbb8bd2c9bed23ef552b97fd",
+      "reviewed_ranges": "1-495; 580-840",
+      "notes": "Actual canvas/toolbar/slots, tabs, specialized native panes and core fields. Not the complete large file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor"
+    },
+    {
+      "id": "S13",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "1911ff78156bf187345007216ec077223f30c4e7",
+      "reviewed_ranges": "1-300; 370-660",
+      "notes": "Actual composer path, native action dispatch, edit model and current-surface lookup.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs"
+    },
+    {
+      "id": "S14",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureNodeEditor.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "3da04772d284ffb934a23f3d8894e0245a8f2063",
+      "reviewed_ranges": "1-225",
+      "notes": "Typed native metadata merge and editing exclusions; remaining implementation requires executor audit.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureNodeEditor.cs"
+    },
+    {
+      "id": "S15",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "29061f66b5bff65ea8953d56d3a9e8afb899020e",
+      "reviewed_ranges": "1-235",
+      "notes": "Clipboard capture and preconditions; remaining mutation implementation requires executor audit.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs"
+    },
+    {
+      "id": "S16",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "8ce65a1eb8ea39d85955431958a3435ac179c800",
+      "reviewed_ranges": "1-220",
+      "notes": "Hierarchy/conversion/transfer actual renderer; later mixed runtime sections intentionally deferred.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor"
+    },
+    {
+      "id": "S17",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "038f65cf3cb37f4a5538dffa7c48804ca8b93190",
+      "reviewed_ranges": "full",
+      "notes": "WB3-H1 mutable dialog read after native awaits, opening/choice handling.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs"
+    },
+    {
+      "id": "S18",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "0a281d868da4e9092960298bb7734ce0c3b68bd8",
+      "reviewed_ranges": "1-300",
+      "notes": "Sibling conversion and descendant-transfer UI lifetimes and partial outcomes.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs"
+    },
+    {
+      "id": "S19",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "bab7081d8c401cbb6d9d2bcc16f6975afb571127",
+      "reviewed_ranges": "1-220",
+      "notes": "Actual source/target reservations, native creation receipt, transfer/compensation entry boundaries.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs"
+    },
+    {
+      "id": "S20",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.CreateCatalog.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "8a0b0fbfe89f76046ee2fb5a1bbfdbd75ecc868c",
+      "reviewed_ranges": "full",
+      "notes": "Native dynamic choices and special task/secret/text/media composer paths.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.CreateCatalog.cs"
+    },
+    {
+      "id": "S21",
+      "repository": "fyziktom/CanDoItAll.Components",
+      "path": "src/CanDoItAll.Components.CanvasLib/README.md",
+      "ref": "24d182c664d0b1f293098643e52caed7384a5d50",
+      "blob_sha": "6e7fb5fc18c2635dc920feefc1981dc64946b3ea",
+      "reviewed_ranges": "full",
+      "notes": "Actual shared CanvasWorkbench/CanvasFloatingWindow contracts and asset ownership.",
+      "url": "https://github.com/fyziktom/CanDoItAll.Components/blob/24d182c664d0b1f293098643e52caed7384a5d50/src/CanDoItAll.Components.CanvasLib/README.md"
+    },
+    {
+      "id": "S22",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "tests/Components/CanDoItAll.Workbench.Insights.UI.Tests/ReportingSessionTests.cs",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "c308446512a9168e498199ac2ee31fb16e78e1fe",
+      "reviewed_ranges": "full",
+      "notes": "Source of lazy/stale/independent report and Activity tests; not run here.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/tests/Components/CanDoItAll.Workbench.Insights.UI.Tests/ReportingSessionTests.cs"
+    },
+    {
+      "id": "S23",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "AGENTS.md",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "reviewed_ranges": "full",
+      "notes": "Current repository validation and canonical UI seam instruction entry.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/AGENTS.md"
+    },
+    {
+      "id": "S24",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/testing.md",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "f5ca92c16d64af67665e4ad29ca8e1703272371c",
+      "reviewed_ranges": "1-170",
+      "notes": "Isolated PostgreSQL18, exact discovery, focused builds and renderer-event/disposal guidance.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/docs/testing.md"
+    },
+    {
+      "id": "S25",
+      "repository": "fyziktom/CanDoItAll",
+      "path": "docs/architecture/ui-component-seams.md",
+      "ref": "bbd9e8de96dc7895abdecc04406766f7aea94c8e",
+      "blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "reviewed_ranges": "1-210",
+      "notes": "Canonical boundaries, state/effect/commit semantics, proof layers and anti-patterns.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/bbd9e8de96dc7895abdecc04406766f7aea94c8e/docs/architecture/ui-component-seams.md"
+    }
+  ]
+}

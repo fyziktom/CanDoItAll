@@ -69,6 +69,9 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveAgentTeamAsync(model, cancellationToken);
 
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentTeamMetadataAsync(model, cancellationToken);
+
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
         Guid teamId,
         IReadOnlyList<Guid> agentIds,
@@ -156,10 +159,15 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveCapabilityAsync(model, cancellationToken);
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(
+        CapabilityEditorModel model,
+        CancellationToken cancellationToken = default)
+        => catalogService.SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
 
     public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(

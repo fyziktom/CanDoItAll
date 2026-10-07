@@ -82,8 +82,7 @@ public sealed class ProviderBoundaryArchitectureGuardTests
     }
 
     [Fact]
-    public void Workspace_retains_only_the_opaque_default_provider_preference()
-    {
+    public void Workspace_retains_only_the_opaque_default_provider_preference() {
         var workspaceDirectory = Absolute("src/Modules/CanDoItAll.Modules.Workspace");
         var sharedProviderDirectory = Path.Combine(workspaceDirectory, "SharedProviders");
         var providerDirectory = Path.Combine(workspaceDirectory, "Providers");
@@ -91,7 +90,7 @@ public sealed class ProviderBoundaryArchitectureGuardTests
             ? EnumerateSourceFiles(providerDirectory).Select(path => Path.GetFileName(path)!).ToArray()
             : [];
         var providerCatalog = Read(
-            "src/Modules/CanDoItAll.Modules.Workspace/Providers/WorkspaceProviderCatalog.cs");
+            "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceProviderCatalog.cs");
         var workspaceRegistration = Read(
             "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs");
         var preferenceTransfer = Read(
@@ -111,9 +110,12 @@ public sealed class ProviderBoundaryArchitectureGuardTests
         ];
 
         Assert.False(Directory.Exists(sharedProviderDirectory));
-        Assert.Equal(["WorkspaceProviderCatalog.cs"], providerFiles);
+        Assert.Empty(providerFiles);
         Assert.Contains("public sealed record WorkspaceProviderOption", providerCatalog, StringComparison.Ordinal);
         Assert.Contains("public interface IWorkspaceProviderCatalog", providerCatalog, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            forbiddenOwnershipTokens,
+            token => providerCatalog.Contains(token, StringComparison.Ordinal));
         Assert.DoesNotContain(
             forbiddenOwnershipTokens,
             token => workspaceRegistration.Contains(token, StringComparison.Ordinal));

@@ -23,7 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
-public sealed class ProjectStructurePageProcessLaunchScopeTests {
+public sealed partial class ProjectStructurePageProcessLaunchScopeTests {
     private static readonly Guid DefinitionId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
         new ProcessDefinitionCatalogItemKey("customer-onboarding")).Value;
 
@@ -455,9 +455,9 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
             services.Replace(ServiceDescriptor.Singleton<IProcessLaunchArtifactInitializer>(probe));
             services.AddSingleton<IProcessLaunchVariableContributor>(probe);
             if (saveGate is not null) {
-                services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new PooledDbContextFactory<WorkbenchDbContext>(
+                services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new ProcessLinkReadFactory(new PooledDbContextFactory<WorkbenchDbContext>(
                     new DbContextOptionsBuilder<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
-                        .AddInterceptors(saveGate).Options));
+                        .AddInterceptors(saveGate).Options), saveGate));
             }
         });
 
@@ -548,6 +548,18 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
     private sealed record LaunchTarget(Guid ProjectId, string ProjectName, string TargetNodeId, string ProcessNodeId);
 
     private sealed class ProcessLinkSaveGate : SaveChangesInterceptor {
+        public bool FailReadAfterSave { get; set; }
+        public bool ReadFailurePending { get; set; }
+
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            if (FailReadAfterSave) {
+                FailReadAfterSave = false;
+                ReadFailurePending = true;
+            }
+            return ValueTask.FromResult(result);
+        }
+
         public Guid? ProjectId { get; set; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -561,6 +573,19 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
                 await Release.Task.WaitAsync(cancellationToken);
             }
             return result;
+        }
+    }
+
+    private sealed class ProcessLinkReadFactory(IDbContextFactory<WorkbenchDbContext> inner, ProcessLinkSaveGate gate)
+        : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => inner.CreateDbContext();
+
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            if (gate.ReadFailurePending) {
+                gate.ReadFailurePending = false;
+                throw new IOException("Injected read failure after the original Process link was saved.");
+            }
+            return inner.CreateDbContextAsync(cancellationToken);
         }
     }
 

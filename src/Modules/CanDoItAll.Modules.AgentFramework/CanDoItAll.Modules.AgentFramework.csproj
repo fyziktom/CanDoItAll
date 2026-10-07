@@ -20,6 +20,11 @@
     <ProjectReference Include="../../Integration/CanDoItAll.Agents.Storage/CanDoItAll.Agents.Storage.csproj" />
     <ProjectReference Include="../../MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/CanDoItAll.AgentFramework.Workflows.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.Editor.UI/CanDoItAll.AgentFramework.Editor.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.Providers.UI/CanDoItAll.AgentFramework.Providers.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.SharedProviders.UI/CanDoItAll.AgentFramework.SharedProviders.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageSelection.UI/CanDoItAll.Workspace.StorageSelection.UI.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
@@ -67,4 +72,7 @@
     <ProjectReference Include="..\..\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.csproj" />
+  </ItemGroup>
 </Project>

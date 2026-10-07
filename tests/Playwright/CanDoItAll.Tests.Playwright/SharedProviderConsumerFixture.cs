@@ -1,0 +1,271 @@
+using System.Diagnostics;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Tests.Support;
+using Microsoft.Playwright;
+
+namespace CanDoItAll.Tests.Playwright;
+
+internal enum SharedProviderConsumerClient { A, B }
+
+internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
+    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    internal static readonly JsonSerializerOptions ReadJson = new(Json) {
+        Converters = { new JsonStringEnumConverter() }
+    };
+    private readonly IPlaywright playwright;
+    private readonly IBrowser browser;
+    private readonly string root;
+    private readonly JsonElement metadata;
+    private readonly List<string> browserErrors = [];
+    private readonly List<object> requestFailures = [];
+    private readonly string traceId = Guid.NewGuid().ToString("N");
+    private ResponsePlanState responsePlanState;
+    private enum ResponsePlanState { None, Unconfirmed, Completed }
+    public SharedProviderNativeDefaultsUiTests.Settings Settings { get; }
+    public IPage Page { get; }
+    public HttpClient Api { get; }
+    public string Address { get; }
+    private readonly string clientRole;
+
+    private SharedProviderConsumerFixture(IPlaywright playwright, IBrowser browser, IPage page, HttpClient api,
+        SharedProviderNativeDefaultsUiTests.Settings settings, string root, JsonElement metadata,
+        string address, string clientRole) {
+        this.playwright = playwright;
+        this.browser = browser;
+        this.root = root;
+        this.metadata = metadata;
+        Settings = settings;
+        Page = page;
+        Api = api;
+        Address = address;
+        this.clientRole = clientRole;
+        Observe(page);
+    }
+
+    private void Observe(IPage page) {
+        page.PageError += (_, error) => browserErrors.Add(error);
+        page.Console += (_, message) => {
+            if (message.Type == "error") {
+                browserErrors.Add(message.Text);
+            }
+        };
+        page.RequestFailed += (_, request) => requestFailures.Add(new {
+            Path = new Uri(request.Url).AbsolutePath, request.Method, request.ResourceType, request.Failure
+        });
+    }
+
+    public async Task<IPage> OpenLocalOperatorPageAsync() {
+        var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
+        var authority = new Uri(Address).Authority;
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == authority
+            ? route.ContinueAsync() : route.AbortAsync());
+        var page = await context.NewPageAsync();
+        Observe(page);
+        return page;
+    }
+
+    public static Task<SharedProviderConsumerFixture> StartAsync(params string[] additionalScopes)
+        => StartAsync(SharedProviderConsumerClient.A, additionalScopes);
+
+    public static async Task<SharedProviderConsumerFixture> StartAsync(SharedProviderConsumerClient client, params string[] additionalScopes) {
+        var settings = SharedProviderNativeDefaultsUiTests.Settings.Load();
+        var (address, role) = client switch {
+            SharedProviderConsumerClient.A => (settings.Clients[0], "client-a"),
+            SharedProviderConsumerClient.B => (settings.Clients[1], "client-b"),
+            _ => throw new ArgumentOutOfRangeException(nameof(client))
+        };
+        var root = Path.GetFullPath(Environment.GetEnvironmentVariable("CANDOITALL_SHARED_PP2_FIXTURE_ROOT")!);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "host-run-metadata.json")));
+        var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+        var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chrome" });
+        var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1 });
+        var page = await context.NewPageAsync();
+        var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, address, false, [
+            ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects, ApiAccessScopeNames.WriteProjectStructure,
+            ApiAccessScopeNames.WriteAgents, ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows,
+            ApiAccessScopeNames.ExecuteWorkflows, .. additionalScopes
+        ]);
+        var api = SharedProviderNativeDefaultsUiTests.Api(address, token);
+        var authority = new Uri(address).Authority;
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == authority
+            ? route.ContinueAsync() : route.AbortAsync());
+        await context.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {token}" });
+        return new(playwright, browser, page, api, settings, root, document.RootElement.Clone(), address, role);
+    }
+
+    public Task NavigateAsync(string relative) => SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(Page, Address + relative);
+    public Task ScreenshotAsync(string name) => Page.ScreenshotAsync(new() { Path = Path.Combine(Settings.Evidence, name + ".png") });
+    public Task EvidenceAsync(string name, object evidence) => File.WriteAllTextAsync(Path.Combine(Settings.Evidence, name + ".json"), JsonSerializer.Serialize(evidence, Json));
+    public static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
+
+    public async Task<JsonElement> GetAsync(string path) {
+        using var response = await Api.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<JsonElement>(Json);
+    }
+
+    public async Task<T> PostAsync<T>(string path, object request) {
+        using var response = await Api.PostAsJsonAsync(path, request, Json);
+        Assert.True(response.IsSuccessStatusCode, $"Native {path} returned {(int)response.StatusCode}.");
+        return (await response.Content.ReadFromJsonAsync<T>(ReadJson))!;
+    }
+
+    public async Task ScriptAsync(string sourceModel, string marker, params object[] steps) {
+        if (responsePlanState == ResponsePlanState.Unconfirmed) {
+            throw new InvalidOperationException("Inspect the unconfirmed response plan before replacing it.");
+        }
+        responsePlanState = ResponsePlanState.Unconfirmed;
+        await RunOracleAsync("e2e-runner", ["consumer-upstream", "script"], JsonSerializer.Serialize(new { model = sourceModel, marker, steps }, Json));
+    }
+
+    public async Task AssertScriptCompleteAsync(int expected) {
+        var progress = await ReadScriptProgressAsync();
+        Assert.Equal(expected, progress.GetProperty("total").GetInt32());
+        Assert.Equal(expected, progress.GetProperty("consumed").GetInt32());
+        responsePlanState = ResponsePlanState.Completed;
+    }
+
+    public Task<JsonElement> ReadCapturesAsync() => RunOracleAsync("e2e-runner", ["consumer-upstream", "captures"]);
+    public Task<JsonElement> ReadScriptProgressAsync() => RunOracleAsync("e2e-runner", ["consumer-upstream", "progress"]);
+    public async Task<JsonElement> ClearScriptAsync() {
+        if (responsePlanState == ResponsePlanState.Unconfirmed) {
+            throw new InvalidOperationException("An unconfirmed native response plan must remain available for its original attempt.");
+        }
+        var result = await RunOracleAsync("e2e-runner", ["consumer-upstream", "clear"]);
+        responsePlanState = ResponsePlanState.None;
+        return result;
+    }
+
+    public Task<JsonElement> ReadAgentAsync(Guid agentId, bool planning = false) => RunOracleAsync("e2e-" + clientRole,
+        ["read-consumer-agent", agentId.ToString("D"), "--role", clientRole, .. planning ? new[] { "--planning" } : []]);
+
+    public Task<JsonElement> ReadOperatorsAsync(Guid projectId, Guid? agentId = null) => RunOracleAsync("e2e-" + clientRole,
+        ["read-wb5-operators", projectId.ToString("D"), "--role", clientRole, .. agentId is { } id ? new[] { "--agent", id.ToString("D") } : []]);
+
+    public async Task RestartOwnedAppsAsync(string evidenceName = "custom-restart-containers") {
+        var project = metadata.GetProperty("composeProjectName").GetString()!;
+        using var images = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "tool-state", "handoff", "image-reuse.json")));
+        var expectedImage = images.RootElement.GetProperty("appImageId").GetString();
+        var before = new List<AppContainer>();
+        foreach (var role in new[] { "central", "client-a", "client-b" }) {
+            var identities = (await DockerAsync("ps", "--all", "--filter", "label=com.docker.compose.project=" + project,
+                "--filter", "label=com.docker.compose.service=" + role, "--format", "{{.ID}}"))
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var container = await InspectAsync(Assert.Single(identities));
+            Assert.Equal(project, container.Project);
+            Assert.Equal(role, container.Role);
+            Assert.Equal(metadata.GetProperty("appImage").GetString(), container.Image);
+            Assert.Equal(expectedImage, container.ImageId);
+            before.Add(container);
+        }
+        await Page.GotoAsync("about:blank");
+        await DockerAsync(["restart", .. before.Select(container => container.Id)]);
+        var after = new List<AppContainer>();
+        foreach (var previous in before) {
+            var current = await InspectAsync(previous.Id);
+            Assert.Equal(previous with { StartedAt = current.StartedAt }, current);
+            Assert.True(current.StartedAt > previous.StartedAt);
+            after.Add(current);
+        }
+        await EvidenceAsync(evidenceName, new { Before = before, After = after });
+
+        async Task<AppContainer> InspectAsync(string id) {
+            var fields = (await DockerAsync("inspect", "--format",
+                "{{.Id}}|{{.Image}}|{{.Config.Image}}|{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}|{{.State.StartedAt}}", id)).Trim().Split('|');
+            Assert.Equal(6, fields.Length);
+            return new(fields[0], fields[1], fields[2], fields[3], fields[4], DateTimeOffset.Parse(fields[5]));
+        }
+    }
+
+    private sealed record AppContainer(string Id, string ImageId, string Image, string Project, string Role, DateTimeOffset StartedAt);
+
+    private static async Task<string> DockerAsync(params string[] arguments) {
+        var start = new ProcessStartInfo("docker") {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        start.ArgumentList.Add("--context");
+        start.ArgumentList.Add("default");
+        foreach (var argument in arguments) {
+            start.ArgumentList.Add(argument);
+        }
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("The owned restart command did not start.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        await process.WaitForExitAsync(timeout.Token);
+        Assert.True(process.ExitCode == 0, $"The owned restart command failed: {await stderr}");
+        return await stdout;
+    }
+
+    private async Task<JsonElement> RunOracleAsync(string service, string[] arguments, string? input = null) {
+        var repository = TestRepositoryRoot.Find();
+        var start = new ProcessStartInfo("docker") {
+            WorkingDirectory = repository,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        foreach (var argument in new[] { "--context", "default", "compose", "--ansi", "never", "--project-name", metadata.GetProperty("composeProjectName").GetString()!,
+            "--env-file", ".env.shared-providers.e2e.example", "--file", "compose.shared-providers.e2e.yaml", "--profile", "orchestrator",
+            "run", "--rm", "--no-deps", "-T", service }.Concat(arguments)) {
+            start.ArgumentList.Add(argument);
+        }
+        foreach (var key in start.Environment.Keys.Where(key => key.StartsWith("COMPOSE_", StringComparison.Ordinal) || key.StartsWith("E2E_", StringComparison.Ordinal) || key.StartsWith("DOCKER_", StringComparison.Ordinal)).ToArray()) {
+            start.Environment.Remove(key);
+        }
+        foreach (var line in await File.ReadAllLinesAsync(Path.Combine(repository, ".env.shared-providers.e2e.example"))) {
+            var pair = line.Split('=', 2);
+            if (pair.Length == 2 && pair[0].StartsWith("E2E_", StringComparison.Ordinal) && pair[0].EndsWith("_FILE", StringComparison.Ordinal)) {
+                start.Environment[pair[0]] = Path.Combine(root, "runtime-secrets", Path.GetFileName(pair[1]));
+            }
+        }
+        start.Environment["E2E_ARTIFACT_ROOT"] = root;
+        start.Environment["E2E_RUN_MARKER"] = metadata.GetProperty("runMarker").GetString();
+        start.Environment["E2E_APP_IMAGE"] = metadata.GetProperty("appImage").GetString();
+        start.Environment["E2E_UPSTREAM_IMAGE"] = metadata.GetProperty("upstreamImage").GetString();
+        var prefix = metadata.GetProperty("ingressPrefix").GetString()!.Split('.');
+        string[] networks = ["LOCAL_INGRESS", "APP_MESH", "CENTRAL_DB", "CLIENT_A_DB", "CLIENT_B_DB", "UPSTREAM_DATA", "UPSTREAM_CONTROL", "CLIENT_A_PERSONAL", "PERSONAL_CONTROL"];
+        for (var index = 0; index < networks.Length; index++) {
+            start.Environment[$"E2E_{networks[index]}_SUBNET"] = $"{prefix[0]}.{prefix[1]}.{int.Parse(prefix[2]) + index}.0/24";
+        }
+        start.Environment["E2E_LOCAL_INGRESS_GATEWAY"] = string.Join('.', prefix) + ".1";
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("The native fixture oracle did not start.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        if (input is not null) {
+            await process.StandardInput.WriteAsync(input);
+        }
+        process.StandardInput.Close();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        await process.WaitForExitAsync(timeout.Token);
+        Assert.True(process.ExitCode == 0, $"The owned consumer oracle failed ({service}/{arguments[0]}). {await stdout}");
+        Assert.True((await stderr).Length < 16_384, "Unexpected fixture oracle diagnostics.");
+        var payload = (await stdout).Split('\n', StringSplitOptions.RemoveEmptyEntries).Last();
+        return JsonSerializer.Deserialize<JsonElement>(payload, Json);
+    }
+
+    public async ValueTask DisposeAsync() {
+        try {
+            await ScreenshotAsync("consumer-final-" + traceId);
+            await EvidenceAsync("consumer-final-text-" + traceId, await Page.Locator("body").InnerTextAsync());
+            if (responsePlanState == ResponsePlanState.Completed) {
+                await ClearScriptAsync();
+            } else if (responsePlanState == ResponsePlanState.Unconfirmed) {
+                await EvidenceAsync("consumer-response-plan-retained-" + traceId, new { Reason = "Native completion was not confirmed; inspect the original attempt before replacing its response plan." });
+            }
+            await EvidenceAsync("consumer-browser-" + traceId, new { Errors = browserErrors, RequestFailures = requestFailures });
+        } finally {
+            Api.Dispose();
+            await browser.DisposeAsync();
+            playwright.Dispose();
+        }
+        Assert.Empty(browserErrors);
+    }
+}

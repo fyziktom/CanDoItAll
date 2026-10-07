@@ -130,9 +130,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
     private static async Task AuthorizeSimpleChatsBrowserAsync(IPage page, AcceptanceSettings settings) {
         await NavigateAsync(page, $"{settings.ClientUrl}/settings?tab=api-access");
-        await FieldByLabel(page, "Subject").FillAsync("shared-catalog-ui-operator");
-        await FieldByLabel(page, "Display name").FillAsync("Shared catalog UI operator");
-        await FieldByLabel(page, "Lifetime minutes").FillAsync("120");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("shared-catalog-ui-operator");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("Shared catalog UI operator");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("120");
         var expectedScopes = string.Join(' ', ApiAccessScopeNames.ReadLlmChats,
             ApiAccessScopeNames.ManageLlmChats, ApiAccessScopeNames.ExecuteLlmChats);
         await page.GetByTestId("api-token-scopes").FillAsync(expectedScopes);
@@ -168,9 +168,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private static async Task<string> ConfigureSharedInstanceAsync(IPage page, AcceptanceSettings settings)
     {
         await NavigateAsync(page, $"{settings.SharedUrl}/settings?tab=api-access");
-        await FieldByLabel(page, "Subject").FillAsync("shared-providers-ui-client");
-        await FieldByLabel(page, "Display name").FillAsync("Shared provider desktop client");
-        await FieldByLabel(page, "Lifetime minutes").FillAsync("10080");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token subject", Exact = true }).FillAsync("shared-providers-ui-client");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token display name", Exact = true }).FillAsync("Shared provider desktop client");
+        await page.GetByRole(AriaRole.Textbox, new() { Name = "Token lifetime minutes", Exact = true }).FillAsync("120");
         await page.GetByTestId("api-token-scopes").FillAsync(
             "api.shared-providers.catalog.read api.shared-providers.invoke");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create token", Exact = true }).ClickAsync();
@@ -349,8 +349,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
 
         await page.GetByTestId("shared-provider-connections-close").ClickAsync();
         await AssertNoLocalProvidersAsync(page);
-        await page.GetByTestId("providers-new").ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "New provider profile", Exact = true }).WaitForAsync();
+        await NewProviderAsync(page);
         await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
         await page.GetByTestId("providers-connections").ClickAsync();
         await page.GetByTestId("shared-provider-source-add").WaitForAsync();
@@ -502,8 +501,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             return;
         }
 
-        await page.GetByTestId("providers-new").ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "New provider profile", Exact = true }).WaitForAsync();
+        await NewProviderAsync(page);
         var kindSelect = page.GetByTestId("providers-kind-select");
         if (!string.Equals(await kindSelect.InputValueAsync(), kind, StringComparison.Ordinal)) {
             await kindSelect.SelectOptionAsync(kind);
@@ -537,6 +535,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await ExpectTextAsync(page.GetByTestId("shared-provider-publication-status"), "Published");
     }
 
+    private static async Task NewProviderAsync(IPage page) {
+        await page.GetByTestId("provider-editor-tab-connection").ClickAsync();
+        var previousName = await page.GetByTestId("providers-name-input").ElementHandleAsync();
+        await page.GetByTestId("providers-new").ClickAsync();
+        await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
+        await page.GetByRole(AriaRole.Heading, new() { Name = "New provider profile", Exact = true }).WaitForAsync();
+    }
+
     private static Task AwaitProviderHealthAsync(IPage page, string kind) =>
         page.GetByText(kind == "Ollama" ? "Ollama returned /api/tags" : "OpenAI model catalog returned",
             new() { Exact = false }).WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 });
@@ -545,24 +551,29 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     {
         await NavigateAsync(page, $"{baseUrl}/settings?tab=secrets");
         await page.GetByRole(AriaRole.Heading, new() { Name = "Secret vault", Exact = true }).WaitForAsync();
-        var existingSecret = page.GetByText(name, new() { Exact = true }).First;
+        await Assertions.Expect(page.GetByTestId("secrets-refresh")).ToBeEnabledAsync();
+        var existingSecret = page.GetByText(name, new() { Exact = true });
+        Assert.InRange(await existingSecret.CountAsync(), 0, 1);
         if (await existingSecret.CountAsync() > 0)
         {
             await SelectSecretForEditingAsync(page, existingSecret, name);
             await page.GetByTestId("settings-secret-value").FillAsync(value);
             await page.GetByRole(AriaRole.Button, new() { Name = "Save secret", Exact = true }).ClickAsync();
-            await page.GetByText("Secret saved", new() { Exact = true }).WaitForAsync();
+            await page.GetByTestId("settings-operation").First.GetByText("SaveSecret: Committed", new() { Exact = true }).WaitForAsync();
             await Assertions.Expect(FieldByLabel(page, "Name")).ToHaveValueAsync(string.Empty);
             await AssertSecretValueRoundTripsThroughUiAsync(page, name, value);
             return;
         }
 
+        var previousName = await page.GetByTestId("secret-name").ElementHandleAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "New secret", Exact = true }).ClickAsync();
-        await FieldByLabel(page, "Name").FillAsync(name);
-        await FieldByLabel(page, "Kind").SelectOptionAsync("ApiKey");
-        await FieldByLabel(page, "Scope").FillAsync("workspace");
+        await page.WaitForFunctionAsync("element => !element.isConnected", previousName);
+        await page.GetByTestId("secret-name").FillAsync(name);
+        await page.GetByTestId("secret-kind").SelectOptionAsync("ApiKey");
+        await page.GetByTestId("secret-scope").FillAsync("workspace");
         await page.GetByTestId("settings-secret-value").FillAsync(value);
         await page.GetByRole(AriaRole.Button, new() { Name = "Save secret", Exact = true }).ClickAsync();
+        await page.GetByTestId("settings-operation").First.GetByText("SaveSecret: Committed", new() { Exact = true }).WaitForAsync();
         await Assertions.Expect(FieldByLabel(page, "Name")).ToHaveValueAsync(string.Empty);
         await AssertSecretValueRoundTripsThroughUiAsync(page, name, value);
     }
@@ -572,7 +583,9 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         string name,
         string expectedValue)
     {
-        var secret = page.GetByText(name, new() { Exact = true }).First;
+        await Assertions.Expect(page.GetByTestId("secrets-refresh")).ToBeEnabledAsync();
+        var secret = page.GetByText(name, new() { Exact = true });
+        await Assertions.Expect(secret).ToHaveCountAsync(1);
         await SelectSecretForEditingAsync(page, secret, name);
         var actualValue = await page.GetByTestId("settings-secret-value").InputValueAsync();
         var expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expectedValue));
@@ -639,6 +652,8 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         string? imageProviderName)
     {
         await NavigateAsync(page, $"{settings.ClientUrl}/agents?tab=agents");
+        await page.Locator(".agent-catalog-panel")
+            .GetByText(new System.Text.RegularExpressions.Regex(@"^\d+ of \d+ agent\(s\)$")).WaitForAsync();
         var existingAgentCard = page.GetByTestId("agents-catalog-card-shell")
             .Filter(new LocatorFilterOptions { HasTextString = agentName })
             .First;
@@ -747,9 +762,10 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await select.SelectOptionAsync(value);
     }
 
-    internal static async Task NavigateAsync(IPage page, string url)
-    {
-        var response = await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+    internal static async Task NavigateAsync(IPage page, string url, Func<string, Task<IResponse?>>? navigate = null) {
+        var response = navigate is null
+            ? await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded })
+            : await navigate(url);
         Assert.NotNull(response);
         Assert.True(response.Ok, $"Navigation to '{url}' returned HTTP {response.Status}.");
         await DismissStartupModalIfPresentAsync(page);

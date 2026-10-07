@@ -224,6 +224,15 @@
         </div>
     </BottomUtilities>
     <TopBar>
+        @if (layoutInitializationFailed) {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="layout-initialization-failure">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="Workspace browser state could not be restored or saved. Retry when browser storage is available." />
+                    <Button Text="Retry workspace" Icon="refresh" Click="RetryLayoutInitializationAsync"
+                            Disabled="layoutInitializationBusy" data-testid="layout-initialization-retry" />
+                </Stack>
+            </Alert>
+        }
         <MainLayoutTopBar DatabaseSwitchAlert="@databaseSwitchAlert"
                           ActiveWorkspaceTitle="@ActiveWorkspaceTitle"
                           ActiveNavigationTitle="@ActiveNavigation.Title"

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers.UI;
 using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
 using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.AspNetCore.Components.Forms;
@@ -20,6 +21,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
     public ProviderProfilesState State { get; private set; } = new();
     public ProviderProfilesCatalog Catalog { get; private set; } = new([], new([]));
     public EditContext EditContext { get; private set; } = new(CreateNewProviderEditor());
+    public ProviderEditorDraft Editor => ProviderEditorDraft.For(EditContext);
     public ProviderProfileEditorModel Draft => (ProviderProfileEditorModel)EditContext.Model;
     public ProviderProfilesLoadState CatalogLoadState { get; private set; } = ProviderProfilesLoadState.Loading;
     public ProviderProfilesLoadState EditorLoadState { get; private set; } = ProviderProfilesLoadState.Loading;
@@ -54,10 +56,10 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         return State.ProviderId.HasValue && await SelectAsync(State.ProviderId);
     }
 
-    public Task<bool> RefreshCatalogAsync() => RefreshCatalogCoreAsync(preserveEditor: false);
-    public Task<bool> RefreshMetadataAsync(CancellationToken cancellationToken = default) => RefreshCatalogCoreAsync(preserveEditor: true, cancellationToken);
+    public Task<bool> RefreshCatalogAsync() => RefreshCatalogCoreAsync();
+    public Task<bool> RefreshMetadataAsync(CancellationToken cancellationToken = default) => RefreshCatalogCoreAsync(cancellationToken);
 
-    private async Task<bool> RefreshCatalogCoreAsync(bool preserveEditor, CancellationToken cancellationToken = default) {
+    private async Task<bool> RefreshCatalogCoreAsync(CancellationToken cancellationToken = default) {
         if (disposed) {
             return false;
         }
@@ -65,16 +67,37 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         catalogRead?.Cancel();
         using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         catalogRead = owner;
-        var retainReady = preserveEditor && CatalogLoadState == ProviderProfilesLoadState.Ready;
+        var retainReady = CatalogLoadState == ProviderProfilesLoadState.Ready;
         if (!retainReady) {
             CatalogLoadState = ProviderProfilesLoadState.Loading;
         }
         CatalogError = null;
         MetadataWarning = null;
+        long? importedReadVersion = null;
         try {
             var loaded = await reads.LoadCatalogAsync(owner.Token);
             if (disposed || generation != catalogGeneration || owner.IsCancellationRequested) {
                 return false;
+            }
+            var selected = loaded.Providers.FirstOrDefault(provider => provider.Id == State.ProviderId);
+            if (selected?.ConnectorPluginKey == ProviderConnectorKeys.SharedImport && Draft.Id == selected.Id &&
+                EditorLoadState == ProviderProfilesLoadState.Ready) {
+                var context = EditContext;
+                importedReadVersion = selectionVersion;
+                if (Draft.ExpectedConcurrencyToken != ImportedRevision(loaded, selected.Id)) {
+                    using var importedRead = CancellationTokenSource.CreateLinkedTokenSource(owner.Token, TargetCancellationToken);
+                    MetadataWarning = "Refreshing the imported provider snapshot.";
+                    var draft = await reads.LoadEditorAsync(selected.Id, importedRead.Token);
+                    if (disposed || generation != catalogGeneration || importedRead.IsCancellationRequested ||
+                        !IsCurrentSelection(importedReadVersion.Value) || !ReferenceEquals(context, EditContext)) {
+                        return false;
+                    }
+                    ValidateImportedEditor(loaded, selected.Id, draft);
+                    editorRead?.Cancel();
+                    EditContext = new(draft);
+                    EditorError = null;
+                    MetadataWarning = null;
+                }
             }
             Catalog = loaded;
             CatalogLoadState = ProviderProfilesLoadState.Ready;
@@ -86,8 +109,15 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         } catch (OperationCanceledException) when (owner.IsCancellationRequested) {
             return false;
         } catch (Exception) {
+            if (importedReadVersion.HasValue && !IsCurrentSelection(importedReadVersion.Value)) {
+                return false;
+            }
             if (!disposed && generation == catalogGeneration) {
-                if (retainReady) {
+                if (importedReadVersion.HasValue && IsCurrentSelection(importedReadVersion.Value)) {
+                    EditorError = "The updated imported provider snapshot could not be loaded. Retry to read the same target.";
+                    EditorLoadState = ProviderProfilesLoadState.Failed;
+                    MetadataWarning = null;
+                } else if (retainReady) {
                     MetadataWarning = "The provider catalog could not be refreshed. Your draft is retained.";
                 } else {
                     CatalogError = "The provider catalog could not be loaded.";
@@ -102,9 +132,15 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         }
     }
 
-    public async Task<bool> SelectAsync(Guid? providerId) {
+    public Task<bool> SelectAsync(Guid? providerId) => AcquireAsync(providerId, replace: false);
+
+    private async Task<bool> AcquireAsync(Guid? providerId, bool replace) {
         if (disposed) {
             return false;
+        }
+        if (!replace && selectionVersion > 0 && State.ProviderId == providerId &&
+            EditorLoadState == ProviderProfilesLoadState.Ready && Draft.Id == providerId) {
+            return true;
         }
         var version = ++selectionVersion;
         targetLifetime.Cancel();
@@ -113,6 +149,7 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         editorRead?.Cancel();
         State = State with { ProviderId = providerId };
         EditorError = null;
+        MetadataWarning = null;
         if (providerId is null) {
             var unresolved = Recovery.Find(null);
             EditContext = unresolved?.Context ?? new(CreateNewProviderEditor());
@@ -139,6 +176,9 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
             }
             if (draft.Id != providerId) {
                 throw new InvalidOperationException("The provider read returned a different editor identity.");
+            }
+            if (IsSourceManaged) {
+                ValidateImportedEditor(Catalog, providerId.Value, draft);
             }
             EditContext = new(draft);
             EditorLoadState = ProviderProfilesLoadState.Ready;
@@ -216,12 +256,13 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
         var version = selectionVersion;
         var selectedId = State.ProviderId;
         var wasImported = IsSourceManaged;
+        var context = EditContext;
         if (!await RefreshMetadataAsync() || !IsCurrentSelection(version)) {
             return new(false);
         }
         if (change.UnknownScope || change.CommitState == ProviderManagement.SharedProviderCommitState.Unconfirmed) {
-            MetadataWarning = "Shared-provider state may have changed. Your draft is retained; refresh to verify the catalog.";
-            return new(true);
+            MetadataWarning = "Shared-provider state may have changed. Refresh to verify the catalog before another change.";
+            return new(true, !ReferenceEquals(context, EditContext));
         }
         if (!selectedId.HasValue) {
             return new(true);
@@ -234,15 +275,25 @@ public sealed class ProviderProfilesSession(IProviderProfilesReads reads, Provid
             if (SelectedProvider is null) {
                 return new(true);
             }
-            var replaced = await SelectAsync(selectedId);
+            var replaced = !ReferenceEquals(context, EditContext) || await AcquireAsync(selectedId, replace: true);
             return new(replaced, replaced);
         }
         return new(true);
     }
 
+    private static Guid ImportedRevision(ProviderProfilesCatalog catalog, Guid providerId) =>
+        catalog.Revisions.TryGetValue(providerId, out var revision) ? revision.Value
+            : throw new InvalidOperationException("The imported provider snapshot has no native revision.");
+
+    private static void ValidateImportedEditor(ProviderProfilesCatalog catalog, Guid providerId, ProviderProfileEditorModel draft) {
+        if (draft.Id != providerId || draft.ExpectedConcurrencyToken != ImportedRevision(catalog, providerId)) {
+            throw new InvalidOperationException("The imported editor and catalog belong to different snapshots. Refresh the provider.");
+        }
+    }
+
     public async Task NewAsync() {
         SelectSection(ProviderEditorSection.Connection);
-        await SelectAsync(null);
+        await AcquireAsync(null, replace: true);
     }
 
     public void Dispose() {

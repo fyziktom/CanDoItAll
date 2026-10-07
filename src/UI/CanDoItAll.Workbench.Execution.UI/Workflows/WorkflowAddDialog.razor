@@ -1,0 +1,228 @@
+@namespace CanDoItAll.Workbench.Execution.UI.Workflows
+@{
+    var workflowDialog = View;
+    var actions = Actions;
+    var inputLocked = workflowDialog.IsBusy || workflowDialog.RequiresObservation;
+    var selectedOption = workflowDialog.SelectedWorkflowId.HasValue
+        ? workflowDialog.Options.FirstOrDefault(option => option.WorkflowId == workflowDialog.SelectedWorkflowId.Value)
+        : null;
+    var source = ResolveWorkflowInputSource(workflowDialog.InputSettings);
+
+}
+<div class="execution-workflow">
+    <CanvasOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowDialog.Title"
+                                   Kicker="Workflow input"
+                                   Title="@workflowDialog.Title"
+                                   Summary="@workflowDialog.Copy"
+                                   DialogClass="project-structure-workflow-add-dialog"
+                                   BodyClass="project-structure-workflow-add-dialog__body"
+                                   DataTestId="project-structure-workflow-add-dialog"
+                                   Close="@(() => actions.Close())">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="@(() => actions.Close())" />
+            <Button Text="@workflowDialog.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Info"
+                    data-testid="project-structure-workflow-add-submit"
+                    IsBusy="@workflowDialog.IsBusy"
+                    Disabled="@(workflowDialog.IsBusy || workflowDialog.RequiresObservation || workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
+                    Click="@(() => actions.Submit())" />
+        </Actions>
+        <Body>
+            <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Footer" Value="Workflow" Class="cw-panel-copy" />
+                        <ResourceCardPicker TItem="WorkflowId"
+                                            Options="@BuildWorkflowPickerOptions(workflowDialog)"
+                                            SelectionChanged="@(id => actions.Select(id))"
+                                            SearchPlaceholder="Search workflow definitions"
+                                            EmptyTitle="No workflows match the current search"
+                                            DataTestId="project-structure-workflow-add-select" />
+                    </Stack>
+                </PanelCard>
+
+                @if (selectedOption is not null) {
+                    <PanelCard>
+                        <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected workflow" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{selectedOption.PreferredBackend} backend")"
+                                       Class="cw-panel-copy" />
+                            @if (!string.IsNullOrWhiteSpace(selectedOption.Description)) {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.Description"
+                                           Class="cw-panel-copy" />
+                            }
+                            @if (!selectedOption.IsSelectable) {
+                                <TextBlock TextStyle="TextStyle.Note"
+                                           Value="@selectedOption.DisabledReason"
+                                           Class="cw-panel-copy" />
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Always included" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Info" Text="Project details" />
+                            <Pill Tone="PillTone.Info" Text="@($"Parent: {workflowDialog.ParentNodeTitle}")" />
+                        </div>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Optional input" />
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeParentSubtree"
+                                   data-testid="project-structure-workflow-add-include-subtree"
+                                   disabled="@inputLocked" @onchange="@(args => actions.IncludeSubtree(ParseCheckboxValue(args)))" />
+                            <span>Include parent subtree</span>
+                        </label>
+                        <label class="project-structure-checkbox-row">
+                            <input type="checkbox"
+                                   checked="@workflowDialog.InputSettings.IncludeAssets"
+                                   data-testid="project-structure-workflow-add-include-assets"
+                                   disabled="@inputLocked" @onchange="@(args => actions.IncludeAssets(ParseCheckboxValue(args)))" />
+                            <span>Include asset references</span>
+                        </label>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Additional source" />
+                        <select class="cw-context-toolbox__search"
+                                data-testid="project-structure-workflow-add-source-kind"
+                                value="@source.Kind.ToString()"
+                                disabled="@inputLocked" @onchange="@(args => actions.SourceKind(ParseSourceKind(args)))">
+                            @foreach (var sourceKind in WorkflowInputSourceKinds) {
+                                <option value="@sourceKind">@ResolveWorkflowInputSourceKindLabel(sourceKind)</option>
+                            }
+                        </select>
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-key"
+                               placeholder="Source key"
+                               value="@source.Key"
+                               disabled="@inputLocked" @oninput="@(args => actions.SourceKey(args.Value?.ToString() ?? string.Empty))" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-label"
+                               placeholder="Source label"
+                               value="@source.Label"
+                               disabled="@inputLocked" @oninput="@(args => actions.SourceLabel(args.Value?.ToString() ?? string.Empty))" />
+                        <input class="cw-context-toolbox__search"
+                               type="text"
+                               data-testid="project-structure-workflow-add-source-value"
+                               placeholder="File path, folder path, or external reference"
+                               value="@source.Value"
+                               disabled="@inputLocked" @oninput="@(args => actions.SourceValue(args.Value?.ToString() ?? string.Empty))" />
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manual JSON" />
+                        <textarea class="cw-context-toolbox__search"
+                                  rows="5"
+                                  data-testid="project-structure-workflow-add-manual-json"
+                                  value="@workflowDialog.InputSettings.ManualInputJson"
+                                  disabled="@inputLocked" @oninput="@(args => actions.ManualInput(args.Value?.ToString() ?? string.Empty))"></textarea>
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Input preview" />
+                        @foreach (var previewSection in workflowDialog.Preview.Sections) {
+                            <div class="project-structure-facts-list">
+                                <div class="project-structure-fact-row">
+                                    <span>@previewSection.Title</span>
+                                    <strong>@previewSection.Summary</strong>
+                                </div>
+                                @foreach (var row in previewSection.Rows) {
+                                    <div class="project-structure-fact-row">
+                                        <span>@row.Label</span>
+                                        <strong>@row.Value</strong>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(workflowDialog.Error)) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="project-structure-workflow-add-error">
+                        @workflowDialog.Error
+                    </Alert>
+                }
+            </Stack>
+        </Body>
+    </CanvasOverlayDialog>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkflowAddView View { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public WorkflowAddActions Actions { get; set; } = default!;
+
+    private static readonly WorkflowInputSourceKind[] WorkflowInputSourceKinds = Enum.GetValues<WorkflowInputSourceKind>();
+    private static WorkflowInputSourceKind ParseSourceKind(ChangeEventArgs args)
+        => Enum.TryParse<WorkflowInputSourceKind>(args.Value?.ToString(), out var kind) && Enum.IsDefined(kind)
+            ? kind : throw new ArgumentException("Unsupported Workflow input source.", nameof(args));
+    private static IReadOnlyList<ResourceCardPickerOption<WorkflowId>> BuildWorkflowPickerOptions(
+        WorkflowAddView dialog) {
+        return dialog.Options
+            .Select(option => new ResourceCardPickerOption<WorkflowId>(
+                option.WorkflowId,
+                option.DisplayName,
+                "Workflow") {
+                Subtitle = $"{option.PreferredBackend} backend",
+                Description = option.Description,
+                Meta = option.Status.ToString(),
+                Icon = "account_tree",
+                Tags = [option.Status.ToString()],
+                IsSelected = dialog.SelectedWorkflowId == option.WorkflowId,
+                IsDisabled = dialog.IsBusy || dialog.RequiresObservation || !option.IsSelectable,
+                DisabledReason = option.DisabledReason,
+                TestId = $"project-structure-workflow-add-option-{option.WorkflowId.Value:N}"
+            })
+            .ToList();
+    }
+
+    private static WorkflowInputSourceView ResolveWorkflowInputSource(
+        WorkflowInputView settings)
+        => settings.AdditionalSources.FirstOrDefault()
+           ?? new WorkflowInputSourceView(
+               WorkflowInputSourceKind.FilePath,
+               "source",
+               "Additional source",
+               string.Empty);
+
+    private static string ResolveWorkflowInputSourceKindLabel(WorkflowInputSourceKind sourceKind)
+        => sourceKind switch {
+            WorkflowInputSourceKind.FolderPath => "Folder path",
+            WorkflowInputSourceKind.SelectedNode => "Selected node",
+            WorkflowInputSourceKind.ManualJson => "Manual JSON reference",
+            _ => "File path"
+        };
+
+    private static bool ParseCheckboxValue(ChangeEventArgs args)
+        => args.Value switch {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => false
+        };
+
+}

@@ -1,6 +1,8 @@
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.UI.Chat
+@using Microsoft.Extensions.Logging
 @inject DialogService DialogService
+@inject ILogger<ChatWorkspacePanel> Logger
 @inject AgentToolPolicyCatalog ToolPolicies
 @implements IDisposable
 
@@ -13,24 +15,9 @@
         }
     </ActivityContent>
     <AttachmentPicker>
-                    @if (AttachmentFilesSelected.HasDelegate) {
-                        <label for="@ResolveAttachmentInputId()"
-                               class="@ResolveAttachmentUploadButtonClass()"
-                               aria-label="Attach image file"
-                               aria-disabled="@IsBusy"
-                               title="Attach image file"
-                               data-testid="chat-image-attachment-button">
-                            <Icon Name="image" />
-                        </label>
-                        <InputFile id="@attachmentInputId"
-                                   class="chat-attachment-file-input"
-                                   style="display:none"
-                                   OnChange="HandleAttachmentFilesSelectedAsync"
-                                   accept="image/png,image/jpeg,image/gif,image/webp"
-                                   multiple
-                                   disabled="@IsBusy"
-                                   data-testid="chat-image-attachment-input" />
-                    }
+        @if (AttachmentFilesSelected.HasDelegate) {
+            <AgentImageAttachmentPicker Generation="SelectionGeneration" Disabled="IsBusy" Selected="HandleAttachmentFilesSelectedAsync" />
+        }
     </AttachmentPicker>
 </AgentChatSurface>
 
@@ -218,16 +205,9 @@
     internal static string FormatApprovalArguments(string? argumentsJson, string? toolName = null, AgentToolPolicyCatalog? toolPolicies = null)
         => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName, toolPolicies);
 
-    private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
-        => AttachmentFilesSelected.InvokeAsync(args);
-
-    private string ResolveAttachmentInputId()
-        => IsBusy ? string.Empty : attachmentInputId;
-
-    private string ResolveAttachmentUploadButtonClass()
-        => IsBusy
-            ? "chat-attachment-upload-button chat-attachment-upload-button--disabled"
-            : "chat-attachment-upload-button";
+    private Task HandleAttachmentFilesSelectedAsync(AgentImageSelection selection)
+        => disposed || IsBusy || selection.Generation != SelectionGeneration
+            ? Task.CompletedTask : AttachmentFilesSelected.InvokeAsync(selection.Files);
 
     private IReadOnlyList<ExecutionLogEntry> ResolveActiveExecutionEntries() {
         if (ActiveRun is not null) {
@@ -365,7 +345,7 @@
         IReadOnlyList<ExecutionLogEntry> entries,
         Guid? highlightEntryId,
         ModalSize size) {
-        _ = DialogService.OpenAsync<AgentExecutionLogDialog>(
+        _ = ObserveExecutionDialogAsync(DialogService.OpenAsync<AgentExecutionLogDialog>(
             title,
             new Dictionary<string, object?> {
                 [nameof(AgentExecutionLogDialog.Run)] = ActiveRun,
@@ -381,7 +361,16 @@
                 AriaLabel = title,
                 Style = "max-height:calc(100vh - 2rem);"
             },
-            dialogLifetime.Token);
+            dialogLifetime.Token), dialogLifetime.Token, ActiveRun?.Id);
+    }
+
+    private async Task ObserveExecutionDialogAsync(Task<object?> opening, CancellationToken token, Guid? runId) {
+        try {
+            await opening;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("Execution log dialog failed ({FailureType}); run {RunId}.", exception.GetType().Name, runId);
+        }
     }
 
     private string BuildExecutionDialogSubtitle(IReadOnlyList<ExecutionLogEntry> entries) {
@@ -457,7 +446,6 @@
     private long presentationRevision;
     private (Guid? Agent, Guid? Session, Guid? Run, long Generation) observedTarget;
     private CancellationTokenSource dialogLifetime = new();
-    private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
     private bool disposed;
 
     protected override void OnParametersSet() {

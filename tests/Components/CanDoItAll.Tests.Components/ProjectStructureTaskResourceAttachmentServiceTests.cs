@@ -3,11 +3,72 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskResourceAttachmentServiceTests
 {
+    [Fact]
+    public async Task Lost_pricing_acknowledgement_preserves_the_committed_definition_attachment() {
+        var probe = new PricingAcknowledgementProbe();
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.RemoveAll<IProjectStructureTaskResourceCostStrategy>();
+            services.AddSingleton<IProjectStructureTaskResourceCostStrategy>(new MutatingProcessQuoteStrategy());
+            services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider =>
+                new PricingProbeFactory(new DbContextOptionsBuilder<WorkbenchDbContext>(
+                    provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>()).AddInterceptors(probe).Options));
+        });
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var owner = CreateAgent(admission);
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var task = await workbench.CreateObjectAsync(projectId,
+            new ProjectObjectCreateRequest(ProjectObjectType.WorkItem, "Lost pricing acknowledgement", string.Empty,
+                string.Empty, $"project:{projectId}", 420, 260, ObjectSubtype: "task",
+                MetadataJson: ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope {
+                    WorkItem = new() { WorkItemKind = ProjectWorkItemKind.Task, ExecutionState = ProjectTaskExecutionState.NotStarted }
+                })) { ExpectedProjectAdmission = admission });
+        var resource = (await services.GetRequiredService<ProjectStructureTaskResourceService>().ListOptionsAsync(projectId))
+            .First(option => option.Kind == ProjectStructureTaskResourceKind.Process);
+        probe.TaskId = task.Id;
+        var failure = await Record.ExceptionAsync(() => services.GetRequiredService<ProjectStructureTaskResourceAttachmentService>()
+            .AttachAsync(projectId, task.Id, new(new(resource.Kind, resource.ResourceId), ProjectTaskExecutionSnapshot.NotStarted) {
+                ExpectedProjectAdmission = admission
+            }, owner));
+        Assert.NotNull(failure);
+        Assert.Equal(1, probe.LostAcknowledgements);
+        var surface = await workbench.GetStructureAsync(projectId);
+        var persisted = ProjectStructureTaskEditStatePolicy.Read(Assert.Single(surface.Nodes, node => node.Id == task.Id));
+        Assert.Equal(50m, persisted.Estimate.ExpectedCostAmount);
+        Assert.Equal(resource.ResourceId, persisted.CostBasis?.ResourceId);
+        Assert.Contains(surface.Links, link => link.SourceId == task.Id && link.Kind == ProjectObjectLinkKind.Uses &&
+            link.TargetId == $"process-definition:{resource.ResourceId:D}");
+    }
+
+    private sealed class PricingProbeFactory(DbContextOptions<WorkbenchDbContext> options) : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class PricingAcknowledgementProbe : DbTransactionInterceptor {
+        public string? TaskId { get; set; }
+        public int LostAcknowledgements { get; private set; }
+        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData,
+            CancellationToken cancellationToken = default) {
+            if (TaskId is not null && LostAcknowledgements == 0 && eventData.Context?.ChangeTracker.Entries<ProjectObjectRecord>().Any(
+                entry => entry.Entity.NodeKey == TaskId &&
+                ProjectObjectMetadataSerializer.Parse(entry.Entity.MetadataJson).WorkItem?.ExpectedCostAmount == 50m) == true) {
+                LostAcknowledgements++;
+                throw new IOException("Injected pricing acknowledgement loss after the real transaction committed.");
+            }
+            return Task.CompletedTask;
+        }
+    }
+
     [Theory]
     [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Process, "custom:workflow", "process-definition:1")]
     [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Workflow, null, null)]

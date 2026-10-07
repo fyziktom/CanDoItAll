@@ -10,6 +10,24 @@ public sealed class WorkflowCallerLaunchMigrationTests
     private static readonly DateTimeOffset FixedUtcNow = new(2026, 7, 12, 19, 30, 0, TimeSpan.Zero);
 
     [Fact]
+    public async Task TestRunner_UnknownAdmissionRetainsReservedIdentityAndDoesNotReportRejection() {
+        var definition = CreateDefinition(WorkflowLifecycleStatus.Draft);
+        var unknown = new WorkflowLaunchAdmissionObservationException(WorkflowRunId.New(),
+            new InvalidOperationException("Injected acknowledgement loss"),
+            new InvalidOperationException("Injected observation loss"));
+        var launch = new RecordingLaunchService { Failure = unknown };
+        var runner = new WorkflowTestRunner(new RecordingCatalog(definition), launch,
+            new QueryOnlyRuntimeManager(), new InMemoryWorkflowRunStore());
+
+        var result = await Assert.ThrowsAsync<WorkflowLaunchAdmissionObservationException>(() =>
+            runner.RunAsync(new(null, null, definition, "{}", WorkflowRuntimeBackendKind.InProcess, false)));
+
+        Assert.Same(unknown, result);
+        Assert.Equal(unknown.ReservedRunId, result.ReservedRunId);
+        Assert.Single(launch.Intents);
+    }
+
+    [Fact]
     public async Task TestRunner_DraftAndExactRuns_UsePreviewLaunchIntentWithoutDuplicateValidation()
     {
         var saved = CreateDefinition(WorkflowLifecycleStatus.Active);
@@ -194,12 +212,16 @@ public sealed class WorkflowCallerLaunchMigrationTests
     {
         public List<WorkflowLaunchIntent> Intents { get; } = [];
         public WorkflowRunSnapshot? LastRun { get; private set; }
+        public Exception? Failure { get; init; }
 
         public Task<WorkflowLaunchResult> LaunchAsync(
             WorkflowLaunchIntent intent,
             CancellationToken cancellationToken = default)
         {
             Intents.Add(intent);
+            if (Failure is { } failure) {
+                return Task.FromException<WorkflowLaunchResult>(failure);
+            }
             var definition = intent.Selection switch
             {
                 WorkflowDefinitionSelection.DraftPreview draft => draft.Definition,

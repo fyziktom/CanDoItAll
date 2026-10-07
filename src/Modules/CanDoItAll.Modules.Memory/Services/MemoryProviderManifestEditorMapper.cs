@@ -107,6 +107,9 @@ internal static class MemoryProviderManifestEditorMapper
 
     public static MemoryProviderInteractionSupport BuildInteractionSupport(MemoryProviderProfileEditorModel editor)
     {
+        if (!ManagedCapabilitiesChanged(editor) && editor.PreservedInteractionSupport is { } preserved) {
+            return preserved;
+        }
         return new MemoryProviderInteractionSupport(
             editor.SupportsContextQuerySync,
             editor.SupportsContextQueryAsync,

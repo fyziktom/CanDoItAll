@@ -1,0 +1,74 @@
+@using CanDoItAll.AppComponents
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       Class="external-workspace-root-selection-field"
+       data-testid="@($"{DataTestId}-field")">
+    <div>
+        <label class="cda-field-label"
+               for="@InputId">
+            External workspace root
+        </label>
+        <div class="external-workspace-root-selection-field__entry mt-2">
+            <input id="@InputId"
+                   type="text"
+                   class="cda-input"
+                   value="@Entry.Candidate"
+                   disabled="@Disabled"
+                   placeholder="Native absolute folder path or external-target/v1/..."
+                   aria-invalid="@(HasValidationMessage ? "true" : "false")"
+                   aria-describedby="@InputDescriptionIds"
+                   data-testid="@($"{DataTestId}-input")"
+                   @oninput="args => CandidateChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)" form="@EntryFormId" />
+            <Button Text="Add root"
+                    Icon="add"
+                    Type="button"
+                    ButtonStyle="ButtonStyle.Light"
+                    Disabled="@Disabled"
+                    Click="Add"
+                    data-testid="@($"{DataTestId}-add")" />
+        </div>
+        <p id="@HintId"
+           class="mt-2 text-sm leading-6 text-slate-600">
+            Enter one native absolute folder path or canonical <code>external-target/v1/...</code> alias.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Entry.ValidationMessage)) {
+        <Alert id="@ValidationId"
+               AlertStyle="AlertStyle.Warning"
+               data-testid="@($"{DataTestId}-validation")">
+            @Entry.ValidationMessage
+        </Alert>
+    }
+
+    <SelectedReferenceTable TKey="string"
+                            Items="@SelectedRoots"
+                            PrimaryColumnLabel="Folder path"
+                            IdentifierColumnLabel="Internal alias"
+                            EmptyTitle="No external workspace roots"
+                            EmptyDescription="Add an absolute folder path when this agent needs access outside the active workspace."
+                            DataTestId="@DataTestId"
+                            Disabled="@Disabled"
+                            RemoveRequested="Remove" />
+
+    <p class="text-sm leading-6 text-slate-600"
+       data-testid="@($"{DataTestId}-metadata-explanation")">
+        Readable folder paths are shown here for review. Agent metadata uses the stable internal alias shown beside each path.
+    </p>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public AgentRootEntry Entry { get; set; } = default!;
+    [Parameter] public IReadOnlyList<SelectedReferenceItem<string>> SelectedRoots { get; set; } = [];
+    [Parameter] public EventCallback<string> CandidateChanged { get; set; }
+    [Parameter] public EventCallback Add { get; set; }
+    [Parameter] public EventCallback<string> Remove { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string DataTestId { get; set; } = "agents-catalog-workspace-external-roots";
+    [Parameter] public string EntryFormId { get; set; } = string.Empty;
+    private string InputId => $"{DataTestId}-input";
+    private string HintId => $"{DataTestId}-hint";
+    private string ValidationId => $"{DataTestId}-validation-message";
+    private bool HasValidationMessage => !string.IsNullOrWhiteSpace(Entry.ValidationMessage);
+    private string InputDescriptionIds => HasValidationMessage ? $"{HintId} {ValidationId}" : HintId;
+}

@@ -20,6 +20,36 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureGanttPanelTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Queued_title_callback_cannot_rebind_to_a_successor_view(bool returnToOriginal) {
+        using var context = CreateContext([]);
+        var originalId = Guid.NewGuid();
+        var successorId = Guid.NewGuid();
+        var node = CreateTask("task-a", "Same visible title");
+        await SeedProjectTaskAsync(context, originalId, node);
+        await SeedProjectTaskAsync(context, successorId, node);
+        var callbacks = 0;
+        var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
+            .Add(component => component.ProjectId, originalId)
+            .Add(component => component.Surface, CreateSurface(context, originalId, node))
+            .Add(component => component.MutationCommitted, () => callbacks++));
+        var queued = cut.FindComponent<GanttChart>().Instance.TaskTitleChangeRequested;
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters
+            .Add(component => component.ProjectId, successorId)
+            .Add(component => component.Surface, CreateSurface(context, successorId, node))));
+        if (returnToOriginal) {
+            await cut.InvokeAsync(() => cut.Render(parameters => parameters
+                .Add(component => component.ProjectId, originalId)
+                .Add(component => component.Surface, CreateSurface(context, originalId, node))));
+        }
+        await cut.InvokeAsync(() => queued.InvokeAsync(new(new(node.Id), node.Title, "Obsolete input")));
+        Assert.Equal(0, callbacks);
+        await using var read = await context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+        Assert.All(await read.Set<ProjectObjectRecord>().ToListAsync(), item => Assert.Equal(node.Title, item.Title));
+    }
+
     [Fact]
     public async Task Disposed_Gantt_refresh_cannot_overwrite_a_replacement_project_observation() {
         var projectId = Guid.NewGuid();
@@ -440,9 +470,7 @@ public sealed class ProjectStructureGanttPanelTests
         Assert.Contains("Before refresh", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Building the Gantt projection", cut.Markup, StringComparison.Ordinal);
         await cut.InvokeAsync(() => originalChart.TaskDoubleClicked.InvokeAsync(new GanttTaskId("task-a")));
-        var refreshNotification = Assert.Single(
-            context.Services.GetRequiredService<NotificationService>().Messages);
-        Assert.Equal("Project schedule refresh in progress", refreshNotification.Summary);
+        Assert.Empty(context.Services.GetRequiredService<NotificationService>().Messages);
 
         refreshAssignments.SetResult([]);
         await refreshTask;
@@ -483,6 +511,7 @@ public sealed class ProjectStructureGanttPanelTests
             ProgressPercent = 40,
             MetadataJson = metadata
         };
+        await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))
@@ -522,6 +551,7 @@ public sealed class ProjectStructureGanttPanelTests
         using var context = CreateContext([agent, primaryPerson]);
         var dialogHost = context.Render<DialogHost>();
         var task = CreateTask("task-a", "Customer acceptance");
+        await SeedProjectTaskAsync(context, projectId, task);
         var cut = context.Render<ProjectStructureGanttPanel>(parameters => parameters
             .Add(component => component.ProjectId, projectId)
             .Add(component => component.Surface, CreateSurface(context, projectId, task))

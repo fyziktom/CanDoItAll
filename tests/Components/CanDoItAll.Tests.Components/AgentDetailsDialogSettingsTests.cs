@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.Workspace.StorageSelection.Contracts;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
@@ -206,7 +207,19 @@ public sealed class AgentDetailsDialogSettingsTests
         using var context = CreateContext(out var workspaceProxy, out _, catalogSource);
         var dialogHost = context.Render<DialogHost>();
         var editor = CreateEditor();
+        editor.Instructions = "Unsaved instructions survive selection.";
+        editor.WorkspaceToolAccess.CanReadFiles = true;
+        editor.WorkspaceToolAccess.CanReadStorage = true;
+        editor.ProjectStructureAccess.CanRead = true;
+        editor.SelectedCapabilityIds = [Guid.NewGuid()];
+        var permissions = editor.Permissions;
+        var projectAccess = System.Text.Json.JsonSerializer.Serialize(editor.ProjectStructureAccess);
+        var secrets = editor.AllowedSecretReferences.ToArray();
+        var capabilities = editor.SelectedCapabilityIds.ToArray();
         var cut = RenderTab(context, editor, section: AgentEditorSection.WorkspaceTools);
+        var editContext = cut.FindComponent<Microsoft.AspNetCore.Components.Forms.EditForm>().Instance.EditContext;
+        var field = cut.FindComponent<CanDoItAll.Workspace.StorageSelection.UI.StorageCatalogSelectionField>();
+        Assert.True(field.Instance.OwnerLifetime.CanBeCanceled);
 
         var openTask = cut
             .Find("[data-testid='agents-catalog-storage-selection-choose']")
@@ -229,6 +242,19 @@ public sealed class AgentDetailsDialogSettingsTests
             .Find("[data-testid='agents-catalog-storage-selection-dialog-apply']")
             .Click();
         await openTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Same(editContext, cut.FindComponent<Microsoft.AspNetCore.Components.Forms.EditForm>().Instance.EditContext);
+        Assert.Equal("Unsaved instructions survive selection.", editor.Instructions);
+        Assert.Equal(permissions, editor.Permissions);
+        Assert.Equal(projectAccess, System.Text.Json.JsonSerializer.Serialize(editor.ProjectStructureAccess));
+        Assert.Equal(secrets, editor.AllowedSecretReferences);
+        Assert.Equal(capabilities, editor.SelectedCapabilityIds);
+        Assert.True(editor.WorkspaceToolAccess.CanReadFiles);
+        Assert.False(editor.WorkspaceToolAccess.CanWriteFiles);
+        Assert.True(editor.WorkspaceToolAccess.CanReadStorage);
+        Assert.False(editor.WorkspaceToolAccess.CanWriteStorage);
+        Assert.False(editor.WorkspaceToolAccess.AllowAllStorageCatalogs);
+        Assert.Empty(workspaceProxy.SavedModels);
 
         cut.WaitForAssertion(() =>
         {
@@ -506,33 +532,30 @@ public sealed class AgentDetailsDialogSettingsTests
         };
     }
 
-    private static StorageCatalogSummary CreateStorageCatalog(string name, string endpoint)
-    {
-        return new StorageCatalogSummary(
+    private static StorageSelectionItem CreateStorageCatalog(string name, string endpoint) {
+        return new StorageSelectionItem(
             Guid.NewGuid(),
             name,
-            StorageProviderKind.FileSystem,
-            StorageConnectionMode.Local,
+            "File system",
+            "Local",
             endpoint,
             DisplayOrder: 0,
             IsEnabled: true,
             IsSystemDefault: false,
             IsReadOnly: false,
-            StorageCapability.Read | StorageCapability.Write,
-            StorageHealthStatus.Healthy,
-            LastTestedAtUtc: null,
-            LastHealthMessage: string.Empty);
+            "Healthy");
     }
 
     private sealed class RecordingStorageCatalogSelectionSource(
-        IReadOnlyList<StorageCatalogSummary> catalogs)
-        : IStorageCatalogSelectionSource
-    {
+        IReadOnlyList<StorageSelectionItem> catalogs)
+        : IStorageCatalogSelectionSource {
+        public StorageCatalogSelectionContext Context { get; } = new(Guid.NewGuid(), 0);
+        public bool IsCurrent => true;
+        public event Action? ContextChanged { add { } remove { } }
         public int ListCalls { get; private set; }
 
-        public Task<IReadOnlyList<StorageCatalogSummary>> ListAsync(
-            CancellationToken cancellationToken = default)
-        {
+        public Task<IReadOnlyList<StorageSelectionItem>> ListAsync(
+            CancellationToken cancellationToken = default) {
             ListCalls++;
             return Task.FromResult(catalogs);
         }
