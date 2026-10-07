@@ -107,6 +107,9 @@ public sealed record ProjectStructureTaskUpdateAgentInput(
     /// </remarks>
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
+    [System.ComponentModel.Description("Optional first planned interval for an unscheduled task, for example a JSON outline import. Omit or send null to preserve the current schedule. Cannot be combined with scheduleChange. Echo the node's nullable dates and duration; changed values fail with StaleTask.")]
+    public ProjectStructureInitialTaskSchedule? InitialSchedule { get; init; }
+
     /// <summary>
     /// Converts the plain task identifiers into the validated Gantt contract; an invalid identifier, gesture or
     /// interval becomes the HTTP 400 <c>TaskUpdateRequestInvalid</c> rejection before anything is read or written.
@@ -115,6 +118,10 @@ public sealed record ProjectStructureTaskUpdateAgentInput(
     {
         try
         {
+            if (InitialSchedule is not null && ScheduleChange is not null) {
+                throw new ArgumentException("Send initialSchedule or scheduleChange, never both.");
+            }
+            InitialSchedule?.Validate();
             var taskId = new GanttTaskId(TaskId);
             return new ProjectStructureTaskDetailsUpdateRequest(
                 taskId,
@@ -132,7 +139,8 @@ public sealed record ProjectStructureTaskUpdateAgentInput(
                 CurrentCostBasis,
                 CurrentDirectAssignmentRevision)
             {
-                ExpectedProjectAdmission = ExpectedProjectAdmission
+                ExpectedProjectAdmission = ExpectedProjectAdmission,
+                InitialSchedule = InitialSchedule
             };
         }
         catch (ArgumentException exception)

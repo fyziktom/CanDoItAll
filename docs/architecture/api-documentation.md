@@ -17,6 +17,11 @@ The document is produced by `Microsoft.AspNetCore.OpenApi` (`AddOpenApi` in
 served on both `/openapi/v1.json` and `/swagger/v1/swagger.json`. Swagger UI is only a viewer of that
 document. Do not add SwaggerGen or a second generator.
 
+The initial canonical-task schedule contract is a reviewed source-owned metadata
+exception: its DTO and property `Description` attributes own the generated prose.
+See [initial task scheduling](task-initial-schedule-api.md) for its read/write recipe
+and raw HTTP validation. It uses the same OpenAPI pipeline, with no hand-edited schemas.
+
 1. Every project that declares a handler or a serialized API type sets `GenerateDocumentationFile`. Its
    XML file is emitted next to the assembly.
 2. The package's source generator runs in the Web project. It intercepts the `AddOpenApi` call, reads the
