@@ -39,7 +39,7 @@ public sealed partial class StorageCatalogService {
             rule.UsagePurpose = purpose;
             rule.ContentKind = StorageContentKind.Unknown;
             rule.MimePattern = string.Empty;
-            rule.EditIntent = purpose is StorageUsagePurpose.ProjectAsset or StorageUsagePurpose.PromptExport;
+            rule.EditIntent = purpose == StorageUsagePurpose.PromptExport;
             rule.PreviewRequired = previewRequired;
             rule.PublishIntent = purpose is StorageUsagePurpose.ReleasePackage or StorageUsagePurpose.DeploymentMirror;
             rule.RequiredCapabilities = StorageCapability.Write |
@@ -74,7 +74,7 @@ public sealed partial class StorageCatalogService {
 
     private static string BuildRoutingReason(StorageUsagePurpose purpose) {
         return purpose switch {
-            StorageUsagePurpose.ProjectAsset => "Workspace default for editable project assets.",
+            StorageUsagePurpose.ProjectAsset => "Workspace default for project assets.",
             StorageUsagePurpose.PromptAttachment => "Workspace default for prompt attachments.",
             StorageUsagePurpose.PromptExport => "Workspace default for generated prompt exports.",
             StorageUsagePurpose.Evidence => "Workspace default for shareable evidence artifacts.",

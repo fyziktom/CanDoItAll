@@ -21,6 +21,7 @@ public sealed class StorageStablePlacementDriverTests {
         var query = handler.Uri.Query.TrimStart('?').Split('&').Select(part => part.Split('=', 2))
             .ToDictionary(pair => pair[0], pair => pair[1], StringComparer.Ordinal);
         Assert.Equal("1", query["cid-version"]);
+        Assert.Equal("false", query["progress"]);
         Assert.Equal("sha2-256", query["hash"]);
         Assert.Equal("true", query["raw-leaves"]);
         Assert.Equal("size-262144", query["chunker"]);
@@ -36,14 +37,15 @@ public sealed class StorageStablePlacementDriverTests {
     }
 
     [Fact]
-    public async Task Ordinary_ipfs_add_preserves_existing_endpoint_and_options() {
+    public async Task Ordinary_ipfs_add_requests_a_single_result_without_changing_import_options() {
         using var handler = new CaptureHandler();
         using var http = new HttpClient(handler);
         var transport = new IpfsHttpStorageTransport(http);
-        await transport.AddAsync((new StorageCatalogRecord() { EndpointOrRoot = "https://ipfs.example.test/" }).ToDriverInput(), null, "ordinary.txt",
+        var result = await transport.AddAsync((new StorageCatalogRecord() { EndpointOrRoot = "https://ipfs.example.test/" }).ToDriverInput(), null, "ordinary.txt",
             "ordinary"u8.ToArray(), CancellationToken.None);
+        Assert.Equal("bafy-test-content", result.ContentId);
         Assert.Equal("/api/v0/add", handler.Uri!.AbsolutePath);
-        Assert.Empty(handler.Uri.Query);
+        Assert.Equal("?progress=false", handler.Uri.Query);
         Assert.Contains("ordinary", handler.Body, StringComparison.Ordinal);
     }
 
@@ -103,7 +105,12 @@ public sealed class StorageStablePlacementDriverTests {
             Uri = request.RequestUri;
             HadAuthorization = request.Headers.Authorization is not null;
             Body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
-            return new(HttpStatusCode.OK) { Content = new StringContent("{\"Hash\":\"bafy-test-content\"}", Encoding.UTF8, "application/json") };
+            string progress = Uri!.Query.TrimStart('?').Split('&').Contains("progress=false", StringComparer.Ordinal)
+                ? string.Empty
+                : "{\"Name\":\"upload\",\"Bytes\":7}\n";
+            return new(HttpStatusCode.OK) {
+                Content = new StringContent(progress + "{\"Hash\":\"bafy-test-content\"}\n", Encoding.UTF8, "application/json")
+            };
         }
     }
 

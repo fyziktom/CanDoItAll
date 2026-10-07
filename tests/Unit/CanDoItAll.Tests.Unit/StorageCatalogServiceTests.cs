@@ -462,6 +462,50 @@ public sealed class StorageCatalogServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Project_asset_default_routes_ordinary_images_after_creation_or_resave(bool legacyRule) {
+        string workspaceRoot = TestFileSystem.CreateTemporaryRoot("storage-asset-default");
+        try {
+            var catalog = CreateSut($"storage-asset-default-{Guid.NewGuid():N}", workspaceRoot);
+            var storage = await catalog.SaveAsync(new StorageCatalogSaveRequest {
+                Name = "Synthetic image store",
+                ProviderKind = StorageProviderKind.Ipfs,
+                EndpointOrRoot = "https://ipfs.example.test/",
+                CapabilityMask = StorageCapability.Read | StorageCapability.Write | StorageCapability.InlinePreview
+            });
+            Guid? existingRuleId = null;
+            if (legacyRule) {
+                var previous = await catalog.SaveRuleAsync(new StorageRoutingRuleSaveRequest {
+                    Name = "Project assets default",
+                    UsagePurpose = StorageUsagePurpose.ProjectAsset,
+                    EditIntent = true,
+                    PreviewRequired = true,
+                    PreferredStorageId = storage.Id
+                });
+                existingRuleId = previous.Id;
+            }
+
+            await catalog.ApplyDefaultPurposesAsync(storage.Id, [StorageUsagePurpose.ProjectAsset, StorageUsagePurpose.PromptExport]);
+            var recommendation = await new DefaultStorageRoutingService(catalog).RecommendAsync(new StorageSelectionContext(
+                "synthetic.png", "image/png", StorageUsagePurpose.ProjectAsset, StorageContentKind.Image, PreviewRequired: true));
+
+            Assert.Equal(storage.Id, recommendation.PrimaryCandidate?.StorageId);
+            Assert.Equal(StorageProviderKind.Ipfs, recommendation.PrimaryCandidate?.ProviderKind);
+            Assert.Empty(recommendation.Warnings);
+            var rules = await catalog.ListRulesAsync();
+            var assetRule = Assert.Single(rules, rule => rule.UsagePurpose == StorageUsagePurpose.ProjectAsset);
+            Assert.False(assetRule.EditIntent);
+            if (existingRuleId is not null) {
+                Assert.Equal(existingRuleId, assetRule.Id);
+            }
+            Assert.True(Assert.Single(rules, rule => rule.UsagePurpose == StorageUsagePurpose.PromptExport).EditIntent);
+        } finally {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static StorageCatalogService CreateSut(string databaseName, string workspaceRoot)
     {
         var (options, coordinator) = CreateOptions(DatabaseProviderKind.InMemory, databaseName);
