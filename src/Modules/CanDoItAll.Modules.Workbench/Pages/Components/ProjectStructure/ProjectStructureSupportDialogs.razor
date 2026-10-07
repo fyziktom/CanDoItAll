@@ -16,48 +16,17 @@
         Actions="@(new((node, status) => change.InvokeAsync((node, status)), () => workbook.InvokeAsync(), () => gantt.InvokeAsync(), () => close.InvokeAsync()))" />
 }
 
-@if (PendingDeletePrompt is { } deletePrompt)
-{
+@if (PendingDeletePrompt is { } deletePrompt) {
     var confirmDelete = ConfirmDelete;
     var cancelDelete = CancelDelete;
-    <ProjectStructureOverlayDialog AriaLabel="@ResolveDeletePromptAriaLabel(deletePrompt)"
-                                   Kicker="@(deletePrompt.IsBulk ? "Delete selection" : "Delete node")"
-                                   Title="@deletePrompt.Title"
-                                   Summary="@deletePrompt.ImpactCopy"
-                                   DialogClass="project-structure-summary-dialog"
-                                   Close="@(() => cancelDelete.InvokeAsync(deletePrompt))">
-        <Body>
-            @if (!string.IsNullOrWhiteSpace(DeleteFailure)) {
-                <Alert AlertStyle="AlertStyle.Warning" data-testid="project-structure-delete-failure">@DeleteFailure</Alert>
-            }
-        </Body>
-        <Actions>
-            @if (deletePrompt.ManagedAttachmentCount > 0)
-            {
-                var deletesMultipleNodes = deletePrompt.IsBulk || deletePrompt.DescendantCount > 0;
-                <Button Text="@(deletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
-                        ButtonStyle="ButtonStyle.Base"
-                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.RetainManagedFiles)))" />
-                <Button Text="@(deletesMultipleNodes
-                    ? "Delete nodes and files"
-                    : deletePrompt.ManagedAttachmentCount > 1
-                        ? "Delete node and files"
-                        : "Delete node and file")"
-                        ButtonStyle="ButtonStyle.Danger"
-                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)))" />
-            }
-            else
-            {
-                <Button Text="@(deletePrompt.IsBulk ? "Delete selected" : "Delete")"
-                        ButtonStyle="ButtonStyle.Danger"
-                        Click="@(() => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt, ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)))" />
-            }
-            <Button Text="Cancel"
-                    Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
-                    Click="@(() => cancelDelete.InvokeAsync(deletePrompt))" />
-        </Actions>
-    </ProjectStructureOverlayDialog>
+    <ContentDeleteDialog State="@(new(deletePrompt.Title, deletePrompt.ImpactCopy, deletePrompt.NodeIds.Count,
+                             deletePrompt.DescendantCount, deletePrompt.ManagedAttachmentCount, DeleteFailure))"
+        Actions="@(new(disposition => confirmDelete.InvokeAsync(new ProjectStructureDeleteConfirmation(deletePrompt,
+            disposition switch {
+                ContentStorageDisposition.RetainManagedFiles => ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+                ContentStorageDisposition.DeleteOwnedManagedFiles => ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+                _ => throw new ArgumentOutOfRangeException(nameof(disposition))
+            })), () => cancelDelete.InvokeAsync(deletePrompt)))" />
 }
 
 @if (PendingTranscriptAction is { } transcript) {
@@ -153,8 +122,4 @@
     [Parameter, EditorRequired]
     public Func<ProjectLlmActionKind, string> ResolveTranscriptActionLabel { get; set; } = default!;
 
-    private static string ResolveDeletePromptAriaLabel(ProjectStructureDeletePrompt prompt)
-        => prompt.IsBulk
-            ? $"Delete {prompt.NodeIds.Count} selected nodes"
-            : $"Delete {prompt.Title}";
 }

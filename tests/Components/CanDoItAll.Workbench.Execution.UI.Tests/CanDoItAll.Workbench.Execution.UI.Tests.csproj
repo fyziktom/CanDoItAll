@@ -10,6 +10,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="bunit" Version="2.7.2" />
     <ProjectReference Include="../../../src/UI/CanDoItAll.Workbench.Execution.UI/CanDoItAll.Workbench.Execution.UI.csproj" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/CanDoItAll.Workbench.Execution.UiSandbox.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

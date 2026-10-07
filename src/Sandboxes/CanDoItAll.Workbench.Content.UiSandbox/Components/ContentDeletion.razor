@@ -1,0 +1,12 @@
+@page "/deletion"
+
+<PageTitle>Managed file disposition</PageTitle>
+<Stack GapScale="LayoutGap.Small" Class="content-scenarios">
+    <PageHeader Eyebrow="Independent content scenarios" Title="Managed file disposition"
+        Description="Actual confirmation renderer with synthetic prompts. No files or nodes are deleted." />
+    <ContentScenarioNavigation />
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+        <ContentDeletionSpecimen Name="First branch" />
+        <ContentDeletionSpecimen Name="Second branch" />
+    </Grid>
+</Stack>

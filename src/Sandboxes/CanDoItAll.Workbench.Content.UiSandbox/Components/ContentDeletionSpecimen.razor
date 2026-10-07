@@ -1,0 +1,35 @@
+<SurfaceCard data-testid="content-deletion-specimen">
+    <Cluster Gap="LayoutGap.Small">
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
+        <Button Text="Open confirmation" Click="Open" />
+        <Button Text="Admission failure" Click="Fail" />
+    </Cluster>
+    <div class="cw-stage-surface content-scenario-canvas">
+        @if (state is { } original) {
+            <ContentDeleteDialog CanvasScoped="true" State="original"
+                Actions="@(new(disposition => Confirm(original, disposition), () => Cancel(original)))" />
+        }
+    </div>
+    <TextBlock Value="@receipt" data-testid="content-deletion-receipt" />
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private ContentDeleteConfirmation? state;
+    private string receipt = "No scenario action.";
+    private void Open() => state = new(Name, "Two selected branches contain three managed files. Choose their disposition.", 2, 4, 3);
+    private void Fail() => state = new(Name, "The original project changed before admission.", 1, 0, 1, "The original project lifetime is no longer current.");
+    private Task Confirm(ContentDeleteConfirmation original, ContentStorageDisposition disposition) {
+        if (ReferenceEquals(state, original)) {
+            receipt = $"Synthetic original-prompt receipt: {disposition}. No native mutation.";
+            state = null;
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+    private Task Cancel(ContentDeleteConfirmation original) {
+        if (ReferenceEquals(state, original)) {
+            state = null;
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+}

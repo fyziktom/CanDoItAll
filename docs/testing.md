@@ -1212,3 +1212,25 @@ its Fast/Parity commands are documented in
 [the sandbox README](../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md).
 See [WB4's boundary and evidence record](architecture/workbench-content-wb4.md) for current
 proof and incomplete groups. Only 1920×1080/DPR1 is in the WB4 visual campaign.
+
+### Workbench Execution completion (WB6)
+
+The remaining Workflow and full Process staffing renderer family lives in
+`src/UI/CanDoItAll.Workbench.Execution.UI`. The actual nested picker/details/switch dialogs
+are in the same leaf. The native Workbench module retains authority, preparation, execution,
+accepted identities and durable cleanup receipts. Managed-file disposition belongs to
+Content.UI. See [the full census and boundary record](architecture/workbench-execution-ui.md).
+
+Build the native Workbench module and affected light leaf/sandbox first. Refresh the owning
+assemblies, then confirm discovery for `ProjectStructurePageWorkflowNodeTests`,
+`ProjectStructurePageProcessLaunchScopeTests`, `ProjectStructurePageProcessLinkTests`,
+`ProjectStructureProcessAssignmentDialogTests`, `ContentDeleteTests` and the independent
+Execution suite. The two existing Insights deletion-lifetime cases cover the original native
+prompt through the new Content renderer. PostgreSQL remains explicitly isolated.
+
+The Execution test project is included in Components/Stable and all explicit component CI
+selections. The independent host exposes `/workflow` and `/process`; the Content host adds
+`/deletion`. Use 1920x1080/DPR1 for this completion checkpoint. Provider fixtures, genuine
+model rehearsal, published asset checks, watch measurements and native recovery are separate
+proof lanes. A full Stable checkpoint is explicitly required by the WB6 package after source
+settles, without repeating the aggregate for each renderer phase.

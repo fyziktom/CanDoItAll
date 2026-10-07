@@ -268,6 +268,9 @@
   .start {
     inset-inline-start: var(--spacing);
   }
+  .start\! {
+    inset-inline-start: var(--spacing) !important;
+  }
   .end {
     inset-inline-end: var(--spacing);
   }
@@ -706,13 +709,6 @@
       --tw-space-y-reverse: 0;
       margin-block-start: calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));
       margin-block-end: calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
-  .space-y-5 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)));
     }
   }
   .gap-x-4 {
@@ -1323,12 +1319,6 @@
     --tw-shadow-color: color-mix(in srgb, oklch(92.9% 0.013 255.508) 60%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 60%, transparent) var(--tw-shadow-alpha), transparent);
-    }
-  }
-  .ring-emerald-400\/70 {
-    --tw-ring-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-ring-color: color-mix(in oklab, var(--color-emerald-400) 70%, transparent);
     }
   }
   .ring-sky-100 {

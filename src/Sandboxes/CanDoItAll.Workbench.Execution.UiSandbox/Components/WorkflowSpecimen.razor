@@ -1,6 +1,9 @@
 <SurfaceCard data-testid="execution-workflow-specimen">
     <Stack GapScale="LayoutGap.Small">
         <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
+        <DropDown TValue="ExecutionScenario" Data="@(Enum.GetValues<ExecutionScenario>())" @bind-Value="scenario"
+            Change="@(_ => ChangeScenario())" aria-label="Workflow scenario" Style="width:15rem" />
+        <TextBlock TextStyle="TextStyle.Note" Value="@ExecutionScenarioDescriptions.Describe(scenario)" data-testid="execution-scenario-description" />
         <Stack Orientation="Orientation.Horizontal" GapScale="LayoutGap.Small">
             <Button Text="Add workflow" Click="OpenAdd" />
             <Button Text="Review start" Click="OpenStart" />
@@ -28,6 +31,15 @@
     private WorkflowAddView? add;
     private WorkflowStartView? start;
     private string receipt = "No scenario action yet.";
+    private ExecutionScenario scenario;
+
+    private void ChangeScenario() {
+        if (start is not null) {
+            OpenStart();
+        } else {
+            OpenAdd();
+        }
+    }
 
     private void OpenAdd() {
         start = null;
@@ -36,6 +48,16 @@
             new(false, true, "{}", [new(WorkflowInputSourceKind.FilePath, "source", "Additional source", "")]),
             new([new("Project", Name, Enumerable.Range(1, 30).Select(i => new WorkflowPreviewRow($"Input {i}", $"Preserved synthetic value {i}")).ToArray())]),
             false, false, string.Empty);
+        add = scenario switch {
+            ExecutionScenario.Empty => add with { Options = [], SelectedWorkflowId = null, SelectedVersionId = null },
+            ExecutionScenario.Unavailable => add with { Options = add.Options.Select(option => option with { IsSelectable = false, DisabledReason = "Saved version unavailable." }).ToArray(), SelectedWorkflowId = null },
+            ExecutionScenario.Loading or ExecutionScenario.Pending => add with { IsBusy = true },
+            ExecutionScenario.Error => add with { Error = "Synthetic options read failed. Select Normal to retry." },
+            ExecutionScenario.InvalidInput => add with { InputSettings = add.InputSettings with { ManualInputJson = "{ invalid raw input" }, Error = "Manual input is not valid JSON." },
+            ExecutionScenario.Conflict => add with { RequiresObservation = true, Error = "The original source changed. Observe the retained original result." },
+            ExecutionScenario.Accepted or ExecutionScenario.ObservationRequired => add with { RequiresObservation = true, Error = "Original created identity retained; observation required." },
+            _ => add
+        };
     }
 
     private void OpenStart() {
@@ -44,6 +66,15 @@
             [new(new("attach-output"), "Attach output", "Preview without the selected structure write.", false)],
             WorkflowRuntimeBackendKind.InProcess, WorkflowRuntimeBackendKind.InProcess,
             [new(WorkflowRuntimeBackendKind.InProcess, "In process", true)], string.Empty, false, false, string.Empty);
+        start = scenario switch {
+            ExecutionScenario.Empty => start with { Status = null, SimulationOptions = [] },
+            ExecutionScenario.Unavailable => start with { BackendWarning = "The saved backend is unavailable in this synthetic host." },
+            ExecutionScenario.Loading or ExecutionScenario.Pending => start with { IsBusy = true },
+            ExecutionScenario.Error or ExecutionScenario.InvalidInput => start with { Error = "Synthetic original start was rejected before dispatch." },
+            ExecutionScenario.Conflict => start with { RequiresObservation = true, Error = "Source changed after original acceptance; observe original intent." },
+            ExecutionScenario.Accepted or ExecutionScenario.ObservationRequired => start with { RequiresObservation = true, Status = new("Accepted", 1, 2, "Original synthetic run identity retained.") },
+            _ => start
+        };
     }
 
     private WorkflowAddActions AddActions(Guid opening) => new(
@@ -63,7 +94,7 @@
             if (add?.OpeningId == opening) {
                 add = null;
             }
-            return Task.CompletedTask;
+            return InvokeAsync(StateHasChanged);
         });
 
     private WorkflowStartActions StartActions(Guid opening) => new(change => {
@@ -71,18 +102,18 @@
             start = current with { SimulationOptions = current.SimulationOptions.Select(option => option.NodeId == change.NodeId
                 ? option with { IsEnabled = change.IsEnabled } : option).ToArray() };
         }
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }, () => {
         if (start is { IsBusy: false } current && current.OpeningId == opening) {
             receipt = $"Scenario {(current.RequiresObservation ? "observation" : "start review")} from {opening:N}. No runtime dispatched.";
             start = current with { RequiresObservation = true };
         }
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }, () => {
         if (start?.OpeningId == opening) {
             start = null;
         }
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     });
 
     private Task ChangeSource(Guid opening, Func<WorkflowInputSourceView, WorkflowInputSourceView> update)
@@ -94,7 +125,7 @@
         if (add is { IsBusy: false, RequiresObservation: false } current && current.OpeningId == opening) {
             add = update(current);
         }
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private void ToggleBusy() {

@@ -14,6 +14,9 @@
         <Button Text="Accepted run" Click="OpenAccepted" />
     </Stack>
     <TextBlock TextStyle="TextStyle.Note" Value="@receipt" data-testid="execution-process-receipt" />
+    <DropDown TValue="ExecutionScenario" Data="@(Enum.GetValues<ExecutionScenario>())" @bind-Value="scenario"
+        aria-label="Process scenario" Style="width:15rem" />
+    <TextBlock TextStyle="TextStyle.Note" Value="@ExecutionScenarioDescriptions.Describe(scenario)" />
     <div class="execution-scenario-canvas">
         @if (link is { } currentLink) {
             <ProcessLinkDialog View="currentLink" Actions="@(new(id => SelectLink(id), SubmitLink, Close))" />
@@ -35,29 +38,37 @@
     private ProcessLinkView? link;
     private ProcessStartView? start;
     private bool staffing;
+    private ExecutionScenario scenario;
     private string receipt = "No scenario operation yet.";
 
     private void OpenLink() {
         start = null;
         link = new(Guid.NewGuid(), "Add process for Desktop scenario", "Selecting a saved definition does not execute it.", "Add process",
             [new(definitionId, "Document review", "Project", "Published", true)], definitionId, false, false, string.Empty);
+        link = scenario switch {
+            ExecutionScenario.Empty or ExecutionScenario.Unavailable => link with { Options = [], SelectedDefinitionId = null, Error = "No available published definition." },
+            ExecutionScenario.Loading or ExecutionScenario.Pending => link with { IsBusy = true },
+            ExecutionScenario.Error => link with { Error = "Synthetic read failure. Close and retry after choosing Normal." },
+            ExecutionScenario.Accepted or ExecutionScenario.ObservationRequired or ExecutionScenario.Conflict => link with { RequiresObservation = true, SubmitLabel = "Observe original link", Error = "Original native receipt requires observation." },
+            _ => link
+        };
     }
 
     private Task SelectLink(Guid id) {
         link = link! with { SelectedDefinitionId = id };
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task SubmitLink() {
         receipt = $"Scenario selected saved definition {link!.SelectedDefinitionId:D}; no native write.";
         OpenConfirm();
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private void OpenConfirm() {
         link = null;
         staffing = false;
-        start = View(2);
+        start = ScenarioView(2);
     }
 
     private void OpenStaffing() => OpenStaffing(false);
@@ -65,7 +76,7 @@
     private void OpenStaffing(bool longBody) {
         link = null;
         staffing = true;
-        start = View(longBody ? 24 : 2);
+        start = ScenarioView(longBody ? 24 : 2);
     }
 
     private void OpenAccepted() {
@@ -76,12 +87,12 @@
 
     private Task Continue() {
         staffing = true;
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task PrepareAnother() {
         OpenStaffing();
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task Review() {
@@ -92,27 +103,27 @@
             receipt = $"Scenario {start.ReviewLabel} for {start.OpeningId:D}; no runtime dispatched.";
             start = null;
         }
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task RequestHr() {
         start = start! with { ConfirmHrManagerMatch = true };
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task CancelHr() {
         start = start! with { ConfirmHrManagerMatch = false };
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task ConfirmHr() {
         start = start! with { ConfirmHrManagerMatch = false, StatusMessage = "Synthetic matching confirmed explicitly; no model called." };
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task OpenPicker(Guid roleId) {
         receipt = $"Directory requested for original role {roleId:D}.";
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task SelectCandidate(ProjectStructureProcessStartCandidateSelection selection) {
@@ -125,13 +136,27 @@
             StatusMessage = "Synthetic role changed. Review is required again."
         };
         receipt = $"Selected original candidate {selection.CandidateId:D} for role {selection.LaunchPlanRoleId:D}.";
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
     }
 
     private Task Close() {
         link = null;
         start = null;
-        return Task.CompletedTask;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private ProcessStartView ScenarioView(int count) {
+        var view = View(count);
+        return scenario switch {
+            ExecutionScenario.Empty => view with { Roles = [] },
+            ExecutionScenario.Unavailable => view with { Roles = view.Roles.Select(role => role with { IsResolved = false, Candidates = [], DirectoryCandidates = [] }).ToArray() },
+            ExecutionScenario.Loading or ExecutionScenario.Pending => view with { IsBusy = true, StatusMessage = "Waiting for original native operation." },
+            ExecutionScenario.Error or ExecutionScenario.InvalidInput => view with { Error = "Synthetic preparation failed before dispatch. No run exists." },
+            ExecutionScenario.Conflict => view with { Error = "Original source changed; prepare an explicit new intent after review.", CanPrepareAnother = true, PreviousLaunchNotice = "Original preparation retained." },
+            ExecutionScenario.Accepted => view with { ReviewPhase = ProcessReviewPhase.Accepted, StatusMessage = "Original accepted identity retained." },
+            ExecutionScenario.ObservationRequired => view with { ReviewPhase = ProcessReviewPhase.Accepted, StatusMessage = "Accepted run needs observation after readback failure; opening it never starts again." },
+            _ => view
+        };
     }
 
     private static ProcessStartView View(int count) {
