@@ -123,6 +123,11 @@ Follow the SharedInfo standard. In this repository in particular:
   identifier, schema, required-member, enum, media-type and security metadata of the documents before and
   after a change, and justify every difference with runtime evidence.
 
+The JSON-outline import's `SourceText` and additive `RequireSourceKeys` descriptions use
+`Description` attributes to document the structured source-identity contract without
+adding XML comments. The maintained [import identity contract](project-import-source-identity.md)
+defines validation, metadata and the non-atomic boundary after source validation.
+
 ## Account and section authority
 
 The [API-user operating contract](../api-user-access.md) defines the exposure truth table and credential kinds. HTTP management requires a live registered configured-administrator session; no subject, role, broad scope or loopback request substitutes for it. Ordinary business routes enforce their section capabilities and retain exact privileged and resource policies. The generated document uses actual endpoint authorization metadata for bearer requirements. The new access, workspace-settings and process-authoring contracts use explicit endpoint metadata and `Description` attributes without introducing XML comments. Numeric enum value descriptions are derived from the CLR enum so clients see the actual wire values.
