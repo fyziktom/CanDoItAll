@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T04:52:15.101055+00:00",
+  "generated_utc": "2026-10-07T15:19:17.432876+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15306,
+  "allowance_count": 15305,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7943,12 +7943,6 @@
       "path": "src/App/CanDoItAll.Web/appsettings.json",
       "category": "mcp",
       "source_fingerprint": "a9f95e5f99d20aa4775c64ab6d3a81273ef4d03f609ad287195cccf225c2f86b",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
-      "category": "windows-path",
-      "source_fingerprint": "e07498444469ad7bd98aff471827df7c424d8e55ca8d7e4873938aee6397ee31",
       "count": 1
     },
     {
