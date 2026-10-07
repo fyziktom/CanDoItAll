@@ -1,0 +1,122 @@
+@namespace CanDoItAll.Workbench.Execution.UI.Workflows
+@{
+    var workflowStart = View;
+    var actions = Actions;
+    var status = workflowStart.Status;
+
+}
+<div class="execution-workflow">
+    <CanvasOverlayDialog CanvasScoped="true"
+                                   AriaLabel="@workflowStart.Title"
+                                   Kicker="Workflow start"
+                                   Title="@workflowStart.Title"
+                                   Summary="@workflowStart.Copy"
+                                   DataTestId="project-structure-workflow-start-dialog"
+                                   Close="@(() => actions.Close())">
+        <Actions>
+            <Button Text="Cancel"
+                    Variant="Variant.Text"
+                    ButtonStyle="ButtonStyle.Base"
+                    Click="@(() => actions.Close())" />
+            <Button Text="@workflowStart.SubmitLabel"
+                    ButtonStyle="ButtonStyle.Success"
+                    data-testid="project-structure-workflow-start-submit"
+                    IsBusy="@workflowStart.IsBusy"
+                    Disabled="@workflowStart.IsBusy"
+                    Click="@(() => actions.Submit())" />
+        </Actions>
+        <Body>
+            <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Medium">
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow node" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@workflowStart.NodeTitle" />
+                        @if (status is not null) {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"{status.Status} / step {status.CurrentStepIndex} of {status.StepCount}")"
+                                       Class="cw-panel-copy" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@status.Message"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
+                <PanelCard>
+                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run backend" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                   Value="@workflowStart.RequestedBackend.ToString()" />
+                        <div class="cw-chip-row">
+                            <Pill Tone="PillTone.Neutral"
+                                  Text="@($"Definition: {workflowStart.PreferredBackend}")" />
+                            <Pill Tone="PillTone.Info"
+                                  Text="@($"Requested: {workflowStart.RequestedBackend}")" />
+                        </div>
+                        @if (workflowStart.BackendOptions.Count > 0) {
+                            <div class="cw-chip-row">
+                                @foreach (var backendOption in workflowStart.BackendOptions) {
+                                    <Pill Tone="@(backendOption.IsSelected ? PillTone.Ok : PillTone.Neutral)"
+                                          Text="@backendOption.Label" />
+                                }
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(workflowStart.BackendWarning)) {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@workflowStart.BackendWarning"
+                                       Class="cw-panel-copy" />
+                        }
+                    </Stack>
+                </PanelCard>
+
+                @if (workflowStart.SimulationOptions.Count > 0) {
+                    <PanelCard>
+                        <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Run Preview" />
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="Skip selected project-structure write steps during this preview run."
+                                       Class="cw-panel-copy" />
+                            @foreach (var option in workflowStart.SimulationOptions) {
+                                <label class="project-structure-checkbox-row">
+                                    <input type="checkbox"
+                                           checked="@option.IsEnabled"
+                                           disabled="@(workflowStart.IsBusy || workflowStart.RequiresObservation)"
+                                           data-testid="@($"project-structure-workflow-start-simulate-{NormalizeTestIdToken(option.NodeId.Value)}")"
+                                           @onchange="args => actions.Simulation(new WorkflowSimulationChange(option.NodeId, ParseCheckboxValue(args)))" />
+                                    <span>@option.NodeName: @option.Description</span>
+                                </label>
+                            }
+                        </Stack>
+                    </PanelCard>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(workflowStart.Error)) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="project-structure-workflow-start-error">
+                        @workflowStart.Error
+                    </Alert>
+                }
+            </Stack>
+        </Body>
+    </CanvasOverlayDialog>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public WorkflowStartView View { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public WorkflowStartActions Actions { get; set; } = default!;
+
+    private static string NormalizeTestIdToken(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? "primary"
+            : value.Trim().ToLowerInvariant().Replace(':', '-');
+
+    private static bool ParseCheckboxValue(ChangeEventArgs args)
+        => args.Value switch {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => false
+        };
+
+}

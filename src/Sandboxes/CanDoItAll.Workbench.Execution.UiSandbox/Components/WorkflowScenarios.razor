@@ -1,0 +1,12 @@
+@page "/"
+@page "/workflow"
+
+<PageTitle>Workbench execution scenarios</PageTitle>
+<Stack GapScale="LayoutGap.Small" Class="execution-scenarios">
+    <PageHeader Eyebrow="Independent execution UI scenarios" Title="Workflow inputs and start review"
+        Description="Actual presentation components with synthetic in-memory state. These scenarios do not execute a Workflow or call a model." />
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+        <WorkflowSpecimen Name="First view" />
+        <WorkflowSpecimen Name="Second view" />
+    </Grid>
+</Stack>

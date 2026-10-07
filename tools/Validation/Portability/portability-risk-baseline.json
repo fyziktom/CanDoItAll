@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-06T20:04:40.100054+00:00",
+  "generated_utc": "2026-10-07T01:28:05.030673+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15287,
+  "allowance_count": 15291,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -59168,12 +59168,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
-      "category": "case-policy",
-      "source_fingerprint": "1d2124695e6c433fc8b5533f8ff3469d80bb5634fb43df99c825b0bb44ae103c",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasTaskDialogCoordinator.cs",
       "category": "case-policy",
       "source_fingerprint": "4f47bf6a4662a759222af6c80331babd86a34379ae285507266024cb9228d160",
@@ -65291,6 +65285,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowNodeService.cs",
       "category": "case-policy",
       "source_fingerprint": "c2535ab975503bdb01b80098e4f7e255939e2adf00345654762c88bd5deb7ec6",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureWorkflowPresentation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "309c5826fa89c679bfc4a9ada4700d9d90056b2dbd140ae64bd3fcdf1801184a",
       "count": 1
     },
     {
@@ -72281,6 +72281,30 @@
       "path": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/README.md",
       "category": "windows-executable",
       "source_fingerprint": "4ce33c07d0fafa244969907f441d4bdb733cf770e0f937a5ee99f39e951ab045",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/ExecutionWatchState.cs",
+      "category": "environment",
+      "source_fingerprint": "a4168475809fd027b3872102fad4b393ea503b6c8a93f321e07fde3aaa073353",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/ExecutionWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "08509719464ebe3e8008eb12bdcef8d8a299cf3a43ff07cd0b8e7b8370e838af",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/ExecutionWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "46adb705b951b845d8eed03a3b33fca8da9db0e123850fb0243fb2924174faa8",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/ExecutionWatchState.cs",
+      "category": "mcp",
+      "source_fingerprint": "cd5951013d976b0130b42aa2d973f77ab4ea51f14d832e3f6e4bb3d9703e78ae",
       "count": 1
     },
     {

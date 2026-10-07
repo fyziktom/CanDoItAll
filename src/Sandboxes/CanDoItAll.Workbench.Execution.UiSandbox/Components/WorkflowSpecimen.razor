@@ -1,0 +1,117 @@
+<SurfaceCard data-testid="execution-workflow-specimen">
+    <Stack GapScale="LayoutGap.Small">
+        <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
+        <Stack Orientation="Orientation.Horizontal" GapScale="LayoutGap.Small">
+            <Button Text="Add workflow" Click="OpenAdd" />
+            <Button Text="Review start" Click="OpenStart" />
+            <Button Text="Toggle busy" Click="ToggleBusy" />
+            <Button Text="Unknown result" Click="Unknown" />
+        </Stack>
+        <TextBlock TextStyle="TextStyle.Note" Value="@receipt" data-testid="execution-workflow-receipt" />
+    </Stack>
+    <div class="execution-scenario-canvas">
+        @if (add is { } input) {
+            <WorkflowAddDialog @key="input.OpeningId" View="input" Actions="@AddActions(input.OpeningId)" />
+        }
+        @if (start is { } run) {
+            <WorkflowStartDialog @key="run.OpeningId" View="run" Actions="@StartActions(run.OpeningId)" />
+        }
+    </div>
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    private readonly WorkflowId workflowId = WorkflowId.New();
+    private readonly WorkflowVersionId versionId = WorkflowVersionId.New();
+    private WorkflowAddView? add;
+    private WorkflowStartView? start;
+    private string receipt = "No scenario action yet.";
+
+    private void OpenAdd() {
+        start = null;
+        add = new(Guid.NewGuid(), Name, [new(workflowId, versionId, "Artifact review", "Saved synthetic Workflow choice",
+            WorkflowLifecycleStatus.Active, WorkflowRuntimeBackendKind.InProcess, true, string.Empty)], workflowId, versionId,
+            new(false, true, "{}", [new(WorkflowInputSourceKind.FilePath, "source", "Additional source", "")]),
+            new([new("Project", Name, Enumerable.Range(1, 30).Select(i => new WorkflowPreviewRow($"Input {i}", $"Preserved synthetic value {i}")).ToArray())]),
+            false, false, string.Empty);
+    }
+
+    private void OpenStart() {
+        add = null;
+        start = new(Guid.NewGuid(), Name, new("Ready", 0, 2, "Original saved Workflow version"),
+            [new(new("attach-output"), "Attach output", "Preview without the selected structure write.", false)],
+            WorkflowRuntimeBackendKind.InProcess, WorkflowRuntimeBackendKind.InProcess,
+            [new(WorkflowRuntimeBackendKind.InProcess, "In process", true)], string.Empty, false, false, string.Empty);
+    }
+
+    private WorkflowAddActions AddActions(Guid opening) => new(
+        id => ChangeAdd(opening, view => view with { SelectedWorkflowId = id }),
+        enabled => ChangeAdd(opening, view => view with { InputSettings = view.InputSettings with { IncludeParentSubtree = enabled } }),
+        enabled => ChangeAdd(opening, view => view with { InputSettings = view.InputSettings with { IncludeAssets = enabled } }),
+        text => ChangeAdd(opening, view => view with { InputSettings = view.InputSettings with { ManualInputJson = text } }),
+        kind => ChangeSource(opening, source => source with { Kind = kind }),
+        key => ChangeSource(opening, source => source with { Key = key }),
+        label => ChangeSource(opening, source => source with { Label = label }),
+        value => ChangeSource(opening, source => source with { Value = value }),
+        () => ChangeAdd(opening, view => {
+            receipt = $"Scenario submit from {opening:N}; raw JSON: {view.InputSettings.ManualInputJson}";
+            return view with { RequiresObservation = true, Error = "Synthetic receipt retained. No native write was performed." };
+        }),
+        () => {
+            if (add?.OpeningId == opening) {
+                add = null;
+            }
+            return Task.CompletedTask;
+        });
+
+    private WorkflowStartActions StartActions(Guid opening) => new(change => {
+        if (start is { IsBusy: false, RequiresObservation: false } current && current.OpeningId == opening) {
+            start = current with { SimulationOptions = current.SimulationOptions.Select(option => option.NodeId == change.NodeId
+                ? option with { IsEnabled = change.IsEnabled } : option).ToArray() };
+        }
+        return Task.CompletedTask;
+    }, () => {
+        if (start is { IsBusy: false } current && current.OpeningId == opening) {
+            receipt = $"Scenario {(current.RequiresObservation ? "observation" : "start review")} from {opening:N}. No runtime dispatched.";
+            start = current with { RequiresObservation = true };
+        }
+        return Task.CompletedTask;
+    }, () => {
+        if (start?.OpeningId == opening) {
+            start = null;
+        }
+        return Task.CompletedTask;
+    });
+
+    private Task ChangeSource(Guid opening, Func<WorkflowInputSourceView, WorkflowInputSourceView> update)
+        => ChangeAdd(opening, view => view with { InputSettings = view.InputSettings with {
+            AdditionalSources = [update(view.InputSettings.AdditionalSources[0]), .. view.InputSettings.AdditionalSources.Skip(1)]
+        } });
+
+    private Task ChangeAdd(Guid opening, Func<WorkflowAddView, WorkflowAddView> update) {
+        if (add is { IsBusy: false, RequiresObservation: false } current && current.OpeningId == opening) {
+            add = update(current);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void ToggleBusy() {
+        if (add is not null) {
+            add = add with { IsBusy = !add.IsBusy };
+        }
+        if (start is not null) {
+            start = start with { IsBusy = !start.IsBusy };
+        }
+    }
+
+    private void Unknown() {
+        if (add is not null) {
+            add = add with { RequiresObservation = true, Error = "The original effect is unconfirmed." };
+        }
+        if (start is not null) {
+            start = start with { RequiresObservation = true, Error = "Observe the original start." };
+        }
+    }
+}

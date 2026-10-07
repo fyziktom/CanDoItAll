@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Execution.UI/CanDoItAll.Workbench.Execution.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workbench.Structure.UI/CanDoItAll.Workbench.Structure.UI.csproj" />

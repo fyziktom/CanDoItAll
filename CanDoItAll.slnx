@@ -4,6 +4,7 @@
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/CanDoItAll.Workbench.Insights.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/CanDoItAll.Workbench.Structure.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/CanDoItAll.Workbench.Content.UiSandbox.csproj" />
+    <Project Path="src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/CanDoItAll.Workbench.Execution.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/CanDoItAll.Workbench.Operators.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
     <Project Path="src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox.csproj" />
@@ -62,6 +63,7 @@
     <Project Path="src/UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workbench.Structure.UI/CanDoItAll.Workbench.Structure.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj" />
+    <Project Path="src/UI/CanDoItAll.Workbench.Execution.UI/CanDoItAll.Workbench.Execution.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.Workbench.Operators.UI/CanDoItAll.Workbench.Operators.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.csproj" />
     <Project Path="src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.csproj" />

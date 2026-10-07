@@ -1,0 +1,36 @@
+.execution-workflow ::deep .project-structure-workflow-add-dialog {
+    width: min(74rem, calc(100% - 3rem));
+}
+
+.execution-workflow ::deep .project-structure-workflow-add-dialog__body {
+    min-height: 0;
+    overflow: auto;
+}
+
+.project-structure-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2rem;
+}
+
+.project-structure-checkbox-row input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #2563eb;
+}
+
+.project-structure-facts-list {
+    display: grid;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.project-structure-fact-row {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr);
+    gap: 0.75rem;
+    padding-block: 0.4rem;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-wrap: anywhere;
+}

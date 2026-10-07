@@ -59,3 +59,12 @@ All browser evidence uses 1920 by 1080 pixels at DPR 1. Keep deterministic evide
 from genuine-model runs. Recovery preserves the data-protection keys, storage catalog and
 original host-binding identity together with the database. Closure requires the final
 native candidate, repeated recovery, signed source commits and the Czech operator runbook.
+
+## Workflow checkpoint
+
+The Workflow add and start forms now render in the Execution library. The native adapter
+preserves full input state, uses typed Workflow identities and captures callbacks for each
+opening. Independent renderer tests passed 5/5; the native Workflow lifetime suite passed
+26/26. Two desktop scenario views preserve independent raw input and observation state.
+The sandbox requires Development for the source-assets loop; published assets are validated
+separately at final closure. Process and final candidate proof remain in progress.

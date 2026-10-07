@@ -1,0 +1,12 @@
+.project-structure-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2rem;
+}
+
+.project-structure-checkbox-row input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #2563eb;
+}
