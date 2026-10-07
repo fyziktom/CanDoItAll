@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-07T11:06:21.235789+00:00",
+  "scope": "Normal 5032 development instance; original frozen WB6 candidate remains separate.",
+  "productionCommit": "166f747afb3d5f98fbe552e03e81cedce2a480d8",
+  "productionSignatureVerified": true,
+  "dependencies": {
+    "CanDoItAll.Components": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+    "CanDoItAll.FileTools": "3a080ecd31068a77c1e1bd639f7a78e21c93db85"
+  },
+  "sourceFiles": {
+    "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor": {
+      "bytes": 154687,
+      "sha256": "c61c8f1bbe4808376cca99c89eeab8b12744cdb06d348d0c12f434be5d872bfb"
+    },
+    "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessLinkDialog.razor": {
+      "bytes": 4900,
+      "sha256": "a1e99e7c4ec6f4d1b37a1663e2b4b2b7c598af6230bc8df333f0605d8ef5173d"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs": {
+      "bytes": 258392,
+      "sha256": "e92a4d9ffcd844321f3e3821bebb6cb137d10ba02566940cc072eab9073ff816"
+    },
+    "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.LiveRefresh.cs": {
+      "bytes": 5222,
+      "sha256": "41f6e89a8f0e996133399d1702a010ae4003c71076d5dc137106305bf097bf5c"
+    }
+  },
+  "externalSampleFiles": {
+    "Tetris3.Client/App.razor": {
+      "bytes": 2961,
+      "sha256": "68e92b7bfab6f34e347ecb585071fe955d458ed0cd94eb10f1efce1a7bede9b6"
+    },
+    "Tetris3.Client/Game/GameState.cs": {
+      "bytes": 3646,
+      "sha256": "7c6af3e8751f2713b5f749abf2f40bdd341061ed057872a93c9e3dec832db5ad"
+    },
+    "Tetris3.Client/Mini.razor": {
+      "bytes": 297,
+      "sha256": "6b503fc7904a158f0076c1bb5fa739988fc988fad3dec43c690028ef8034e677"
+    },
+    "Tetris3.Client/wwwroot/app.css": {
+      "bytes": 2411,
+      "sha256": "f5b7493bae9f517ec4684ecf5e054f16ed7b82358caaa8f106a68564d2921a07"
+    },
+    "Tetris3.Client.Tests/GameStateTests.cs": {
+      "bytes": 1584,
+      "sha256": "4fff0fa02d8901c99095e6956900eb73c36fdce9e29ef092aac5070bf80a8e24"
+    },
+    "Tetris3.Client.Tests/RotationTests.cs": {
+      "bytes": 2153,
+      "sha256": "993b05f0e2b87401d6cfd0e5dc37a117900fca063c74e1afa20492626ffb7a05"
+    }
+  },
+  "externalSampleProvenance": {
+    "agentRepair": [
+      "Tetris3.Client/App.razor",
+      "Tetris3.Client/Game/GameState.cs",
+      "Tetris3.Client.Tests/GameStateTests.cs"
+    ],
+    "codexRepair": [
+      "Tetris3.Client/Game/GameState.cs",
+      "Tetris3.Client/Mini.razor",
+      "Tetris3.Client/wwwroot/app.css",
+      "Tetris3.Client.Tests/RotationTests.cs"
+    ],
+    "location": "Existing Tetris3 output directory; not a Git repository. Source archives and these hashes preserve the exact files."
+  },
+  "checks": {
+    "processRefreshRegressions": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "processRenderersAndBoundaries": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "tetrisIndependentTests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "portability": "PASS: 15306 reviewed executable-source findings unchanged; no baseline rewrite.",
+    "viewport": {
+      "width": 1920,
+      "height": 1080,
+      "dpr": 1
+    }
+  },
+  "genuineModelCases": {
+    "image": {
+      "status": "PASS",
+      "operationId": "c9ce7c1e-c373-4d03-9def-af8edac54302",
+      "model": "gpt-image-2",
+      "sha256": "9638b63479306f08120c44d54ce25eaf752504fafd9c38e837ac7f68ed1e243d"
+    },
+    "simpleProcess": {
+      "status": "PASS",
+      "runId": "61fc069e-65c5-4fb9-9c1c-4bc45c092dab",
+      "completedSteps": 2,
+      "totalSteps": 2,
+      "model": "gpt-5.6-terra"
+    },
+    "blazorProcess": {
+      "status": "CANCELLED_INCOMPLETE",
+      "runId": "cc75386b-e027-4661-8150-dfa6486fe2f7",
+      "reason": "Conservative call-budget guard; active/cancelled usage is incomplete. Independent QA did not finish. No success claim."
+    }
+  },
+  "privateEvidenceDirectory": "artifacts/manual-5032-repair-20261007",
+  "proofFiles": {
+    "live-refresh-04.trx": {
+      "bytes": 12516,
+      "sha256": "3b8aef6a60097b5121513550f32726f65a6b2375650b8c342b906ae7862c794a"
+    },
+    "execution-ui.trx": {
+      "bytes": 12658,
+      "sha256": "824fc63472e52e1a6340ebcccd2888151389db3187ac72a15fb8d7fc35c71c06"
+    },
+    "tetris-codex.trx": {
+      "bytes": 9796,
+      "sha256": "2b82dc7c6454cb835004b4874c3ede8e42063b4ce023d88b0a9e49ab6bfba0f8"
+    },
+    "browser-proof-final.json": {
+      "bytes": 2904,
+      "sha256": "8859c3ced87a3469a0028f99bbebb2667b197d94c8ab55601553d1e6145fb69a"
+    },
+    "genuine-model-ledger.json": {
+      "bytes": 3516,
+      "sha256": "77c7d4bed0d483827e44e63d5633c35eb07391cd5f4e31457a4d3188fb6fac55"
+    },
+    "tetris3-before-rehearsal.zip": {
+      "bytes": 7918,
+      "sha256": "79330af216714ac3d2be775be982debe09931a34431acca6eda39ac3d32db058"
+    },
+    "tetris3-after-agent-before-rotation.zip": {
+      "bytes": 8065,
+      "sha256": "bca0e948f21f9d5b15f0099e0b5fd1a17cd71c4475c6b55ae8e4354b8996f691"
+    },
+    "tetris3-final-desktop.zip": {
+      "bytes": 8995,
+      "sha256": "e206897570cf79c5d06d832d9bcf887b452ffeeadd0b78dddefdb9d064ea16a5"
+    },
+    "native-proof-preserved.zip": {
+      "bytes": 920390,
+      "sha256": "2fca5a95f99a6067045205c320886f0c08efc1ce311713aa0b0d38d5f8cb7fcc"
+    },
+    "final-image-preview.png": {
+      "bytes": 385540,
+      "sha256": "d93456f5b441a6e4d959efeb64461a5484c1e090e3c70318b5c4647eedfacee1"
+    },
+    "final-note-completed.png": {
+      "bytes": 228763,
+      "sha256": "d484782dba9c2976666e3ba27dc576077d7d882223c312cc495a02dab803d1fe"
+    },
+    "tetris-final-desktop.png": {
+      "bytes": 302410,
+      "sha256": "1132cc4b41a395a7c2f2b9d0a2cacdcef8141891d2cb52a902035a04c2d483a3"
+    }
+  }
+}
