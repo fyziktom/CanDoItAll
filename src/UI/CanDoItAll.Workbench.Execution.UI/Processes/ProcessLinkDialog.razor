@@ -45,7 +45,7 @@
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected process" />
                             <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selectedOption.DisplayName" />
                             <TextBlock TextStyle="TextStyle.Note"
-                                       Value="@($"{selectedOption.ScopeLabel} scope â€˘ {selectedOption.Status}")"
+                                       Value="@($"{selectedOption.ScopeLabel} scope · {selectedOption.Status}")"
                                        Class="cw-panel-copy" />
                             @if (!selectedOption.HasPublishedVersion) {
                                 <TextBlock TextStyle="TextStyle.Note"
