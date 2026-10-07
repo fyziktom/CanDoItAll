@@ -29,7 +29,7 @@
     height: var(--structure-canvas-height, calc(100dvh - 8rem)) !important;
 }
 
-.project-structure-page ::deep .cw-workbench-frame:has(.project-structure-preview-backdrop) .cw-stage-surface {
+.project-structure-page ::deep .cw-workbench-frame:has(.canvas-overlay-backdrop--canvas) .cw-stage-surface {
     z-index: 700;
 }
 

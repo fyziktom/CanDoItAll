@@ -157,6 +157,9 @@ public sealed record ProjectStructureWorkflowAddDialogState(
     string Error)
 {
     public ProjectStructureSurface? OpenedSurface { get; init; }
+    public Guid OpeningId { get; init; }
+    public bool IsBusy { get; init; }
+    public bool RequiresObservation { get; init; }
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 
     public string Title => $"Add workflow for {ParentNodeTitle}";
@@ -181,13 +184,16 @@ public sealed record ProjectStructureWorkflowStartDialogState(
 {
     public Guid ProjectId { get; init; }
     public Guid IntentId { get; init; }
+    public Guid OpeningId { get; init; }
+    public bool RequiresObservation { get; init; }
+    internal ProjectStructureWorkflowNodeStartResult? AcceptedStart { get; init; }
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 
     public string Title => $"Start {NodeTitle}";
 
     public string Copy => "Confirm the workflow start. The workflow definition owns its execution settings, so this starts directly without resource matching.";
 
-    public string SubmitLabel => "Start workflow";
+    public string SubmitLabel => RequiresObservation ? "Observe original start" : "Start workflow";
 }
 
 public sealed record ProjectStructureWorkflowStartSimulationChange(

@@ -407,6 +407,7 @@ public partial class ProjectStructurePage
         if (workflowAddDialog is not null)
         {
             builder.Append("|workflow-add:")
+                .Append(workflowAddDialog.OpeningId).Append(':').Append(workflowAddDialog.IsBusy).Append(':').Append(workflowAddDialog.RequiresObservation).Append(':')
                 .Append(workflowAddDialog.ParentNodeId)
                 .Append(':')
                 .Append(workflowAddDialog.SelectedWorkflowId?.ToString() ?? string.Empty)
@@ -449,6 +450,7 @@ public partial class ProjectStructurePage
         if (workflowStartDialog is not null)
         {
             builder.Append("|workflow-start:")
+                .Append(workflowStartDialog.OpeningId).Append(':').Append(workflowStartDialog.RequiresObservation).Append(':')
                 .Append(workflowStartDialog.NodeId)
                 .Append(':')
                 .Append(workflowStartDialog.IsBusy)

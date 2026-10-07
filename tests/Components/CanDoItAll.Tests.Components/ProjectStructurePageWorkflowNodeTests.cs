@@ -18,7 +18,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePageWorkflowNodeTests
+public sealed partial class ProjectStructurePageWorkflowNodeTests
 {
     private const string ManualInputJson = "{\"reviewMode\":\"strict\"}";
     private const string SourcePath = "C:\\specs\\canvas-interactions.md";
@@ -228,6 +228,8 @@ public sealed class ProjectStructurePageWorkflowNodeTests
 
     private sealed class WorkflowReadGate {
         public bool Armed { get; set; }
+        public Exception? Failure { get; set; }
+        public Func<bool>? IsReady { get; set; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
@@ -236,10 +238,13 @@ public sealed class ProjectStructurePageWorkflowNodeTests
         public WorkbenchDbContext CreateDbContext() => inner.CreateDbContext();
 
         public async Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
-            if (gate.Armed) {
+            if (gate.Armed && (gate.IsReady?.Invoke() ?? true)) {
                 gate.Armed = false;
                 gate.Entered.TrySetResult();
                 await gate.Release.Task.WaitAsync(cancellationToken);
+                if (gate.Failure is { } failure) {
+                    throw failure;
+                }
             }
             return await inner.CreateDbContextAsync(cancellationToken);
         }

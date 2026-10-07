@@ -1,8 +1,9 @@
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject, CreateNode, EditNode, CopyNodes, MoveNodes, ConnectNodes, DisconnectNodes, RecomposeNodes, SummaryStatus, ExportWorkbook, ExportGantt, ExportCanvasImage, CreateTranscript, TranscriptAnalysis, GenerateImage }
+internal enum ProjectStructureAuthoringOperation { AddSubproject, ReconnectSubproject, ConvertNode, TransferDescendants, CreateProject, CreateNode, EditNode, CopyNodes, MoveNodes, ConnectNodes, DisconnectNodes, RecomposeNodes, SummaryStatus, ExportWorkbook, ExportGantt, ExportCanvasImage, CreateTranscript, TranscriptAnalysis, GenerateImage, AddWorkflow, StartWorkflow }
 internal enum ProjectStructureAuthoringResultKind { Rejected, Committed, Unconfirmed, Compensated, PartialCommit }
 internal enum ProjectStructureExternalEffectState { NotStarted, Dispatched, Completed }
 
@@ -30,4 +31,8 @@ internal sealed record ProjectStructureAuthoringOutcome(
     public ProjectStructureExternalEffectState ExternalEffect { get; init; }
     public Guid? ProviderId { get; init; }
     public ProjectStructureContentMediaReceipt? StoredMedia { get; init; }
+    public WorkflowId? WorkflowId { get; init; }
+    public WorkflowVersionId? WorkflowVersionId { get; init; }
+    public ProjectStructureWorkflowNodeStartResult? WorkflowStart { get; init; }
+    public ProjectStructureTaskAttachmentFailureFacts? WorkflowAttachmentFailure { get; init; }
 }

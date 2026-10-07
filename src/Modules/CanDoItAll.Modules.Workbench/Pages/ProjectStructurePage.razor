@@ -147,6 +147,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                             @{
                                 var quickOpening = quickActionDialog;
                                 var webOpening = webPreviewDialog;
+                                var addWorkflowOpening = workflowAddOpening;
+                                var startWorkflowOpening = workflowStartOpening;
                             }
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs RenderProcessStartDialog="false"
@@ -155,20 +157,20 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                                            ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
                                                            ExecuteProcessLink="ExecuteProcessLinkAsync"
                                                            WorkflowAddDialog="@workflowAddDialog"
-                                                           CloseWorkflowAdd="CloseWorkflowAddDialog"
-                                                           WorkflowAddSelectionChanged="HandleWorkflowAddSelectionChanged"
-                                                           WorkflowAddIncludeParentSubtreeChanged="HandleWorkflowAddIncludeParentSubtreeChanged"
-                                                           WorkflowAddIncludeAssetsChanged="HandleWorkflowAddIncludeAssetsChanged"
-                                                           WorkflowAddManualInputChanged="HandleWorkflowAddManualInputChanged"
-                                                           WorkflowAddSourceKindChanged="HandleWorkflowAddSourceKindChanged"
-                                                           WorkflowAddSourceKeyChanged="HandleWorkflowAddSourceKeyChanged"
-                                                           WorkflowAddSourceLabelChanged="HandleWorkflowAddSourceLabelChanged"
-                                                           WorkflowAddSourceValueChanged="HandleWorkflowAddSourceValueChanged"
-                                                           ExecuteWorkflowAdd="ExecuteWorkflowAddAsync"
+                                                           CloseWorkflowAdd="@(() => ChangeAuthoringDialog(addWorkflowOpening, workflowAddOpening, CloseWorkflowAddDialog))"
+                                                           WorkflowAddSelectionChanged="@(id => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSelectionChanged(id)))"
+                                                           WorkflowAddIncludeParentSubtreeChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddIncludeParentSubtreeChanged(args)))"
+                                                           WorkflowAddIncludeAssetsChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddIncludeAssetsChanged(args)))"
+                                                           WorkflowAddManualInputChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddManualInputChanged(args)))"
+                                                           WorkflowAddSourceKindChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceKindChanged(args)))"
+                                                           WorkflowAddSourceKeyChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceKeyChanged(args)))"
+                                                           WorkflowAddSourceLabelChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceLabelChanged(args)))"
+                                                           WorkflowAddSourceValueChanged="@(args => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSourceValueChanged(args)))"
+                                                           ExecuteWorkflowAdd="@(() => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, ExecuteWorkflowAddAsync))"
                                                            WorkflowStartDialog="@workflowStartDialog"
-                                                           CloseWorkflowStart="CloseWorkflowStartDialog"
-                                                           WorkflowStartSimulationChanged="HandleWorkflowStartSimulationChanged"
-                                                           ExecuteWorkflowStart="ExecuteWorkflowStartAsync"
+                                                           CloseWorkflowStart="@(() => ChangeAuthoringDialog(startWorkflowOpening, workflowStartOpening, CloseWorkflowStartDialog))"
+                                                           WorkflowStartSimulationChanged="@(change => ChangeAuthoringDialog(startWorkflowOpening, workflowStartOpening, () => HandleWorkflowStartSimulationChanged(change)))"
+                                                           ExecuteWorkflowStart="@(() => DispatchAuthoringDialogAsync(startWorkflowOpening, workflowStartOpening, ExecuteWorkflowStartAsync))"
                                                            ProcessStartDialog="@processStartDialog"
             CloseProcessStart="CloseProcessStartDialog"
             ExecuteProcessStart="ExecuteProcessStartAsync"
@@ -446,6 +448,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             CancelRuntimePreviewWait();
             CloseProcessStartDialog();
             CloseProcessLinkDialog();
+            CloseWorkflowAddDialog();
+            CloseWorkflowStartDialog();
             actionNavigationRevision++;
             partySession?.Retire();
             partySession = null;

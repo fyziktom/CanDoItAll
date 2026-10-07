@@ -60,7 +60,7 @@ public partial class ProjectStructurePage {
         return true;
     }
 
-    private void RecordAuthoringOutcome(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOutcome outcome) {
+    private void RecordAuthoringOutcome(ProjectStructureAuthoringOpening opening, ProjectStructureAuthoringOutcome outcome, bool publish = true) {
         authoringOutcomes.Enqueue(outcome);
         while (authoringOutcomes.Count > 16) {
             authoringOutcomes.Dequeue();
@@ -69,7 +69,7 @@ public partial class ProjectStructurePage {
             Logger.LogWarning(failure, "Structure {Operation} for project {ProjectId}, lifetime {LifetimeId}, opening {OpeningId}, submission {SubmissionId}: {Outcome}.",
                 outcome.Operation, outcome.Project.ProjectId, outcome.Project.LifetimeId, outcome.OpeningId, outcome.SubmissionId, outcome.Kind);
         }
-        if (!deferredCompletionCts.IsCancellationRequested && ReferenceEquals(opening.Context.Actor, InsightsAuthentication) &&
+        if (publish && !deferredCompletionCts.IsCancellationRequested && ReferenceEquals(opening.Context.Actor, InsightsAuthentication) &&
             surface?.ExpectedProjectAdmission?.DatabaseProfileId == outcome.Project.DatabaseProfileId) {
             ReportActionResult(opening.Context, outcome.Message,
                 outcome.Kind == ProjectStructureAuthoringResultKind.Committed ? "mint" : "warn");
@@ -80,6 +80,12 @@ public partial class ProjectStructurePage {
         => deferredCompletionCts.IsCancellationRequested ? Task.CompletedTask : InvokeAsync(StateHasChanged);
 
     private void RetireInactiveAuthoring() {
+        if (workflowAddOpening is { } workflowAdd && !IsCurrentAction(workflowAdd.Context)) {
+            CloseWorkflowAddDialog();
+        }
+        if (workflowStartOpening is { } workflowStart && !IsCurrentAction(workflowStart.Context)) {
+            CloseWorkflowStartDialog();
+        }
         RetireImageAuthorities();
         if (runtimePreviewWait is { } wait && !IsCurrentRuntimeObservation(wait)) {
             CancelRuntimePreviewWait();
@@ -139,7 +145,7 @@ public partial class ProjectStructurePage {
             RecordAuthoringOutcome(opening, outcome with {
                 Message = $"{outcome.Message} The accepted change could not be refreshed. Reload the original project; do not repeat the write.",
                 Failure = exception
-            });
+            }, IsCurrentAction(opening.Context) && canPublish());
         }
     }
 

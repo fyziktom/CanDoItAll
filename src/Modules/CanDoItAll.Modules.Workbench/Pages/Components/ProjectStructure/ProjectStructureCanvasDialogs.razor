@@ -101,7 +101,8 @@
             <Button Text="@workflowDialog.SubmitLabel"
                     ButtonStyle="ButtonStyle.Info"
                     data-testid="project-structure-workflow-add-submit"
-                    Disabled="@(workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
+                    IsBusy="@workflowDialog.IsBusy"
+                    Disabled="@(workflowDialog.IsBusy || workflowDialog.RequiresObservation || workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
                     Click="ExecuteWorkflowAdd" />
         </Actions>
         <Body>
@@ -267,7 +268,6 @@
             <Button Text="Cancel"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
-                    Disabled="@workflowStart.IsBusy"
                     Click="CloseWorkflowStart" />
             <Button Text="@workflowStart.SubmitLabel"
                     ButtonStyle="ButtonStyle.Success"
