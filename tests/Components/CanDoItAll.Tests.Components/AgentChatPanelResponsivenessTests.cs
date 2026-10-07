@@ -1074,6 +1074,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         context.Services.AddSingleton(DispatchProxy.Create<IAgentVoiceService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IAgentChatAttachmentStagingService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
+        context.Services.AddSingleton(DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IPromptGalleryService, UnexpectedCallProxy>());
         return context;
     }

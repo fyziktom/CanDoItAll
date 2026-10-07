@@ -64,6 +64,9 @@ public partial class AgentChatPanel : IAsyncDisposable {
     public IFloatingAgentChatCoordinator FloatingChatCoordinator { get; set; } = default!;
 
     [Inject]
+    public IAgentChatLauncher ChatLauncher { get; set; } = default!;
+
+    [Inject]
     public IAgentChatExecutionOrchestrator ChatExecutionOrchestrator { get; set; } = default!;
 
     [Inject]
@@ -265,7 +268,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         isBusy = true;
         try {
             if (handle.HasValue) {
-                await FloatingChatCoordinator.StartNewChatAsync(agentId);
+                await ChatLauncher.StartNewChatAsync(agentId);
                 return;
             }
             var created = await WorkspaceService.GetOrCreateChatSessionAsync(agentId);

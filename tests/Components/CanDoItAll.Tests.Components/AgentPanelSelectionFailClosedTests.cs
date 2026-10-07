@@ -162,6 +162,7 @@ public sealed class AgentPanelSelectionFailClosedTests
             DispatchProxy.Create<IAgentChatAttachmentStagingService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
+        context.Services.AddSingleton(DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
         context.Services.AddSingleton<IPromptGalleryService>(
