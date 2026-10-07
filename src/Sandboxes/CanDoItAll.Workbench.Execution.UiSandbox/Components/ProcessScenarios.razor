@@ -1,0 +1,153 @@
+@page "/process"
+@using CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Workbench.Execution.UI.Processes
+
+<PageTitle>Workbench Process scenarios</PageTitle>
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" Class="execution-scenarios">
+    <PageHeader Eyebrow="Independent execution UI scenarios" Title="Process review and staffing"
+        Description="Synthetic in-memory presentation. Preparing, matching, and accepting here do not launch a native Process or call a model." />
+    <Stack Orientation="Orientation.Horizontal" GapScale="LayoutGap.Small">
+        <Button Text="Link process" Click="OpenLink" />
+        <Button Text="Confirm process" Click="OpenConfirm" />
+        <Button Text="Staffing" Click="OpenStaffing" />
+        <Button Text="Long staffing" Click="@(() => OpenStaffing(true))" />
+        <Button Text="Accepted run" Click="OpenAccepted" />
+    </Stack>
+    <TextBlock TextStyle="TextStyle.Note" Value="@receipt" data-testid="execution-process-receipt" />
+    <div class="execution-scenario-canvas">
+        @if (link is { } currentLink) {
+            <ProcessLinkDialog View="currentLink" Actions="@(new(id => SelectLink(id), SubmitLink, Close))" />
+        }
+    </div>
+</Stack>
+@if (start is { } current) {
+    if (staffing) {
+        <ProcessAssignmentDialog @key="current.OpeningId" Dialog="current" Close="Close" ReviewAndStartProcess="Review"
+            PrepareAnotherProcessLaunch="OpenStaffing" RequestHrManagerMatch="RequestHr" CancelHrManagerMatch="CancelHr"
+            ExecuteHrManagerMatch="ConfirmHr" SelectProcessStartCandidate="SelectCandidate" AssignProcessStartAgent="OpenPicker" />
+    } else {
+        <ProcessStartDialog View="current" Actions="@(new(Continue, PrepareAnother, Close))" />
+    }
+}
+
+@code {
+    private readonly Guid definitionId = Guid.NewGuid();
+    private ProcessLinkView? link;
+    private ProcessStartView? start;
+    private bool staffing;
+    private string receipt = "No scenario operation yet.";
+
+    private void OpenLink() {
+        start = null;
+        link = new(Guid.NewGuid(), "Add process for Desktop scenario", "Selecting a saved definition does not execute it.", "Add process",
+            [new(definitionId, "Document review", "Project", "Published", true)], definitionId, false, false, string.Empty);
+    }
+
+    private Task SelectLink(Guid id) {
+        link = link! with { SelectedDefinitionId = id };
+        return Task.CompletedTask;
+    }
+
+    private Task SubmitLink() {
+        receipt = $"Scenario selected saved definition {link!.SelectedDefinitionId:D}; no native write.";
+        OpenConfirm();
+        return Task.CompletedTask;
+    }
+
+    private void OpenConfirm() {
+        link = null;
+        staffing = false;
+        start = View(2);
+    }
+
+    private void OpenStaffing() => OpenStaffing(false);
+
+    private void OpenStaffing(bool longBody) {
+        link = null;
+        staffing = true;
+        start = View(longBody ? 24 : 2);
+    }
+
+    private void OpenAccepted() {
+        OpenStaffing();
+        start = start! with { ReviewPhase = ProcessReviewPhase.Accepted,
+            StatusMessage = "Synthetic accepted identity retained. Opening this scenario never starts another run." };
+    }
+
+    private Task Continue() {
+        staffing = true;
+        return Task.CompletedTask;
+    }
+
+    private Task PrepareAnother() {
+        OpenStaffing();
+        return Task.CompletedTask;
+    }
+
+    private Task Review() {
+        if (start!.ReviewPhase == ProcessReviewPhase.Unprepared) {
+            start = start with { ReviewPhase = ProcessReviewPhase.Prepared, CanPrepareAnother = true,
+                StatusMessage = "Synthetic review saved; no native preparation or approval occurred." };
+        } else {
+            receipt = $"Scenario {start.ReviewLabel} for {start.OpeningId:D}; no runtime dispatched.";
+            start = null;
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task RequestHr() {
+        start = start! with { ConfirmHrManagerMatch = true };
+        return Task.CompletedTask;
+    }
+
+    private Task CancelHr() {
+        start = start! with { ConfirmHrManagerMatch = false };
+        return Task.CompletedTask;
+    }
+
+    private Task ConfirmHr() {
+        start = start! with { ConfirmHrManagerMatch = false, StatusMessage = "Synthetic matching confirmed explicitly; no model called." };
+        return Task.CompletedTask;
+    }
+
+    private Task OpenPicker(Guid roleId) {
+        receipt = $"Directory requested for original role {roleId:D}.";
+        return Task.CompletedTask;
+    }
+
+    private Task SelectCandidate(ProjectStructureProcessStartCandidateSelection selection) {
+        start = start! with {
+            Roles = start.Roles.Select(role => role.LaunchPlanRoleId == selection.LaunchPlanRoleId ? role with {
+                IsResolved = true,
+                Candidates = role.DirectoryCandidates.Select(candidate => candidate with { IsSelected = candidate.CandidateId == selection.CandidateId }).ToArray()
+            } : role).ToArray(),
+            ReviewPhase = ProcessReviewPhase.Unprepared,
+            StatusMessage = "Synthetic role changed. Review is required again."
+        };
+        receipt = $"Selected original candidate {selection.CandidateId:D} for role {selection.LaunchPlanRoleId:D}.";
+        return Task.CompletedTask;
+    }
+
+    private Task Close() {
+        link = null;
+        start = null;
+        return Task.CompletedTask;
+    }
+
+    private static ProcessStartView View(int count) {
+        var roles = Enumerable.Range(1, count).Select(index => {
+            ProjectStructureProcessStartCandidateState Candidate(string name, bool selected, int score) => new(
+                Guid.NewGuid(), Guid.NewGuid(), name, "Existing agent", "AI agent", $"{score / 10m:0.0} score", selected,
+                selected, false, true, "Matches document analysis requirements.", "Available", "scenario-agent",
+                "Scenario provider", "Readable model label", "Reviewer", "Read-only scenario agent with document tools.",
+                "Active", "No queued work", ToolNames: ["Read file", "Create document"], SkillNames: ["Document review"], MatchScore: score);
+            var candidates = new[] { Candidate($"Document reviewer {index}", true, 45), Candidate($"Alternate reviewer {index}", false, 42) };
+            return new ProjectStructureProcessStartRoleState(Guid.NewGuid(), $"Document review role {index}", "AI agent", true,
+                true, false, "Manually selected", "Ready for explicit review", candidates) { DirectoryCandidates = candidates };
+        }).ToArray();
+        return new(Guid.NewGuid(), "Assign roles for Desktop scenario", "Review original roles and candidate identities.", "Continue",
+            Guid.NewGuid(), "scenario-process", "scenario-target", "scenario-target", "Desktop scenario", Guid.NewGuid(), false,
+            false, string.Empty, roles, "Scenario HR manager", string.Empty, false, new(0.03m, 2, 1, "Illustrative", "Synthetic", "Not a provider quote."),
+            string.Empty, ProcessReviewPhase.Unprepared, false);
+    }
+}

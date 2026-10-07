@@ -46,6 +46,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject IConversationShellCoordinator ConversationShellCoordinator
 @implements IAsyncDisposable
 
+@{
+    var processLinkReceiver = processLinkDialog;
+    var processStartReceiver = processStartDialog;
+}
+
 <PageTitle>@ProjectStructurePageTitleBuilder.Build(surface?.ProjectName)</PageTitle>
 
 <ProjectStructureAgentChatContextProvider ProjectId="@ProjectId"
@@ -153,9 +158,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                             <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
                             <ProjectStructureCanvasDialogs RenderProcessStartDialog="false"
                                                            ProcessLinkDialog="@processLinkDialog"
-                                                           CloseProcessLink="CloseProcessLinkDialog"
-                                                           ProcessLinkSelectionChanged="HandleProcessLinkSelectionChanged"
-                                                           ExecuteProcessLink="ExecuteProcessLinkAsync"
+                                                           CloseProcessLink="@(() => DispatchProcessLinkAsync(processLinkReceiver, () => { CloseProcessLinkDialog();
+                                                               return Task.CompletedTask; }))"
+                                                           ProcessLinkSelectionChanged="@(id => DispatchProcessLinkAsync(processLinkReceiver, () => { HandleProcessLinkSelectionChanged(id);
+                                                               return Task.CompletedTask; }))"
+                                                           ExecuteProcessLink="@(() => DispatchProcessLinkAsync(processLinkReceiver, ExecuteProcessLinkAsync))"
                                                            WorkflowAddDialog="@workflowAddDialog"
                                                            CloseWorkflowAdd="@(() => ChangeAuthoringDialog(addWorkflowOpening, workflowAddOpening, CloseWorkflowAddDialog))"
                                                            WorkflowAddSelectionChanged="@(id => DispatchAuthoringDialogAsync(addWorkflowOpening, workflowAddOpening, () => HandleWorkflowAddSelectionChanged(id)))"
@@ -172,16 +179,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                                            WorkflowStartSimulationChanged="@(change => ChangeAuthoringDialog(startWorkflowOpening, workflowStartOpening, () => HandleWorkflowStartSimulationChanged(change)))"
                                                            ExecuteWorkflowStart="@(() => DispatchAuthoringDialogAsync(startWorkflowOpening, workflowStartOpening, ExecuteWorkflowStartAsync))"
                                                            ProcessStartDialog="@processStartDialog"
-            CloseProcessStart="CloseProcessStartDialog"
-            ExecuteProcessStart="ExecuteProcessStartAsync"
-            ReviewAndStartProcess="ReviewAndStartProcessAsync"
-                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
-            SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
-            AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
-            ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
-            RequestHrManagerMatch="RequestHrManagerMatchAsync"
-            CancelHrManagerMatch="CancelHrManagerMatchAsync"
-            ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+            CloseProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, () => { CloseProcessStartDialog();
+                                                               return Task.CompletedTask; }))"
+            ExecuteProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteProcessStartAsync))"
+            ReviewAndStartProcess="@(() => DispatchProcessStartAsync(processStartReceiver, ReviewAndStartProcessAsync))"
+                                   PrepareAnotherProcessLaunch="@(() => DispatchProcessStartAsync(processStartReceiver, PrepareAnotherProcessLaunchAsync))"
+            SelectProcessStartCandidate="@(value => DispatchProcessStartAsync(processStartReceiver, () => SelectProcessStartCandidateAsync(value)))"
+            AssignProcessStartAgent="@(value => DispatchProcessStartAsync(processStartReceiver, () => OpenManualProcessStartAgentPickerAsync(value)))"
+            ProcessStartAssignmentsReviewedChanged="@(value => DispatchProcessStartAsync(processStartReceiver, () => HandleProcessStartAssignmentsReviewedChanged(value)))"
+            RequestHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, RequestHrManagerMatchAsync))"
+            CancelHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, CancelHrManagerMatchAsync))"
+            ExecuteHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteHrManagerMatchAsync))"
                                                            QuickActionDialog="@quickActionDialog"
                                                            CloseQuickActionDialog="@(() => CloseQuickActionDialog(quickOpening))"
                                                            ExecuteQuickAction="@(action => ExecuteQuickActionAsync(quickOpening, action))"
@@ -248,16 +256,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 <ProjectStructureDeferredSurface RenderKey="@CanvasOverlayRenderKey">
     <ProjectStructureCanvasDialogs RenderProcessStartDialog="true"
                                    ProcessStartDialog="@processStartDialog"
-                                   CloseProcessStart="CloseProcessStartDialog"
-                                   ExecuteProcessStart="ExecuteProcessStartAsync"
-                                   ReviewAndStartProcess="ReviewAndStartProcessAsync"
-                                   PrepareAnotherProcessLaunch="PrepareAnotherProcessLaunchAsync"
-                                   SelectProcessStartCandidate="SelectProcessStartCandidateAsync"
-                                   AssignProcessStartAgent="OpenManualProcessStartAgentPickerAsync"
-                                   ProcessStartAssignmentsReviewedChanged="HandleProcessStartAssignmentsReviewedChanged"
-                                   RequestHrManagerMatch="RequestHrManagerMatchAsync"
-                                   CancelHrManagerMatch="CancelHrManagerMatchAsync"
-                                   ExecuteHrManagerMatch="ExecuteHrManagerMatchAsync"
+                                   CloseProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, () => { CloseProcessStartDialog();
+                                                               return Task.CompletedTask; }))"
+                                   ExecuteProcessStart="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteProcessStartAsync))"
+                                   ReviewAndStartProcess="@(() => DispatchProcessStartAsync(processStartReceiver, ReviewAndStartProcessAsync))"
+                                   PrepareAnotherProcessLaunch="@(() => DispatchProcessStartAsync(processStartReceiver, PrepareAnotherProcessLaunchAsync))"
+                                   SelectProcessStartCandidate="@(value => DispatchProcessStartAsync(processStartReceiver, () => SelectProcessStartCandidateAsync(value)))"
+                                   AssignProcessStartAgent="@(value => DispatchProcessStartAsync(processStartReceiver, () => OpenManualProcessStartAgentPickerAsync(value)))"
+                                   ProcessStartAssignmentsReviewedChanged="@(value => DispatchProcessStartAsync(processStartReceiver, () => HandleProcessStartAssignmentsReviewedChanged(value)))"
+                                   RequestHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, RequestHrManagerMatchAsync))"
+                                   CancelHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, CancelHrManagerMatchAsync))"
+                                   ExecuteHrManagerMatch="@(() => DispatchProcessStartAsync(processStartReceiver, ExecuteHrManagerMatchAsync))"
                                    EditPreviewNode="EditAttachmentPreviewNodeAsync"
                                    CanShowLocalOpen="CanShowLocalOpen"
                                    CanOpenInPreferredApplication="CanOpenInPreferredApplication"

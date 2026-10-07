@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Modules.Workbench.Pages
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
-@inject DialogService DialogService
+@using CanDoItAll.Workbench.Execution.UI.Processes
 
 <div class="project-structure-agent-switch-confirmation"
      data-testid="project-structure-process-assignment-agent-switch-confirmation-content">
@@ -60,6 +60,12 @@
 </div>
 
 @code {
+    [Parameter, EditorRequired]
+    public ProcessCandidateChoice Choice { get; set; } = default!;
+
+    private DialogReference OwnDialog => DialogReference
+        ?? throw new InvalidOperationException("The agent switch requires its own dialog reference.");
+
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
@@ -72,20 +78,11 @@
     [Parameter, EditorRequired]
     public ProjectStructureProcessStartCandidateState NextCandidate { get; set; } = default!;
 
-    private Task ConfirmAsync()
-        => DialogReference is null
-            ? DialogService.CloseAsync(true)
-            : DialogReference.CloseAsync(true);
+    private Task ConfirmAsync() => OwnDialog.CloseAsync(Choice);
+    private Task CancelAsync() => OwnDialog.CloseAsync();
 
-    private Task CancelAsync()
-        => DialogReference is null
-            ? DialogService.CloseAsync(false)
-            : DialogReference.CloseAsync(false);
-
-    private string ResolveSwitchSummary()
-    {
-        if (!string.IsNullOrWhiteSpace(NextCandidate.RecommendationSummary))
-        {
+    private string ResolveSwitchSummary() {
+        if (!string.IsNullOrWhiteSpace(NextCandidate.RecommendationSummary)) {
             return NextCandidate.RecommendationSummary;
         }
 
@@ -97,8 +94,7 @@
             ? null
             : candidate.AgentAvatarImageUrl;
 
-    private static string BuildInitials(string value)
-    {
+    private static string BuildInitials(string value) {
         var segments = value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Take(2)

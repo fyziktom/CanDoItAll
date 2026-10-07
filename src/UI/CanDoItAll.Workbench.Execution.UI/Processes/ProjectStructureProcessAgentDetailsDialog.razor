@@ -19,8 +19,7 @@
                 <span>@Candidate.ScoreLabel</span>
                 <span>@Candidate.CandidateKindLabel</span>
                 <span>@Candidate.ExecutorKind</span>
-                @if (!string.IsNullOrWhiteSpace(Candidate.AgentStatusLabel))
-                {
+                @if (!string.IsNullOrWhiteSpace(Candidate.AgentStatusLabel)) {
                     <span>@Candidate.AgentStatusLabel</span>
                 }
             </div>
@@ -74,15 +73,12 @@
 
         <section class="project-structure-agent-details__panel">
             <h4>Tools</h4>
-            @if (ResolveToolNames().Count == 0)
-            {
+            @if (ResolveToolNames().Count == 0) {
                 <p>No explicit tool capabilities are configured for this agent.</p>
             }
-            else
-            {
+            else {
                 <div class="project-structure-agent-details__tag-list">
-                    @foreach (var tool in ResolveToolNames())
-                    {
+                    @foreach (var tool in ResolveToolNames()) {
                         <span>@tool</span>
                     }
                 </div>
@@ -91,15 +87,12 @@
 
         <section class="project-structure-agent-details__panel">
             <h4>Skills</h4>
-            @if (ResolveSkillNames().Count == 0)
-            {
+            @if (ResolveSkillNames().Count == 0) {
                 <p>No explicit skills are configured for this agent.</p>
             }
-            else
-            {
+            else {
                 <div class="project-structure-agent-details__tag-list">
-                    @foreach (var skill in ResolveSkillNames())
-                    {
+                    @foreach (var skill in ResolveSkillNames()) {
                         <span>@skill</span>
                     }
                 </div>
@@ -123,15 +116,12 @@
     [Parameter, EditorRequired]
     public ProjectStructureProcessStartCandidateState Candidate { get; set; } = default!;
 
-    private string ResolveSummary()
-    {
-        if (!string.IsNullOrWhiteSpace(Candidate.AgentSummary))
-        {
+    private string ResolveSummary() {
+        if (!string.IsNullOrWhiteSpace(Candidate.AgentSummary)) {
             return Candidate.AgentSummary;
         }
 
-        if (!string.IsNullOrWhiteSpace(Candidate.RecommendationSummary))
-        {
+        if (!string.IsNullOrWhiteSpace(Candidate.RecommendationSummary)) {
             return Candidate.RecommendationSummary;
         }
 
@@ -194,8 +184,7 @@
             ? null
             : candidate.AgentAvatarImageUrl;
 
-    private static string BuildInitials(string value)
-    {
+    private static string BuildInitials(string value) {
         var segments = value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Take(2)

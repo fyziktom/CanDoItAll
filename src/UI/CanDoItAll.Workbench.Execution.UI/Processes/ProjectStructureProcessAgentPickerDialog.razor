@@ -2,6 +2,8 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @inject DialogService DialogService
+@using CanDoItAll.Workbench.Execution.UI.Processes
+@implements IDisposable
 
 <Stack GapScale="LayoutGap.Large"
        data-testid="project-structure-process-assignment-agent-picker-content"
@@ -22,8 +24,7 @@
         </Stack>
     </SurfaceCard>
 
-    @if (DirectoryCandidates.Count == 0)
-    {
+    @if (DirectoryCandidates.Count == 0) {
         <SurfaceCard Soft="true"
                      Class="project-structure-agent-picker__empty"
                      data-testid="project-structure-process-assignment-agent-picker-empty">
@@ -32,13 +33,11 @@
             <span>Enable or provision an agent that matches this process role before launch.</span>
         </SurfaceCard>
     }
-    else
-    {
+    else {
         <Grid ColumnTemplate="repeat(3,minmax(0,1fr))"
               Gap="LayoutGap.Medium"
               data-testid="project-structure-process-assignment-agent-picker-candidates">
-            @foreach (var candidate in DirectoryCandidates)
-            {
+            @foreach (var candidate in DirectoryCandidates) {
                 var candidateTestId = $"project-structure-process-assignment-agent-picker-candidate-{candidate.CandidateId:D}";
                 <SurfaceCard Soft="@candidate.IsSelected"
                              Class="@ResolveCandidateCardClass(candidate)"
@@ -85,8 +84,7 @@
                                 <Badge Tone="BadgeTone.Promo"
                                        Text="skills" />
                             </TooltipTarget>
-                            @if (candidate.IsRecommended)
-                            {
+                            @if (candidate.IsRecommended) {
                                 <Badge Tone="BadgeTone.Success"
                                        Text="compatible" />
                             }
@@ -104,13 +102,11 @@
                                     Size="ButtonSize.Small"
                                     data-testid="@($"{candidateTestId}-details")"
                                     Click="@(() => OpenCandidateDetailsAsync(candidate))" />
-                            @if (candidate.IsSelected)
-                            {
+                            @if (candidate.IsSelected) {
                                 <Badge Tone="BadgeTone.Success"
                                        Text="Selected" />
                             }
-                            else
-                            {
+                            else {
                                 <Button Text="Select agent"
                                         Icon="check"
                                         ButtonStyle="ButtonStyle.Info"
@@ -138,6 +134,15 @@
 </Stack>
 
 @code {
+    private readonly CancellationTokenSource children = new();
+    private bool detailsOpen;
+
+    [Parameter, EditorRequired]
+    public Guid OpeningId { get; set; }
+
+    private DialogReference OwnDialog => DialogReference
+        ?? throw new InvalidOperationException("The agent picker requires its own dialog reference.");
+
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
@@ -153,46 +158,54 @@
             .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private Task SelectAsync(ProjectStructureProcessStartCandidateState candidate)
-    {
-        if (!candidate.IsResolvable)
-        {
+    private Task SelectAsync(ProjectStructureProcessStartCandidateState candidate) {
+        if (!candidate.IsResolvable) {
             return Task.CompletedTask;
         }
 
-        return DialogReference is null
-            ? DialogService.CloseAsync(candidate.CandidateId)
-            : DialogReference.CloseAsync(candidate.CandidateId);
+        return OwnDialog.CloseAsync(new ProcessCandidateChoice(OpeningId, Role.LaunchPlanRoleId,
+            candidate.CandidateId, Role.Candidates.FirstOrDefault(item => item.IsSelected)?.CandidateId));
     }
 
-    private Task CancelAsync()
-        => DialogReference is null
-            ? DialogService.CloseAsync()
-            : DialogReference.CloseAsync();
+    private Task CancelAsync() => OwnDialog.CloseAsync();
 
-    private Task OpenCandidateDetailsAsync(ProjectStructureProcessStartCandidateState candidate)
-    {
-        _ = DialogService.OpenAsync<ProjectStructureProcessAgentDetailsDialog>(
-            candidate.DisplayName,
-            new Dictionary<string, object?>
-            {
-                [nameof(ProjectStructureProcessAgentDetailsDialog.Role)] = Role,
-                [nameof(ProjectStructureProcessAgentDetailsDialog.Candidate)] = candidate
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Process assignment",
-                Subtitle = $"Readonly agent details for {Role.DisplayName}.",
-                Size = ModalSize.Wide,
-                DenseChrome = true,
-                TestId = "project-structure-process-assignment-agent-details-dialog",
-                AriaLabel = "Process assignment agent details"
-            });
+    private Task OpenCandidateDetailsAsync(ProjectStructureProcessStartCandidateState candidate) {
+        if (!detailsOpen) {
+            detailsOpen = true;
+            _ = ObserveDetailsAsync(Role, candidate);
+        }
         return Task.CompletedTask;
     }
 
-    private string ResolveDirectorySummary()
-    {
+    private async Task ObserveDetailsAsync(ProjectStructureProcessStartRoleState role,
+        ProjectStructureProcessStartCandidateState candidate) {
+        try {
+            await DialogService.OpenAsync<ProjectStructureProcessAgentDetailsDialog>(
+                candidate.DisplayName, new Dictionary<string, object?> {
+                    [nameof(ProjectStructureProcessAgentDetailsDialog.Role)] = role,
+                    [nameof(ProjectStructureProcessAgentDetailsDialog.Candidate)] = candidate
+                }, new DialogOptions {
+                    Eyebrow = "Process assignment",
+                    Subtitle = $"Readonly agent details for {role.DisplayName}.",
+                    Size = ModalSize.Wide,
+                    DenseChrome = true,
+                    TestId = "project-structure-process-assignment-agent-details-dialog",
+                    AriaLabel = "Process assignment agent details"
+                }, children.Token);
+        } catch (OperationCanceledException) when (children.IsCancellationRequested) {
+        } catch (Exception exception) {
+            await DispatchExceptionAsync(exception);
+        } finally {
+            detailsOpen = false;
+        }
+    }
+
+    public void Dispose() {
+        children.Cancel();
+        children.Dispose();
+    }
+
+    private string ResolveDirectorySummary() {
         var count = DirectoryCandidates.Count;
         return count == 1
             ? "1 compatible active agent is available."
@@ -212,23 +225,19 @@
             ? candidate.ExecutorKind
             : candidate.AgentRoleTitle;
 
-    private static string ResolveCandidateSummary(ProjectStructureProcessStartCandidateState candidate)
-    {
-        if (!string.IsNullOrWhiteSpace(candidate.AgentSummary))
-        {
+    private static string ResolveCandidateSummary(ProjectStructureProcessStartCandidateState candidate) {
+        if (!string.IsNullOrWhiteSpace(candidate.AgentSummary)) {
             return Trim(candidate.AgentSummary, 150);
         }
 
-        if (!string.IsNullOrWhiteSpace(candidate.RecommendationSummary))
-        {
+        if (!string.IsNullOrWhiteSpace(candidate.RecommendationSummary)) {
             return Trim(candidate.RecommendationSummary, 150);
         }
 
         return "Compatible active agent for this process role.";
     }
 
-    private static string BuildModelTooltip(ProjectStructureProcessStartCandidateState candidate)
-    {
+    private static string BuildModelTooltip(ProjectStructureProcessStartCandidateState candidate) {
         var provider = string.IsNullOrWhiteSpace(candidate.AgentProviderName)
             ? "Provider not configured"
             : candidate.AgentProviderName.Trim();
@@ -239,15 +248,13 @@
         return $"{provider} / {model}";
     }
 
-    private static string BuildListTooltip(IReadOnlyList<string> values, string emptyText)
-    {
+    private static string BuildListTooltip(IReadOnlyList<string> values, string emptyText) {
         var names = values
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (names.Count == 0)
-        {
+        if (names.Count == 0) {
             return emptyText;
         }
 
@@ -273,10 +280,8 @@
             ? null
             : candidate.AgentAvatarImageUrl;
 
-    private static decimal ResolveScore(ProjectStructureProcessStartCandidateState candidate)
-    {
-        if (candidate.MatchScore != 0)
-        {
+    private static decimal ResolveScore(ProjectStructureProcessStartCandidateState candidate) {
+        if (candidate.MatchScore != 0) {
             return candidate.MatchScore;
         }
 
@@ -296,8 +301,7 @@
                 : 0m;
     }
 
-    private static string BuildInitials(string value)
-    {
+    private static string BuildInitials(string value) {
         var segments = value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Take(2)
@@ -308,8 +312,7 @@
             : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
     }
 
-    private static string Trim(string value, int maxLength)
-    {
+    private static string Trim(string value, int maxLength) {
         var trimmed = value.Trim();
         return trimmed.Length <= maxLength ? trimmed : trimmed[..(maxLength - 3)] + "...";
     }

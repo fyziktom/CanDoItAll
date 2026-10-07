@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T01:28:05.030673+00:00",
+  "generated_utc": "2026-10-07T01:55:19.749176+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -59162,12 +59162,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasDialogs.razor",
-      "category": "case-policy",
-      "source_fingerprint": "1b80dcdf154bbef371f290c882ff2d01d3ffe593d3b1d8f03835cee2f343789e",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasTaskDialogCoordinator.cs",
       "category": "case-policy",
       "source_fingerprint": "4f47bf6a4662a759222af6c80331babd86a34379ae285507266024cb9228d160",
@@ -59255,102 +59249,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor.cs",
       "category": "link-reparse",
       "source_fingerprint": "fb588b7d298aacabf5e6454f4c9cfb603913c93b67c3e1ab0805fc46cf955e2f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentDetailsDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "7d75a0309fab19f994e10e431d7a8cc0c6278df8a60762c51f9b021cc80af6a0",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentDetailsDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "d4c497474909b48f93f8aad1165069e968293206dc1420a7c291443d76aa3774",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentPickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "9ae63e35f3d7b36d348bb755bb86993ec110b891d9c8d71c051c8b3d5c884da6",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentPickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "a260da93cf5cfc6130d09511b257d184f2b6f1157ecf3113bba1b5a5bee261fe",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAgentPickerDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "f5271c382b97686d1589f92e4121e141a98d05c3e077ab03c65985bcf9b05524",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "12b44cf4c5e82322b40a87614e7df1ff91d7b78de68671ac907a70dc22cc9d3d",
-      "count": 2
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "34a7d9d6b67a2a75ebd22820d80ce9abb2ecd7f8ef15617169c4b34b93fd9257",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "5e9eb62db8d44fb1afad907a1d6f929b32caea9ff81f00aaf1b0d3cbb3c96251",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "7190ab27d71a1ac87174eeafa11630d3741095d10793a7cd756f75be00fda1e3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "71d19715adf810f8bd557a47ccb6649da1052e0f491f846a56c7ea77837a55aa",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "77182f00baa4d5a7a84d1164391bb0da2a8964172dcac26af1929d0d826af953",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "7a18345f96e3a96640d758b6972f889a5c6d4184fbd43d20d0958bd2562bdaa2",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "87322ec957113bdaa913c35675a3e39cad7504868c30f08d746336986591cb28",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "885916ec014b6c1a7432e456dd0be7df1a739934b72d283b82bda53a54b83f1f",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "915348d5b814d1e1dbac62abbb0364613a3e182b4087899944d46418de66521b",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureProcessAssignmentDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e962860af7deacd5c95c5a330a3a82423e9c37c531d3df227accad0957142c93",
       "count": 1
     },
     {
@@ -72284,6 +72182,12 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/ProcessScenarios.razor",
+      "category": "manager-discovery",
+      "source_fingerprint": "9a42e73bb86a62a2ff1237ae7f895e05b943f29f1e9bcb81d7113996b432c475",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/ExecutionWatchState.cs",
       "category": "environment",
       "source_fingerprint": "a4168475809fd027b3872102fad4b393ea503b6c8a93f321e07fde3aaa073353",
@@ -75731,6 +75635,102 @@
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
       "category": "external-tool",
       "source_fingerprint": "ecdf0bd70be156748d610e1c734ba58115183bac94fea252be8aa3a8cc7309da",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "13d7e4ef335c30737a73df9a726b094535ad69fd2a25d469aede032fc25310d2",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "2688721620a6169025387eff9cb05e123985c42434919d028649612863d11cda",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "59dfe15db3fe7bbd6ff4d09f45241af7398f3efa0cd618f63000c81301bb769d",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "5ffd421081a26cae5e4c1186a5662ff553df21cf65bd2f79d8d706becee489c4",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "68dc2ba42d9fd63bf2c35753bb894131a00903837cdcddd554e94c321f1e48dd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "8436a87a272a553abaf059ebc414fa20e03f4c2a094fb775f7efbf3272e8c734",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "9e3f6c0c88aad8109cadfd0261d248f9873d202b451a6be741b9833ee469e9a7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "c4c5b86346736ac59cb6691df62f21997f0542dfb55e1b60283858d5ff7539dc",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "da41219542669830d1bb8139420142619eb197f6903df58402faa07b246eda4f",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "e55da62664eef32f3d3d3e75578204ac582d5d35d3ee59d86e7bc423aadffd83",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "fd626be06d6cb0c8fc7694ad2e9469eb720b5641aa7dc7c381936c7c21b56fb8",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProjectStructureProcessAgentDetailsDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "283efe08ccb1441a46b13e6139705b700a30a2f2466d6a8634b833b9bf69ddc7",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProjectStructureProcessAgentDetailsDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "2a3758eceb2abb795f25791e1d54b7ac5439fd9e46e7754c12931d8b8cb67a4a",
+      "count": 2
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProjectStructureProcessAgentPickerDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "71fe10ea9e334fa87ec153573a5da17c68c65b0c7549bde46d9170513b1eb594",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProjectStructureProcessAgentPickerDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "c1a5b840dc8d7c380a4cdeb229fd99805340277301eb53461ae408599f35ae91",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProjectStructureProcessAgentPickerDialog.razor",
+      "category": "case-policy",
+      "source_fingerprint": "ee9f1f64e182eab56386956cfb1521274c1d131a7360c116fc6cbf75e545772a",
       "count": 1
     },
     {

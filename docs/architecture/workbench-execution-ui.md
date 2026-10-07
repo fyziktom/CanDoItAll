@@ -68,3 +68,21 @@ opening. Independent renderer tests passed 5/5; the native Workflow lifetime sui
 26/26. Two desktop scenario views preserve independent raw input and observation state.
 The sandbox requires Development for the source-assets loop; published assets are validated
 separately at final closure. Process and final candidate proof remain in progress.
+
+## Process checkpoint
+
+The leaf owns Process link/confirmation, full staffing and the actual Agent picker, details
+and switch children. Existing public display records and dynamic child names retain type
+forwarding from Workbench. The native Process start record, authority, source snapshot,
+variables, prepared request and admission remain in Workbench and the Process application.
+
+Each nested selection carries its opening, role, candidate and previous candidate identity.
+Replacement or disposal cancels only that opening's child dialogs. The parent rejects results
+when the role snapshot or opening changed; a second dispatch cannot open another picker.
+Read-only details remain available for accepted plans. Native callbacks independently fence
+the original actor, runtime, project admission and launch intent. Link receipts retain the
+original native result, and failed readback uses observation rather than another mutation.
+
+The unreachable inline staffing branch has been removed from the composition wrapper.
+Existing preparation restore, explicit new intent, continuation and graph delivery owners
+remain unchanged. The independent host exposes the same child types at /process.

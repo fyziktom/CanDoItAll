@@ -1,14 +1,14 @@
-.project-structure-assignment-modal {
+.execution-process ::deep .project-structure-assignment-modal {
     border-radius: 1rem;
     gap: 0;
     padding: 0;
 }
 
-.project-structure-assignment-modal::deep > .rz-stack {
+.execution-process ::deep .project-structure-assignment-modal > .rz-stack {
     gap: 0 !important;
 }
 
-.project-structure-assignment-modal::deep .project-structure-preview-dialog__header {
+.execution-process ::deep .project-structure-assignment-modal .canvas-overlay-dialog__header {
     align-items: center;
     border-bottom: 1px solid rgba(148, 163, 184, 0.22);
     display: grid;
@@ -18,15 +18,15 @@
     width: 100%;
 }
 
-.project-structure-assignment-modal::deep .project-structure-preview-dialog__copy {
+.execution-process ::deep .project-structure-assignment-modal .canvas-overlay-dialog__copy {
     max-width: none;
 }
 
-.project-structure-assignment-modal::deep .project-structure-preview-dialog__actions {
+.execution-process ::deep .project-structure-assignment-modal .canvas-overlay-dialog__actions {
     align-items: center;
 }
 
-.project-structure-assignment-modal__body {
+.execution-process ::deep .project-structure-assignment-modal__body {
     overflow: hidden;
 }
 
@@ -955,7 +955,7 @@ button:disabled {
 }
 
 @media (max-width: 1040px) {
-    .project-structure-assignment-modal::deep .project-structure-preview-dialog__header {
+    .execution-process ::deep .project-structure-assignment-modal .canvas-overlay-dialog__header {
         grid-template-columns: 1fr;
     }
 
@@ -985,11 +985,11 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
-    .project-structure-assignment-modal {
+    .execution-process ::deep .project-structure-assignment-modal {
         border-radius: 0.85rem;
     }
 
-    .project-structure-assignment-modal::deep .project-structure-preview-dialog__header {
+    .execution-process ::deep .project-structure-assignment-modal .canvas-overlay-dialog__header {
         min-height: auto;
         padding: 1rem;
     }
