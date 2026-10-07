@@ -101,6 +101,23 @@ There is no silent snapshot-to-database fallback. Writes always go through canon
 See [Internal communication](architecture/internal-communication.md) for the execution
 and live-event communication contract.
 
+## Image Generation And Asset Analysis
+
+`image_generation_create` accepts PNG, JPEG and WebP raster sources. It checks the
+declared media type against the source signature before provider dispatch for both
+workspace files and project assets. SVG, GIF and mismatched content return the safe,
+retryable `SourceImageFormatUnsupported` failure with a `NotCommitted` effect. The
+agent can read an SVG node with `project_structure_asset_text_get` and include its
+layout details in the generation prompt, or supply a rasterized reference. An SVG
+must not be submitted directly to the raster image-edit endpoint.
+
+Generated images use the returned `projectAssetCreateDraft` with the separately
+authorized `project_structure_asset_create` tool. To inspect saved pixels, call
+`project_structure_asset_image_analyze` with the returned project and node IDs.
+Analysis requires project read authority and `workspaceToolAccess.canTransformArtifacts`.
+The independent `imageGenerationAccess.canGenerateImages` setting enables generation.
+Existing approval, project-lifetime and result-disclosure checks remain in force.
+
 ## HTTP And Runtime Authorization Are Different
 
 Bearer authorization to an HTTP endpoint is not an agent capability grant. Conversely, an agent capability assignment is not a bearer token or permission to call an external API route.
