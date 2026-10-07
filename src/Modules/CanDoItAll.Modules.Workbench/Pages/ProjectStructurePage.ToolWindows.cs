@@ -48,8 +48,10 @@ public partial class ProjectStructurePage
         }
         if (expectedNode is not null) {
             var current = original.Nodes.SingleOrDefault(node => node.Id == expectedNode.Id);
-            if (current is null || current.RecordId != expectedNode.RecordId || current.ObjectType != expectedNode.ObjectType ||
+            if (current is null || current.IsSystemManaged != expectedNode.IsSystemManaged ||
+                (!current.IsSystemManaged && current.RecordId != expectedNode.RecordId) || current.ObjectType != expectedNode.ObjectType ||
                 current.ObjectSubtype != expectedNode.ObjectSubtype || current.ParentId != expectedNode.ParentId ||
+                current.ArtifactKind != expectedNode.ArtifactKind || current.ArtifactId != expectedNode.ArtifactId ||
                 current.StorageObjectReferenceJson != expectedNode.StorageObjectReferenceJson || current.RelatedProjectId != expectedNode.RelatedProjectId) {
                 throw new ProjectStructureEditConflictException();
             }
