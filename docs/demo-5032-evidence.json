@@ -26,6 +26,12 @@
       "sha256": "41f6e89a8f0e996133399d1702a010ae4003c71076d5dc137106305bf097bf5c"
     }
   },
+  "generatedStylesheet": {
+    "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
+    "bytes": 116967,
+    "sha256": "914216684fe7468ff208ce33e527e48364a7374b0b766f1091c776fb79c2b16f",
+    "change": "Final managed build removed one unused emerald-400 variable. No selector or layout rule changed."
+  },
   "externalSampleFiles": {
     "Tetris3.Client/App.razor": {
       "bytes": 2961,
