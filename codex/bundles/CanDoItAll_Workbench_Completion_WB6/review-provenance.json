@@ -1,0 +1,16 @@
+{
+  "main": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+  "components": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+  "branch": "components-decoupling",
+  "review_date": "2026-10-06",
+  "review_kind": "source and implementer report",
+  "whole_product_certified": false,
+  "reviewer_executed_dotnet": false,
+  "reviewer_executed_docker": false,
+  "reviewer_executed_browser": false,
+  "private_original_runtime_artifacts_available": false,
+  "new_workflow_finding": "source-derived; reproduction required",
+  "heading_followup": "reported in WB5; not independently rendered here",
+  "final_remote_refs_unchanged": true,
+  "main_signature_reported_valid_by_github": true
+}

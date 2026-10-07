@@ -1,0 +1,197 @@
+{
+  "id": "CanDoItAll_Workbench_Completion_WB6",
+  "title": "Complete Workbench and freeze a runnable customer-demo candidate",
+  "language": "en",
+  "model": "Codex GPT-6 Astra Max",
+  "entrypoint": "prompt.md",
+  "shared_version": "v3",
+  "review_date": "2026-10-06",
+  "preparation_date": "2026-10-07",
+  "presentation_date": "2026-10-08",
+  "timezone": "America/Curacao",
+  "review_main": "12322a72cd11a0de3ae98ad4dd1e0061964c9af2",
+  "review_components": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+  "commits_are_checkout_pins": false,
+  "reviewer_ran_product_tests": false,
+  "preserve_historical_bundles": true,
+  "signed_commits_required": true,
+  "push_authorized": false,
+  "merge_authorized": false,
+  "viewport": {
+    "width": 1920,
+    "height": 1080,
+    "device_scale_factor": 1
+  },
+  "scope": [
+    "remaining Workbench Workflow/Process integration",
+    "managed-file disposition renderer",
+    "complete active Workbench census",
+    "native runnable candidate",
+    "genuine-model UI artifact rehearsal"
+  ],
+  "excluded": [
+    "standalone Processes product UI extraction",
+    "other module decoupling",
+    "mobile/tablet tuning",
+    "new runtime or durable admission platform"
+  ],
+  "validation_groups": [
+    {
+      "id": "G00",
+      "title": "Source pair, rules and protected runnable baseline",
+      "lane": "structure"
+    },
+    {
+      "id": "G01",
+      "title": "WB6-W1 original Workflow opening and accepted result",
+      "lane": "structure"
+    },
+    {
+      "id": "G02",
+      "title": "Large-desktop content heading and overlay hit testing",
+      "lane": "structure"
+    },
+    {
+      "id": "G03",
+      "title": "Whole Workbench caller/asset census with zero unfinished active renderers",
+      "lane": "structure"
+    },
+    {
+      "id": "G04",
+      "title": "Workflow link/create and canonical-task attachment",
+      "lane": "structure"
+    },
+    {
+      "id": "G05",
+      "title": "Workflow inputs/raw validation/version and source authority",
+      "lane": "structure"
+    },
+    {
+      "id": "G06",
+      "title": "Workflow start/simulation/accepted intent and status",
+      "lane": "structure"
+    },
+    {
+      "id": "G07",
+      "title": "Process link/estimate/confirm and captured target",
+      "lane": "structure"
+    },
+    {
+      "id": "G08",
+      "title": "Full staffing, candidate, details and switch dialog family",
+      "lane": "structure"
+    },
+    {
+      "id": "G09",
+      "title": "Manual/HR matching and reviewed preparation semantics",
+      "lane": "structure"
+    },
+    {
+      "id": "G10",
+      "title": "Process admission, restore, delivery and explicit new intent",
+      "lane": "structure"
+    },
+    {
+      "id": "G11",
+      "title": "Managed-attachment disposition and original cleanup receipts",
+      "lane": "structure"
+    },
+    {
+      "id": "G12",
+      "title": "Native concurrent writers, close/reopen and post-commit failures",
+      "lane": "structure"
+    },
+    {
+      "id": "G13",
+      "title": "Protected WB1-WB5 dependencies, child types and assets",
+      "lane": "structure"
+    },
+    {
+      "id": "G14",
+      "title": "Independent source/published sandbox and bounded watch proof",
+      "lane": "structure"
+    },
+    {
+      "id": "G15",
+      "title": "Current native candidate build, boot, stop and repeated restart",
+      "lane": "delivery"
+    },
+    {
+      "id": "G16",
+      "title": "Agent canary, exact write/attach and denial",
+      "lane": "genuine"
+    },
+    {
+      "id": "G17",
+      "title": "Agent SVG creation, actual native render and independent text analysis",
+      "lane": "genuine"
+    },
+    {
+      "id": "G18",
+      "title": "Raster generation and actual visual analysis",
+      "lane": "genuine"
+    },
+    {
+      "id": "G19",
+      "title": "Agent XLSX formulas/cells and independent revision-sensitive analysis",
+      "lane": "genuine"
+    },
+    {
+      "id": "G20",
+      "title": "Small saved Workflow actual UI execution and artifact",
+      "lane": "genuine"
+    },
+    {
+      "id": "G21",
+      "title": "Small published Process actual reviewed execution and output",
+      "lane": "genuine"
+    },
+    {
+      "id": "G22",
+      "title": "Deterministic native Agent/Workflow/Process and authorization negatives",
+      "lane": "native"
+    },
+    {
+      "id": "G23",
+      "title": "Final source/two-client names, routing and relevant consumers",
+      "lane": "native"
+    },
+    {
+      "id": "G24",
+      "title": "History/Usage, Scheduler restart, Operators and Content continuity",
+      "lane": "native"
+    },
+    {
+      "id": "G25",
+      "title": "Static portability/security/documentation and test-discovery correctness",
+      "lane": "static"
+    },
+    {
+      "id": "G26",
+      "title": "Frozen broader checkpoint and honest scoped exception disposition",
+      "lane": "broad"
+    },
+    {
+      "id": "G27",
+      "title": "Versioned candidate, scripts, database/storage recovery and data continuity",
+      "lane": "delivery"
+    },
+    {
+      "id": "G28",
+      "title": "Uninterrupted final customer walkthrough and Czech runbook",
+      "lane": "delivery"
+    },
+    {
+      "id": "G29",
+      "title": "Signed commits, source manifests, resource disposition and final readiness",
+      "lane": "delivery"
+    }
+  ],
+  "paid_rehearsal": {
+    "requires_existing_authorization_or_confirmation": true,
+    "proposed_usd_cap": 10,
+    "max_language_vision_attempts": 64,
+    "max_image_attempts": 4,
+    "reset_historical_budget": false
+  }
+}
