@@ -45,7 +45,11 @@ WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
-RUN apt-get update \
+RUN sed -i \
+        -e 's|http://archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+        -e 's|http://security.ubuntu.com/ubuntu|https://security.ubuntu.com/ubuntu|g' \
+        /etc/apt/sources.list.d/ubuntu.sources \
+    && apt-get update \
     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux \
     && rm -rf /var/lib/apt/lists/*
 
