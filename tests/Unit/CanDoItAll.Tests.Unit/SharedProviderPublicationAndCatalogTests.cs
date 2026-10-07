@@ -97,6 +97,29 @@ public sealed class SharedProviderPublicationAndCatalogTests
     }
 
     [Fact]
+    public void Local_health_catalog_retains_all_discovered_models_without_widening_publication_limit() {
+        var profile = CreateProfile(defaultModel: "custom-default");
+        var service = new ProviderProfileService();
+        var mapper = new ProviderProfileMapper(new ProviderAdministrationConnectorCatalog([]), service);
+        string[] discovered = Enumerable.Range(1, 256).Select(index => $"custom-{index}").ToArray();
+        var healthy = service.ApplyHealthResult(mapper.Map(profile),
+            new ProviderHealthResult(true, "Synthetic catalog is healthy.", discovered), DateTimeOffset.UtcNow);
+
+        profile.ExtraSettingsJson = ProviderMetadata.BuildExtraSettingsJson(
+            healthy.ConfigurationJson, profile.ConnectorPluginKey, profile.ConfigSchemaVersion,
+            profile.ApiKeySecretId, profile.TimeoutSeconds, healthy.Kind, healthy.Transport,
+            healthy.Purpose, healthy.DefaultModel, healthy.ModelThinkingEffortCapabilities,
+            healthy.Tags, healthy.SuggestedModels);
+
+        Assert.Equal(discovered.Order(), ProviderMetadata.ReadSuggestedModels(profile).Order());
+        var reloaded = mapper.Map(profile);
+        Assert.All(discovered, model => Assert.Contains(model, reloaded.SuggestedModels));
+        var decision = CreatePolicy().Evaluate(profile, CreateManifest(profile.ConnectorPluginKey), true);
+        Assert.Equal(SharedProviderPublicationEligibilityCode.MetadataInvalid, decision.Code);
+        Assert.Contains("at most", decision.SanitizedReason);
+    }
+
+    [Fact]
     public void PublicationPricesMatchEffectiveSourcePricesWithoutPersistedPricing() {
         var profile = CreateProfile();
         var mapper = new ProviderProfileMapper(new ProviderAdministrationConnectorCatalog([]), new ProviderProfileService());
