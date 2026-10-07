@@ -11,6 +11,8 @@ public sealed class ProjectTransferProject {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
+    public string? ExternalNamespace { get; set; }
+    public string? ExternalKey { get; set; }
     public string Description { get; set; } = string.Empty;
     public string Objective { get; set; } = string.Empty;
     public ProjectStatus Status { get; set; } = ProjectStatus.Draft;

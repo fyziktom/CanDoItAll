@@ -19,6 +19,7 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
         await using var context = await CreateAsync(session, cancellationToken);
         return new(
             await context.Set<Project>().AsNoTracking().Select(row => new ProjectTransferProject {
+                ExternalNamespace = row.ExternalNamespace, ExternalKey = row.ExternalKey,
                 LifetimeId = row.LifetimeId, LegacyAgentAccessBindingEligible = row.LegacyAgentAccessBindingEligible, Id = row.Id, Name = row.Name, Slug = row.Slug, Description = row.Description, Objective = row.Objective, Status = row.Status, CurrentPhase = row.CurrentPhase, TargetDateUtc = row.TargetDateUtc, CreatedAtUtc = row.CreatedAtUtc, UpdatedAtUtc = row.UpdatedAtUtc
             }).ToArrayAsync(cancellationToken),
             await context.Set<ProjectPhase>().AsNoTracking().Select(row => new ProjectTransferPhase {
@@ -63,6 +64,7 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
         }
         await using var context = await CreateAsync(session, cancellationToken);
         context.AddRange(data.Projects.Select(row => new Project {
+            ExternalNamespace = row.ExternalNamespace, ExternalKey = row.ExternalKey,
             Id = row.Id, Name = row.Name, Slug = row.Slug, Description = row.Description, Objective = row.Objective, Status = row.Status, CurrentPhase = row.CurrentPhase, TargetDateUtc = row.TargetDateUtc, CreatedAtUtc = row.CreatedAtUtc, UpdatedAtUtc = row.UpdatedAtUtc
         }));
         await context.SaveChangesAsync(cancellationToken);

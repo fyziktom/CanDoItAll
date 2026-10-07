@@ -106,6 +106,7 @@ public sealed partial class ProjectsService {
             ProfileId = admission.DatabaseProfileId,
             Project = new {
                 project.Id, project.LifetimeId, project.LegacyAgentAccessBindingEligible, project.Name, project.Slug,
+                project.ExternalNamespace, project.ExternalKey,
                 project.Description, project.Objective, project.Status, project.CurrentPhase, project.TargetDateUtc,
                 project.CreatedAtUtc, project.UpdatedAtUtc
             },

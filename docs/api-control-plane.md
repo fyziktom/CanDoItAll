@@ -101,7 +101,7 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | Base path | Responsibility | Source |
 | --- | --- | --- |
 | `/api/access` | API status and token issue. | [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs) |
-| `/api/projects` | Project records, access items, hierarchy, subproject relationships, and durable deletion-cleanup recovery. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
+| `/api/projects` | Project records, [stable external identity](project-external-identity.md), access items, hierarchy, subproject relationships, and durable deletion-cleanup recovery. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
 | `/api/project-structure` | Structure reads and focused mutations, node copy, tasks, process/workflow node operations, assets, imports, leases, deletion-cleanup readback, knowledge, and analytics. | [`ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs) |
 | `/api/agents` | Agent, provider, capability, memory, chat, execution, per-proposal approval, artifact, receipt, checkpoint, log, aggregate usage, metric, and runtime-snapshot operations. `GET /usage` provides bounded Agent/Chat usage with rolling periods; see [its contract and rollout](architecture/agents-overview-usage-window.md#public-api). | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
 | `/api/agents/voice` | Bounded audio transcription and speech synthesis using workspace settings; requires execute authority. See [voice input, errors and cancellation](agent-voice-api.md). | [`AgentVoiceApi.cs`](../src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs) |

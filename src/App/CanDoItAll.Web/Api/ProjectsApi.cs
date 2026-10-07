@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Projects;
+using System.ComponentModel;
 
 namespace CanDoItAll.Web.Api;
 
@@ -26,11 +27,18 @@ internal static class ProjectsApi
             .WithName("GetProjectEditor")
             .Produces<ProjectEditorModel>();
 
+        projects.MapGet("/by-external-key/{externalNamespace}/{externalKey}", ResolveExternalIdentityAsync)
+            .WithName("ResolveProjectExternalIdentity")
+            .WithSummary("Resolve a project by its stable external namespace and key.")
+            .WithDescription("Trims and lowercases both identity tokens. Returns the current project id and lifetime; never searches display names. An optional expectedLifetimeId rejects a replaced binding. The pair is unique within the active database profile, including archived projects.")
+            .Produces<ProjectExternalIdentityResolution>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
+
         projects.MapPost("/", SaveProjectAsync)
             .WithName("SaveProject")
             .Produces<Guid>()
             .ProducesApiErrors(StatusCodes.Status400BadRequest)
-            .ProducesApiErrors(StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         projects.MapDelete("/{projectId:guid}", DeleteProjectAsync)
             .WithName("DeleteProject")
@@ -190,10 +198,28 @@ internal static class ProjectsApi
     internal static async Task<IResult> SaveProjectAsync(
         ProjectEditorModel request,
         ProjectsService projectsService,
-        CancellationToken cancellationToken)
-        => ApiEndpointResults.FromResult(
-            await projectsService.SaveAsync(request, cancellationToken),
-            ProjectErrorCodes.NotFound);
+        CancellationToken cancellationToken) {
+        var result = await projectsService.SaveAsync(request, cancellationToken);
+        var conflict = result.Errors.FirstOrDefault(error => error.Code is
+            ProjectErrorCodes.ExternalIdentityConflict or ProjectErrorCodes.ExternalIdentityImmutable);
+        return conflict is not null
+            ? ApiEndpointResults.Conflict(conflict.Message, conflict.Code)
+            : ApiEndpointResults.FromResult(result, ProjectErrorCodes.NotFound);
+    }
+
+    internal static async Task<IResult> ResolveExternalIdentityAsync(
+        [Description("External namespace: 1-100 ASCII letters, digits, dots, underscores or hyphens with alphanumeric ends.")] string externalNamespace,
+        [Description("External key within the namespace, using the same token rules.")] string externalKey,
+        [Description("Optional nonempty lifetime from a previous resolution; mismatch returns HTTP 409.")] Guid? expectedLifetimeId,
+        ProjectIdentityQueryService identities,
+        CancellationToken cancellationToken) {
+        var result = await identities.ResolveExternalIdentityAsync(externalNamespace, externalKey, expectedLifetimeId, cancellationToken);
+        var conflict = result.Errors.FirstOrDefault(error => error.Code is
+            ProjectErrorCodes.ExternalIdentityConflict or ProjectErrorCodes.LifetimeChanged);
+        return conflict is not null
+            ? ApiEndpointResults.Conflict(conflict.Message, conflict.Code)
+            : ApiEndpointResults.FromResult(result, ProjectErrorCodes.NotFound);
+    }
 
     /// <summary>
     /// Delete a project and have the other modules clean up the data they keep for it.
