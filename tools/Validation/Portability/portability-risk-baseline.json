@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T02:33:00.301226+00:00",
+  "generated_utc": "2026-10-07T04:52:15.101055+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15293,
+  "allowance_count": 15306,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -81059,6 +81059,60 @@
       "path": "tools/Validation/bundles/validate_bundle_delivery.py",
       "category": "windows-path",
       "source_fingerprint": "b95330206e9c8909168ee5bc729628d26bb1b84bc11e763138c496cf64255807",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/Backup-Demo.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "49d88c7371ed40023bf6595f132d85bd1911414cd116ba25f3045e651b8f4cf8",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/Check-Demo.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "45095dda190488a26247c6378010776f4147b667747379d5cfe672c1bfeb1c9b",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "274ce51c8167ea58e1ef1a8474fa5aefa192deb8498a0847e42bc384578f007e",
+      "count": 3
+    },
+    {
+      "path": "tools/demo/workbench-wb6/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "b4d0ab92b3387fff65a6857dea8b7c5fbe7e46738814adeae60ef11b06ba106c",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "09a186a6244fd4bf9149889c8de95522078bf5f987522a290adeb1980bd92105",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "d2de21fcc6d69a1a60ce53acf701389405e407b11f54678d8f15ea6e9adb9777",
+      "count": 3
+    },
+    {
+      "path": "tools/demo/workbench-wb6/Restore-Demo.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "23b82b59e3f192c5af90f9b63d4ed6c708f72935fc7553620bd4d90e35694995",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/Start-Demo.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "8bf9f0f007c440199c0c2178bd5a36462892967a4a6d830cca0bbb8a03f48b7b",
+      "count": 1
+    },
+    {
+      "path": "tools/demo/workbench-wb6/Stop-Demo.ps1",
+      "category": "shell-elevation",
+      "source_fingerprint": "d823572f04611dacfbda75cd579426cab9362a7e43b9cd273009b1fcc3cb3eb4",
       "count": 1
     },
     {

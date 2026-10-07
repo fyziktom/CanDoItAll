@@ -39,7 +39,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
         Assert.Equal(resume.SiblingId, sibling!.Id);
         Assert.Equal("PP2C untouched " + resume.ProjectName["PP2C files ".Length..], sibling.Name);
         var tree = await TreeAsync(fixture, resume.ProjectId, includeMetadata: true);
-        Assert.Equal(resume.Nodes.Count + (resume.PartiesComplete ? 3 : 2) + (resume.Secrets is null ? 0 : 3) + (resume.Files is null ? 0 : 1), tree.Nodes.Count);
+        Assert.Equal(resume.Nodes.Count + (resume.PartiesComplete ? 3 : 2) + (resume.Secrets?.Length ?? 0) +
+            (resume.ReusedSecretNodeId is null ? 0 : 1) + (resume.Files is null ? 0 : 1), tree.Nodes.Count);
         Assert.Contains(tree.Nodes, node => node.Id == resume.ParentId && node.ObjectType == ProjectObjectType.ProjectBlock);
         foreach (var (kind, id) in resume.Nodes) {
             var node = Assert.Single(tree.Nodes, node => node.Id == id);
@@ -56,14 +57,16 @@ public sealed partial class SharedProviderNativeConsumerTests {
             Assert.Equal(JsonSerializer.Serialize(accepted), JsonSerializer.Serialize(Assert.Single(assignments, item => item.Id == accepted.Id)));
         }
         if (resume.Secrets is not null) {
-            Assert.Equal(2, resume.Secrets.Length);
+            Assert.InRange(resume.Secrets.Length, 1, 2);
             foreach (var secret in resume.Secrets) {
                 var node = Assert.Single(tree.Nodes, node => node.Id == secret.Id);
                 Assert.Equal(secret.SecretId, ProjectObjectMetadataSerializer.Parse(node.MetadataJson).SecretReference!.SecretId);
             }
-            var reused = Assert.Single(tree.Nodes, node => node.Id == resume.ReusedSecretNodeId);
-            Assert.Equal(Assert.Single(resume.Secrets, secret => secret.Suffix == "intended").SecretId,
-                ProjectObjectMetadataSerializer.Parse(reused.MetadataJson).SecretReference!.SecretId);
+            if (resume.ReusedSecretNodeId is not null) {
+                var reused = Assert.Single(tree.Nodes, node => node.Id == resume.ReusedSecretNodeId);
+                Assert.Equal(Assert.Single(resume.Secrets, secret => secret.Suffix == "intended").SecretId,
+                    ProjectObjectMetadataSerializer.Parse(reused.MetadataJson).SecretReference!.SecretId);
+            }
             await fixture.EvidenceAsync("wb5-native-secret-references", resume.Secrets);
         }
         if (resume.Files is not null) {
@@ -79,8 +82,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
 
     private static async Task ConfigureOperatorsAsync(SharedProviderConsumerFixture fixture, Guid projectId, string marker, OperatorResume? resume) {
         if (resume?.PartiesComplete is true) {
-            if (resume.Secrets is null) {
-                await CreateOperatorSecretsAsync(fixture, projectId, marker);
+            if (resume.ReusedSecretNodeId is null) {
+                await CreateOperatorSecretsAsync(fixture, projectId, marker, resume.Secrets);
             }
             return;
         }
@@ -201,10 +204,14 @@ public sealed partial class SharedProviderNativeConsumerTests {
     private static async Task<ProjectPartyAssignmentDetail[]> OperatorAssignmentsAsync(SharedProviderConsumerFixture fixture, Guid projectId) =>
         (await fixture.ReadOperatorsAsync(projectId)).GetProperty("assignments").Deserialize<ProjectPartyAssignmentDetail[]>(SharedProviderConsumerFixture.ReadJson)!;
 
-    private static async Task CreateOperatorSecretsAsync(SharedProviderConsumerFixture fixture, Guid projectId, string marker) {
-        var accepted = new List<OperatorSecretReceipt>();
-        Guid? first = null;
+    private static async Task CreateOperatorSecretsAsync(SharedProviderConsumerFixture fixture, Guid projectId, string marker,
+        OperatorSecretReceipt[]? retained = null) {
+        var accepted = new List<OperatorSecretReceipt>(retained ?? []);
+        Guid? first = accepted.SingleOrDefault(item => item.Suffix == "intended")?.SecretId;
         foreach (var suffix in new[] { "intended", "neighbor" }) {
+            if (accepted.Any(item => item.Suffix == suffix)) {
+                continue;
+            }
             await OpenOperatorToolboxAsync(fixture, projectId, "assets", "add-secret-reference");
             var dialog = fixture.Page.GetByTestId("project-structure-secret-dialog");
             var value = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");

@@ -249,6 +249,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             var window = page.GetByTestId(testId);
             if (await window.IsVisibleAsync()) {
                 await window.GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
+                await Assertions.Expect(window).ToBeHiddenAsync();
             }
         }
         await SelectFileNodeAsync(page, nodeId, title);

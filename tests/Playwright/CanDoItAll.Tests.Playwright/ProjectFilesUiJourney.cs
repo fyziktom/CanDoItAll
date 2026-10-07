@@ -201,6 +201,11 @@ internal static class ProjectFilesUiJourney {
     }
 
     internal static async Task SelectFileNodeAsync(IPage page, string nodeId, string title) {
+        var toolbox = page.GetByTestId("project-structure-toolbox-window");
+        if (await toolbox.IsVisibleAsync()) {
+            await toolbox.GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
+            await Assertions.Expect(toolbox).ToBeHiddenAsync();
+        }
         var window = page.GetByTestId("project-structure-object-index-window");
         if (!await window.IsVisibleAsync()) {
             await page.GetByTestId("project-structure-object-index-toggle").ClickAsync();
