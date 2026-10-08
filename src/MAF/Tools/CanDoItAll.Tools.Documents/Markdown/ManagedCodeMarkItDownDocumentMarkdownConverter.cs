@@ -1,5 +1,9 @@
 using CanDoItAll.AgentFramework.Core;
 using MarkItDown;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using UglyToad.PdfPig.Exceptions;
 
 namespace CanDoItAll.Tools.Documents;
 
@@ -28,10 +32,24 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverter : IWorkspaceD
             return CreateFailure(sourcePath, "Document source file was not found.");
         }
 
-        DocumentConverterResult converted;
+        string fullMarkdown;
         try
         {
-            converted = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+            if (Path.GetExtension(sourcePath).Equals(".pdf", StringComparison.OrdinalIgnoreCase)) {
+                using var document = PdfDocument.Open(sourcePath);
+                var pages = new List<string>();
+                foreach (var page in document.GetPages()) {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    pages.Add(ContentOrderTextExtractor.GetText(page, addDoubleNewline: true).Trim());
+                }
+                fullMarkdown = string.Join("\n\n", pages);
+                if (string.IsNullOrWhiteSpace(fullMarkdown)) {
+                    return CreateFailure(sourcePath, "The PDF has no selectable text. Supply a text-bearing document; OCR is not configured.");
+                }
+            } else {
+                await using var converted = await client.ConvertAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+                fullMarkdown = converted.Markdown ?? string.Empty;
+            }
         }
         catch (MarkItDownException exception)
         {
@@ -43,9 +61,10 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverter : IWorkspaceD
                 _ => $"Document '{fileName}' could not be converted to markdown. The file may be damaged, protected, or not the format its extension suggests."
             });
         }
+        catch (Exception exception) when (exception is PdfDocumentFormatException or PdfDocumentEncryptedException) {
+            return CreateFailure(sourcePath, "The PDF could not be read. It may be damaged or password protected.");
+        }
 
-        await using var result = converted;
-        var fullMarkdown = result.Markdown ?? string.Empty;
         var markdown = request.MaxCharacters is { } limit && fullMarkdown.Length > limit
             ? fullMarkdown[..limit]
             : fullMarkdown;

@@ -1,5 +1,22 @@
 # Workflow PDF staging
 
+The document adapter reads PDF text with the existing PdfPig 0.1.13 parser's
+`ContentOrderTextExtractor`. Its layout-aware whitespace keeps separately positioned
+lines (including booking URLs and footers) separate. MarkItDown 10.0.7 uses raw
+`page.Text`, which concatenates them. PDF extraction emits document text only; converter
+timestamps and disposed page-image paths are not source facts. A PDF without selectable
+text returns an explicit failure; OCR is not configured. Other supported formats retain
+the MarkItDown path and writable temporary workspace. This is format dispatch, with no
+silent parser fallback. The converter regression includes multiline URLs, empty/damaged
+PDFs, truncation, cancellation, DOCX and XLSX.
+
+Concurrent workflow admission, lifecycle transition and external-response acceptance
+retry only PostgreSQL serialization failures or deadlocks. Each of at most five attempts
+opens a fresh context/transaction and reacquires source authority. Provider calls are
+outside this boundary. Other errors and exhausted retries propagate; run/event identities
+remain stable. PostgreSQL 18 tests exercise aborted commits, exhaustion, non-retryable
+errors and twelve concurrent independent lifecycles.
+
 The Content Studio workflow needs to convert uploaded menus through the existing
 `document.to-markdown` executor. Agent attachment staging only accepts images.
 
