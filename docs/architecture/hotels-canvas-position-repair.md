@@ -17,3 +17,11 @@ part of Components `assets:verify`; all generated-asset, readonly-drag and compo
 checks pass. CanvasLib Release builds with zero warnings/errors. The hotel image must
 include this exact Components commit, followed by native canvas review at the same
 saved positions. Main portability enforcement remains unchanged and passes.
+
+The live overview also exposed overlapping badges at 33% zoom and a root card hidden
+behind the floating toolbar after Fit canvas. Components follow-up `e44176b2` uses
+wrapped, bounded titles in the existing micro renderer through 55% zoom and fits the
+scene below the measured toolbar. Full details remain available at normal zoom. Seven
+additional rendering/viewport regressions pass (14 total layout/overview checks).
+The hotel layout uses 320-unit rows to allow for the real 232-unit task cards and
+their clearance; an explicit arrangement operation preserves content and identities.
