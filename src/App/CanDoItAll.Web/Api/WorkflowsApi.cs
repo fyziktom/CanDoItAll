@@ -33,6 +33,7 @@ internal static class WorkflowsApi
         workflows.MapWorkflowRunIdempotencyApi();
         workflows.MapWorkflowStableIdentityApi();
         workflows.MapWorkflowExternalResponseApi();
+        workflows.MapWorkflowAttachmentsApi();
 
         workflows.MapGet("/contract", GetContract)
             .WithName("GetWorkflowsApiContract")

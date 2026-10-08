@@ -326,6 +326,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkWorkspaceActivityExecutionService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
+        services.AddScoped<WorkflowDocumentStagingService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddScoped<AgentAvatarGenerationService>();

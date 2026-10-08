@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T19:41:51.872793+00:00",
+  "generated_utc": "2026-10-08T06:33:17.702936+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15312,
+  "allowance_count": 15317,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -22553,6 +22553,36 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/PluginWorkspaceFiles.cs",
       "category": "path-api",
       "source_fingerprint": "319d23a21e1e4a1ce8517e62640b72733148d84b0779d8fbd01184653ed368b1",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "1525fb26c0709160c232417de3194ee21b710f3ceaedb641fc75be88fb2a6378",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "3f607140077ed6f7b035ff7211561ea6c85e2de2850366a8456fc2e3b490f4ee",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "05e44733599d38991f790d227416a954a7b832db39b1817ec6a412e308c44669",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bacb7f43772cdf2f971f64884eaf9d1a2a72ee7260cee7c0a925edd6cf532622",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "windows-path",
+      "source_fingerprint": "232d06d8584d99b9b4fb63d1a6b20b7d0af215586030594f0d3b96cf232c4ddd",
       "count": 1
     },
     {
