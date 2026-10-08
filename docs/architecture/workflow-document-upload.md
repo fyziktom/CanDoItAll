@@ -22,3 +22,11 @@ explicit removal of both client path separators, and create-new/delete-on-failur
 to a unique authorized workspace path. The endpoint never replaces an existing file.
 Live conversion and generated API documentation evidence belong to T20-b on the hotel
 planning board and the SharedInfo contract export.
+
+The document converter configures its MarkItDown scratch root as
+`candoitall-document-conversion` beneath the host temporary directory, independent
+of the process working directory. This supports the standard read-only container image;
+conversion does not require a writable application directory. The conversion result owns
+disposable scratch artifacts. Existing conversion, truncation, missing
+source and cancellation tests apply; live PDF conversion is also exercised in the
+read-only hotel engine container.

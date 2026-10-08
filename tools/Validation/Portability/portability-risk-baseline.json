@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-08T06:33:17.702936+00:00",
+  "generated_utc": "2026-10-08T07:35:10.612031+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15317,
+  "allowance_count": 15319,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -38823,8 +38823,20 @@
     },
     {
       "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "8e90a6dfa10a371f58754e631f55d577f3b53c55412baa84680f74b6b3cc4487",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
       "category": "path-api",
       "source_fingerprint": "07b09f8d2fe4d510fd78743db2a27fa69cfa643951723ba3c401e58ba194c4a5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
+      "category": "path-api",
+      "source_fingerprint": "e99d9c30847b864d239de7b1187118b4f8cefc78780cd21f8e29a73989e62806",
       "count": 1
     },
     {

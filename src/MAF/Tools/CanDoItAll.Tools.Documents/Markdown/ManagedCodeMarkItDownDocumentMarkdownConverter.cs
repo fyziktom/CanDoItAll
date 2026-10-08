@@ -5,7 +5,9 @@ namespace CanDoItAll.Tools.Documents;
 
 public sealed class ManagedCodeMarkItDownDocumentMarkdownConverter : IWorkspaceDocumentMarkdownConverter
 {
-    private readonly MarkItDownClient client = new();
+    private readonly MarkItDownClient client = new(new MarkItDownOptions {
+        RootPath = Path.Combine(Path.GetTempPath(), "candoitall-document-conversion")
+    });
 
     public async Task<WorkspaceDocumentMarkdownConversionResult> ConvertToMarkdownAsync(
         WorkspaceDocumentMarkdownConversionRequest request,
