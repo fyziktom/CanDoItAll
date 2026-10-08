@@ -8,3 +8,8 @@ public sealed record ProjectCleanupStatus(
     ProjectCleanupTarget Target, string Status, bool CanRetryNow, DateTimeOffset? RetryAvailableAtUtc, string RetryGuidance);
 
 public sealed record ProjectCleanupNotice(ProjectCleanupTarget Target, string Operation, IReadOnlyList<string> Warnings);
+
+public enum ProjectCleanupView { Pending, RetainedMedia }
+
+public sealed record ProjectCleanupReview(
+    ProjectCleanupView View, int Page = 0, ProjectCleanupTarget? Target = null, int MediaPage = 0);

@@ -556,10 +556,11 @@ public sealed class ProjectsPageTests
                 cut.FindAll("[data-testid='project-card']"),
                 card => card.TextContent.Contains("Partial deletion project", StringComparison.Ordinal));
             Assert.Contains("cleanup remains pending", cut.Find("[data-testid='project-deletion-notice']").TextContent);
-            Assert.NotNull(cut.Find("[data-testid='project-deletion-retry']"));
+            Assert.NotNull(cut.Find("[data-testid='project-cleanup-open']"));
         });
 
-        cut.Find("[data-testid='project-deletion-retry']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-cleanup-open']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-deletion-retry']").ClickAsync(new()));
 
         cut.WaitForAssertion(() =>
         {

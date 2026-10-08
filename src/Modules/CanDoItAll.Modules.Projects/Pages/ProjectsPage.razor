@@ -38,7 +38,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     <ChildContent>
         <ProjectDeletionStatusSurface Message="@projectDeletionNotice" IsError="projectDeletionNoticeIsError"
                                       Pending="CleanupStatuses" Completed="CleanupNotices" BusyTargets="busyCleanupTargets"
-                                      Retry="RetryProjectDeletionCleanupAsync" />
+                                      Retry="RetryProjectDeletionCleanupAsync" Review="cleanupReview"
+                                      ReviewChanged="value => cleanupReview = value" />
         @if (portfolioError is not null || editorError is not null) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="projects-read-error">
                 <TextBlock Value="@(editorError ?? portfolioError)" />
@@ -171,6 +172,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
     private readonly Dictionary<Guid, ProjectEditorDraft> mutationTargets = [];
     private readonly HashSet<ProjectCleanupTarget> busyCleanupTargets = [];
+    private ProjectCleanupReview? cleanupReview;
     private readonly ProjectsPageLoadGeneration portfolioLoads = new();
     private readonly ProjectsPageLoadGeneration packageLoads = new();
     private readonly ProjectsPageLoadGeneration filesLoads = new();
@@ -439,19 +441,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         projectDeletionCompletionNotices.Clear();
         projectDeletionCompletionNotices.AddRange(
             state.DeletionCompletionNotices.Where(notice => notice.Warnings.Count > 0));
-        if (pendingProjectDeletionCleanups.Count > 0 && (string.IsNullOrWhiteSpace(projectDeletionNotice) || !projectDeletionNoticeIsError))
-        {
-            projectDeletionNotice =
-                $"{pendingProjectDeletionCleanups.Count} deleted project cleanup operation(s) remain pending and can be retried by exact mutation id.";
-            projectDeletionNoticeIsError = true;
-        }
-        else if (projectDeletionCompletionNotices.Count > 0 &&
-                 string.IsNullOrWhiteSpace(projectDeletionNotice))
-        {
-            projectDeletionNotice =
-                $"{projectDeletionCompletionNotices.Count} completed project deletion operation(s) retained managed media and require manual review.";
-            projectDeletionNoticeIsError = true;
-        }
         RebuildProjectFileProjection();
     }
 
@@ -866,8 +855,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             var deletion = await ProjectsService.DeleteAsync(id, expectedProjectAdmission: admission);
             RecordDeletion(target, intent);
             projectDeletionNotice = deletion.Warnings.Count == 0 ? "Project deleted."
-                : BuildProjectDeletionWarningMessage("Project deleted with retained managed media.", deletion.Warnings);
-            projectDeletionNoticeIsError = deletion.Warnings.Count > 0;
+                : "Project deleted. Retained media is recorded in cleanup history.";
+            projectDeletionNoticeIsError = false;
         } catch (ProjectWriteAdmissionRejectedException exception) when (admission is not null && exception.Admission == admission) {
             RefuseMutation(target, exception, "Deletion was refused because the acquired project lifetime no longer exists. Close and reopen the current project before another write.");
             return;
@@ -918,8 +907,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             portfolioLoads.Invalidate();
             pendingProjectDeletionCleanups.RemoveAll(cleanup => cleanup.ProjectId == target.ProjectId && cleanup.ParticipantId == target.ParticipantId && cleanup.RecoveryId == target.RecoveryId);
             projectDeletionNotice = result.Warnings.Count == 0 ? "Project cleanup completed."
-                : BuildProjectDeletionWarningMessage("Project cleanup completed with retained managed media.", result.Warnings);
-            projectDeletionNoticeIsError = result.Warnings.Count > 0;
+                : "Project cleanup completed. Retained media is recorded in cleanup history.";
+            projectDeletionNoticeIsError = false;
         } catch (ProjectDeletionPartialCommitException) {
             projectDeletionNotice = "Project cleanup is still pending. The exact durable operation remains available for another retry.";
             projectDeletionNoticeIsError = true;
@@ -944,11 +933,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private IReadOnlyList<ProjectCleanupNotice> CleanupNotices => projectDeletionCompletionNotices.Select(item => new ProjectCleanupNotice(
         new(item.ProjectId, item.ParticipantId, item.RecoveryId), FormatCompletionOperation(item.Operation),
         item.Warnings.Select(warning => $"{warning.RetainedObject.Provider} · storage {warning.RetainedObject.StorageId?.ToString("D") ?? "bootstrap"} · {warning.RetainedObject.LocatorKind} · {warning.RetainedObject.Locator}. {warning.RetainedObject.Reason} {warning.Remediation}").ToArray())).ToArray();
-
-    private static string BuildProjectDeletionWarningMessage(
-        string message,
-        IReadOnlyCollection<ProjectDeletionWarning> warnings)
-        => $"{message} {string.Join(" ", warnings.Select(warning => $"{warning.Message} {warning.Remediation}"))}";
 
     private ProjectFileFilter CreateProjectFileFilter()
         => new(
