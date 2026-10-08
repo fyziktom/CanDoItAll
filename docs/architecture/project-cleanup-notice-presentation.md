@@ -22,6 +22,11 @@ operations retain exact retry controls and busy/refusal feedback. Completed hist
 is informational and paged, with media details available without expanding the page.
 Closing this view never acknowledges, deletes or retries a record.
 
+The dialog body captures its non-null review snapshot when it is created. A queued
+child render may run after the host clears the review on close; reading the live
+nullable parameter inside that fragment can otherwise terminate the Blazor circuit.
+The close regression also renders that queued body after the host has cleared it.
+
 Post-operation feedback is concise; exact retained objects and remediation remain in
 the receipt view. Reading fresh inventory cannot turn successful immutable retention
 into an error. Unknown outcomes still require observation before another write, and

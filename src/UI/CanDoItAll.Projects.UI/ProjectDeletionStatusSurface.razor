@@ -11,7 +11,7 @@
         </Cluster>
     </Alert>
 }
-@if (Review is not null) {
+@if (Review is { } review) {
     <Dialog IsOpen="true" Title="Project cleanup" Size="ModalSize.Wide" DenseChrome="true"
             Subtitle="Unfinished operations need attention. Completed operations keep an auditable record of retained media."
             OnClose="Close" TestId="project-cleanup-dialog">
@@ -23,9 +23,9 @@
                     <Button Text="@($"Retained media ({Completed.Count})")" ButtonStyle="ButtonStyle.Light"
                             Click="@(() => ChangeView(ProjectCleanupView.RetainedMedia))" data-testid="project-cleanup-completed-tab" />
                 </Cluster>
-                @if (Review.View == ProjectCleanupView.RetainedMedia && Review.Target is not null) {
+                @if (review.View == ProjectCleanupView.RetainedMedia && review.Target is not null) {
                     <Button Text="Back to completed operations" ButtonStyle="ButtonStyle.Light"
-                            Click="@(() => ReviewChanged.InvokeAsync(Review with { Target = null, MediaPage = 0 }))" data-testid="project-cleanup-back" />
+                            Click="@(() => ReviewChanged.InvokeAsync(review with { Target = null, MediaPage = 0 }))" data-testid="project-cleanup-back" />
                     @if (SelectedNotice is { } selected) {
                         <TextBlock Value="@OperationLabel(selected.Target, selected.Operation)" Class="break-words" />
                         <TextBlock Value="Deletion completed. These objects were retained by the storage provider; review the recorded guidance below." />
@@ -33,21 +33,21 @@
                             <TextBlock Value="@warning" Class="break-words" data-testid="project-cleanup-media-item" />
                         }
                         <Cluster Gap="LayoutGap.Small">
-                            <Button Text="Previous media" Disabled="@(MediaPage == 0)" Click="@(() => MoveMedia(-1))" data-testid="project-cleanup-media-previous" />
+                            <Button Text="Previous media" Disabled="@(MediaPage == 0)" Click="@(() => MoveMedia(review, -1))" data-testid="project-cleanup-media-previous" />
                             <TextBlock Value="@($"Media page {MediaPage + 1} of {PageCount(selected.Warnings.Count)} · {selected.Warnings.Count} retained objects")" />
-                            <Button Text="Next media" Disabled="@(MediaPage + 1 >= PageCount(selected.Warnings.Count))" Click="@(() => MoveMedia(1))" data-testid="project-cleanup-media-next" />
+                            <Button Text="Next media" Disabled="@(MediaPage + 1 >= PageCount(selected.Warnings.Count))" Click="@(() => MoveMedia(review, 1))" data-testid="project-cleanup-media-next" />
                         </Cluster>
                     } else {
                         <TextBlock Value="This operation is no longer in the current inventory. Return to the list to choose another operation." data-testid="project-cleanup-missing" />
                     }
                 } else {
                     <SectionHead>
-                        <TextBlock TextStyle="TextStyle.H3" Value="@(Review.View == ProjectCleanupView.Pending ? "Needs attention" : "Completed operations with retained media")" />
+                        <TextBlock TextStyle="TextStyle.H3" Value="@(review.View == ProjectCleanupView.Pending ? "Needs attention" : "Completed operations with retained media")" />
                     </SectionHead>
                     @if (ItemCount == 0) {
                         <TextBlock Value="No operations in this view." />
                     }
-                    @if (Review.View == ProjectCleanupView.Pending) {
+                    @if (review.View == ProjectCleanupView.Pending) {
                         @foreach (var cleanup in Pending.Skip(CurrentPage * PageSize).Take(PageSize)) {
                             <Stack @key="cleanup.Target" GapScale="LayoutGap.Small" data-testid="project-cleanup-pending-item">
                                 <TextBlock Value="@OperationLabel(cleanup.Target, cleanup.Status)" Class="break-words" />
@@ -65,15 +65,15 @@
                             <Stack @key="notice.Target" GapScale="LayoutGap.Small" data-testid="project-cleanup-completed-item">
                                 <TextBlock Value="@OperationLabel(notice.Target, notice.Operation)" Class="break-words" />
                                 <Button Text="@($"Inspect {notice.Warnings.Count} retained objects")" ButtonStyle="ButtonStyle.Light"
-                                        Click="@(() => ReviewChanged.InvokeAsync(Review with { Target = notice.Target, MediaPage = 0 }))"
+                                        Click="@(() => ReviewChanged.InvokeAsync(review with { Target = notice.Target, MediaPage = 0 }))"
                                         data-testid="project-cleanup-inspect" />
                             </Stack>
                         }
                     }
                     <Cluster Gap="LayoutGap.Small">
-                        <Button Text="Previous operations" Disabled="@(CurrentPage == 0)" Click="@(() => MovePage(-1))" data-testid="project-cleanup-previous" />
+                        <Button Text="Previous operations" Disabled="@(CurrentPage == 0)" Click="@(() => MovePage(review, -1))" data-testid="project-cleanup-previous" />
                         <TextBlock Value="@($"Page {CurrentPage + 1} of {PageCount(ItemCount)} · {ItemCount} operations")" />
-                        <Button Text="Next operations" Disabled="@(CurrentPage + 1 >= PageCount(ItemCount))" Click="@(() => MovePage(1))" data-testid="project-cleanup-next" />
+                        <Button Text="Next operations" Disabled="@(CurrentPage + 1 >= PageCount(ItemCount))" Click="@(() => MovePage(review, 1))" data-testid="project-cleanup-next" />
                     </Cluster>
                 }
             </Stack>
@@ -105,10 +105,10 @@
     private Task Open() => ChangeView(Pending.Count > 0 ? ProjectCleanupView.Pending : ProjectCleanupView.RetainedMedia);
     private Task Close() => ReviewChanged.InvokeAsync((ProjectCleanupReview?)null);
     private Task ChangeView(ProjectCleanupView view) => ReviewChanged.InvokeAsync(new(view));
-    private Task MovePage(int direction) => ReviewChanged.InvokeAsync(Review! with {
+    private Task MovePage(ProjectCleanupReview review, int direction) => ReviewChanged.InvokeAsync(review with {
         Page = Math.Clamp(CurrentPage + direction, 0, PageCount(ItemCount) - 1), Target = null, MediaPage = 0
     });
-    private Task MoveMedia(int direction) => ReviewChanged.InvokeAsync(Review! with {
+    private Task MoveMedia(ProjectCleanupReview review, int direction) => ReviewChanged.InvokeAsync(review with {
         MediaPage = Math.Clamp(MediaPage + direction, 0, PageCount(SelectedNotice?.Warnings.Count ?? 0) - 1)
     });
 }

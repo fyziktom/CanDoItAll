@@ -107,8 +107,10 @@ public sealed class ProjectDeletionStatusSurfaceTests {
         var cut = Render(context, Notices(6));
         await Click(cut, "project-cleanup-open");
         await Click(cut, "project-cleanup-inspect");
+        var queuedBody = cut.FindComponents<Stack>().Single(stack => stack.Instance.GapScale == LayoutGap.Medium).Instance.ChildContent;
         await cut.InvokeAsync(() => cut.Find("button[aria-label='Close']").ClickAsync(new()));
         Assert.Empty(cut.FindAll("[data-testid='project-cleanup-dialog']"));
+        context.Render<Stack>(parameters => parameters.Add(stack => stack.ChildContent, queuedBody));
         Assert.Contains("6 completed", cut.Markup);
         await Click(cut, "project-cleanup-open");
         Assert.NotEmpty(cut.FindAll("[data-testid='project-cleanup-completed-item']"));
