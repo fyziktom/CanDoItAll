@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectExternalIdentityApiIntegrationTests {
-    private const string ResolvePath = "/api/projects/by-external-key/partner.hotel/resort";
+    private const string ResolvePath = "/api/projects/by-external-key/partner.integration/workspace";
 
     [Fact]
     public async Task Identity_survives_rename_legacy_save_and_archiving_and_rejects_rebinding_or_duplicates() {
@@ -19,13 +19,13 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         var id = await created.Content.ReadFromJsonAsync<Guid>();
         var resolution = await host.Client.GetFromJsonAsync<ProjectExternalIdentityResolution>(ResolvePath);
         Assert.Equal(id, resolution!.ProjectId);
-        Assert.Equal("partner.hotel", resolution.ExternalNamespace);
-        Assert.Equal("resort", resolution.ExternalKey);
+        Assert.Equal("partner.integration", resolution.ExternalNamespace);
+        Assert.Equal("workspace", resolution.ExternalKey);
 
         var editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
         Assert.Equal(resolution.LifetimeId, editor.ExpectedLifetimeId);
-        Assert.Equal("partner.hotel", editor.ExternalNamespace);
-        Assert.Equal("resort", editor.ExternalKey);
+        Assert.Equal("partner.integration", editor.ExternalNamespace);
+        Assert.Equal("workspace", editor.ExternalKey);
         editor.Name = "Renamed synthetic project";
         editor.Status = ProjectStatus.Archived;
         using var renamed = await host.Client.PostAsJsonAsync("/api/projects/", editor);
@@ -51,8 +51,8 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         var id = await created.Content.ReadFromJsonAsync<Guid>();
         var editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{id}"))!;
         var lifetime = editor.ExpectedLifetimeId;
-        editor.ExternalNamespace = "partner.hotel";
-        editor.ExternalKey = "resort";
+        editor.ExternalNamespace = "partner.integration";
+        editor.ExternalKey = "workspace";
         editor.ExpectedLifetimeId = null;
         using var missingLifetime = await host.Client.PostAsJsonAsync("/api/projects/", editor);
         await AssertErrorAsync(missingLifetime, HttpStatusCode.BadRequest, ProjectErrorCodes.ExternalIdentityLifetimeRequired);
@@ -121,14 +121,14 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
     }
 
     [Theory]
-    [InlineData(null, "resort")]
-    [InlineData("partner.hotel", null)]
+    [InlineData(null, "workspace")]
+    [InlineData("partner.integration", null)]
     [InlineData("", "")]
-    [InlineData("partner.hotel", " ")]
-    [InlineData("partner.hotel", "bad:key")]
-    [InlineData("partner.hotel", "ends-")]
-    [InlineData("partner.hotel", "-starts")]
-    [InlineData("partner.hotel", "résort")]
+    [InlineData("partner.integration", " ")]
+    [InlineData("partner.integration", "bad:key")]
+    [InlineData("partner.integration", "ends-")]
+    [InlineData("partner.integration", "-starts")]
+    [InlineData("partner.integration", "wórkspace")]
     public async Task Invalid_identity_is_rejected_before_creation(string? externalNamespace, string? externalKey) {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
         using var response = await host.Client.PostAsJsonAsync("/api/projects/", new ProjectEditorModel {
@@ -150,7 +150,7 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
         Assert.Equal(HttpStatusCode.OK, maximum.StatusCode);
         using var emptyLifetime = await host.Client.GetAsync($"{ResolvePath}?expectedLifetimeId={Guid.Empty}");
         await AssertErrorAsync(emptyLifetime, HttpStatusCode.BadRequest, ProjectErrorCodes.ExternalIdentityInvalid);
-        using var invalidKey = await host.Client.GetAsync("/api/projects/by-external-key/partner.hotel/bad:key");
+        using var invalidKey = await host.Client.GetAsync("/api/projects/by-external-key/partner.integration/bad:key");
         await AssertErrorAsync(invalidKey, HttpStatusCode.BadRequest, ProjectErrorCodes.ExternalIdentityInvalid);
     }
 
@@ -171,7 +171,7 @@ public sealed class ProjectExternalIdentityApiIntegrationTests {
     }
 
     private static ProjectEditorModel NewProject() => new() {
-        Name = "Synthetic resort project", ExternalNamespace = " Partner.Hotel ", ExternalKey = " RESORT "
+        Name = "Synthetic workspace project", ExternalNamespace = " Partner.Integration ", ExternalKey = " WORKSPACE "
     };
 
     private static async Task AssertErrorAsync(HttpResponseMessage response, HttpStatusCode status, string code) {

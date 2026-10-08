@@ -28,16 +28,11 @@ no projects, registrations, partial classes or service interfaces are added. Raw
 tests cover same-title nodes, clean notes, exact identity readback and rejection before
 any nodes are created. Existing Mermaid/DOCX/XMind and raw task-update suites cover
 unchanged import and canonical task behavior. SharedInfo carries the API-user guidance
-and exact generated snapshot; the hotel seeder consumes it through HTTP only.
+and exact generated snapshot. External clients consume the published HTTP contract.
 
-## Validation and architecture closure
+## Validation
 
-Review result: **Pass**. The existing Workbench importer and metadata normalization
-remain the owners; the typed identity adds no dependency direction, registration,
-interface or partial-class split. Production Workbench/Web Release builds passed with
-zero warnings/errors. All 14 identity unit cases and 35 focused HTTP/import cases
-passed without skips against PostgreSQL 18.6. The latter include eight new raw JSON
-cases, 23 canonical task-update cases and four existing Mermaid/DOCX/XMind imports.
-The final portability gate passed with 15,312 reviewed executable findings unchanged;
-no baseline refresh was needed. The initial HTTP failures exposed dropped metadata
-in both task serialization and node-kind scoping; the final proof includes the fixes.
+Build Workbench and Web, then discover and run `ProjectStructureImportSourceIdentityTests`
+and `ProjectStructureImportIdentityRawJsonTests`. Include the existing import and
+task-update cases when changing metadata normalization. Follow [Testing](../testing.md)
+for the isolated PostgreSQL host, discovery counts and final portability enforcement.

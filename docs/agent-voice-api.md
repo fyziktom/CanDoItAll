@@ -41,7 +41,7 @@ before using it as an instruction; proper names may be transcribed inaccurately.
 `POST /api/agents/voice/speech` accepts a JSON body such as:
 
 ```json
-{"text":"Welcome to this synthetic resort demonstration.","voiceId":"marin"}
+{"text":"Your project report is ready.","voiceId":"marin"}
 ```
 
 `text` must be nonblank and at most 4,096 UTF-16 characters. The entire JSON request

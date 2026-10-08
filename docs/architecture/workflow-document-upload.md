@@ -2,7 +2,7 @@
 
 The document adapter reads PDF text with the existing PdfPig 0.1.13 parser's
 `ContentOrderTextExtractor`. Its layout-aware whitespace keeps separately positioned
-lines (including booking URLs and footers) separate. MarkItDown 10.0.7 uses raw
+lines (including URLs and footers) separate. MarkItDown 10.0.7 uses raw
 `page.Text`, which concatenates them. PDF extraction emits document text only; converter
 timestamps and disposed page-image paths are not source facts. A PDF without selectable
 text returns an explicit failure; OCR is not configured. Other supported formats retain
@@ -17,8 +17,8 @@ outside this boundary. Other errors and exhausted retries propagate; run/event i
 remain stable. PostgreSQL 18 tests exercise aborted commits, exhaustion, non-retryable
 errors and twelve concurrent independent lifecycles.
 
-The Content Studio workflow needs to convert uploaded menus through the existing
-`document.to-markdown` executor. Agent attachment staging only accepts images.
+Workflows can convert uploaded documents through the existing `document.to-markdown`
+executor. Agent attachment staging only accepts images.
 
 `POST /api/workflows/attachments/documents` adds a separate document ingress boundary.
 It requires `api.workflows.write`, exactly one `file` part, matching PDF extension/media
@@ -32,18 +32,18 @@ owns multipart shape and scope. No new provider or converter abstraction is intr
 Cancellation/failed writes remove only a file created by this operation. The service
 does not claim to sanitize or validate the entire PDF document.
 
-Verification: Web Release build; ten WorkflowDocumentStagingTests; six
-WorkflowDocumentApiIntegrationTests, including 401/403/write permission and ambiguous
-forms. Portability review accepts ordinal case-insensitive MIME/extension comparison,
+Validate the Web Release build, `WorkflowDocumentStagingTests` and
+`WorkflowDocumentApiIntegrationTests`, including 401/403/write permission and ambiguous
+forms. The implementation uses ordinal case-insensitive MIME/extension comparison,
 explicit removal of both client path separators, and create-new/delete-on-failure writes
 to a unique authorized workspace path. The endpoint never replaces an existing file.
-Live conversion and generated API documentation evidence belong to T20-b on the hotel
-planning board and the SharedInfo contract export.
+Verify live conversion separately from staging and compare the generated API document
+with the SharedInfo contract export.
 
 The document converter configures its MarkItDown scratch root as
 `candoitall-document-conversion` beneath the host temporary directory, independent
 of the process working directory. This supports the standard read-only container image;
 conversion does not require a writable application directory. The conversion result owns
 disposable scratch artifacts. Existing conversion, truncation, missing
-source and cancellation tests apply; live PDF conversion is also exercised in the
-read-only hotel engine container.
+source and cancellation tests apply. Include a live PDF conversion check in the
+read-only container validation.

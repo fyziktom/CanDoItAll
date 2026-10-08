@@ -41,11 +41,8 @@ cover stale dates/duration and malformed input; raw JSON integration tests impor
 real outline, initialize/read back its task, then verify stale, invalid and dependency
 rejections without partial title changes. Existing task-update tests cover compatibility.
 
-Verified on 7 October 2026: 19 expected/discovered unit cases and 23 expected/discovered
-raw HTTP cases passed, zero skipped, using isolated PostgreSQL 18.6 on loopback port
-5544. Workbench and Web production builds passed. The complete source portability scan
-included new files and final enforcement passed with all 15,312 reviewed findings
-unchanged; the baseline was not rewritten. The six enforcement-tool and four secret
-scanner tests passed. An isolated WindowsHeadless host emitted both identical OpenAPI
-routes with all five required initial-schedule members and their source-owned
-`Description` attributes. No XML documentation was introduced.
+Build Workbench and Web, then discover and run `ProjectStructureInitialTaskScheduleTests`,
+`ProjectStructureTaskUpdateAgentInputTests` and `ProjectStructureTaskUpdateRawJsonTests`.
+Follow [Testing](../testing.md) for the isolated PostgreSQL host and portability gate.
+Both OpenAPI document routes must expose the five required initial-schedule members
+and their source-owned `Description` attributes.

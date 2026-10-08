@@ -43,21 +43,21 @@ public sealed class ProjectExternalIdentityPersistenceTests {
         await using var current = new AppDbContext(lease.CreateAppDbContextOptions());
         var bound = await current.Set<Project>().SingleAsync();
         bound.ExternalNamespace = "synthetic";
-        bound.ExternalKey = "resort";
+        bound.ExternalKey = "workspace";
         await current.SaveChangesAsync();
         await Assert.ThrowsAsync<PostgresException>(() => current.GetService<IMigrator>().MigrateAsync(PreviousMigration));
         await using var readback = new AppDbContext(lease.CreateAppDbContextOptions());
-        Assert.Equal("resort", (await readback.Set<Project>().SingleAsync()).ExternalKey);
+        Assert.Equal("workspace", (await readback.Set<Project>().SingleAsync()).ExternalKey);
         Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
     }
 
     [Theory]
-    [InlineData(null, "resort")]
+    [InlineData(null, "workspace")]
     [InlineData("synthetic", null)]
-    [InlineData("Synthetic", "resort")]
+    [InlineData("Synthetic", "workspace")]
     [InlineData("synthetic", "")]
-    [InlineData("synthetic", "resort-")]
-    [InlineData("synthetic", "resort\n")]
+    [InlineData("synthetic", "workspace-")]
+    [InlineData("synthetic", "workspace\n")]
     public async Task Database_rejects_malformed_pairs_even_when_service_is_bypassed(string? externalNamespace, string? externalKey) {
         await using var database = await HistoryPersistenceTestDatabase.CreateAsync();
         await using var context = database.Factory.CreateDbContext();
@@ -79,7 +79,7 @@ public sealed class ProjectExternalIdentityPersistenceTests {
         var writers = 0;
         async Task<bool> InsertAsync() {
             await using var context = database.Factory.CreateDbContext();
-            context.Add(new Project { Name = "Concurrent synthetic insert", ExternalNamespace = "synthetic", ExternalKey = "resort" });
+            context.Add(new Project { Name = "Concurrent synthetic insert", ExternalNamespace = "synthetic", ExternalKey = "workspace" });
             if (Interlocked.Increment(ref writers) == 2) {
                 ready.SetResult();
             }
@@ -104,7 +104,7 @@ public sealed class ProjectExternalIdentityPersistenceTests {
     [Fact]
     public async Task Transfer_and_package_payload_preserve_identity_and_create_fresh_target_lifetime() {
         await using var source = await HistoryPersistenceTestDatabase.CreateAsync();
-        var project = new Project { Name = "Transferred synthetic resort", ExternalNamespace = "synthetic", ExternalKey = "resort" };
+        var project = new Project { Name = "Transferred synthetic workspace", ExternalNamespace = "synthetic", ExternalKey = "workspace" };
         await using (var context = source.Factory.CreateDbContext()) {
             context.Add(project);
             await context.SaveChangesAsync();
@@ -140,11 +140,11 @@ public sealed class ProjectExternalIdentityPersistenceTests {
         await using (var context = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync()) {
             var project = await context.Set<Project>().SingleAsync(row => row.Id == receipt.Project.ProjectId);
             project.ExternalNamespace = "synthetic";
-            project.ExternalKey = "resort";
+            project.ExternalKey = "workspace";
             await context.SaveChangesAsync();
         }
         Assert.False(await projects.TryCompensateCreationAsync(receipt));
         Assert.True((await scope.ServiceProvider.GetRequiredService<ProjectIdentityQueryService>()
-            .ResolveExternalIdentityAsync("synthetic", "resort", receipt.Project.LifetimeId)).IsSuccess);
+            .ResolveExternalIdentityAsync("synthetic", "workspace", receipt.Project.LifetimeId)).IsSuccess);
     }
 }

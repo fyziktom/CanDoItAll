@@ -184,6 +184,6 @@ tool calling is supported. The managed default model remains GPT-5.4 Mini. Its
 Every suggested managed OpenAI chat model now has a price row. Normal startup seeds
 the standard provider profiles and refreshes their owned price catalog. Deployments
 that deliberately set `AgentFramework:Providers:SeedDefaults=false` must supply their
-own provider bindings; this switch is unsuitable for a demo using the built-in
-Delivery Manager unchanged. Agent saves reject a missing provider before checking
+bindings for every configured agent, including built-in agents. Agent saves reject a
+missing provider before checking
 model prices and tell the operator to restore or select a provider.

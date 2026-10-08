@@ -14,16 +14,16 @@ and last character. For example:
 
 ```json
 {
-  "name": "Synthetic resort operations",
-  "externalNamespace": "hotels-ai-demos",
-  "externalKey": "corallune-guest-journey"
+  "name": "Operations workspace",
+  "externalNamespace": "partner.integration",
+  "externalKey": "operations-workspace"
 }
 ```
 
 The save returns the project UUID. Resolve it directly with:
 
 ```http
-GET /api/projects/by-external-key/hotels-ai-demos/corallune-guest-journey
+GET /api/projects/by-external-key/partner.integration/operations-workspace
 ```
 
 The response contains `projectId`, `lifetimeId`, `externalNamespace` and `externalKey`.

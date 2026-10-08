@@ -1,11 +1,10 @@
 # Project cleanup notices without displacing the workspace
 
-The Projects page expanded every retained-media receipt into a warning above the
-portfolio. Repeated hotel seed resets produced 33 completed operations, each with
-several IPFS references. These are durable completion records: immutable storage
-retention is an expected provider outcome, not a failed project deletion. The page
-also promoted this history to an error and concatenated every warning into immediate
-feedback. A successful cleanup therefore obscured the primary project surface.
+Completed project deletions can retain several media references per operation.
+These are durable completion records: immutable storage retention is an expected
+provider outcome, not a failed project deletion. Expanding every receipt into a
+warning above the portfolio obscures the primary project surface. Completed history
+therefore uses a compact summary and an explicit review dialog.
 
 The Projects service and Workbench storage participants retain ownership of deletion,
 retry, receipts and authorization. Their durable records and HTTP contracts remain
