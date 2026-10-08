@@ -1,6 +1,25 @@
 .project-structure-gantt-panel {
     width: 100%;
     min-width: 0;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .project-structure-gantt-panel__content,
+::deep .project-structure-gantt-panel__chart {
+    flex: 1;
+    min-height: 0;
+}
+
+::deep .project-structure-gantt-panel__content > :not(.project-structure-gantt-panel__chart) {
+    flex-shrink: 0;
+}
+
+::deep .project-structure-gantt-panel__dependencies {
+    max-height: 30%;
+    overflow: auto;
 }
 
 ::deep .project-structure-gantt-panel__utility-bar {

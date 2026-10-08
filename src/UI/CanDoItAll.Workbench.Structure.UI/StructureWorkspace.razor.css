@@ -2,6 +2,13 @@
     min-height: var(--structure-page-min-height, calc(100dvh - 5.5rem));
 }
 
+.project-structure-page--planning,
+.project-structure-page--planning ::deep .project-structure-page__stack {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .project-structure-page ::deep .cw-stage {
     min-height: var(--structure-stage-min-height, calc(100dvh - 6rem));
 }

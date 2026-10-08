@@ -43,7 +43,7 @@ public sealed class ProjectStructureGanttProjectionAdapter
             return Invalid(issues);
         }
 
-        var dependencies = BuildDependencies(surface.Links, schedules.Keys, issues);
+        var dependencies = BuildDependencies(surface.Links, surface.Nodes, schedules.Keys, issues);
         if (HasErrors(issues))
         {
             return Invalid(issues);
@@ -256,10 +256,12 @@ public sealed class ProjectStructureGanttProjectionAdapter
 
     private static IReadOnlyList<GanttDependency> BuildDependencies(
         IReadOnlyCollection<ProjectStructureLink> links,
+        IReadOnlyCollection<ProjectStructureNode> nodes,
         IEnumerable<GanttTaskId> taskIds,
         ICollection<ProjectStructureGanttProjectionIssue> issues)
     {
         var taskIdByNodeKey = taskIds.ToDictionary(taskId => taskId.Value, StringComparer.Ordinal);
+        var nodeKeys = nodes.Select(node => node.Id).ToHashSet(StringComparer.Ordinal);
         var dependencies = new List<GanttDependency>();
         var dependencyIds = new HashSet<GanttDependencyId>();
         var dependencyEdges = new HashSet<DependencyEdge>();
@@ -275,10 +277,13 @@ public sealed class ProjectStructureGanttProjectionAdapter
 
             if (!hasSuccessor || !hasPredecessor)
             {
-                issues.Add(Warning(
-                    ProjectStructureGanttProjectionIssueCode.DependencyEndpointNotTask,
-                    "A task dependency references a non-task project node and is not included in the Gantt projection.",
-                    hasSuccessor ? successorId : predecessorId));
+                var prerequisiteKey = hasSuccessor ? link.TargetId : link.SourceId;
+                if (!nodeKeys.Contains(prerequisiteKey)) {
+                    issues.Add(Warning(
+                        ProjectStructureGanttProjectionIssueCode.MissingDependencyEndpoint,
+                        $"A task dependency references missing project node '{prerequisiteKey}' and is not included in the Gantt projection.",
+                        hasSuccessor ? successorId : predecessorId));
+                }
                 continue;
             }
 
