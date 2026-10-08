@@ -54,7 +54,7 @@
     else if (projection is not null)
     {
         <Stack GapScale="LayoutGap.Small"
-               Class="w-full min-w-0"
+               Class="project-structure-gantt-panel__content w-full min-w-0"
                AlignItems="AlignItems.Stretch">
             <SurfaceCard Soft="true"
                          Class="project-structure-gantt-panel__utility-bar">
@@ -125,7 +125,7 @@
             </SurfaceCard>
 
             @if (showDependencies && projection.IsValid) {
-                <SectionCard Title="Schedule dependencies" Description="Remove the exact displayed link. Task dates remain unchanged.">
+                <SectionCard Class="project-structure-gantt-panel__dependencies" Title="Schedule dependencies" Description="Remove the exact displayed link. Task dates remain unchanged.">
                     @foreach (var dependency in accepted.Dependencies) {
                         var predecessor = accepted.Tasks.First(task => task.Id == dependency.PredecessorId);
                         var successor = accepted.Tasks.First(task => task.Id == dependency.SuccessorId);
@@ -176,7 +176,7 @@
             }
             else
             {
-                <Stack Class="w-full min-w-0"
+                <Stack Class="project-structure-gantt-panel__chart w-full min-w-0"
                        data-testid="project-structure-gantt-chart">
                     <ErrorBoundary @ref="chartErrorBoundary">
                     <ChildContent>
@@ -201,7 +201,7 @@
                                 HeaderHeight="40"
                                 BarHeight="26"
                                 TaskTableWidth="600"
-                                MaxHeight="48rem"
+                                FillHeight="true"
                                 ExportFileName="@ExportFileName"
                                 AriaLabel="Interactive project structure Gantt schedule" />
                     </ChildContent>

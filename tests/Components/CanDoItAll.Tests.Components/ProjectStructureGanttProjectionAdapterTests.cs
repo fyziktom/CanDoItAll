@@ -10,6 +10,42 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
 {
     private static readonly DateTimeOffset ProjectionOrigin = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Approval_prerequisites_remain_in_structure_without_becoming_schedule_warnings(bool reverse) {
+        var task = CreateTask("task", "Prepare the ceremony", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var approval = CreateNode("approval", ProjectObjectType.Decision, "", "Approve the ceremony plan");
+        var link = new ProjectStructureLink(reverse ? approval.Id : task.Id, reverse ? task.Id : approval.Id,
+            ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid());
+        var surface = CreateSurface(Guid.NewGuid(), [task, approval], [link]);
+
+        var result = Build(surface);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Issues);
+        Assert.Empty(result.Dependencies);
+        Assert.Single(result.Tasks);
+        Assert.Equal(link, Assert.Single(surface.Links));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Missing_dependency_endpoints_still_produce_actionable_warnings(bool reverse) {
+        var task = CreateTask("task", "Prepare the ceremony", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var link = new ProjectStructureLink(reverse ? "missing" : task.Id, reverse ? task.Id : "missing",
+            ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid());
+
+        var result = Build(CreateSurface(Guid.NewGuid(), [task], [link]));
+
+        var issue = Assert.Single(result.Issues);
+        Assert.Equal(ProjectStructureGanttProjectionIssueCode.MissingDependencyEndpoint, issue.Code);
+        Assert.Equal(ProjectStructureGanttProjectionIssueSeverity.Warning, issue.Severity);
+        Assert.Contains("missing", issue.Message, StringComparison.Ordinal);
+        Assert.Empty(result.Dependencies);
+    }
+
     [Fact]
     public void DependsOn_maps_target_to_predecessor_and_preserves_multiple_dependencies()
     {

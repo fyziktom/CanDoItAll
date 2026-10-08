@@ -2534,7 +2534,10 @@ public sealed record ProjectStructureImportRequest(
     ProjectObjectMediaPayload? SourceAsset = null,
     string ContainerBlockSubtype = "delivery",
     string LeafWorkItemSubtype = "task",
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [System.ComponentModel.Description("When true, every JsonOutline object in sourceText must supply sourceKey alongside title (or name), optional notes and children. A key is case-sensitive, unique across the complete outline, starts with an ASCII letter or digit, and contains at most 128 ASCII letters, digits, '-', '_', '.', ':' or '/'. Supplied keys are validated even when this option is false. Missing required keys fail with HTTP 400 ImportSourceKeyRequired; invalid supplied keys with InvalidImportSourceKey; duplicate keys with DuplicateImportSourceKey; other source kinds with this option enabled fail with ImportSourceKeysUnsupported. Validation occurs before creating the import container or source asset. Supplied keys are preserved in each node's typed metadataJson.importSource with numeric sourceKind and containerNodeId; notes remain human text. Default false preserves imports without keys. Clients that depend on structured identities should verify this property exists in the live schema, then set it true. Imports remain non-atomic after validation; inspect partial results before retrying.")]
+    public bool RequireSourceKeys { get; init; }
+}
 
 /// <summary>Result of a committed outline import.</summary>
 /// <param name="ProjectId">Identifier of the project the outline was imported into.</param>

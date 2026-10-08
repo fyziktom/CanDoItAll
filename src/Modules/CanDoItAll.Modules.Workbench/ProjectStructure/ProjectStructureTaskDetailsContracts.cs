@@ -35,6 +35,8 @@ public sealed record ProjectStructureTaskDetailsUpdateRequest(
     long CurrentDirectAssignmentRevision) {
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
 
+    public ProjectStructureInitialTaskSchedule? InitialSchedule { get; init; }
+
     [JsonIgnore]
     public ProjectStructureAgentContext? MutationOwner { get; init; }
 }
@@ -55,6 +57,8 @@ public sealed record ProjectStructureTaskDetailsMutationRequest(
     bool CostBasisChanged,
     long CurrentDirectAssignmentRevision) {
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    public ProjectStructureInitialTaskSchedule? InitialSchedule { get; init; }
 
     [JsonIgnore]
     public ProjectStructureAgentContext? MutationOwner { get; init; }

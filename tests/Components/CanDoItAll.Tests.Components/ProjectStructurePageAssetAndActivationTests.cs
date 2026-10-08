@@ -16,6 +16,49 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructurePageAssetAndActivationTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Opening_a_projected_screenshot_revalidates_its_source_without_comparing_transient_record_ids(bool changeSource) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var launcher = harness.Context.Services.GetRequiredService<ProcessLaunchApplicationService>();
+        Guid projectId = await CreateProjectAsync(projects, "Process screenshot preview");
+        var launched = await launcher.LaunchAsync(new ProcessLaunchRequest(
+            DefinitionKey: "software-delivery", ProcessDefinitionId: null, LiveRunProfileKey: null,
+            ProjectId: projectId, ProjectNodeId: $"project:{projectId}", RequestedBy: "component-test",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal), RunReadiness: false, Execute: false));
+        Assert.True(launched.RunId.HasValue);
+        var runId = launched.RunId.Value;
+        string relativePath = $"{ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(runId)}/browser/preview.png";
+        string filePath = Path.Combine(harness.ActiveProfile.WorkspaceRootPath, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        byte[] png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2uoAAAAASUVORK5CYII=");
+        await File.WriteAllBytesAsync(filePath, png);
+        string nodeId = ProjectStructureProcessNodeKeys.BuildProcessRunScreenshotNodeKey(runId.Value, relativePath);
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, projectId));
+        var canvas = WaitForCanvasWorkbench(page);
+        page.WaitForAssertion(() => Assert.Contains(canvas.Instance.Surface.Nodes, node => node.Id == nodeId));
+        var first = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == nodeId);
+        var second = Assert.Single((await workbench.GetStructureAsync(projectId)).Nodes, node => node.Id == nodeId);
+        Assert.NotEqual(first.RecordId, second.RecordId);
+        if (changeSource) {
+            await File.WriteAllBytesAsync(filePath, [.. png, 0]);
+        }
+
+        await page.InvokeAsync(() => canvas.Instance.NodeOpened.InvokeAsync(nodeId));
+
+        if (changeSource) {
+            Assert.Empty(page.FindComponents<ProjectStructureAttachmentPreviewDialog>());
+            Assert.Contains("Unable to authorize this project asset.", page.Markup, StringComparison.Ordinal);
+        } else {
+            var preview = Assert.Single(page.FindComponents<ProjectStructureAttachmentPreviewDialog>());
+            Assert.Contains("preview.png", preview.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("Unable to authorize this project asset.", page.Markup, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public async Task Summary_gantt_export_persists_mermaid_source_as_file_content()
     {

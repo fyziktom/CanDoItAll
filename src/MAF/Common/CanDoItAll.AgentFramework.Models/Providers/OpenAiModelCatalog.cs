@@ -8,6 +8,9 @@ public static class OpenAiModelIds
     public const string GptImage25Sunburst = "gpt-image-2.5-sunburst";
     public const string GptImage25Flare = "gpt-image-2.5-flare";
     public const string Gpt6Astra = "gpt-6-astra";
+    public const string Gpt61Sol = "gpt-6.1-sol";
+    public const string Gpt6Sol = "gpt-6-sol";
+    public const string Gpt6Luna = "gpt-6-luna";
     public const string Gpt56 = "gpt-5.6";
     public const string Gpt56Luna = "gpt-5.6-luna";
     public const string Gpt56Terra = "gpt-5.6-terra";
@@ -55,7 +58,7 @@ public static class OpenAiModelSuggestions {
         "gpt-5.3-codex", "gpt-5.4", OpenAiModelIds.Gpt54Mini, "gpt-5.4-nano", "gpt-5.4-pro",
         "gpt-5.5", "gpt-5.5-pro",
         OpenAiModelIds.Gpt56, OpenAiModelIds.Gpt56Luna, OpenAiModelIds.Gpt56Terra, OpenAiModelIds.Gpt56Sol,
-        OpenAiModelIds.Gpt6Astra
+        OpenAiModelIds.Gpt6Astra, OpenAiModelIds.Gpt61Sol, OpenAiModelIds.Gpt6Sol, OpenAiModelIds.Gpt6Luna
     };
 
     public static bool IsMainModel(string model) => MainModels.Contains(model);

@@ -50,6 +50,11 @@ MCP server source and setup belong to `CanDoItAll.Mcp`. Canonical Codex skills, 
 and repository-family standards belong to `CanDoItAll.SharedInfo`. Keep developer-machine
 launch configuration and local MCP settings outside this repository.
 
+Demo implementations, scenario data, provisioning scripts, presentation instructions
+and demo verification records belong in `CanDoItAll.Demos`. Keep reusable engine fixes,
+regression tests and generic API/architecture guidance here. Use domain-neutral examples
+in engine documentation and test fixtures; do not copy demo identities or runtime settings.
+
 ## Validation And Documentation
 
 - Build each affected production project after C# or project changes, then run the

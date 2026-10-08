@@ -41,6 +41,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
                     BuildTaskSubtitle(task),
                     BuildTaskNotes(task),
                     parentNodeId,
+                    StartUtc: task.StartUtc,
                     EndUtc: task.DueUtc,
                     ObjectSubtype: NormalizeTaskSubtype(settings.TaskObjectSubtype),
                     MetadataJson: BuildTaskMetadataJson(task, context, parentNodeId),
@@ -68,6 +69,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
                 node.ObjectSubtype,
                 node.Title,
                 node.Subtitle,
+                node.StartUtc,
                 node.EndUtc
             }).ToArray()
         };
@@ -141,11 +143,17 @@ public sealed partial class ProjectStructureWorkflowExecutor
                 throw new InvalidOperationException($"Task item {index} must be a JSON object.");
             }
 
+            var start = ReadOptionalTaskDate(item, index, "startUtc");
+            var due = ReadOptionalTaskDate(item, index, "dueUtc", "dueDateUtc", "dueDate");
+            if (start is { } startUtc && due is { } dueUtc && startUtc >= dueUtc) {
+                throw new InvalidOperationException($"Task item {index} must start before its due date.");
+            }
             tasks.Add(new WorkflowTaskNodeSource(
                 ReadRequiredTaskString(item, "title", index),
                 ReadOptionalString(item, "summary", "notes", "description"),
                 ReadOptionalString(item, "owner", "assignee"),
-                ReadOptionalDueUtc(item, index),
+                start,
+                due,
                 ReadOptionalString(item, "urgency", "priority"),
                 ReadOptionalBoolean(item, "requiresResponse", "responseRequired"),
                 ReadOptionalBoolean(item, "asap", "needsAsapResponse"),

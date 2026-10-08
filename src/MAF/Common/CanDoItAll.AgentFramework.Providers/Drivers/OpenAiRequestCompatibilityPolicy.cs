@@ -11,6 +11,8 @@ public static class OpenAiRequestCompatibilityPolicy
             ProviderInvocationFeatures.FunctionTools,
             [
                 OpenAiModelIds.Gpt54Mini,
+                OpenAiModelIds.Gpt6Sol,
+                OpenAiModelIds.Gpt6Luna,
                 OpenAiModelIds.Gpt56Luna,
                 OpenAiModelIds.Gpt56Terra
             ],

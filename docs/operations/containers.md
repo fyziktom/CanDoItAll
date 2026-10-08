@@ -33,6 +33,11 @@ sibling repository has its own `.dockerignore`. The `COPY --exclude` option requ
 Dockerfile frontend 1.19 or later; the `docker/dockerfile:1` syntax directive selects the
 current stable frontend.
 
+The pinned Ubuntu runtime image installs its required packages from the official archive
+and security sources over HTTPS. Certificate and package-signature verification stay
+enabled. A package download failure fails the build; it never produces an image with
+missing runtime dependencies.
+
 PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
 volume. Replacing `.secrets/db-password` does **not** rotate the role password in an
 existing database. It can instead make a recreated app use a password that PostgreSQL

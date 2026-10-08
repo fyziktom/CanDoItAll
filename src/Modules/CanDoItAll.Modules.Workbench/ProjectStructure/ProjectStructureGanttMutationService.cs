@@ -154,6 +154,13 @@ public sealed class ProjectStructureGanttMutationService(
                 }
 
                 var affectedTaskIds = new HashSet<GanttTaskId> { request.TaskId };
+                if (request.InitialSchedule is { } initial) {
+                    if (request.ScheduleChange is not null) {
+                        throw new ProjectStructureGanttMutationException(ProjectStructureGanttMutationErrorCode.InvalidSchedule,
+                            "Send initialSchedule or scheduleChange, never both.");
+                    }
+                    ApplyInitialSchedule(state, task, request.TaskId, initial, now);
+                }
                 if (request.ScheduleChange is not null)
                 {
                     if (request.ScheduleChange.TaskId != request.TaskId)
@@ -968,6 +975,21 @@ public sealed class ProjectStructureGanttMutationService(
         }
 
         return Result(persistedTaskIds.Select(static taskId => new GanttTaskId(taskId)));
+    }
+
+    private static void ApplyInitialSchedule(MutationState state, ProjectObjectRecord task, GanttTaskId taskId,
+        ProjectStructureInitialTaskSchedule initial, DateTimeOffset now) {
+        try {
+            initial.Validate();
+        } catch (ArgumentException exception) {
+            throw new ProjectStructureGanttMutationException(ProjectStructureGanttMutationErrorCode.InvalidSchedule, exception.Message);
+        }
+        initial.RequireCurrentState(taskId, task.StartUtc, task.EndUtc, task.DurationSeconds);
+        var schedule = BuildSchedule(state.TasksByNodeKey.Values);
+        ValidateGraph(state.TaskIds, state.Dependencies);
+        schedule[task.NodeKey] = new TaskInterval(initial.ProposedStartUtc, initial.ProposedEndUtc);
+        ValidateScheduleConstraints(schedule, state.Dependencies);
+        ApplyDates(task, initial.ProposedStartUtc, initial.ProposedEndUtc, now);
     }
 
     private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? metadata)

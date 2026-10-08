@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Projects.UiSandbox;
 
-public enum ProjectsScenario { Portfolio, LargePortfolio, Empty, ReadFailure, MissingReference, RejectedSave, UnknownSeed, PartialDeletion }
+public enum ProjectsScenario { Portfolio, LargePortfolio, Empty, ReadFailure, MissingReference, RejectedSave, UnknownSeed, PartialDeletion, CleanupHistory }
 
 public sealed class ProjectsScenarioStore {
     public static readonly Guid ProfileId = Guid.Parse("01010101-1111-2222-3333-010101010101");

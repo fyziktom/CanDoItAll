@@ -83,6 +83,9 @@ internal static class OpenAiThinkingEffortModelRegistry
     private static readonly OpenAiThinkingEffortModelDefinition[] Definitions =
     [
         Supported(OpenAiModelIds.Gpt6Astra, LowThroughMax),
+        Supported(OpenAiModelIds.Gpt61Sol, LowThroughMax, ResponsesOnly),
+        Supported(OpenAiModelIds.Gpt6Sol, NoneThroughMax),
+        Supported(OpenAiModelIds.Gpt6Luna, NoneThroughMax),
         Supported(OpenAiModelIds.Gpt56Sol, NoneThroughMax, ResponsesOnly),
         Supported(OpenAiModelIds.Gpt56Terra, NoneThroughMax, ResponsesOnly),
         Supported(OpenAiModelIds.Gpt56Luna, NoneThroughMax, ResponsesOnly),

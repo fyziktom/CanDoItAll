@@ -42,41 +42,28 @@ public sealed class AgentVoiceService(
         var audioChunks = ResolveTranscriptionChunks(request);
         if (audioChunks.Count == 0)
         {
-            throw new InvalidOperationException("Speech-to-text input audio is empty.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.InvalidInput, "Speech-to-text input audio is empty.");
         }
 
         for (var index = 0; index < audioChunks.Count; index++)
         {
             if (audioChunks[index].AudioBytes.Length == 0)
             {
-                throw new InvalidOperationException($"Speech-to-text input audio chunk {index + 1} is empty.");
+                throw new AgentVoiceException(AgentVoiceFailureKind.InvalidInput, $"Speech-to-text input audio chunk {index + 1} is empty.");
             }
         }
 
         var settings = (await GetSettingsAsync(cancellationToken)).SpeechToText;
         if (!settings.IsEnabled)
         {
-            throw new InvalidOperationException("Speech-to-text is disabled in AgentFramework voice settings.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.Disabled, "Speech-to-text is disabled in AgentFramework voice settings.");
         }
 
         var provider = await ResolveProviderAsync(
             settings.ProviderProfileId,
-            "speech-to-text",
+            AgentProviderOperationKind.TranscribeSpeech,
             cancellationToken);
         var driver = driverFactory.CreateSpeechToTextDriver(settings.DriverKind);
-        if (audioChunks.Count == 1)
-        {
-            var chunk = audioChunks[0];
-            return await driver.TranscribeAsync(
-                new SpeechToTextDriverRequest(
-                    provider,
-                    settings,
-                    chunk.AudioBytes,
-                    NormalizeFileName(chunk.FileName),
-                    NormalizeContentType(chunk.ContentType)),
-                cancellationToken);
-        }
-
         var transcriptSegments = new List<string>();
         var models = new List<string>();
         for (var index = 0; index < audioChunks.Count; index++)
@@ -92,7 +79,7 @@ public sealed class AgentVoiceService(
                 cancellationToken);
             if (string.IsNullOrWhiteSpace(result.Text))
             {
-                throw new InvalidOperationException($"Speech-to-text returned empty text for audio chunk {index + 1}.");
+                throw new AgentVoiceException(AgentVoiceFailureKind.ProviderUnavailable, $"Speech-to-text returned empty text for audio chunk {index + 1}.");
             }
 
             transcriptSegments.Add(result.Text.Trim());
@@ -139,7 +126,7 @@ public sealed class AgentVoiceService(
         var chunks = AgentVoiceSpeechTextChunker.Split(context.PreparedText.SpokenText);
         if (chunks.Count == 0)
         {
-            throw new InvalidOperationException("Text-to-speech input text is required.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.InvalidInput, "Text-to-speech input text is required.");
         }
 
         for (var index = 0; index < chunks.Count; index++)
@@ -180,19 +167,25 @@ public sealed class AgentVoiceService(
 
     private async Task<ProviderProfile> ResolveProviderAsync(
         Guid? providerProfileId,
-        string capabilityName,
+        AgentProviderOperationKind operation,
         CancellationToken cancellationToken)
     {
         if (!providerProfileId.HasValue)
         {
-            throw new InvalidOperationException($"A provider profile must be selected for {capabilityName}.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.ProviderUnavailable, "A provider profile must be selected for voice.");
         }
 
         var provider = await providerSource.GetProviderAsync(providerProfileId.Value, cancellationToken)
-            ?? throw new InvalidOperationException($"Provider profile '{providerProfileId.Value:D}' configured for {capabilityName} was not found.");
+            ?? throw new AgentVoiceException(AgentVoiceFailureKind.ProviderUnavailable, "The configured voice provider was not found.");
         if (!provider.IsEnabled)
         {
-            throw new InvalidOperationException($"Provider profile '{provider.Name}' configured for {capabilityName} is disabled.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.ProviderUnavailable, "The configured voice provider is disabled.");
+        }
+
+        ProviderAudioCapabilityPolicy.EnsureAvailable(provider, operation);
+        if (provider.Kind != ProviderKind.OpenAi || provider.Purpose != ProviderProfilePurpose.Chat) {
+            throw new AgentVoiceException(AgentVoiceFailureKind.CapabilityUnavailable,
+                "Voice requires an enabled native OpenAI chat provider profile.");
         }
 
         return provider;
@@ -205,24 +198,24 @@ public sealed class AgentVoiceService(
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.Text))
         {
-            throw new InvalidOperationException("Text-to-speech input text is required.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.InvalidInput, "Text-to-speech input text is required.");
         }
 
         var settings = (await GetSettingsAsync(cancellationToken)).TextToSpeech;
         if (!settings.IsEnabled)
         {
-            throw new InvalidOperationException("Text-to-speech is disabled in AgentFramework voice settings.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.Disabled, "Text-to-speech is disabled in AgentFramework voice settings.");
         }
 
         if (request.AgentVoiceAccess is not null &&
             !AgentVoiceAccessMetadata.Normalize(request.AgentVoiceAccess).CanUseVoiceMode)
         {
-            throw new InvalidOperationException("This agent does not allow voice mode.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.AccessDenied, "This agent does not allow voice mode.");
         }
 
         var provider = await ResolveProviderAsync(
             settings.ProviderProfileId,
-            "text-to-speech",
+            AgentProviderOperationKind.SynthesizeSpeech,
             cancellationToken);
         var driver = driverFactory.CreateTextToSpeechDriver(settings.DriverKind);
         var voiceId = string.IsNullOrWhiteSpace(request.VoiceIdOverride)
@@ -234,7 +227,7 @@ public sealed class AgentVoiceService(
 
         if (string.IsNullOrWhiteSpace(preparedText.SpokenText))
         {
-            throw new InvalidOperationException("Text-to-speech prepared speech text is empty.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.InvalidInput, "Text-to-speech prepared speech text is empty.");
         }
 
         return new AgentVoiceSynthesisContext(

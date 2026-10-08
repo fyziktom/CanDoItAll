@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
@@ -9,6 +10,10 @@ public static class ProjectErrorCodes
     public const string LifetimeChanged = "projects.lifetime-changed";
     public const string ReservedIdConflict = "projects.reserved-id-conflict";
     public const string ReservationClosed = "projects.reservation-closed";
+    public const string ExternalIdentityInvalid = "projects.external-identity-invalid";
+    public const string ExternalIdentityConflict = "projects.external-identity-conflict";
+    public const string ExternalIdentityImmutable = "projects.external-identity-immutable";
+    public const string ExternalIdentityLifetimeRequired = "projects.external-identity-lifetime-required";
 }
 
 /// <summary>
@@ -213,6 +218,12 @@ public sealed class ProjectEditorModel
     /// read. Null skips the check; ignored when creating a project.
     /// </summary>
     public Guid? ExpectedLifetimeId { get; set; }
+
+    [Description("Stable external namespace, trimmed and lowercased. Supply with externalKey; each accepts 1-100 ASCII letters/digits/dots/underscores/hyphens with alphanumeric ends. Omit both to preserve an existing identity. An assigned pair is immutable. Updating with a pair requires expectedLifetimeId.")]
+    public string? ExternalNamespace { get; set; }
+
+    [Description("Stable key within externalNamespace, independent of the project display name. Null with a null namespace preserves the current pair; empty strings cannot clear it. Duplicate pairs return HTTP 409.")]
+    public string? ExternalKey { get; set; }
 
     /// <summary>
     /// Name of the project; required on save and trimmed.

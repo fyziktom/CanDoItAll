@@ -93,20 +93,20 @@ public sealed partial class ProjectStructureWorkflowExecutor
         return false;
     }
 
-    private static DateTimeOffset? ReadOptionalDueUtc(JsonElement element, int index)
+    private static DateTimeOffset? ReadOptionalTaskDate(JsonElement element, int index, params string[] propertyNames)
     {
-        var value = ReadOptionalString(element, "dueUtc", "dueDateUtc", "dueDate");
+        var value = ReadOptionalString(element, propertyNames);
         if (string.IsNullOrWhiteSpace(value))
         {
             return null;
         }
 
-        if (DateTimeOffset.TryParse(value, out var parsed))
+        if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
         {
             return parsed.ToUniversalTime();
         }
 
-        throw new InvalidOperationException($"Task item {index} has invalid due date '{value}'.");
+        throw new InvalidOperationException($"Task item {index} has invalid '{propertyNames[0]}' date '{value}'.");
     }
 
     private static IReadOnlyList<string> ReadOptionalStringArray(JsonElement element, string propertyName)
