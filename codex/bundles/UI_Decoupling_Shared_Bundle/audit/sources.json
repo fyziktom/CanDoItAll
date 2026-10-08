@@ -1,0 +1,846 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-08",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "review_commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+  "commit_timestamp_utc": "2026-10-08T19:48:01Z",
+  "execution_pin": false,
+  "method": "Connected GitHub immutable file and tree reads; selected source paths and ranges.",
+  "limits": [
+    "No application checkout, .NET build, test discovery, database, browser, runtime or watch execution was performed by the reviewer.",
+    "All 31 historical assignment entry briefs were read, not every nested attachment or copied historical shared bundle.",
+    "Inventory metadata is not an implementation read. Maintained execution receipts are attributed reports, not reproduced proof.",
+    "The CodeAnalytics MCP was not available in this review session; the executor must use its current configured instance.",
+    "No evaluated transitive dependency graph or repo-wide semantic reachability census was executed."
+  ],
+  "sources": [
+    {
+      "id": "G01",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "AGENTS.md",
+      "blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "full",
+      "purpose": "Repository execution rules.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/AGENTS.md"
+    },
+    {
+      "id": "G02",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": ".github/copilot-instructions.md",
+      "blob_sha": "a933ebf8bbea296c00c611e4659adec1e07529ee",
+      "coverage": "full",
+      "purpose": "Current ownership, language, MCP, Demos, test and portability rules.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/.github/copilot-instructions.md"
+    },
+    {
+      "id": "G03",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "docs/architecture/ui-component-seams.md",
+      "blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "coverage": "full",
+      "purpose": "Canonical seam, state, admission and proof guidance.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/docs/architecture/ui-component-seams.md"
+    },
+    {
+      "id": "G04",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "docs/testing.md",
+      "blob_sha": "4b7a037c9494842d0a148a78821e089e2a38685e",
+      "coverage": "partial",
+      "purpose": "Current test entry points, isolated PostgreSQL, async tests and live-evidence caveats.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/docs/testing.md",
+      "inspected_line_ranges": [
+        [
+          1,
+          220
+        ],
+        [
+          350,
+          600
+        ]
+      ]
+    },
+    {
+      "id": "G05",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "docs/architecture/workbench-execution-ui.md",
+      "blob_sha": "1d8fa423d44d9a4f5f56e9b57ad51256808a36ec",
+      "coverage": "full",
+      "purpose": "Maintained WB6 extraction census and qualified validation status; its executed results are historical reports, not reruns.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/docs/architecture/workbench-execution-ui.md"
+    },
+    {
+      "id": "G06",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/README.md",
+      "blob_sha": "6f2d6094fc0ac8c76d115b34d5fde5bec500bb73",
+      "coverage": "full",
+      "purpose": "Reviewed shared v3, not the delivered v4 file.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/README.md"
+    },
+    {
+      "id": "G07",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/audit/module-map.md",
+      "blob_sha": "e3baf4f5ab0a192ef6a6459e85445908202d4066",
+      "coverage": "full",
+      "purpose": "Stale September 28 candidate map.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/audit/module-map.md"
+    },
+    {
+      "id": "G08",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/VALIDATION.md",
+      "blob_sha": "666ed3a048d804ee4ae3936e3919e71365d8e03d",
+      "coverage": "full",
+      "purpose": "Preserve impact-based validation and mandatory portability closure.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/VALIDATION.md"
+    },
+    {
+      "id": "G09",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/architecture/01-boundaries.md",
+      "blob_sha": "90364f6607cf1563717a9628be0e0cc403f998ae",
+      "coverage": "full",
+      "purpose": "Reviewed v3 guidance retained in meaning and refreshed without dated defect claims.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/architecture/01-boundaries.md"
+    },
+    {
+      "id": "G10",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/architecture/02-state-and-effects.md",
+      "blob_sha": "611a075c6055f8cb441f63bb69620a4f94804c3e",
+      "coverage": "full",
+      "purpose": "Reviewed v3 guidance retained in meaning and refreshed without dated defect claims.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/architecture/02-state-and-effects.md"
+    },
+    {
+      "id": "G11",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/architecture/03-sandboxes-and-dev-loop.md",
+      "blob_sha": "f155cc28287800139270896dbe4f1c6f43b58b7b",
+      "coverage": "full",
+      "purpose": "Reviewed v3 guidance retained in meaning and refreshed without dated defect claims.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/architecture/03-sandboxes-and-dev-loop.md"
+    },
+    {
+      "id": "G12",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/UI_Decoupling_Shared_Bundle/architecture/04-domain-safeguards.md",
+      "blob_sha": "0ea10330f5fe2915f97c50550ebf3fefbbe710d7",
+      "coverage": "full",
+      "purpose": "Reviewed v3 guidance retained in meaning and refreshed without dated defect claims.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/UI_Decoupling_Shared_Bundle/architecture/04-domain-safeguards.md"
+    },
+    {
+      "id": "P01",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
+      "blob_sha": "291195b373393824292b24c60b90a519449abd24",
+      "coverage": "full",
+      "purpose": "Native module dependency graph; not a suitable render-leaf reference.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj"
+    },
+    {
+      "id": "P02",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+      "blob_sha": "ff0bf6946aa7d2e739c4b093960fd9c01700265e",
+      "coverage": "partial",
+      "purpose": "Main mixed renderer/owner; draft reset, lazy load, launch intents, manager voice and native command fences.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          1410
+        ],
+        [
+          3200,
+          3500
+        ],
+        [
+          3650,
+          4020
+        ]
+      ]
+    },
+    {
+      "id": "P03",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
+      "blob_sha": "390be7ddc7ebcb927d12e496d91b9a08dd248a7e",
+      "coverage": "partial",
+      "purpose": "Live tabs, dialogs, context, hidden groups, polling and native mock coupling.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          220
+        ],
+        [
+          280,
+          530
+        ]
+      ]
+    },
+    {
+      "id": "P04",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionCanvasPanel.razor",
+      "blob_sha": "9d74795bf03c07947eda26530998a0b0802fe6b6",
+      "coverage": "partial",
+      "purpose": "Actual CanvasWorkbench, floating toolbox/selection/editor and structural actions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionCanvasPanel.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          130
+        ]
+      ]
+    },
+    {
+      "id": "P05",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionRoleEditorPanel.razor",
+      "blob_sha": "ca208898a195decd38b5848aa1484df01f5a30ee",
+      "coverage": "partial",
+      "purpose": "Role draft synchronization, raw workflow GUID validation and native command shape.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionRoleEditorPanel.razor",
+      "inspected_line_ranges": [
+        [
+          340,
+          610
+        ]
+      ]
+    },
+    {
+      "id": "P06",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionStepEditorPanel.razor",
+      "blob_sha": "8a19180fb7c139f044f168864624f509a309187d",
+      "coverage": "partial",
+      "purpose": "Step list and operation/route/role/artifact/subprocess editing surface.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionStepEditorPanel.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          145
+        ]
+      ]
+    },
+    {
+      "id": "P07",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor",
+      "blob_sha": "5a352e9cf8eb2f2482184fa6e64ecdaca0a0c7ac",
+      "coverage": "partial",
+      "purpose": "Template search, previews, categories and native import operations.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessTemplateLibraryPanel.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          160
+        ]
+      ]
+    },
+    {
+      "id": "P08",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunFilesDialog.razor",
+      "blob_sha": "ce729ed019cc26287bd1d530ab0db5f981988220",
+      "coverage": "partial",
+      "purpose": "Real FileBrowser/FileInteraction; unfenced error paths and asynchronous cleanup risk.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunFilesDialog.razor",
+      "inspected_line_ranges": [
+        [
+          1,
+          480
+        ]
+      ]
+    },
+    {
+      "id": "P09",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunCancellationAction.razor",
+      "blob_sha": "d5bfc6fade2709742224afac26551d28c47eb0b1",
+      "coverage": "full",
+      "purpose": "Preserve origin-fenced cancellation, known commit, refresh warning and unknown-outcome behavior.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunCancellationAction.razor"
+    },
+    {
+      "id": "P10",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs",
+      "blob_sha": "666b024f810b97d98753a86bea4faf37f7b717ae",
+      "coverage": "full",
+      "purpose": "In-process native adapter, project lifetime and canvas ownership. Not an HTTP client.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs"
+    },
+    {
+      "id": "P11",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Processes/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj",
+      "blob_sha": "b5800ad936029edbc1510ba11868fe4d1cce5bcb",
+      "coverage": "full",
+      "purpose": "Existing light domain contracts; do not duplicate or turn them into a Blazor state assembly.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Processes/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj"
+    },
+    {
+      "id": "P12",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor",
+      "blob_sha": "965573bb61db9653c540f2381e8a83acddc1e462",
+      "coverage": "full",
+      "purpose": "Both live routes and query parsing.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor"
+    },
+    {
+      "id": "P13",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
+      "blob_sha": "292038b50165312ffb00200ff0a1a90cc1d678b0",
+      "coverage": "full",
+      "purpose": "Current route-host parameters and query compatibility.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor"
+    },
+    {
+      "id": "P14",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
+      "blob_sha": "d87e97681034dd267e3db768cf63320b98e070f9",
+      "coverage": "full",
+      "purpose": "Current route-host parameters and query compatibility.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor"
+    },
+    {
+      "id": "P15",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFilesCoordinator.cs",
+      "blob_sha": "36c08862c973397f82cd8d8046bf864cee1293fc",
+      "coverage": "tree_metadata",
+      "purpose": "Native file coordinator dependency; read completely before editing adapter.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFilesCoordinator.cs"
+    },
+    {
+      "id": "P16",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs",
+      "blob_sha": "8764389ccdc7e705557782a848a0eba5ef633e96",
+      "coverage": "tree_metadata",
+      "purpose": "File authority owner; not inspected implementation proof.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileScopeProvider.cs"
+    },
+    {
+      "id": "P17",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileSessions.cs",
+      "blob_sha": "0b8397f8360db4a08fd27812d21b808b30c4bd7c",
+      "coverage": "tree_metadata",
+      "purpose": "Native session lifetimes; review before changing disposal.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessRunFileSessions.cs"
+    },
+    {
+      "id": "P18",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+      "blob_sha": "3db6ae0466751dfeb8d6ba36f3c11557b438e7c9",
+      "coverage": "tree_metadata",
+      "purpose": "DI entry to reconcile, not reviewed registration correctness.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs"
+    },
+    {
+      "id": "P19",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Processes/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj",
+      "blob_sha": "c6acd096d57bd3b7de3e48db446508630a49cdbe",
+      "coverage": "full",
+      "purpose": "Existing projections reference Contracts, Abstractions and pure Core; evaluate before duplicating DTOs.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Processes/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj"
+    },
+    {
+      "id": "P20",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Processes/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj",
+      "blob_sha": "bf0c7777bb586e414081ed5204827d1c8460c833",
+      "coverage": "full",
+      "purpose": "Core directly references Contracts and Abstractions, not Runtime/Persistence.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Processes/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj"
+    },
+    {
+      "id": "P21",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Processes/CanDoItAll.Processes.Abstractions/CanDoItAll.Processes.Abstractions.csproj",
+      "blob_sha": "fc9d8ea011d4b2cf858a7208d00715d479c9e5e0",
+      "coverage": "full",
+      "purpose": "Abstractions directly references Contracts; confirm evaluated closure.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Processes/CanDoItAll.Processes.Abstractions/CanDoItAll.Processes.Abstractions.csproj"
+    },
+    {
+      "id": "T01",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs",
+      "blob_sha": "11fa8eebc98e41470aec08b3b648a3fe7f02e41b",
+      "coverage": "partial",
+      "purpose": "Existing workspace/live/context tests share a partial class; some reflect private members.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs",
+      "inspected_line_ranges": [
+        [
+          1,
+          190
+        ]
+      ]
+    },
+    {
+      "id": "T02",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellLaunchTests.cs",
+      "blob_sha": "cf321f6bd2e6165280581f51fc6dd2a9a92b53f8",
+      "coverage": "full",
+      "purpose": "Preserve existing retained-intent and no-recapture launch assertions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellLaunchTests.cs"
+    },
+    {
+      "id": "T03",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessRunCancellationActionTests.cs",
+      "blob_sha": "ed9bcd44f7586c57e158060080de31c6497eb428",
+      "coverage": "full",
+      "purpose": "Source contains nine data-expanded cases; execution/discovery not performed.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/tests/Components/CanDoItAll.Tests.Components/ProcessRunCancellationActionTests.cs"
+    },
+    {
+      "id": "T04",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessRunFilesDialogTests.cs",
+      "blob_sha": "67fb1f1104fc6517fd5d82addd2389c75d34a630",
+      "coverage": "partial",
+      "purpose": "Refresh/current scope and forbidden retry baseline; extend adverse ordering.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/tests/Components/CanDoItAll.Tests.Components/ProcessRunFilesDialogTests.cs",
+      "inspected_line_ranges": [
+        [
+          1,
+          165
+        ]
+      ]
+    },
+    {
+      "id": "T05",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs",
+      "blob_sha": "a9091fb8a9ed1f5fbe1b4e02a30f6b84d40bdb0e",
+      "coverage": "partial",
+      "purpose": "Existing real host canvas/global/project journeys; validate current selectors and readiness.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/tests/Playwright/CanDoItAll.Tests.Playwright/ProcessShellSmokeTests.cs",
+      "inspected_line_ranges": [
+        [
+          1,
+          210
+        ]
+      ]
+    },
+    {
+      "id": "N01",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj",
+      "blob_sha": "7266192a54dfd065b40da6dfab5577ebc2b23a71",
+      "coverage": "full",
+      "purpose": "Direct references do not justify a new shell extraction.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj"
+    },
+    {
+      "id": "N02",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
+      "blob_sha": "a6e17190dffe88bb59c647789ee4bdb68a02f0f1",
+      "coverage": "full",
+      "purpose": "Feature-neutral composition references; evaluate transitive closure rather than prohibit by name.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj"
+    },
+    {
+      "id": "N03",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/UI/CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj",
+      "blob_sha": "db8d2233d94877d6075e1434ad492eb86a5eef79",
+      "coverage": "full",
+      "purpose": "Existing light configuration renderer boundary.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/UI/CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj"
+    },
+    {
+      "id": "N04",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj",
+      "blob_sha": "527f57fb034c6b3f3918df40c6946cdf1f4d4f0f",
+      "coverage": "full",
+      "purpose": "References Git foundation; not proof of heavy runtime coupling by itself.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj"
+    },
+    {
+      "id": "N05",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj",
+      "blob_sha": "ae8112f660762291f31be2b3f299a9124f3a6bbe",
+      "coverage": "full",
+      "purpose": "Direct dependencies are abstractions/shared kernel; inspect actual effects if consumed.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj"
+    },
+    {
+      "id": "H01",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Collaboration_Review_Fixes/README.md",
+      "blob_sha": "25a3c01843b593f26d944d0a9de006fe1b9bfb2c",
+      "coverage": "full_entry_brief",
+      "purpose": "Production draft lifetime, sandbox parity and browser completion Lesson: A correct boundary still needs the same lifetime semantics in both hosts.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Collaboration_Review_Fixes/README.md"
+    },
+    {
+      "id": "H02",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_TestLab_UI_Decoupling/README.md",
+      "blob_sha": "cfb6452520d8f0a3f91a33733ab67f77107b3cd1",
+      "coverage": "full_entry_brief",
+      "purpose": "Full TestLab and a bounded conversation-shell cleanup Lesson: Close narrowly reproduced prerequisites; do not re-extract the preceding module.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_TestLab_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H03",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_TestLab_Review_Fixes/README.md",
+      "blob_sha": "ec648b020f700f3c32c590bb40fb6188f435c438",
+      "coverage": "full_entry_brief",
+      "purpose": "Interrupted committed read-back and missing saved reference Lesson: Pending state must retire; saved unavailable references need honest presentation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_TestLab_Review_Fixes/README.md"
+    },
+    {
+      "id": "H04",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Plugins_UI_Decoupling/README.md",
+      "blob_sha": "63ff64ff0e573abc77e4b9296144bfd4dac39207",
+      "coverage": "full_entry_brief",
+      "purpose": "Complete six-section Plugins, upload and restart Lesson: Render the meaningful children, not just a catalog facade.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Plugins_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H05",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_SchedulerPlanner_UI_Decoupling/README.md",
+      "blob_sha": "b78713c366c3f611cc0f6c33dc24a8668dc6de80",
+      "coverage": "full_entry_brief",
+      "purpose": "Plugins follow-up and complete SchedulerPlanner Lesson: Combine a bounded correction and a whole next family; keep signing and isolation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_SchedulerPlanner_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H06",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Memory_UI_Decoupling/README.md",
+      "blob_sha": "9d17ad6a4312fcbd18047d543543ee701ad989cc",
+      "coverage": "full_entry_brief",
+      "purpose": "Scheduler follow-up and seven-tab Memory Lesson: Preserve unavailable backend capabilities; do not fake support for green tests.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Memory_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H07",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Resources_UI_Decoupling/README.md",
+      "blob_sha": "25a09c473d1e36fa65e2c7edfdfe378bbfa828fd",
+      "coverage": "full_entry_brief",
+      "purpose": "Same-ID Memory revision attribution and Resources Registry/Browse Lesson: Public ID is not revision/lifetime; file promotion/reopening is part of parity.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Resources_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H08",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Settings_Core_UI_Decoupling/README.md",
+      "blob_sha": "50782c0b8c293f8a9f620e17c787d941e0a07920",
+      "coverage": "full_entry_brief",
+      "purpose": "Resource editor readiness and Workspace Core Lesson: Reference-list readiness does not establish the active editor is loaded.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Settings_Core_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H09",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_API_Access_UI_Decoupling/README.md",
+      "blob_sha": "f7649dcd0ef4f0585cd02e9205434cc047945ef7",
+      "coverage": "full_entry_brief",
+      "purpose": "Files identity and full API administration UI Lesson: Keep sensitive material transient; protect independent leaf dependencies.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_API_Access_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H10",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Storage_Catalog_UI_Decoupling/README.md",
+      "blob_sha": "9f3374b33b424b253ed018d9d5b5798c634eb1c9",
+      "coverage": "full_entry_brief",
+      "purpose": "API read cleanup/denial and storage catalog Lesson: Late cleanup and permission-denial propagation require separate assertions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Storage_Catalog_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H11",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Storage_Selection_UI_Decoupling/README.md",
+      "blob_sha": "1089db42bb9153151ac4829f3f46a47eb85f072d",
+      "coverage": "full_entry_brief",
+      "purpose": "Same-ID reselection and cross-module picker Lesson: Child Apply is not parent Save; preserve the actual parent draft.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Storage_Selection_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H12",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Completion_and_Regression/README.md",
+      "blob_sha": "17df8497a8bac6b9eef9b07260bd28c995476f74",
+      "coverage": "full_entry_brief",
+      "purpose": "Recovery, Data Sources, configuration and frozen campaign Lesson: A larger task can finish several coherent families before final validation.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Completion_and_Regression/README.md"
+    },
+    {
+      "id": "H13",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Closure_and_Critical_Fixes/README.md",
+      "blob_sha": "5e7e584c7f0e30316046d48e0edee7a7a694e34d",
+      "coverage": "full_entry_brief",
+      "purpose": "Profile resurrection and shared lifetime/live proof gaps Lesson: Do not relabel an extracted UI as application readiness or renew spent budgets.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Closure_and_Critical_Fixes/README.md"
+    },
+    {
+      "id": "H14",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workspace_Closure_R2/README.md",
+      "blob_sha": "ba5b1f0d386c30606dfe29974943553a46f7616a",
+      "coverage": "full_entry_brief",
+      "purpose": "Deletion, navigation acknowledgement and delivery Lesson: A source revision, running candidate and verified sibling pair are separate facts.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workspace_Closure_R2/README.md"
+    },
+    {
+      "id": "H15",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Projects_Portfolio_UI_Decoupling/README.md",
+      "blob_sha": "f123bf4fadac79adfd03551730816f9a7cc5f5fb",
+      "coverage": "full_entry_brief",
+      "purpose": "Shared selector follow-up, portfolio and full project editor Lesson: An intermediate retained slot must be explicit, then closed in the later family.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Projects_Portfolio_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H16",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Projects_Files_UI_Decoupling/README.md",
+      "blob_sha": "c1b1cc78c8bb25728544f6e5a80ab2fed556bb16",
+      "coverage": "full_entry_brief",
+      "purpose": "Known-lifetime refusal, JS teardown and both Files surfaces Lesson: Known rejection is not unknown commit; use real FileBrowser/FileInteraction.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Projects_Files_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H17",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Agent_Editor_Core_UI_Decoupling/README.md",
+      "blob_sha": "a9a96de8802dcd7ce0b1eecba9c94466e899a7f7",
+      "coverage": "full_entry_brief",
+      "purpose": "Files origin follow-up and four editor sections Lesson: Preserve all remaining sections during an intermediate extraction.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Agent_Editor_Core_UI_Decoupling/README.md"
+    },
+    {
+      "id": "H18",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Agent_Editor_Completion_A2/README.md",
+      "blob_sha": "7da7f0e60aadd57c2a942b5768545fae5d6cf8a5",
+      "coverage": "full_entry_brief",
+      "purpose": "Capability reconciliation and remaining six sections Lesson: Do not deliver only the prerequisite when the whole editor is assigned.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Agent_Editor_Completion_A2/README.md"
+    },
+    {
+      "id": "H19",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Provider_Profiles_UI_Decoupling_PP1/README.md",
+      "blob_sha": "d0d2ff9ae32fdd90d9b62c141a51261098a0d8ef",
+      "coverage": "full_entry_brief",
+      "purpose": "Provider catalog and local configuration Lesson: Do not invent a blocker to fill S0; preserve explicitly retained integrations.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Provider_Profiles_UI_Decoupling_PP1/README.md"
+    },
+    {
+      "id": "H20",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Provider_Sharing_PP2/README.md",
+      "blob_sha": "b4afde9e18cfd57b02ce0dd692d7633c0432af94",
+      "coverage": "full_entry_brief",
+      "purpose": "Real multi-instance provider proof, then Sharing extraction Lesson: Real native behavior and renderer extraction are distinct completion obligations.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Provider_Sharing_PP2/README.md"
+    },
+    {
+      "id": "H21",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Provider_Sharing_PP2_Completion/README.md",
+      "blob_sha": "8274f83350fde99057a7a2d93091f4046093d463",
+      "coverage": "full_entry_brief",
+      "purpose": "Local settings race and missing structural completion Lesson: An S0-only result is a checkpoint, never completion of the assigned family.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Provider_Sharing_PP2_Completion/README.md"
+    },
+    {
+      "id": "H22",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Provider_History_PP3/README.md",
+      "blob_sha": "f2a9e287602534922ef7c5035ce8781c59733bb3",
+      "coverage": "full_entry_brief",
+      "purpose": "Tooltip follow-up and full request history Lesson: Reuse existing History renderers; retain bounded authorized content and query semantics.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Provider_History_PP3/README.md"
+    },
+    {
+      "id": "H23",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Agent_Authoring_CA1/README.md",
+      "blob_sha": "efc7cedae7b5eb26155ee78b6c80482e6b369b83",
+      "coverage": "full_entry_brief",
+      "purpose": "Capability wizard/editor and technical teams Lesson: Verify actual sibling delivery before duplicating a reported library fix.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Agent_Authoring_CA1/README.md"
+    },
+    {
+      "id": "H24",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workflow_Authoring_WF1/README.md",
+      "blob_sha": "a46ca691eac1781dec89b1457ef3899cdd7a7eb5",
+      "coverage": "full_entry_brief",
+      "purpose": "Setup-result attribution and full workflow canvas authoring Lesson: Preserve native runtime while extracting canvas and page-owned dialogs.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workflow_Authoring_WF1/README.md"
+    },
+    {
+      "id": "H25",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Agents_Completion_AC1/README.md",
+      "blob_sha": "5c0301fb2f538b0e4c38a8d6413ddf3e3d7a033f",
+      "coverage": "full_entry_brief",
+      "purpose": "Scheduler startup, preview attribution and residual Agents Lesson: A residual rendered-surface census is better than treating every host as unfinished.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Agents_Completion_AC1/README.md"
+    },
+    {
+      "id": "H26",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Planning_WB1/README.md",
+      "blob_sha": "b79732b54f08bc4749d8f529384ff55050a37275",
+      "coverage": "full_entry_brief",
+      "purpose": "Calendar, interactive Gantt and real task forms Lesson: Scope by complete user workflows rather than source file size.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Planning_WB1/README.md"
+    },
+    {
+      "id": "H27",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Insights_WB2/README.md",
+      "blob_sha": "65a4d9d963cf467dbee7c05b2e7313970c30cfc5",
+      "coverage": "full_entry_brief",
+      "purpose": "Gantt cleanup, Manager Summary and selection/support Lesson: Independent reporting lanes and real support overlays matter.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Insights_WB2/README.md"
+    },
+    {
+      "id": "H28",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Structure_WB3/README.md",
+      "blob_sha": "2380a729e4dfb5eaf3779fc5daa24f268f118f7f",
+      "coverage": "full_entry_brief",
+      "purpose": "Hierarchy lifetime and full structure authoring Lesson: Preserve graph gestures, node composition and native structural authority.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Structure_WB3/README.md"
+    },
+    {
+      "id": "H29",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Content_WB4/README.md",
+      "blob_sha": "b8e2e0a5f1ee7cc52a7149e91fe71d6a2a833770",
+      "coverage": "full_entry_brief",
+      "purpose": "Original text target, content/files and exports Lesson: Source/publish and actual file bytes are independent proof layers.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Content_WB4/README.md"
+    },
+    {
+      "id": "H30",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Operators_WB5/README.md",
+      "blob_sha": "bc39b15827be75ef8d1e5846571bac6b5ab489b2",
+      "coverage": "full_entry_brief",
+      "purpose": "Participant origin, secrets, runtime actions and preview Lesson: Keep protected references and approval dialogs attached to original interactions.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Operators_WB5/README.md"
+    },
+    {
+      "id": "H31",
+      "repository": "fyziktom/CanDoItAll",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "path": "codex/bundles/CanDoItAll_Workbench_Completion_WB6/prompt.md",
+      "blob_sha": "ead3672d398f403c389cdb705a272d22e0865663",
+      "coverage": "full_entry_brief",
+      "purpose": "Workflow/process execution integration, full residual closure and demo checkpoint Lesson: Its demo-specific campaign is historical; standalone Processes was explicitly excluded.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/codex/bundles/CanDoItAll_Workbench_Completion_WB6/prompt.md"
+    }
+  ],
+  "branch_rechecked_at_review_closure": {
+    "observed_head": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+    "unchanged_from_review": true,
+    "method": "Connected GitHub branch metadata read; no repository writes."
+  }
+}

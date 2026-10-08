@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "canonicalization": "UTF-8 text; CRLF normalized to LF",
+  "files": {
+    "ARCHITECTURE.md": "564e71281a500c0bca85a56161d099d6d64366b2d2032fb50ae53b7c6bb132ef",
+    "DEPENDENCIES_AND_PERFORMANCE.md": "437a25e8d7cb52f414facd915d18a98ad7f330e69192b631e2b35007e651d1cc",
+    "EXECUTION_STAGES.md": "ec167135ef278c2784f1d22797ded96f5750fef03d60e1690220b3631043d868",
+    "FEATURE_PARITY.md": "df4486957577c127526f7fcd3645a8c23c677bb9a2944e7d485e855e2a01006c",
+    "PACKAGE_VALIDATION.md": "ccc787903d96a6edb3f4b8eaa5c17c87fedb946200980744ce9226b5023a7ed0",
+    "README.md": "4e32fd7cc6ae175a9b6f9fd199a4b160c51fa3bf9807503ce6011324dd875557",
+    "REVIEW.md": "c757ac77b9080eb27c9354fd245bd645a0ec7df2fc39c67c89bc5a8052d889d3",
+    "S0_REGRESSIONS.md": "3dfea77edd9657052bb0404e407c18d9afacd47433c0bc812c96baee239ce5a9",
+    "SAFE_EXECUTION.md": "54889208ed29ea99bd24220aede143d4f8fe08b1710da26abfd726d5862ead98",
+    "SOURCES.json": "94496e8d0dfa819059047ab8d1c62b97adea32080c94eacb3d1095361abab1ee",
+    "UI_JOURNEYS.md": "149aa38b3076761889eb6a86385f74470b372a39ea4e6f7b98d86b116825a3ba",
+    "VALIDATION_MATRIX.md": "bd8c2903a7145ff3d0efdd04cab6a52392333d7db0294e0d93a3cb3bc77e5a0b",
+    "acceptance-plan.json": "e9675bcb8fee23633fd8deb5a4df8c48bf6f82fdcc648516cec3fa5f9a5f3503",
+    "bundle.json": "d36e18aa623dc1e618d2e88deba504523882e53d68f596dac19c10c8f453e6ba",
+    "prompt.md": "32d3c5c4ec28f7fe1490973f1ec22c70c63720b52132513e42e03dbf1460df1e",
+    "templates/closure.md": "cc8281fd2e8d9670b3e3a94b2bfdca256b2a939aea379c6afdd949f238e052af",
+    "templates/evidence.json": "7b9472bb6ab85ced1cfbb98ad087c7045ecdf3af0c0ffcad3ca9af7af3274b9e",
+    "templates/feature-contract.csv": "bfa031189fd1d885f309fccac804f53a55bf6d7a50c505c726c1f7c30f5a5e78",
+    "templates/impact-plan.json": "7c3992981344767866c0072660f8b8c60941fcb32c51f0e824f7e6acde6124a7"
+  }
+}

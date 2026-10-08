@@ -1,31 +1,17 @@
-# Execution brief for Codex
+# Shared execution contract
 
-Use `CDA-UI-DECOUPLING-SHARED-v3` with the owner's **specific module/surface assignment**. This shared bundle alone is not an instruction to modify the product. Choose the simplest correct implementation; no required number of interfaces, partial classes, DTOs, projects or commits.
+You are implementing the child assignment, not writing another plan. Work on the current operator-supplied checkout. Use the complete child package and this one shared v4 companion. Do not execute historical bundle prompts or recreate already extracted families merely because old documents list them as pending.
 
-## Establish the actual starting point
+Preserve product behavior, authorization, native operation identities, raw drafts, supported routes and meaningful presentation. Extraction means a real render dependency boundary and an independently usable development host, not moving an `@code` block into a partial file. A larger assignment may contain multiple tested stages, but all in-scope stages remain obligations.
 
-Read the current repository instructions, canonical UI seams document, testing guide, relevant CI steps and the chosen module's extraction record. Record actual branch, HEAD, relevant sibling revisions, local changes, SDK and dependency mode. The audit SHA in this bundle is historical provenance, never a checkout command. Reinspect changed audit files and any new consumers. Use the connected Code Analytics MCP for symbols, references and affected-test discovery when available; corroborate its results with source and test discovery. If unavailable, use repository search/build metadata and state that limitation. Never invent a successful MCP call.
+Before editing, record the current application/sibling revisions, worktree state, relevant drift, feature baseline, owning consumers and a CodeAnalytics-assisted test plan. Read the actual tests and affected current configuration. Do not trust the MCP as a complete oracle for Razor, generated code, reflection, DI, static assets or new files. Use the union described in VALIDATION.md.
 
-Assess the **rendered closure**: routed page, descendants, deferred tabs, dialogs, slots, shared widgets, imports, public types, JS/CSS, registrations and real consumers. Identify the existing read/write owners, editor lifetime and externally observable behavior before moving files. A cross-module dependency is resolved through its owner, not hidden behind a page facade.
+Choose the smallest meaningful architecture satisfying the child scope. Reuse existing feature/render contracts and Components/FileTools primitives. Do not impose a class, interface, assembly or commit quota. Keep application/data/runtime owners in place. No API-only rewrite, engine redesign, database migration, global state framework, removal of functionality or silent mock fallback is authorized by this companion.
 
-## Make a bounded change
+Work through bounded, buildable checkpoints. At each checkpoint update one short progress ledger, the feature matrix, changed contracts, selected proof and unresolved risks. Do not stop after S0, the first leaf, a sandbox mock or a green package validator. Continue independently within the agreed scope. When blocked by an external capability, continue independent safe work, preserve a resumable checkpoint and mark the missing proof blocked. Never manufacture completion or expand into a different module to conceal the gap.
 
-Separate feature renderers into an existing or justified lightweight Razor library and keep routing, application orchestration and production effects with their module/host. Reuse existing contracts and component families. Choose presentation records with typed intents or a cohesive workspace view contract according to the surface; do not convert all existing variants to one framework. Narrow query ports and browser-only rendering effects are legitimate where their role is explicit.
+Use the same actual render closure in the sandbox and production. Prove state/effect semantics with controlled ordering, real native owners where relevant, and actual browser actions for shipped UI. Build changed production projects and run precise discovery-backed tests. Run broad Stable only under the current documented trigger/frozen checkpoint, not once per stage. Mandatory portability closure is not optional.
 
-Preserve existing HTTP control planes where they already exist. Do not introduce HTTP between co-located UI and services merely to achieve separation. Do not pull EF, provider implementations, runtime hosting or the production composition root into renderers or their sandbox, even transitively. Inspect evaluated project references and package/asset closure, not just imports or assembly names.
+Keep all repository text, code, comments, test names, generated UI strings, documentation, scripts and commit messages in English. Preserve existing signing policy and operator work. Never disable signing, expose passphrases, reset/clean/stash someone else's changes, push, merge, deploy, modify ordinary installations or spend on external inference as a consequence of this companion.
 
-A module assignment may authorize the necessary UI library, sandbox, moved contracts and narrow consumer fixes without asking again for each routine choice. It does not authorize unrelated owner redesign, schema migration, API/auth changes, broad sibling rewrites, publication or merges. Record a newly discovered external prerequisite as a bounded dependency repair or a blocked sub-scope; continue independent useful work without pretending the blocked dimension passed.
-
-## Prove the result
-
-Use the same real renderers in production and a deterministic backend-free sandbox. Cover the meaningful loading, error, stale, restricted, edit and overlay states. Retain draft/validation lifetime, target-bound effects and backend authorization. A successful write followed by a failed refresh is not a failed write and must not cause a second submission.
-
-Build affected production projects, discover and execute the narrow owning tests, then exercise the actual production route through Playwright with its relevant user actions. Include cross-module journeys when the changed seam participates in them. Run the current required static/documentation gates. Broader stable, live-provider, container and cross-platform gates are triggered by affected contracts and the repository's current rules, not by the end of every small phase. Report blocked or skipped lanes explicitly.
-
-Measure the edit-to-visible loop and graph with comparable before/after conditions. Do not disable watching important source or use stale packages to manufacture improvement. No percentage claim without corresponding samples and provenance.
-
-## Handoff
-
-Update the canonical module boundary record and local READMEs; do not append another independent shared rulebook. State retained responsibilities, remaining debt, exact test/discovery evidence, graph/asset results and observed performance. Keep code, UI text, comments, documentation and test identifiers in English; the final owner-facing message may be Czech.
-
-Preserve the user's worktree and existing signed-commit policy. Commit only when authorized by the module assignment; keep the ordinary unlocked GPG agent/session instead of disabling signing, storing a passphrase or weakening its configuration. Push, merge, release and publication require their own authorization. A signed checkpoint is not a claim that unexecuted validation is green.
+Report separately: render extraction, native functional parity, browser/asset validation, performance measurement, final broad gate when required, and release/demo readiness. Attribute inherited receipts and invalidate stale evidence honestly. The child defines the final deliverable, not an old roadmap or historical live budget.

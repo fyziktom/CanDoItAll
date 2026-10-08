@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "CDA-PROCESSES-UI-DECOUPLING-PC1",
+  "version": "1.0",
+  "target_executor": "Codex GPT-6 Astra Max",
+  "review_commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+  "review_date": "2026-10-08",
+  "execution_pin": false,
+  "language": "en",
+  "entry": "prompt.md",
+  "standalone_assignment": true,
+  "shared_requirement": {
+    "id": "CDA-UI-DECOUPLING-SHARED-v4",
+    "manifest_sha256": "77accddd7487d8f36a3baff6d940591ab5b0d2cdb4b96289b1de8229a459beb9"
+  },
+  "acceptance_plan": "acceptance-plan.json",
+  "coverage_group_count": 42,
+  "product_evidence_status": "NOT_RUN"
+}

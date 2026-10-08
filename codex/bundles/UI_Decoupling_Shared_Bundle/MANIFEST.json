@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "canonicalization": "UTF-8 text; CRLF normalized to LF",
+  "files": {
+    "CHANGELOG.md": "e3537e43c2ab35114eb4f1cd3565dfc78931165a1be2476a24512bb9b6cb9009",
+    "EXECUTION.md": "9b5e5a59776908d124a961244f139de7369634cc9f9eec223d6c468436b43221",
+    "MIGRATION_FROM_V3.md": "d2ef5c546a5114b5d22d94de2e9ff6e0d3e19926c63a316f5c9c230f25a8f40d",
+    "PACKAGE_VALIDATION.md": "ccc787903d96a6edb3f4b8eaa5c17c87fedb946200980744ce9226b5023a7ed0",
+    "README.md": "98d7f14d8bba10231487f64afd1aa55ed76249033e29286fb5d54938e59a025e",
+    "VALIDATION.md": "7e9aaff037e317ecd431c966f96169733dbf950ea947ba28abcf164b8d7d74a8",
+    "architecture/01-boundaries.md": "d2cb304bc69699db882fbe19ddc584403be56ab3be1a1843b86315b7131cb648",
+    "architecture/02-state-and-effects.md": "a0970630516ac7e2859711d68bd2d2a09881c2fe87ec3cdc4ca23aa5861337db",
+    "architecture/03-sandboxes-and-dev-loop.md": "cb9af07ad0006d745cdd031e305f549ae38224703877d267831b1be341d3417a",
+    "architecture/04-domain-safeguards.md": "7bfc4f4a1a2444672febfdad618479dac7488c65a548d1ee1cd4ec368e5e2abd",
+    "audit/bundle-history.md": "21b9229cf36352f17c8d7221eab006009475438173a7e14bdc52f3a77eb9e9bd",
+    "audit/module-map.md": "ac65f3c1cf01d8a150e7556694d490ed5744ad1fe45ddb429d23c3f8a02610af",
+    "audit/sources.json": "84fd0d473610a294b2db945b64c123f3b3c8522bf2b1deb3e553a84ba5b678f3",
+    "bundle.json": "3185575d5b8585df18b27cdda2daebe4938b94012168786a431355d7d0bc5576",
+    "prompt.md": "cf55da3d5c1fb37f63e1e12b84c07d189ca697d995bd77df524c8df604c7d5ea",
+    "templates/evidence.json": "74fac9496e248c39358720e53201724414c958282159c6037a18e7094ef3b0f4",
+    "templates/feature-contract.csv": "d45f23a5bfe02d54c6e7e005ebe69864169f03702f690c15d31a38a68c62bbaf",
+    "templates/progress.md": "e248a3a2e0af514973fd8fefca048bcd30dacbda3539190cadf2417924caa962",
+    "tools/handoff_tools.py": "d4dcf13d4763a629d7083a81c9c099a200cc21f962dad3a19740f91733ea8ffc",
+    "tools/test_handoff_tools.py": "3df69614a99bb06d375b844f9c1aaf651f407e6657363b119e1e8fe220c07d01"
+  }
+}

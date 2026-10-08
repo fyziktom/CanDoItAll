@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "assignment_id": "SET_FROM_CHILD",
+  "candidate": {
+    "commit": null,
+    "tree": null,
+    "worktree_delta": null,
+    "sibling_revisions": {},
+    "configuration": null,
+    "source_mode": null,
+    "asset_mode": null
+  },
+  "codeanalytics": {
+    "status": "NOT_RUN",
+    "index_revision": null,
+    "queries": [],
+    "blind_spot_review": []
+  },
+  "groups": [],
+  "note": "Copy to an owned evidence directory. Fill actual child acceptance rows. A package check is not product proof."
+}

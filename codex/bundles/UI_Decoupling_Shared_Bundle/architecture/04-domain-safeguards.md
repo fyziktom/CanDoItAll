@@ -1,39 +1,23 @@
-# 4 · Domain and security safeguards retained from the Foundation
+# Native authority and sensitive boundaries
 
-This is the UI-relevant part of the supplied Architecture Foundation, reconciled with current product instructions [S01, S02]. It does **not** replace the Foundation's unrelated domain roadmap or instruct a UI task to implement its entire contract catalogue.
+UI extraction does not transfer ownership of projects, files, providers, processes, workflows, business assignments or persistence. Keep one authoritative native writer for each fact. Reuse existing application contracts; do not reach through another module's DbContext or recreate its policy in presentation code.
 
-## Preserve authority, not arbitrary folder structure
+Preserve distinctions: technical agents versus CRM/HR records; Simple Chats versus managed execution; process orchestration versus workflow execution; graph appearance versus scheduling; file bytes/roots versus metadata versus project contributions; provider-neutral contracts versus concrete drivers. Existing backend debt is neither permission for a new unsafe edge nor a demand to redesign the whole engine in a UI task.
 
-One authoritative owner writes each business fact. A screen can combine several owners' facts without becoming their writer. A reusable UI library and a shared DTO do not acquire ownership of those facts. Application composition wires implementations but is not another business store. Do not read or mutate a foreign aggregate by reaching directly into its DbContext to avoid a missing contract.
+## Context and permissions
 
-Keep distinctions that matter in product journeys: technical agent definition/runtime versus CRM/HR records; ordinary Simple Chats versus managed agent execution; process orchestration versus workflows; project hierarchy/presentation versus task scheduling and business assignments; file bytes/paths versus asset metadata versus project references; provider-neutral Memory contracts versus concrete provider implementation. These are semantic safeguards, not a claim that every conceptual owner already has a fully isolated project in the reviewed source.
+Source-read permission, visibility in an agent context, authority to mutate, delegated capability, project admission and runtime approval are different facts. Hiding a control is not enforcement. Preserve current ProjectWriteAdmission/project binding and equivalent native lifetimes. A deleted/recreated project with the same public ID is not the old admitted target. Never mint a replacement authority token in a renderer to make a retry succeed.
 
-Prefer the existing light owner contracts, bounded query/projection and command path. Where a seam is missing, extract the smallest justified closure with its owner and consumers. Do not invent a universal repository, bus, plugin system or platform-wide transaction layer as the price of moving one page.
+Maintain redaction, HTML/Markdown sanitization, attachment/URL policies, trusted workspace roots, bounded content, platform/headless restrictions and safe public errors. Keep secrets, raw authority and private paths out of URLs, context snapshots, screenshots, console output and unrestricted UI contracts. Current denial invalidates access; a previous accepted snapshot does not override it.
 
-## Context and authorization survive the UI move
+## Durable effects
 
-Typed context identifies the actual profile/project/target/lifetime the operator saw. Treat source-read permission, ability to mention a record, permission to command its owner, delegated agent capability, runtime admission and approval as different checks. Hiding a button is presentation; enforcement remains at the owner boundary. Do not give a sandbox/test planner administrator grants to make a real-host scenario pass.
+An accepted launch or write can outlive the component. Navigation/closing stops presentation-owned reads and subscriptions, not native work. Explicit Cancel retains its actual backend semantics. A UI busy gate is not exactly-once delivery. Restore native caller intent/preparation identity on observation/recovery; a new explicit user action is different from retrying an uncertain or accepted action.
 
-Preserve `ProjectWriteAdmission` and comparable existing admission/version tokens. A deleted/recreated entity with the same public ID is not automatically the old target. The module completion record specifically describes the project-lifetime safeguard [S05]; extend such semantics only through the relevant owner contract, not by constructing a substitute token in a renderer.
+Keep approved tool mutation, sandbox/workspace restrictions, artifact recovery, receipts and continuation/link delivery at native boundaries. Do not disable governance or inject an always-successful service to get a green UI scenario. Backend unsupported operations remain explicitly unsupported and server-side rejected.
 
-Keep secrets and confidential content out of URLs, browser-side diagnostics, screenshots and unrestricted lists. Preserve masking and failure-message sanitization, file path validation, trusted workspace roots and platform/headless restrictions. Query results and external/agent-generated content are data, not authority to perform a write.
+## Scope and environment
 
-Do not redesign JWT/API authentication, ownership of the whole application, or Blazor SSR access rules in this UI program. Preserve whatever the current production host and API policy enforce. A changed public HTTP/control-plane contract does trigger its own real-host tests, even though this program is not an API-only redesign.
+No database schema migration, new runtime bus, global auth redesign, whole-application JWT/SSR change, model/package upgrade, real external publication or paid inference follows from this companion. A necessary bounded owner correction must be traced, separately reviewed and tested at its actual owner. A larger prerequisite gets an explicit causal report and blocked status, not an improvised architectural expansion.
 
-## Durable operations outlive renderers
-
-Closing a component normally ends its subscriptions and presentation effects, not an accepted workflow/process or database commit. Preserve the existing explicit cancellation semantics; do not turn navigation into an undocumented cancellation command. Keep runtime execution, approvals, workspaces, recovery and results at the existing owner boundary.
-
-Safe retry/idempotency, receipts, transactions, outbox/inbox and compensation are backend concerns where the operation requires them. Do not claim exactly-once behavior from a disabled button or a local generation counter. Do not add a fake receipt in UI to cover an unknown outcome. The selected operation must have an honest safe path; a wider new durable protocol is a separately scoped prerequisite, not mandatory infrastructure for every read panel.
-
-## Cross-module journeys select the proof
-
-When a changed surface participates in a journey, test that journey's relevant boundary: agent chat over a project; prompt selection into the current chat/workflow target; file/task contribution and return; workflow/process launch, progress and result; CRM/HR assignment into a project; scheduler dispatch; copy/move/delete or export/import. Do not rerun all of these for an unrelated isolated label change, and do not substitute a sandbox click for real-owner admission.
-
-Only the owning service changes durable links, scheduling, managed definitions and contribution lifecycles. A late UI result after delete/restore/reopen cannot recreate a record or attach output to the successor target. Preserve user edits and ownership of previously contributed content; visual row order or canvas layout is not a substitute schedule.
-
-## Database scope
-
-Renderer extraction should normally require no data migration. Moving contract types is not permission to rename tables, split all DbContexts, invent cross-module copies or change restore behavior. If a genuine schema/transaction change is necessary for the selected boundary, record it explicitly and apply current migration, isolated PostgreSQL and transfer/restart tests from `docs/testing.md` [S03]. Do not reuse the old integration bundle's database or environment assumptions.
-
-Keep a compatibility/debt note for an existing backend issue outside scope. Do not accept a new unsafe cross-owner dependency merely because the complete domain redesign is deferred. This allows UI progress without freezing incorrect authority or expanding each slice into the whole Foundation roadmap.
+Use isolated PostgreSQL and owned fixtures for durable proof. Do not reuse ordinary databases, retained provider stores, ports, signing material or installations. Current repository rules govern release/publish/signing. Demo-specific provisioning and rehearsal artifacts belong in `CanDoItAll.Demos`; shared machine tooling in its existing sibling repositories. Keep generic regression tests and architecture in this repository.

@@ -1,39 +1,40 @@
-# CanDoItAll · Shared UI Decoupling Bundle
+# UI Decoupling Shared Bundle v4
 
-**Reference:** `CDA-UI-DECOUPLING-SHARED-v3` · **Edition:** 2026-09-28
+**ID:** `CDA-UI-DECOUPLING-SHARED-v4` · **Reviewed:** 2026-10-08  
+**Purpose:** one reusable execution companion, not an independent implementation assignment.
 
-Incrementally separate production renderers from persistence, runtime and application composition so a developer can work on a module in a small, representative `dotnet watch` host. Keep the modular application and its existing in-process services. This is **not** an API-only migration, a new UI framework, a backend rewrite, or authorization to refactor every module at once.
+Read this with the selected child bundle and current repository instructions. The companion is designed for a substantial, staged Codex GPT-6 Astra Max assignment. Complete the selected feature family without negotiating a new task after each checkpoint; preserve every shipped capability and its native authority.
 
-## Start here
+## Entry
 
-Read [the execution brief](prompt.md), [boundaries](architecture/01-boundaries.md), [state and effects](architecture/02-state-and-effects.md), [sandboxes and the development loop](architecture/03-sandboxes-and-dev-loop.md), and [validation](VALIDATION.md). Consult [domain safeguards](architecture/04-domain-safeguards.md) where a slice crosses an owner boundary. A module-specific assignment can be a single document based on [the child template](templates/module-slice.md); it does not need numbered subbundles or a prescribed class hierarchy.
+1. Follow [migration](MIGRATION_FROM_V3.md) when replacing the active v3 directory. Keep the two delivered directories beside each other under `codex/bundles`.
+2. Read the selected child's `prompt.md`, this [shared prompt](prompt.md), [execution protocol](EXECUTION.md), and [validation](VALIDATION.md).
+3. Consult the four architecture documents for the affected boundary. The child's sources and feature matrix define implementation scope; historical bundles are context only.
 
-The [review](audit/REVIEW.md), [input reconciliation](audit/input-reconciliation.md), [module map](audit/module-map.md) and [source register](audit/source-register.md) explain why this edition differs from the supplied bundles. They are reference material, not a mandatory reading loop for every edit. [České shrnutí](README.cs.md).
+Current `AGENTS.md`, `.github/copilot-instructions.md`, `docs/architecture/ui-component-seams.md`, `docs/testing.md`, evaluated project configuration and current CI are authoritative. This companion does not override repository security or ownership rules. Resolve a conflict explicitly, never silently choose an easier gate.
 
-## Authority and currency
+## What v4 changes
 
-The current repository's `AGENTS.md`, `.github/copilot-instructions.md`, **`docs/architecture/ui-component-seams.md`**, `docs/testing.md` and applicable CI configuration remain the product authority. Family-wide standards and reusable agent skills belong in `CanDoItAll.SharedInfo`. This bundle is their UI-decoupling execution companion, not a competing permanent architecture manual.
+The v3 architecture was already substantially sound. This revision updates its stale module map, stops recursive/shared-copy accumulation, makes long-run checkpoints explicit, requires impact selection to include known blind spots, and ties closure to feature coverage and the actual source/dependency candidate. It consolidates lessons from 31 historical entry briefs rather than treating their old tasks as new work. See [change log](CHANGELOG.md) and [history](audit/bundle-history.md).
 
-The review used `fyziktom/CanDoItAll`, **development**, commit `7db3543ab437376baeca55089cb331fbe1b30483` (2026-09-27). The branch was checked again at the end of source inspection and had not changed. This identifies the evidence, **not a required execution checkout**. Begin a child on the branch supplied by the owner, record its actual HEAD and dirty state, then refresh the affected source and test map. Do not reset to the review SHA, silently change branches, or assume a newer checkout is compatible because its filenames match.
+The [current map](audit/module-map.md) separates remaining extraction from native owner code and outstanding validation. The [source register](audit/sources.json) records complete versus partial reads and metadata-only observations. Its SHAs are review provenance, **never checkout/reset instructions**.
 
-When code and guidance disagree, distinguish intended behavior, current implementation and a defect. Preserve safety and the authorized behavior; record and resolve the relevant discrepancy at its real owner. Neither historical prose nor accidental current behavior automatically wins. Any lasting clarification belongs in the existing canonical document, not a second copied manual.
-
-## What “done” means for a slice
-
-Production uses the extracted renderers; their complete useful scenario can run without production module implementations or a database; dependencies and assets really reflect that separation; state, mutations and owner authority remain correct; the affected behavior has current evidence. Report architecture, sandbox fidelity, production behavior and measured development performance separately. A working sandbox alone does not close production work, and a smaller graph alone does not prove a speedup.
-
-A bounded preparation step may finish with an explicit remaining extraction blocker. It must not be labelled a completed module. The program tracks surfaces and owner roles, not the number of `.UI` projects.
-
-## Package and tooling
-
-This archive contains guidance and two optional Python 3.10+ utilities. It contains no application patch, dependency binaries, old browser/TRX evidence or fonts. `tools/check_review_drift.py` reads local Git metadata and reports reviewed files that changed; it does not fetch, switch branches, stage files or run tests. `tools/validate_bundle.py` checks this archive's internal integrity, not application correctness.
+## Read-only helpers
 
 ```text
-python tools/validate_bundle.py
-python tools/check_review_drift.py --repo <path-to-CanDoItAll>
-python tools/test_tooling.py
+python -B tools/handoff_tools.py verify .
+python -B tools/handoff_tools.py verify ../CanDoItAll_Processes_UI_Decoupling_PC1 --shared .
+python -B tools/handoff_tools.py inspect --repo ../../.. --sources audit/sources.json --output <owned-path>/entry-inspection.json
+python -B -m unittest discover -s tools -p "test_*.py"
 ```
 
-The drift utility prints JSON to standard output (redirect it to an owned evidence file as needed). Exit code 0 means a report was produced, even when drift is found; code 2 means the utility could not complete. It compares registered file blobs and reports working-tree/index changes, not the complete new module inventory.
+Use these paths only after installing this directory at `codex/bundles/UI_Decoupling_Shared_Bundle`. Before installation, pass the actual repository path. `inspect` is a read-only drift/candidate census, not a semantic architecture guard. It does not invoke the MCP, build .NET, mutate the checkout, or prove product behavior. A drift report calls for review, not a reset. Package checks and their actual results are described in [package validation](PACKAGE_VALIDATION.md).
 
-The review is source/configuration analysis. No .NET build, product test, live browser journey, sibling build or watch benchmark was executed for this package. Prior repository completion reports remain historical evidence with their own scope. See [validation status](audit/package-validation.md).
+
+### Helper prerequisites and exit codes
+
+Use Python 3.10 or newer. `inspect` additionally requires Git and a local checkout with a valid HEAD; it performs no network access. Choose an existing task-owned output directory. An output file is created exclusively and is never overwritten.
+
+`verify` returns 0 for package integrity success, 1 for an integrity/companion mismatch, and 2 for a tool/input error. `inspect` returns 0 when its checked paths show no drift, 3 when drift requires review, and 2 for an inspection/input error. Exit 3 is not an application failure and never authorizes checkout/reset. Neither exit 0 nor the source register establishes semantic closure, source authenticity or product correctness.
+
+All new package and repository content is English. Human conversation may be Czech. No credentials, private product evidence, font files or compiled application artifacts are included.
