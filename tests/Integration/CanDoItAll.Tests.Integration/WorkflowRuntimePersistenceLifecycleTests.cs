@@ -5,12 +5,111 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class WorkflowRuntimePersistenceLifecycleTests
 {
     private static readonly DateTimeOffset StartedAtUtc = new(2026, 7, 12, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task AbortedAdmissionAndTransitionRetryFreshTransactionsWithoutDuplicateEvents() {
+        await using var fixture = await RetryFixture.CreateAsync();
+        var run = CreateRun(WorkflowRunState.Running, StartedAtUtc);
+        fixture.Probe.FailuresRemaining = 2;
+        await fixture.Store.CreateRunWithStartedEventAsync(run, CreateEvent(run.RunId, WorkflowEventKind.Started, StartedAtUtc));
+        Assert.Equal(3, fixture.Probe.Attempts);
+        fixture.Probe.Attempts = 0;
+        fixture.Probe.FailuresRemaining = 2;
+        var completed = run with { State = WorkflowRunState.Completed, TerminalAtUtc = StartedAtUtc.AddSeconds(1) };
+        var result = await fixture.Store.TryTransitionRunAsync(run.RunId, [WorkflowRunState.Running], completed,
+            CreateEvent(run.RunId, WorkflowEventKind.Completed, StartedAtUtc.AddSeconds(1)));
+        Assert.True(result.Transitioned);
+        Assert.Equal(3, fixture.Probe.Attempts);
+        var events = await fixture.Store.ListEventsAsync(run.RunId);
+        Assert.Equal(2, events.Count);
+        Assert.Single(events, e => e.Kind == WorkflowEventKind.Started);
+        Assert.Single(events, e => e.Kind == WorkflowEventKind.Completed);
+    }
+
+    [Fact]
+    public async Task ExhaustedSerializationConflictRollsBackAllAttempts() {
+        await using var fixture = await RetryFixture.CreateAsync();
+        fixture.Probe.FailuresRemaining = 10;
+        var run = CreateRun(WorkflowRunState.Running, StartedAtUtc);
+        await Assert.ThrowsAsync<PostgresException>(() => fixture.Store.CreateRunWithStartedEventAsync(run,
+            CreateEvent(run.RunId, WorkflowEventKind.Started, StartedAtUtc)));
+        Assert.Equal(5, fixture.Probe.Attempts);
+        Assert.Null(await fixture.Store.GetRunAsync(run.RunId));
+        Assert.Empty(await fixture.Store.ListEventsAsync(run.RunId));
+    }
+
+    [Fact]
+    public async Task UnrelatedCommitFailureIsNotRetried() {
+        await using var fixture = await RetryFixture.CreateAsync();
+        fixture.Probe.FailureCode = PostgresErrorCodes.DiskFull;
+        fixture.Probe.FailuresRemaining = 10;
+        var run = CreateRun(WorkflowRunState.Running, StartedAtUtc);
+        await Assert.ThrowsAsync<PostgresException>(() => fixture.Store.CreateRunWithStartedEventAsync(run,
+            CreateEvent(run.RunId, WorkflowEventKind.Started, StartedAtUtc)));
+        Assert.Equal(1, fixture.Probe.Attempts);
+        Assert.Null(await fixture.Store.GetRunAsync(run.RunId));
+    }
+
+    [Fact]
+    public async Task ConcurrentIndependentRunsKeepOneStartedAndTerminalEventEach() {
+        await using var fixture = await RetryFixture.CreateAsync();
+        var runs = Enumerable.Range(0, 12).Select(_ => CreateRun(WorkflowRunState.Running, StartedAtUtc)).ToArray();
+        await Task.WhenAll(runs.Select(async run => {
+            await fixture.Store.CreateRunWithStartedEventAsync(run, CreateEvent(run.RunId, WorkflowEventKind.Started, StartedAtUtc));
+            var completed = run with { State = WorkflowRunState.Completed, TerminalAtUtc = StartedAtUtc.AddSeconds(1) };
+            var result = await fixture.Store.TryTransitionRunAsync(run.RunId, [WorkflowRunState.Running], completed,
+                CreateEvent(run.RunId, WorkflowEventKind.Completed, StartedAtUtc.AddSeconds(1)));
+            Assert.True(result.Transitioned);
+            Assert.Equal(2, (await fixture.Store.ListEventsAsync(run.RunId)).Count);
+        }));
+    }
+
+    private sealed class RetryFixture(PostgresTestDatabaseLease database, PersistentWorkflowRunStore store, AbortCommitProbe probe) : IAsyncDisposable {
+        public PersistentWorkflowRunStore Store { get; } = store;
+        public AbortCommitProbe Probe { get; } = probe;
+
+        public static async Task<RetryFixture> CreateAsync() {
+            AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+            var database = PostgresTestDatabaseLease.Create("workflowtransactionretry");
+            try {
+                var probe = new AbortCommitProbe();
+                var options = new DbContextOptionsBuilder<AppDbContext>(database.CreateAppDbContextOptions()).AddInterceptors(probe).Options;
+                await using var context = new AppDbContext(options);
+                await context.Database.EnsureCreatedAsync();
+                probe.Attempts = 0;
+                return new(database, new(WorkflowOwnerPersistenceTestFactory.FromCanonical(new TestDbContextFactory(options))), probe);
+            } catch {
+                await database.DisposeAsync();
+                throw;
+            }
+        }
+
+        public ValueTask DisposeAsync() => database.DisposeAsync();
+    }
+
+    private sealed class AbortCommitProbe : DbTransactionInterceptor {
+        public int FailuresRemaining { get; set; }
+        public int Attempts { get; set; }
+        public string FailureCode { get; set; } = PostgresErrorCodes.SerializationFailure;
+
+        public override ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction, TransactionEventData eventData,
+            InterceptionResult result, CancellationToken cancellationToken = default) {
+            Attempts++;
+            if (FailuresRemaining-- > 0) {
+                throw new PostgresException("Injected transaction abort.", "ERROR", "ERROR", FailureCode);
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
 
     [Fact]
     public async Task PersistentStoreEnforcesAtomicLifecycleAndExactlyOnceExternalResponse()
