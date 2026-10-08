@@ -5661,6 +5661,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ExternalKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalNamespace")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<bool>("LegacyAgentAccessBindingEligible")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -5696,12 +5704,19 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExternalNamespace", "ExternalKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Projects_ExternalIdentity")
+                        .HasFilter("\"ExternalNamespace\" IS NOT NULL");
+
                     b.HasIndex("Name", "Id");
 
                     b.HasIndex("UpdatedAtUtc", "Id")
                         .IsDescending(true, false);
 
-                    b.ToTable("Projects_Projects", (string)null);
+                    b.ToTable("Projects_Projects", null, t => {
+                            t.HasCheckConstraint("CK_Projects_ExternalIdentity", "(\"ExternalNamespace\" IS NULL AND \"ExternalKey\" IS NULL) OR\n(\"ExternalNamespace\" IS NOT NULL AND \"ExternalKey\" IS NOT NULL AND\n \"ExternalNamespace\" COLLATE \"C\" ~ '^[a-z0-9]([a-z0-9._-]{0,98}[a-z0-9])?$' AND\n \"ExternalKey\" COLLATE \"C\" ~ '^[a-z0-9]([a-z0-9._-]{0,98}[a-z0-9])?$')");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectCreationReservationRecord", b => {

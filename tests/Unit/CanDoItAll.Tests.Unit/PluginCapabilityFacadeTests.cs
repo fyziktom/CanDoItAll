@@ -91,6 +91,39 @@ public sealed class PluginCapabilityFacadeTests
         Assert.Equal(created.Effect.Occurrence.RunId.ToString(), metadata.RootElement.GetProperty("workflowRunId").GetString());
         Assert.Equal(created.Effect.StepId.Value, metadata.RootElement.GetProperty("workflowStepId").GetString());
         Assert.False(metadata.RootElement.TryGetProperty("agentId", out _));
+        Assert.Null(created.Request.StartUtc);
+    }
+
+    [Fact]
+    public async Task ProjectStructure_executor_preserves_explicit_task_schedule_in_utc() {
+        var gateway = new RecordingProjectStructureGateway();
+        await ExecuteProjectStructureAsync(gateway, new WorkflowProjectStructureExecutorSettings {
+            Operation = WorkflowProjectStructureOperation.CreateTaskNodes,
+            ProjectId = Guid.NewGuid(), NodeId = "calendar", TaskItemsJsonPath = "$.tasks"
+        }, """{"tasks":[{"title":"Publish the approved post","startUtc":"2027-02-14T17:00:00+02:00","dueUtc":"2027-02-14T16:00:00Z"}]}""");
+
+        var request = Assert.Single(gateway.CreatedNodes).Request;
+        Assert.Equal(new DateTimeOffset(2027, 2, 14, 15, 0, 0, TimeSpan.Zero), request.StartUtc);
+        Assert.Equal(new DateTimeOffset(2027, 2, 14, 16, 0, 0, TimeSpan.Zero), request.EndUtc);
+    }
+
+    [Theory]
+    [InlineData("not-a-date")]
+    [InlineData("2027-02-14T16:00:00Z")]
+    [InlineData("2027-02-15T16:00:00Z")]
+    public async Task ProjectStructure_executor_rejects_invalid_schedule_before_creating_any_task(string start) {
+        var gateway = new RecordingProjectStructureGateway();
+        var payload = JsonSerializer.Serialize(new { tasks = new[] {
+            new { title = "Valid task", startUtc = "2027-02-14T15:00:00Z", dueUtc = "2027-02-14T16:00:00Z" },
+            new { title = "Invalid task", startUtc = start, dueUtc = "2027-02-14T16:00:00Z" }
+        } });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteProjectStructureAsync(gateway,
+            new WorkflowProjectStructureExecutorSettings {
+                Operation = WorkflowProjectStructureOperation.CreateTaskNodes,
+                ProjectId = Guid.NewGuid(), NodeId = "calendar", TaskItemsJsonPath = "$.tasks"
+            }, payload));
+        Assert.Empty(gateway.CreatedNodes);
     }
 
     [Fact]

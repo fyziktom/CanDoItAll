@@ -1478,8 +1478,15 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
 {
     private const int MaximumOverviewRecentTake = 12;
     private const int MaximumOverviewTopWorkflowTake = 10;
+    private const int MaximumTransactionAttempts = 5;
 
-    public async Task CreateRunWithStartedEventAsync(
+    public Task CreateRunWithStartedEventAsync(WorkflowRunSnapshot run, WorkflowEventRecord startedEvent,
+        CancellationToken cancellationToken = default) => RetryAbortedTransactionAsync(async () => {
+            await CreateRunWithStartedEventAttemptAsync(run, startedEvent, cancellationToken);
+            return true;
+        }, cancellationToken);
+
+    private async Task CreateRunWithStartedEventAttemptAsync(
         WorkflowRunSnapshot run,
         WorkflowEventRecord startedEvent,
         CancellationToken cancellationToken = default)
@@ -1625,7 +1632,12 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
         return await scheduledSourceAuthority.AcquireAsync(authority, cancellationToken);
     }
 
-    public async Task<WorkflowRunTransitionResult> TryTransitionRunAsync(
+    public Task<WorkflowRunTransitionResult> TryTransitionRunAsync(WorkflowRunId runId,
+        IReadOnlyCollection<WorkflowRunState> expectedStates, WorkflowRunSnapshot updatedRun,
+        WorkflowEventRecord? transitionEvent = null, CancellationToken cancellationToken = default) =>
+        RetryAbortedTransactionAsync(() => TryTransitionRunAttemptAsync(runId, expectedStates, updatedRun, transitionEvent, cancellationToken), cancellationToken);
+
+    private async Task<WorkflowRunTransitionResult> TryTransitionRunAttemptAsync(
         WorkflowRunId runId,
         IReadOnlyCollection<WorkflowRunState> expectedStates,
         WorkflowRunSnapshot updatedRun,
@@ -1712,7 +1724,11 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
         return new WorkflowRunTransitionResult(true, updatedRun);
     }
 
-    public async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(
+    public Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAsync(WorkflowExternalRequestId requestId,
+        string responseJson, DateTimeOffset respondedAtUtc, CancellationToken cancellationToken = default) =>
+        RetryAbortedTransactionAsync(() => TryAcceptExternalResponseAttemptAsync(requestId, responseJson, respondedAtUtc, cancellationToken), cancellationToken);
+
+    private async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseAttemptAsync(
         WorkflowExternalRequestId requestId,
         string responseJson,
         DateTimeOffset respondedAtUtc,
@@ -1756,6 +1772,26 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
                 ? WorkflowExternalResponseAcceptanceOutcome.Accepted
                 : WorkflowExternalResponseAcceptanceOutcome.AlreadyResponded,
             await HydrateExternalRequestAsync(dbContext, record, cancellationToken));
+    }
+
+    private static async Task<T> RetryAbortedTransactionAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken) {
+        for (var attempt = 1; ; attempt++) {
+            cancellationToken.ThrowIfCancellationRequested();
+            try {
+                return await operation();
+            } catch (Exception error) when (attempt < MaximumTransactionAttempts && IsPostgresTransactionAbort(error)) {
+                await Task.Delay(TimeSpan.FromMilliseconds(20 * attempt), cancellationToken);
+            }
+        }
+    }
+
+    private static bool IsPostgresTransactionAbort(Exception error) {
+        for (Exception? current = error; current is not null; current = current.InnerException) {
+            if (current is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.DeadlockDetected }) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static async Task CreateRunWithStartedEventInMemoryAsync(

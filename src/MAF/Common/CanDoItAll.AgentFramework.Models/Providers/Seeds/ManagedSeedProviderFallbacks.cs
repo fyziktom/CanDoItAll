@@ -56,6 +56,9 @@ public static class ManagedSeedProviderFallbacks
     [
         OpenAiDefaultModel,
         OpenAiModelIds.Gpt6Astra,
+        OpenAiModelIds.Gpt61Sol,
+        OpenAiModelIds.Gpt6Sol,
+        OpenAiModelIds.Gpt6Luna,
         OpenAiModelIds.Gpt56Luna,
         OpenAiModelIds.Gpt56Terra,
         OpenAiModelIds.Gpt56Sol,

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-07T15:19:17.432876+00:00",
+  "generated_utc": "2026-10-08T18:06:19.416052+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15305,
+  "allowance_count": 15319,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6233,6 +6233,24 @@
       "path": "src/App/CanDoItAll.Web/Api/AgentApiResponseContracts.cs",
       "category": "mcp",
       "source_fingerprint": "f6e08ac931063baaa5bf4cfd63e7c8bf9098c399b195bb2129c2c82f35414755",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0fe5a8cf05f0e2f0a7fdd1b45b4d156b9d0ee5de99c88e2fa387f3d0a0e12d1a",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "31ecc95b03d6d334094ad8d43f8c3aa2f5949e9a40329696298d85504a39976c",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b49a4a845544293ac78ddaed7bdffe318481aedc90504133dee282906ac279ef",
       "count": 1
     },
     {
@@ -12791,6 +12809,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260927120448_AddInvocationCompletionUsageIndex.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "6893d2b38a57a14bc9264587b951366087d8abb9ec4278fb2fd1b209012083c2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261007193102_AddProjectExternalIdentity.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0761d942ab6604abcd68dae3ddcffcadfd989eba279104bb1b2a371ea12e4dd5",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261007193102_AddProjectExternalIdentity.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "4a51ee141fb5f81cde0013c69aa03a58ca4762be4c42f50a6bf67533b04efc36",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261007193102_AddProjectExternalIdentity.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "446c2f9fd320cf8b4f3533602996b1e6a664471553a6322fcff8cf644fc6e3b6",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261007193102_AddProjectExternalIdentity.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8d0338c906bee1cc94450dd57fddd65a29e26b86f0b4219b5d6deae6300d59d3",
       "count": 1
     },
     {
@@ -22514,6 +22556,36 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "1525fb26c0709160c232417de3194ee21b710f3ceaedb641fc75be88fb2a6378",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "3f607140077ed6f7b035ff7211561ea6c85e2de2850366a8456fc2e3b490f4ee",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "05e44733599d38991f790d227416a954a7b832db39b1817ec6a412e308c44669",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bacb7f43772cdf2f971f64884eaf9d1a2a72ee7260cee7c0a925edd6cf532622",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkflowDocumentStagingService.cs",
+      "category": "windows-path",
+      "source_fingerprint": "232d06d8584d99b9b4fb63d1a6b20b7d0af215586030594f0d3b96cf232c4ddd",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Files/WorkspaceDestinationContentPlacementPolicy.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "299b80aa38aa8196897063c43b87600a7f32ec31a88d55036918049e1abf72df",
@@ -31792,12 +31864,6 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
       "category": "case-policy",
-      "source_fingerprint": "c9f5b709e7822716290019af3c6fd5a03ed2d5d7e2c70a7c224dcf8e77f46f80",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
-      "category": "case-policy",
       "source_fingerprint": "decd607b8648c191fc20a72151fcca6e61ddaaa1b6fc6eac9e613e1e19eea359",
       "count": 1
     },
@@ -38751,8 +38817,26 @@
     },
     {
       "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "8e90a6dfa10a371f58754e631f55d577f3b53c55412baa84680f74b6b3cc4487",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4f62c8f534d67f7a0d97dcab0eb082047e707b29100ab69f78f8fdd4cb5d8f73",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
       "category": "path-api",
       "source_fingerprint": "07b09f8d2fe4d510fd78743db2a27fa69cfa643951723ba3c401e58ba194c4a5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Markdown/ManagedCodeMarkItDownDocumentMarkdownConverter.cs",
+      "category": "path-api",
+      "source_fingerprint": "e99d9c30847b864d239de7b1187118b4f8cefc78780cd21f8e29a73989e62806",
       "count": 1
     },
     {

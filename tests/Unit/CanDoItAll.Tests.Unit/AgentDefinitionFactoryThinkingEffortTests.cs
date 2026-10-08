@@ -6,6 +6,46 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentDefinitionFactoryThinkingEffortTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData("gpt-5.4-mini")]
+    public void Create_MissingProviderIsRejectedBeforeModelOrPriceValidation(string model) {
+        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt54Mini);
+        var editor = CreateEditor(provider);
+        editor.Model = model;
+
+        var error = Assert.Throws<InvalidOperationException>(() => CreateDefinition(editor, []));
+
+        Assert.Contains("missing provider profile", error.Message, StringComparison.Ordinal);
+        Assert.Contains(provider.Id.ToString(), error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("price", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(OpenAiModelIds.Gpt61Sol)]
+    [InlineData(OpenAiModelIds.Gpt6Sol)]
+    [InlineData(OpenAiModelIds.Gpt6Luna)]
+    public void Create_CurrentOpenAiModelPreservesExplicitReasoning(string model) {
+        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt54Mini, ProviderTransportKind.Responses);
+        var editor = CreateEditor(provider);
+        editor.Model = model;
+        editor.ThinkingEffortOverride = AgentReasoningEffortLevel.Medium;
+
+        var saved = CreateDefinition(editor, [provider]);
+
+        Assert.Equal(model, saved.Model);
+        Assert.Equal(AgentReasoningEffortLevel.Medium, AgentThinkingEffortPolicy.ReadConfiguredEffort(saved.ConfigurationJson, "agent"));
+    }
+
+    [Fact]
+    public void Create_Sol61RejectsUnsupportedNoneReasoning() {
+        var provider = CreateProvider(ProviderKind.OpenAi, OpenAiModelIds.Gpt61Sol, ProviderTransportKind.Responses);
+        var editor = CreateEditor(provider);
+        editor.ThinkingEffortOverride = AgentReasoningEffortLevel.None;
+
+        Assert.Throws<InvalidOperationException>(() => CreateDefinition(editor, [provider]));
+    }
+
     [Fact]
     public void Create_LocalManualModelOverrideStillRequiresPrice() {
         var provider = CreateProvider(ProviderKind.OpenAi, "local-default") with {

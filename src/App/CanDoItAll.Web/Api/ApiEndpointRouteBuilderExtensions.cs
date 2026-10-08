@@ -61,6 +61,7 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapAgentEventsApi();
         group.MapAgentProviderEventsApi();
         group.MapAgentAttachmentsApi();
+        group.MapAgentVoiceApi();
         group.MapAgentRecruitingApi();
         group.MapPromptGalleryApi();
         group.MapWorkflowsApi();

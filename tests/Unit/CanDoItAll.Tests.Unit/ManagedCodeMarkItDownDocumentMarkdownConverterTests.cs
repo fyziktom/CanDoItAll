@@ -150,7 +150,7 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverterTests
         try
         {
             var sourcePath = Path.Combine(root, "quarterly.pdf");
-            await WriteMinimalPdfAsync(sourcePath, "Quarterly PDF marker 4242 USD");
+            await WriteMinimalPdfAsync(sourcePath, "Quarterly PDF marker 4242 USD\nhttps://example.invalid/booking/\nIndependent footer");
 
             var result = await new ManagedCodeMarkItDownDocumentMarkdownConverter()
                 .ConvertToMarkdownAsync(new WorkspaceDocumentMarkdownConversionRequest(sourcePath, 4096));
@@ -158,6 +158,8 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverterTests
             Assert.True(result.Succeeded, result.Diagnostics);
             Assert.Contains("Quarterly", result.Markdown, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("4242", result.Markdown, StringComparison.OrdinalIgnoreCase);
+            Assert.Matches(@"https://example\.invalid/booking/\s+Independent footer", result.Markdown);
+            Assert.DoesNotContain("generated:", result.Markdown, StringComparison.Ordinal);
             Assert.False(result.IsTruncated);
             Assert.InRange(new FileInfo(sourcePath).Length, 1, 8192);
         }
@@ -226,13 +228,36 @@ public sealed class ManagedCodeMarkItDownDocumentMarkdownConverterTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Pdf_without_readable_text_returns_explicit_failure(bool damaged) {
+        var root = CreateWorkspaceRoot();
+        try {
+            var sourcePath = Path.Combine(root, "unreadable.pdf");
+            if (damaged) {
+                await File.WriteAllTextAsync(sourcePath, "%PDF-1.4\nbroken");
+            } else {
+                await WriteMinimalPdfAsync(sourcePath, string.Empty);
+            }
+            var result = await new ManagedCodeMarkItDownDocumentMarkdownConverter()
+                .ConvertToMarkdownAsync(new WorkspaceDocumentMarkdownConversionRequest(sourcePath));
+            Assert.False(result.Succeeded);
+            Assert.Empty(result.Markdown);
+            Assert.NotEmpty(result.Message);
+            Assert.Equal([sourcePath], Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories));
+        } finally {
+            DeleteDirectory(root);
+        }
+    }
+
     private static async Task WriteMinimalPdfAsync(string path, string text)
     {
-        var escapedText = text
+        var lines = text.Split('\n').Select(line => line
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("(", "\\(", StringComparison.Ordinal)
-            .Replace(")", "\\)", StringComparison.Ordinal);
-        var content = $"BT /F1 18 Tf 72 720 Td ({escapedText}) Tj ET";
+            .Replace(")", "\\)", StringComparison.Ordinal));
+        var content = "BT /F1 18 Tf 72 720 Td (" + string.Join(") Tj 0 -28 Td (", lines) + ") Tj ET";
         string[] objects =
         [
             "<< /Type /Catalog /Pages 2 0 R >>",

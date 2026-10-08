@@ -170,6 +170,8 @@ public enum ProjectLlmActionKind
 
 public sealed class ProjectObjectMetadataEnvelope
 {
+    public ProjectStructureImportSourceIdentity? ImportSource { get; set; }
+
     public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
 
     public ProjectStructureDeferredCompletionMetadata? DeferredCompletion { get; set; }

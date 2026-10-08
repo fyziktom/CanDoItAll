@@ -69,7 +69,11 @@ public sealed class ProjectStructureTaskDetailsService(
                             commit.ProposedCostBasis !=
                                 commit.CurrentState.CostBasis,
                             commit.CurrentState
-                                .DirectAssignmentRevision) { ExpectedProjectAdmission = expected, MutationOwner = request.MutationOwner };
+                                .DirectAssignmentRevision) {
+                            ExpectedProjectAdmission = expected,
+                            MutationOwner = request.MutationOwner,
+                            InitialSchedule = request.InitialSchedule
+                        };
                     return ganttMutationService.ApplyTaskDetailsAsync(
                         projectId,
                         mutationRequest,
@@ -100,6 +104,9 @@ public sealed class ProjectStructureTaskDetailsService(
         }
 
         ArgumentNullException.ThrowIfNull(request);
+        if (request.InitialSchedule is not null && request.ScheduleChange is not null) {
+            throw InvalidRequest("Send initialSchedule or scheduleChange, never both.");
+        }
         if (string.IsNullOrWhiteSpace(request.CurrentTitle) ||
             string.IsNullOrWhiteSpace(request.ProposedTitle))
         {
@@ -140,6 +147,7 @@ public sealed class ProjectStructureTaskDetailsService(
 
         try
         {
+            request.InitialSchedule?.Validate();
             ProjectTaskEstimatePolicy.ValidateAndNormalize(
                 request.CurrentEstimate);
             ProjectTaskEstimatePolicy.ValidateAndNormalize(

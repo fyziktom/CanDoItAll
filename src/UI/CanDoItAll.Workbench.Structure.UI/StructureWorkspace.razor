@@ -2,7 +2,7 @@
 @{
     var shell = Presentation;
 }
-<div class="project-structure-page" data-testid="structure-workspace" data-context-id="@shell.ContextId">
+<div class="project-structure-page @(SelectedView == 1 ? "project-structure-page--planning" : null)" data-testid="structure-workspace" data-context-id="@shell.ContextId">
     @if (shell.UnavailableTitle is not null) {
         <PageScaffold>
             <Header><PageHeader Eyebrow="Workbench" Title="Project structure unavailable" Description="The requested project is not available in the active database profile." /></Header>
@@ -19,6 +19,7 @@
     } else {
         <Stack Gap="1.5rem" Class="project-structure-page__stack">
             <Tabs SelectedIndex="SelectedView" SelectedIndexChanged="@(value => Dispatch.InvokeAsync(new StructureViewIntent(shell.ContextId, value)))"
+                  FillHeight="@(SelectedView == 1)" PanelOverflowMode="@(SelectedView == 1 ? TabsPanelOverflowMode.Hidden : TabsPanelOverflowMode.Visible)"
                   AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Server">
                 <TabsItem Text="Canvas" Icon="account_tree">
         @{

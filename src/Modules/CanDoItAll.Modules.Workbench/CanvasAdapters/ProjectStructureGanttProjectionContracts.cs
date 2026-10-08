@@ -18,7 +18,7 @@ public enum ProjectStructureGanttProjectionIssueCode
     InvalidTaskSchedule,
     CanonicalDurationMismatch,
     MissingDependencyRecordId,
-    DependencyEndpointNotTask,
+    MissingDependencyEndpoint,
     DuplicateDependencyId,
     DuplicateDependency,
     SelfDependency,

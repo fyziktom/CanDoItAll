@@ -1,38 +1,114 @@
 @if (!string.IsNullOrWhiteSpace(Message)) {
     <Alert AlertStyle="@(IsError ? AlertStyle.Warning : AlertStyle.Info)" Variant="Variant.Outlined" data-testid="project-deletion-notice">
-        <Stack GapScale="LayoutGap.Small">
-            <TextBlock Value="@Message" />
-            @foreach (var cleanup in Pending) {
-                <Stack @key="cleanup.Target" GapScale="LayoutGap.Small">
-                    <TextBlock Value="@($"Project {cleanup.Target.ProjectId:D} · {cleanup.Target.ParticipantId} · mutation {cleanup.Target.RecoveryId:D} · {cleanup.Status}")" />
-                    <TextBlock Value="@cleanup.RetryGuidance" />
-                    @if (!cleanup.CanRetryNow && cleanup.RetryAvailableAtUtc.HasValue) {
-                        <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; use retry to refresh its state.")" />
-                    }
-                    <Cluster JustifyContent="JustifyContent.End">
-                        <Button Text="Retry cleanup" ButtonStyle="ButtonStyle.Warning"
-                                Disabled="@BusyTargets.Contains(cleanup.Target)" Click="@(() => Retry.InvokeAsync(cleanup.Target))"
-                                data-testid="project-deletion-retry" />
-                    </Cluster>
-                </Stack>
-            }
-            @foreach (var notice in Completed) {
-                <Stack @key="notice.Target" GapScale="LayoutGap.Small">
-                    <TextBlock Value="@($"Project {notice.Target.ProjectId:D} · {notice.Target.ParticipantId} · mutation {notice.Target.RecoveryId:D} · {notice.Operation} completed")" />
-                    @foreach (var warning in notice.Warnings) {
-                        <TextBlock Value="@warning" />
-                    }
-                </Stack>
-            }
-        </Stack>
+        <TextBlock Value="@Message" />
     </Alert>
+}
+@if (Pending.Count > 0 || Completed.Count > 0) {
+    <Alert AlertStyle="@(Pending.Count > 0 ? AlertStyle.Warning : AlertStyle.Info)" Variant="Variant.Outlined" data-testid="project-cleanup-summary">
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <TextBlock Value="@Summary" />
+            <Button Text="Review cleanup" ButtonStyle="ButtonStyle.Light" Click="Open" data-testid="project-cleanup-open" />
+        </Cluster>
+    </Alert>
+}
+@if (Review is { } review) {
+    <Dialog IsOpen="true" Title="Project cleanup" Size="ModalSize.Wide" DenseChrome="true"
+            Subtitle="Unfinished operations need attention. Completed operations keep an auditable record of retained media."
+            OnClose="Close" TestId="project-cleanup-dialog">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="@($"Needs attention ({Pending.Count})")" ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ChangeView(ProjectCleanupView.Pending))" data-testid="project-cleanup-pending-tab" />
+                    <Button Text="@($"Retained media ({Completed.Count})")" ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ChangeView(ProjectCleanupView.RetainedMedia))" data-testid="project-cleanup-completed-tab" />
+                </Cluster>
+                @if (review.View == ProjectCleanupView.RetainedMedia && review.Target is not null) {
+                    <Button Text="Back to completed operations" ButtonStyle="ButtonStyle.Light"
+                            Click="@(() => ReviewChanged.InvokeAsync(review with { Target = null, MediaPage = 0 }))" data-testid="project-cleanup-back" />
+                    @if (SelectedNotice is { } selected) {
+                        <TextBlock Value="@OperationLabel(selected.Target, selected.Operation)" Class="break-words" />
+                        <TextBlock Value="Deletion completed. These objects were retained by the storage provider; review the recorded guidance below." />
+                        @foreach (var warning in selected.Warnings.Skip(MediaPage * PageSize).Take(PageSize)) {
+                            <TextBlock Value="@warning" Class="break-words" data-testid="project-cleanup-media-item" />
+                        }
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Previous media" Disabled="@(MediaPage == 0)" Click="@(() => MoveMedia(review, -1))" data-testid="project-cleanup-media-previous" />
+                            <TextBlock Value="@($"Media page {MediaPage + 1} of {PageCount(selected.Warnings.Count)} · {selected.Warnings.Count} retained objects")" />
+                            <Button Text="Next media" Disabled="@(MediaPage + 1 >= PageCount(selected.Warnings.Count))" Click="@(() => MoveMedia(review, 1))" data-testid="project-cleanup-media-next" />
+                        </Cluster>
+                    } else {
+                        <TextBlock Value="This operation is no longer in the current inventory. Return to the list to choose another operation." data-testid="project-cleanup-missing" />
+                    }
+                } else {
+                    <SectionHead>
+                        <TextBlock TextStyle="TextStyle.H3" Value="@(review.View == ProjectCleanupView.Pending ? "Needs attention" : "Completed operations with retained media")" />
+                    </SectionHead>
+                    @if (ItemCount == 0) {
+                        <TextBlock Value="No operations in this view." />
+                    }
+                    @if (review.View == ProjectCleanupView.Pending) {
+                        @foreach (var cleanup in Pending.Skip(CurrentPage * PageSize).Take(PageSize)) {
+                            <Stack @key="cleanup.Target" GapScale="LayoutGap.Small" data-testid="project-cleanup-pending-item">
+                                <TextBlock Value="@OperationLabel(cleanup.Target, cleanup.Status)" Class="break-words" />
+                                <TextBlock Value="@cleanup.RetryGuidance" Class="break-words" />
+                                @if (!cleanup.CanRetryNow && cleanup.RetryAvailableAtUtc.HasValue) {
+                                    <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; retry refreshes its state.")" />
+                                }
+                                <Button Text="Retry cleanup" ButtonStyle="ButtonStyle.Warning"
+                                        Disabled="@BusyTargets.Contains(cleanup.Target)" Click="@(() => Retry.InvokeAsync(cleanup.Target))"
+                                        data-testid="project-deletion-retry" />
+                            </Stack>
+                        }
+                    } else {
+                        @foreach (var notice in Completed.Skip(CurrentPage * PageSize).Take(PageSize)) {
+                            <Stack @key="notice.Target" GapScale="LayoutGap.Small" data-testid="project-cleanup-completed-item">
+                                <TextBlock Value="@OperationLabel(notice.Target, notice.Operation)" Class="break-words" />
+                                <Button Text="@($"Inspect {notice.Warnings.Count} retained objects")" ButtonStyle="ButtonStyle.Light"
+                                        Click="@(() => ReviewChanged.InvokeAsync(review with { Target = notice.Target, MediaPage = 0 }))"
+                                        data-testid="project-cleanup-inspect" />
+                            </Stack>
+                        }
+                    }
+                    <Cluster Gap="LayoutGap.Small">
+                        <Button Text="Previous operations" Disabled="@(CurrentPage == 0)" Click="@(() => MovePage(review, -1))" data-testid="project-cleanup-previous" />
+                        <TextBlock Value="@($"Page {CurrentPage + 1} of {PageCount(ItemCount)} · {ItemCount} operations")" />
+                        <Button Text="Next operations" Disabled="@(CurrentPage + 1 >= PageCount(ItemCount))" Click="@(() => MovePage(review, 1))" data-testid="project-cleanup-next" />
+                    </Cluster>
+                }
+            </Stack>
+        </ChildContent>
+    </Dialog>
 }
 
 @code {
+    private const int PageSize = 5;
     [Parameter] public string? Message { get; set; }
     [Parameter] public bool IsError { get; set; }
     [Parameter] public IReadOnlyList<ProjectCleanupStatus> Pending { get; set; } = [];
     [Parameter] public IReadOnlyList<ProjectCleanupNotice> Completed { get; set; } = [];
     [Parameter] public IReadOnlySet<ProjectCleanupTarget> BusyTargets { get; set; } = new HashSet<ProjectCleanupTarget>();
     [Parameter] public EventCallback<ProjectCleanupTarget> Retry { get; set; }
+    [Parameter] public ProjectCleanupReview? Review { get; set; }
+    [Parameter] public EventCallback<ProjectCleanupReview?> ReviewChanged { get; set; }
+
+    private string Summary => Pending.Count > 0
+        ? $"{Pending.Count} cleanup operation(s) need attention · {Completed.Count} completed with retained media."
+        : $"{Completed.Count} completed cleanup operation(s) retained media. History is available for review.";
+    private int ItemCount => Review?.View == ProjectCleanupView.Pending ? Pending.Count : Completed.Count;
+    private int CurrentPage => Math.Clamp(Review?.Page ?? 0, 0, PageCount(ItemCount) - 1);
+    private ProjectCleanupNotice? SelectedNotice => Completed.FirstOrDefault(item => item.Target == Review?.Target);
+    private int MediaPage => Math.Clamp(Review?.MediaPage ?? 0, 0, PageCount(SelectedNotice?.Warnings.Count ?? 0) - 1);
+    private static int PageCount(int count) => Math.Max(1, (count + PageSize - 1) / PageSize);
+    private static string OperationLabel(ProjectCleanupTarget target, string operation)
+        => $"Project {target.ProjectId:D} · {target.ParticipantId} · {operation} · operation {target.RecoveryId:D}";
+    private Task Open() => ChangeView(Pending.Count > 0 ? ProjectCleanupView.Pending : ProjectCleanupView.RetainedMedia);
+    private Task Close() => ReviewChanged.InvokeAsync((ProjectCleanupReview?)null);
+    private Task ChangeView(ProjectCleanupView view) => ReviewChanged.InvokeAsync(new(view));
+    private Task MovePage(ProjectCleanupReview review, int direction) => ReviewChanged.InvokeAsync(review with {
+        Page = Math.Clamp(CurrentPage + direction, 0, PageCount(ItemCount) - 1), Target = null, MediaPage = 0
+    });
+    private Task MoveMedia(ProjectCleanupReview review, int direction) => ReviewChanged.InvokeAsync(review with {
+        MediaPage = Math.Clamp(MediaPage + direction, 0, PageCount(SelectedNotice?.Warnings.Count ?? 0) - 1)
+    });
 }

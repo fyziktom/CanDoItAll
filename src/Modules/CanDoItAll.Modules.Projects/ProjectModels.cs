@@ -6,6 +6,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace CanDoItAll.Modules.Projects;
 
@@ -29,6 +30,10 @@ public sealed class Project
     public string Name { get; set; } = string.Empty;
 
     public string Slug { get; set; } = string.Empty;
+
+    public string? ExternalNamespace { get; set; }
+
+    public string? ExternalKey { get; set; }
 
     public string Description { get; set; } = string.Empty;
 
@@ -92,12 +97,18 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 {
     public void Configure(EntityTypeBuilder<Project> builder)
     {
-        builder.ToTable("Projects_Projects");
+        builder.ToTable("Projects_Projects", table => table.HasCheckConstraint(
+            ProjectExternalIdentity.CheckConstraintName, ProjectExternalIdentity.CheckConstraintSql));
         builder.HasKey(project => project.Id);
         builder.Property(project => project.LifetimeId).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(project => project.LegacyAgentAccessBindingEligible).HasDefaultValue(false);
         builder.Property(project => project.Name).HasMaxLength(200).IsRequired();
         builder.Property(project => project.Slug).HasMaxLength(200).IsRequired();
+        builder.Property(project => project.ExternalNamespace).HasMaxLength(ProjectExternalIdentity.MaximumLength);
+        builder.Property(project => project.ExternalKey).HasMaxLength(ProjectExternalIdentity.MaximumLength);
+        builder.HasIndex(project => new { project.ExternalNamespace, project.ExternalKey })
+            .IsUnique().HasDatabaseName(ProjectExternalIdentity.UniqueIndexName)
+            .HasFilter("\"ExternalNamespace\" IS NOT NULL");
         builder.Property(project => project.Description).HasColumnType("TEXT");
         builder.Property(project => project.Objective).HasColumnType("TEXT");
         builder.Property(project => project.CurrentPhase).HasMaxLength(120);
@@ -523,6 +534,8 @@ public sealed partial class ProjectsService(
             Id = project.Id,
             ExpectedLifetimeId = project.LifetimeId,
             ExpectedProjectAdmission = writeAdmissionService.Capture(project),
+            ExternalNamespace = project.ExternalNamespace,
+            ExternalKey = project.ExternalKey,
             Name = project.Name,
             Description = project.Description,
             Objective = project.Objective,
@@ -688,11 +701,31 @@ public sealed partial class ProjectsService(
             return Result<ProjectSaveOutcome>.Failure(Error.Validation("Project name is required."));
         }
 
+        ProjectExternalIdentity? externalIdentity = null;
+        if (model.ExternalNamespace is not null || model.ExternalKey is not null) {
+            var normalized = ProjectExternalIdentity.Normalize(model.ExternalNamespace, model.ExternalKey);
+            if (normalized.IsFailure) {
+                return Result<ProjectSaveOutcome>.Failure(normalized.Errors);
+            }
+            externalIdentity = normalized.Value!;
+            if (model.Id.HasValue && (!model.ExpectedLifetimeId.HasValue || model.ExpectedLifetimeId == Guid.Empty)) {
+                return Result<ProjectSaveOutcome>.Failure(Error.Validation(
+                    "Saving an external identity on an existing project requires its current expectedLifetimeId.",
+                    ProjectErrorCodes.ExternalIdentityLifetimeRequired));
+            }
+        }
+
         var targetProjectId = model.Id ?? newProjectId ?? Guid.NewGuid();
+        var mutationKeys = parentProjectId.HasValue
+            ? BuildProjectHierarchyMutationScopeKeys(targetProjectId, parentProjectId)
+            : BuildProjectMutationScopeKeys(targetProjectId);
+        if (externalIdentity is not null) {
+            mutationKeys = [.. mutationKeys, externalIdentity.MutationScopeKey];
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
             dbContext,
-            parentProjectId.HasValue ? BuildProjectHierarchyMutationScopeKeys(targetProjectId, parentProjectId) : BuildProjectMutationScopeKeys(targetProjectId),
+            mutationKeys,
             model.Id.HasValue ? ProjectMutationPurpose.ExistingWrite : parentProjectId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
             targetProjectId, model.Id.HasValue ? [targetProjectId] : parentProjectId.HasValue ? [parentProjectId.Value] : [],
             authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, reservation);
@@ -731,6 +764,18 @@ public sealed partial class ProjectsService(
                 "This project belongs to a different lifetime. Reload it before saving changes.", ProjectErrorCodes.LifetimeChanged));
         }
 
+        if (externalIdentity is not null) {
+            if (entity?.ExternalNamespace is not null &&
+                (entity.ExternalNamespace != externalIdentity.Namespace || entity.ExternalKey != externalIdentity.Key)) {
+                return Result<ProjectSaveOutcome>.Failure(Error.Failure(
+                    "A project's assigned external identity cannot be changed or cleared.", ProjectErrorCodes.ExternalIdentityImmutable));
+            }
+            if (await dbContext.Set<Project>().AnyAsync(project => project.Id != targetProjectId &&
+                    project.ExternalNamespace == externalIdentity.Namespace && project.ExternalKey == externalIdentity.Key, cancellationToken)) {
+                return ExternalIdentityConflict();
+            }
+        }
+
         if (entity is null)
         {
             if (reservation is null && await dbContext.Set<ProjectCreationReservationRecord>().AnyAsync(record =>
@@ -750,6 +795,11 @@ public sealed partial class ProjectsService(
                 entity.BindReservedLifetime(reservation.LifetimeId);
             }
             await dbContext.Set<Project>().AddAsync(entity, cancellationToken);
+        }
+
+        if (externalIdentity is not null) {
+            entity.ExternalNamespace = externalIdentity.Namespace;
+            entity.ExternalKey = externalIdentity.Key;
         }
 
         if (parentProject is not null)
@@ -838,14 +888,25 @@ public sealed partial class ProjectsService(
             acceptedOptions.Add(new(index, option.Id, option.Category, option.OptionName, option.Notes));
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateException exception) when (externalIdentity is not null &&
+            (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception) &&
+                DbUpdateExceptionClassifier.GetConstraintName(exception) == ProjectExternalIdentity.UniqueIndexName ||
+             exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })) {
+            return ExternalIdentityConflict();
+        }
         var admission = writeAdmissionService.Capture(entity);
         var editorAcknowledgement = new ProjectEditorAcknowledgement(admission, entity.Name, entity.Description,
             entity.Objective, entity.Status, entity.CurrentPhase, entity.TargetDateUtc,
             acceptedPhases.AsReadOnly(), acceptedOptions.AsReadOnly());
         var creationReceipt = model.Id.HasValue ? null : new ProjectCreationReceipt(admission, reservation,
             await ReadCreationFingerprintAsync(dbContext, admission, cancellationToken), authorization);
-        await mutationScope.CommitAsync(cancellationToken);
+        try {
+            await mutationScope.CommitAsync(cancellationToken);
+        } catch (PostgresException exception) when (externalIdentity is not null && exception.SqlState == PostgresErrorCodes.SerializationFailure) {
+            return ExternalIdentityConflict();
+        }
         await mutationScope.DisposeAsync();
         await RunPostCommitActionAsync(
             "search-index-upsert",
@@ -889,6 +950,10 @@ public sealed partial class ProjectsService(
 
         return Result<ProjectSaveOutcome>.Success(new(entity.Id, creationReceipt, editorAcknowledgement));
     }
+
+    private static Result<ProjectSaveOutcome> ExternalIdentityConflict() => Result<ProjectSaveOutcome>.Failure(Error.Failure(
+        "The external identity is already assigned or changed concurrently. Read the current binding before another save.",
+        ProjectErrorCodes.ExternalIdentityConflict));
 
     private async Task UpsertAdmittedSearchProjectionAsync(ProjectWriteAdmission admission, SearchDocumentInput input,
         CancellationToken cancellationToken) {

@@ -208,6 +208,30 @@ public static class ProviderPricingDefaults
             LongContextCacheWritePerMillionTokensUsd = 25.00m,
             LongContextOutputPerMillionTokensUsd = 75.00m
         },
+        new(OpenAiModelIds.Gpt61Sol, 2.00m, 0.10m, 10.00m) {
+            CacheWritePerMillionTokensUsd = 2.50m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt6LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 4.00m,
+            LongContextCachedInputPerMillionTokensUsd = 0.20m,
+            LongContextCacheWritePerMillionTokensUsd = 5.00m,
+            LongContextOutputPerMillionTokensUsd = 15.00m
+        },
+        new(OpenAiModelIds.Gpt6Sol, 2.00m, 0.20m, 10.00m) {
+            CacheWritePerMillionTokensUsd = 2.50m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt6LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 4.00m,
+            LongContextCachedInputPerMillionTokensUsd = 0.40m,
+            LongContextCacheWritePerMillionTokensUsd = 5.00m,
+            LongContextOutputPerMillionTokensUsd = 15.00m
+        },
+        new(OpenAiModelIds.Gpt6Luna, 0.10m, 0.01m, 0.50m) {
+            CacheWritePerMillionTokensUsd = 0.125m,
+            LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt6LongContextThresholdTokens,
+            LongContextInputPerMillionTokensUsd = 0.20m,
+            LongContextCachedInputPerMillionTokensUsd = 0.02m,
+            LongContextCacheWritePerMillionTokensUsd = 0.25m,
+            LongContextOutputPerMillionTokensUsd = 0.75m
+        },
         new(OpenAiModelIds.GptImage25Sunburst, 5.00m, 1.25m, 30.00m) {
             ImageInputPerMillionTokensUsd = 8.00m,
             CachedImageInputPerMillionTokensUsd = 2.00m
@@ -246,7 +270,10 @@ public static class ProviderPricingDefaults
         new("gpt-5.4-nano", 0.20m, 0.02m, 1.25m),
         new("gpt-5.3-codex", 1.75m, 0.175m, 14.00m),
         new("chat-latest", 5.00m, 0.50m, 30.00m),
-        new("gpt-5-mini", 0.25m, 0.025m, 2.00m)
+        new("gpt-5-mini", 0.25m, 0.025m, 2.00m),
+        new("gpt-4.1", 2.00m, 0.50m, 8.00m),
+        new("gpt-4.1-mini", 0.40m, 0.10m, 1.60m),
+        new("gpt-4.1-nano", 0.10m, 0.025m, 0.40m)
     ];
 
     public static bool IsPrivateProvider(ProviderKind kind)
@@ -648,9 +675,9 @@ public static class ProviderPricingDefaults
     {
         return kind switch
         {
-            ProviderKind.OpenAi or ProviderKind.AzureOpenAi => OpenAiModelPrices.FirstOrDefault(
-                price => string.Equals(price.Model, model, StringComparison.OrdinalIgnoreCase)) ??
-                new ProviderModelTokenPrice(model, 0m, 0m, 0m),
+            ProviderKind.OpenAi or ProviderKind.AzureOpenAi => TryFindKnownDefaultPrice(kind, model, out var price)
+                ? price
+                : new ProviderModelTokenPrice(model, 0m, 0m, 0m),
             _ => CreatePrivateDefaultPrice(model)
         };
     }

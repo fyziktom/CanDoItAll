@@ -17,7 +17,8 @@
         </Cluster>
         <TextBlock Value="@($"Simulated writes: {store.Writes}; seed batches: {store.SeedBatches}. {notice}")" data-testid="scenario-effects" />
     </FormSection>
-    <ProjectDeletionStatusSurface Message="@cleanupMessage" IsError="true" Pending="cleanups" Retry="RetryCleanup" />
+    <ProjectDeletionStatusSurface Message="@cleanupMessage" IsError="@(cleanups.Count > 0)" Pending="cleanups" Completed="completedCleanups"
+                                  Retry="RetryCleanup" Review="cleanupReview" ReviewChanged="value => cleanupReview = value" />
     <ProjectsBoard ProjectSummaries="store.Summaries" ProjectProjection="Projection" HierarchyLinks="store.Hierarchy"
                    ProjectSearch="@search" ProjectSearchChanged="value => search = value"
                    StatusFilter="status" StatusFilterChanged="value => status = value"
@@ -85,6 +86,8 @@
     private string? packageMessage;
     private string? cleanupMessage;
     private IReadOnlyList<ProjectCleanupStatus> cleanups = [];
+    private IReadOnlyList<ProjectCleanupNotice> completedCleanups = [];
+    private ProjectCleanupReview? cleanupReview;
     private ProjectFileFilterProjection Projection => ProjectFileFilterProjection.Create(store.Summaries, store.Hierarchy,
         new(search, status, partyCategory, partyValue, hierarchyId, hierarchyMode, includeSubprojects));
 
@@ -96,6 +99,12 @@
         ResetFilters();
         cleanups = [];
         cleanupMessage = null;
+        cleanupReview = null;
+        completedCleanups = scenario == ProjectsScenario.CleanupHistory
+            ? Enumerable.Range(0, 200).Select(index => new ProjectCleanupNotice(
+                new(Guid.NewGuid(), new("scenario-media"), Guid.NewGuid()), "project deletion",
+                Enumerable.Range(0, 23).Select(item => $"Retained object {index + 1}/{item + 1}: immutable media remains available. Review provider retention policy before removing an external pin.").ToArray())).ToArray()
+            : [];
         notice = "Scenario reset.";
     }
 
