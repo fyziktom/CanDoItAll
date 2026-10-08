@@ -13,6 +13,50 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderPricingTests
 {
+    [Theory]
+    [InlineData(OpenAiModelIds.Gpt61Sol, 2, 0.1, 2.5, 10)]
+    [InlineData(OpenAiModelIds.Gpt6Sol, 2, 0.2, 2.5, 10)]
+    [InlineData(OpenAiModelIds.Gpt6Luna, 0.1, 0.01, 0.125, 0.5)]
+    public void Current_openai_rates_survive_snapshot_discovery_and_long_context_pricing(
+        string model, decimal input, decimal cached, decimal writes, decimal output) {
+        var snapshot = model + "-2026-10-06";
+        var merged = ProviderPricingDefaults.MergeDiscoveredModelPrices(ProviderKind.OpenAi, snapshot, [],
+            [new ProviderDiscoveredModelPrice(snapshot, null, null, null)]);
+        var price = Assert.Single(merged.ModelPrices);
+        Assert.Equal((snapshot, input, cached, writes, output),
+            (price.Model, price.InputPerMillionTokensUsd, price.CachedInputPerMillionTokensUsd,
+                price.CacheWritePerMillionTokensUsd, price.OutputPerMillionTokensUsd));
+        Assert.Equal((272000, input * 2, cached * 2, writes * 2, output * 1.5m),
+            (price.LongContextThresholdTokens, price.LongContextInputPerMillionTokensUsd,
+                price.LongContextCachedInputPerMillionTokensUsd, price.LongContextCacheWritePerMillionTokensUsd,
+                price.LongContextOutputPerMillionTokensUsd));
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, 272000, 0, 0, 100, out var standard));
+        Assert.True(ProviderPricingCalculator.TryCalculate(price, 272001, 0, 0, 100, out var longContext));
+        Assert.Equal((272000 * input + 100 * output) / 1000000, standard.TotalUsd);
+        Assert.Equal((272001 * input * 2 + 100 * output * 1.5m) / 1000000, longContext.TotalUsd);
+    }
+
+    [Theory]
+    [InlineData("gpt-4.1", 2, 0.5, 8)]
+    [InlineData("gpt-4.1-mini", 0.4, 0.1, 1.6)]
+    [InlineData("gpt-4.1-nano", 0.1, 0.025, 0.4)]
+    public void Gpt41_snapshot_prices_are_available(string model, decimal input, decimal cached, decimal output) {
+        var snapshot = model + "-2025-04-14";
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, snapshot);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(prices, snapshot, out var price));
+        Assert.Equal((input, cached, output),
+            (price.InputPerMillionTokensUsd, price.CachedInputPerMillionTokensUsd, price.OutputPerMillionTokensUsd));
+    }
+
+    [Fact]
+    public void Every_managed_openai_chat_suggestion_has_a_configured_price() {
+        var prices = ProviderPricingDefaults.CreateDefaultPrices(ProviderKind.OpenAi, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        Assert.All(ManagedSeedProviderFallbacks.OpenAiSuggestedModels, model => {
+            Assert.True(ProviderPricingDefaults.TryFindPrice(prices, model, out var price), model);
+            Assert.True(price.HasConfiguredStandardPrice, model);
+        });
+    }
+
     [Fact]
     public void Long_usage_does_not_clamp_or_overflow() {
         var price = new ProviderModelTokenPrice("exact", 2m, 1m, 4m) { CacheWritePerMillionTokensUsd = 3m };

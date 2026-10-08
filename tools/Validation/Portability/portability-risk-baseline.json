@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-08T08:14:06.472614+00:00",
+  "generated_utc": "2026-10-08T18:06:19.416052+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15320,
+  "allowance_count": 15319,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -31859,12 +31859,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
       "category": "case-policy",
       "source_fingerprint": "adfd3ac6987773006c3475812adc0e33067027940aa59404c14776f5de85d32c",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs",
-      "category": "case-policy",
-      "source_fingerprint": "c9f5b709e7822716290019af3c6fd5a03ed2d5d7e2c70a7c224dcf8e77f46f80",
       "count": 1
     },
     {

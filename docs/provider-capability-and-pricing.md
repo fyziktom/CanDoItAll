@@ -148,3 +148,42 @@ The defaults include `gpt-6-astra`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5
 Rates are standard USD per million tokens, verified on 2026-09-20 against the official [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra), [Sunburst model](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst), and [Flare model](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare) pages. Astra's long-context rates apply to the entire request above the threshold. Different image models and quality settings can consume different token counts despite equal rates. Image execution history currently records image counts, so a token-based image cost remains unavailable rather than an invented estimate.
 
 GPT Image 2.5 accepts `auto`, `low`, `medium`, `high`, `xhigh`, and `max` quality. The driver rejects the last two for older image models before dispatch. Shared-provider requests and responses preserve these new values.
+
+## October 2026 OpenAI catalog refresh
+
+Verified 8 October 2026 against the official [pricing page](https://developers.openai.com/api/docs/pricing)
+and the [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol),
+[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna),
+[GPT-4.1](https://developers.openai.com/api/docs/models/gpt-4.1),
+[Mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini) and
+[Nano](https://developers.openai.com/api/docs/models/gpt-4.1-nano) model pages.
+
+| Model | Input | Cached input | Cache write | Output |
+| --- | ---: | ---: | ---: | ---: |
+| GPT-6.1 Sol | 2 | 0.10 | 2.50 | 10 |
+| GPT-6 Sol | 2 | 0.20 | 2.50 | 10 |
+| GPT-6 Luna | 0.10 | 0.01 | 0.125 | 0.50 |
+| GPT-4.1 | 2 | 0.50 | — | 8 |
+| GPT-4.1 Mini | 0.40 | 0.10 | — | 1.60 |
+| GPT-4.1 Nano | 0.10 | 0.025 | — | 0.40 |
+
+These are standard global USD rates per million tokens. Above 272,000 input tokens,
+the GPT-6 Sol/Luna rows use twice the input/cache rates and 1.5 times the output rate
+for the whole request. Dated snapshots retain their exact identifiers and inherit
+their documented family rate during discovery. Other service tiers and regional
+premiums are not represented by these standard rows. Existing execution price
+snapshots are immutable; historical usage is never repriced.
+
+GPT-6 Sol/Luna allow None through Max reasoning; Chat Completions function tools
+require explicit None and record that adjustment. GPT-6.1 Sol allows Low through Max
+and is exposed through Responses in this application's reasoning registry, where
+tool calling is supported. The managed default model remains GPT-5.4 Mini. Its
+0.75 / 0.075 / 4.50 rates and the existing GPT-5.6 rates remain current.
+
+Every suggested managed OpenAI chat model now has a price row. Normal startup seeds
+the standard provider profiles and refreshes their owned price catalog. Deployments
+that deliberately set `AgentFramework:Providers:SeedDefaults=false` must supply their
+own provider bindings; this switch is unsuitable for a demo using the built-in
+Delivery Manager unchanged. Agent saves reject a missing provider before checking
+model prices and tell the operator to restore or select a provider.

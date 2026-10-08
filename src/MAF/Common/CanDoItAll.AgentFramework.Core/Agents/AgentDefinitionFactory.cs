@@ -133,11 +133,14 @@ internal static class AgentDefinitionFactory
 
     private static ProviderProfile? ResolveSelectedProvider(
         Guid? providerProfileId,
-        IReadOnlyList<ProviderProfile> providers)
-    {
-        return providerProfileId.HasValue
-            ? providers.FirstOrDefault(item => item.Id == providerProfileId.Value)
-            : null;
+        IReadOnlyList<ProviderProfile> providers) {
+        if (providerProfileId is not { } selectedId) {
+            return null;
+        }
+
+        return providers.FirstOrDefault(item => item.Id == selectedId)
+            ?? throw new InvalidOperationException(
+                $"Agent references missing provider profile '{selectedId}'. Restore that provider or select an available provider before saving.");
     }
 
     private static string ResolveEffectiveModel(
