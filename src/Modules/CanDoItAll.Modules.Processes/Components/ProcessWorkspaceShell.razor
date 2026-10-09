@@ -24,6 +24,7 @@
 @inject IJSRuntime JsRuntime
 @inject ILogger<ProcessWorkspaceShell> Logger
 @inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject IDatabaseSwitchNotificationService DatabaseChanges
 @inject TimeProvider TimeProvider
 @inject IAgentChatExecutionOrchestrator ChatExecutionOrchestrator
 
@@ -429,6 +430,25 @@
             6 => ProcessAgentChatRunView.Evidence,
             _ => ProcessAgentChatRunView.Activity
         };
+
+    protected override void OnInitialized() => DatabaseChanges.Changed += OnDatabaseChanged;
+
+    private void OnDatabaseChanged(object? sender, DatabaseProfileChangedNotification notification)
+        => _ = ReloadDatabaseProfileAsync();
+
+    private async Task ReloadDatabaseProfileAsync() {
+        try {
+            await InvokeAsync(async () => {
+                if (!isDisposed && acceptedProfileGeneration != DatabaseRuntimeState.GetSnapshot().Generation) {
+                    await DispatchViewActionAsync(() => LoadAsync(forceRefresh: true));
+                }
+            });
+        } catch (Exception exception) {
+            if (!isDisposed) {
+                Logger.LogWarning("Process workspace profile refresh failed. FailureType={FailureType}.", exception.GetType().Name);
+            }
+        }
+    }
 
     protected override async Task OnParametersSetAsync() {
         var previousRunId = ResolveSelectedManagerChatRunId();
@@ -2201,6 +2221,7 @@
         }
 
         isDisposed = true;
+        DatabaseChanges.Changed -= OnDatabaseChanged;
         RetireDefinitionEditor();
         agentChatFreshnessLease?.Dispose();
         agentChatFreshnessLease = null;

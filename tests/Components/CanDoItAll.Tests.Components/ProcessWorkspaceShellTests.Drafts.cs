@@ -3,12 +3,120 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.UI;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Authoring_profile_notification_retires_read_and_write_without_parameter_echo(bool fail) {
+        using var context = CreateContext(out var client);
+        var runtime = new AuthoringDatabaseRuntime();
+        context.Services.AddSingleton<IDatabaseRuntimeState>(runtime);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        var notifications = context.Services.GetRequiredService<IDatabaseSwitchNotificationService>();
+        var profileA = runtime.GetSnapshot().ActiveProfileId!.Value;
+        var original = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.AuthoringCompletion = original;
+        var running = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        client.DeferShellRequests = true;
+        var reading = cut.InvokeAsync(session.RefreshAsync);
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        client.DeferShellRequests = false;
+        Task? successorTask = null;
+        TaskCompletionSource? successor = null;
+        try {
+            await cut.InvokeAsync(() => runtime.ChangeProfile(Guid.NewGuid(), notifications));
+            cut.WaitForAssertion(() => Assert.Equal(3, client.Requests.Count));
+            await cut.InvokeAsync(() => runtime.ChangeProfile(profileA, notifications));
+            cut.WaitForAssertion(() => Assert.Equal(4, client.Requests.Count));
+            cut.WaitForAssertion(() => Assert.False(session.IsBusy));
+            successor = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            client.AuthoringCompletion = successor;
+            successorTask = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+            cut.WaitForAssertion(() => Assert.Equal(2, client.AuthoringCommandCount));
+            if (fail) {
+                original.SetException(new InvalidOperationException("Private retired profile"));
+            } else {
+                original.SetResult();
+            }
+            client.CompleteShellRequest(0);
+            await Task.WhenAll(running, reading);
+            Assert.True(session.IsBusy);
+            Assert.Null(AuthoringReceipt(session, AuthoringFamily.Definition));
+            Assert.Null(session.ErrorMessage);
+            successor.SetResult();
+            await successorTask;
+            Assert.NotNull(AuthoringReceipt(session, AuthoringFamily.Definition));
+        } finally {
+            original.TrySetResult();
+            successor?.TrySetResult();
+            client.CompleteShellRequest(0);
+            await Task.WhenAll(running, reading, successorTask ?? Task.CompletedTask);
+        }
+    }
+
+    private sealed class AuthoringDatabaseRuntime : IDatabaseRuntimeState {
+        private DatabaseRuntimeSnapshot snapshot = new(Guid.NewGuid(), "fixture-profile", 0);
+        public DatabaseRuntimeSnapshot GetSnapshot() => snapshot;
+        public void MarkCurrentProfile(ResolvedDatabaseProfile profile) => throw new NotSupportedException();
+        public void ChangeProfile(Guid profile, IDatabaseSwitchNotificationService notifications) {
+            var previous = snapshot;
+            snapshot = new(profile, "fixture-profile", previous.Generation + 1);
+            notifications.Publish(new(previous.ActiveProfileId, previous.ActiveFingerprint, profile, snapshot.ActiveFingerprint!, snapshot.Generation));
+        }
+    }
+
+    [Fact]
+    public async Task Authoring_import_retains_original_target_and_later_browsing_selection() {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        await OpenAuthoringFamilyAsync(cut, AuthoringFamily.Template);
+        var catalog = session.DefinitionCatalog.SelectedEditor!.TemplateCatalog!;
+        var target = session.TemplateBrowserState.SelectedTargetStepKey;
+        client.AuthoringCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var running = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Template));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.AuthoringCommandCount));
+        var laterQuery = catalog.Query with { PreviewTab = ProcessTemplateCatalogPreviewTabKind.Json, SearchText = "Later search" };
+        await cut.InvokeAsync(() => session.ApplyTemplateCatalogQueryAsync(laterQuery));
+        session.TemplateBrowserState.SelectedTargetStepKey = new("later-target");
+        client.AuthoringCompletion.SetResult();
+        await running;
+        Assert.Equal(catalog.SelectedItem!.Key, client.LastTemplateImportCommand!.ItemKey);
+        Assert.Equal(target, client.LastTemplateImportCommand.TargetStepKey);
+        Assert.Equal(laterQuery, session.DefinitionCatalog.SelectedEditor!.TemplateCatalog!.Query);
+        Assert.Equal(new("later-target"), session.TemplateBrowserState.SelectedTargetStepKey);
+        Assert.Single(session.DefinitionCatalog.SelectedEditor.TemplateCatalog.ImportedComponents);
+        Assert.Equal(1, client.AuthoringCommandCount);
+    }
+
+    [Fact]
+    public async Task Authoring_accepted_receipt_survives_followup_read_failure_without_write_retry() {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        await cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        var receipt = AuthoringReceipt(session, AuthoringFamily.Definition);
+        client.ShellResultTransform = (_, _) => throw new TimeoutException("Private read connection");
+        await cut.InvokeAsync(session.RefreshAsync);
+        Assert.Equal(receipt, AuthoringReceipt(session, AuthoringFamily.Definition));
+        Assert.Equal("savedraft:test", session.DefinitionDraft.VersionToken?.Value);
+        Assert.Equal(1, client.AuthoringCommandCount);
+        Assert.Contains("Refresh failed", session.ErrorMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("Private read connection", cut.Markup, StringComparison.Ordinal);
+    }
+
     public enum AuthoringFamily { Definition, Role, Step, Canvas, Template }
 
     public static IEnumerable<object[]> AuthoringReadOrders => Enum.GetValues<AuthoringFamily>()
