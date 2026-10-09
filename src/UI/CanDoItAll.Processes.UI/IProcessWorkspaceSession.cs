@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Components;
 namespace CanDoItAll.Processes.UI;
 
 public interface IProcessWorkspaceSession {
+    bool CanRecoverAuthoring => false;
+    bool CanRetryOriginalAuthoring => false;
+    Task RecoverAuthoringAsync() => Task.CompletedTask;
+    Task RetryOriginalAuthoringAsync() => Task.CompletedTask;
     bool AgentContextDisabled { get; }
     string AgentContextTooltip { get; }
     Task ApplyDefinitionSearchAsync();

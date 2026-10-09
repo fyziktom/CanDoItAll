@@ -65,3 +65,22 @@ stages; this checkpoint does not claim those paths are complete. The combined S2
 passed all 22 selected integration cases with zero skips; the production integration build
 completed without errors. The nine initial receipt-selection failures were test comparisons
 of collection references, corrected to compare both the scalar fields and list contents.
+
+S3 adds a monotone observation comparison and a coherent sibling read-back from the same
+committed in-memory snapshot. It does not assign new tokens to dirty forms. Clean forms
+advance on a newer observation; dirty forms keep their baseline and report a conflict.
+Historical command receipts survive subsequent reads, and stale observations cannot replace
+confirmed state. Project inheritance carries the observed global revision separately.
+
+Unknown outcomes retain their original operation locator and immutable submitted command in
+the opening. An explicit status read is scoped to the original profile and project lifetime.
+A recorded result is recovered through the idempotent owner; an absent result offers a
+separate explicit retry using the same ID and payload. Neither rendering nor refresh repeats
+a write. Known command outcomes remain known when sibling projection reconciliation fails.
+Retirement fences status callbacks and their cleanup as well as write completions.
+
+S3 validation passed 222 component cases and 24 PostgreSQL integration cases without skips.
+The native recovery pair injects faults before and after the real transaction COMMIT,
+checks status from a separate native scope, retries the original command, and verifies one
+head and one receipt. The Application assembly retains its dependency boundary; safe host
+logging reports reconciliation failures without adding a logging dependency to Application.

@@ -7,6 +7,15 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistenceDbContext> factory,
     CoordinatedDatabaseTransaction transactions, IProcessAuthoringAdmissionPolicy admissions, TimeProvider clock) : IProcessAuthoringStore {
+    public async Task<ProcessAuthoringReceipt?> GetOperationAsync(ProcessAuthoringAddress address, string callerId, Guid operationId, CancellationToken cancellationToken = default) {
+        address.Validate();
+        if (operationId == Guid.Empty) {
+            throw new ArgumentException("An authoring operation identity is required.");
+        }
+        await admissions.RequireAsync(address, callerId, false, cancellationToken);
+        await using var context = await factory.CreateDbContextAsync(cancellationToken);
+        return await FindReceipt(context, address, callerId, operationId, null, cancellationToken);
+    }
     public async Task<ProcessAuthoringSnapshot?> ReadAsync(ProcessAuthoringAddress address, CancellationToken cancellationToken = default) {
         address.Validate();
         await admissions.RequireAsync(address, null, false, cancellationToken);
@@ -122,14 +131,14 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
             head.Lifecycle, ProcessAuthoringCodec.Read(head.ContentJson), head.PublishedId, head.UpdatedAtUtc);
 
     private static async Task<ProcessAuthoringReceipt?> FindReceipt(ProcessPersistenceDbContext context, ProcessAuthoringAddress address,
-        string callerId, Guid operationId, string fingerprint, CancellationToken cancellationToken) {
+        string callerId, Guid operationId, string? fingerprint, CancellationToken cancellationToken) {
         var entity = await context.AuthoringReceipts.AsNoTracking().SingleOrDefaultAsync(item => item.DatabaseProfileId == address.DatabaseProfileId &&
             item.CallerId == callerId && item.OperationId == operationId, cancellationToken);
         if (entity is null) {
             return null;
         }
         if (entity.ProjectId != address.ProjectId || entity.ProjectLifetimeId != address.ProjectLifetimeId ||
-                entity.DefinitionKey != address.DefinitionKey || entity.RequestFingerprint != fingerprint) {
+                entity.DefinitionKey != address.DefinitionKey || fingerprint is not null && entity.RequestFingerprint != fingerprint) {
             throw new InvalidOperationException("The authoring operation identity was reused for different submitted content or ownership.");
         }
         return ProcessAuthoringCodec.ReadReceipt(entity.ReceiptJson);

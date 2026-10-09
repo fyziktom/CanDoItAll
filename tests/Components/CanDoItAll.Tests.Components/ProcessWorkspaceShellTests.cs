@@ -3331,7 +3331,16 @@ public sealed partial class ProcessWorkspaceShellTests
         public TaskCompletionSource? AuthoringCompletion { get; set; }
         public int AuthoringCommandCount { get; private set; }
         public bool RejectAuthoringCommands { get; set; }
+        public Func<ProcessDefinitionEditorCommandResult, ProcessDefinitionEditorCommandResult>? EditorResultTransform { get; set; }
+        public ProcessAuthoringOperationState AuthoringOperationState { get; set; } = ProcessAuthoringOperationState.Unavailable;
+        public TaskCompletionSource<ProcessAuthoringOperationStatus>? AuthoringStatusCompletion { get; set; }
+        public List<ProcessAuthoringOperationQuery> AuthoringStatusQueries { get; } = [];
         public List<ProcessDefinitionCanvasCommand> CanvasCommands { get; } = [];
+
+        public Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default) {
+            AuthoringStatusQueries.Add(query);
+            return AuthoringStatusCompletion?.Task ?? Task.FromResult(new ProcessAuthoringOperationStatus(AuthoringOperationState, null));
+        }
 
         private async Task WaitForAuthoringAsync(CancellationToken cancellationToken) {
             AuthoringCommandCount++;
@@ -3447,7 +3456,8 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Definition was not published because blocking lint issues remain.",
                 lint.Issues);
             var projection = CreateEditor(command.Draft.DefinitionKey, command.Draft, authoringStatus, versionToken, lint, receipt);
-            return new ProcessDefinitionEditorCommandResult(receipt, projection);
+            var result = new ProcessDefinitionEditorCommandResult(receipt, projection);
+            return EditorResultTransform?.Invoke(result) ?? result;
         }
 
         public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(

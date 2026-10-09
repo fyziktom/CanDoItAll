@@ -12,6 +12,106 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_newer_observation_advances_view_but_preserves_dirty_baseline_and_historical_receipt(bool dirty) {
+        using var context = CreateContext(out var client);
+        var profile = Guid.NewGuid();
+        long revision = 0;
+        client.ShellResultTransform = (_, value) => value with { DefinitionCatalog = value.DefinitionCatalog with {
+            SelectedEditor = Observe(value.DefinitionCatalog.SelectedEditor!, revision)
+        } };
+        client.EditorResultTransform = value => value with { Projection = Observe(value.Projection, 1) };
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        await cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        var receipt = session.DefinitionCatalog.SelectedEditor!.LastCommandReceipt;
+        if (dirty) {
+            session.DefinitionDraft.Name = "Local unsaved name";
+        }
+        revision = 2;
+        await cut.InvokeAsync(session.RefreshAsync);
+        Assert.Equal(2, session.DefinitionCatalog.SelectedEditor!.Observation!.Revision);
+        Assert.Equal(dirty ? "Local unsaved name" : "Authoritative revision 2", session.DefinitionDraft.Name);
+        Assert.Equal(dirty ? "native-r1" : "native-r2", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Equal(dirty, session.DefinitionDraft.HasConflict);
+        Assert.Equal(receipt, session.DefinitionCatalog.SelectedEditor.LastCommandReceipt);
+        revision = 0;
+        await cut.InvokeAsync(session.RefreshAsync);
+        Assert.Equal(2, session.DefinitionCatalog.SelectedEditor.Observation.Revision);
+        Assert.Equal(receipt, session.DefinitionCatalog.SelectedEditor.LastCommandReceipt);
+        Assert.Equal(1, client.AuthoringCommandCount);
+
+        ProcessDefinitionEditorProjection Observe(ProcessDefinitionEditorProjection editor, long value) => editor with {
+            Observation = new(profile, Guid.Empty, Guid.Empty, editor.DefinitionKey, value, $"hash-{value}", null),
+            VersionToken = new($"native-r{value}"), Identity = editor.Identity with { Name = $"Authoritative revision {value}" }
+        };
+    }
+
+    [Theory]
+    [InlineData(ProcessAuthoringOperationState.Committed)]
+    [InlineData(ProcessAuthoringOperationState.Rejected)]
+    [InlineData(ProcessAuthoringOperationState.NotRecorded)]
+    public async Task Explicit_authoring_recovery_keeps_original_id_and_payload_and_requires_explicit_retry_after_absence(ProcessAuthoringOperationState state) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        client.AuthoringCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.AuthoringCommandCount));
+        var original = client.LastEditorCommand!;
+        client.AuthoringCompletion.SetException(new TimeoutException("Uncertain transport"));
+        await pending;
+        session.DefinitionDraft.Name = "Later local edit";
+        Assert.True(session.CanRecoverAuthoring);
+        client.AuthoringCompletion = null;
+        client.AuthoringOperationState = state;
+        client.RejectAuthoringCommands = state == ProcessAuthoringOperationState.Rejected;
+        await cut.InvokeAsync(session.RecoverAuthoringAsync);
+        Assert.Equal(original.OperationId, Assert.Single(client.AuthoringStatusQueries).OperationId);
+        if (state == ProcessAuthoringOperationState.NotRecorded) {
+            Assert.Equal(1, client.AuthoringCommandCount);
+            Assert.True(session.CanRetryOriginalAuthoring);
+            await cut.InvokeAsync(session.RetryOriginalAuthoringAsync);
+        }
+        Assert.Equal(2, client.AuthoringCommandCount);
+        Assert.Equal(original, client.LastEditorCommand);
+        Assert.Equal("Later local edit", session.DefinitionDraft.Name);
+        Assert.False(session.IsBusy);
+        Assert.False(session.CanRecoverAuthoring);
+    }
+
+    [Fact]
+    public async Task Retired_authoring_status_callback_cannot_retry_same_id_successor_opening() {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        var key = session.DefinitionCatalog.SelectedEditor!.DefinitionKey;
+        client.AuthoringCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var original = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.AuthoringCommandCount));
+        client.AuthoringCompletion.SetException(new TimeoutException());
+        await original;
+        client.AuthoringStatusCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var status = cut.InvokeAsync(session.RecoverAuthoringAsync);
+        cut.WaitForAssertion(() => Assert.Single(client.AuthoringStatusQueries));
+        await cut.InvokeAsync(() => session.SelectDefinitionAsync(new("architecture-decision-governance")));
+        await cut.InvokeAsync(() => session.SelectDefinitionAsync(key));
+        client.AuthoringCompletion = null;
+        await cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        var successor = session.DefinitionCatalog.SelectedEditor!.LastCommandReceipt;
+        client.AuthoringStatusCompletion.SetResult(new(ProcessAuthoringOperationState.Committed, null));
+        await status;
+        Assert.Equal(2, client.AuthoringCommandCount);
+        Assert.Equal(successor, session.DefinitionCatalog.SelectedEditor.LastCommandReceipt);
+        Assert.False(session.CanRecoverAuthoring);
+        Assert.False(session.IsBusy);
+    }
+
     public enum AuthoringRetirement { Scope, ProjectLifetime, Disposal }
 
     public static IEnumerable<object[]> AuthoringRetirements => Enum.GetValues<AuthoringFamily>()

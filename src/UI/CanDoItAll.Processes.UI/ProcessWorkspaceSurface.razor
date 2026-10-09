@@ -60,6 +60,12 @@
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Action required" />
                 <h2 class="text-base font-semibold text-rose-900">Process shell projection failed</h2>
                 <p class="mt-2 text-sm leading-6 text-rose-700">@Session.ErrorMessage</p>
+                @if (Session.CanRecoverAuthoring) {
+                    <Button Text="Check authoring status" Click="Session.RecoverAuthoringAsync" data-testid="processes-authoring-recover" />
+                }
+                @if (Session.CanRetryOriginalAuthoring) {
+                    <Button Text="Retry original command" Click="Session.RetryOriginalAuthoringAsync" data-testid="processes-authoring-retry" />
+                }
                 @if (Session.PendingLaunchStorageKey is not null) {
                     <Button Text="Launch another run" Disabled="@Session.IsBusy" Click="Session.StartNewProcessLaunchAsync"
                             data-testid="processes-launch-new-intent" />

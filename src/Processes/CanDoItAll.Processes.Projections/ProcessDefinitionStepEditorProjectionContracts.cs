@@ -436,7 +436,9 @@ public sealed record ProcessDefinitionStepEditorCommand(
 
 public sealed record ProcessDefinitionStepEditorCommandResult(
     ProcessDefinitionStepCommandReceipt Receipt,
-    ProcessDefinitionStepEditorProjection Projection);
+    ProcessDefinitionStepEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Definition step list, editable step snapshots, selected step and validation findings.")]
 public sealed record ProcessDefinitionStepEditorProjection(

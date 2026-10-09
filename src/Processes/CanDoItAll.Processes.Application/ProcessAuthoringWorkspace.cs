@@ -34,14 +34,16 @@ public sealed class ProcessAuthoringWorkspace(IProcessAuthoringStore store, IPro
         var address = await context.CaptureReadAddressAsync(scope, key, cancellationToken);
         var head = await store.ReadAsync(address, cancellationToken);
         var content = head is { Lifecycle: not ProcessAuthoringLifecycle.Deleted } ? head.Content : null;
+        long inheritedRevision = 0;
         if (content is null && address.ProjectId != Guid.Empty) {
             var inherited = await store.ReadAsync(address with { ProjectId = Guid.Empty, ProjectLifetimeId = Guid.Empty }, cancellationToken);
+            inheritedRevision = inherited?.Revision ?? 0;
             if (inherited is { Lifecycle: not ProcessAuthoringLifecycle.Deleted }) {
                 content = inherited.Content;
             }
         }
         content ??= ReadTemplate(key.Value);
-        return CreateSession(scope, address, head?.Revision ?? 0, head?.Lifecycle ?? ProcessAuthoringLifecycle.Deleted, content, head?.PublishedId);
+        return CreateSession(scope, address, head?.Revision ?? 0, head?.Lifecycle ?? ProcessAuthoringLifecycle.Deleted, content, head?.PublishedId, inheritedRevision);
     }
 
     public ProcessAuthoringContent ReadTemplate(string key) {
@@ -59,6 +61,14 @@ public sealed class ProcessAuthoringWorkspace(IProcessAuthoringStore store, IPro
         string? token, Guid operationId, string fingerprint, CancellationToken cancellationToken) {
         var address = token is null ? await context.CaptureReadAddressAsync(scope, key, cancellationToken) : AddressFromToken(scope, key, token);
         return await store.RecoverAsync(address, context.CallerId, operationId, fingerprint, cancellationToken);
+    }
+
+    public async Task<ProcessAuthoringOperationStatus> GetOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken) {
+        var address = AddressFromToken(query.Scope, query.DefinitionKey, query.VersionToken);
+        var receipt = await store.GetOperationAsync(address, context.CallerId, query.OperationId, cancellationToken);
+        return new(receipt is null ? ProcessAuthoringOperationState.NotRecorded : receipt.Outcome == ProcessAuthoringOutcome.Accepted
+            ? ProcessAuthoringOperationState.Committed : ProcessAuthoringOperationState.Rejected,
+            receipt?.Snapshot is null ? null : FromReceipt(query.Scope, receipt).Observation);
     }
 
     public bool Matches(ProcessAuthoringSession current, string? expectedToken) {
@@ -80,8 +90,10 @@ public sealed class ProcessAuthoringWorkspace(IProcessAuthoringStore store, IPro
 
     public ProcessAuthoringSession FromReceipt(ProcessWorkspaceShellScope scope, ProcessAuthoringReceipt receipt) {
         var snapshot = receipt.Snapshot ?? throw new InvalidOperationException("The authoring receipt has no committed definition.");
-        return CreateSession(scope, snapshot.Address, snapshot.Revision, snapshot.Lifecycle, snapshot.Content, snapshot.PublishedId)
+        var session = CreateSession(scope, snapshot.Address, snapshot.Revision, snapshot.Lifecycle, snapshot.Content, snapshot.PublishedId)
             with { CommittedAtUtc = snapshot.UpdatedAtUtc };
+        reads[(scope, new(snapshot.Address.DefinitionKey))] = Task.FromResult(session);
+        return session;
     }
 
     public async Task<ProcessAuthoringContent> InheritedContentAsync(ProcessAuthoringSession session, CancellationToken cancellationToken) {
@@ -109,9 +121,9 @@ public sealed class ProcessAuthoringWorkspace(IProcessAuthoringStore store, IPro
     }
 
     private static ProcessAuthoringSession CreateSession(ProcessWorkspaceShellScope scope, ProcessAuthoringAddress address, long revision,
-        ProcessAuthoringLifecycle lifecycle, ProcessAuthoringContent content, Guid? publishedId) {
+        ProcessAuthoringLifecycle lifecycle, ProcessAuthoringContent content, Guid? publishedId, long inheritedRevision = 0) {
         ProcessAuthoringObservation observation = new(address.DatabaseProfileId, address.ProjectId, address.ProjectLifetimeId,
-            new(address.DefinitionKey), revision, ProcessAuthoringCodec.Hash(ProcessAuthoringCodec.Write(content)), publishedId);
+            new(address.DefinitionKey), revision, ProcessAuthoringCodec.Hash(ProcessAuthoringCodec.Write(content)), publishedId) { InheritedRevision = inheritedRevision };
         var token = TokenPrefix + Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(observation,
             ProcessAuthoringCommandJsonContext.Default.ProcessAuthoringObservation)));
         return new(scope, address, revision, lifecycle, content, publishedId, observation, token);

@@ -7,6 +7,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public interface IProcessWorkspaceProjectionClient
 {
+    Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default)
+        => Task.FromResult(new ProcessAuthoringOperationStatus(ProcessAuthoringOperationState.Unavailable, null));
     Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default);
@@ -46,9 +48,12 @@ public interface IProcessWorkspaceProjectionClient
 
 public sealed class ProcessWorkspaceProjectionClient(
     IServiceScopeFactory scopeFactory,
-
     ProjectWriteAdmissionService projectAdmissions) : IProcessWorkspaceProjectionClient
 {
+    public async Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default) {
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ProcessAuthoringWorkspace>().GetOperationAsync(query, cancellationToken);
+    }
     public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
         ProcessWorkspaceShellRequest request,
         CancellationToken cancellationToken = default)

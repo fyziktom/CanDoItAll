@@ -1154,7 +1154,9 @@ public sealed record ProcessDefinitionEditorCommand(
 
 public sealed record ProcessDefinitionEditorCommandResult(
     ProcessDefinitionEditorCommandReceipt Receipt,
-    ProcessDefinitionEditorProjection Projection);
+    ProcessDefinitionEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Current definition overview and optional role, step, canvas and template authoring projections. Read-only over this HTTP surface.")]
 public sealed record ProcessDefinitionEditorProjection(

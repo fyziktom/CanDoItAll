@@ -279,7 +279,9 @@ public sealed record ProcessTemplateImportCommand(
 
 public sealed record ProcessTemplateImportCommandResult(
     ProcessTemplateImportCommandReceipt Receipt,
-    ProcessTemplateCatalogProjection Projection);
+    ProcessTemplateCatalogProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Template catalog for the selected definition, including previews and existing imported components.")]
 public sealed record ProcessTemplateCatalogProjection(

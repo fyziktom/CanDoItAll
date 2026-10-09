@@ -203,25 +203,33 @@ public sealed class ProcessWorkspaceShellProjectionService(
         CancellationToken cancellationToken = default)
         => definitionCatalogProjectionService.FeedDefaultDefinitionsAsync(command, cancellationToken);
 
-    public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
+    public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(
         ProcessDefinitionEditorCommand command,
-        CancellationToken cancellationToken = default)
-        => definitionEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        CancellationToken cancellationToken = default) {
+        var result = await definitionEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        return result with { Reconciliation = await ReconcileAuthoringAsync(command.Scope, command.DefinitionKey, result.Projection.Observation, cancellationToken) };
+    }
 
-    public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+    public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
         ProcessDefinitionRoleEditorCommand command,
-        CancellationToken cancellationToken = default)
-        => definitionRoleEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        CancellationToken cancellationToken = default) {
+        var result = await definitionRoleEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        return result with { Reconciliation = await ReconcileAuthoringAsync(command.Scope, command.DefinitionKey, result.Projection.Observation, cancellationToken) };
+    }
 
-    public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+    public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
         ProcessDefinitionCanvasCommand command,
-        CancellationToken cancellationToken = default)
-        => definitionCanvasEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        CancellationToken cancellationToken = default) {
+        var result = await definitionCanvasEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        return result with { Reconciliation = await ReconcileAuthoringAsync(command.Scope, command.DefinitionKey, result.Projection.Observation, cancellationToken) };
+    }
 
-    public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+    public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
         ProcessDefinitionStepEditorCommand command,
-        CancellationToken cancellationToken = default)
-        => definitionStepEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        CancellationToken cancellationToken = default) {
+        var result = await definitionStepEditorProjectionService.ExecuteCommandAsync(command, cancellationToken);
+        return result with { Reconciliation = await ReconcileAuthoringAsync(command.Scope, command.DefinitionKey, result.Projection.Observation, cancellationToken) };
+    }
 
     public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
         ProcessTemplateImportCommand command,
@@ -233,9 +241,31 @@ public sealed class ProcessWorkspaceShellProjectionService(
         var stepEditor = await definitionStepEditorProjectionService
             .GetEditorAsync(command.Scope, command.TargetDefinitionKey, cancellationToken)
             .ConfigureAwait(false);
-        return await templateCatalogProjectionService
+        var result = await templateCatalogProjectionService
             .ExecuteCommandAsync(command, stepEditor, cancellationToken)
             .ConfigureAwait(false);
+        return result with { Reconciliation = await ReconcileAuthoringAsync(command.Scope, command.TargetDefinitionKey, result.Projection.Observation, cancellationToken) };
+    }
+
+    private async Task<ProcessAuthoringReconciliation?> ReconcileAuthoringAsync(ProcessWorkspaceShellScope scope,
+        ProcessDefinitionCatalogItemKey key, ProcessAuthoringObservation? expected, CancellationToken cancellationToken) {
+        if (expected is null) {
+            return null;
+        }
+        try {
+            var editor = await definitionEditorProjectionService.GetEditorAsync(scope, key, cancellationToken);
+            var steps = await definitionStepEditorProjectionService.GetEditorAsync(scope, key, cancellationToken);
+            var roles = await definitionRoleEditorProjectionService.GetEditorAsync(scope, key, cancellationToken);
+            var canvas = await definitionCanvasEditorProjectionService.GetCanvasAsync(scope, key, cancellationToken);
+            var templates = await templateCatalogProjectionService.GetCatalogAsync(scope, key,
+                new(null, ProcessTemplateCatalogCategoryKind.All, null, ProcessTemplateCatalogPreviewTabKind.Overview, 50), steps, cancellationToken);
+            if (new[] { editor.Observation, steps.Observation, roles.Observation, canvas.Observation, templates.Observation }.Any(item => item != expected)) {
+                throw new InvalidOperationException("Authoring reconciliation did not observe the command's aggregate revision.");
+            }
+            return new(editor with { StepEditor = steps, RoleEditor = roles, Canvas = canvas, TemplateCatalog = templates }, null);
+        } catch (Exception) {
+            return new(null, "The command outcome is known, but related panels could not be refreshed. Refresh to read the current definition.");
+        }
     }
 
     private static void ValidateRequest(ProcessWorkspaceShellRequest request)

@@ -159,9 +159,14 @@
     private long definitionCompletionSequence;
     private DefinitionEditorOperationFence? definitionOperation;
     private bool definitionOutcomeUnknown;
+    private bool definitionOutcomeKnown;
+    private DefinitionAuthoringRecovery? definitionRecovery;
+    private bool authoringRecoveryBusy;
+    private bool authoringRetryAvailable;
+    private long authoringRecoverySequence;
     private ProcessDefinitionCanvasCommand? pendingCanvasMove;
     private bool WorkspaceBusy => isBusy || definitionOperation is not null || definitionOutcomeUnknown;
-    private const string UnknownAuthoringOutcome = "The authoring command's outcome is unknown. Further authoring is blocked in this opening. Refresh only reads; verify the original operation before reopening the editor.";
+    private const string UnknownAuthoringOutcome = "The authoring command's outcome is unknown. Check its saved status before continuing. Refresh only reads and does not repeat the command.";
     private string? agentContextNotice;
     private string searchText = string.Empty;
     private string pendingSearchText = string.Empty;
@@ -627,6 +632,13 @@
         }
         var editor = observed.DefinitionCatalog.SelectedEditor ?? current;
         var pending = definitionOperation is not null || definitionOutcomeUnknown || completionSequence != definitionCompletionSequence;
+        if (current.Observation is not null) {
+            var native = pending ? (Editor: current, Stale: false) : ProcessAuthoringReadReconciler.Reconcile(current, editor);
+            if (native.Stale) {
+                errorMessage = "This read is older than the confirmed authoring revision or belongs to another owner. The confirmed result remains visible; Refresh retries the read.";
+            }
+            return observed with { DefinitionCatalog = observed.DefinitionCatalog with { SelectedEditor = native.Editor } };
+        }
         var definitionMismatch = current.LastCommandReceipt?.Status == ProcessDefinitionEditorCommandStatus.Accepted && editor.VersionToken != current.VersionToken;
         var roleMismatch = current.RoleEditor?.LastCommandReceipt?.Status == ProcessDefinitionRoleCommandStatus.Accepted &&
             editor.RoleEditor is { } roles && roles.VersionToken != current.RoleEditor.VersionToken;
@@ -671,6 +683,11 @@
     private void RetireDefinitionEditor() {
         definitionOperation = null;
         definitionOutcomeUnknown = false;
+        definitionOutcomeKnown = false;
+        definitionRecovery = null;
+        authoringRecoveryBusy = false;
+        authoringRetryAvailable = false;
+        authoringRecoverySequence++;
         pendingCanvasMove = null;
         definitionDraft = new();
         roleEditorState = new();
@@ -708,8 +725,8 @@
         return DetailTabs.ElementAtOrDefault(activeDetailTabIndex)?.Key ?? ResolvePreferredDetailTab();
     }
 
-    private ProcessDefinitionWorkspaceLoadOptions CreateDefinitionLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey)
-        => detailTabKey switch {
+    private ProcessDefinitionWorkspaceLoadOptions CreateDefinitionLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey) {
+        var options = detailTabKey switch {
             ProcessWorkspaceDetailTabKey.Definition => ProcessDefinitionWorkspaceLoadOptions.Basics,
             ProcessWorkspaceDetailTabKey.Roles => ProcessDefinitionWorkspaceLoadOptions.Roles,
             ProcessWorkspaceDetailTabKey.Steps => ProcessDefinitionWorkspaceLoadOptions.Steps,
@@ -717,6 +734,16 @@
             ProcessWorkspaceDetailTabKey.Exchange => ProcessDefinitionWorkspaceLoadOptions.Exchange,
             _ => ProcessDefinitionWorkspaceLoadOptions.CatalogOnly
         };
+        if (options.IncludeSelectedEditor && shell?.DefinitionCatalog.SelectedEditor is { Observation: not null } current) {
+            options = options with {
+                IncludeRoleEditor = options.IncludeRoleEditor || current.RoleEditor is not null,
+                IncludeStepEditor = options.IncludeStepEditor || current.StepEditor is not null,
+                IncludeCanvas = options.IncludeCanvas || current.Canvas is not null,
+                IncludeTemplateCatalog = options.IncludeTemplateCatalog || current.TemplateCatalog is not null
+            };
+        }
+        return options;
+    }
 
     private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey) {
         var hasExplicitRuntimeSelection = (selectedRuntimeRunId ?? RunIdQuery).HasValue || LiveRoute || LaunchPlanIdQuery.HasValue;
@@ -1850,29 +1877,29 @@
         editorCommandNotice = editor?.LastCommandReceipt?.Summary;
     }
 
-    private async Task ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommandKind commandKind) {
+    private Task ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommandKind commandKind) {
         var editor = DefinitionCatalog.SelectedEditor;
         if (editor is null) {
-            return;
+            return Task.CompletedTask;
         }
+        return ExecuteDefinitionEditorCommandAsync(new ProcessDefinitionEditorCommand(ResolveScope(), editor.DefinitionKey,
+            commandKind, definitionDraft.VersionToken, definitionDraft.Capture()));
+    }
 
-        var operation = TryBeginDefinitionEditorOperation(editor.DefinitionKey);
+    private async Task ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommand command) {
+        var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
         if (operation is null) {
             return;
         }
-
-        var submitted = definitionDraft.Capture();
+        RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
+            command.OperationId, () => ExecuteDefinitionEditorCommandAsync(command));
+        var submitted = command.Draft;
         try {
-            var result = await ProjectionClient.ExecuteDefinitionEditorCommandAsync(new ProcessDefinitionEditorCommand(
-                ResolveScope(),
-                editor.DefinitionKey,
-                commandKind,
-                definitionDraft.VersionToken,
-                submitted));
+            var result = await ProjectionClient.ExecuteDefinitionEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
-            definitionCompletionSequence++;
+            ObserveAuthoringResult(result.Reconciliation);
 
             editorCommandNotice = result.Receipt.Summary;
             if (result.Receipt.Status == ProcessDefinitionEditorCommandStatus.Accepted) {
@@ -1923,13 +1950,14 @@
         if (operation is null) {
             return;
         }
-
+        RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
+            command.OperationId, () => ExecuteDefinitionRoleEditorCommandAsync(command));
         try {
             var result = await ProjectionClient.ExecuteDefinitionRoleEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
-            definitionCompletionSequence++;
+            ObserveAuthoringResult(result.Reconciliation);
 
             if (result.Receipt.Status == ProcessDefinitionRoleCommandStatus.Accepted) {
                 roleEditorState.Accept(result.Projection);
@@ -1971,14 +1999,15 @@
         if (operation is null) {
             return;
         }
-
+        RetainAuthoringRecovery(operation.Value, command.Scope, command.TargetDefinitionKey, command.ExpectedVersionToken?.Value,
+            command.OperationId, () => ExecuteTemplateImportCommandAsync(command));
         var querySequence = templateQuerySequence;
         try {
             var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
-            definitionCompletionSequence++;
+            ObserveAuthoringResult(result.Reconciliation);
 
             ApplyTemplateCatalogProjection(result.Projection, querySequence != templateQuerySequence);
         } catch (Exception exception) {
@@ -1997,6 +2026,7 @@
         if (preserveQuery && currentEditor.TemplateCatalog is { } currentCatalog) {
             projection = currentCatalog with {
                 VersionToken = projection.VersionToken,
+                Observation = projection.Observation,
                 ImportedComponents = projection.ImportedComponents,
                 LastImportReceipt = projection.LastImportReceipt
             };
@@ -2045,13 +2075,14 @@
         if (operation is null) {
             return;
         }
-
+        RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
+            command.OperationId, () => ExecuteDefinitionCanvasCommandAsync(command));
         try {
             var result = await ProjectionClient.ExecuteDefinitionCanvasCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
-            definitionCompletionSequence++;
+            ObserveAuthoringResult(result.Reconciliation);
 
             ApplyDefinitionCanvasProjection(result.Projection);
         } catch (Exception exception) {
@@ -2082,13 +2113,14 @@
         if (operation is null) {
             return;
         }
-
+        RetainAuthoringRecovery(operation.Value, command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
+            command.OperationId, () => ExecuteDefinitionStepEditorCommandAsync(command));
         try {
             var result = await ProjectionClient.ExecuteDefinitionStepEditorCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
-            definitionCompletionSequence++;
+            ObserveAuthoringResult(result.Reconciliation);
 
             if (result.Receipt.Status == ProcessDefinitionStepCommandStatus.Accepted) {
                 stepEditorState.Accept(result.Projection);
@@ -2133,6 +2165,8 @@
             DatabaseRuntimeState.GetSnapshot().Generation,
             shell.ProjectBinding);
         definitionOperation = operation;
+        definitionOutcomeKnown = false;
+        authoringRetryAvailable = false;
         errorMessage = null;
         return operation;
     }
@@ -2149,11 +2183,13 @@
         if (!IsCurrentDefinitionEditorOperation(operation)) {
             return;
         }
-        definitionOutcomeUnknown = true;
-        errorMessage = UnknownAuthoringOutcome;
+        definitionOutcomeUnknown = !definitionOutcomeKnown;
+        errorMessage = definitionOutcomeKnown
+            ? "The command outcome is known, but the view could not be reconciled. Refresh to read the current definition."
+            : UnknownAuthoringOutcome;
         pendingCanvasMove = null;
-        Logger.LogWarning("Process authoring outcome is unknown. Operation={Operation} Definition={Definition} ProjectId={ProjectId} FailureType={FailureType}.",
-            operation.Sequence, operation.DefinitionKey, operation.Scope.ProjectId, exception.GetType().Name);
+        Logger.LogWarning("Process authoring completion failed. Operation={Operation} Definition={Definition} ProjectId={ProjectId} KnownOutcome={KnownOutcome} FailureType={FailureType}.",
+            definitionRecovery?.Query.OperationId, operation.DefinitionKey, operation.Scope.ProjectId, definitionOutcomeKnown, exception.GetType().Name);
     }
 
     private async Task CompleteDefinitionEditorOperationAsync(DefinitionEditorOperationFence operation) {
@@ -2161,11 +2197,97 @@
             return;
         }
         definitionOperation = null;
+        if (!definitionOutcomeUnknown) {
+            definitionRecovery = null;
+        }
         if (!definitionOutcomeUnknown && pendingCanvasMove is { } move && shell?.DefinitionCatalog.SelectedEditor?.Canvas is { } canvas) {
             pendingCanvasMove = null;
-            await ExecuteDefinitionCanvasCommandAsync(move with { ExpectedVersionToken = canvas.VersionToken });
+            var positions = move.NodePositions?.Where(position => canvas.Nodes.Any(node => node.NodeKey == position.NodeKey)).ToArray();
+            if (positions?.Length > 0) {
+                await ExecuteDefinitionCanvasCommandAsync(move with { ExpectedVersionToken = canvas.VersionToken, NodePositions = positions });
+            }
         }
     }
+
+    private void ObserveAuthoringResult(ProcessAuthoringReconciliation? reconciliation) {
+        definitionOutcomeKnown = true;
+        definitionOutcomeUnknown = false;
+        definitionCompletionSequence++;
+        if (reconciliation?.Editor is { } editor && shell?.DefinitionCatalog.SelectedEditor is { } current) {
+            editor = ProcessAuthoringReadReconciler.PreserveReceipts(current, editor);
+            if (editor.TemplateCatalog is { } catalog && current.TemplateCatalog is { } currentCatalog) {
+                editor = editor with { TemplateCatalog = currentCatalog with {
+                    Observation = catalog.Observation, VersionToken = catalog.VersionToken,
+                    ImportedComponents = catalog.ImportedComponents, LastImportReceipt = catalog.LastImportReceipt
+                } };
+            }
+            ApplyDefinitionEditorProjection(editor);
+        }
+        if (reconciliation?.Warning is { } warning) {
+            errorMessage = warning;
+            Logger.LogWarning("Authoring result is known but sibling projection reconciliation failed. Operation={Operation} Definition={Definition}.",
+                definitionRecovery?.Query.OperationId, definitionOperation?.DefinitionKey);
+        }
+    }
+
+    private void RetainAuthoringRecovery(DefinitionEditorOperationFence origin, ProcessWorkspaceShellScope scope,
+        ProcessDefinitionCatalogItemKey key, string? token, Guid operationId, Func<Task> dispatch) {
+        definitionRecovery = token is null ? null : new(origin, new(scope, key, token, operationId), dispatch);
+    }
+
+    private bool OwnsAuthoringRecovery(DefinitionAuthoringRecovery recovery)
+        => !isDisposed && definitionRecovery == recovery && ResolveScope() == recovery.Origin.Scope &&
+            DatabaseRuntimeState.GetSnapshot().Generation == recovery.Origin.ProfileGeneration &&
+            shell?.ProjectBinding == recovery.Origin.ProjectBinding &&
+            shell?.DefinitionCatalog.SelectedEditor?.DefinitionKey == recovery.Origin.DefinitionKey;
+
+    private async Task RecoverAuthoringAsync() {
+        if (authoringRecoveryBusy || definitionRecovery is not { } recovery || !OwnsAuthoringRecovery(recovery)) {
+            return;
+        }
+        authoringRecoveryBusy = true;
+        var recoverySequence = ++authoringRecoverySequence;
+        try {
+            var status = await ProjectionClient.GetAuthoringOperationAsync(recovery.Query);
+            if (!OwnsAuthoringRecovery(recovery)) {
+                return;
+            }
+            if (status.State is ProcessAuthoringOperationState.Committed or ProcessAuthoringOperationState.Rejected) {
+                definitionOutcomeUnknown = false;
+                await recovery.Dispatch();
+            } else {
+                authoringRetryAvailable = status.State == ProcessAuthoringOperationState.NotRecorded;
+                errorMessage = authoringRetryAvailable
+                    ? "No committed receipt is recorded. You may explicitly retry the original command; it keeps the same operation identity and submitted values."
+                    : "The original operation status is unavailable. Check again when the authoring owner is reachable.";
+            }
+        } catch (Exception exception) {
+            if (OwnsAuthoringRecovery(recovery)) {
+                errorMessage = "The original operation status could not be read. Check again; no command was repeated.";
+                Logger.LogWarning("Authoring status read failed. Operation={Operation} FailureType={FailureType}.", recovery.Query.OperationId, exception.GetType().Name);
+            }
+        } finally {
+            if (authoringRecoverySequence == recoverySequence) {
+                authoringRecoveryBusy = false;
+            }
+        }
+    }
+
+    private async Task RetryOriginalAuthoringAsync() {
+        if (!authoringRetryAvailable || definitionRecovery is not { } recovery || !OwnsAuthoringRecovery(recovery)) {
+            return;
+        }
+        authoringRetryAvailable = false;
+        definitionOutcomeUnknown = false;
+        await recovery.Dispatch();
+    }
+
+    private sealed record DefinitionAuthoringRecovery(DefinitionEditorOperationFence Origin, ProcessAuthoringOperationQuery Query, Func<Task> Dispatch);
+
+    bool IProcessWorkspaceSession.CanRecoverAuthoring => definitionOutcomeUnknown && definitionRecovery is not null && !authoringRecoveryBusy;
+    bool IProcessWorkspaceSession.CanRetryOriginalAuthoring => definitionOutcomeUnknown && authoringRetryAvailable && !authoringRecoveryBusy;
+    Task IProcessWorkspaceSession.RecoverAuthoringAsync() => RecoverAuthoringAsync();
+    Task IProcessWorkspaceSession.RetryOriginalAuthoringAsync() => RetryOriginalAuthoringAsync();
 
     private readonly record struct DefinitionEditorOperationFence(
         long Sequence,

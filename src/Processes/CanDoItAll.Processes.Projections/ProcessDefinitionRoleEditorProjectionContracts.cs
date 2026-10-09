@@ -335,7 +335,9 @@ public sealed record ProcessDefinitionRoleEditorCommand(
 
 public sealed record ProcessDefinitionRoleEditorCommandResult(
     ProcessDefinitionRoleCommandReceipt Receipt,
-    ProcessDefinitionRoleEditorProjection Projection);
+    ProcessDefinitionRoleEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Definition roles, selected role, step assignments and role validation findings.")]
 public sealed record ProcessDefinitionRoleEditorProjection(

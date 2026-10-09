@@ -330,7 +330,9 @@ public sealed record ProcessDefinitionCanvasCommand(
 
 public sealed record ProcessDefinitionCanvasCommandResult(
     ProcessDefinitionCanvasCommandReceipt Receipt,
-    ProcessDefinitionCanvasEditorProjection Projection);
+    ProcessDefinitionCanvasEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Definition canvas geometry, connections, selection and available authoring commands.")]
 public sealed record ProcessDefinitionCanvasEditorProjection(
