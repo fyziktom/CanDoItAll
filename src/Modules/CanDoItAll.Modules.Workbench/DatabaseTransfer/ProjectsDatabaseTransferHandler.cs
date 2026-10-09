@@ -20,12 +20,21 @@ public sealed class ProjectsDatabaseTransferHandler(
         CancellationToken cancellationToken = default) {
         var sourceCounts = await operations.RunIndependentAsync(context.SourceProfile, data.CountAsync, cancellationToken);
         var targetCounts = await operations.RunIndependentAsync(context.TargetProfile, data.CountAsync, cancellationToken);
+        string? sourceRestriction = null;
+        try {
+            await operations.RunIndependentAsync(context.SourceProfile, async (session, token) => {
+                await targetStateGuard.RequireSupportedSourceAsync(session, token);
+                return true;
+            }, cancellationToken);
+        } catch (InvalidDataException exception) {
+            sourceRestriction = exception.Message;
+        }
 
         return new DatabaseTransferItemPreview(
             Descriptor,
-            sourceCounts.Total > 0,
+            sourceCounts.Total > 0 && sourceRestriction is null,
             $"{sourceCounts.Projects} project(s), {sourceCounts.Objects} structure object(s), and {sourceCounts.ViewStates} view state record(s) are available.",
-            sourceCounts.Total == 0 ? "The source database does not contain projects or retained project history." : null,
+            sourceRestriction ?? (sourceCounts.Total == 0 ? "The source database does not contain projects or retained project history." : null),
             sourceCounts.Total,
             targetCounts.Total);
     }
@@ -36,6 +45,7 @@ public sealed class ProjectsDatabaseTransferHandler(
         CoordinatedDatabaseTransaction.RequireDistinctPhysicalDatabases(context.SourceProfile, context.TargetProfile);
         var sourceData = await operations.RunSerializableAsync(context.SourceProfile,
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (session, token) => {
+                await targetStateGuard.RequireSupportedSourceAsync(session, token);
                 var loaded = await data.LoadAsync(session, token);
                 loaded.ValidateForImport();
                 return loaded;

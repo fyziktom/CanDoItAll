@@ -70,6 +70,10 @@ internal static class ProcessAuthoringCanvasPatch {
                 sourceStep = before.Nodes.FirstOrDefault(item => item.NodeKey == command.SelectedNodeKey)?.StepKey?.Value;
             }
             placements.Add(new(node.NodeKey.Value, node.Kind, ProcessAuthoringCanvasLayout.SemanticKey(node), sourceStep, node.X, node.Y, isClone));
+            var original = before.Nodes.FirstOrDefault(item => item.NodeKey == node.NodeKey);
+            if (original is not null && original.X == node.X && original.Y == node.Y) {
+                continue;
+            }
             var step = definition.Steps.FirstOrDefault(item => item.Key == node.StepKey?.Value);
             if (node.Kind == ProcessDefinitionCanvasNodeKind.Step && step is not null) {
                 step.CanvasX = node.X;

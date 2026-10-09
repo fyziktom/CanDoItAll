@@ -15,7 +15,9 @@ public enum ProjectTransferTargetStateArea {
     Workspace
 }
 
-public sealed record ProjectTransferTargetStateResidue(string Description);
+public sealed record ProjectTransferTargetStateResidue(string Description) {
+    public bool BlocksSourceTransfer { get; init; }
+}
 
 public enum ProjectTransferTargetInspectionMode {
     Independent,

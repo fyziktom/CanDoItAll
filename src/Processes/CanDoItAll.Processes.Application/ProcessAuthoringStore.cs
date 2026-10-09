@@ -34,14 +34,19 @@ public sealed record ProcessAuthoringImport(Guid OperationId, ProcessAuthoringPr
     IReadOnlyDictionary<string, string> Remap, ProcessTemplateImportedComponentProjection Component);
 
 public sealed record ProcessAuthoringSnapshot(ProcessAuthoringAddress Address, long Revision, ProcessAuthoringLifecycle Lifecycle,
-    ProcessAuthoringContent Content, Guid? PublishedId, DateTimeOffset UpdatedAtUtc);
+    ProcessAuthoringContent Content, Guid? PublishedId, DateTimeOffset UpdatedAtUtc) {
+    public long InheritedRevision { get; init; }
+}
 public sealed record ProcessAuthoringPublication(Guid Id, ProcessAuthoringAddress Address, long Revision,
     string ContentHash, ProcessAuthoringContent Content, DateTimeOffset PublishedAtUtc);
 public sealed record ProcessAuthoringCatalogEntry(ProcessAuthoringAddress Address, long Revision, ProcessAuthoringLifecycle Lifecycle,
-    Guid? PublishedId, string Name, string Summary, string Criticality, string OperatingMode, DateTimeOffset UpdatedAtUtc);
+    Guid? PublishedId, string Name, string Summary, string Criticality, string OperatingMode, DateTimeOffset UpdatedAtUtc) {
+    public long? PublishedRevision { get; init; }
+}
 public sealed record ProcessAuthoringCommit(ProcessAuthoringAddress Address, string CallerId, Guid OperationId, string RequestFingerprint,
     long ExpectedRevision, ProcessAuthoringContent Content, ProcessAuthoringLifecycle Lifecycle, bool Publish) {
     public ProcessAuthoringSelection? Selection { get; init; }
+    public long? ExpectedInheritedRevision { get; init; }
 }
 public sealed record ProcessAuthoringSelection(string? RoleKey = null, string? StepKey = null,
     ProcessDefinitionCanvasSelectionProjection? Canvas = null);

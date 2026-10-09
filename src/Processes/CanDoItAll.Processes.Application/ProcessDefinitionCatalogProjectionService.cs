@@ -121,7 +121,8 @@ public sealed class ProcessDefinitionCatalogProjectionService
                 : inherited?.ExecutableSource ?? ProcessDefinitionExecutableSource.Unavailable;
             items[key] = new(key, row.Address.ProjectId == Guid.Empty ? ProcessDefinitionCatalogScopeKind.Global : ProcessDefinitionCatalogScopeKind.Project,
                 row.Name, row.Summary, status, row.Criticality, row.OperatingMode, row.UpdatedAtUtc, 0) {
-                    PublishedId = row.PublishedId, HasDraft = row.Lifecycle == ProcessAuthoringLifecycle.Draft, ExecutableSource = executable
+                    PublishedId = row.PublishedId, HasDraft = row.Lifecycle == ProcessAuthoringLifecycle.Draft, ExecutableSource = executable,
+                    ExecutableRevision = row.PublishedId is not null ? row.PublishedRevision : inherited?.ExecutableRevision
                 };
         }
         return items.Values.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Key.Value, StringComparer.Ordinal).ToArray();

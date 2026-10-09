@@ -48,6 +48,7 @@ public sealed class ProjectPackageService(
             try {
                 var snapshot = await operations.RunSerializableAsync<ProjectPackageExportSnapshot?>(sourceProfile,
                     [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (database, token) => {
+                    await targetStateGuard.RequireSupportedSourceAsync(database, token);
                     var dataSet = await data.LoadAsync(database, token);
                     dataSet.PrepareForPackageExport();
                     dataSet.ValidateForImport();

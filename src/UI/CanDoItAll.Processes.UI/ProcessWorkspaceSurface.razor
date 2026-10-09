@@ -1017,6 +1017,9 @@
                 _ => "This definition is unavailable for new launches."
             })</p>
             <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
+                @if (Session.DefinitionCatalog.SelectedItem?.ExecutableRevision is { } executableRevision) {
+                    <StatusBadge Tone="info" Text="@($"Published revision {executableRevision}")" />
+                }
                 <StatusBadge Tone="info" Text="@ResolveHistoryWindowText(Session.CurrentShell.Runtime.HistoryWindow)" />
                 <StatusBadge Tone="@ResolveEditorStatusTone(Session.DefinitionCatalog.SelectedEditor?.Status ?? ProcessDefinitionAuthoringStatus.TemplateDefault)" Text="@(Session.DefinitionCatalog.SelectedEditor?.Status.ToString() ?? "No definition")" />
             </Cluster>

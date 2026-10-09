@@ -29,6 +29,52 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectTransferOwnerInspectionTests {
+    [Theory]
+    [InlineData(AuthoringResidue.Head, false)]
+    [InlineData(AuthoringResidue.Publication, false)]
+    [InlineData(AuthoringResidue.Receipt, false)]
+    [InlineData(AuthoringResidue.Head, true)]
+    [InlineData(AuthoringResidue.Publication, true)]
+    [InlineData(AuthoringResidue.Receipt, true)]
+    public async Task Every_retained_authoring_table_blocks_target_import_and_unsupported_source_transfer(AuthoringResidue kind, bool global) {
+        await using var database = await HistoryPersistenceTestDatabase.CreateAsync();
+        await using var owner = database.Factory.CreateDbContext();
+        var project = global ? Guid.Empty : Guid.NewGuid();
+        var lifetime = global ? Guid.Empty : Guid.NewGuid();
+        var profile = database.Profile.Profile.Id;
+        switch (kind) {
+            case AuthoringResidue.Head:
+                owner.Add(new ProcessAuthoringHeadEntity { DatabaseProfileId = profile, ProjectId = project, ProjectLifetimeId = lifetime,
+                    DefinitionKey = "retained-authoring", Revision = 1, Lifecycle = ProcessAuthoringLifecycle.Deleted, ContentJson = "{}" });
+                break;
+            case AuthoringResidue.Publication:
+                owner.Add(new ProcessAuthoringPublicationEntity { Id = Guid.NewGuid(), DatabaseProfileId = profile, ProjectId = project,
+                    ProjectLifetimeId = lifetime, DefinitionKey = "retained-authoring", Revision = 1, ContentJson = "{}" });
+                break;
+            case AuthoringResidue.Receipt:
+                owner.Add(new ProcessAuthoringReceiptEntity { DatabaseProfileId = profile, CallerId = "retained-caller", OperationId = Guid.NewGuid(),
+                    ProjectId = project, ProjectLifetimeId = lifetime, DefinitionKey = "retained-authoring", ReceiptJson = "{}" });
+                break;
+        }
+        await owner.SaveChangesAsync();
+        var runner = new ProjectTransferTargetInspectionRunner();
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, owner, runner);
+        var guard = new ProjectTransferTargetStateGuard(CreateParticipants(runner), operations);
+        var residues = await operations.RunIndependentAsync(database.Profile, guard.FindPreflightResiduesAsync);
+        Assert.Contains(residues, item => item.Area == ProjectTransferTargetStateArea.Processes && item.BlocksSourceTransfer);
+        Assert.Contains(typeof(ProcessAuthoringHeadEntity), guard.EntityTypesToLock);
+        Assert.Contains(typeof(ProcessAuthoringPublicationEntity), guard.EntityTypesToLock);
+        Assert.Contains(typeof(ProcessAuthoringReceiptEntity), guard.EntityTypesToLock);
+        var rejection = await Assert.ThrowsAsync<InvalidDataException>(() => operations.RunSerializableAsync(database.Profile,
+            [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (session, token) => {
+            await guard.RequireSupportedSourceAsync(session, token);
+            return true;
+        }));
+        Assert.Contains("No project data was copied", rejection.Message);
+    }
+
+    public enum AuthoringResidue { Head, Publication, Receipt }
+
     [Fact]
     public async Task All_twelve_areas_read_the_explicit_target_and_final_reads_share_its_locked_transaction() {
         await using var other = await HistoryPersistenceTestDatabase.CreateAsync();

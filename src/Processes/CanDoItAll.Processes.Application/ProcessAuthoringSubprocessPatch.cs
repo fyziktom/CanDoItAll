@@ -18,7 +18,10 @@ internal static class ProcessAuthoringSubprocessPatch {
                 if (candidates.Length != 1) {
                     throw new InvalidOperationException("A child artifact mapping must identify exactly one artifact on its selected child step.");
                 }
-                return new ProcessSubprocessChildOutputContract { StepKey = step.Key, ArtifactExpectationKey = candidates[0].Key, ArtifactTitle = candidates[0].Title };
+                var output = contract.AcceptedChildOutputs.SingleOrDefault(item => item.StepKey == step.Key && item.ArtifactExpectationKey == candidates[0].Key)
+                    ?? new ProcessSubprocessChildOutputContract { StepKey = step.Key, ArtifactExpectationKey = candidates[0].Key };
+                output.ArtifactTitle = candidates[0].Title;
+                return output;
             }).ToList();
         } else if (contract.AcceptedChildOutputs.Count == 0 && contract.AlreadySatisfiedOutput is null) {
             var predecessors = child.Steps.SelectMany(step => step.Dependencies.Select(item => item.DependsOnStepKey).Append(step.DependsOnStepKey)).ToHashSet(StringComparer.Ordinal);

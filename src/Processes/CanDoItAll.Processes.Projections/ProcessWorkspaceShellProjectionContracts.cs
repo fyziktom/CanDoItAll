@@ -1016,6 +1016,8 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     public bool HasDraft { get; init; }
     [Description("Source selected for new launches independently of the editable draft.")]
     public ProcessDefinitionExecutableSource ExecutableSource { get; init; } = ProcessDefinitionExecutableSource.TemplateDefault;
+    [Description("Revision of the publication selected for a new launch, including an inherited publication; null for a template default.")]
+    public long? ExecutableRevision { get; init; }
     [Description("Whether the selected source admits a new launch; native admission checks remain authoritative.")]
     public bool CanLaunch => Status != ProcessDefinitionCatalogItemStatus.Archived && ExecutableSource != ProcessDefinitionExecutableSource.Unavailable;
 }

@@ -83,14 +83,18 @@ public sealed class ProcessAuthoringWorkspace(IProcessAuthoringStore store, IPro
         ProcessAuthoringContent content, ProcessAuthoringLifecycle lifecycle, bool publish, ProcessAuthoringSelection? selection,
         CancellationToken cancellationToken) {
         var saved = await store.CommitAsync(new(baseline.Address, context.CallerId, operationId, fingerprint,
-            baseline.Revision, content, lifecycle, publish) { Selection = selection }, cancellationToken);
+            baseline.Revision, content, lifecycle, publish) {
+                Selection = selection,
+                ExpectedInheritedRevision = baseline.Address.ProjectId != Guid.Empty && baseline.Lifecycle == ProcessAuthoringLifecycle.Deleted
+                    ? baseline.Observation.InheritedRevision : null
+            }, cancellationToken);
         reads.Clear();
         return saved;
     }
 
     public ProcessAuthoringSession FromReceipt(ProcessWorkspaceShellScope scope, ProcessAuthoringReceipt receipt) {
         var snapshot = receipt.Snapshot ?? throw new InvalidOperationException("The authoring receipt has no committed definition.");
-        var session = CreateSession(scope, snapshot.Address, snapshot.Revision, snapshot.Lifecycle, snapshot.Content, snapshot.PublishedId)
+        var session = CreateSession(scope, snapshot.Address, snapshot.Revision, snapshot.Lifecycle, snapshot.Content, snapshot.PublishedId, snapshot.InheritedRevision)
             with { CommittedAtUtc = snapshot.UpdatedAtUtc };
         reads[(scope, new(snapshot.Address.DefinitionKey))] = Task.FromResult(session);
         return session;

@@ -1,4 +1,7 @@
 using System.Data.Common;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
@@ -24,6 +27,22 @@ public sealed class ProcessAuthoringStoreTests {
         await using var lease = PostgresTestDatabaseLease.Create("process-authoring-upgrade");
         await using var context = new AppDbContext(lease.CreateAppDbContextOptions());
         await context.GetService<IMigrator>().MigrateAsync("20261007193102_AddProjectExternalIdentity");
+        var projectId = Guid.NewGuid();
+        var savedAt = DateTimeOffset.UtcNow;
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Projects_Projects"
+                ("Id", "Name", "Slug", "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({projectId}, {"Preserved authoring upgrade project"}, {projectId.ToString("N")}, {"Original description"}, {"Original objective"},
+                {0}, {"Review"}, NULL, {savedAt}, {savedAt})
+            """);
+        WorkflowDefinition workflow = new(WorkflowId.New(), WorkflowVersionId.New(), "Preserved upgrade workflow", "Original workflow",
+            WorkflowLifecycleStatus.Active, new(new("start"), [
+                new(new("start"), WorkflowNodeKind.Start, "Start", [], new(null, null, null, null, "", WorkflowValueShape.Text, WorkflowValueShape.Text)),
+                new(new("end"), WorkflowNodeKind.End, "End", [], new(null, null, null, null, "", WorkflowValueShape.Text, WorkflowValueShape.Text))
+            ], [new(new("start-end"), new("start"), null, new("end"), null, WorkflowEdgeKind.Direct, "")]),
+            new(WorkflowRuntimeBackendKind.InProcess, true, false, false, false), savedAt, savedAt);
+        context.Add(WorkflowDefinitionRecord.FromDefinition(workflow, 1));
+        await context.SaveChangesAsync();
         var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>().UseNpgsql(lease.ConnectionString).Options;
         var store = new EfProcessPreparedLaunchStore(new ContextFactory(options), options);
         var saved = await store.PrepareAsync(ProcessPreparedLaunchFixture.Create());
@@ -35,6 +54,8 @@ public sealed class ProcessAuthoringStoreTests {
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_instance_plans p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_states p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_step_assignments p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM "Projects_Projects" p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM "AgentFramework_WorkflowDefinitions" p
             ORDER BY "Value"
             """).ToArrayAsync();
         Assert.NotEmpty(before);
@@ -46,6 +67,8 @@ public sealed class ProcessAuthoringStoreTests {
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_instance_plans p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_states p
             UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_step_assignments p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM "Projects_Projects" p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM "AgentFramework_WorkflowDefinitions" p
             ORDER BY "Value"
             """).ToArrayAsync();
         Assert.Equal(before, after);
@@ -53,6 +76,11 @@ public sealed class ProcessAuthoringStoreTests {
         Assert.Empty(await context.Set<ProcessAuthoringPublicationEntity>().ToArrayAsync());
         Assert.Empty(await context.Set<ProcessAuthoringReceiptEntity>().ToArrayAsync());
         Assert.Equal(saved.PreparationFingerprint, (await store.GetAsync(saved.Preparation.AdmissionId))!.PreparationFingerprint);
+        var restoredWorkflow = JsonSerializer.Deserialize<WorkflowDefinition>((await context.Set<WorkflowDefinitionRecord>().AsNoTracking().SingleAsync()).DefinitionJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Equal(workflow.VersionId, restoredWorkflow!.VersionId);
+        Assert.Equal(workflow.Graph, restoredWorkflow.Graph with { Nodes = workflow.Graph.Nodes, Edges = workflow.Graph.Edges });
+        Assert.Equal(JsonSerializer.Serialize(workflow.Graph), JsonSerializer.Serialize(restoredWorkflow.Graph));
     }
 
     [Fact]

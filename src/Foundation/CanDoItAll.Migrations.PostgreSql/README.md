@@ -45,6 +45,40 @@ Create new migrations through the normal EF workflow and append them after the b
 Do not edit an applied migration. Back up authoritative data before applying schema
 changes.
 
+## Process authoring activation and rollback
+
+`20261009124700_AddProcessAuthoring` appends three owner tables: scoped definition heads,
+immutable publications and operation receipts. The complete `AppDbContext` and the narrow
+Process context share their mapping. It does not rewrite existing projects, workflows,
+runtime plans, assignments or prepared launch records. Run the normal schema bootstrap;
+there is no separate authoring schema initializer.
+
+Before activation, preserve a consistent database backup and stop incompatible application
+and worker writers at a maintenance boundary. All readers that select executable Process
+definitions must understand the authored overlay. Older binaries still select distributed
+defaults; mixed old/new readers and writers are not supported. A switch in a new binary
+cannot make an old binary observe publications. Existing old-format prepared and accepted
+runs remain supported by the current binary's captured-plan compatibility path.
+
+Instance-local edits in an old open editor were never database records. Operators must
+preserve any still-visible work before retiring those editors; this migration cannot
+recover edits already lost by an earlier scope or process. After authoring writes begin,
+dropping the new tables or restarting an old binary is not a lossless rollback. Prefer a
+forward repair, or restore the complete compatible backup with explicit reconciliation of
+subsequent authoring and runtime activity. Retain publication and receipt history used by
+prepared launches and accepted runs.
+
+Project database/package transfer currently refuses a source containing retained Process
+authoring heads, publications or receipts, including global definitions that can affect
+project execution. The same facts block target adoption. The refusal happens before copying
+project data; copying current heads alone would lose immutable dependencies and receipt
+scope. This is an explicit transfer limit, not an automatic export/rebinding facility.
+
+The PC3 native tests apply this migration twice to an owned predecessor-schema fixture and
+compare complete stored project, workflow, prepared and accepted runtime payloads. They also
+check the canonical pending-model state. Production activation and rollback are operator
+operations; task validation never applies them to ordinary profiles.
+
 The LLM Chats schema is an append-only migration chain:
 
 - `20260814163458_AddLlmChats` creates definitions, revisions, tags, conversations, transcripts,

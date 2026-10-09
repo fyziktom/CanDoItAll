@@ -31,8 +31,10 @@ public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace worksp
         var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
         var step = content.Definition.Steps.Single(step => step.Key == key);
         var previousChild = step.SubprocessProcessKey;
+        var previousMappings = ChildMappings(step);
         ProcessAuthoringStepPatch.Apply(step, normalized.Projection.SelectedStep!);
-        if (command.CommandKind == ProcessDefinitionStepCommandKind.MapSubprocess || previousChild != step.SubprocessProcessKey) {
+        if (command.CommandKind == ProcessDefinitionStepCommandKind.MapSubprocess || previousChild != step.SubprocessProcessKey ||
+                !previousMappings.SequenceEqual(ChildMappings(step))) {
             try {
                 if (string.IsNullOrWhiteSpace(step.SubprocessProcessKey)) {
                     step.SubprocessContract = null;
@@ -48,6 +50,11 @@ public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace worksp
             false, new(StepKey: key), cancellationToken);
         return await ResultAsync(command, workspace.FromReceipt(command.Scope, saved), saved.Outcome, saved.Selection?.StepKey, null, cancellationToken);
     }
+
+    private static (string Step, string Artifact, Guid? Id)[] ChildMappings(ProcessTemplateDefinitionStepDocument step)
+        => step.ArtifactExpectations.Where(item => !string.IsNullOrEmpty(item.SubprocessChildStepKey) ||
+                !string.IsNullOrEmpty(item.SubprocessChildArtifactTitle) || item.SubprocessChildArtifactExpectationId is not null)
+            .Select(item => (item.SubprocessChildStepKey, item.SubprocessChildArtifactTitle, item.SubprocessChildArtifactExpectationId)).ToArray();
 
     private async Task<ProcessDefinitionStepEditorCommandResult> ResultAsync(ProcessDefinitionStepEditorCommand command,
         ProcessAuthoringSession session, ProcessAuthoringOutcome outcome, string? selectedKey, string? reason, CancellationToken cancellationToken) {

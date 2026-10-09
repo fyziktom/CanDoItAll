@@ -17,6 +17,9 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
     private static readonly SemanticProjectStateRegistration[] SemanticProjectStateRegistry =
     [
         Residue<ProcessPreparedLaunchEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProcessAuthoringHeadEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
+        Residue<ProcessAuthoringPublicationEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
+        Residue<ProcessAuthoringReceiptEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
         Residue<StoragePlacementIntentRecord>(ProjectTransferTargetStateArea.Infrastructure, SemanticProjectStateKind.TypedScope),
         Residue<WorkflowStructureOutputRecord>(ProjectTransferTargetStateArea.AgentFramework, SemanticProjectStateKind.JsonRuntimeAggregate),
         Residue<ProjectWorkflowContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),

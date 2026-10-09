@@ -5,7 +5,9 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed record ProjectTransferTargetResidue(
     ProjectTransferTargetStateArea Area,
-    string Description);
+    string Description) {
+    public bool BlocksSourceTransfer { get; init; }
+}
 
 public sealed class ProjectTransferTargetStateGuard {
     private static readonly ProjectTransferTargetStateArea[] RequiredAreas =
@@ -64,13 +66,20 @@ public sealed class ProjectTransferTargetStateGuard {
         return FindResiduesAsync(session, cancellationToken);
     }
 
+    internal async Task RequireSupportedSourceAsync(DatabaseTransferProfileSession session, CancellationToken cancellationToken) {
+        var unsupported = (await FindResiduesAsync(session, cancellationToken)).Where(item => item.BlocksSourceTransfer).ToArray();
+        if (unsupported.Length > 0) {
+            throw new InvalidDataException("Project transfer cannot preserve the source's retained executable authoring history: " + Describe(unsupported) + ". No project data was copied.");
+        }
+    }
+
     private Task<IReadOnlyList<ProjectTransferTargetResidue>> FindResiduesAsync(DatabaseTransferProfileSession session,
         CancellationToken cancellationToken)
         => operations.InspectTargetAsync<IReadOnlyList<ProjectTransferTargetResidue>>(session, async (request, token) => {
             var residues = new List<ProjectTransferTargetResidue>();
             foreach (var participant in participants) {
                 var found = await participant.FindResiduesAsync(request, token);
-                residues.AddRange(found.Select(residue => new ProjectTransferTargetResidue(participant.Area, residue.Description)));
+                residues.AddRange(found.Select(residue => new ProjectTransferTargetResidue(participant.Area, residue.Description) { BlocksSourceTransfer = residue.BlocksSourceTransfer }));
             }
             return residues;
         }, cancellationToken);

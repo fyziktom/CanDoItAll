@@ -22,7 +22,10 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTran
         typeof(ProcessInstancePlanEntity),
         typeof(ProcessRuntimeStateEntity),
         typeof(ProcessRuntimeStepAssignmentEntity),
-        typeof(ProcessPreparedLaunchEntity)
+        typeof(ProcessPreparedLaunchEntity),
+        typeof(ProcessAuthoringHeadEntity),
+        typeof(ProcessAuthoringPublicationEntity),
+        typeof(ProcessAuthoringReceiptEntity)
     ];
 
     public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
@@ -33,6 +36,11 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTran
     private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
         ProcessPersistenceDbContext dbContext, CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
+        if (await dbContext.AuthoringHeads.AsNoTracking().AnyAsync(cancellationToken) ||
+                await dbContext.AuthoringPublications.AsNoTracking().AnyAsync(cancellationToken) ||
+                await dbContext.AuthoringReceipts.AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("process authoring, publications or operation receipts affecting project definition selection") { BlocksSourceTransfer = true });
+        }
         await foreach (var launch in dbContext.Set<ProcessPreparedLaunchEntity>().AsNoTracking()
                 .AsAsyncEnumerable().WithCancellation(cancellationToken)) {
             if (launch.ReferencesProject()) {

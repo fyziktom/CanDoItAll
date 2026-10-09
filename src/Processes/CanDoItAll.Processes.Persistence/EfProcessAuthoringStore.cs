@@ -77,7 +77,10 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
             .Where(item => item.DatabaseProfileId == databaseProfileId &&
                 (item.ProjectId == Guid.Empty || item.ProjectId == projectId && item.ProjectLifetimeId == projectLifetimeId))
             .Select(item => new ProcessAuthoringCatalogEntry(new(item.DatabaseProfileId, item.ProjectId, item.ProjectLifetimeId, item.DefinitionKey),
-                item.Revision, item.Lifecycle, item.PublishedId, item.Name, item.Summary, item.Criticality, item.OperatingMode, item.UpdatedAtUtc))
+                item.Revision, item.Lifecycle, item.PublishedId, item.Name, item.Summary, item.Criticality, item.OperatingMode, item.UpdatedAtUtc) {
+                    PublishedRevision = context.AuthoringPublications.Where(publication => publication.Id == item.PublishedId)
+                        .Select(publication => (long?)publication.Revision).FirstOrDefault()
+                })
             .ToArrayAsync(cancellationToken);
     }
 
@@ -105,7 +108,8 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
     public async Task<ProcessAuthoringReceipt> CommitAsync(ProcessAuthoringCommit command, CancellationToken cancellationToken = default) {
         command.Address.Validate();
         if (command.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(command.CallerId) || command.CallerId.Length > 200 ||
-                command.RequestFingerprint.Length != 71 || command.ExpectedRevision < 0 ||
+                command.RequestFingerprint.Length != 71 || command.ExpectedRevision < 0 || command.ExpectedInheritedRevision < 0 ||
+                command.ExpectedInheritedRevision is not null && command.Address.ProjectId == Guid.Empty ||
                 command.Content.Definition.Key != command.Address.DefinitionKey || command.Publish && command.Lifecycle != ProcessAuthoringLifecycle.Published) {
             throw new ArgumentException("The authoring operation has an invalid identity, revision or publication.");
         }
@@ -126,10 +130,17 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
         if (replay is not null) {
             return replay;
         }
+        ProcessAuthoringHeadEntity? inherited = null;
+        if (command.ExpectedInheritedRevision is not null) {
+            var global = command.Address with { ProjectId = Guid.Empty, ProjectLifetimeId = Guid.Empty };
+            await ProcessAuthoringMutationLock.AcquireAsync(context, global, cancellationToken);
+            inherited = await FindHead(context, global).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        }
         await ProcessAuthoringMutationLock.AcquireAsync(context, command.Address, cancellationToken);
         var head = await FindHead(context, command.Address).SingleOrDefaultAsync(cancellationToken);
         var outcome = ProcessAuthoringOutcome.Conflict;
-        if ((head?.Revision ?? 0) == command.ExpectedRevision) {
+        if ((head?.Revision ?? 0) == command.ExpectedRevision &&
+                (command.ExpectedInheritedRevision is null || command.ExpectedInheritedRevision == (inherited?.Revision ?? 0))) {
             outcome = ProcessAuthoringOutcome.Accepted;
             if (head is null) {
                 head = new() { DatabaseProfileId = command.Address.DatabaseProfileId, ProjectId = command.Address.ProjectId,
@@ -154,7 +165,15 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
                 head.PublishedId = null;
             }
         }
-        ProcessAuthoringReceipt receipt = new(command.OperationId, outcome, head is null ? null : Snapshot(head)) {
+        var snapshot = head is null ? null : Snapshot(head);
+        if (outcome == ProcessAuthoringOutcome.Conflict && command.ExpectedInheritedRevision is not null &&
+                (head is null || head.Lifecycle == ProcessAuthoringLifecycle.Deleted)) {
+            snapshot = new(command.Address, head?.Revision ?? 0, ProcessAuthoringLifecycle.Deleted,
+                inherited is null ? content : ProcessAuthoringCodec.Read(inherited.ContentJson), null, clock.GetUtcNow()) {
+                    InheritedRevision = inherited?.Revision ?? 0
+                };
+        }
+        ProcessAuthoringReceipt receipt = new(command.OperationId, outcome, snapshot) {
             Selection = outcome == ProcessAuthoringOutcome.Accepted ? command.Selection : null
         };
         context.AuthoringReceipts.Add(new() { DatabaseProfileId = command.Address.DatabaseProfileId, CallerId = command.CallerId,
