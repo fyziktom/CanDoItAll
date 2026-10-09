@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "CDA-PROCESSES-UI-DECOUPLING-PC2",
+  "version": "1.0",
+  "target_executor": "Codex GPT-6 Astra Max",
+  "review_commit": "146067ed133f624878dfe5756c441a43c0f21b4a",
+  "review_date": "2026-10-09",
+  "execution_pin": false,
+  "language": "en",
+  "entry": "prompt.md",
+  "standalone_assignment": true,
+  "shared_requirement": {
+    "id": "CDA-UI-DECOUPLING-SHARED-v4.1",
+    "manifest_sha256": "ea708e0a5cf5b87f2fe5731a90efef475031d4219d89d2d1ee441f610a2e9867"
+  },
+  "acceptance_plan": "acceptance-plan.json",
+  "coverage_group_count": 31,
+  "pc1_carry_forward_count": 42,
+  "product_evidence_status": "NOT_RUN",
+  "commit_policy": "Incremental signed and verified logical checkpoints; local PGP unlock requested at entry; no automatic push.",
+  "scope": "PC1 correctness and evidence closure plus bounded native-authoring prerequisite; no silent new schema/runtime authority design."
+}

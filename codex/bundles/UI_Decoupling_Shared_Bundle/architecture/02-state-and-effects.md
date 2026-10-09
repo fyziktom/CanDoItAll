@@ -36,3 +36,15 @@ Validate and capture a submission before dispatch. Enter, footer Save and altern
 Use existing receipt shapes and actual stage knowledge. Do not fabricate a universal receipt in UI or infer rollback from any exception. For operations permitting editing while pending, reconcile against the submitted snapshot: keep subsequent field/row edits, adopt assigned identities correctly, and refresh only untouched data. For an intentionally locked editor, preserve that deliberate policy consistently rather than silently removing editing capability.
 
 Tests must demonstrate the owner effect, not just a changed label. Assert dispatch count, exact target/lifetime, accepted identity, persisted state and whether a “retry” performs a read versus a second mutation. For create/launch/cancel, include remount, lost response, post-commit refresh failure and a new explicit user intent.
+
+## PC1 review addendum: independent reads are not mutation retirement
+
+A newer read of the same opening does not retire its pending write. Use distinct read sequencing and mutation ownership. Capture the actual scope/profile/project admission, opening identity, target identity, submitted values and native expected version. Serialize conflicting write intents at the native-host seam without freezing harmless typing or making another view share the slot. Preserve an accepted receipt before dependent observation. A late read cannot roll back an acknowledged revision; opaque tokens are compared for identity, never numerically ordered.
+
+Retirement means the actual opening/authority changed, not that a refresh counter incremented. A stale result may be retained in its origin's bounded operation record, but must not mutate the successor or revive a closed editor. Ambiguous errors must not prompt blind replay of an Add, Import, Publish, Launch or cancellation intent.
+
+An authoritative command can change selection: Add may assign a new role; Delete may select a surviving role or no role. Adopt that selection only for the matching active submission when the user has not since made another explicit selection. Clear the deleted draft and its validation/submission state. Do not stamp the response version onto the old selection and then short-circuit every later observation.
+
+Capture every semantic field from the **actual edited row**, including fields not currently exposed by an input. The selected row in a server projection and a locally selected row may differ. Preserve hidden decision-role and other binding metadata in round trips.
+
+For concurrent edits of nested rows, pair by stable identity and reconcile at the smallest meaningful field boundary; a whole-row local replacement can discard server normalization of an untouched field. An explicit discard, known rejection or retirement clears its submission record. Test same-ID reopenings and multiple command entry paths; a single mutable `submission` field is safe only when its matching mutation gate and origin lifecycle are proved.

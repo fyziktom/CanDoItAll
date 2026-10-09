@@ -38,3 +38,9 @@ Finish with separate status for:
 - Release/demo readiness, only when explicitly in scope and actually established.
 
 A remaining host is not necessarily unfinished UI. A remaining in-scope native renderer hidden behind a slot is unfinished. A completed source refactor without required native/browser proof is a qualified checkpoint, not final task completion.
+
+## Required signing checkpoints in PC2
+
+[Signing and commits](SIGNING_AND_COMMITS.md) refines the earlier generic checkpoint rule. Request the local PGP unlock at entry. Establish the designated committer environment before substantial implementation. Commit after coherent tested changes throughout PC2; do not defer the entire series to one final `processes phase2` commit. If signing expires, retain work and request re-unlock without switching to unsigned commits or proceeding with an unbounded pending batch.
+
+A tracked, sanitized final verification record must identify the tested source checkpoint, relevant siblings/configuration, exact filters and counts, results, missing proof, and commit/signature references. Detailed raw `.artifacts` data can remain ignored; its existence alone is not independently reviewable proof for a pushed branch. See [evidence template](templates/evidence.json).

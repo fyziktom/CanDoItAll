@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "assignment_id": "SET_FROM_CHILD",
   "candidate": {
     "commit": null,
@@ -17,5 +17,24 @@
     "blind_spot_review": []
   },
   "groups": [],
-  "note": "Copy to an owned evidence directory. Fill actual child acceptance rows. A package check is not product proof."
+  "note": "Copy to an owned evidence directory. Fill actual child acceptance rows. A package check is not product proof.",
+  "signing": {
+    "status": "NOT_RUN",
+    "public_fingerprint": null,
+    "checkpoints": [],
+    "note": "Never store private keys, passphrases or agent secrets."
+  },
+  "provenance": {
+    "reviewed_source_commit": "146067ed133f624878dfe5756c441a43c0f21b4a",
+    "executed_by_reviewer": false,
+    "historical_claims": []
+  },
+  "closure": {
+    "structural": "NOT_RUN",
+    "native_parity": "NOT_RUN",
+    "browser_assets": "NOT_RUN",
+    "portability_static": "NOT_RUN",
+    "broad_gate": "NOT_RUN",
+    "authoring_durability": "NOT_RUN"
+  }
 }

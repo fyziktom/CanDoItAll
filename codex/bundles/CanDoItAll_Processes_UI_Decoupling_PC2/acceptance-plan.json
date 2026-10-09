@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "assignment_id": "CDA-PROCESSES-UI-DECOUPLING-PC2",
+  "review_commit": "146067ed133f624878dfe5756c441a43c0f21b4a",
+  "execution_pin": false,
+  "group_count": 31,
+  "note": "Coverage groups, not fixed test counts or a framework/class quota. P3 owner outcome does not imply native durability PASS.",
+  "groups": [
+    {
+      "id": "A01",
+      "stage": "P0",
+      "title": "Startup local PGP request and signing preflight",
+      "obligation": "Signing protocol; no secret exposure; verified configured identity before substantial implementation."
+    },
+    {
+      "id": "A02",
+      "stage": "P0",
+      "title": "Current checkout and operator work preserved",
+      "obligation": "Branch/tree/siblings/dirty state, drift and existing index ownership recorded without reset."
+    },
+    {
+      "id": "A03",
+      "stage": "P0",
+      "title": "Current test impact and CodeAnalytics freshness",
+      "obligation": "Actual MCP calls/index or explicit unavailable evidence plus source/graph/blind-spot fallback."
+    },
+    {
+      "id": "A04",
+      "stage": "P1",
+      "title": "Accepted authoring result survives same-opening read",
+      "obligation": "Definition, role, step, canvas and template family coverage; accepted identity/receipt not lost."
+    },
+    {
+      "id": "A05",
+      "stage": "P1",
+      "title": "Old read cannot regress acknowledged state",
+      "obligation": "Both completion orders; native opaque token semantics; read-only reconciliation."
+    },
+    {
+      "id": "A06",
+      "stage": "P1",
+      "title": "Reentry cannot replace pending submission",
+      "obligation": "Alternate command/Enter/double dispatch gated consistently without freezing harmless typing."
+    },
+    {
+      "id": "A07",
+      "stage": "P1",
+      "title": "Outcomes are classified and not blindly replayed",
+      "obligation": "Rejected, accepted, accepted with read-back warning and genuinely unknown result have correct recovery."
+    },
+    {
+      "id": "A08",
+      "stage": "P1",
+      "title": "Retired opening cannot update same-ID successor",
+      "obligation": "Scope/profile/project lifetime/definition/dispose; success/error/finally/notification covered."
+    },
+    {
+      "id": "A09",
+      "stage": "P1",
+      "title": "Canvas/template intent semantics preserved",
+      "obligation": "No dropped final geometry or retargeted/duplicated import because of new mutation gating."
+    },
+    {
+      "id": "A10",
+      "stage": "P2",
+      "title": "Role Add adopts eligible authoritative selection",
+      "obligation": "New identity and fields accepted when origin current; no hijack of later user selection."
+    },
+    {
+      "id": "A11",
+      "stage": "P2",
+      "title": "Role Delete clears removed editor correctly",
+      "obligation": "Survivor and last-role cases; raw draft/validation/submission/dialog cleanup."
+    },
+    {
+      "id": "A12",
+      "stage": "P2",
+      "title": "Actual edited step keeps DecisionRoleKey",
+      "obligation": "Distinct and nullable bindings, non-first selection/reorder/refresh; other step unmodified."
+    },
+    {
+      "id": "A13",
+      "stage": "P2",
+      "title": "Immutable submissions preserve later field edits",
+      "obligation": "Definition/role/step fields and hidden metadata reconcile against submitted values."
+    },
+    {
+      "id": "A14",
+      "stage": "P2",
+      "title": "Stable row and raw-number reconciliation",
+      "obligation": "H1 reproduced/refuted; accepted untouched normalization and later raw input both respected."
+    },
+    {
+      "id": "A15",
+      "stage": "P2",
+      "title": "Submission lifecycle closes on reachable discard/refusal",
+      "obligation": "H2 reproduced/refuted; no old submission reused after explicit transition."
+    },
+    {
+      "id": "A16",
+      "stage": "P2",
+      "title": "Two openings and Server-tab raw drafts remain independent",
+      "obligation": "Real renderer input/validation and canvas/dialog identity; no circuit-scoped mutable sharing."
+    },
+    {
+      "id": "A17",
+      "stage": "P3",
+      "title": "Actual cross-scope authoring diagnosis completed",
+      "obligation": "Native DI/client, new scope and relevant restart/catalog/version observations; not same-instance fake."
+    },
+    {
+      "id": "A18",
+      "stage": "P3",
+      "title": "Native authoring owner outcome delivered",
+      "obligation": "Bounded existing-owner adapter repair with proof OR implementation-ready authority prerequisite with consumer/schema/lifecycle/test map; not a vague TODO."
+    },
+    {
+      "id": "A19",
+      "stage": "P3",
+      "title": "Durability readiness remains truthful",
+      "obligation": "Cannot PASS native durability while the proven gap remains; no singleton/UI-cache/template-file workaround."
+    },
+    {
+      "id": "A20",
+      "stage": "P4",
+      "title": "PC1 feature groups carried forward",
+      "obligation": "All 42 historical groups mapped to current preserved behavior/proof without blanket green inheritance."
+    },
+    {
+      "id": "A21",
+      "stage": "P4",
+      "title": "Affected production projects and light closure validated",
+      "obligation": "UI/native/Web/sandbox as affected; actual dependency guards and forbidden/unresolved controls."
+    },
+    {
+      "id": "A22",
+      "stage": "P4",
+      "title": "Focused discovery and execution are source-valid",
+      "obligation": "Exact filters/expected/discovered/executed expanded cases, no stale outputs or zero-test success."
+    },
+    {
+      "id": "A23",
+      "stage": "P4",
+      "title": "Authoring browser journeys demonstrate new corrections",
+      "obligation": "J1-J3 actual renderer/native seam events and identity/command oracles, not only success labels."
+    },
+    {
+      "id": "A24",
+      "stage": "P4",
+      "title": "Native launch/workflow/files/chat/cancel preserved",
+      "obligation": "J5 actual owners and no duplicate effects; attributed controlled upstream, not live-provider claim."
+    },
+    {
+      "id": "A25",
+      "stage": "P4",
+      "title": "Affected Workbench/voice/shared chat consumers preserved",
+      "obligation": "Current invalidation analysis and required concrete tests for both default/typed-child paths."
+    },
+    {
+      "id": "A26",
+      "stage": "P4",
+      "title": "Fast/Parity source and published assets work",
+      "obligation": "All relevant real children, canvas/dialog/chart/graph/file/chat and no dev-only production endpoint."
+    },
+    {
+      "id": "A27",
+      "stage": "P4",
+      "title": "Owned environments cleaned and private data safe",
+      "obligation": "Isolated PostgreSQL/ports/outputs/processes; no retained installation/credential/spend side effects."
+    },
+    {
+      "id": "A28",
+      "stage": "P5",
+      "title": "Active renderer and evaluated dependency census delivered",
+      "obligation": "Real reachability/ownership/asset classification; no interface/file quota or invented next module."
+    },
+    {
+      "id": "A29",
+      "stage": "P5",
+      "title": "Mandatory portability and triggered broader gates recorded",
+      "obligation": "Current enforcement without write-baseline; named Stable trigger/result or justified no trigger."
+    },
+    {
+      "id": "A30",
+      "stage": "P5",
+      "title": "Tracked source-addressed evidence and signed checkpoints",
+      "obligation": "Sanitized final summary; separate readiness dimensions; verified incremental English commits."
+    },
+    {
+      "id": "A31",
+      "stage": "P5",
+      "title": "No unsupported performance or full-completion claims",
+      "obligation": "Measured changes only when invalidated; explicit native-authoring/release limits and honest missing proof."
+    }
+  ]
+}

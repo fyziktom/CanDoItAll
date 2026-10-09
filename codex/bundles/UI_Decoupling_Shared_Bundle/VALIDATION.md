@@ -61,3 +61,11 @@ Read their current CLI and `docs/testing.md` first. A tracked-only scan does not
 For each acceptance row retain: source/configuration candidate, test/filter or actual manual journey, expected versus discovered/executed count where applicable, real oracle, outcome, sanitized artifact location and any limitation. The statuses are `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED`, `NOT_APPLICABLE` and `STALE`. NOT_APPLICABLE requires an explicit scope reason and cannot erase a mandatory row. PASS requires actual execution and the relevant effect oracle, not a copied earlier receipt.
 
 The package templates intentionally start NOT_RUN. They are not a predetermined list of passing test counts. Keep actual results outside sealed inputs; update maintained architecture/testing records with precise provenance and remaining gaps. Package helper tests validate only the helper, never the C# application.
+
+## v4.1: evidence that survives a push
+
+Commit a sanitized summary (for example under `docs/validation`) identifying source checkpoint/tree or source digest, dirty delta when relevant, consumed siblings, exact build/test commands, discovered and executed case counts, failures/skips, database major version, source/published asset modes and required gate status. Keep secrets, absolute personal paths and raw traces outside Git. Hash raw artifacts when an artifact store is available; a hash or local path does not prove an unavailable artifact was examined.
+
+Separate `REVIEWED_SOURCE`, attributed historical execution, current execution, and `NOT_RUN`. Repository docs may report selected tests without proving the final pushed source was rerun. Empty GitHub check-runs/status collections are absence of available CI proof, not successful CI.
+
+A preexisting native ownership defect is not an extraction regression, but it still prevents claiming that feature's native parity is complete. Record the reproducible counterexample and the smallest follow-on owner work; do not turn a bug into a permanently expected success assertion or silently mark that feature out of scope. The child defines which implementation expansion is authorized.

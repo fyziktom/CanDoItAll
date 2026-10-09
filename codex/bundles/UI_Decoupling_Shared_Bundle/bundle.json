@@ -1,13 +1,15 @@
 {
   "schema_version": 1,
-  "id": "CDA-UI-DECOUPLING-SHARED-v4",
-  "version": "4.0",
-  "review_commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
-  "review_date": "2026-10-08",
+  "id": "CDA-UI-DECOUPLING-SHARED-v4.1",
+  "version": "4.1",
+  "review_commit": "146067ed133f624878dfe5756c441a43c0f21b4a",
+  "review_date": "2026-10-09",
   "execution_pin": false,
   "language": "en",
   "entry": "prompt.md",
   "standalone_assignment": false,
   "canonicalization": "UTF-8; CRLF normalized to LF for manifest checks",
-  "history_entry_briefs_reviewed": 31
+  "history_entry_briefs_reviewed": 31,
+  "supersedes": "CDA-UI-DECOUPLING-SHARED-v4",
+  "historical_survey_note": "The 31-entry brief survey belongs to v4; v4.1 reviewed the pushed PC1 delta and selected current sources."
 }

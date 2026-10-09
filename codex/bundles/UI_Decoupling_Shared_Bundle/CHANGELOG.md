@@ -11,3 +11,9 @@
 | Tooling | Optional integrity/source-inspection support | A single read-only helper; no claim that bookkeeping establishes product correctness |
 
 The older v3 source-specific defect examples are not restated as current defects unless the current review verified them. Current canonical product guidance remains the maintained architectural authority; the bundle is an execution companion, not a second conflicting specification.
+
+## v4.1 — 2026-10-09
+
+Reviews pushed PC1 at `146067ed133f624878dfe5756c441a43c0f21b4a`. Keeps the extracted libraries and native ownership. Adds the startup PGP request, same-agent continuity, safe cache handling, incremental signed checkpoint verification, independent mutation/read semantics, identity-aware selection/draft reconciliation, and pushed-candidate evidence reporting. Updates the current map and keeps the prior 31-entry survey explicitly historical.
+
+No application changes or product-test pass claims are delivered by this package revision.
