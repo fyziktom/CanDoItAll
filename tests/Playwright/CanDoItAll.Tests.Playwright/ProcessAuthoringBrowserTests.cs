@@ -194,6 +194,7 @@ public sealed class ProcessAuthoringBrowserTests {
                 Assert.Empty(persisted.Content.Definition.Steps.Single(step => step.Key == "second-step").ArtifactExpectations);
             }
             Assert.Empty(errors);
+            await Assertions.Expect(page.GetByTestId("processes-command-strip")).ToContainTextAsync("2 definition(s)");
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "pc2-" + scenario + ".png"), FullPage = true });
         } catch {
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "pc2-" + scenario + "-failure.png"), FullPage = true });

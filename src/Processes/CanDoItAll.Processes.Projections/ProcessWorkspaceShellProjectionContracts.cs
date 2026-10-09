@@ -1220,7 +1220,9 @@ public sealed record ProcessDefinitionCatalogProjection(
     IReadOnlyList<ProcessDefinitionCatalogItemProjection> Items,
     ProcessDefinitionCatalogItemProjection? SelectedItem,
     ProcessDefinitionEditorProjection? SelectedEditor,
-    ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt) {
+    public int TotalDefinitionCount => ScopeGroups.Sum(group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.All ? group.Count : 0);
+}
 
 public sealed record ProcessLiveRunSummaryProjection(
     int ActiveRunCount,

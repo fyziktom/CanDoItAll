@@ -52,13 +52,14 @@ public sealed class ProcessWorkbenchBrowserTests {
                     let stableSince = started;
                     while (Date.now() - started < 10000) {
                         const point = window.CanDoItAll.canvasWorkbench.getHotZoneCenter(host, { zone: 'node-body', nodeId: id });
-                        const current = JSON.stringify(point);
+                        const viewport = host.__canvasWorkbenchState?.ui;
+                        const rect = host.getBoundingClientRect();
+                        const current = JSON.stringify([point, viewport?.panX, viewport?.panY, viewport?.zoom, rect.x, rect.y]);
                         if (current !== signature) {
                             signature = current;
                             stableSince = Date.now();
                         }
                         if (point && Date.now() - stableSince > 300) {
-                            const rect = host.getBoundingClientRect();
                             return { x: rect.left + point.x, y: rect.top + point.y };
                         }
                         await new Promise(resolve => requestAnimationFrame(resolve));

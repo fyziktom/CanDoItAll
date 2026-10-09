@@ -250,7 +250,7 @@
     private string DefinitionTotalText
         => shell is null
             ? "0"
-            : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount).ToString(CultureInfo.InvariantCulture);
+            : shell.DefinitionCatalog.TotalDefinitionCount.ToString(CultureInfo.InvariantCulture);
 
     private string DefinitionTooltip
         => shell?.DefinitionCatalog.Summary ?? "Definition catalog projection is loading.";

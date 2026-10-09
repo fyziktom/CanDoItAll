@@ -224,7 +224,7 @@
     private string DefinitionCountText
         => shell is null
             ? "0"
-            : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount).ToString("N0", CultureInfo.CurrentCulture);
+            : shell.DefinitionCatalog.TotalDefinitionCount.ToString("N0", CultureInfo.CurrentCulture);
 
     private string LastEventText
         => shell?.Runtime.Runs.Count > 0

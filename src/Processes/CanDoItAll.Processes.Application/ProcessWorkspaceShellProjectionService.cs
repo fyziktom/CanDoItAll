@@ -1536,7 +1536,7 @@ public sealed class ProcessWorkspaceShellProjectionService(
         ProcessDefinitionCatalogProjection definitionCatalog,
         ProcessRuntimeWorkspaceProjection runtime)
     {
-        var definitionCount = definitionCatalog.PublishedDefinitionCount + definitionCatalog.DraftDefinitionCount;
+        var definitionCount = definitionCatalog.TotalDefinitionCount;
         var definitionCountText = definitionCount.ToString(CultureInfo.InvariantCulture);
         var activeRunCountText = runtime.Runs.Count(run => run.IsActive).ToString(CultureInfo.InvariantCulture);
         var historyCountText = runtime.Events.Count.ToString(CultureInfo.InvariantCulture);

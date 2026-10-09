@@ -41,6 +41,7 @@ public sealed class ProcessAuthoringQueryTests(ITestOutputHelper output) {
             Record("catalog-1001-authored-rows", sample, watch, commands);
             Assert.Equal(50, catalog.Items.Count);
             Assert.Equal(1001, catalog.DraftDefinitionCount);
+            Assert.Equal(1000 + current.GetRequiredService<ProcessTemplatePackLoader>().Load().Definitions.Count, catalog.TotalDefinitionCount);
             Assert.Single(commands.Sql);
             Assert.DoesNotContain("ContentJson", Assert.Single(commands.Sql), StringComparison.Ordinal);
 

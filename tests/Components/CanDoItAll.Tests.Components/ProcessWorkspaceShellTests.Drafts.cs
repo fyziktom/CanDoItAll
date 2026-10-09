@@ -12,6 +12,23 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Draft_and_launchable_publication_count_as_one_definition(bool live) {
+        using var context = CreateContext(out var client);
+        client.ShellResultTransform = (_, projection) => projection with {
+            DefinitionCatalog = projection.DefinitionCatalog with { DraftDefinitionCount = 1 }
+        };
+        if (live) {
+            var cut = context.Render<LiveProcessesDashboard>();
+            cut.WaitForAssertion(() => Assert.Equal("2", ((ILiveProcessesSession)cut.Instance).DefinitionCountText));
+        } else {
+            var cut = context.Render<ProcessWorkspaceShell>();
+            cut.WaitForAssertion(() => Assert.Equal("2", ((IProcessWorkspaceSession)cut.Instance).DefinitionTotalText));
+        }
+    }
+
     [Fact]
     public async Task Pending_definition_read_disables_header_mutations_and_keeps_refresh_available() {
         using var context = CreateContext(out var client);

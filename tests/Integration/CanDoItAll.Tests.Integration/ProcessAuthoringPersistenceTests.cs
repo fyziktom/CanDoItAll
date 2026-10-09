@@ -14,9 +14,12 @@ public sealed class ProcessAuthoringPersistenceTests {
             new(null, null, ProcessDefinitionCatalogScopeKind.All, 50),
             new(null, ProcessTemplateCatalogCategoryKind.All, null, ProcessTemplateCatalogPreviewTabKind.Overview, 50), false);
         var marker = "Durable definition " + Guid.NewGuid().ToString("N");
+        int definitionCount;
         await using (var scope = app.Services.CreateAsyncScope()) {
             var client = scope.ServiceProvider.GetRequiredService<IProcessWorkspaceProjectionClient>();
-            var editor = (await client.GetShellAsync(request)).DefinitionCatalog.SelectedEditor!;
+            var baseline = await client.GetShellAsync(request);
+            definitionCount = baseline.DefinitionCatalog.Items.Count;
+            var editor = baseline.DefinitionCatalog.SelectedEditor!;
             request = request with { DefinitionCatalogQuery = request.DefinitionCatalogQuery with { SelectedDefinitionKey = editor.DefinitionKey } };
             var draft = new ProcessDefinitionEditorDraftProjection(editor.DefinitionKey,
                 editor.Identity with { Name = marker }, editor.Governance, editor.Contracts, editor.Simulation);
@@ -29,5 +32,9 @@ public sealed class ProcessAuthoringPersistenceTests {
         Assert.Equal(marker, observed.DefinitionCatalog.SelectedEditor!.Identity.Name);
         Assert.Equal(marker, observed.DefinitionCatalog.SelectedItem!.Name);
         Assert.Equal(1, observed.DefinitionCatalog.DraftDefinitionCount);
+        Assert.Equal(definitionCount, observed.DefinitionCatalog.PublishedDefinitionCount);
+        Assert.Equal(definitionCount, observed.DefinitionCatalog.TotalDefinitionCount);
+        Assert.Equal(definitionCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            observed.Tabs.Single(tab => tab.Key == ProcessWorkspaceTabKey.Definitions).CountText);
     }
 }
