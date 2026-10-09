@@ -32,6 +32,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     private NativeApplication? app;
     private HttpClient? client;
     private readonly AcceptedRunReadFault readFault = new();
+    private ProcessAuthoringBrowserControl? authoring;
     internal Task ReadFailure => readFault.Observed.Task;
     internal int ReadFailures => readFault.Count;
     internal Guid ProjectId { get; private set; }
@@ -40,8 +41,9 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal string Evidence { get; } = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "processes-pc1", "native-" + Guid.NewGuid().ToString("N"));
     internal IReadOnlyDictionary<string, WorkflowDefinition> Workflows { get; private set; } = new Dictionary<string, WorkflowDefinition>();
 
-    internal static async Task<ProcessNativeBrowserHost> StartAsync(string upstream, bool allowVoice = false, bool failFirstRunRead = false) {
-        var host = new ProcessNativeBrowserHost();
+    internal static async Task<ProcessNativeBrowserHost> StartAsync(string upstream, bool allowVoice = false, bool failFirstRunRead = false,
+        ProcessAuthoringBrowserControl? authoring = null) {
+        var host = new ProcessNativeBrowserHost { authoring = authoring };
         try {
             await host.StartCoreAsync(upstream, allowVoice);
             host.readFault.Armed = failFirstRunRead;
@@ -86,7 +88,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             });
         }
         var pack = WritePack();
-        app = new(profile, pack, readFault);
+        app = new(profile, pack, readFault, authoring);
         app.UseKestrel(0);
         client = app.CreateClient(new() { AllowAutoRedirect = false });
     }
@@ -102,6 +104,13 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             Processes = Workflows.Keys.Select(key => new ProcessTemplateManifestProcessEntry { Key = key, RelativePath = key }).ToList()
         };
         File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(manifest));
+        if (authoring is not null) {
+            Directory.CreateDirectory(Path.Combine(root, "toolbox"));
+            File.WriteAllText(Path.Combine(root, "toolbox", "role-templates.json"), """
+                [{ "ActionId": "role-template.workflow-owner", "Label": "Reviewer", "TemplateRoleKey": "workflow-owner",
+                   "KeyPrefix": "reviewer", "DisplayNameTemplate": "Reviewer {ordinal}", "PreferredExecutorKind": "person-or-agent", "DefaultAllocationPercent": 50 }]
+                """);
+        }
         foreach (var (key, workflow) in Workflows) {
             var directory = Path.Combine(root, key);
             Directory.CreateDirectory(directory);
@@ -116,6 +125,13 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
                     OperationTargetScope = ProcessOperationContractNames.ExternalProductTargetReadOnly,
                     RoleAssignments = [new() { RoleKey = "workflow-owner", ResponsibilityKind = "Responsible", IsRequired = true }] }]
             };
+            if (authoring is not null) {
+                definition.Steps[0].DecisionRoleKey = "workflow-owner";
+                definition.RoleUsages.Add(new() { Key = "second-owner", DisplayName = "Second owner", PreferredExecutorKind = "person-or-agent", DefaultAllocationPercent = 50 });
+                definition.Steps.Add(new() { Key = "second-step", Title = "Second step", StepKind = "Work", DecisionRoleKey = "second-owner",
+                    OperationTargetScope = ProcessOperationContractNames.ManagedProcessArtifactsOnly,
+                    AllowedOperations = [ProcessOperationContractNames.ReadProcessContext] });
+            }
             File.WriteAllText(Path.Combine(directory, "definition.json"), JsonSerializer.Serialize(definition));
         }
         return root;
@@ -152,7 +168,8 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         }
         await environment.DisposeAsync();
     }
-    private sealed class NativeApplication(TestDatabaseProfile profile, string pack, AcceptedRunReadFault readFault) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
+    private sealed class NativeApplication(TestDatabaseProfile profile, string pack, AcceptedRunReadFault readFault,
+        ProcessAuthoringBrowserControl? authoring) : WebApplicationFactory<CanDoItAll.Web.Components.App> {
         protected override void ConfigureWebHost(IWebHostBuilder builder) {
             builder.UseEnvironment("Development");
             builder.UseContentRoot(Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"));
@@ -165,7 +182,8 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             builder.ConfigureServices(services => {
                 services.Replace(ServiceDescriptor.Singleton(new ProcessTemplatePackLoader(pack)));
                 services.Replace(ServiceDescriptor.Scoped<IProcessWorkspaceProjectionClient>(provider =>
-                    new ObservedProjectionClient(ActivatorUtilities.CreateInstance<ProcessWorkspaceProjectionClient>(provider), readFault)));
+                    new ObservedProjectionClient(ActivatorUtilities.CreateInstance<ProcessWorkspaceProjectionClient>(provider), readFault, authoring,
+                        provider.GetRequiredService<ProcessDefinitionRoleEditorProjectionService>(), provider.GetRequiredService<ProcessDefinitionStepEditorProjectionService>())));
             });
         }
     }
@@ -181,22 +199,54 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             }
         }
     }
-    private sealed class ObservedProjectionClient(ProcessWorkspaceProjectionClient native, AcceptedRunReadFault fault) : IProcessWorkspaceProjectionClient {
+    private sealed class ObservedProjectionClient(ProcessWorkspaceProjectionClient native, AcceptedRunReadFault fault,
+        ProcessAuthoringBrowserControl? authoring, ProcessDefinitionRoleEditorProjectionService roles,
+        ProcessDefinitionStepEditorProjectionService steps) : IProcessWorkspaceProjectionClient {
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(ProcessWorkspaceShellRequest request, CancellationToken cancellationToken = default) {
             var result = await native.GetShellAsync(request, cancellationToken);
             fault.AfterRead(request);
+            if (authoring is not null && result.DefinitionCatalog.SelectedEditor is { } editor) {
+                Interlocked.Increment(ref authoring.ReadCount);
+                editor = editor with {
+                    RoleEditor = editor.RoleEditor is null ? null : await roles.GetEditorAsync(request.Scope, editor.DefinitionKey, cancellationToken),
+                    StepEditor = editor.StepEditor is null ? null : await steps.GetEditorAsync(request.Scope, editor.DefinitionKey, cancellationToken)
+                };
+                result = result with { DefinitionCatalog = result.DefinitionCatalog with { SelectedEditor = editor } };
+            }
             return result;
         }
         public Task<ProcessDefinitionCatalogCommandReceipt> FeedDefaultDefinitionsAsync(ProcessDefinitionFeedDefaultsCommand command, CancellationToken cancellationToken = default)
             => native.FeedDefaultDefinitionsAsync(command, cancellationToken);
-        public Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommand command, CancellationToken cancellationToken = default)
-            => native.ExecuteDefinitionEditorCommandAsync(command, cancellationToken);
-        public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(ProcessDefinitionRoleEditorCommand command, CancellationToken cancellationToken = default)
-            => native.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
+        public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommand command, CancellationToken cancellationToken = default) {
+            var result = await native.ExecuteDefinitionEditorCommandAsync(command, cancellationToken);
+            if (authoring is not null) {
+                Interlocked.Increment(ref authoring.DefinitionCommandCount);
+                authoring.DefinitionCommand = command;
+                authoring.DefinitionResult = result;
+                authoring.DefinitionStarted.TrySetResult();
+                await authoring.ReleaseDefinition.Task;
+            }
+            return result;
+        }
+        public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(ProcessDefinitionRoleEditorCommand command, CancellationToken cancellationToken = default) {
+            if (authoring is null) {
+                return await native.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
+            }
+            var result = await roles.ExecuteCommandAsync(command, cancellationToken);
+            authoring.RoleResult = result;
+            return result;
+        }
         public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command, CancellationToken cancellationToken = default)
             => native.ExecuteDefinitionCanvasCommandAsync(command, cancellationToken);
-        public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(ProcessDefinitionStepEditorCommand command, CancellationToken cancellationToken = default)
-            => native.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
+        public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(ProcessDefinitionStepEditorCommand command, CancellationToken cancellationToken = default) {
+            if (authoring is null) {
+                return await native.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
+            }
+            authoring.StepCommand = command;
+            var result = await steps.ExecuteCommandAsync(command, cancellationToken);
+            authoring.StepResult = result;
+            return result;
+        }
         public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command, CancellationToken cancellationToken = default)
             => native.ExecuteTemplateImportCommandAsync(command, cancellationToken);
         public Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(ProcessRuntimeOperatorActionCommand command, CancellationToken cancellationToken = default)

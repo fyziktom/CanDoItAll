@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-08T23:50:09.045653+00:00",
+  "generated_utc": "2026-10-09T10:59:14.338848+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15357,
+  "allowance_count": 15358,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -75287,6 +75287,12 @@
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessRuntimeDisplay.cs",
       "category": "shell-elevation",
       "source_fingerprint": "5b9602bd66c5df1051142abb5622cd93b0f88341d623758f89683000c985019c",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Processes.UI/ProcessStepEditorState.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c8c96cc21c5a0395781038a53b8214c2f0a8635341a23349906b100b9ff39b58",
       "count": 1
     },
     {
