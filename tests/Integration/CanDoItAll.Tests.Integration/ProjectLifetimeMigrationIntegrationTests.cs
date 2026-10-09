@@ -72,7 +72,11 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
             Assert.Equal(legacyProjects, await ReadProjectPayloadsAsync(context));
             Assert.Equal(legacyRecovery, await ReadLegacyRecoveryAsync(context));
             var projects = await context.Set<Project>().AsNoTracking().OrderBy(project => project.Id).ToArrayAsync();
-            Assert.All(projects, project => Assert.True(project.LegacyAgentAccessBindingEligible));
+            Assert.All(projects, project => {
+                Assert.True(project.LegacyAgentAccessBindingEligible);
+                Assert.Null(project.ExternalNamespace);
+                Assert.Null(project.ExternalKey);
+            });
             var currentLifetimes = projects.Select(project => project.LifetimeId).ToArray();
             Assert.All(currentLifetimes, lifetime => Assert.NotEqual(Guid.Empty, lifetime));
             Assert.Equal(2, currentLifetimes.Distinct().Count());
@@ -185,7 +189,8 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
 
     private static Task<string[]> ReadProjectPayloadsAsync(AppDbContext context)
         => context.Database.SqlQueryRaw<string>("""
-            SELECT (to_jsonb(project) - 'LifetimeId' - 'LegacyAgentAccessBindingEligible')::text AS "Value"
+            SELECT (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL)
+                || (to_jsonb(project) - 'LifetimeId' - 'LegacyAgentAccessBindingEligible'))::text AS "Value"
             FROM "Projects_Projects" project ORDER BY project."Id"
             """).ToArrayAsync();
 

@@ -10,15 +10,17 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
 
     public Task DisposeAsync() => fixture.DisposeAsync();
 
-    [Fact]
-    public async Task Process_canvas_stays_maximized_through_selection_and_recomposition()
+    [Theory]
+    [InlineData(2048, 1200)]
+    [InlineData(1920, 1080)]
+    public async Task Process_canvas_stays_maximized_through_selection_and_recomposition(int width, int height)
     {
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize
             {
-                Width = 2048,
-                Height = 1200
+                Width = width,
+                Height = height
             }
         });
         var page = await context.NewPageAsync();
@@ -36,6 +38,7 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-detail-tab-steps").ClickAsync();
         await page.GetByTestId("processes-definition-canvas").WaitForAsync();
         await page.Locator(".cw-canvas-host").WaitForAsync();
+        await page.WaitForFunctionAsync("() => !!document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState");
 
         var initial = await ReadProcessCanvasRuntimeAsync(page);
         await page.GetByTitle("Maximize canvas", new() { Exact = true }).ClickAsync();
@@ -60,9 +63,22 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         Assert.True(selected.BodyLocked);
         Assert.InRange(selected.RenderCount - maximized.RenderCount, 0, 6);
 
-        await page.GetByTestId("processes-canvas-recompose").ClickAsync();
+        await page.GetByTestId("processes-canvas-toggle-toolbox").ClickAsync();
+        var point = await ProcessCanvasBrowser.ReadNodePointAsync(page, "step:feature-intake");
+        await page.Mouse.ClickAsync(point.X, point.Y);
+        await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-selection"), "Clarify .NET scope");
+
+        await page.GetByTestId("processes-canvas-recompose").FocusAsync();
+        await page.GetByTestId("processes-canvas-recompose").PressAsync("Enter");
         await ExpectTextContainsAsync(page.GetByTestId("processes-canvas-command-receipt"), "recomposed");
-        await page.WaitForTimeoutAsync(500);
+        await page.WaitForFunctionAsync("""
+            () => {
+                const nodes = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.nodes ?? [];
+                const y = id => nodes.find(node => node.id === id)?.y;
+                return y('step:feature-intake') === y('step:post-release-learning') &&
+                    y('step:feature-intake') !== y('step:quality-repair');
+            }
+            """);
 
         var recomposed = await ReadProcessCanvasRuntimeAsync(page);
         Assert.True(recomposed.IsMaximized);
@@ -70,6 +86,8 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         Assert.True(recomposed.BodyLocked);
         Assert.Equal(recomposed.IntakeY, recomposed.SuccessTerminalY);
         Assert.NotEqual(recomposed.IntakeY, recomposed.RepairY);
+        await page.GetByTitle("Dock canvas", new() { Exact = true }).ClickAsync();
+        await Assertions.Expect(page.Locator("body")).Not.ToHaveClassAsync(new Regex("cw-body-lock"));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.Empty(pageErrors);
     }

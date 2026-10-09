@@ -6,6 +6,14 @@
 @inject AgentToolPolicyCatalog ToolPolicies
 @implements IDisposable
 
+@if (ChildContent is not null) {
+    @ChildContent(new(MapPresentation(), EventCallback.Factory.Create<ChatWorkspaceIntent>(this, HandleIntentAsync),
+        ActivityStreamId?.OperationId == activity?.OperationId ? activity : null))
+    @if (ActivityStreamId is not null) {
+        <AgentExecutionActivityStatus @key="ActivityStreamId" StreamId="ActivityStreamId"
+                                      Headless="true" StateChanged="UpdateActivity" />
+    }
+} else {
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
                   HeaderActions="@HeaderActions" ComposerActions="@ComposerActions">
     <ActivityContent>
@@ -20,8 +28,18 @@
         }
     </AttachmentPicker>
 </AgentChatSurface>
+}
 
 @code {
+    [Parameter] public RenderFragment<ChatWorkspaceBinding>? ChildContent { get; set; }
+    private AgentActivityState? activity;
+
+    private void UpdateActivity(AgentActivityState state) {
+        if (!disposed && ActivityStreamId?.OperationId == state.OperationId) {
+            activity = state;
+        }
+    }
+
     [Parameter]
     public AgentDefinition? Agent { get; set; }
 

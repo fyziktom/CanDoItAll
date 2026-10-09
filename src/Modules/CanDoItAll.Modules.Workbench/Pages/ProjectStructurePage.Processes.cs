@@ -811,7 +811,7 @@ public partial class ProjectStructurePage
             {
                 var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.IsSelected && candidate.IsResolvable);
                 if (selectedCandidate is null ||
-                    selectedCandidate.TechnicalAgentId is not { } agentId ||
+                    selectedCandidate.TechnicalAgentId is not { } executorId ||
                     string.IsNullOrWhiteSpace(role.StepKey) ||
                     string.IsNullOrWhiteSpace(role.RoleKey))
                 {
@@ -821,8 +821,8 @@ public partial class ProjectStructurePage
                 return new ProcessLaunchExecutorOverride(
                     role.StepKey,
                     role.RoleKey,
-                    ProcessLaunchExecutorKinds.Agent,
-                    agentId.ToString("D"),
+                    selectedCandidate.ExecutorKind,
+                    executorId.ToString("D"),
                     selectedCandidate.DisplayName,
                     selectedCandidate.IsRecommended
                         ? "Accepted HR manager recommendation during project-structure launch review."

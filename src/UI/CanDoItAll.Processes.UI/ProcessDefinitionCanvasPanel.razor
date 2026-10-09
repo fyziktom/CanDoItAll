@@ -1,4 +1,4 @@
-@namespace CanDoItAll.Modules.Processes
+@namespace CanDoItAll.Processes.UI
 @using System.Diagnostics.CodeAnalysis
 @using System.Globalization
 @using CanDoItAll.Processes.Projections
@@ -65,8 +65,7 @@
                     </Cluster>
                 </ToolbarLeftContent>
                 <OverlayContent>
-                    @if (toolboxWindowState.IsVisible)
-                    {
+                    @if (toolboxWindowState.IsVisible) {
                         <CanvasFloatingWindow WindowId="@CanvasToolboxWindowId"
                                               TestId="processes-canvas-toolbox-window"
                                               AriaLabel="Process canvas toolbox floating window"
@@ -99,8 +98,7 @@
                         </CanvasFloatingWindow>
                     }
 
-                    @if (selectionWindowState.IsVisible)
-                    {
+                    @if (selectionWindowState.IsVisible) {
                         <CanvasFloatingWindow WindowId="@CanvasSelectionWindowId"
                                               TestId="processes-canvas-selection-window"
                                               AriaLabel="Process canvas selection floating window"
@@ -127,14 +125,12 @@
 
                                 <Cluster Gap="LayoutGap.XSmall"
                                          Class="flex-wrap">
-                                    @foreach (var fact in selection.Facts)
-                                    {
+                                    @foreach (var fact in selection.Facts) {
                                         <StatusBadge Tone="neutral" Text="@fact" />
                                     }
                                 </Cluster>
 
-                                @if (!string.IsNullOrWhiteSpace(selection.KeyText))
-                                {
+                                @if (!string.IsNullOrWhiteSpace(selection.KeyText)) {
                                     <p class="processes-canvas-selection-key"
                                        data-testid="processes-canvas-selection-key">@selection.KeyText</p>
                                 }
@@ -160,8 +156,7 @@
                         </CanvasFloatingWindow>
                     }
 
-                    @if (editorWindowState.IsVisible)
-                    {
+                    @if (editorWindowState.IsVisible) {
                         <CanvasFloatingWindow WindowId="@CanvasEditorWindowId"
                                               TestId="processes-canvas-editor-window"
                                               AriaLabel="Process canvas editor floating window"
@@ -183,8 +178,7 @@
                                 <p class="processes-canvas-selection-summary">@selection.Summary</p>
                                 <Cluster Gap="LayoutGap.XSmall"
                                          Class="flex-wrap">
-                                    @foreach (var action in VisibleCommands)
-                                    {
+                                    @foreach (var action in VisibleCommands) {
                                         <Button Text="@action.Text"
                                                 Icon="@action.Icon"
                                                 ButtonStyle="ButtonStyle.Light"
@@ -203,8 +197,7 @@
         </Canvas>
     </CanvasWorkbenchStage>
 
-    @if (!string.IsNullOrWhiteSpace(commandNotice) || Canvas.LastCommandReceipt is not null)
-    {
+    @if (!string.IsNullOrWhiteSpace(commandNotice) || Canvas.LastCommandReceipt is not null) {
         <p class="processes-canvas-command-receipt"
            data-testid="processes-canvas-command-receipt">
             @ResolveCommandReceiptText()
@@ -213,8 +206,7 @@
 
     <div class="processes-canvas-test-mirrors"
          aria-hidden="true">
-        @foreach (var node in Canvas.Nodes)
-        {
+        @foreach (var node in Canvas.Nodes) {
             <button type="button"
                     tabindex="-1"
                     @onclick="@(() => SelectNodeByKeyAsync(node.NodeKey))"
@@ -223,8 +215,7 @@
             </button>
         }
 
-        @foreach (var edge in Canvas.Edges)
-        {
+        @foreach (var edge in Canvas.Edges) {
             <button type="button"
                     tabindex="-1"
                     @onclick="@(() => SelectEdgeByKeyAsync(edge.EdgeKey))"
@@ -236,9 +227,10 @@
 </div>
 
 @code {
-    private const string CanvasToolboxWindowId = "processes.canvas.toolbox";
-    private const string CanvasSelectionWindowId = "processes.canvas.selection";
-    private const string CanvasEditorWindowId = "processes.canvas.editor";
+    private readonly string surfaceId = $"processes-canvas-{Guid.NewGuid():N}";
+    private string CanvasToolboxWindowId => $"{surfaceId}-toolbox";
+    private string CanvasSelectionWindowId => $"{surfaceId}-selection";
+    private string CanvasEditorWindowId => $"{surfaceId}-editor";
     private const string ToolboxSectionId = "process-definition";
     private const string StructuralInputPortId = "process:input";
     private const string StructuralOutputPortId = "process:output";
@@ -287,20 +279,17 @@
 
     private IReadOnlyList<CanvasWorkbenchStat> CanvasStats =>
     [
-        new()
-        {
+        new() {
             Label = "Nodes",
             Value = Canvas.Nodes.Count.ToString(CultureInfo.InvariantCulture),
             Tone = "info"
         },
-        new()
-        {
+        new() {
             Label = "Edges",
             Value = Canvas.Edges.Count.ToString(CultureInfo.InvariantCulture),
             Tone = "secondary"
         },
-        new()
-        {
+        new() {
             Label = "Selection",
             Value = selection.Kind.ToString(),
             Tone = selection.Kind == ProcessDefinitionCanvasSelectionKind.None ? "neutral" : "success"
@@ -363,30 +352,25 @@
             ? "Select a process step, role, artifact, route, or subprocess boundary to edit from the canvas."
             : "Use the detail editors below for full contract edits; quick canvas actions stay close to this floating window.";
 
-    protected override void OnParametersSet()
-    {
+    protected override void OnParametersSet() {
         var scopeChanged = syncedScope != Scope;
         var definitionChanged = syncedDefinitionKey != Canvas.DefinitionKey;
         var versionChanged = syncedVersionToken != Canvas.VersionToken;
         var receiptId = Canvas.LastCommandReceipt?.ReceiptId;
         var receiptChanged = syncedReceiptId != receiptId || (receiptId is not null && versionChanged);
-        if (!scopeChanged && !definitionChanged && !versionChanged && !receiptChanged)
-        {
+        if (!scopeChanged && !definitionChanged && !versionChanged && !receiptChanged) {
             return;
         }
 
-        var acceptedRecomposition = receiptChanged && Canvas.LastCommandReceipt is
-        {
+        var acceptedRecomposition = receiptChanged && Canvas.LastCommandReceipt is {
             CommandKind: ProcessDefinitionCanvasCommandKind.Recompose,
             Status: ProcessDefinitionCanvasCommandStatus.Accepted
         };
-        var rejectedMove = receiptChanged && Canvas.LastCommandReceipt is
-        {
+        var rejectedMove = receiptChanged && Canvas.LastCommandReceipt is {
             CommandKind: ProcessDefinitionCanvasCommandKind.MoveNodes,
             Status: ProcessDefinitionCanvasCommandStatus.Rejected
         };
-        if (scopeChanged || definitionChanged || acceptedRecomposition || rejectedMove)
-        {
+        if (scopeChanged || definitionChanged || acceptedRecomposition || rejectedMove) {
             localNodePositions.Clear();
         }
 
@@ -399,48 +383,37 @@
         selectedEdgeKey = Canvas.Selection.EdgeKey;
         selection = Canvas.Selection;
         List<string> selectedNodeIds = selectedNodeKey is null ? [] : [selectedNodeKey.Value.Value];
-        if (scopeChanged || definitionChanged)
-        {
+        if (scopeChanged || definitionChanged) {
             canvasUiState = CreateDefaultUiState(selectedNodeIds);
-        }
-        else
-        {
+        } else {
             canvasUiState.SelectedNodeIds = selectedNodeIds;
-            if (string.IsNullOrWhiteSpace(canvasUiState.ActiveInspectorTab))
-            {
+            if (string.IsNullOrWhiteSpace(canvasUiState.ActiveInspectorTab)) {
                 canvasUiState.ActiveInspectorTab = "process-definition";
             }
         }
 
         commandNotice = null;
-        if (scopeChanged || definitionChanged)
-        {
+        if (scopeChanged || definitionChanged) {
             highlightedArtifactKey = null;
             highlightedRoleKey = null;
-        }
-        else if (highlightedArtifactKey is not null && !Canvas.Nodes.Any(IsHighlightedArtifactReference))
-        {
+        } else if (highlightedArtifactKey is not null && !Canvas.Nodes.Any(IsHighlightedArtifactReference)) {
             highlightedArtifactKey = null;
         }
 
         if (!scopeChanged &&
             !definitionChanged &&
             highlightedRoleKey is not null &&
-            !Canvas.Nodes.Any(IsHighlightedRoleReference))
-        {
+            !Canvas.Nodes.Any(IsHighlightedRoleReference)) {
             highlightedRoleKey = null;
         }
 
-        if (selection.Kind != ProcessDefinitionCanvasSelectionKind.None)
-        {
+        if (selection.Kind != ProcessDefinitionCanvasSelectionKind.None) {
             selectionWindowState.IsVisible = true;
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!fitViewAfterRecompose || workbenchRef is null)
-        {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!fitViewAfterRecompose || workbenchRef is null) {
             return;
         }
 
@@ -448,21 +421,18 @@
         await workbenchRef.FitViewToSceneAsync();
     }
 
-    private CanvasWorkbenchSurface BuildCanvasSurface()
-    {
+    private CanvasWorkbenchSurface BuildCanvasSurface() {
         var selectedNodeIds = selectedNodeKey is null ? [] : new List<string> { selectedNodeKey.Value.Value };
         var uiState = CanvasWorkbenchUiState.Parse(canvasUiState.ToJson());
         uiState.SelectedNodeIds = selectedNodeIds;
         uiState.ActiveInspectorTab = "process-definition";
 
-        return new CanvasWorkbenchSurface
-        {
-            SurfaceId = $"process-definition:{Canvas.DefinitionKey.Value}",
+        return new CanvasWorkbenchSurface {
+            SurfaceId = $"{surfaceId}:{Canvas.DefinitionKey.Value}",
             Mode = CanvasWorkbenchModes.Authoring,
             DependencySourceId = Canvas.VersionToken.Value,
             UiState = uiState,
-            Chrome = new CanvasWorkbenchChrome
-            {
+            Chrome = new CanvasWorkbenchChrome {
                 HintText = "Click to inspect a process item, drag nodes to tune layout, right-click for local actions, and use the floating windows for toolbox and selection work.",
                 FocusActionLabel = "Focus process definition",
                 QuickCreateActions = Canvas.ToolboxActions
@@ -475,8 +445,7 @@
         };
     }
 
-    private CanvasWorkbenchNode BuildWorkbenchNode(ProcessDefinitionCanvasEditorNodeProjection node)
-    {
+    private CanvasWorkbenchNode BuildWorkbenchNode(ProcessDefinitionCanvasEditorNodeProjection node) {
         var position = localNodePositions.TryGetValue(node.NodeKey.Value, out var localPosition)
             ? localPosition
             : (node.X, node.Y);
@@ -487,13 +456,11 @@
             .Take(3)
             .Select(badge => new CanvasWorkbenchChip { Text = badge, Tone = ResolveChipTone(node.Tone) })
             .ToList();
-        if (isHighlightedReference)
-        {
+        if (isHighlightedReference) {
             chips.Add(new CanvasWorkbenchChip { Text = "Highlighted", Tone = "warning" });
         }
 
-        return new CanvasWorkbenchNode
-        {
+        return new CanvasWorkbenchNode {
             Id = node.NodeKey.Value,
             Family = ResolveNodeFamily(node.Kind),
             Kind = node.Kind.ToString(),
@@ -511,8 +478,7 @@
             Chips = chips,
             FooterChips =
             [
-                new CanvasWorkbenchChip
-                {
+                new CanvasWorkbenchChip {
                     Text = ResolveNodeKeyText(node),
                     Tone = "neutral"
                 }
@@ -530,8 +496,7 @@
     }
 
     private CanvasWorkbenchLink BuildWorkbenchLink(ProcessDefinitionCanvasEdgeProjection edge)
-        => new()
-        {
+        => new() {
             SourceId = edge.FromNodeKey.Value,
             SourcePortId = ResolveSourcePort(edge.Kind),
             TargetId = edge.ToNodeKey.Value,
@@ -546,8 +511,7 @@
     private CanvasWorkbenchPort BuildWorkbenchPort(
         ProcessDefinitionCanvasNodeKind nodeKind,
         ProcessDefinitionCanvasPortProjection port)
-        => new()
-        {
+        => new() {
             Id = ResolvePortId(port.Kind),
             Label = port.Label,
             Side = IsInputPort(nodeKind, port.Kind) ? "left" : "right",
@@ -557,8 +521,7 @@
         };
 
     private CanvasWorkbenchAction BuildQuickCreateAction(ProcessDefinitionCanvasToolboxActionProjection action)
-        => new()
-        {
+        => new() {
             ActionId = action.ActionKey.Value,
             Label = action.Label,
             MenuLabel = action.Label,
@@ -567,12 +530,9 @@
             Tone = ResolveToolboxTone(action.Kind)
         };
 
-    private List<CanvasWorkbenchAction> BuildNodeContextActions(ProcessDefinitionCanvasEditorNodeProjection node)
-    {
-        var actions = new List<CanvasWorkbenchAction>
-        {
-            new()
-            {
+    private List<CanvasWorkbenchAction> BuildNodeContextActions(ProcessDefinitionCanvasEditorNodeProjection node) {
+        var actions = new List<CanvasWorkbenchAction> {
+            new() {
                 ActionId = $"{SelectActionPrefix}{node.NodeKey.Value}",
                 Label = "Inspect",
                 MenuLabel = "Inspect",
@@ -583,10 +543,8 @@
         };
 
         if (node.Kind == ProcessDefinitionCanvasNodeKind.Artifact &&
-            !string.IsNullOrWhiteSpace(node.ArtifactKey))
-        {
-            actions.Add(new CanvasWorkbenchAction
-            {
+            !string.IsNullOrWhiteSpace(node.ArtifactKey)) {
+            actions.Add(new CanvasWorkbenchAction {
                 ActionId = $"{CloneArtifactReferenceActionPrefix}{node.NodeKey.Value}",
                 Label = "Clone",
                 MenuLabel = "Clone",
@@ -594,8 +552,7 @@
                 Icon = "content_copy",
                 Tone = "accent"
             });
-            actions.Add(new CanvasWorkbenchAction
-            {
+            actions.Add(new CanvasWorkbenchAction {
                 ActionId = $"{HighlightArtifactReferencesActionPrefix}{node.NodeKey.Value}",
                 Label = "Highlight",
                 MenuLabel = "Highlight",
@@ -605,10 +562,8 @@
             });
         }
 
-        if (node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey is not null)
-        {
-            actions.Add(new CanvasWorkbenchAction
-            {
+        if (node.Kind == ProcessDefinitionCanvasNodeKind.Role && node.RoleKey is not null) {
+            actions.Add(new CanvasWorkbenchAction {
                 ActionId = $"{CloneRoleReferenceActionPrefix}{node.NodeKey.Value}",
                 Label = "Clone",
                 MenuLabel = "Clone",
@@ -616,8 +571,7 @@
                 Icon = "content_copy",
                 Tone = "accent"
             });
-            actions.Add(new CanvasWorkbenchAction
-            {
+            actions.Add(new CanvasWorkbenchAction {
                 ActionId = $"{HighlightRoleReferencesActionPrefix}{node.NodeKey.Value}",
                 Label = "Highlight",
                 MenuLabel = "Highlight",
@@ -630,8 +584,7 @@
         actions.AddRange(Canvas.ToolboxActions
             .Where(action => action.IsEnabled)
             .Take(5)
-            .Select(action => new CanvasWorkbenchAction
-            {
+            .Select(action => new CanvasWorkbenchAction {
                 ActionId = action.ActionKey.Value,
                 Label = action.Label,
                 MenuLabel = action.Label,
@@ -643,73 +596,61 @@
         return actions;
     }
 
-    private Task ToggleToolboxWindowAsync()
-    {
+    private Task ToggleToolboxWindowAsync() {
         toolboxWindowState = ToggleWindow(toolboxWindowState);
         return Task.CompletedTask;
     }
 
-    private Task ToggleSelectionWindowAsync()
-    {
+    private Task ToggleSelectionWindowAsync() {
         selectionWindowState = ToggleWindow(selectionWindowState);
         return Task.CompletedTask;
     }
 
-    private Task ToggleEditorWindowAsync()
-    {
+    private Task ToggleEditorWindowAsync() {
         editorWindowState = ToggleWindow(editorWindowState);
         return Task.CompletedTask;
     }
 
-    private Task OpenEditorWindowAsync()
-    {
+    private Task OpenEditorWindowAsync() {
         editorWindowState.IsVisible = true;
         editorWindowState.IsMinimized = false;
         return Task.CompletedTask;
     }
 
-    private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-    {
+    private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state) {
         toolboxWindowState = CanvasWorkbenchWindowState.Normalize(state);
         return Task.CompletedTask;
     }
 
-    private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-    {
+    private Task HandleSelectionWindowStateChangedAsync(CanvasWorkbenchWindowState state) {
         selectionWindowState = CanvasWorkbenchWindowState.Normalize(state);
         return Task.CompletedTask;
     }
 
-    private Task HandleEditorWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-    {
+    private Task HandleEditorWindowStateChangedAsync(CanvasWorkbenchWindowState state) {
         editorWindowState = CanvasWorkbenchWindowState.Normalize(state);
         return Task.CompletedTask;
     }
 
-    private Task ToggleToolboxGroupAsync(string groupKey)
-    {
+    private Task ToggleToolboxGroupAsync(string groupKey) {
         expandedToolboxGroupKey = string.Equals(expandedToolboxGroupKey, groupKey, StringComparison.Ordinal)
             ? null
             : groupKey;
         return Task.CompletedTask;
     }
 
-    private async Task HandleToolboxActionSelectedAsync(string actionId)
-    {
+    private async Task HandleToolboxActionSelectedAsync(string actionId) {
         var action = Canvas.ToolboxActions.FirstOrDefault(item => string.Equals(item.ActionKey.Value, actionId, StringComparison.Ordinal));
-        if (action is null || !action.IsEnabled)
-        {
+        if (action is null || !action.IsEnabled) {
             return;
         }
 
         await ExecuteToolboxActionAsync(action);
     }
 
-    private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
-    {
+    private async Task HandleCanvasSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args) {
         var nodeKey = args.PrimaryNodeId ?? args.SelectedNodeIds.FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(nodeKey))
-        {
+        if (string.IsNullOrWhiteSpace(nodeKey)) {
             await ClearSelectionAsync();
             return;
         }
@@ -717,26 +658,21 @@
         await SelectNodeByKeyAsync(new ProcessDefinitionCanvasNodeKey(nodeKey));
     }
 
-    private Task HandleCanvasStateChangedAsync(string stateJson)
-    {
+    private Task HandleCanvasStateChangedAsync(string stateJson) {
         canvasUiState = CanvasWorkbenchUiState.Parse(stateJson);
-        if (string.IsNullOrWhiteSpace(canvasUiState.ActiveInspectorTab))
-        {
+        if (string.IsNullOrWhiteSpace(canvasUiState.ActiveInspectorTab)) {
             canvasUiState.ActiveInspectorTab = "process-definition";
         }
 
         return Task.CompletedTask;
     }
 
-    private async Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args)
-    {
-        foreach (var position in args.Positions)
-        {
+    private async Task HandleCanvasNodesMovedAsync(CanvasWorkbenchNodesMovedEventArgs args) {
+        foreach (var position in args.Positions) {
             localNodePositions[position.NodeId] = (position.X, position.Y);
         }
 
-        if (args.Positions.Count == 0)
-        {
+        if (args.Positions.Count == 0) {
             return;
         }
 
@@ -751,74 +687,60 @@
                 .ToArray());
     }
 
-    private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request)
-    {
-        if (!string.IsNullOrWhiteSpace(request.NodeId))
-        {
+    private async Task HandleCanvasContextActionAsync(CanvasWorkbenchContextActionRequest request) {
+        if (!string.IsNullOrWhiteSpace(request.NodeId)) {
             await SelectNodeByKeyAsync(new ProcessDefinitionCanvasNodeKey(request.NodeId));
         }
 
-        if (request.ActionId.StartsWith(SelectActionPrefix, StringComparison.Ordinal))
-        {
+        if (request.ActionId.StartsWith(SelectActionPrefix, StringComparison.Ordinal)) {
             return;
         }
 
-        if (TryResolveContextNodeKey(request, CloneArtifactReferenceActionPrefix, out var cloneNodeKey))
-        {
+        if (TryResolveContextNodeKey(request, CloneArtifactReferenceActionPrefix, out var cloneNodeKey)) {
             selectedNodeKey = cloneNodeKey.Value;
             await ExecuteCanvasCommandAsync(ProcessDefinitionCanvasCommandKind.CloneArtifactReference, toolboxActionKey: null);
             return;
         }
 
-        if (TryResolveContextNodeKey(request, HighlightArtifactReferencesActionPrefix, out var highlightNodeKey))
-        {
+        if (TryResolveContextNodeKey(request, HighlightArtifactReferencesActionPrefix, out var highlightNodeKey)) {
             await HighlightArtifactReferencesAsync(highlightNodeKey.Value);
             return;
         }
 
-        if (TryResolveContextNodeKey(request, CloneRoleReferenceActionPrefix, out var cloneRoleNodeKey))
-        {
+        if (TryResolveContextNodeKey(request, CloneRoleReferenceActionPrefix, out var cloneRoleNodeKey)) {
             selectedNodeKey = cloneRoleNodeKey.Value;
             await ExecuteCanvasCommandAsync(ProcessDefinitionCanvasCommandKind.CloneRoleReference, toolboxActionKey: null);
             return;
         }
 
-        if (TryResolveContextNodeKey(request, HighlightRoleReferencesActionPrefix, out var highlightRoleNodeKey))
-        {
+        if (TryResolveContextNodeKey(request, HighlightRoleReferencesActionPrefix, out var highlightRoleNodeKey)) {
             await HighlightRoleReferencesAsync(highlightRoleNodeKey.Value);
             return;
         }
 
-        if (TryResolveToolboxAction(request.ActionId, out var toolboxAction))
-        {
+        if (TryResolveToolboxAction(request.ActionId, out var toolboxAction)) {
             await ExecuteToolboxActionAsync(toolboxAction);
         }
     }
 
-    private async Task HandleCanvasCreateActionAsync(CanvasWorkbenchCreateActionRequest request)
-    {
-        if (!string.IsNullOrWhiteSpace(request.SourceNodeId))
-        {
+    private async Task HandleCanvasCreateActionAsync(CanvasWorkbenchCreateActionRequest request) {
+        if (!string.IsNullOrWhiteSpace(request.SourceNodeId)) {
             selectedNodeKey = new ProcessDefinitionCanvasNodeKey(request.SourceNodeId);
         }
 
-        if (TryResolveToolboxAction(request.ActionId, out var toolboxAction))
-        {
+        if (TryResolveToolboxAction(request.ActionId, out var toolboxAction)) {
             await ExecuteToolboxActionAsync(toolboxAction);
         }
     }
 
-    private async Task HandleCanvasNodeOpenedAsync(string nodeId)
-    {
+    private async Task HandleCanvasNodeOpenedAsync(string nodeId) {
         await SelectNodeByKeyAsync(new ProcessDefinitionCanvasNodeKey(nodeId));
         await OpenEditorWindowAsync();
     }
 
-    private async Task SelectNodeByKeyAsync(ProcessDefinitionCanvasNodeKey key)
-    {
+    private async Task SelectNodeByKeyAsync(ProcessDefinitionCanvasNodeKey key) {
         var node = Canvas.Nodes.FirstOrDefault(item => item.NodeKey == key);
-        if (node is null)
-        {
+        if (node is null) {
             return;
         }
 
@@ -838,11 +760,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task SelectEdgeByKeyAsync(ProcessDefinitionCanvasEdgeKey key)
-    {
+    private async Task SelectEdgeByKeyAsync(ProcessDefinitionCanvasEdgeKey key) {
         var edge = Canvas.Edges.FirstOrDefault(item => item.EdgeKey == key);
-        if (edge is null)
-        {
+        if (edge is null) {
             return;
         }
 
@@ -864,8 +784,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private Task ClearSelectionAsync()
-    {
+    private Task ClearSelectionAsync() {
         selectedNodeKey = null;
         selectedEdgeKey = null;
         selection = ProcessDefinitionCanvasSelectionProjection.None;
@@ -876,13 +795,11 @@
     private Task ExecuteToolboxActionAsync(ProcessDefinitionCanvasToolboxActionProjection action)
         => ExecuteCanvasCommandAsync(ResolveCommandKind(action.Kind), action.ActionKey);
 
-    private async Task HighlightArtifactReferencesAsync(ProcessDefinitionCanvasNodeKey nodeKey)
-    {
+    private async Task HighlightArtifactReferencesAsync(ProcessDefinitionCanvasNodeKey nodeKey) {
         var node = Canvas.Nodes.FirstOrDefault(item => item.NodeKey == nodeKey);
         if (node is null ||
             node.Kind != ProcessDefinitionCanvasNodeKind.Artifact ||
-            string.IsNullOrWhiteSpace(node.ArtifactKey))
-        {
+            string.IsNullOrWhiteSpace(node.ArtifactKey)) {
             return;
         }
 
@@ -892,13 +809,11 @@
         await SelectNodeByKeyAsync(node.NodeKey);
     }
 
-    private async Task HighlightRoleReferencesAsync(ProcessDefinitionCanvasNodeKey nodeKey)
-    {
+    private async Task HighlightRoleReferencesAsync(ProcessDefinitionCanvasNodeKey nodeKey) {
         var node = Canvas.Nodes.FirstOrDefault(item => item.NodeKey == nodeKey);
         if (node is null ||
             node.Kind != ProcessDefinitionCanvasNodeKind.Role ||
-            node.RoleKey is null)
-        {
+            node.RoleKey is null) {
             return;
         }
 
@@ -912,8 +827,7 @@
     private async Task ExecuteCanvasCommandAsync(
         ProcessDefinitionCanvasCommandKind commandKind,
         ProcessDefinitionCanvasToolboxActionKey? toolboxActionKey,
-        IReadOnlyList<ProcessDefinitionCanvasNodePosition>? nodePositions = null)
-    {
+        IReadOnlyList<ProcessDefinitionCanvasNodePosition>? nodePositions = null) {
         var command = new ProcessDefinitionCanvasCommand(
             Scope,
             Canvas.DefinitionKey,
@@ -934,8 +848,7 @@
 
     private bool TryResolveToolboxAction(
         string actionId,
-        [NotNullWhen(true)] out ProcessDefinitionCanvasToolboxActionProjection? action)
-    {
+        [NotNullWhen(true)] out ProcessDefinitionCanvasToolboxActionProjection? action) {
         action = Canvas.ToolboxActions.FirstOrDefault(item => string.Equals(item.ActionKey.Value, actionId, StringComparison.Ordinal));
         return action is not null;
     }
@@ -953,22 +866,18 @@
     private static bool TryResolveContextNodeKey(
         CanvasWorkbenchContextActionRequest request,
         string actionPrefix,
-        [NotNullWhen(true)] out ProcessDefinitionCanvasNodeKey? nodeKey)
-    {
+        [NotNullWhen(true)] out ProcessDefinitionCanvasNodeKey? nodeKey) {
         nodeKey = null;
-        if (!request.ActionId.StartsWith(actionPrefix, StringComparison.Ordinal))
-        {
+        if (!request.ActionId.StartsWith(actionPrefix, StringComparison.Ordinal)) {
             return false;
         }
 
         var keyText = request.ActionId[actionPrefix.Length..];
-        if (string.IsNullOrWhiteSpace(keyText))
-        {
+        if (string.IsNullOrWhiteSpace(keyText)) {
             keyText = request.NodeId;
         }
 
-        if (string.IsNullOrWhiteSpace(keyText))
-        {
+        if (string.IsNullOrWhiteSpace(keyText)) {
             return false;
         }
 
@@ -977,26 +886,22 @@
     }
 
     private static CanvasWorkbenchUiState CreateDefaultUiState(IReadOnlyList<string> selectedNodeIds)
-        => new()
-        {
+        => new() {
             SelectedNodeIds = [.. selectedNodeIds],
             ActiveInspectorTab = "process-definition"
         };
 
     private static CanvasWorkbenchWindowState CreateWindowState(double width, double height, bool isVisible)
-        => new()
-        {
+        => new() {
             IsVisible = isVisible,
             Width = width,
             Height = height
         };
 
-    private static CanvasWorkbenchWindowState ToggleWindow(CanvasWorkbenchWindowState state)
-    {
+    private static CanvasWorkbenchWindowState ToggleWindow(CanvasWorkbenchWindowState state) {
         var next = CanvasWorkbenchWindowState.Normalize(state).Clone();
         next.IsVisible = !next.IsVisible;
-        if (next.IsVisible)
-        {
+        if (next.IsVisible) {
             next.IsMinimized = false;
         }
 
@@ -1004,8 +909,7 @@
     }
 
     private static ProcessDefinitionCanvasCommandKind ResolveCommandKind(ProcessDefinitionCanvasToolboxActionKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasToolboxActionKind.BranchRouter => ProcessDefinitionCanvasCommandKind.AddBranchRouter,
             ProcessDefinitionCanvasToolboxActionKind.RoleBinding => ProcessDefinitionCanvasCommandKind.AddRoleBinding,
             ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => ProcessDefinitionCanvasCommandKind.AddArtifactExpectation,
@@ -1014,8 +918,7 @@
         };
 
     private static ProcessDefinitionCanvasSelectionKind ResolveSelectionKind(ProcessDefinitionCanvasNodeKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasNodeKind.Step => ProcessDefinitionCanvasSelectionKind.Step,
             ProcessDefinitionCanvasNodeKind.BranchRouter => ProcessDefinitionCanvasSelectionKind.Route,
             ProcessDefinitionCanvasNodeKind.Role => ProcessDefinitionCanvasSelectionKind.Role,
@@ -1025,8 +928,7 @@
         };
 
     private static string ResolveNodeFamily(ProcessDefinitionCanvasNodeKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasNodeKind.BranchRouter => "workflow-decision",
             ProcessDefinitionCanvasNodeKind.Role => "group",
             ProcessDefinitionCanvasNodeKind.Artifact => "special",
@@ -1035,8 +937,7 @@
         };
 
     private static string ResolveNodeIcon(ProcessDefinitionCanvasNodeKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasNodeKind.BranchRouter => "call_split",
             ProcessDefinitionCanvasNodeKind.Role => "badge",
             ProcessDefinitionCanvasNodeKind.Artifact => "inventory_2",
@@ -1045,8 +946,7 @@
         };
 
     private static string ResolveStatusPill(ProcessDefinitionCanvasEditorNodeProjection node)
-        => node.Kind switch
-        {
+        => node.Kind switch {
             ProcessDefinitionCanvasNodeKind.Role when node.RoleKey is not null => "Role",
             ProcessDefinitionCanvasNodeKind.Artifact when !string.IsNullOrWhiteSpace(node.ArtifactKey) => "Artifact",
             ProcessDefinitionCanvasNodeKind.SubprocessBoundary => "Subprocess",
@@ -1055,8 +955,7 @@
         };
 
     private static string ResolveAccentColor(string tone)
-        => tone switch
-        {
+        => tone switch {
             "success" => "#059669",
             "warning" => "#d97706",
             "accent" => "#db2777",
@@ -1065,8 +964,7 @@
         };
 
     private static string ResolvePaletteKey(string tone)
-        => tone switch
-        {
+        => tone switch {
             "success" => "success",
             "warning" => "warning",
             "accent" => "secondary",
@@ -1076,8 +974,7 @@
         };
 
     private static string ResolveChipTone(string tone)
-        => tone switch
-        {
+        => tone switch {
             "success" => "success",
             "warning" => "warning",
             "accent" => "accent",
@@ -1085,8 +982,7 @@
         };
 
     private static string ResolveLinkTone(string tone)
-        => tone switch
-        {
+        => tone switch {
             "success" => "success",
             "warning" => "warning",
             "accent" => "accent",
@@ -1095,8 +991,7 @@
         };
 
     private static string ResolveToolboxTone(ProcessDefinitionCanvasToolboxActionKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasToolboxActionKind.RoleBinding => "success",
             ProcessDefinitionCanvasToolboxActionKind.ArtifactExpectation => "info",
             ProcessDefinitionCanvasToolboxActionKind.BranchRouter => "warning",
@@ -1113,8 +1008,7 @@
            (nodeKind == ProcessDefinitionCanvasNodeKind.SubprocessBoundary && portKind == ProcessDefinitionCanvasPortKind.SubprocessBoundary);
 
     private static string ResolvePortId(ProcessDefinitionCanvasPortKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasPortKind.StructuralInput => StructuralInputPortId,
             ProcessDefinitionCanvasPortKind.StructuralOutput => StructuralOutputPortId,
             ProcessDefinitionCanvasPortKind.RoleBinding => RoleBindingPortId,
@@ -1124,8 +1018,7 @@
         };
 
     private static string ResolveSourcePort(ProcessDefinitionCanvasEdgeKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasEdgeKind.RoleBinding => RoleBindingPortId,
             ProcessDefinitionCanvasEdgeKind.ArtifactExpectation => ArtifactExpectationPortId,
             ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => SubprocessBoundaryPortId,
@@ -1133,8 +1026,7 @@
         };
 
     private static string ResolveTargetPort(ProcessDefinitionCanvasEdgeKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasEdgeKind.RoleBinding => RoleBindingPortId,
             ProcessDefinitionCanvasEdgeKind.ArtifactExpectation => ArtifactExpectationPortId,
             ProcessDefinitionCanvasEdgeKind.SubprocessBoundary => SubprocessBoundaryPortId,
@@ -1142,8 +1034,7 @@
         };
 
     private static string ResolvePortTone(ProcessDefinitionCanvasPortKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessDefinitionCanvasPortKind.RoleBinding => "success",
             ProcessDefinitionCanvasPortKind.ArtifactExpectation => "info",
             ProcessDefinitionCanvasPortKind.SubprocessBoundary => "accent",
@@ -1152,8 +1043,7 @@
         };
 
     private static string ResolveNodeKeyText(ProcessDefinitionCanvasEditorNodeProjection node)
-        => node.Kind switch
-        {
+        => node.Kind switch {
             ProcessDefinitionCanvasNodeKind.Artifact when !string.IsNullOrWhiteSpace(node.ArtifactKey) => node.ArtifactKey,
             ProcessDefinitionCanvasNodeKind.Role when node.RoleKey is { } roleKey => roleKey.Value,
             _ => node.StepKey?.Value ?? node.NodeKey.Value
@@ -1173,8 +1063,7 @@
     private static string BuildEdgeTestId(ProcessDefinitionCanvasEdgeKey key)
         => $"processes-canvas-edge-{NormalizeTestId(key.Value)}";
 
-    private static string NormalizeTestId(string value)
-    {
+    private static string NormalizeTestId(string value) {
         var normalized = new string(value
             .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
             .ToArray());

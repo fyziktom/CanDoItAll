@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <ProcessesAssetMode Condition="'$(ProcessesAssetMode)' == ''">Parity</ProcessesAssetMode>
+    <OutputPath>bin/$(ProcessesAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(ProcessesAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(ProcessesAssetMode)' == 'Fast'">$(DefineConstants);PROCESSES_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Markdown" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <ProjectReference Include="../../UI/CanDoItAll.Processes.UI/CanDoItAll.Processes.UI.csproj" />
+    <Content Remove="wwwroot/css/processes-fast.css" Condition="'$(ProcessesAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(ProcessesAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireProcessesTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(ProcessesAssetMode)' != 'Parity' and '$(ProcessesAssetMode)' != 'Fast'"
+           Text="ProcessesAssetMode must be Parity or Fast." />
+    <Error Condition="'$(ProcessesAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(ProcessesAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/processes-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run processes:css:build." />
+  </Target>
+</Project>

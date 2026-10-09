@@ -117,7 +117,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
             await using var database = await ContextAsync(services);
             await MigrateCurrentAsync(database);
             await seed(database);
-            Assert.Empty(await database.Set<Project>().ToArrayAsync());
+            Assert.Empty(await database.Set<Project>().Select(project => project.Id).ToArrayAsync());
             Assert.Empty(await database.Set<ProjectObjectRecord>().ToArrayAsync());
             expected = await SnapshotDataAsync(database);
             Assert.NotEmpty(expected);

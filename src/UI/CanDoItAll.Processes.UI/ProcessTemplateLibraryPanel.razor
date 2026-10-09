@@ -1,4 +1,6 @@
-@namespace CanDoItAll.Modules.Processes
+@namespace CanDoItAll.Processes.UI
+@using CanDoItAll.Components.Mermaid
+@using CanDoItAll.Conversations.Components
 @using CanDoItAll.Processes.Projections
 
 <div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-template-library">
@@ -15,8 +17,7 @@
         </Cluster>
     </Split>
 
-    @if (TemplateCatalog.LastImportReceipt is not null)
-    {
+    @if (TemplateCatalog.LastImportReceipt is not null) {
         <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-template-library-import-receipt">
             @($"{TemplateCatalog.LastImportReceipt.Status}: {TemplateCatalog.LastImportReceipt.Summary}")
         </p>
@@ -49,8 +50,7 @@
             </Cluster>
 
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Category" />
-            @foreach (var category in TemplateCatalog.Categories)
-            {
+            @foreach (var category in TemplateCatalog.Categories) {
                 <Button Text="@($"{category.Label} ({category.Count})")"
                         Icon="@ResolveCategoryIcon(category.Kind)"
                         Size="ButtonSize.Small"
@@ -62,16 +62,12 @@
             }
 
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Results" />
-            @if (TemplateCatalog.Items.Count == 0)
-            {
+            @if (TemplateCatalog.Items.Count == 0) {
                 <EmptyState Eyebrow="No templates"
                             Title="No template items match"
                             Description="Clear the search or select a broader category." />
-            }
-            else
-            {
-                @foreach (var item in TemplateCatalog.Items)
-                {
+            } else {
+                @foreach (var item in TemplateCatalog.Items) {
                     <Button Text="@item.Title"
                             Icon="@ResolveItemIcon(item.Kind)"
                             Size="ButtonSize.Small"
@@ -82,8 +78,7 @@
                     <p class="text-xs leading-5 text-slate-500">@item.Summary</p>
                     <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                         <StatusBadge Tone="neutral" Text="@item.CategoryLabel" />
-                        @foreach (var fact in item.Facts.Take(2))
-                        {
+                        @foreach (var fact in item.Facts.Take(2)) {
                             <StatusBadge Tone="@ResolveFactTone(fact)" Text="@($"{fact.Label}: {fact.Value}")" />
                         }
                     </Cluster>
@@ -92,14 +87,11 @@
         </Stack>
 
         <Stack GapScale="LayoutGap.Small" Class="lg:col-span-2" data-testid="processes-template-library-preview">
-            @if (TemplateCatalog.Preview is null || TemplateCatalog.SelectedItem is null)
-            {
+            @if (TemplateCatalog.Preview is null || TemplateCatalog.SelectedItem is null) {
                 <EmptyState Eyebrow="Preview"
                             Title="Select a template item"
                             Description="Template previews include generated Markdown, generated Mermaid, canonical JSON, and a structure tree." />
-            }
-            else
-            {
+            } else {
                 var preview = TemplateCatalog.Preview;
                 <Split Gap="LayoutGap.Small">
                     <Stack GapScale="LayoutGap.Tiny">
@@ -115,8 +107,7 @@
                 </Split>
 
                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
-                    @foreach (var tab in PreviewTabs)
-                    {
+                    @foreach (var tab in PreviewTabs) {
                         <Button Text="@ResolvePreviewTabText(tab)"
                                 Icon="@ResolvePreviewTabIcon(tab)"
                                 Size="ButtonSize.Small"
@@ -132,12 +123,10 @@
                 <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                     <Stack GapScale="LayoutGap.Small" data-testid="processes-template-library-imports">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Import" />
-                        @if (ShouldShowTargetStepPicker(preview))
-                        {
+                        @if (ShouldShowTargetStepPicker(preview)) {
                             @RenderTargetStepPicker()
                         }
-                        @if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Process)
-                        {
+                        @if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Process) {
                             <Button Text="Import process"
                                     Icon="account_tree"
                                     Size="ButtonSize.Small"
@@ -145,9 +134,7 @@
                                     Disabled="@(Disabled || !CanImport(ProcessTemplateImportCommandKind.ImportProcess))"
                                     Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportProcess, TemplateCatalog.SelectedItem.Key))"
                                     data-testid="processes-template-library-import-process" />
-                        }
-                        else if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Role)
-                        {
+                        } else if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Role) {
                             <Button Text="Import role"
                                     Icon="badge"
                                     Size="ButtonSize.Small"
@@ -155,9 +142,7 @@
                                     Disabled="@(Disabled || !CanImport(ProcessTemplateImportCommandKind.ImportRole))"
                                     Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportRole, TemplateCatalog.SelectedItem.Key))"
                                     data-testid="processes-template-library-import-role" />
-                        }
-                        else if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Artifact)
-                        {
+                        } else if (TemplateCatalog.SelectedItem.Kind == ProcessTemplateCatalogItemKind.Artifact) {
                             <Button Text="Import artifact"
                                     Icon="inventory_2"
                                     Size="ButtonSize.Small"
@@ -170,26 +155,20 @@
 
                     <Stack GapScale="LayoutGap.Small" data-testid="processes-template-library-related">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Related components" />
-                        @if (preview.RelatedComponents.Count == 0)
-                        {
+                        @if (preview.RelatedComponents.Count == 0) {
                             <p class="text-sm leading-6 text-slate-600">No related role or artifact components are projected for this template.</p>
-                        }
-                        else
-                        {
-                            @foreach (var related in preview.RelatedComponents)
-                            {
+                        } else {
+                            @foreach (var related in preview.RelatedComponents) {
                                 <div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildRelatedTestId(related.Key)">
                                     <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                         <StatusBadge Tone="neutral" Text="@related.Kind.ToString()" />
-                                        @if (related.IsImported)
-                                        {
+                                        @if (related.IsImported) {
                                             <StatusBadge Tone="success" Text="Imported" />
                                         }
                                     </Cluster>
                                     <p class="mt-2 text-sm font-semibold text-slate-900">@related.Title</p>
                                     <p class="text-xs leading-5 text-slate-500">@related.Summary</p>
-                                    @if (related.Kind == ProcessTemplateCatalogItemKind.Role)
-                                    {
+                                    @if (related.Kind == ProcessTemplateCatalogItemKind.Role) {
                                         <Button Text="Import role"
                                                 Icon="badge"
                                                 Size="ButtonSize.Small"
@@ -197,9 +176,7 @@
                                                 Disabled="@Disabled"
                                                 Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportRole, related.Key))"
                                                 data-testid="@BuildRelatedImportTestId(ProcessTemplateImportCommandKind.ImportRole, related.Key)" />
-                                    }
-                                    else if (related.Kind == ProcessTemplateCatalogItemKind.Artifact)
-                                    {
+                                    } else if (related.Kind == ProcessTemplateCatalogItemKind.Artifact) {
                                         <Button Text="Import artifact"
                                                 Icon="inventory_2"
                                                 Size="ButtonSize.Small"
@@ -243,60 +220,46 @@
     [Parameter]
     public EventCallback<ProcessTemplateImportCommand> ExecuteImport { get; set; }
 
-    private ProcessTemplateCatalogVersionToken? syncedVersionToken;
-    private ProcessTemplateCatalogQueryProjection? syncedQuery;
-    private string pendingSearchText = string.Empty;
-    private ProcessDefinitionStepKey? selectedTargetStepKey;
-
-    protected override void OnParametersSet()
-    {
-        if (syncedVersionToken == TemplateCatalog.VersionToken &&
-            Equals(syncedQuery, TemplateCatalog.Query))
-        {
-            return;
-        }
-
-        syncedVersionToken = TemplateCatalog.VersionToken;
-        syncedQuery = TemplateCatalog.Query;
-        pendingSearchText = TemplateCatalog.Query.SearchText ?? string.Empty;
-        selectedTargetStepKey = TemplateCatalog.ImportTargets.FirstOrDefault(target => target.IsDefaultTarget)?.StepKey ??
-                                TemplateCatalog.ImportTargets.FirstOrDefault()?.StepKey;
+    [Parameter] public ProcessTemplateBrowserState State { get; set; } = new();
+    private string pendingSearchText {
+        get => State.PendingSearchText;
+        set => State.PendingSearchText = value;
+    }
+    private ProcessDefinitionStepKey? selectedTargetStepKey {
+        get => State.SelectedTargetStepKey;
+        set => State.SelectedTargetStepKey = value;
     }
 
+    protected override void OnParametersSet() => State.Observe(Scope, TemplateCatalog);
+
     private Task ApplySearchAsync()
-        => QueryChanged.InvokeAsync(TemplateCatalog.Query with
-        {
+        => QueryChanged.InvokeAsync(TemplateCatalog.Query with {
             SearchText = pendingSearchText.Trim(),
             SelectedItemKey = null
         });
 
-    private Task ClearSearchAsync()
-    {
+    private Task ClearSearchAsync() {
         pendingSearchText = string.Empty;
-        return QueryChanged.InvokeAsync(TemplateCatalog.Query with
-        {
+        return QueryChanged.InvokeAsync(TemplateCatalog.Query with {
             SearchText = string.Empty,
             SelectedItemKey = null
         });
     }
 
     private Task SelectCategoryAsync(ProcessTemplateCatalogCategoryKind category)
-        => QueryChanged.InvokeAsync(TemplateCatalog.Query with
-        {
+        => QueryChanged.InvokeAsync(TemplateCatalog.Query with {
             Category = category,
             SelectedItemKey = null
         });
 
     private Task SelectItemAsync(ProcessTemplateCatalogItemKey itemKey)
-        => QueryChanged.InvokeAsync(TemplateCatalog.Query with
-        {
+        => QueryChanged.InvokeAsync(TemplateCatalog.Query with {
             SelectedItemKey = itemKey,
             PreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview
         });
 
     private Task SelectPreviewTabAsync(ProcessTemplateCatalogPreviewTabKind tab)
-        => QueryChanged.InvokeAsync(TemplateCatalog.Query with
-        {
+        => QueryChanged.InvokeAsync(TemplateCatalog.Query with {
             PreviewTab = tab
         });
 
@@ -321,8 +284,7 @@
             preview.RelatedComponents.Any(component => component.Kind == ProcessTemplateCatalogItemKind.Artifact));
 
     private RenderFragment RenderPreview(ProcessTemplateCatalogPreviewProjection preview) => @<div class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@BuildPreviewContentTestId(TemplateCatalog.Query.PreviewTab)">
-        @switch (TemplateCatalog.Query.PreviewTab)
-        {
+        @switch (TemplateCatalog.Query.PreviewTab) {
             case ProcessTemplateCatalogPreviewTabKind.Overview:
                 <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                     <StatusBadge Tone="neutral" Text="@preview.Kind.ToString()" />
@@ -332,9 +294,11 @@
                 <p class="mt-3 text-sm leading-6 text-slate-700">@preview.Summary</p>
                 break;
             case ProcessTemplateCatalogPreviewTabKind.Markdown:
+                <ConversationMarkdownRenderer Markdown="@preview.GeneratedMarkdown" />
                 <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-700" data-testid="processes-template-library-markdown">@preview.GeneratedMarkdown</pre>
                 break;
             case ProcessTemplateCatalogPreviewTabKind.Diagram:
+                <MermaidDiagram Source="@preview.GeneratedMermaid" Title="Template diagram" />
                 <pre class="max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-700" data-testid="processes-template-library-diagram">@preview.GeneratedMermaid</pre>
                 break;
             case ProcessTemplateCatalogPreviewTabKind.Json:
@@ -342,8 +306,7 @@
                 break;
             case ProcessTemplateCatalogPreviewTabKind.Structure:
                 <ul role="tree" aria-label="Template structure" class="space-y-2" data-testid="processes-template-library-structure">
-                    @foreach (var node in preview.Structure)
-                    {
+                    @foreach (var node in preview.Structure) {
                         <li role="treeitem"
                             class="rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                             style="@($"margin-left:{node.Depth * 0.75}rem")">
@@ -351,8 +314,7 @@
                                 <StatusBadge Tone="neutral" Text="@node.Kind.ToString()" />
                                 <span class="font-semibold text-slate-900">@node.Title</span>
                             </Cluster>
-                            @if (!string.IsNullOrWhiteSpace(node.Summary))
-                            {
+                            @if (!string.IsNullOrWhiteSpace(node.Summary)) {
                                 <p class="mt-1 text-xs leading-5 text-slate-500">@node.Summary</p>
                             }
                         </li>
@@ -369,15 +331,13 @@
                 value="@selectedTargetStepKey?.Value"
                 @onchange="UpdateTargetStep"
                 data-testid="processes-template-library-artifact-target">
-            @foreach (var target in TemplateCatalog.ImportTargets)
-            {
+            @foreach (var target in TemplateCatalog.ImportTargets) {
                 <option value="@target.StepKey.Value">@target.Title</option>
             }
         </select>
     </Stack>;
 
-    private void UpdateTargetStep(ChangeEventArgs args)
-    {
+    private void UpdateTargetStep(ChangeEventArgs args) {
         var value = ReadChangeValue(args);
         selectedTargetStepKey = string.IsNullOrWhiteSpace(value)
             ? null
@@ -388,8 +348,7 @@
         => args.Value?.ToString() ?? string.Empty;
 
     private static string ResolveCategoryIcon(ProcessTemplateCatalogCategoryKind category)
-        => category switch
-        {
+        => category switch {
             ProcessTemplateCatalogCategoryKind.All => "select_all",
             ProcessTemplateCatalogCategoryKind.Processes => "account_tree",
             ProcessTemplateCatalogCategoryKind.Roles => "badge",
@@ -398,8 +357,7 @@
         };
 
     private static string ResolveItemIcon(ProcessTemplateCatalogItemKind kind)
-        => kind switch
-        {
+        => kind switch {
             ProcessTemplateCatalogItemKind.Process => "account_tree",
             ProcessTemplateCatalogItemKind.Role => "badge",
             ProcessTemplateCatalogItemKind.Artifact => "inventory_2",
@@ -407,8 +365,7 @@
         };
 
     private static string ResolvePreviewTabText(ProcessTemplateCatalogPreviewTabKind tab)
-        => tab switch
-        {
+        => tab switch {
             ProcessTemplateCatalogPreviewTabKind.Overview => "Overview",
             ProcessTemplateCatalogPreviewTabKind.Markdown => "Markdown",
             ProcessTemplateCatalogPreviewTabKind.Diagram => "Diagram",
@@ -418,8 +375,7 @@
         };
 
     private static string ResolvePreviewTabIcon(ProcessTemplateCatalogPreviewTabKind tab)
-        => tab switch
-        {
+        => tab switch {
             ProcessTemplateCatalogPreviewTabKind.Overview => "info",
             ProcessTemplateCatalogPreviewTabKind.Markdown => "article",
             ProcessTemplateCatalogPreviewTabKind.Diagram => "schema",
@@ -432,8 +388,7 @@
         => string.Equals(fact.Label, "Import", StringComparison.OrdinalIgnoreCase) ? "success" : "neutral";
 
     private static string BuildCategoryTestId(ProcessTemplateCatalogCategoryKind category)
-        => category switch
-        {
+        => category switch {
             ProcessTemplateCatalogCategoryKind.All => "processes-template-library-category-all",
             ProcessTemplateCatalogCategoryKind.Processes => "processes-template-library-category-processes",
             ProcessTemplateCatalogCategoryKind.Roles => "processes-template-library-category-roles",
@@ -450,8 +405,7 @@
     private static string BuildRelatedImportTestId(
         ProcessTemplateImportCommandKind kind,
         ProcessTemplateCatalogItemKey key)
-        => kind switch
-        {
+        => kind switch {
             ProcessTemplateImportCommandKind.ImportRole => $"processes-template-library-import-role-{NormalizeForTestId(key.Value)}",
             ProcessTemplateImportCommandKind.ImportArtifact => $"processes-template-library-import-artifact-{NormalizeForTestId(key.Value)}",
             _ => $"processes-template-library-import-{NormalizeForTestId(key.Value)}"
@@ -463,8 +417,7 @@
     private static string BuildPreviewContentTestId(ProcessTemplateCatalogPreviewTabKind tab)
         => $"processes-template-library-preview-{NormalizeForTestId(tab.ToString())}";
 
-    private static string NormalizeForTestId(string value)
-    {
+    private static string NormalizeForTestId(string value) {
         var normalized = new string(value
             .Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
             .ToArray())

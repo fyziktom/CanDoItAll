@@ -112,8 +112,8 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
     private static async Task<Project> SeedLegacyAsync(AppDbContext database, bool includeUnambiguous) {
         var project = new Project { Name = "Unambiguous saved project", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
         var recreated = new Project { Name = "Recreated saved ID", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
-        database.AddRange(project, recreated);
-        await database.SaveChangesAsync();
+        await InsertLegacyProjectAsync(database, project);
+        await InsertLegacyProjectAsync(database, recreated);
         await database.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "Projects_ProjectRetirements" ("LifetimeId", "ProjectId", "RetiredAtUtc")
             VALUES ({Guid.NewGuid()}, {recreated.Id}, {SavedAt})
@@ -143,6 +143,13 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await database.SaveChangesAsync();
         return project;
     }
+
+    private static Task InsertLegacyProjectAsync(AppDbContext database, Project project) => database.Database.ExecuteSqlInterpolatedAsync($"""
+        INSERT INTO "Projects_Projects" ("Id", "LifetimeId", "LegacyAgentAccessBindingEligible", "Name", "Slug",
+            "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+        VALUES ({project.Id}, {project.LifetimeId}, FALSE, {project.Name}, {project.Slug}, {project.Description},
+            {project.Objective}, {(int)project.Status}, {project.CurrentPhase}, {project.TargetDateUtc}, {project.CreatedAtUtc}, {project.UpdatedAtUtc});
+        """);
 
     private static async Task InsertLegacyReferencesAsync(AppDbContext database, Guid? projectId) {
         var notes = "Original reference\nwith trailing spaces  ";

@@ -26,7 +26,9 @@
     "structure:css:build": "npm run structure:build --prefix Tailwind",
     "content:css:build": "npm run content:build --prefix Tailwind",
     "operators:css:build": "npm run operators:build --prefix Tailwind",
-    "execution:css:build": "npm run execution:build --prefix Tailwind"
+    "execution:css:build": "npm run execution:build --prefix Tailwind",
+    "processes:css:build": "npm run processes:build --prefix Tailwind",
+    "processes:css:watch": "npm run processes:watch --prefix Tailwind"
   },
   "repository": {
     "type": "git",

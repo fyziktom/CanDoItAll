@@ -236,11 +236,17 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
 
     private static async Task SeedAsync(AppDbContext context) {
         var project = new Project { Name = "Preserved project", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Projects_Projects" ("Id", "LifetimeId", "LegacyAgentAccessBindingEligible", "Name", "Slug",
+                "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({project.Id}, {project.LifetimeId}, FALSE, {project.Name}, {project.Slug}, {project.Description},
+                {project.Objective}, {(int)project.Status}, {project.CurrentPhase}, NULL, {SavedAt}, {SavedAt});
+            """);
         var person = new Party { PartyType = PartyType.Person, DisplayName = "Original person", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
         var organization = new Party { PartyType = PartyType.Organization, DisplayName = "Original organization", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
         var affiliation = new PartyOrganizationAffiliation { PersonPartyId = person.Id, OrganizationPartyId = organization.Id,
             AffiliationKind = PartyOrganizationAffiliationKind.Employee, CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
-        context.AddRange(project, person, organization, affiliation);
+        context.AddRange(person, organization, affiliation);
         context.Add(new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "legacy-task", ObjectType = ProjectObjectType.WorkItem,
             Title = "Preserved native task", MetadataJson = "{\"unknown\":{\"key\":7}}", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt });
         ProjectPartyAssignment[] assignments = [
@@ -281,7 +287,8 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             WHERE "AssignmentKind" <> 'WorkItemAssignee' ORDER BY "Value"
             """).ToArrayAsync();
         var other = await context.Database.SqlQueryRaw<string>("""
-            SELECT 'project:' || to_jsonb(row)::text AS "Value" FROM "Projects_Projects" row
+            SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || to_jsonb(row))::text AS "Value"
+                FROM "Projects_Projects" row
             UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
             UNION ALL SELECT 'party:' || to_jsonb(row)::text AS "Value" FROM "CrmHr_Parties" row
             UNION ALL SELECT 'affiliation:' || to_jsonb(row)::text AS "Value" FROM "CrmHr_PartyOrganizationAffiliations" row
@@ -299,7 +306,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
     }
 
     private static async Task AssertCurrentReferencesOnlyAsync(AppDbContext context) {
-        var project = await context.Set<Project>().AsNoTracking().SingleAsync();
+        var project = await context.Set<Project>().Select(project => new { project.Id, project.LifetimeId }).SingleAsync();
         var assignments = await context.Set<ProjectWorkAssignmentRecord>().AsNoTracking().ToArrayAsync();
         Assert.Equal(3, assignments.Length);
         var current = assignments.Where(row => row.ProjectId == project.Id).ToArray();

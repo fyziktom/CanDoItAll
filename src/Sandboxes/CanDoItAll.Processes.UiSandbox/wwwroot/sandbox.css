@@ -1,0 +1,5 @@
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+.process-scenario-fields { flex: 0 0 18rem; }
+.process-scenario-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.process-scenario-body > * { min-height: 0; flex: 1; }

@@ -1,0 +1,28 @@
+{
+  "profiles": {
+    "Processes sandbox": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://127.0.0.1:5407",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER": "1",
+        "ProcessesAssetMode": "Parity"
+      }
+    },
+    "Processes sandbox Fast": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://127.0.0.1:5408",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER": "1",
+        "ProcessesAssetMode": "Fast"
+      }
+    }
+  }
+}

@@ -1512,12 +1512,10 @@ public sealed partial class ProcessWorkspaceShellTests
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
-        var usageOptions = (CdaChartOptions)typeof(ProcessWorkspaceShell)
-            .GetField("RuntimeUsageChartOptions", BindingFlags.NonPublic | BindingFlags.Static)!
-            .GetValue(null)!;
-        var usageSeries = (IReadOnlyList<CdaChartSeries>)typeof(ProcessWorkspaceShell)
-            .GetProperty("RuntimeUsageSeries", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(cut.Instance)!;
+        var usageChart = cut.FindComponents<CdaChart>()
+            .Single(chart => chart.Instance.Title == "Token and cost telemetry").Instance;
+        var usageOptions = usageChart.Options;
+        var usageSeries = usageChart.Series;
         Assert.Equal("k tokens / min / USD x1k", usageOptions.YAxisTitle);
         Assert.Equal(["Tokens (k)", "Minutes", "Cost (USD x1k)"], usageSeries.Select(series => series.Name));
 
@@ -3340,6 +3338,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public ProcessWorkspaceShellRequest? LastRequest => Requests.LastOrDefault();
 
         public int FeedDefaultsCommandCount { get; private set; }
+        public TaskCompletionSource<ProcessDefinitionCatalogCommandReceipt>? FeedCompletion { get; set; }
 
         public ProcessDefinitionEditorCommand? LastEditorCommand { get; private set; }
 
@@ -3352,6 +3351,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public ProcessTemplateImportCommand? LastTemplateImportCommand { get; private set; }
 
         public ProcessRuntimeOperatorActionCommand? LastOperatorActionCommand { get; private set; }
+        public TaskCompletionSource<ProcessRuntimeOperatorActionResult>? OperatorCompletion { get; set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
@@ -3387,6 +3387,9 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             FeedDefaultsCommandCount++;
+            if (FeedCompletion is not null) {
+                return FeedCompletion.Task;
+            }
             return Task.FromResult(new ProcessDefinitionCatalogCommandReceipt(
                 Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                 ProcessDefinitionCatalogCommandKind.FeedDefaults,
@@ -3554,6 +3557,9 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             LastOperatorActionCommand = command;
+            if (OperatorCompletion is not null) {
+                return OperatorCompletion.Task;
+            }
             return Task.FromResult(new ProcessRuntimeOperatorActionResult(
                 command.RunId,
                 command.StepInstanceId,

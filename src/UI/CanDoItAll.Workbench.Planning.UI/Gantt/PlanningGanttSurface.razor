@@ -125,19 +125,21 @@
             </SurfaceCard>
 
             @if (showDependencies && projection.IsValid) {
-                <SectionCard Class="project-structure-gantt-panel__dependencies" Title="Schedule dependencies" Description="Remove the exact displayed link. Task dates remain unchanged.">
-                    @foreach (var dependency in accepted.Dependencies) {
-                        var predecessor = accepted.Tasks.First(task => task.Id == dependency.PredecessorId);
-                        var successor = accepted.Tasks.First(task => task.Id == dependency.SuccessorId);
-                        <Cluster Gap="LayoutGap.Small" @key="dependency.Id">
-                            <TextBlock Value="@($"{predecessor.Title} → {successor.Title}")" />
-                            <Button Text="Remove dependency" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@(!CanMutate)"
-                                    aria-label="@($"Remove dependency from {predecessor.Title} to {successor.Title}")"
-                                    Click="@(() => dependencyCallback.InvokeAsync(new(accepted.Origin,
-                                        GanttDependencyPlanner.PlanRemove(accepted.Tasks, accepted.Dependencies, dependency.Id))))" />
-                        </Cluster>
-                    }
-                </SectionCard>
+                <Stack Class="project-structure-gantt-panel__dependencies">
+                    <SectionCard Title="Schedule dependencies" Description="Remove the exact displayed link. Task dates remain unchanged.">
+                        @foreach (var dependency in accepted.Dependencies) {
+                            var predecessor = accepted.Tasks.First(task => task.Id == dependency.PredecessorId);
+                            var successor = accepted.Tasks.First(task => task.Id == dependency.SuccessorId);
+                            <Cluster Gap="LayoutGap.Small" @key="dependency.Id">
+                                <TextBlock Value="@($"{predecessor.Title} → {successor.Title}")" />
+                                <Button Text="Remove dependency" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@(!CanMutate)"
+                                        aria-label="@($"Remove dependency from {predecessor.Title} to {successor.Title}")"
+                                        Click="@(() => dependencyCallback.InvokeAsync(new(accepted.Origin,
+                                            GanttDependencyPlanner.PlanRemove(accepted.Tasks, accepted.Dependencies, dependency.Id))))" />
+                            </Cluster>
+                        }
+                    </SectionCard>
+                </Stack>
             }
 
             @if (projection.ProjectionOnlyTaskIds.Count > 0)

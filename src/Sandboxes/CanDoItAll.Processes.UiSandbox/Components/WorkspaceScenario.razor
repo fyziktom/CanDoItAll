@@ -1,0 +1,125 @@
+@page "/"
+@page "/workspace"
+@page "/live"
+@page "/two"
+@implements IAsyncDisposable
+@inject NavigationManager Navigation
+@inject CanDoItAll.FileTools.FileInteraction.Components.FileInteractionComponentComposition InteractionComposition
+@using CanDoItAll.AgentFramework.UI.Chat
+@using CanDoItAll.AgentFramework.UI.Runtime
+
+<PageTitle>Processes - independent scenarios</PageTitle>
+<Toolbar data-testid="process-scenario-toolbar">
+    <ToolbarRow>
+        <ToolbarActions>
+            <Button Text="Workspace" Click="@(() => Navigation.NavigateTo("/workspace"))" />
+            <Button Text="Live processes" Click="@(() => Navigation.NavigateTo("/live"))" />
+            <Button Text="Two workspaces" Click="@(() => Navigation.NavigateTo("/two"))" />
+            <Button Text="Change scope" Click="session.ChangeScopeAsync" />
+            <Button Text="Fail refresh" Click="session.InjectReadFailureAsync" />
+            <Button Text="Files" Click="() => session.OpenRunFilesAsync(session.CurrentShell.Runtime.Runs[0].RunId.Value)" />
+        </ToolbarActions>
+        <ToolbarFields Class="process-scenario-fields">
+            <select class="cda-input" aria-label="Conversation scenario" value="@chat.Scenario" @onchange="ChangeChatScenario">
+                @foreach (var scenario in Enum.GetValues<ProcessChatScenario>()) {
+                    <option value="@scenario">@scenario</option>
+                }
+            </select>
+        </ToolbarFields>
+    </ToolbarRow>
+</Toolbar>
+<div class="process-scenario-body" data-testid="process-scenario-ready">
+    @if (Navigation.Uri.EndsWith("/live", StringComparison.Ordinal)) {
+        <LiveProcessesSurface Session="session">
+            <CancellationContent>
+                <ProcessRunCancellationSurface Status="@(session.RunDetailSnapshot?.Status ?? ProcessProjectedRunStatus.Active)"
+                    Message="cancellationMessage" CommandFinished="@(cancellationMessage is not null)" CancelAsync="CancelScenario" />
+            </CancellationContent>
+        </LiveProcessesSurface>
+    } else {
+        <ProcessWorkspaceSurface Session="session" ManagerChat="ChatBinding" />
+        @if (Navigation.Uri.EndsWith("/two", StringComparison.Ordinal)) {
+            <ProcessWorkspaceSurface Session="secondSession" ManagerChat="SecondChatBinding" />
+        }
+    }
+</div>
+@if (files is not null) {
+    <ProcessRunFilesSurface IsOpen="true" View="files.View" InteractionComposition="InteractionComposition" ActivateAsync="files.ActivateAsync"
+        RefreshAsync="files.RefreshAsync" CloseAsync="CloseFilesAsync" OpenInteractionExternallyCallback="files.RecordExternalAction" />
+}
+<Dialog IsOpen="executionOpen" Title="Scenario execution history" OnClose="() => executionOpen = false" TestId="process-scenario-execution">
+    <ChildContent>
+        <AgentExecutionLogSurface State="executionLog" />
+    </ChildContent>
+</Dialog>
+
+@code {
+    private readonly ProcessScenarioSession session = new();
+    private readonly ProcessScenarioSession secondSession = new();
+    private readonly ProcessChatFixture chat = new();
+    private readonly ProcessChatFixture secondChat = new();
+    private ProcessFileScenario? files;
+    private bool executionOpen;
+    private string? cancellationMessage;
+    private bool disposed;
+    private readonly AgentExecutionLogState executionLog = new("Scenario execution", "Deterministic recorded activity", "Local scenario", "Completed", "success", "1s", null,
+        [new(Guid.Parse("51000000-0000-0000-0000-000000000003"), Guid.Parse("51000000-0000-0000-0000-000000000004"), "Completed", "success", "Read process context", "12:00", "Selected definition and run were observed.")]);
+    private ChatWorkspaceBinding ChatBinding => new(chat.Presentation, EventCallback.Factory.Create<ChatWorkspaceIntent>(this, ApplyChatIntent),
+        new(new(Guid.Parse("51000000-0000-0000-0000-000000000005")), "Agent responding", "info", "Deterministic process activity", false));
+    private ChatWorkspaceBinding SecondChatBinding => new(secondChat.Presentation, EventCallback.Factory.Create<ChatWorkspaceIntent>(this, secondChat.Apply));
+
+    protected override void OnInitialized() {
+        session.Changed += Changed;
+        secondSession.Changed += Changed;
+        session.Navigate += Navigate;
+        secondSession.Navigate += Navigate;
+        Navigation.LocationChanged += LocationChanged;
+    }
+    private void LocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) {
+        if (!disposed) {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+    private void Navigate(string path) => Navigation.NavigateTo(path);
+    private void Changed() => _ = InvokeAsync(async () => {
+        if (disposed) {
+            return;
+        }
+        if (session.FilesRunId is { } runId && files?.View.RunId != runId) {
+            if (files is not null) {
+                await files.DisposeAsync();
+            }
+            files = new(runId);
+        }
+        StateHasChanged();
+    });
+    private void ChangeChatScenario(ChangeEventArgs args) {
+        var scenario = Enum.Parse<ProcessChatScenario>(args.Value!.ToString()!);
+        chat.SetScenario(scenario);
+        session.SetChatScenario(scenario);
+    }
+    private void ApplyChatIntent(ChatWorkspaceIntent intent) {
+        chat.Apply(intent);
+        executionOpen = intent.Action is ChatWorkspaceAction.ExecutionEntry or ChatWorkspaceAction.ExecutionHistory;
+    }
+    private void CancelScenario() => cancellationMessage = "Cancellation accepted in this scenario.";
+    private async Task CloseFilesAsync() {
+        var old = files;
+        files = null;
+        await session.CloseFilesAsync();
+        if (old is not null) {
+            await old.DisposeAsync();
+        }
+    }
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        session.Changed -= Changed;
+        secondSession.Changed -= Changed;
+        session.Navigate -= Navigate;
+        secondSession.Navigate -= Navigate;
+        Navigation.LocationChanged -= LocationChanged;
+        if (files is not null) {
+            await files.DisposeAsync();
+        }
+    }
+}

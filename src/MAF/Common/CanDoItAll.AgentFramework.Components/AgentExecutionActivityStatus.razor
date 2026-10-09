@@ -1,3 +1,5 @@
 @using CanDoItAll.AgentFramework.UI.Chat
 
-<AgentActivitySurface State="@(new(StreamId.OperationId, StatusLabel, StatusTone, StatusMessage, HasSequenceGap))" />
+@if (!Headless) {
+    <AgentActivitySurface State="@Presentation" />
+}

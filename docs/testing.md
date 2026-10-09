@@ -134,6 +134,32 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+### Processes UI slice
+
+Build Processes.UI, the native Processes module and Web directly, followed by the
+[independent sandbox](../src/Sandboxes/CanDoItAll.Processes.UiSandbox/README.md) in both
+`ProcessesAssetMode=Parity` and `ProcessesAssetMode=Fast`. Use an isolated configuration
+such as `ProcUiProof` and set `CANDOITALL_TEST_CONFIGURATION` to that same value for browser
+child hosts. Production and native tests use an explicitly task-owned PostgreSQL 18
+endpoint; the sandbox itself does not require a database.
+
+| Owning project | Focused selection | Proof |
+| --- | --- | --- |
+| `tests/Components/CanDoItAll.Processes.UI.Tests` | `FullyQualifiedName~CanDoItAll.Tests.Components.ProcessesUI` | Complete light renderers, raw drafts, independent canvas identities, real Markdown files, public and transitive dependency guards |
+| `tests/Components/CanDoItAll.Tests.Components` | `FullyQualifiedName~ProcessWorkspaceShellTests\|FullyQualifiedName~ProcessRunFilesDialogTests\|FullyQualifiedName~ProcessRunCancellationActionTests\|FullyQualifiedName~ChatWorkspacePanelTests\|FullyQualifiedName~AgentExecutionActivityStatusTests\|FullyQualifiedName~ProjectStructurePageProcessLaunchScopeTests` | Native composition, controlled completion ordering, launch and cancellation, chat/voice/context and Workbench opening lifetime |
+| `tests/Unit/CanDoItAll.Tests.Unit` | `FullyQualifiedName~ProcessDefinitionCatalogProjectionTests\|FullyQualifiedName~ProcessProjectionPipelineTests\|FullyQualifiedName~ProcessLaunchAtomicCommitTests\|FullyQualifiedName~ProcessLaunchAgentOperationTests\|FullyQualifiedName~ProcessLaunchProducerRequestTests\|FullyQualifiedName~ProcessRuntimeOperatorApplicationServiceTests\|FullyQualifiedName~ProcessRunFileScopeProviderTests\|FullyQualifiedName~ProcessRunFilesCoordinatorTests\|FullyQualifiedName~ProjectStructureProcessLaunchSourceSnapshotMapperTests\|FullyQualifiedName~ProjectStructureProcessLaunchContextBuilderTests` | Actual affected owner and direct Workbench consumer regression floor |
+| `tests/Integration/CanDoItAll.Tests.Integration` | `FullyQualifiedName~Maf122ProcessExecutionIntegrationTests\|FullyQualifiedName~Maf122WorkflowProcessIntegrationTests\|FullyQualifiedName~ProcessLaunchProducerApiTests` | Real workflow/process execution, result/artifact, caller-intent and retained API receipt boundaries |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~ProcessesSandboxBrowserTests\|FullyQualifiedName~ProcessNativeBrowserTests\|FullyQualifiedName~ProcessShellSmokeTests` | Source/published Fast and Parity, all eight tabs, actual canvas/diagram/chart/file/chat assets, native launch/chat/files/cancellation and original route/canvas controls |
+| `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~ProcessWorkbenchBrowserTests\|FullyQualifiedName~ProcessVoiceBrowserTests` | Reviewed native workflow launch with delivered project link, plus actual voice ownership under permitted, denied and delayed browser media |
+
+Count expanded theories and partial test files before discovery. The browser host publishes
+from already built mode-specific outputs; build both modes before the four sandbox cases.
+It launches owned processes on ephemeral loopback ports and removes their owned fixtures.
+Native upstream inference uses an explicit-free loopback fixture, not an external provider.
+The lightweight test project belongs to Components and Stable and all explicit CI component
+selections, never to the product solution. See the [boundary record](architecture/processes-ui-boundary.md)
+for owner placement and proof limits, including the existing request-local authoring storage.
+
 ### Scheduler UI slice
 
 Build SchedulerPlanner.Contracts, SchedulerPlanner.UI, SchedulerPlanner.Presentation, the

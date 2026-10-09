@@ -1,0 +1,366 @@
+@namespace CanDoItAll.Processes.UI
+@if (State.HasInputErrors) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="processes-step-numeric-error">@(State.NumericInputError ?? "Loop budgets and retention must be non-negative whole numbers.")</Alert>
+}
+
+@if (State.HasConflict) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="processes-step-draft-conflict">A newer saved version is available. Your local edits and original version are retained.</Alert>
+}
+@if (State.IsDirty) {
+    <Button Text="Discard edits" Disabled="@Disabled" Click="State.Discard" data-testid="processes-step-discard" />
+}
+@using CanDoItAll.Processes.Projections
+
+<div class="mt-6 border-t border-slate-200 pt-5" data-testid="processes-definition-step-editor">
+    <Split Gap="LayoutGap.Small">
+        <Stack GapScale="LayoutGap.Tiny">
+            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Steps" />
+            <h3 class="text-sm font-semibold text-slate-900">Step editor</h3>
+            <p class="text-sm leading-6 text-slate-600">Basic info, operation contract, route targets, roles, artifacts, and subprocess mappings.</p>
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+            <StatusBadge Tone="info" Text="@($"{State.StepEditor.Steps.Count} step(s)")" />
+            <StatusBadge Tone="@ProcessStepEditorState.ResolveLintTone(State.StepEditor.Lint)" Text="@ProcessStepEditorState.ResolveLintText(State.StepEditor.Lint)" />
+        </Cluster>
+    </Split>
+
+    @if (!string.IsNullOrWhiteSpace(State.CommandNotice) || State.StepEditor.LastCommandReceipt is not null) {
+        <p class="mt-3 text-xs font-semibold text-slate-500" data-testid="processes-step-command-receipt">
+            @(State.StepEditor.LastCommandReceipt is null ? State.CommandNotice : $"{State.StepEditor.LastCommandReceipt.Status}: {State.StepEditor.LastCommandReceipt.Summary}")
+        </p>
+    }
+
+    @if (State.StepEditor.SelectedStep is null || State.SelectedStepKey is null) {
+        <EmptyState Eyebrow="No step"
+                    Title="No step selected"
+                    Description="Select a process definition step before editing operation contracts or routing." />
+    } else {
+        <Grid Gap="LayoutGap.Large" ColumnsLg="4" Class="mt-5" data-testid="processes-step-editor-layout">
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-step-list">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Step list" />
+                @foreach (var step in State.StepEditor.Steps) {
+                    <Button Text="@step.Title"
+                            Icon="@ProcessStepEditorState.ResolveStepIcon(step.StepKind)"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="@(step.StepKey == State.SelectedStepKey ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Disabled="@State.Disabled"
+                            Click="@(() => State.SelectStep(step.StepKey))"
+                            data-testid="@ProcessStepEditorState.BuildStepItemTestId(step.StepKey)" />
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                        <StatusBadge Tone="neutral" Text="@step.StepKind.ToString()" />
+                        <StatusBadge Tone="info" Text="@($"order {step.Order}")" />
+                    </Cluster>
+                }
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" Class="lg:col-span-2" data-testid="processes-step-editor-form">
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-basic">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Basic" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-title-input">Title</label>
+                    <input id="processes-step-title-input"
+                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           value="@State.StepTitle"
+                           @oninput="args => State.StepTitle = ProcessStepEditorState.ReadChangeValue(args)"
+                           data-testid="processes-step-title" />
+
+                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <label class="text-xs font-semibold text-slate-500" for="processes-step-kind-input">Kind</label>
+                            <select id="processes-step-kind-input"
+                                    class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                    value="@State.StepKind"
+                                    @onchange="args => State.StepKind = ProcessStepEditorState.ParseStepKind(args)"
+                                    data-testid="processes-step-kind">
+                                @foreach (var option in ProcessStepEditorState.StepKindOptions) {
+                                    <option value="@option">@option.ToString()</option>
+                                }
+                            </select>
+                        </Stack>
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <label class="text-xs font-semibold text-slate-500" for="processes-step-lead-hours-input">Lead hours</label>
+                            <input id="processes-step-lead-hours-input"
+                                   type="number"
+                                   min="0"
+                                   class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                   value="@State.TargetLeadHoursInput"
+                                   @oninput="args => State.TargetLeadHoursInput = ProcessStepEditorState.ReadChangeValue(args)"
+                                   data-testid="processes-step-target-lead-hours" />
+                        </Stack>
+                    </Grid>
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-subtitle-input">Subtitle</label>
+                    <input id="processes-step-subtitle-input"
+                           class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                           value="@State.StepSubtitle"
+                           @oninput="args => State.StepSubtitle = ProcessStepEditorState.ReadChangeValue(args)"
+                           data-testid="processes-step-subtitle" />
+
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-notes-input">Notes</label>
+                    <textarea id="processes-step-notes-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.StepNotes"
+                              @oninput="args => State.StepNotes = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-notes"></textarea>
+
+                    <Cluster Gap="LayoutGap.Medium" Class="flex-wrap">
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@State.AllowsManualSkip"
+                                   @onchange="args => State.AllowsManualSkip = ProcessStepEditorState.ParseBool(args)"
+                                   data-testid="processes-step-allows-manual-skip" />
+                            Manual skip
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@State.AllowsSafeRefusal"
+                                   @onchange="args => State.AllowsSafeRefusal = ProcessStepEditorState.ParseBool(args)"
+                                   data-testid="processes-step-allows-safe-refusal" />
+                            Safe refusal
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@State.RequiresApproval"
+                                   @onchange="args => State.RequiresApproval = ProcessStepEditorState.ParseBool(args)"
+                                   data-testid="processes-step-requires-approval" />
+                            Approval
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox"
+                                   checked="@State.RequiresDecisionRecord"
+                                   @onchange="args => State.RequiresDecisionRecord = ProcessStepEditorState.ParseBool(args)"
+                                   data-testid="processes-step-requires-decision-record" />
+                            Decision record
+                        </label>
+                    </Cluster>
+                </Stack>
+
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-operation-contract">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operation" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-target-scope-input">Target scope</label>
+                    <select id="processes-step-target-scope-input"
+                            class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                            value="@State.OperationTargetScope"
+                            @onchange="args => State.OperationTargetScope = ProcessStepEditorState.ParseTargetScope(args)"
+                            data-testid="processes-step-operation-target-scope">
+                        @foreach (var option in ProcessStepEditorState.TargetScopeOptions) {
+                            <option value="@option">@option.ToString()</option>
+                        }
+                    </select>
+
+                    <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" data-testid="processes-step-allowed-operations">
+                        @foreach (var operation in ProcessStepEditorState.OperationOptions) {
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox"
+                                       checked="@State.SelectedOperations.Contains(operation)"
+                                       @onchange="args => State.ToggleOperation(operation, args)"
+                                       data-testid="@ProcessStepEditorState.BuildOperationTestId(operation)" />
+                                @operation.ToString()
+                            </label>
+                        }
+                    </Grid>
+                </Stack>
+
+                <Stack GapScale="LayoutGap.Small" data-testid="processes-step-contracts">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Contracts" />
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-input-contract-input">Input</label>
+                    <textarea id="processes-step-input-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.InputContractSummary"
+                              @oninput="args => State.InputContractSummary = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-input-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-output-contract-input">Output</label>
+                    <textarea id="processes-step-output-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.OutputContractSummary"
+                              @oninput="args => State.OutputContractSummary = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-output-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-evidence-contract-input">Evidence</label>
+                    <textarea id="processes-step-evidence-contract-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.EvidenceContractSummary"
+                              @oninput="args => State.EvidenceContractSummary = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-evidence-contract"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-decision-rights-input">Decision rights</label>
+                    <textarea id="processes-step-decision-rights-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.DecisionRightsSummary"
+                              @oninput="args => State.DecisionRightsSummary = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-decision-rights"></textarea>
+                    <label class="text-xs font-semibold text-slate-500" for="processes-step-exception-policy-input">Exception policy</label>
+                    <textarea id="processes-step-exception-policy-input"
+                              class="min-h-9 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm"
+                              value="@State.ExceptionPolicySummary"
+                              @oninput="args => State.ExceptionPolicySummary = ProcessStepEditorState.ReadChangeValue(args)"
+                              data-testid="processes-step-exception-policy"></textarea>
+                </Stack>
+            </Stack>
+
+            <Stack GapScale="LayoutGap.Small" data-testid="processes-step-sidecar">
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Routing" />
+                <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                    <StatusBadge Tone="neutral" Text="@($"{State.BranchOutcomes.Count} route(s)")" />
+                    <StatusBadge Tone="info" Text="@($"{State.ArtifactExpectations.Count} artifact(s)")" />
+                </Cluster>
+
+                @for (var index = 0; index < State.BranchOutcomes.Count; index++) {
+                    var branchIndex = index;
+                    var branch = State.BranchOutcomes[branchIndex];
+                    <div @key="branch.OutcomeKey" class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@ProcessStepEditorState.BuildBranchTestId(branch.OutcomeKey)">
+                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-route-title-{branchIndex}")">Route</label>
+                        <input id="@($"processes-step-route-title-{branchIndex}")"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@branch.Title"
+                               @oninput="args => State.UpdateBranchTitle(branch.OutcomeKey, args)"
+                               data-testid="@ProcessStepEditorState.BuildBranchTitleTestId(branch.OutcomeKey)" />
+                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-target-{branchIndex}")">Target</label>
+                        <select id="@($"processes-step-route-target-{branchIndex}")"
+                                class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                value="@branch.RouteTarget.Kind"
+                                @onchange="args => State.UpdateBranchRouteTarget(branch.OutcomeKey, args)"
+                                data-testid="@ProcessStepEditorState.BuildBranchRouteTargetTestId(branch.OutcomeKey)">
+                            @foreach (var option in ProcessStepEditorState.RouteTargetOptions) {
+                                <option value="@option">@option.ToString()</option>
+                            }
+                        </select>
+                        <label class="mt-3 block text-xs font-semibold text-slate-500" for="@($"processes-step-route-budget-{branchIndex}")">Loop budget</label>
+                        <input id="@($"processes-step-route-budget-{branchIndex}")"
+                               type="number"
+                               min="0"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@State.BranchNumber(branch)"
+                               @oninput="args => State.UpdateBranchLoopBudget(branch.OutcomeKey, args)"
+                               data-testid="@ProcessStepEditorState.BuildBranchLoopBudgetTestId(branch.OutcomeKey)" />
+                    </div>
+                }
+
+                <Button Text="Add route"
+                        Icon="alt_route"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(State.Disabled || State.HasInputErrors)"
+                        IsBusy="@State.Disabled"
+                        Click="@(() => State.ExecuteAsync(ProcessDefinitionStepCommandKind.AddBranchOutcome))"
+                        data-testid="processes-step-add-branch-outcome" />
+
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Artifacts" />
+                @for (var index = 0; index < State.ArtifactExpectations.Count; index++) {
+                    var artifactIndex = index;
+                    var artifact = State.ArtifactExpectations[artifactIndex];
+                    <div @key="artifact.ArtifactKey" class="rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="@ProcessStepEditorState.BuildArtifactTestId(artifact.ArtifactKey)">
+                        <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-title-{artifactIndex}")">Artifact</label>
+                        <input id="@($"processes-step-artifact-title-{artifactIndex}")"
+                               class="mt-1 min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                               value="@artifact.Title"
+                               @oninput="args => State.UpdateArtifactTitle(artifact.ArtifactKey, args)"
+                               data-testid="@ProcessStepEditorState.BuildArtifactTitleTestId(artifact.ArtifactKey)" />
+                        <Grid Gap="LayoutGap.XSmall" ColumnsMd="2" Class="mt-3">
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-kind-{artifactIndex}")">Kind</label>
+                                <select id="@($"processes-step-artifact-kind-{artifactIndex}")"
+                                        class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                        value="@artifact.ArtifactKind"
+                                        @onchange="args => State.UpdateArtifactKind(artifact.ArtifactKey, args)"
+                                        data-testid="@ProcessStepEditorState.BuildArtifactKindTestId(artifact.ArtifactKey)">
+                                    @foreach (var option in ProcessStepEditorState.ArtifactKindOptions) {
+                                        <option value="@option">@option.ToString()</option>
+                                    }
+                                </select>
+                            </Stack>
+                            <Stack GapScale="LayoutGap.Tiny">
+                                <label class="text-xs font-semibold text-slate-500" for="@($"processes-step-artifact-retention-{artifactIndex}")">Retention</label>
+                                <input id="@($"processes-step-artifact-retention-{artifactIndex}")"
+                                       type="number"
+                                       min="0"
+                                       class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                                       value="@State.ArtifactNumber(artifact)"
+                                       @oninput="args => State.UpdateArtifactRetention(artifact.ArtifactKey, args)"
+                                       data-testid="@ProcessStepEditorState.BuildArtifactRetentionTestId(artifact.ArtifactKey)" />
+                            </Stack>
+                        </Grid>
+                    </div>
+                }
+
+                <Button Text="Add artifact"
+                        Icon="inventory_2"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(State.Disabled || State.HasInputErrors)"
+                        IsBusy="@State.Disabled"
+                        Click="@(() => State.ExecuteAsync(ProcessDefinitionStepCommandKind.AddArtifactExpectation))"
+                        data-testid="processes-step-add-artifact-expectation" />
+
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Subprocess" />
+                <select class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                        value="@State.SubprocessProcessKey"
+                        @onchange="args => State.SubprocessProcessKey = ProcessStepEditorState.ReadChangeValue(args)"
+                        data-testid="processes-step-subprocess-definition">
+                    <option value="">None</option>
+                    @foreach (var option in State.StepEditor.SubprocessOptions) {
+                        <option value="@option.DefinitionKey.Value">@option.DisplayName</option>
+                    }
+                </select>
+                <input class="min-h-9 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-900 shadow-sm"
+                       value="@State.SubprocessSnapshotName"
+                       @oninput="args => State.SubprocessSnapshotName = ProcessStepEditorState.ReadChangeValue(args)"
+                       placeholder="Snapshot name"
+                       aria-label="Subprocess snapshot name"
+                       data-testid="processes-step-subprocess-snapshot" />
+                <Button Text="Map subprocess"
+                        Icon="account_tree"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(State.Disabled || State.StepKind != ProcessDefinitionStepKind.Subprocess)"
+                        IsBusy="@State.Disabled"
+                        Click="@(() => State.ExecuteAsync(ProcessDefinitionStepCommandKind.MapSubprocess))"
+                        data-testid="processes-step-map-subprocess" />
+            </Stack>
+        </Grid>
+
+        @if (State.StepEditor.Lint.HasWarningsOrErrors) {
+            <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3" data-testid="processes-step-lint-panel">
+                @foreach (var issue in State.StepEditor.Lint.Issues) {
+                    <div class="border-t border-slate-200 py-3 first:border-t-0 first:pt-0 last:pb-0">
+                        <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
+                            <StatusBadge Tone="@ProcessStepEditorState.ResolveLintIssueTone(issue.Severity)" Text="@issue.Severity.ToString()" />
+                            <span class="text-xs font-semibold text-slate-500">@issue.Section.ToString()</span>
+                            <span class="text-xs text-slate-500">@issue.Code</span>
+                        </Cluster>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">@issue.Message</p>
+                        <p class="text-xs leading-5 text-slate-500">@issue.Suggestion</p>
+                    </div>
+                }
+            </div>
+        }
+
+        <Cluster Gap="LayoutGap.Small" Class="mt-5 flex-wrap justify-end">
+            @foreach (var command in State.StepEditor.Commands) {
+                <Button Text="@command.Text"
+                        Icon="@command.Icon"
+                        ButtonStyle="@ProcessStepEditorState.ResolveCommandButtonStyle(command.Kind)"
+                        Size="ButtonSize.Small"
+                        Disabled="@(!command.IsEnabled || State.Disabled || State.HasInputErrors)"
+                        IsBusy="@State.Disabled"
+                        Click="@(() => State.ExecuteAsync(command.Kind))"
+                        title="@command.DisabledReason"
+                        data-testid="@ProcessStepEditorState.BuildCommandTestId(command.Kind)" />
+            }
+        </Cluster>
+    }
+</div>
+
+
+@code {
+    [Parameter, EditorRequired] public ProcessDefinitionStepEditorProjection StepEditor { get; set; } = default!;
+    [Parameter, EditorRequired] public ProcessWorkspaceShellScope Scope { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<ProcessDefinitionStepEditorCommand> ExecuteCommand { get; set; }
+    [Parameter] public ProcessStepEditorState State { get; set; } = new();
+
+    protected override void OnParametersSet() {
+        State.StepEditor = StepEditor;
+        State.Scope = Scope;
+        State.Disabled = Disabled;
+        State.ExecuteCommand = ExecuteCommand;
+        State.Observe();
+    }
+}

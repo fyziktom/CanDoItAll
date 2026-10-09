@@ -6,6 +6,7 @@
     <Project Path="../Components/CanDoItAll.Workbench.Content.UI.Tests/CanDoItAll.Workbench.Content.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workbench.Operators.UI.Tests/CanDoItAll.Workbench.Operators.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workbench.Execution.UI.Tests/CanDoItAll.Workbench.Execution.UI.Tests.csproj" />
+    <Project Path="../Components/CanDoItAll.Processes.UI.Tests/CanDoItAll.Processes.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests/CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests/CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj" />

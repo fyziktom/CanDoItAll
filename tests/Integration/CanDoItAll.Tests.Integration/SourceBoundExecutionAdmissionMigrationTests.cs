@@ -278,7 +278,12 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
 
     private static async Task SeedLegacyAsync(AppDbContext context) {
         var project = new Project { Name = "Preserved source project", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
-        context.Add(project);
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Projects_Projects" ("Id", "LifetimeId", "LegacyAgentAccessBindingEligible", "Name", "Slug",
+                "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({project.Id}, {project.LifetimeId}, FALSE, {project.Name}, {project.Slug}, {project.Description},
+                {project.Objective}, {(int)project.Status}, {project.CurrentPhase}, NULL, {SavedAt}, {SavedAt});
+            """);
         context.Add(new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "saved-task", ObjectType = ProjectObjectType.WorkItem,
             Title = "Saved native task", MetadataJson = "{\"unknown\":{\"value\":7}}", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt });
         await context.SaveChangesAsync();
@@ -306,7 +311,8 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
     }
 
     private static Task<string[]> ReadLegacyAsync(AppDbContext context) => context.Database.SqlQueryRaw<string>("""
-        SELECT 'project:' || to_jsonb(row)::text AS "Value" FROM "Projects_Projects" row
+        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || to_jsonb(row))::text AS "Value"
+            FROM "Projects_Projects" row
         UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
         UNION ALL SELECT 'work:' || (to_jsonb(row) - 'ProjectLifetimeId')::text AS "Value" FROM "Workbench_WorkAssignments" row
         UNION ALL SELECT 'workflow:' || (to_jsonb(row) - ARRAY['DatabaseProfileId', 'ProjectId', 'ProjectLifetimeId'])::text AS "Value"
@@ -331,7 +337,8 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
     private static async Task AssertNoAuthorityAsync(AppDbContext context) => Assert.Empty(await ReadEvidenceAsync(context));
 
     private static async Task AssertCurrentReferenceOnlyAsync(AppDbContext context) {
-        var project = await context.Set<Project>().AsNoTracking().SingleAsync();
+        var project = await context.Set<Project>().AsNoTracking()
+            .Select(row => new { row.Id, row.LifetimeId }).SingleAsync();
         var assignment = await context.Set<ProjectWorkAssignmentRecord>().AsNoTracking().SingleAsync();
         Assert.Equal(project.Id, assignment.ProjectId);
         Assert.Equal(project.LifetimeId, assignment.ProjectLifetimeId);

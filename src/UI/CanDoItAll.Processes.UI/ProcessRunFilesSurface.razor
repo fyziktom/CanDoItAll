@@ -1,0 +1,129 @@
+@namespace CanDoItAll.Processes.UI
+@if (IsOpen) {
+    <Dialog IsOpen="true"
+            Eyebrow="Process run"
+            Title="@(View.Request?.FileName ?? $"Files · Run {View.RunId.ToString("N")[..8]}")"
+            Subtitle="@(View.Request is null ? "Browse current managed artifacts and product outputs. Refresh re-resolves run data and re-enumerates storage." : "Read-only content remains authorized independently from the disposed browser session.")"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="process-run-files-dialog"
+            OnClose="CloseAsync">
+        <HeaderActions>
+            @if (View.Browser is not null) {
+                <StatusBadge Tone="info" Text="@($"{View.SourceCount} root(s)")" />
+                <StatusBadge Tone="neutral" Text="@($"revision {View.Revision[..12]}")" />
+            }
+            <StatusBadge Tone="neutral" Text="Always current" />
+        </HeaderActions>
+        <ChildContent>
+            <div class="process-run-files-dialog__content">
+                @if (View.IsLoading) {
+                    <LoadingState Eyebrow="Authorized run roots"
+                                  Title="Resolving current process files"
+                                  Description="Loading managed artifact and product-output roots from current run data." />
+                } else if (!string.IsNullOrWhiteSpace(View.OpenError)) {
+                    <EmptyState Eyebrow="Run files unavailable"
+                                Title="Unable to open this process-run scope"
+                                Description="@View.OpenError">
+                        <Actions>
+                            <Button Text="Retry"
+                                    data-testid="process-run-files-retry"
+                                    Click="RefreshAsync" />
+                        </Actions>
+                    </EmptyState>
+                } else if (View.Request is not null) {
+                    <Stack GapScale="LayoutGap.Small"
+                           AlignItems="AlignItems.Stretch"
+                           Class="h-full min-h-0 overflow-hidden">
+                        <Cluster Gap="LayoutGap.XSmall" Class="shrink-0">
+                            <Button ButtonStyle="ButtonStyle.Light"
+                                    Icon="arrow_back"
+                                    Text="Back to run files"
+                                    data-testid="process-run-files-back"
+                                    Click="RefreshAsync" />
+                            <StatusBadge Tone="info" Text="Read only" />
+                        </Cluster>
+                        @if (!string.IsNullOrWhiteSpace(View.ActivationError)) {
+                            <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                                @View.ActivationError
+                            </Alert>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(View.ActionFeedback)) {
+                            <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                                @View.ActionFeedback
+                            </Alert>
+                        }
+                        <FileInteraction Request="View.Request"
+                                         ContentSource="View.ContentSource"
+                                         Composition="InteractionComposition"
+                                         OpenExternallyRequested="OpenInteractionExternallyCallback"
+                                         OpenExternallyLabel="Open in preferred app"
+                                         AllowModeSwitch="false"
+                                         MaximumContentBytes="@(16 * 1024 * 1024)"
+                                         AriaLabel="@($"Read-only process-run file {View.Request.FileName}")" />
+                    </Stack>
+                } else if (View.Browser is not null) {
+                    @if (!string.IsNullOrWhiteSpace(View.ActivationError)) {
+                        <Alert AlertStyle="AlertStyle.Danger"
+                               Variant="Variant.Outlined"
+                               data-testid="process-run-files-activation-error">
+                            @View.ActivationError
+                        </Alert>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(View.ActionFeedback)) {
+                        <Alert AlertStyle="AlertStyle.Info"
+                               Variant="Variant.Outlined"
+                               data-testid="process-run-files-action-feedback">
+                            @View.ActionFeedback
+                        </Alert>
+                    }
+
+                    <FileBrowser Session="View.Browser"
+                                 HostActionCatalog="View.HostActionCatalog"
+                                 Class="process-run-files-dialog__browser w-full flex-1 min-h-0"
+                                 AriaLabel="@($"Managed files for process run {View.RunId:D}")"
+                                 DisplayMode="FileBrowserDisplayMode.Compact"
+                                 InitialViewMode="FileBrowserViewMode.List"
+                                 SearchDebounceMilliseconds="280"
+                                 SnapshotChanged="HandleSnapshotChanged"
+                                 ItemInvoked="ActivateAsync"
+                                 ActionRequested="HandleActionRequestedAsync" />
+                }
+            </div>
+        </ChildContent>
+        <Footer>
+            <Split Gap="LayoutGap.Small">
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Icon="refresh"
+                            Text="Refresh sources"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Disabled="@View.IsLoading"
+                            data-testid="process-run-files-refresh"
+                            Click="RefreshAsync" />
+                    <TextBlock TextStyle="TextStyle.Caption"
+                               Value="Host cache and session retention are disabled for live run roots." />
+                </Cluster>
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAsync" />
+            </Split>
+        </Footer>
+    </Dialog>
+}
+
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public ProcessRunFilesPresentation View { get; set; } = default!;
+    [Parameter] public FileInteractionComponentComposition? InteractionComposition { get; set; }
+    [Parameter] public EventCallback RefreshAsync { get; set; }
+    [Parameter] public EventCallback CloseAsync { get; set; }
+    [Parameter] public EventCallback<FileBrowserItemInvokedEventArgs> ActivateAsync { get; set; }
+    [Parameter] public EventCallback<FileBrowserItemActionEventArgs> HandleActionRequestedAsync { get; set; }
+    [Parameter] public EventCallback<FileBrowserSnapshot> HandleSnapshotChanged { get; set; }
+    [Parameter] public EventCallback<FileInteractionRequest> OpenInteractionExternallyCallback { get; set; }
+}

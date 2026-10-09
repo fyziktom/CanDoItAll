@@ -171,9 +171,15 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
 
     private static async Task SeedNativeDataAsync(AppDbContext context) {
         var project = new Project { Name = "Original project", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Projects_Projects" ("Id", "LifetimeId", "LegacyAgentAccessBindingEligible", "Name", "Slug",
+                "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({project.Id}, {project.LifetimeId}, FALSE, {project.Name}, {project.Slug}, {project.Description},
+                {project.Objective}, {(int)project.Status}, {project.CurrentPhase}, NULL, {SavedAt}, {SavedAt});
+            """);
         var node = new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "legacy-node", ObjectType = ProjectObjectType.ProjectBlock,
             Title = "Original native title", Notes = "Human notes", MetadataJson = OriginalJson, CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
-        context.AddRange(project, node, new ProjectNodeBindingRecord { ProjectObjectId = node.Id, Route = "/legacy/route",
+        context.AddRange(node, new ProjectNodeBindingRecord { ProjectObjectId = node.Id, Route = "/legacy/route",
             ExternalArtifactKind = "legacy", ExternalArtifactId = Guid.NewGuid(), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt });
         var party = new Party {
             PartyType = PartyType.AiAgent, DisplayName = "Human-maintained CRM name", Summary = "Retained human enrichment",
@@ -197,7 +203,8 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
     }
 
     private static Task<string[]> NativePayloadsAsync(AppDbContext context) => context.Database.SqlQueryRaw<string>("""
-        SELECT 'project:' || to_jsonb(row)::text AS "Value" FROM "Projects_Projects" row
+        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || to_jsonb(row))::text AS "Value"
+            FROM "Projects_Projects" row
         UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
         UNION ALL SELECT 'binding:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectNodeBindings" row
         UNION ALL SELECT 'party:' || to_jsonb(row)::text AS "Value" FROM "CrmHr_Parties" row
