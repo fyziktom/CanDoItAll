@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-09T10:59:14.338848+00:00",
+  "generated_utc": "2026-10-09T12:54:37.761185+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15358,
+  "allowance_count": 15364,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -12839,6 +12839,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261007193102_AddProjectExternalIdentity.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "8d0338c906bee1cc94450dd57fddd65a29e26b86f0b4219b5d6deae6300d59d3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261009124700_AddProcessAuthoring.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "06c10ba03580f4681f7e437af0c99823507ad7ee72e7a5bb3c1fc3a03c80f160",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261009124700_AddProcessAuthoring.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5661012a6c6e3a6a4d8621b68656e4c98ae999afdcf5f6de30e86aec6189270e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261009124700_AddProcessAuthoring.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "0e5865c518d4b2b1e7cafc46ac559bcfd3a761dd8a07f8391814cb26af636e8d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261009124700_AddProcessAuthoring.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "70ac1556a97a2f78058889931af4969db1d83f8674dca5db8dad8b8fd05b188e",
       "count": 1
     },
     {
@@ -66227,6 +66251,18 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAgentVisibleLaunchVariablePolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "2393b3d029d1cf5965867a5000ff127fc3136dcc6b9048e27203c179bb93ebcf",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringCodec.cs",
+      "category": "case-policy",
+      "source_fingerprint": "67bf70313a1b9515ecb4b0ca4864e784be86dd69da8971a4f2a7cdca920df611",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringCodec.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bd751ac492f444a97de7a956e44f65aeecd7968fa318ed1ebd3b0217c927997a",
       "count": 1
     },
     {

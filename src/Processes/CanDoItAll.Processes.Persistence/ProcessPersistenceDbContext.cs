@@ -4,6 +4,12 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersistenceDbContext> options) : DbContext(options)
 {
+    public DbSet<ProcessAuthoringHeadEntity> AuthoringHeads => Set<ProcessAuthoringHeadEntity>();
+
+    public DbSet<ProcessAuthoringPublicationEntity> AuthoringPublications => Set<ProcessAuthoringPublicationEntity>();
+
+    public DbSet<ProcessAuthoringReceiptEntity> AuthoringReceipts => Set<ProcessAuthoringReceiptEntity>();
+
     public DbSet<ProcessPreparedLaunchEntity> PreparedLaunches => Set<ProcessPreparedLaunchEntity>();
 
     public DbSet<ProcessInstancePlanEntity> InstancePlans => Set<ProcessInstancePlanEntity>();

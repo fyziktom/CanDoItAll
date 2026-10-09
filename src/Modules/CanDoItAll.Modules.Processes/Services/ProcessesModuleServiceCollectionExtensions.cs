@@ -101,6 +101,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddScoped<IProcessAuthoringAdmissionPolicy, ProcessAuthoringAdmissionPolicy>();
+        services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
         services.TryAddScoped<EfProcessExecutionAuthorityQuery>();
         services.TryAddScoped<ProcessExecutionProjectAuthorityReader>();
         services.TryAddScoped<IProcessExecutionProjectAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
