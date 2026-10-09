@@ -3,7 +3,8 @@ using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed class ProcessDefinitionAuthoringAdapter(ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessProjectionClock clock) {
+public sealed class ProcessDefinitionAuthoringAdapter(ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessProjectionClock clock,
+    ProcessExecutableDefinitionResolver resolver) {
     public async Task<ProcessDefinitionEditorProjection> ReadAsync(ProcessWorkspaceShellScope scope, ProcessDefinitionCatalogItemKey key, CancellationToken cancellationToken) {
         var session = await workspace.ReadAsync(scope, key, cancellationToken);
         return await ProjectAsync(session, cancellationToken);
@@ -34,6 +35,15 @@ public sealed class ProcessDefinitionAuthoringAdapter(ProcessAuthoringWorkspace 
         };
         if (lifecycle == ProcessAuthoringLifecycle.Deleted) {
             content = await workspace.InheritedContentAsync(baseline, cancellationToken);
+        }
+        if (lifecycle == ProcessAuthoringLifecycle.Published) {
+            try {
+                content = await resolver.PinPublicationAsync(baseline, content, cancellationToken);
+            } catch (InvalidOperationException exception) {
+                var refused = await ResultAsync(command, baseline, ProcessAuthoringOutcome.Conflict, cancellationToken);
+                var receipt = refused.Receipt with { Summary = "Publication refused: " + exception.Message };
+                return refused with { Receipt = receipt, Projection = refused.Projection with { LastCommandReceipt = receipt } };
+            }
         }
         var saved = await workspace.CommitAsync(baseline, command.OperationId, fingerprint, content, lifecycle,
             command.CommandKind == ProcessDefinitionEditorCommandKind.Publish, null, cancellationToken);

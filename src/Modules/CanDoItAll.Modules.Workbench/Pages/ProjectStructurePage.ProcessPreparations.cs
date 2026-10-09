@@ -103,7 +103,7 @@ public partial class ProjectStructurePage {
                 ?? throw new InvalidOperationException("The process dialog has no captured launch authority. Reopen it before preparing a launch.");
             var storageKey = dialog.IntentStorageKey
                 ?? throw new InvalidOperationException("The process dialog has no retained caller intent location.");
-            var request = dialog.PreparedRequest ?? CreateProcessLaunchRequest(dialog, execute: false, runReadiness: true) with {
+            var request = dialog.PreparedRequest ?? (await CreateProcessLaunchRequestAsync(dialog, execute: false, runReadiness: true)) with {
                 CallerIntentId = dialog.LaunchIntentId,
                 Authority = authority,
                 ProjectAdmission = authority.ProjectAdmission,

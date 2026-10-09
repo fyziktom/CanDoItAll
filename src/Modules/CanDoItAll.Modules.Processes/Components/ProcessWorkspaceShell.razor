@@ -845,8 +845,8 @@
 
     private async Task LaunchSelectedDefinitionAsync() {
         var selectedDefinition = shell?.DefinitionCatalog.SelectedItem;
-        if (selectedDefinition is null || WorkspaceBusy) {
-            catalogCommandNotice = "Select a process definition before launching.";
+        if (selectedDefinition?.CanLaunch != true || WorkspaceBusy) {
+            catalogCommandNotice = "Select an available published definition before launching.";
             return;
         }
         var projectId = ProjectId;

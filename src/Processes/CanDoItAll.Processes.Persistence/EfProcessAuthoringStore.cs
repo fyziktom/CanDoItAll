@@ -1,12 +1,58 @@
 using System.Data;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistenceDbContext> factory,
-    CoordinatedDatabaseTransaction transactions, IProcessAuthoringAdmissionPolicy admissions, TimeProvider clock) : IProcessAuthoringStore {
+    CoordinatedDatabaseTransaction transactions, IProcessAuthoringAdmissionPolicy admissions, TimeProvider clock,
+    DbContextOptions<ProcessPersistenceDbContext>? options = null) : IProcessAuthoringStore {
+    public async Task RequireLaunchableAsync(ProcessExecutableDefinitionClosure definitions, bool underMutationGate, CancellationToken cancellationToken = default) {
+        ProcessAuthoringAddress lookup = new(definitions.DatabaseProfileId, definitions.ProjectId, definitions.ProjectLifetimeId, definitions.DefinitionKey);
+        lookup.Validate();
+        await admissions.RequireAsync(lookup, null, underMutationGate, cancellationToken);
+        var sources = definitions.Definitions.Values.ToArray();
+        if (sources.Length is 0 or > 256 || sources.Any(source => source.DatabaseProfileId != lookup.DatabaseProfileId ||
+                source.ProjectId != Guid.Empty && (source.ProjectId != lookup.ProjectId || source.ProjectLifetimeId != lookup.ProjectLifetimeId))) {
+            throw new InvalidOperationException("The captured executable definitions have an invalid scope or bound.");
+        }
+        await using var context = underMutationGate
+            ? await transactions.CreateEnlistedAsync(options ?? throw new InvalidOperationException("Executable admission requires configured owner options."), value => new ProcessPersistenceDbContext(value), cancellationToken)
+            : await factory.CreateDbContextAsync(cancellationToken);
+        var addresses = sources.SelectMany(source => new[] {
+            new ProcessAuthoringAddress(source.DatabaseProfileId, source.ProjectId, source.ProjectLifetimeId, source.DefinitionKey),
+            lookup with { DefinitionKey = source.DefinitionKey }
+        }).Distinct().OrderBy(address => address.ProjectId).ThenBy(address => address.DefinitionKey, StringComparer.Ordinal).ToArray();
+        if (underMutationGate) {
+            foreach (var address in addresses) {
+                await ProcessAuthoringMutationLock.AcquireAsync(context, address, cancellationToken);
+            }
+        }
+        var keys = sources.Select(source => source.DefinitionKey).ToArray();
+        var heads = await context.AuthoringHeads.AsNoTracking().Where(item => item.DatabaseProfileId == lookup.DatabaseProfileId &&
+            keys.Contains(item.DefinitionKey) && (item.ProjectId == Guid.Empty || item.ProjectId == lookup.ProjectId && item.ProjectLifetimeId == lookup.ProjectLifetimeId))
+            .Select(item => new { item.ProjectId, item.ProjectLifetimeId, item.DefinitionKey, item.Lifecycle }).ToArrayAsync(cancellationToken);
+        if (addresses.Any(address => heads.Any(head => head.ProjectId == address.ProjectId && head.ProjectLifetimeId == address.ProjectLifetimeId &&
+                head.DefinitionKey == address.DefinitionKey && head.Lifecycle == ProcessAuthoringLifecycle.Archived))) {
+            throw new InvalidOperationException("A selected executable definition is archived. The reviewed content is retained, but a new launch cannot be accepted.");
+        }
+        var ids = sources.Where(source => source.PublicationId is not null).Select(source => source.PublicationId!.Value).ToArray();
+        var publications = await context.AuthoringPublications.AsNoTracking().Where(item => ids.Contains(item.Id)).ToArrayAsync(cancellationToken);
+        foreach (var source in sources.Where(source => source.PublicationId is not null)) {
+            var publication = publications.SingleOrDefault(item => item.Id == source.PublicationId);
+            if (publication is null || publication.DatabaseProfileId != source.DatabaseProfileId || publication.ProjectId != source.ProjectId ||
+                    publication.ProjectLifetimeId != source.ProjectLifetimeId || publication.DefinitionKey != source.DefinitionKey || publication.Revision != source.Revision ||
+                    publication.ContentHash != source.PublicationHash || ProcessAuthoringCodec.Hash(publication.ContentJson) != publication.ContentHash) {
+                throw new InvalidOperationException("A pinned publication is missing or failed its immutable identity check.");
+            }
+            var flattened = ProcessAuthoringCodec.Read(publication.ContentJson) with { Dependencies = new Dictionary<string, ProcessExecutableDefinitionSource>() };
+            if (ProcessAuthoringCodec.Write(flattened) != source.ContentJson || ProcessAuthoringCodec.Hash(source.ContentJson) != source.ContentHash) {
+                throw new InvalidOperationException("The captured executable content differs from its immutable publication.");
+            }
+        }
+    }
     public async Task<ProcessAuthoringReceipt?> GetOperationAsync(ProcessAuthoringAddress address, string callerId, Guid operationId, CancellationToken cancellationToken = default) {
         address.Validate();
         if (operationId == Guid.Empty) {
@@ -80,8 +126,7 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
         if (replay is not null) {
             return replay;
         }
-        var aggregateLock = $"process-authoring:{command.Address.DatabaseProfileId:N}:{command.Address.ProjectId:N}:{command.Address.ProjectLifetimeId:N}:{command.Address.DefinitionKey}";
-        await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({aggregateLock}, 0))", cancellationToken);
+        await ProcessAuthoringMutationLock.AcquireAsync(context, command.Address, cancellationToken);
         var head = await FindHead(context, command.Address).SingleOrDefaultAsync(cancellationToken);
         var outcome = ProcessAuthoringOutcome.Conflict;
         if ((head?.Revision ?? 0) == command.ExpectedRevision) {

@@ -1014,6 +1014,17 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     int CompatibilityIssueCount) {
     public Guid? PublishedId { get; init; }
     public bool HasDraft { get; init; }
+    [Description("Source selected for new launches independently of the editable draft.")]
+    public ProcessDefinitionExecutableSource ExecutableSource { get; init; } = ProcessDefinitionExecutableSource.TemplateDefault;
+    [Description("Whether the selected source admits a new launch; native admission checks remain authoritative.")]
+    public bool CanLaunch => Status != ProcessDefinitionCatalogItemStatus.Archived && ExecutableSource != ProcessDefinitionExecutableSource.Unavailable;
+}
+
+public enum ProcessDefinitionExecutableSource {
+    TemplateDefault,
+    GlobalPublication,
+    ProjectPublication,
+    Unavailable
 }
 
 public sealed record ProcessDefinitionCatalogCommandReceipt(

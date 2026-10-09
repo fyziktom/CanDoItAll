@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Processes.Application;
@@ -24,6 +25,7 @@ public sealed record ProcessAuthoringContent(
     IReadOnlyList<ProcessAuthoringReferencePlacement> References,
     IReadOnlyList<ProcessAuthoringImport> Imports) {
     public const int CurrentSchemaVersion = 1;
+    public IReadOnlyDictionary<string, ProcessExecutableDefinitionSource> Dependencies { get; init; } = new Dictionary<string, ProcessExecutableDefinitionSource>();
 }
 
 public sealed record ProcessAuthoringProvenance(string Source, string Version, string ContentHash);
@@ -54,6 +56,7 @@ public interface IProcessAuthoringContext {
 }
 
 public interface IProcessAuthoringStore {
+    Task RequireLaunchableAsync(ProcessExecutableDefinitionClosure definitions, bool underMutationGate, CancellationToken cancellationToken = default);
     Task<ProcessAuthoringReceipt?> GetOperationAsync(ProcessAuthoringAddress address, string callerId, Guid operationId, CancellationToken cancellationToken = default);
     Task<ProcessAuthoringSnapshot?> ReadAsync(ProcessAuthoringAddress address, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ProcessAuthoringCatalogEntry>> ListAsync(Guid databaseProfileId, Guid projectId, Guid projectLifetimeId, CancellationToken cancellationToken = default);

@@ -25,6 +25,9 @@ public sealed record ProcessLaunchRequest(
     [JsonIgnore]
     public ProcessProjectAdmission? ProjectAdmission { get; init; }
 
+    [JsonIgnore]
+    public ProcessExecutableDefinitionClosure? ResolvedDefinitions { get; init; }
+
     public ProcessLaunchIntentId? CallerIntentId { get; init; }
     public ProcessLaunchAdmissionId? PreparedAdmissionId { get; init; }
     public string? ProducerInputFingerprint { get; init; }

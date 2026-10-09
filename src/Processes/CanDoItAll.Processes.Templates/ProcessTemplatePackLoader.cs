@@ -53,24 +53,29 @@ public sealed class ProcessTemplatePackLoader
 
     public ProcessTemplateDefinitionSummary ProjectDefinition(ProcessTemplateDefinitionDocument definition,
         IReadOnlyDictionary<string, ProcessTemplateRoleResourceDocument> resources) {
-        var template = Load().Definitions.Single(item => item.Key == definition.Key);
+        var template = Load().Definitions.SingleOrDefault(item => item.Key == definition.Key);
         var roles = definition.RoleUsages.Select((role, index) =>
             CreateRoleSummary(role, index, resources.GetValueOrDefault(role.Key))).ToArray();
         var names = roles.ToDictionary(role => role.Key, role => role.DisplayName, StringComparer.OrdinalIgnoreCase);
-        return template with {
-            DisplayName = definition.DisplayName, Summary = definition.Summary, Criticality = definition.Criticality,
-            OperatingMode = definition.OperatingMode, AutonomyLevel = definition.AutonomyLevel,
-            AuthoringDefaults = new(definition.ValueStatement, definition.CustomerName, definition.OwnerName,
+        return new(definition.Key, template?.RelativePath ?? string.Empty, definition.DisplayName, definition.Summary, definition.Criticality,
+            definition.OperatingMode, definition.AutonomyLevel, template?.UpdatedAtUtc ?? DateTimeOffset.UnixEpoch,
+            new(definition.ValueStatement, definition.CustomerName, definition.OwnerName,
                 definition.InterfaceContractSummary, definition.ManagerOverrideSummary, definition.GovernanceNotes,
                 definition.ChangeSummary, definition.GovernancePolicySummary, definition.ConstitutionRuleSummary,
                 definition.OperatingModeSummary, definition.SimulationReadinessSummary, definition.Steps.Count,
                 definition.RoleUsages.Count(role => role.IsRequired), definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
-            RoleAuthoringDefaults = new(roles, template.RoleAuthoringDefaults.TemplateActions,
+            new(roles, template?.RoleAuthoringDefaults.TemplateActions ?? LoadRoleTemplateActions(Load().RootPath),
                 definition.Steps.SelectMany(step => step.RoleAssignments.Select(assignment => CreateStepRoleBinding(step, assignment, names))).ToArray()),
-            StepAuthoringDefaults = ProcessTemplateStepSummaryBuilder.Build(definition),
-            CanvasAuthoringDefaults = ProcessTemplateCanvasSummaryBuilder.Build(definition, template.CanvasAuthoringDefaults.ToolboxActions),
-            LibrarySummary = ProcessTemplateLibrarySummaryBuilder.Build(template.RelativePath, definition)
-        };
+            ProcessTemplateStepSummaryBuilder.Build(definition),
+            ProcessTemplateCanvasSummaryBuilder.Build(definition, template?.CanvasAuthoringDefaults.ToolboxActions ?? []),
+            ProcessTemplateLibrarySummaryBuilder.Build(template?.RelativePath ?? string.Empty, definition));
+    }
+
+    public static void ValidateExecutableDocuments(IReadOnlyList<ProcessTemplateDefinitionDocument> definitions) {
+        foreach (var definition in definitions) {
+            ValidateDefinition(definition, definition.Key);
+        }
+        ValidateForwardedChildContextArtifacts(definitions.Select(definition => (definition, definition.Key)).ToArray());
     }
 
     public ProcessTemplateDefinitionDocument LoadDefinition(string processKey)

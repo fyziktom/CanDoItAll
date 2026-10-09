@@ -84,3 +84,30 @@ The native recovery pair injects faults before and after the real transaction CO
 checks status from a separate native scope, retries the original command, and verifies one
 head and one receipt. The Application assembly retains its dependency boundary; safe host
 logging reports reconciliation failures without adding a logging dependency to Application.
+
+S4 binds publication to launch. A publication freezes its complete semantic document and a
+finite dependency set. The executable resolver selects project publication, global
+publication, or template in that order; drafts retain the prior runnable source. The light
+catalog names that source and disables archived launches. Publishing uses the existing
+template validators and the same kernel/compiler request as launch, without executing a
+workflow or inference.
+
+Native producers resolve content before enriching driver variables, including an explicit
+resolved-empty activation list. The reviewed plan stores the flattened immutable definition
+set once. Assignments, briefs and child preparation use those captured definitions; child
+republishing cannot retarget a saved parent. Legacy template identities keep their original
+hash path. Publication-backed identities include the frozen content/dependency hashes.
+
+Acceptance checks archived state and immutable publication identity under the same
+PostgreSQL transaction and aggregate locks as authoring. Republish preserves an unaccepted
+review; archive refuses its acceptance. An accepted run still recovers its original plan.
+Delete restores inherited selection for new requests while retaining historical evidence.
+Existing-launch lookup checks the current profile and project incarnation without selecting
+today's executable definition to reinterpret an accepted run.
+
+S4 native proof passed 29 authoring cases, followed by five strengthened publication cases.
+The version oracle adds an artifact in v2: a new preparation has its produced slot, while
+accepting the v1 preparation preserves zero produced slots and its original plan hash.
+Other cases cover a mapped typed child contract, child republish, archive before and after
+acceptance, reset to inheritance, explicit unknown identity, corrupt content and empty
+driver activation. Lifecycle/transfer, OS restart, browser and final gates remain open.

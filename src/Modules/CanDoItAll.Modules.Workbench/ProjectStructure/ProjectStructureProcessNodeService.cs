@@ -295,6 +295,9 @@ public sealed partial class ProjectStructureProcessNodeService(
         }
 
         var definitionKey = dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId.Value));
+        var definitions = await dependencies.ProcessLaunchApplicationService.ResolveForPreparationAsync(NormalizeOptional(definitionKey),
+            new ProcessDefinitionId(processDefinitionId.Value), projectId, cancellationToken: cancellationToken);
+        definitionKey = definitions?.DefinitionKey ?? definitionKey;
         var launchRequest = new ProcessLaunchRequest(
             DefinitionKey: NormalizeOptional(definitionKey),
             new ProcessDefinitionId(processDefinitionId.Value),
@@ -303,9 +306,9 @@ public sealed partial class ProjectStructureProcessNodeService(
             ProjectNodeId: targetNode.Id,
             RequestedBy: string.IsNullOrWhiteSpace(request.RequestedBy) ? agent.AgentName : request.RequestedBy,
             Variables: CreateVariables(surface, processNode, processDefinitionNodeId ?? nodeId, processDefinitionId.Value,
-                targetNode, agent, dependencies.LaunchVariablePreparationService, definitionKey),
+                targetNode, agent, dependencies.LaunchVariablePreparationService, definitionKey, definitions),
             RunReadiness: request.RunHrMatch,
-            Execute: request.Execute);
+            Execute: request.Execute) { ResolvedDefinitions = definitions };
         if (agent.ProcessLaunchInvocation is { } admittedInvocation) {
             launchRequest = await BindInvocationAsync(dependencies, launchRequest, targetNode, admittedInvocation, cancellationToken);
         }
@@ -451,6 +454,7 @@ public sealed partial class ProjectStructureProcessNodeService(
                 $"Parent project node '{projectNodeId}' was not found in project '{projectId:D}'.");
         }
 
+        var definitions = await dependencies.ProcessLaunchApplicationService.ResolveChildForPreparationAsync(parentAssignment, definitionKey, cancellationToken);
         var launchVariables = CreateSubprocessVariables(
             projectId,
             surface,
@@ -463,7 +467,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             request,
             agent,
             dependencies.WorkspaceFiles,
-            dependencies.LaunchVariablePreparationService);
+            dependencies.LaunchVariablePreparationService,
+            definitions);
         var subprocessIdentityVariables = CreateSubprocessIdentityVariables(
             projectId,
             projectNode.Id,
@@ -511,6 +516,7 @@ public sealed partial class ProjectStructureProcessNodeService(
                     Execute: request.Execute)
                 {
                     RootRunIdOverride = parentState.RootRunId,
+                    ResolvedDefinitions = definitions,
                     ProjectAdmission = parentState.ProjectAdmission
                 },
                 cancellationToken)
@@ -1060,7 +1066,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
         IProcessLaunchVariablePreparer launchVariablePreparationService,
-        string? definitionKey)
+        string? definitionKey,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -1103,7 +1110,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             targetNode,
             definitionKey,
             isSubprocess: false,
-            variables: variables);
+            variables: variables,
+            definitions: definitions);
 
         return variables;
     }
@@ -1120,7 +1128,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
         IWorkspaceFileService workspaceFiles,
-        IProcessLaunchVariablePreparer launchVariablePreparationService)
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
@@ -1180,7 +1189,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             projectNode,
             definitionKey,
             isSubprocess: true,
-            variables: variables);
+            variables: variables,
+            definitions: definitions);
         RemoveSubprocessReservedLaunchVariables(variables);
 
         return variables;
@@ -1277,7 +1287,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureNode targetNode,
         string? definitionKey,
         bool isSubprocess,
-        IDictionary<string, string> variables)
+        IDictionary<string, string> variables,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
 
@@ -1290,7 +1301,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             definitionKey,
             isSubprocess,
             contextSummary);
-        launchVariablePreparationService.Enrich(context, variables);
+        launchVariablePreparationService.Enrich(definitions is null ? context : context.WithDefinition(
+            ProcessExecutableDefinitionResolver.Decode(definitions, definitions.DefinitionKey).Definition), variables);
     }
 
     private static ProjectStructureNode? ResolveProcessStartTargetNode(

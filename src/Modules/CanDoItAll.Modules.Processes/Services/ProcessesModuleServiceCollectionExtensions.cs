@@ -106,6 +106,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessAuthoringContext>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
         services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
         services.TryAddScoped<ProcessAuthoringWorkspace>();
+        services.TryAddScoped<ProcessExecutableDefinitionResolver>();
         services.TryAddScoped<ProcessDefinitionAuthoringAdapter>();
         services.TryAddScoped<ProcessRoleAuthoringAdapter>();
         services.TryAddScoped<ProcessStepAuthoringAdapter>();

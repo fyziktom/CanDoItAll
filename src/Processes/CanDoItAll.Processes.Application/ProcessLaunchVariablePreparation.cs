@@ -34,7 +34,7 @@ public sealed class ProcessLaunchVariablePreparationService(
         ProcessLaunchPreparationContext context,
         ProcessTemplatePackLoader? templatePackLoader)
     {
-        if (context.DriverActivations.Count > 0 ||
+        if (context.DriverActivationsResolved || context.DriverActivations.Count > 0 ||
             templatePackLoader is null ||
             string.IsNullOrWhiteSpace(context.DefinitionKey))
         {
@@ -50,6 +50,22 @@ public sealed class ProcessLaunchVariablePreparationService(
         }
 
         var definition = templatePackLoader.LoadDefinition(normalizedDefinitionKey);
+        return context.WithDefinition(definition);
+    }
+}
+
+public sealed record ProcessLaunchPreparationContext(
+    string? DefinitionKey,
+    bool IsSubprocess,
+    ProcessLaunchSourceSnapshot Source)
+{
+    public IReadOnlyList<ProcessLaunchDriverActivation> DriverActivations { get; init; } = [];
+    public bool DriverActivationsResolved { get; init; }
+
+    public ProcessLaunchPreparationContext WithDefinition(ProcessTemplateDefinitionDocument definition) {
+        if (definition.Key != DefinitionKey) {
+            throw new InvalidOperationException("Driver preparation and executable content have different definition identities.");
+        }
         var activations = definition.LaunchDriverActivations
             .Where(activation => !string.IsNullOrWhiteSpace(activation.DriverKey))
             .Select(activation => new ProcessLaunchDriverActivation(
@@ -65,16 +81,8 @@ public sealed class ProcessLaunchVariablePreparationService(
                     .ToArray()
             })
             .ToArray();
-        return context with { DriverActivations = activations };
+        return this with { DriverActivations = activations, DriverActivationsResolved = true };
     }
-}
-
-public sealed record ProcessLaunchPreparationContext(
-    string? DefinitionKey,
-    bool IsSubprocess,
-    ProcessLaunchSourceSnapshot Source)
-{
-    public IReadOnlyList<ProcessLaunchDriverActivation> DriverActivations { get; init; } = [];
 }
 
 public sealed record ProcessLaunchDriverActivation(

@@ -122,6 +122,7 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
         services.RemoveAll<IProcessStepExecutionDriver>();
         services.RemoveAll<IProcessRuntimeStepAssignmentRepairService>();
         services.RemoveAll<IProcessRuntimeRunCancellationObserver>();
+        services.RemoveAll<IProcessAuthoringStore>();
 
         using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions

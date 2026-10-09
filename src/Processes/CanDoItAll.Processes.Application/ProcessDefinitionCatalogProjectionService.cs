@@ -68,8 +68,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
         var summary = CreateSummary(pack, filteredItems.Length, normalizedSearchText);
 
         return new ProcessDefinitionCatalogProjection(
-            PublishedDefinitionCount: allItems.Count(item => item.Status != ProcessDefinitionCatalogItemStatus.Archived &&
-                (item.Status is ProcessDefinitionCatalogItemStatus.TemplateDefault or ProcessDefinitionCatalogItemStatus.Published || item.PublishedId is not null)),
+            PublishedDefinitionCount: allItems.Count(item => item.CanLaunch),
             DraftDefinitionCount: allItems.Count(item => item.HasDraft),
             TemplateCompatibilityIssueCount: allItems.Sum(item => item.CompatibilityIssueCount),
             summary,
@@ -115,9 +114,14 @@ public sealed class ProcessDefinitionCatalogProjectionService
                 _ => ProcessDefinitionCatalogItemStatus.Draft
             };
             ProcessDefinitionCatalogItemKey key = new(row.Address.DefinitionKey);
+            var inherited = items.GetValueOrDefault(key);
+            var executable = row.Lifecycle == ProcessAuthoringLifecycle.Archived ? ProcessDefinitionExecutableSource.Unavailable
+                : row.PublishedId is not null ? row.Address.ProjectId == Guid.Empty
+                    ? ProcessDefinitionExecutableSource.GlobalPublication : ProcessDefinitionExecutableSource.ProjectPublication
+                : inherited?.ExecutableSource ?? ProcessDefinitionExecutableSource.Unavailable;
             items[key] = new(key, row.Address.ProjectId == Guid.Empty ? ProcessDefinitionCatalogScopeKind.Global : ProcessDefinitionCatalogScopeKind.Project,
                 row.Name, row.Summary, status, row.Criticality, row.OperatingMode, row.UpdatedAtUtc, 0) {
-                    PublishedId = row.PublishedId, HasDraft = row.Lifecycle == ProcessAuthoringLifecycle.Draft
+                    PublishedId = row.PublishedId, HasDraft = row.Lifecycle == ProcessAuthoringLifecycle.Draft, ExecutableSource = executable
                 };
         }
         return items.Values.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Key.Value, StringComparer.Ordinal).ToArray();

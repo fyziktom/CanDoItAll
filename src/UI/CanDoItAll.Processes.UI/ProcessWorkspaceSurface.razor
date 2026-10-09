@@ -1010,7 +1010,12 @@
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Launch planning" />
             <h3 class="text-base font-semibold text-slate-900">@(Session.DefinitionCatalog.SelectedItem?.Name ?? "Select a definition")</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Launch uses the process application boundary and refreshes runtime projections after the run is accepted.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-600">@(Session.DefinitionCatalog.SelectedItem?.ExecutableSource switch {
+                ProcessDefinitionExecutableSource.GlobalPublication => "Launch uses the published global definition.",
+                ProcessDefinitionExecutableSource.ProjectPublication => "Launch uses the published project definition.",
+                ProcessDefinitionExecutableSource.TemplateDefault => "Launch uses the inherited template default.",
+                _ => "This definition is unavailable for new launches."
+            })</p>
             <Cluster Gap="LayoutGap.XSmall" Class="mt-4 flex-wrap">
                 <StatusBadge Tone="info" Text="@ResolveHistoryWindowText(Session.CurrentShell.Runtime.HistoryWindow)" />
                 <StatusBadge Tone="@ResolveEditorStatusTone(Session.DefinitionCatalog.SelectedEditor?.Status ?? ProcessDefinitionAuthoringStatus.TemplateDefault)" Text="@(Session.DefinitionCatalog.SelectedEditor?.Status.ToString() ?? "No definition")" />
@@ -1020,7 +1025,7 @@
                     ButtonStyle="ButtonStyle.Success"
                     Size="ButtonSize.Small"
                     Class="mt-4"
-                    Disabled="@(Session.IsBusy || Session.DefinitionCatalog.SelectedItem is null)"
+                    Disabled="@(Session.IsBusy || Session.DefinitionCatalog.SelectedItem?.CanLaunch != true)"
                     IsBusy="@Session.IsBusy"
                     Click="Session.LaunchSelectedDefinitionAsync"
                     data-testid="processes-runs-launch-selected-definition" />

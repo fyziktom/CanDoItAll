@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-09T13:29:11.759147+00:00",
+  "generated_utc": "2026-10-09T14:14:58.804103+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15371,
+  "allowance_count": 15372,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -70115,6 +70115,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0dfe66e4bd41cdc877eececc2a89832e4fd0c4b1b447027ccf23f05042da9c91",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "1dc0ee435204668aa680ab9e8ad90660c8d4ee4e75abf309ca106f0a79414bd2",
       "count": 1
     },
     {

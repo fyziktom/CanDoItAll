@@ -3,7 +3,8 @@ using CanDoItAll.Processes.Templates;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessProjectionClock clock) {
+public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessProjectionClock clock,
+    ProcessExecutableDefinitionResolver resolver) {
     public async Task<ProcessDefinitionStepEditorProjection> ReadAsync(ProcessWorkspaceShellScope scope, ProcessDefinitionCatalogItemKey key, CancellationToken cancellationToken)
         => await ProjectAsync(await workspace.ReadAsync(scope, key, cancellationToken), null, cancellationToken);
 
@@ -28,7 +29,21 @@ public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace worksp
             return normalized with { Projection = normalized.Projection with { Observation = baseline.Observation } };
         }
         var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
-        ProcessAuthoringStepPatch.Apply(content.Definition.Steps.Single(step => step.Key == key), normalized.Projection.SelectedStep!);
+        var step = content.Definition.Steps.Single(step => step.Key == key);
+        var previousChild = step.SubprocessProcessKey;
+        ProcessAuthoringStepPatch.Apply(step, normalized.Projection.SelectedStep!);
+        if (command.CommandKind == ProcessDefinitionStepCommandKind.MapSubprocess || previousChild != step.SubprocessProcessKey) {
+            try {
+                if (string.IsNullOrWhiteSpace(step.SubprocessProcessKey)) {
+                    step.SubprocessContract = null;
+                } else {
+                    var child = await resolver.ResolveAsync(command.Scope, step.SubprocessProcessKey, cancellationToken: cancellationToken);
+                    ProcessAuthoringSubprocessPatch.Apply(step, ProcessExecutableDefinitionResolver.Decode(child, child.DefinitionKey).Definition);
+                }
+            } catch (InvalidOperationException exception) {
+                return await ResultAsync(command, baseline, ProcessAuthoringOutcome.Conflict, key, "Subprocess mapping refused: " + exception.Message, cancellationToken);
+            }
+        }
         var saved = await workspace.CommitAsync(baseline, command.OperationId, fingerprint, content, ProcessAuthoringLifecycle.Draft,
             false, new(StepKey: key), cancellationToken);
         return await ResultAsync(command, workspace.FromReceipt(command.Scope, saved), saved.Outcome, saved.Selection?.StepKey, null, cancellationToken);

@@ -15,7 +15,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
     CoordinatedDatabaseTransaction? coordinatedTransaction = null,
     IProcessProjectAdmissionPolicy? projectAdmissionPolicy = null,
     IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null,
-    IProcessToolLaunchAdmissionPolicy? toolLaunchPolicy = null) :
+    IProcessToolLaunchAdmissionPolicy? toolLaunchPolicy = null,
+    IProcessAuthoringStore? authoringStore = null) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
     IProcessRuntimeActivityStore,
@@ -179,7 +180,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         {
             try
             {
-                using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null)
+                using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null || request.InitialPlan.ExecutableDefinitions is not null)
                     ? coordinatedTransaction?.Enter(dbContext)
                     : null;
                 return await CommitCoreAsync(request, authorityLease, cancellationToken).ConfigureAwait(false);
@@ -196,7 +197,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             .ConfigureAwait(false);
         try
         {
-            using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null)
+            using var participation = request.InitialPlan is not null && (request.Mutation.State.ProjectAdmission is not null || request.InitialLaunchAdmission is not null || request.InitialPlan.ExecutableDefinitions is not null)
                 ? coordinatedTransaction?.Enter(dbContext)
                 : null;
             foreach (var rootId in rootIds) {
@@ -254,6 +255,15 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
         await ValidateProjectAdmissionAsync(request, existing, cancellationToken).ConfigureAwait(false);
         await ValidatePreparedAuthorityAsync(request, existing, preparedLaunch, authorityLease, cancellationToken).ConfigureAwait(false);
+        if (existing is null && request.InitialPlan?.ExecutableDefinitions is { } definitions) {
+            var admission = request.Mutation.State.ProjectAdmission;
+            if (definitions.ProjectId != (admission?.ProjectId ?? Guid.Empty) || definitions.ProjectLifetimeId != (admission?.LifetimeId ?? Guid.Empty) ||
+                    admission is not null && definitions.DatabaseProfileId != admission.DatabaseProfileId) {
+                throw new InvalidOperationException("The executable content and launch admission belong to different project lifetimes.");
+            }
+            await (authoringStore ?? throw new InvalidOperationException("Executable admission requires the durable authoring owner."))
+                .RequireLaunchableAsync(definitions, true, cancellationToken).ConfigureAwait(false);
+        }
         await StageInitialPlanAsync(
             request,
             isNewState: existing is null,

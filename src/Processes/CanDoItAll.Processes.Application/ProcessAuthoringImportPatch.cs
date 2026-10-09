@@ -104,10 +104,6 @@ internal static class ProcessAuthoringImportPatch {
                 }
                 if (step.SubprocessContract is { } child) {
                     child.ParentProducedArtifactExpectationKey = MapArtifact(originalKey, child.ParentProducedArtifactExpectationKey);
-                    foreach (var forwarded in child.ForwardedChildContextArtifacts) {
-                        forwarded.ArtifactExpectationKey = MapArtifact(forwarded.SourceStepKey, forwarded.ArtifactExpectationKey);
-                        forwarded.SourceStepKey = MapStep(forwarded.SourceStepKey);
-                    }
                 }
                 step.Key = MapStep(originalKey);
                 step.Order = order++;
