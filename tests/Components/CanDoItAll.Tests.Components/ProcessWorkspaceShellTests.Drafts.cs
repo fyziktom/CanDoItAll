@@ -12,6 +12,74 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    public enum AuthoringRetirement { Scope, ProjectLifetime, Disposal }
+
+    public static IEnumerable<object[]> AuthoringRetirements => Enum.GetValues<AuthoringFamily>()
+        .SelectMany(family => Enum.GetValues<AuthoringRetirement>()
+            .SelectMany(retirement => new[] { new object[] { family, retirement, false }, [family, retirement, true] }));
+
+    [Theory]
+    [MemberData(nameof(AuthoringRetirements))]
+    public async Task Authoring_real_retirement_fences_every_family_completion(AuthoringFamily family, AuthoringRetirement retirement, bool fail) {
+        using var context = CreateContext(out var client);
+        var project = Guid.NewGuid();
+        var profile = Guid.NewGuid();
+        var lifetime = Guid.NewGuid();
+        if (retirement == AuthoringRetirement.ProjectLifetime) {
+            client.ShellResultTransform = (_, shell) => shell with { ProjectBinding = new(profile, project, lifetime) };
+        }
+        var cut = context.Render<ProcessWorkspaceShell>(p => p.Add(c => c.ProjectId, retirement == AuthoringRetirement.ProjectLifetime ? project : null));
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        await OpenAuthoringFamilyAsync(cut, family);
+        var originalSession = (IProcessWorkspaceSession)cut.Instance;
+        var original = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var successor = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        client.AuthoringCompletion = original;
+        var running = cut.InvokeAsync(() => SendAuthoringAsync(originalSession, family));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.AuthoringCommandCount));
+        Task next = Task.CompletedTask;
+        try {
+            switch (retirement) {
+                case AuthoringRetirement.Scope:
+                    cut.Render(p => p.Add(c => c.ProjectId, project));
+                    cut.WaitForAssertion(() => Assert.Equal(project, ((IProcessWorkspaceSession)cut.Instance).CurrentShell.Scope.ProjectId));
+                    cut.Render(p => p.Add(c => c.ProjectId, (Guid?)null));
+                    break;
+                case AuthoringRetirement.ProjectLifetime:
+                    lifetime = Guid.NewGuid();
+                    await cut.InvokeAsync(originalSession.RefreshAsync);
+                    break;
+                case AuthoringRetirement.Disposal:
+                    cut.Dispose();
+                    cut = context.Render<ProcessWorkspaceShell>();
+                    break;
+            }
+            var session = (IProcessWorkspaceSession)cut.Instance;
+            await OpenAuthoringFamilyAsync(cut, family);
+            cut.WaitForAssertion(() => Assert.False(session.IsBusy));
+            client.AuthoringCompletion = successor;
+            next = cut.InvokeAsync(() => SendAuthoringAsync(session, family));
+            cut.WaitForAssertion(() => Assert.Equal(2, client.AuthoringCommandCount));
+            if (fail) {
+                original.SetException(new InvalidOperationException("Retired authority detail"));
+            } else {
+                original.SetResult();
+            }
+            await running;
+            Assert.True(session.IsBusy);
+            Assert.Null(AuthoringReceipt(session, family));
+            Assert.Null(session.ErrorMessage);
+            successor.SetResult();
+            await next;
+            Assert.NotNull(AuthoringReceipt(session, family));
+            Assert.False(session.IsBusy);
+        } finally {
+            original.TrySetResult();
+            successor.TrySetResult();
+            await Task.WhenAll(running, next);
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
