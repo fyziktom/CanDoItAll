@@ -257,8 +257,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
         await ValidatePreparedAuthorityAsync(request, existing, preparedLaunch, authorityLease, cancellationToken).ConfigureAwait(false);
         if (existing is null && request.InitialPlan?.ExecutableDefinitions is { } definitions) {
             var admission = request.Mutation.State.ProjectAdmission;
-            if (definitions.ProjectId != (admission?.ProjectId ?? Guid.Empty) || definitions.ProjectLifetimeId != (admission?.LifetimeId ?? Guid.Empty) ||
-                    admission is not null && definitions.DatabaseProfileId != admission.DatabaseProfileId) {
+            if (admission is not null && (definitions.ProjectId != admission.ProjectId ||
+                    definitions.ProjectLifetimeId != admission.LifetimeId || definitions.DatabaseProfileId != admission.DatabaseProfileId)) {
                 throw new InvalidOperationException("The executable content and launch admission belong to different project lifetimes.");
             }
             await (authoringStore ?? throw new InvalidOperationException("Executable admission requires the durable authoring owner."))

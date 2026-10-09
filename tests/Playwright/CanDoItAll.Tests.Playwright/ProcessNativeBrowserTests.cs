@@ -99,13 +99,18 @@ public sealed class ProcessNativeBrowserTests {
             await page.GotoAsync($"{host.BaseUrl}{route}?runId={runId.Value:D}&definitionKey={ProcessNativeBrowserHost.CompleteDefinition}");
             await Assertions.Expect(page.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
             await page.GetByTestId("processes-detail-tab-manager-chat").ClickAsync();
-            await page.GetByTestId("processes-manager-chat-agent-select").SelectOptionAsync(host.AgentId.ToString("D"));
+            var manager = page.GetByTestId("processes-manager-chat-agent-select");
+            await Assertions.Expect(manager).ToBeEnabledAsync(new() { Timeout = 30_000 });
+            if (await manager.InputValueAsync() != host.AgentId.ToString("D")) {
+                await manager.SelectOptionAsync(host.AgentId.ToString("D"));
+            }
             await Assertions.Expect(page.GetByTestId("processes-manager-chat-context").Locator("h3")).ToHaveTextAsync("PC1 process manager");
             await Assertions.Expect(page.GetByTestId("processes-manager-chat-reload")).ToBeEnabledAsync();
             var chat = page.GetByTestId("processes-manager-chat-tab");
             await Assertions.Expect(chat.Locator(".chat-panel-header").GetByAltText("PC1 process manager")).ToBeVisibleAsync();
             await chat.GetByTestId("chat-prompt-input").FillAsync("Explain the selected process in one sentence.");
             await chat.GetByTestId("chat-prompt-input").PressAsync("Tab");
+            await Assertions.Expect(chat.GetByTestId("chat-prompt-input")).ToHaveValueAsync("Explain the selected process in one sentence.");
             await chat.GetByTestId("chat-send-button").ClickAsync();
             await wire.PrefixFlushed.Task.WaitAsync(TimeSpan.FromSeconds(60));
             try {

@@ -339,7 +339,7 @@ public partial class ProjectStructurePage
             targetNode?.Title ?? string.Empty,
             null,
             ProjectStructureProcessStartStage.Confirm,
-            false,
+            true,
             false,
             string.Empty,
             [],
@@ -389,6 +389,7 @@ public partial class ProjectStructurePage
                 return;
             }
             processStartDialog = dialog with {
+                IsBusy = false,
                 LaunchAuthority = authority,
                 LaunchLinkTarget = linkTarget,
                 IntentStorageKey = storageKey,

@@ -462,5 +462,6 @@ public sealed record ProcessDefinitionStepEditorProjection(
     ProcessDefinitionStepLintProjection Lint,
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionStepCommandReceipt? LastCommandReceipt) {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
     public ProcessAuthoringObservation? Observation { get; init; }
 }

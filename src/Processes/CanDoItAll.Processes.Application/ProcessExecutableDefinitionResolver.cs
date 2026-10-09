@@ -14,9 +14,17 @@ public sealed class ProcessExecutableDefinitionResolver(IProcessAuthoringStore s
         ProcessExecutableDefinitionClosure? captured, CancellationToken cancellationToken) {
         var scope = projectId is { } project ? ProcessWorkspaceShellScope.ForProject(project) : ProcessWorkspaceShellScope.Global;
         var address = await context.CaptureReadAddressAsync(scope, new("existing-launch"), cancellationToken);
-        return (captured is null || captured.DatabaseProfileId == address.DatabaseProfileId && captured.ProjectLifetimeId == address.ProjectLifetimeId) &&
-            (address.ProjectId == Guid.Empty ? admission is null : admission is not null && admission.DatabaseProfileId == address.DatabaseProfileId &&
-                admission.ProjectId == address.ProjectId && admission.LifetimeId == address.ProjectLifetimeId);
+        if (captured is not null && (captured.DatabaseProfileId != address.DatabaseProfileId ||
+                captured.ProjectId != address.ProjectId || captured.ProjectLifetimeId != address.ProjectLifetimeId)) {
+            return false;
+        }
+        if (address.ProjectId == Guid.Empty) {
+            return admission is null;
+        }
+        return admission is null
+            ? captured is not null
+            : admission.DatabaseProfileId == address.DatabaseProfileId && admission.ProjectId == address.ProjectId &&
+                admission.LifetimeId == address.ProjectLifetimeId;
     }
 
     public async Task<ProcessExecutableDefinitionClosure> ResolveAsync(ProcessWorkspaceShellScope scope, string key,

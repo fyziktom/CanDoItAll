@@ -1532,6 +1532,22 @@ public sealed partial class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public async Task Manager_chat_typing_reaches_the_host_and_the_send_request() {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out _, workspaceService);
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
+            .Add(component => component.RunIdQuery, runId));
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForElement("[data-testid='chat-prompt-input']");
+        const string prompt = "Explain the selected process in one sentence.";
+        cut.Find("[data-testid='chat-prompt-input']").Input(prompt);
+        cut.WaitForAssertion(() => Assert.Equal(prompt, ReadManagerChatField<string>(cut, "managerChatDraftPrompt")));
+        await cut.Find("[data-testid='chat-send-button']").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.WaitForAssertion(() => Assert.Equal(prompt, workspaceService.LastPrompt));
+    }
+
+    [Fact]
     public void Manager_chat_uses_distinct_thread_per_selected_process_run()
     {
         var workspaceService = new RecordingManagerChatWorkspaceService();

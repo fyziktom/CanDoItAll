@@ -2,8 +2,16 @@ using System.ComponentModel;
 
 namespace CanDoItAll.Processes.Projections;
 
-public sealed record ProcessAuthoringObservation(Guid DatabaseProfileId, Guid ProjectId, Guid ProjectLifetimeId,
-    ProcessDefinitionCatalogItemKey DefinitionKey, long Revision, string ContentHash, Guid? PublishedId) {
+[Description("Authoritative owner, revision and effective content identity shared by all editor families for one definition. This observation does not grant write authority.")]
+public sealed record ProcessAuthoringObservation(
+    [property: Description("Identity of the runtime database profile that owns this observation.")] Guid DatabaseProfileId,
+    [property: Description("Project identity, or the empty GUID for the global workspace.")] Guid ProjectId,
+    [property: Description("Captured project lifetime identity, or the empty GUID for the global workspace.")] Guid ProjectLifetimeId,
+    [property: Description("Stable key of the process definition whose authoring content is observed.")] ProcessDefinitionCatalogItemKey DefinitionKey,
+    [property: Description("Monotone revision of this scope's authored head, including a reset tombstone; zero when no local head exists.")] long Revision,
+    [property: Description("SHA-256 identity of the complete effective authoring content represented by this observation.")] string ContentHash,
+    [property: Description("Immutable publication retained by this scope's authored head, or null when that head has no publication. A separate inherited source may still be launchable.")] Guid? PublishedId) {
+    [Description("Revision of the inherited global head consulted when local content is absent or reset; zero when no inherited head is observed.")]
     public long InheritedRevision { get; init; }
     public bool HasSameOwner(ProcessAuthoringObservation other)
         => DatabaseProfileId == other.DatabaseProfileId && ProjectId == other.ProjectId &&

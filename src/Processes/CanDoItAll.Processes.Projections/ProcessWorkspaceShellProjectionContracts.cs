@@ -1012,7 +1012,9 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     DateTimeOffset UpdatedAtUtc,
     [property: Description("Number of compatibility findings for this definition.")]
     int CompatibilityIssueCount) {
+    [Description("Immutable publication retained by this catalog item's authored head, or null when no publication belongs to that head.")]
     public Guid? PublishedId { get; init; }
+    [Description("Whether the current authored head is an unpublished draft; an earlier publication may remain launchable.")]
     public bool HasDraft { get; init; }
     [Description("Source selected for new launches independently of the editable draft.")]
     public ProcessDefinitionExecutableSource ExecutableSource { get; init; } = ProcessDefinitionExecutableSource.TemplateDefault;
@@ -1022,6 +1024,7 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     public bool CanLaunch => Status != ProcessDefinitionCatalogItemStatus.Archived && ExecutableSource != ProcessDefinitionExecutableSource.Unavailable;
 }
 
+[Description("Selected executable source: distributed template, global publication, project publication, or unavailable. Numeric JSON values are listed by the OpenAPI schema.")]
 public enum ProcessDefinitionExecutableSource {
     TemplateDefault,
     GlobalPublication,
@@ -1194,6 +1197,7 @@ public sealed record ProcessDefinitionEditorProjection(
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
 {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
     public ProcessAuthoringObservation? Observation { get; init; }
 
     [Description("Optional role authoring projection associated with this definition.")]

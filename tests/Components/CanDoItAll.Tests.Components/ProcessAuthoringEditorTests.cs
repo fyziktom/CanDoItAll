@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProcessAuthoringEditorTests {
     private static readonly ProcessDefinitionCatalogItemKey Definition = new("architecture-review");
 

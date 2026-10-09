@@ -361,5 +361,6 @@ public sealed record ProcessDefinitionRoleEditorProjection(
     IReadOnlyList<ProcessDefinitionRoleCommandProjection> Commands,
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionRoleCommandReceipt? LastCommandReceipt) {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
     public ProcessAuthoringObservation? Observation { get; init; }
 }

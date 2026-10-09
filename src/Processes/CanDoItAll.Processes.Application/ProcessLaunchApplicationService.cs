@@ -198,7 +198,7 @@ public sealed partial class ProcessLaunchApplicationService(
                 continue;
             }
 
-            if ((state.ProjectAdmission?.ProjectId ?? Guid.Empty) != (request.ProjectId ?? Guid.Empty) && executableDefinitions is not null) {
+            if (state.ProjectAdmission is { } admission && admission.ProjectId != (request.ProjectId ?? Guid.Empty) && executableDefinitions is not null) {
                 continue;
             }
 

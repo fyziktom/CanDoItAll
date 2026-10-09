@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Projections;
@@ -11,7 +12,14 @@ namespace CanDoItAll.Tests.Integration.Processes;
 [Trait("Category", "HostPlatform")]
 public sealed class ProcessAuthoringPublicationTests {
     [Fact]
-    public async Task Mapped_child_contract_and_captured_child_publication_survive_later_republish() {
+    public Task Mapped_child_contract_and_captured_child_publication_survive_later_republish()
+        => VerifyCapturedChildAsync(false);
+
+    [Fact]
+    public Task Native_project_child_contract_keeps_its_captured_scope_and_publication()
+        => VerifyCapturedChildAsync(true);
+
+    private static async Task VerifyCapturedChildAsync(bool nativeProject) {
         await using var app = await TestApplication.CreateAsync(new());
         var parentKey = await SeedAsync(app.Services);
         string childKey;
@@ -42,13 +50,22 @@ public sealed class ProcessAuthoringPublicationTests {
         await using var scope = app.Services.CreateAsyncScope();
         var authority = await scope.ServiceProvider.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
             .CaptureLocalAsync(null, ProcessLaunchOperatorSurface.UserInterface);
+        Guid? projectId = null;
+        if (nativeProject) {
+            projectId = Guid.NewGuid();
+            Assert.True((await scope.ServiceProvider.GetRequiredService<ProjectsService>()
+                .CreateAsync(projectId.Value, new() { Name = "Native captured child project" })).IsSuccess);
+        }
         var launch = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
-        var started = await launch.LaunchAsync(new(parentKey, null, null, null, null, "child-pinning", new Dictionary<string, string>(), false, false) {
-            Authority = authority, CallerIntentId = new(Guid.NewGuid())
-        });
+        ProcessLaunchRequest request = new(parentKey, null, null, projectId, null, "child-pinning", new Dictionary<string, string>(), false, false);
+        if (!nativeProject) {
+            request = request with { Authority = authority, CallerIntentId = new(Guid.NewGuid()) };
+        }
+        var started = await launch.LaunchAsync(request);
         Assert.NotNull(started.RunId);
         var assignment = Assert.Single(await scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>().LoadByRunAsync(started.RunId.Value));
         var before = (await launch.ResolveChildForPreparationAsync(assignment, childKey))!;
+        Assert.Equal(projectId ?? Guid.Empty, before.ProjectId);
         var contract = (await ResolveAsync(app.Services, parentKey)).Definition.Steps[0].SubprocessContract!;
         Assert.Equal(childKey, contract.DefinitionKey);
         Assert.Equal("result", Assert.Single(contract.AcceptedChildOutputs).ArtifactExpectationKey);

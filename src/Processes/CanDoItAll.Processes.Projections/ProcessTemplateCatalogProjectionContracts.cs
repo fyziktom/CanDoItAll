@@ -313,5 +313,6 @@ public sealed record ProcessTemplateCatalogProjection(
     IReadOnlyList<ProcessTemplateImportedComponentProjection> ImportedComponents,
     [property: Description("Most recent template import receipt, or null when none is recorded.")]
     ProcessTemplateImportCommandReceipt? LastImportReceipt) {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
     public ProcessAuthoringObservation? Observation { get; init; }
 }
