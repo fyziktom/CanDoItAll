@@ -38,7 +38,8 @@ public sealed class ProcessCanvasAuthoringAdapter(ProcessAuthoringWorkspace work
         }
         ProcessDefinitionCanvasCommandReceipt receipt = new(command.OperationId, command.CommandKind,
             outcome == ProcessAuthoringOutcome.Accepted ? ProcessDefinitionCanvasCommandStatus.Accepted : ProcessDefinitionCanvasCommandStatus.Rejected,
-            projection.VersionToken, session.CommittedAtUtc ?? clock.GetUtcNow(), outcome == ProcessAuthoringOutcome.Accepted ? "The canvas change was committed."
+            projection.VersionToken, session.CommittedAtUtc ?? clock.GetUtcNow(), outcome == ProcessAuthoringOutcome.Accepted
+                ? command.CommandKind == ProcessDefinitionCanvasCommandKind.Recompose ? "The canvas was recomposed and committed." : "The canvas change was committed."
                 : "The definition changed. Review the current revision before changing the canvas again.");
         return new(receipt, projection with { LastCommandReceipt = receipt });
     }

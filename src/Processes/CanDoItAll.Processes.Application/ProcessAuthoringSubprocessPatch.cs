@@ -9,7 +9,8 @@ internal static class ProcessAuthoringSubprocessPatch {
     public static void Apply(ProcessTemplateDefinitionStepDocument target, ProcessTemplateDefinitionDocument child) {
         var contract = target.SubprocessContract ?? new ProcessSubprocessContract();
         contract.DefinitionKey = child.Key;
-        var explicitMappings = target.ArtifactExpectations.Where(item => !string.IsNullOrWhiteSpace(item.SubprocessChildStepKey)).ToArray();
+        var explicitMappings = target.ArtifactExpectations.Where(item => !string.IsNullOrWhiteSpace(item.SubprocessChildStepKey) ||
+            !string.IsNullOrWhiteSpace(item.SubprocessChildArtifactTitle) || item.SubprocessChildArtifactExpectationId.HasValue).ToArray();
         if (explicitMappings.Length > 0) {
             contract.AcceptedChildOutputs = explicitMappings.Select(mapping => {
                 var step = child.Steps.SingleOrDefault(item => item.Key == mapping.SubprocessChildStepKey)

@@ -22,7 +22,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await using var services = CreateProvider(environment.CreatePostgreSqlProfile("fresh"));
         await using var database = await ContextAsync(services);
         await MigrateCurrentAsync(database);
-        Assert.Equal(161, database.Model.GetEntityTypes().Count());
+        Assert.Equal(164, database.Model.GetEntityTypes().Count());
         Assert.False(database.Database.HasPendingModelChanges());
         Assert.Equal(CurrentMigration(database), (await database.Database.GetAppliedMigrationsAsync()).Last());
         foreach (var table in new[] { EvidenceTable.ProcessAssets, EvidenceTable.WorkHistory }) {

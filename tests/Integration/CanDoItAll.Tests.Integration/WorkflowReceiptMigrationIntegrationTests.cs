@@ -42,7 +42,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             Assert.Equal(original, await NativePayloadsAsync(context));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(161, context.Model.GetEntityTypes().Count());
+            Assert.Equal(164, context.Model.GetEntityTypes().Count());
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertEmptyReceiptSchemaAsync(context);
         }
@@ -72,7 +72,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         await context.Database.MigrateAsync();
         Assert.Equal(original, await NativePayloadsAsync(context));
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(161, context.Model.GetEntityTypes().Count());
+        Assert.Equal(164, context.Model.GetEntityTypes().Count());
         Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         await AssertEmptyReceiptSchemaAsync(context);
     }

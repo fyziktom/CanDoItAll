@@ -574,6 +574,7 @@
                 loadedShell = ReconcileDefinitionRead(loadedShell, completionSequence);
             }
             shell = loadedShell;
+            selectedDefinitionKey ??= loadedShell.DefinitionCatalog.SelectedDefinitionKey?.Value;
             acceptedProfileGeneration = originProfileGeneration;
             selectedRuntimeRunId = requiredRouteRunId is { } requestedRunId &&
                 loadedShell.Runtime.SelectedRunId != requestedRunId
@@ -633,7 +634,7 @@
         var editor = observed.DefinitionCatalog.SelectedEditor ?? current;
         var pending = definitionOperation is not null || definitionOutcomeUnknown || completionSequence != definitionCompletionSequence;
         if (current.Observation is not null) {
-            var native = pending ? (Editor: current, Stale: false) : ProcessAuthoringReadReconciler.Reconcile(current, editor);
+            var native = ProcessAuthoringReadReconciler.Reconcile(current, editor);
             if (native.Stale) {
                 errorMessage = "This read is older than the confirmed authoring revision or belongs to another owner. The confirmed result remains visible; Refresh retries the read.";
             }
@@ -1919,7 +1920,9 @@
             return;
         }
 
-        var selectedEditor = projection;
+        var selectedEditor = currentEditor.Observation is { } known && projection.Observation is { } incoming && known.Supersedes(incoming)
+            ? currentEditor with { LastCommandReceipt = projection.LastCommandReceipt ?? currentEditor.LastCommandReceipt }
+            : projection;
         if (selectedEditor.RoleEditor is null && currentEditor.RoleEditor is { } roleEditor) {
             selectedEditor = selectedEditor with { RoleEditor = roleEditor };
         }
@@ -2023,6 +2026,13 @@
             return;
         }
 
+        if (currentEditor.Observation is { } known && projection.Observation is { } incoming && known.Supersedes(incoming)) {
+            if (currentEditor.TemplateCatalog is not { } current) {
+                return;
+            }
+            projection = current with { LastImportReceipt = projection.LastImportReceipt };
+        }
+
         if (preserveQuery && currentEditor.TemplateCatalog is { } currentCatalog) {
             projection = currentCatalog with {
                 VersionToken = projection.VersionToken,
@@ -2046,6 +2056,13 @@
         if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
             currentEditor.DefinitionKey != projection.DefinitionKey) {
             return;
+        }
+
+        if (currentEditor.Observation is { } known && projection.Observation is { } incoming && known.Supersedes(incoming)) {
+            if (currentEditor.RoleEditor is not { } current) {
+                return;
+            }
+            projection = current with { LastCommandReceipt = projection.LastCommandReceipt };
         }
 
         var selectedEditor = currentEditor with {
@@ -2098,6 +2115,13 @@
             return;
         }
 
+        if (currentEditor.Observation is { } known && projection.Observation is { } incoming && known.Supersedes(incoming)) {
+            if (currentEditor.Canvas is not { } current) {
+                return;
+            }
+            projection = current with { LastCommandReceipt = projection.LastCommandReceipt };
+        }
+
         var selectedEditor = currentEditor with {
             Canvas = projection
         };
@@ -2137,6 +2161,13 @@
         if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
             currentEditor.DefinitionKey != projection.DefinitionKey) {
             return;
+        }
+
+        if (currentEditor.Observation is { } known && projection.Observation is { } incoming && known.Supersedes(incoming)) {
+            if (currentEditor.StepEditor is not { } current) {
+                return;
+            }
+            projection = current with { LastCommandReceipt = projection.LastCommandReceipt };
         }
 
         var selectedEditor = currentEditor with {
@@ -2214,7 +2245,8 @@
         definitionOutcomeUnknown = false;
         definitionCompletionSequence++;
         if (reconciliation?.Editor is { } editor && shell?.DefinitionCatalog.SelectedEditor is { } current) {
-            editor = ProcessAuthoringReadReconciler.PreserveReceipts(current, editor);
+            editor = current.Observation is null ? ProcessAuthoringReadReconciler.PreserveReceipts(current, editor)
+                : ProcessAuthoringReadReconciler.Reconcile(current, editor).Editor;
             if (editor.TemplateCatalog is { } catalog && current.TemplateCatalog is { } currentCatalog) {
                 editor = editor with { TemplateCatalog = currentCatalog with {
                     Observation = catalog.Observation, VersionToken = catalog.VersionToken,

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CanDoItAll.Processes.Templates;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
@@ -142,6 +143,8 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
         await page.GetByTestId("processes-definition-editor").WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("processes-definition-editor-name"))
+            .ToHaveValueAsync(new ProcessTemplatePackLoader().LoadDefinition("architecture-decision-governance").DisplayName);
         await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance regression");
         await page.GetByTestId("processes-definition-editor-owner").FillAsync("Architecture board");
         await page.GetByTestId("processes-definition-editor-manager-override").FillAsync("Use the architecture board manager.");
@@ -185,9 +188,16 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-template-library").WaitForAsync();
         await page.GetByTestId("processes-template-library-search").FillAsync("AI-assisted");
         await page.GetByTestId("processes-template-library-search-submit").ClickAsync();
+        await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-preview"), "AI-assisted");
         await page.GetByTestId("processes-template-library-category-processes").ClickAsync();
-        await page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery").WaitForAsync();
-        await page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery").ClickAsync();
+        var selectedStyle = new Regex(@"\bcda-button--tone-primary\b");
+        await Assertions.Expect(page.GetByTestId("processes-template-library-category-processes")).ToHaveClassAsync(selectedStyle);
+        var templateItem = page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery");
+        await templateItem.WaitForAsync();
+        if (!selectedStyle.IsMatch(await templateItem.GetAttributeAsync("class") ?? string.Empty)) {
+            await templateItem.ClickAsync();
+        }
+        await Assertions.Expect(templateItem).ToHaveClassAsync(selectedStyle);
         await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-preview"), "AI-assisted");
         await page.GetByTestId("processes-template-library-import-process").WaitForAsync();
         await page.GetByTestId("processes-template-library-preview-tab-markdown").ClickAsync();

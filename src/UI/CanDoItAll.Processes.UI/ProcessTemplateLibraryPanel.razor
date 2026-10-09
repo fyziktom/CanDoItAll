@@ -37,14 +37,12 @@
                         Icon="search"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Primary"
-                        Disabled="@Disabled"
                         Click="ApplySearchAsync"
                         data-testid="processes-template-library-search-submit" />
                 <Button Text="Clear"
                         Icon="close"
                         Size="ButtonSize.Small"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@Disabled"
                         Click="ClearSearchAsync"
                         data-testid="processes-template-library-search-clear" />
             </Cluster>
@@ -55,7 +53,6 @@
                         Icon="@ResolveCategoryIcon(category.Kind)"
                         Size="ButtonSize.Small"
                         ButtonStyle="@(category.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
-                        Disabled="@Disabled"
                         Click="@(() => SelectCategoryAsync(category.Kind))"
                         title="@category.Description"
                         data-testid="@BuildCategoryTestId(category.Kind)" />
@@ -72,7 +69,6 @@
                             Icon="@ResolveItemIcon(item.Kind)"
                             Size="ButtonSize.Small"
                             ButtonStyle="@(item.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
-                            Disabled="@Disabled"
                             Click="@(() => SelectItemAsync(item.Key))"
                             data-testid="@BuildItemTestId(item.Key)" />
                     <p class="text-xs leading-5 text-slate-500">@item.Summary</p>
@@ -112,7 +108,6 @@
                                 Icon="@ResolvePreviewTabIcon(tab)"
                                 Size="ButtonSize.Small"
                                 ButtonStyle="@(TemplateCatalog.Query.PreviewTab == tab ? ButtonStyle.Primary : ButtonStyle.Light)"
-                                Disabled="@Disabled"
                                 Click="@(() => SelectPreviewTabAsync(tab))"
                                 data-testid="@BuildPreviewTabTestId(tab)" />
                     }

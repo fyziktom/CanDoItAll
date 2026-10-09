@@ -132,11 +132,16 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
                     OperationTargetScope = ProcessOperationContractNames.ManagedProcessArtifactsOnly,
                     AllowedOperations = [ProcessOperationContractNames.ReadProcessContext] });
             }
+            if (authoring?.IncludeImportArtifact == true && key == WaitingDefinition) {
+                definition.Steps[0].ArtifactExpectations.Add(new() {
+                    Key = "pc3-source-evidence", Title = "Imported evidence", ArtifactKind = "Artifact", IsRequired = true
+                });
+            }
             File.WriteAllText(Path.Combine(directory, "definition.json"), JsonSerializer.Serialize(definition));
         }
         return root;
     }
-    private static WorkflowGraph CreateGraph(bool wait) {
+    internal static WorkflowGraph CreateGraph(bool wait) {
         var descriptor = BuiltInWorkflowExecutorDescriptors.JsonTransform;
         var outcome = JsonSerializer.Serialize(new ProcessStepOutcomeResult {
             Status = ProcessStepOutcomeStatus.Completed, Reason = "PC1 native workflow completed.",
@@ -182,8 +187,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             builder.ConfigureServices(services => {
                 services.Replace(ServiceDescriptor.Singleton(new ProcessTemplatePackLoader(pack)));
                 services.Replace(ServiceDescriptor.Scoped<IProcessWorkspaceProjectionClient>(provider =>
-                    new ObservedProjectionClient(ActivatorUtilities.CreateInstance<ProcessWorkspaceProjectionClient>(provider), readFault, authoring,
-                        provider.GetRequiredService<ProcessDefinitionRoleEditorProjectionService>(), provider.GetRequiredService<ProcessDefinitionStepEditorProjectionService>())));
+                    new ObservedProjectionClient(ActivatorUtilities.CreateInstance<ProcessWorkspaceProjectionClient>(provider), readFault, authoring)));
             });
         }
     }
@@ -200,18 +204,15 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         }
     }
     private sealed class ObservedProjectionClient(ProcessWorkspaceProjectionClient native, AcceptedRunReadFault fault,
-        ProcessAuthoringBrowserControl? authoring, ProcessDefinitionRoleEditorProjectionService roles,
-        ProcessDefinitionStepEditorProjectionService steps) : IProcessWorkspaceProjectionClient {
+        ProcessAuthoringBrowserControl? authoring) : IProcessWorkspaceProjectionClient {
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(ProcessWorkspaceShellRequest request, CancellationToken cancellationToken = default) {
             var result = await native.GetShellAsync(request, cancellationToken);
             fault.AfterRead(request);
-            if (authoring is not null && result.DefinitionCatalog.SelectedEditor is { } editor) {
+            if (authoring is not null && Interlocked.Exchange(ref authoring.PendingReadFailures, 0) > 0) {
+                throw new TimeoutException("Private authoring read failure detail.");
+            }
+            if (authoring is not null && result.DefinitionCatalog.SelectedEditor is not null) {
                 Interlocked.Increment(ref authoring.ReadCount);
-                editor = editor with {
-                    RoleEditor = editor.RoleEditor is null ? null : await roles.GetEditorAsync(request.Scope, editor.DefinitionKey, cancellationToken),
-                    StepEditor = editor.StepEditor is null ? null : await steps.GetEditorAsync(request.Scope, editor.DefinitionKey, cancellationToken)
-                };
-                result = result with { DefinitionCatalog = result.DefinitionCatalog with { SelectedEditor = editor } };
             }
             return result;
         }
@@ -220,11 +221,17 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         public async Task<ProcessDefinitionEditorCommandResult> ExecuteDefinitionEditorCommandAsync(ProcessDefinitionEditorCommand command, CancellationToken cancellationToken = default) {
             var result = await native.ExecuteDefinitionEditorCommandAsync(command, cancellationToken);
             if (authoring is not null) {
-                Interlocked.Increment(ref authoring.DefinitionCommandCount);
+                var count = Interlocked.Increment(ref authoring.DefinitionCommandCount);
                 authoring.DefinitionCommand = command;
                 authoring.DefinitionResult = result;
                 authoring.DefinitionStarted.TrySetResult();
                 await authoring.ReleaseDefinition.Task;
+                if (count == 1 && authoring.LoseFirstCommitResponse) {
+                    throw new TimeoutException("Private authoring commit response failure detail.");
+                }
+                if (count == 1 && authoring.FailReadAfterFirstCommit) {
+                    Interlocked.Exchange(ref authoring.PendingReadFailures, 1);
+                }
             }
             return result;
         }
@@ -232,8 +239,12 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
             if (authoring is null) {
                 return await native.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
             }
-            var result = await roles.ExecuteCommandAsync(command, cancellationToken);
+            var result = await native.ExecuteDefinitionRoleEditorCommandAsync(command, cancellationToken);
             authoring.RoleResult = result;
+            if (Interlocked.Increment(ref authoring.RoleCommandCount) == 1 && authoring.DelayFirstRoleResponse) {
+                authoring.RoleStarted.TrySetResult();
+                await authoring.ReleaseRole.Task;
+            }
             return result;
         }
         public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command, CancellationToken cancellationToken = default)
@@ -243,12 +254,24 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
                 return await native.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
             }
             authoring.StepCommand = command;
-            var result = await steps.ExecuteCommandAsync(command, cancellationToken);
+            var result = await native.ExecuteDefinitionStepEditorCommandAsync(command, cancellationToken);
             authoring.StepResult = result;
             return result;
         }
-        public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command, CancellationToken cancellationToken = default)
-            => native.ExecuteTemplateImportCommandAsync(command, cancellationToken);
+        public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(ProcessTemplateImportCommand command, CancellationToken cancellationToken = default) {
+            var result = await native.ExecuteTemplateImportCommandAsync(command, cancellationToken);
+            if (authoring is not null) {
+                authoring.ImportCommand = command;
+                authoring.ImportResult = result;
+                if (Interlocked.Increment(ref authoring.ImportCommandCount) == 1 && authoring.DelayFirstImportResponse) {
+                    authoring.ImportStarted.TrySetResult();
+                    await authoring.ReleaseImport.Task;
+                }
+            }
+            return result;
+        }
+        public Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default)
+            => native.GetAuthoringOperationAsync(query, cancellationToken);
         public Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(ProcessRuntimeOperatorActionCommand command, CancellationToken cancellationToken = default)
             => native.ExecuteRuntimeOperatorActionAsync(command, cancellationToken);
         public Task<ProcessRuntimeRunCancellationResult> RequestRunCancellationAsync(ProcessRuntimeRunCancellationCommand command, CancellationToken cancellationToken = default)

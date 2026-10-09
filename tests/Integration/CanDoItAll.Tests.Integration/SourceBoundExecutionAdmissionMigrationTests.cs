@@ -51,7 +51,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await AssertNoAuthorityAsync(context);
             await AssertCurrentReferenceOnlyAsync(context);
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(161, context.Model.GetEntityTypes().Count());
+            Assert.Equal(164, context.Model.GetEntityTypes().Count());
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         }
     }
@@ -89,7 +89,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await AssertNoAuthorityAsync(restored);
         await AssertCurrentReferenceOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
-        Assert.Equal(161, restored.Model.GetEntityTypes().Count());
+        Assert.Equal(164, restored.Model.GetEntityTypes().Count());
         Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 

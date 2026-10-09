@@ -44,7 +44,12 @@ public sealed class ProcessNativeBrowserTests {
         try {
             await page.GotoAsync(host.BaseUrl + route);
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
-            await page.GetByTestId("processes-definition-" + ProcessNativeBrowserHost.CompleteDefinition).ClickAsync();
+            await Assertions.Expect(page.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
+            var definition = page.GetByTestId("processes-definition-" + ProcessNativeBrowserHost.CompleteDefinition);
+            if (await definition.GetAttributeAsync("aria-selected") != "true") {
+                await definition.ClickAsync();
+            }
+            await Assertions.Expect(page.GetByTestId("processes-definition-editor-name")).ToHaveValueAsync(ProcessNativeBrowserHost.CompleteDefinition);
             await page.GetByTestId("processes-command-launchrun").ClickAsync();
             await page.WaitForURLAsync(new Regex("[?&]runId=", RegexOptions.IgnoreCase), new() { Timeout = 90_000 });
             var runId = new ProcessRunId(Guid.Parse(QueryHelpers.ParseQuery(new Uri(page.Url).Query)["runId"].ToString()));

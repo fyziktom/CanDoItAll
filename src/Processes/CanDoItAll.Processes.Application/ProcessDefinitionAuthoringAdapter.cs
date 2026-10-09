@@ -56,7 +56,13 @@ public sealed class ProcessDefinitionAuthoringAdapter(ProcessAuthoringWorkspace 
         ProcessDefinitionEditorCommandReceipt receipt = new(command.OperationId, command.CommandKind,
             outcome == ProcessAuthoringOutcome.Accepted ? ProcessDefinitionEditorCommandStatus.Accepted : ProcessDefinitionEditorCommandStatus.Rejected,
             projection.VersionToken, session.CommittedAtUtc ?? clock.GetUtcNow(), outcome == ProcessAuthoringOutcome.Accepted
-                ? "The definition was committed to its captured workspace." : "The definition changed. Review the current revision before submitting this draft again.", []);
+                ? command.CommandKind switch {
+                    ProcessDefinitionEditorCommandKind.SaveDraft => "Draft saved.",
+                    ProcessDefinitionEditorCommandKind.Publish => "Definition published.",
+                    ProcessDefinitionEditorCommandKind.Archive => "Definition archived.",
+                    ProcessDefinitionEditorCommandKind.Delete => "Definition override deleted; inherited content is available.",
+                    _ => throw new ArgumentOutOfRangeException(nameof(command))
+                } : "The definition changed. Review the current revision before submitting this draft again.", []);
         return new(receipt, projection with { LastCommandReceipt = receipt });
     }
 

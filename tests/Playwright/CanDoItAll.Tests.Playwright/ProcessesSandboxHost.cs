@@ -25,11 +25,13 @@ internal sealed class ProcessesSandboxHost : IAsyncDisposable {
             foreach (var argument in new[] { "publish", "--no-build", "--no-restore", "/m:1", "/nr:false", "--configuration", PlaywrightTestHostPaths.BuildConfiguration, $"--property:ProcessesAssetMode={assetMode}", "--output", directory }) {
                 publish.ArgumentList.Add(argument);
             }
+            var publishWatch = Stopwatch.StartNew();
             using var publishing = Process.Start(publish) ?? throw new InvalidOperationException("Sandbox publish did not start.");
             var output = publishing.StandardOutput.ReadToEndAsync();
             var error = publishing.StandardError.ReadToEndAsync();
             await publishing.WaitForExitAsync();
             var text = await output + await error;
+            logs.Enqueue($"Sandbox publish elapsedMs={publishWatch.ElapsedMilliseconds}; mode={assetMode}");
             var evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "processes-pc1");
             Directory.CreateDirectory(evidence);
             await File.WriteAllTextAsync(Path.Combine(evidence, evidencePrefix + "-publish.log"), text);
@@ -47,6 +49,7 @@ internal sealed class ProcessesSandboxHost : IAsyncDisposable {
         start.Environment["ASPNETCORE_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment["DOTNET_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment.Remove("CANDOITALL_TESTS_POSTGRES_CONNECTION");
+        var startupWatch = Stopwatch.StartNew();
         process = Process.Start(start) ?? throw new InvalidOperationException("Owned Processes sandbox did not start.");
         logs.Enqueue($"Owned sandbox PID={process.Id}; published={published}; URL={BaseUrl}");
         pumps = [PumpAsync(process.StandardOutput), PumpAsync(process.StandardError)];
@@ -60,6 +63,7 @@ internal sealed class ProcessesSandboxHost : IAsyncDisposable {
             try {
                 using var response = await client.GetAsync(BaseUrl, deadline.Token);
                 if (response.IsSuccessStatusCode) {
+                    logs.Enqueue($"Sandbox HTTP readiness elapsedMs={startupWatch.ElapsedMilliseconds}; mode={assetMode}; published={published}");
                     return;
                 }
             } catch (HttpRequestException) {

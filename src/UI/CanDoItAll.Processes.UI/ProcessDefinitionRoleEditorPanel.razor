@@ -20,7 +20,7 @@
         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
             <StatusBadge Tone="info" Text="@($"{State.RoleEditor.Roles.Count} role(s)")" />
             <StatusBadge Tone="@ProcessRoleEditorState.ResolveLintTone(State.RoleEditor.Lint)" Text="@ProcessRoleEditorState.ResolveLintText(State.RoleEditor.Lint)" />
-            @foreach (var command in State.RoleEditor.Commands.Where(command => command.Kind == ProcessDefinitionRoleCommandKind.AddRole)) {
+            @foreach (var command in State.RoleEditor.Commands.Where(command => command.Kind == ProcessDefinitionRoleCommandKind.AddRole && !State.RoleDetailDialogOpen)) {
                 <Button Text="@command.Text"
                         Icon="@command.Icon"
                         ButtonStyle="@ProcessRoleEditorState.ResolveCommandButtonStyle(command.Kind)"
@@ -68,7 +68,6 @@
                             Size="ButtonSize.Small"
                             ButtonStyle="ButtonStyle.Light"
                             Class="process-role-card__details"
-                            Disabled="@State.Disabled"
                             Click="@(() => State.OpenRoleDetailsAsync(role.RoleKey))"
                             data-testid="@ProcessRoleEditorState.BuildRoleItemTestId(role.RoleKey)" />
                 </article>
@@ -295,7 +294,7 @@
         </ChildContent>
         <Footer>
             <Cluster Gap="LayoutGap.Small" Class="flex-wrap justify-end">
-                @foreach (var command in State.RoleEditor.Commands.Where(command => command.Kind != ProcessDefinitionRoleCommandKind.AddRole)) {
+                @foreach (var command in State.RoleEditor.Commands) {
                     <Button Text="@command.Text"
                             Icon="@command.Icon"
                             ButtonStyle="@ProcessRoleEditorState.ResolveCommandButtonStyle(command.Kind)"

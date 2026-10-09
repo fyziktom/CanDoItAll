@@ -12,6 +12,88 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    [Fact]
+    public async Task Pending_definition_read_disables_header_mutations_and_keeps_refresh_available() {
+        using var context = CreateContext(out var client);
+        client.ShellResultTransform = (_, shell) => shell with {
+            Commands = shell.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
+                ? command with { IsEnabled = true, DisabledReason = null } : command).ToArray()
+        };
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        Assert.False(cut.Find("[data-testid='processes-command-launchrun']").HasAttribute("disabled"));
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        var requestCount = client.Requests.Count;
+        client.DeferShellRequests = true;
+        var reading = cut.InvokeAsync(() => session.SelectDefinitionAsync(new("architecture-decision-governance")));
+        try {
+            cut.WaitForAssertion(() => {
+                Assert.Equal(requestCount + 1, client.Requests.Count);
+                Assert.True(cut.Find("[data-testid='processes-command-launchrun']").HasAttribute("disabled"));
+                Assert.True(cut.Find("[data-testid='processes-feed-defaults']").HasAttribute("disabled"));
+                Assert.False(cut.Find("[data-testid='processes-refresh']").HasAttribute("disabled"));
+            });
+        } finally {
+            client.CompleteShellRequest(0);
+            await reading;
+        }
+        cut.WaitForAssertion(() => {
+            Assert.False(cut.Find("[data-testid='processes-command-launchrun']").HasAttribute("disabled"));
+            Assert.False(cut.Find("[data-testid='processes-feed-defaults']").HasAttribute("disabled"));
+        });
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Native_pending_save_loads_lazy_sibling_and_late_receipt_cannot_roll_back_newer_read(long readRevision) {
+        using var context = CreateContext(out var client);
+        var profile = Guid.NewGuid();
+        long revision = 0;
+        client.ShellResultTransform = (_, value) => value with { DefinitionCatalog = value.DefinitionCatalog with {
+            SelectedEditor = Observe(value.DefinitionCatalog.SelectedEditor!, revision)
+        } };
+        client.EditorResultTransform = value => value with {
+            Projection = Observe(value.Projection, 1), Reconciliation = new(Observe(value.Projection, 1), null)
+        };
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (IProcessWorkspaceSession)cut.Instance;
+        session.DefinitionDraft.Name = "Submitted name";
+        client.AuthoringCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = cut.InvokeAsync(() => SendAuthoringAsync(session, AuthoringFamily.Definition));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.AuthoringCommandCount));
+        revision = readRevision;
+        await OpenAuthoringFamilyAsync(cut, AuthoringFamily.Role);
+        var editor = session.DefinitionCatalog.SelectedEditor!;
+        Assert.Equal(editor.DefinitionKey, client.Requests[^1].DefinitionCatalogQuery.SelectedDefinitionKey);
+        Assert.Equal(readRevision, editor.Observation!.Revision);
+        Assert.Equal(editor.Observation, editor.RoleEditor!.Observation);
+        Assert.Equal("native-r0", session.DefinitionDraft.VersionToken!.Value.Value);
+        session.DefinitionDraft.Name = "Later local edit";
+        client.AuthoringCompletion.SetResult();
+        await pending;
+        editor = session.DefinitionCatalog.SelectedEditor!;
+        Assert.Equal(readRevision, editor.Observation!.Revision);
+        Assert.Equal($"Authoritative revision {readRevision}", editor.Identity.Name);
+        Assert.Equal(editor.Observation, editor.RoleEditor!.Observation);
+        Assert.Equal(ProcessDefinitionEditorCommandStatus.Accepted, editor.LastCommandReceipt!.Status);
+        Assert.Equal("Later local edit", session.DefinitionDraft.Name);
+        Assert.Equal("native-r1", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Equal(readRevision > 1, session.DefinitionDraft.HasConflict);
+        Assert.Equal(1, client.AuthoringCommandCount);
+
+        ProcessDefinitionEditorProjection Observe(ProcessDefinitionEditorProjection value, long observedRevision) {
+            ProcessAuthoringObservation observation = new(profile, Guid.Empty, Guid.Empty, value.DefinitionKey,
+                observedRevision, $"hash-{observedRevision}", null);
+            return value with {
+                Observation = observation, VersionToken = new($"native-r{observedRevision}"),
+                Identity = value.Identity with { Name = $"Authoritative revision {observedRevision}" },
+                RoleEditor = observedRevision == 0 || value.RoleEditor is null ? null : value.RoleEditor with { Observation = observation }
+            };
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

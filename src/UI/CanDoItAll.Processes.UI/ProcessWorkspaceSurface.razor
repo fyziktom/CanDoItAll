@@ -44,7 +44,7 @@
                             <PageHeaderActionButton Icon="@command.Icon"
                                                     Label="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Launch another run" : command.Text)"
                                                     TooltipText="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Start a separate process launch and keep the accepted run." : command.DisabledReason ?? command.Text)"
-                                                    Disabled="@(!command.IsEnabled)"
+                                                    Disabled="@(!command.IsEnabled || Session.IsBusy && command.Kind is (ProcessWorkspaceCommandKind.LaunchRun or ProcessWorkspaceCommandKind.FeedDefaults))"
                                                     Click="@(() => Session.ExecuteCommandAsync(command))"
                                                     data-testid="@BuildCommandTestId(command.Kind)" />
                         }

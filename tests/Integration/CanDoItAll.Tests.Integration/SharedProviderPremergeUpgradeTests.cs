@@ -98,7 +98,7 @@ public sealed class SharedProviderPremergeUpgradeTests {
         Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
-        Assert.Equal(161, db.Model.GetEntityTypes().Count());
+        Assert.Equal(164, db.Model.GetEntityTypes().Count());
         var preservedProfile = await db.Set<PersistedProviderProfile>().SingleAsync();
         Assert.Equal(profile.Id, preservedProfile.Id);
         Assert.Equal(profile.ExtraSettingsJson, preservedProfile.ExtraSettingsJson);

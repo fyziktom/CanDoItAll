@@ -47,7 +47,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(161, context.Model.GetEntityTypes().Count());
+            Assert.Equal(164, context.Model.GetEntityTypes().Count());
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertCurrentReferencesOnlyAsync(context);
             await using var work = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
@@ -92,7 +92,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         AssertState(expected, await ReadStateAsync(restored, ownerTable: true));
         await AssertCurrentReferencesOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
-        Assert.Equal(161, restored.Model.GetEntityTypes().Count());
+        Assert.Equal(164, restored.Model.GetEntityTypes().Count());
         Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 
