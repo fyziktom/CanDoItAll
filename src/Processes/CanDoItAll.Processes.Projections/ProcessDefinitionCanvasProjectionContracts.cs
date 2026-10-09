@@ -83,6 +83,7 @@ public enum ProcessDefinitionCanvasPortKind
 [Description("Opaque version of the canvas projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionCanvasVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCanvasVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -102,6 +103,7 @@ public readonly record struct ProcessDefinitionCanvasVersionToken
 [Description("Opaque canvas node key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCanvasNodeKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCanvasNodeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -121,6 +123,7 @@ public readonly record struct ProcessDefinitionCanvasNodeKey
 [Description("Opaque canvas edge key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCanvasEdgeKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCanvasEdgeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -140,6 +143,7 @@ public readonly record struct ProcessDefinitionCanvasEdgeKey
 [Description("Opaque canvas toolbox action key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCanvasToolboxActionKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCanvasToolboxActionKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -320,7 +324,9 @@ public sealed record ProcessDefinitionCanvasCommand(
     ProcessDefinitionCanvasNodeKey? SelectedNodeKey,
     ProcessDefinitionCanvasEdgeKey? SelectedEdgeKey,
     ProcessDefinitionCanvasRecompositionMode RecompositionMode,
-    IReadOnlyList<ProcessDefinitionCanvasNodePosition>? NodePositions = null);
+    IReadOnlyList<ProcessDefinitionCanvasNodePosition>? NodePositions = null) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessDefinitionCanvasCommandResult(
     ProcessDefinitionCanvasCommandReceipt Receipt,
@@ -345,4 +351,6 @@ public sealed record ProcessDefinitionCanvasEditorProjection(
     [property: Description("Commands available in the authoring application; these read endpoints do not execute commands.")]
     IReadOnlyList<ProcessDefinitionCanvasCommandProjection> Commands,
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
-    ProcessDefinitionCanvasCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionCanvasCommandReceipt? LastCommandReceipt) {
+    public ProcessAuthoringObservation? Observation { get; init; }
+}

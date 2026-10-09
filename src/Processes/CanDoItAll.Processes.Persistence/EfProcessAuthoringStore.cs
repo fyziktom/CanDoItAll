@@ -100,7 +100,9 @@ public sealed class EfProcessAuthoringStore(IDbContextFactory<ProcessPersistence
                 head.PublishedId = null;
             }
         }
-        ProcessAuthoringReceipt receipt = new(command.OperationId, outcome, head is null ? null : Snapshot(head));
+        ProcessAuthoringReceipt receipt = new(command.OperationId, outcome, head is null ? null : Snapshot(head)) {
+            Selection = outcome == ProcessAuthoringOutcome.Accepted ? command.Selection : null
+        };
         context.AuthoringReceipts.Add(new() { DatabaseProfileId = command.Address.DatabaseProfileId, CallerId = command.CallerId,
             OperationId = command.OperationId, ProjectId = command.Address.ProjectId, ProjectLifetimeId = command.Address.ProjectLifetimeId,
             DefinitionKey = command.Address.DefinitionKey, RequestFingerprint = command.RequestFingerprint,

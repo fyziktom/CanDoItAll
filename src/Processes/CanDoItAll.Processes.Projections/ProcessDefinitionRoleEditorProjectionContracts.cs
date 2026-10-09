@@ -94,6 +94,7 @@ public enum ProcessStepRoleResponsibilityKind
 [Description("Opaque role key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionRoleKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionRoleKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -113,6 +114,7 @@ public readonly record struct ProcessDefinitionRoleKey
 [Description("Opaque role template action key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionRoleTemplateActionKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionRoleTemplateActionKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -132,6 +134,7 @@ public readonly record struct ProcessDefinitionRoleTemplateActionKey
 [Description("Opaque version of the role editor projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionRoleEditorVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionRoleEditorVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -151,6 +154,7 @@ public readonly record struct ProcessDefinitionRoleEditorVersionToken
 [Description("Opaque step key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionStepKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionStepKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -325,7 +329,9 @@ public sealed record ProcessDefinitionRoleEditorCommand(
     ProcessDefinitionRoleCommandKind CommandKind,
     ProcessDefinitionRoleEditorVersionToken? ExpectedVersionToken,
     ProcessDefinitionRoleDraftProjection Draft,
-    ProcessDefinitionRoleTemplateActionKey? TemplateActionKey);
+    ProcessDefinitionRoleTemplateActionKey? TemplateActionKey) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessDefinitionRoleEditorCommandResult(
     ProcessDefinitionRoleCommandReceipt Receipt,
@@ -352,4 +358,6 @@ public sealed record ProcessDefinitionRoleEditorProjection(
     [property: Description("Commands available in the authoring application; these read endpoints do not execute commands.")]
     IReadOnlyList<ProcessDefinitionRoleCommandProjection> Commands,
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
-    ProcessDefinitionRoleCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionRoleCommandReceipt? LastCommandReceipt) {
+    public ProcessAuthoringObservation? Observation { get; init; }
+}

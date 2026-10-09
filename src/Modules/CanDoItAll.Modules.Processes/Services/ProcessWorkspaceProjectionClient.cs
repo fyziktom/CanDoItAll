@@ -46,7 +46,7 @@ public interface IProcessWorkspaceProjectionClient
 
 public sealed class ProcessWorkspaceProjectionClient(
     IServiceScopeFactory scopeFactory,
-    ProcessDefinitionCanvasEditorProjectionService canvasSessionService,
+
     ProjectWriteAdmissionService projectAdmissions) : IProcessWorkspaceProjectionClient
 {
     public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
@@ -68,13 +68,6 @@ public sealed class ProcessWorkspaceProjectionClient(
             .GetRequiredService<ProcessWorkspaceShellProjectionService>()
             .GetShellAsync(request, cancellationToken)
             .ConfigureAwait(false);
-        if (projection.DefinitionCatalog.SelectedEditor is { Canvas: not null } selectedEditor) {
-            var canvas = await canvasSessionService.GetCanvasAsync(request.Scope, selectedEditor.DefinitionKey, cancellationToken, binding)
-                .ConfigureAwait(false);
-            projection = projection with {
-                DefinitionCatalog = projection.DefinitionCatalog with { SelectedEditor = selectedEditor with { Canvas = canvas } }
-            };
-        }
         if (admission is not null) {
             await projectAdmissions.RequireCurrentAsync(admission, cancellationToken);
         }
@@ -118,15 +111,9 @@ public sealed class ProcessWorkspaceProjectionClient(
         ProcessDefinitionCanvasCommand command,
         CancellationToken cancellationToken = default)
     {
-        var admission = command.Scope.ProjectId is { } projectId
-            ? await projectAdmissions.CaptureAsync(projectId, cancellationToken)
-                ?? throw new InvalidOperationException("The Process canvas project no longer exists.") : null;
-        var binding = admission is null ? null : new ProcessProjectionProjectBinding(admission.DatabaseProfileId, admission.ProjectId, admission.LifetimeId);
-        var result = await canvasSessionService.ExecuteCommandAsync(command, cancellationToken, binding);
-        if (admission is not null) {
-            await projectAdmissions.RequireCurrentAsync(admission, cancellationToken);
-        }
-        return result;
+        using var scope = scopeFactory.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ProcessWorkspaceShellProjectionService>()
+            .ExecuteDefinitionCanvasCommandAsync(command, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(

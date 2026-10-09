@@ -13,6 +13,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
     private const int MaximumTake = 200;
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly ProcessAuthoringWorkspace? authoring;
     private readonly Lazy<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> catalogItems;
 
     public ProcessDefinitionCatalogProjectionService(IProcessProjectionClock clock)
@@ -22,10 +23,12 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
     public ProcessDefinitionCatalogProjectionService(
         ProcessTemplatePackLoader templatePackLoader,
-        IProcessProjectionClock clock)
+        IProcessProjectionClock clock,
+        ProcessAuthoringWorkspace? authoring = null)
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.authoring = authoring;
         catalogItems = new Lazy<IReadOnlyList<ProcessDefinitionCatalogItemProjection>>(
             LoadCatalogItems,
             LazyThreadSafetyMode.ExecutionAndPublication);
@@ -41,7 +44,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
             ?.Key.Value ?? string.Empty;
     }
 
-    public Task<ProcessDefinitionCatalogProjection> GetCatalogAsync(
+    public async Task<ProcessDefinitionCatalogProjection> GetCatalogAsync(
         ProcessWorkspaceShellScope scope,
         ProcessDefinitionCatalogQueryProjection query,
         ProcessDefinitionCatalogCommandReceipt? lastCommandReceipt = null,
@@ -53,7 +56,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
         var normalizedQuery = NormalizeQuery(query);
         var pack = templatePackLoader.Load();
-        var allItems = catalogItems.Value;
+        var allItems = await CurrentItemsAsync(scope, cancellationToken);
         var normalizedSearchText = normalizedQuery.SearchText ?? string.Empty;
         var scopeFilteredItems = FilterByScope(allItems, normalizedQuery.ScopeFilter)
             .ToArray();
@@ -64,21 +67,22 @@ public sealed class ProcessDefinitionCatalogProjectionService
         var selectedKey = selectedItem?.Key ?? normalizedQuery.SelectedDefinitionKey;
         var summary = CreateSummary(pack, filteredItems.Length, normalizedSearchText);
 
-        return Task.FromResult(new ProcessDefinitionCatalogProjection(
-            PublishedDefinitionCount: allItems.Count,
-            DraftDefinitionCount: 0,
+        return new ProcessDefinitionCatalogProjection(
+            PublishedDefinitionCount: allItems.Count(item => item.Status != ProcessDefinitionCatalogItemStatus.Archived &&
+                (item.Status is ProcessDefinitionCatalogItemStatus.TemplateDefault or ProcessDefinitionCatalogItemStatus.Published || item.PublishedId is not null)),
+            DraftDefinitionCount: allItems.Count(item => item.HasDraft),
             TemplateCompatibilityIssueCount: allItems.Sum(item => item.CompatibilityIssueCount),
             summary,
             normalizedSearchText,
             selectedKey,
-            CreateScopeGroups(scope, allItems.Count, normalizedQuery.ScopeFilter),
+            CreateScopeGroups(scope, allItems, normalizedQuery.ScopeFilter),
             filteredItems,
             selectedItem,
             SelectedEditor: null,
-            lastCommandReceipt));
+            lastCommandReceipt);
     }
 
-    public Task<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> GetCompleteCatalogItemsAsync(
+    public async Task<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> GetCompleteCatalogItemsAsync(
         ProcessWorkspaceShellScope scope,
         string? searchText = null,
         ProcessDefinitionCatalogScopeKind scopeFilter = ProcessDefinitionCatalogScopeKind.All,
@@ -91,11 +95,32 @@ public sealed class ProcessDefinitionCatalogProjectionService
             ? string.Empty
             : searchText.Trim();
         IReadOnlyList<ProcessDefinitionCatalogItemProjection> items = FilterItems(
-                FilterByScope(catalogItems.Value, scopeFilter).ToArray(),
+                FilterByScope(await CurrentItemsAsync(scope, cancellationToken), scopeFilter).ToArray(),
                 normalizedSearchText)
             .ToArray();
 
-        return Task.FromResult(items);
+        return items;
+    }
+
+    private async Task<IReadOnlyList<ProcessDefinitionCatalogItemProjection>> CurrentItemsAsync(ProcessWorkspaceShellScope scope, CancellationToken cancellationToken) {
+        if (authoring is null) {
+            return catalogItems.Value;
+        }
+        var items = catalogItems.Value.ToDictionary(item => item.Key);
+        var authored = await authoring.CatalogAsync(scope, cancellationToken);
+        foreach (var row in authored.Where(row => row.Lifecycle != ProcessAuthoringLifecycle.Deleted).OrderBy(row => row.Address.ProjectId != Guid.Empty)) {
+            var status = row.Lifecycle switch {
+                ProcessAuthoringLifecycle.Published => ProcessDefinitionCatalogItemStatus.Published,
+                ProcessAuthoringLifecycle.Archived => ProcessDefinitionCatalogItemStatus.Archived,
+                _ => ProcessDefinitionCatalogItemStatus.Draft
+            };
+            ProcessDefinitionCatalogItemKey key = new(row.Address.DefinitionKey);
+            items[key] = new(key, row.Address.ProjectId == Guid.Empty ? ProcessDefinitionCatalogScopeKind.Global : ProcessDefinitionCatalogScopeKind.Project,
+                row.Name, row.Summary, status, row.Criticality, row.OperatingMode, row.UpdatedAtUtc, 0) {
+                    PublishedId = row.PublishedId, HasDraft = row.Lifecycle == ProcessAuthoringLifecycle.Draft
+                };
+        }
+        return items.Values.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ThenBy(item => item.Key.Value, StringComparer.Ordinal).ToArray();
     }
 
     private IReadOnlyList<ProcessDefinitionCatalogItemProjection> LoadCatalogItems()
@@ -206,7 +231,7 @@ public sealed class ProcessDefinitionCatalogProjectionService
 
     private static IReadOnlyList<ProcessDefinitionScopeGroupProjection> CreateScopeGroups(
         ProcessWorkspaceShellScope scope,
-        int globalCount,
+        IReadOnlyList<ProcessDefinitionCatalogItemProjection> items,
         ProcessDefinitionCatalogScopeKind scopeFilter)
     {
         var projectLabel = scope.ProjectId.HasValue
@@ -219,19 +244,19 @@ public sealed class ProcessDefinitionCatalogProjectionService
                 ProcessDefinitionCatalogScopeKind.All,
                 "All definitions",
                 "All definitions visible to this workspace.",
-                globalCount,
+                items.Count,
                 scopeFilter == ProcessDefinitionCatalogScopeKind.All),
             new(
                 ProcessDefinitionCatalogScopeKind.Global,
                 "Global defaults",
-                "Template-backed definitions available to every workspace.",
-                globalCount,
+                "Global publications and inherited templates visible in this workspace.",
+                items.Count(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Global),
                 scopeFilter == ProcessDefinitionCatalogScopeKind.Global),
             new(
                 ProcessDefinitionCatalogScopeKind.Project,
                 projectLabel,
-                "Project-specific definitions are reserved for project integration.",
-                Count: 0,
+                "Authored definitions belonging to this project lifetime.",
+                items.Count(item => item.ScopeKind == ProcessDefinitionCatalogScopeKind.Project),
                 scopeFilter == ProcessDefinitionCatalogScopeKind.Project)
         ];
     }

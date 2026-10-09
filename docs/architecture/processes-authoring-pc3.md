@@ -2,9 +2,9 @@
 
 Status: implementation in progress. PC3 authorizes the previously deferred native boundary.
 
-The current five editor services own unrelated per-scope snapshots. Fresh native client
-scopes discard writes; the catalog and launch compiler read the distributed template pack.
-Persistence must own one complete definition, not five serialized forms.
+Before PC3 the five editor services owned unrelated per-scope snapshots. Fresh native client
+scopes discarded writes; the catalog and launch compiler read the distributed template pack.
+Persistence now owns one complete definition rather than five serialized forms.
 
 Application owns the versioned semantic envelope, bounded editor patches and resolution
 of draft/publication content. Persistence implements a narrow aggregate store with one
@@ -45,3 +45,23 @@ campaign. Source/DI/reference inspection substitutes for unavailable CodeAnalyti
 Final validation and measured query/build effects will be linked here after execution.
 
 Storage checkpoint: nine PostgreSQL integration cases passed in ProcAuthoringPC3 on the owned PostgreSQL 18.6 fixture. They cover concurrent first writes and operation replay, exact recovery, CAS, immutable publication retained through a newer draft, real pre/post-COMMIT faults, non-null global uniqueness, all distributed documents/guidance round trips, and an additive/idempotent upgrade preserving prepared/accepted runtime payloads. The native client regression still reproduces lost edits before S2; this is not UI or complete PC3 closure.
+
+The S2 native adapter uses a scoped read session for a coherent five-panel observation and
+creates an ephemeral projection engine for each mapping/validation pass. Those scratch
+engines reuse existing normalization and lint rules; their dictionaries have no native
+write authority. Each accepted patch commits the complete semantic snapshot through the
+same CAS store. The client creates a normal scope for canvas writes as it does for the other
+families. Catalog metadata is read in one bounded query, with project rows overriding global
+rows and deletion restoring inheritance. FeedDefaults remains a repeatable read of defaults.
+
+Canvas actions materialize semantic steps, branches, bindings and artifacts. Clones and
+geometry live in a distinct reference layout without duplicating executable items. Import
+merges allocate collision-safe keys, rewrite internal links and retain source/remap history.
+Receipts retain command-selected identities and original commit time. The positive native
+regression and twelve family cases cover independent scopes, stale cross-family saves,
+referenced/last-role deletion, all nine canvas actions, and the three real import kinds.
+Publication validation, executable selection and UI reconciliation remain subsequent PC3
+stages; this checkpoint does not claim those paths are complete. The combined S2 checkpoint
+passed all 22 selected integration cases with zero skips; the production integration build
+completed without errors. The nine initial receipt-selection failures were test comparisons
+of collection references, corrected to compare both the scalar fields and list contents.

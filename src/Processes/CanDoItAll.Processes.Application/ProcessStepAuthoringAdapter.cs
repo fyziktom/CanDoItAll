@@ -1,0 +1,59 @@
+using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.Templates;
+
+namespace CanDoItAll.Processes.Application;
+
+public sealed class ProcessStepAuthoringAdapter(ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessProjectionClock clock) {
+    public async Task<ProcessDefinitionStepEditorProjection> ReadAsync(ProcessWorkspaceShellScope scope, ProcessDefinitionCatalogItemKey key, CancellationToken cancellationToken)
+        => await ProjectAsync(await workspace.ReadAsync(scope, key, cancellationToken), null, cancellationToken);
+
+    public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteAsync(ProcessDefinitionStepEditorCommand submitted, CancellationToken cancellationToken) {
+        var (command, fingerprint) = ProcessAuthoringRequests.Capture(submitted);
+        if (await workspace.RecoverAsync(command.Scope, command.DefinitionKey, command.ExpectedVersionToken?.Value,
+                command.OperationId, fingerprint, cancellationToken) is { } replay) {
+            return await ResultAsync(command, workspace.FromReceipt(command.Scope, replay), replay.Outcome, replay.Selection?.StepKey, null, cancellationToken);
+        }
+        var baseline = await workspace.ReadAsync(command.Scope, command.DefinitionKey, cancellationToken);
+        var key = command.Draft.Basic.StepKey.Value;
+        if (!workspace.Matches(baseline, command.ExpectedVersionToken?.Value) || !baseline.Content.Definition.Steps.Any(step => step.Key == key)) {
+            return await ResultAsync(command, baseline, ProcessAuthoringOutcome.Conflict, key, null, cancellationToken);
+        }
+        var roles = baseline.Content.Definition.RoleUsages.Select(role => role.Key).ToHashSet(StringComparer.Ordinal);
+        if (command.Draft.Basic.DecisionRoleKey is { } decisionRole && !roles.Contains(decisionRole.Value) ||
+                command.Draft.RoleBindings.Any(binding => binding.StepKey.Value != key || !roles.Contains(binding.RoleKey.Value))) {
+            return await ResultAsync(command, baseline, ProcessAuthoringOutcome.Conflict, key, "Choose roles belonging to this definition and step.", cancellationToken);
+        }
+        var normalized = await Engine(baseline).ExecuteCommandAsync(command, cancellationToken);
+        if (normalized.Receipt.Status != ProcessDefinitionStepCommandStatus.Accepted) {
+            return normalized with { Projection = normalized.Projection with { Observation = baseline.Observation } };
+        }
+        var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
+        ProcessAuthoringStepPatch.Apply(content.Definition.Steps.Single(step => step.Key == key), normalized.Projection.SelectedStep!);
+        var saved = await workspace.CommitAsync(baseline, command.OperationId, fingerprint, content, ProcessAuthoringLifecycle.Draft,
+            false, new(StepKey: key), cancellationToken);
+        return await ResultAsync(command, workspace.FromReceipt(command.Scope, saved), saved.Outcome, saved.Selection?.StepKey, null, cancellationToken);
+    }
+
+    private async Task<ProcessDefinitionStepEditorCommandResult> ResultAsync(ProcessDefinitionStepEditorCommand command,
+        ProcessAuthoringSession session, ProcessAuthoringOutcome outcome, string? selectedKey, string? reason, CancellationToken cancellationToken) {
+        var projection = await ProjectAsync(session, selectedKey, cancellationToken);
+        ProcessDefinitionStepCommandReceipt receipt = new(command.OperationId, command.CommandKind,
+            outcome == ProcessAuthoringOutcome.Accepted ? ProcessDefinitionStepCommandStatus.Accepted : ProcessDefinitionStepCommandStatus.Rejected,
+            projection.VersionToken, session.CommittedAtUtc ?? clock.GetUtcNow(), reason ?? (outcome == ProcessAuthoringOutcome.Accepted ? "The step change was committed."
+                : "The definition changed. Review the current revision before saving this step again."), []);
+        return new(receipt, projection with { LastCommandReceipt = receipt });
+    }
+
+    private async Task<ProcessDefinitionStepEditorProjection> ProjectAsync(ProcessAuthoringSession session, string? selectedKey, CancellationToken cancellationToken) {
+        var projection = await Engine(session).GetEditorAsync(session.Scope, new(session.Address.DefinitionKey), cancellationToken);
+        var selected = selectedKey is null ? projection.SelectedStep : projection.StepDrafts.FirstOrDefault(step => step.Basic.StepKey.Value == selectedKey);
+        return projection with { Observation = session.Observation, SelectedStep = selected, SelectedStepKey = selected?.Basic.StepKey,
+            Steps = projection.Steps.Select(step => step with { IsSelected = step.StepKey == selected?.Basic.StepKey }).ToArray() };
+    }
+
+    private ProcessDefinitionStepEditorProjectionService Engine(ProcessAuthoringSession session) {
+        var engine = new ProcessDefinitionStepEditorProjectionService(templates, clock);
+        engine.InitializeAuthored(session);
+        return engine;
+    }
+}

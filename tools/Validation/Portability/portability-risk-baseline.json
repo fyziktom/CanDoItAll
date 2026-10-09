@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-09T12:54:37.761185+00:00",
+  "generated_utc": "2026-10-09T13:29:11.759147+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15364,
+  "allowance_count": 15371,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -66254,6 +66254,12 @@
       "count": 1
     },
     {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringCanvasPatch.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3b92adbc3e65e8f24ca1c4fac1110dfa25fdf2df32e69e7798d344e6ded2962f",
+      "count": 1
+    },
+    {
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringCodec.cs",
       "category": "case-policy",
       "source_fingerprint": "67bf70313a1b9515ecb4b0ca4864e784be86dd69da8971a4f2a7cdca920df611",
@@ -66263,6 +66269,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringCodec.cs",
       "category": "case-policy",
       "source_fingerprint": "bd751ac492f444a97de7a956e44f65aeecd7968fa318ed1ebd3b0217c927997a",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessAuthoringStepPatch.cs",
+      "category": "process-domain",
+      "source_fingerprint": "81a67b887927aa40320281a46ab5cb77f12e773fd0fdd12816acd7e540914b5b",
       "count": 1
     },
     {
@@ -66629,6 +66641,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCatalogProjectionService.cs",
       "category": "case-policy",
       "source_fingerprint": "90eb9149e0ecc98e74d5d9cbd929a195908b25ec81b8b58417e3372704b0adcc",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCatalogProjectionService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a1748803f4eec7b3d23a25c1cf3c752224d1c1012184538c80211ea75a9db30d",
       "count": 1
     },
     {
@@ -70102,6 +70120,12 @@
     {
       "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "51e339d6fe1cb9e6cd998078f9e31e0a9535a0936ab491770a72b5d84693c41b",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "745d0e6a5322e09ed9302830d1256940ab1fbdb26775d54180620491978e1be8",
       "count": 2
     },
@@ -70122,6 +70146,12 @@
       "category": "absolute-path-field",
       "source_fingerprint": "cfbbfe3b1b27ac2572a5a2a585c2363d3baf4b69fb3b160e2fc82338263b2a89",
       "count": 2
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "d5efe991e4373c3512f01f2b9e78f450ae81a0888763d0c4c825cbd0ed3c0a16",
+      "count": 1
     },
     {
       "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
@@ -70157,6 +70187,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
       "category": "case-policy",
       "source_fingerprint": "462f3e0b662f51a0b74fc16a64f5c2a6b23b5dc170b17f337dd40a19fd53d216",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "category": "case-policy",
+      "source_fingerprint": "48b45712b6e3e51c86420cebe54e367d875d144d46af4317d62c17a61bd91290",
       "count": 1
     },
     {
@@ -70367,6 +70403,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
       "category": "path-api",
       "source_fingerprint": "94f15c96b9d97e31339f36a5c5e02fc961af6f19b84ec4c4ede48e2bd6dc4323",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "category": "path-api",
+      "source_fingerprint": "9606fc7972b4f4f348f9d9ca795375c2cffabbb6743334d9e6c6a379788959d8",
       "count": 1
     },
     {

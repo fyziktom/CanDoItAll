@@ -27,8 +27,9 @@ public sealed record ProcessAuthoringContent(
 }
 
 public sealed record ProcessAuthoringProvenance(string Source, string Version, string ContentHash);
-public sealed record ProcessAuthoringReferencePlacement(string Key, ProcessDefinitionCanvasNodeKind Kind, string SemanticKey, string? StepKey, double X, double Y);
-public sealed record ProcessAuthoringImport(Guid OperationId, ProcessAuthoringProvenance Source, string? TargetStepKey, IReadOnlyDictionary<string, string> Remap);
+public sealed record ProcessAuthoringReferencePlacement(string Key, ProcessDefinitionCanvasNodeKind Kind, string SemanticKey, string? StepKey, double X, double Y, bool IsClone = false);
+public sealed record ProcessAuthoringImport(Guid OperationId, ProcessAuthoringProvenance Source, string? TargetStepKey,
+    IReadOnlyDictionary<string, string> Remap, ProcessTemplateImportedComponentProjection Component);
 
 public sealed record ProcessAuthoringSnapshot(ProcessAuthoringAddress Address, long Revision, ProcessAuthoringLifecycle Lifecycle,
     ProcessAuthoringContent Content, Guid? PublishedId, DateTimeOffset UpdatedAtUtc);
@@ -37,8 +38,20 @@ public sealed record ProcessAuthoringPublication(Guid Id, ProcessAuthoringAddres
 public sealed record ProcessAuthoringCatalogEntry(ProcessAuthoringAddress Address, long Revision, ProcessAuthoringLifecycle Lifecycle,
     Guid? PublishedId, string Name, string Summary, string Criticality, string OperatingMode, DateTimeOffset UpdatedAtUtc);
 public sealed record ProcessAuthoringCommit(ProcessAuthoringAddress Address, string CallerId, Guid OperationId, string RequestFingerprint,
-    long ExpectedRevision, ProcessAuthoringContent Content, ProcessAuthoringLifecycle Lifecycle, bool Publish);
-public sealed record ProcessAuthoringReceipt(Guid OperationId, ProcessAuthoringOutcome Outcome, ProcessAuthoringSnapshot? Snapshot);
+    long ExpectedRevision, ProcessAuthoringContent Content, ProcessAuthoringLifecycle Lifecycle, bool Publish) {
+    public ProcessAuthoringSelection? Selection { get; init; }
+}
+public sealed record ProcessAuthoringSelection(string? RoleKey = null, string? StepKey = null,
+    ProcessDefinitionCanvasSelectionProjection? Canvas = null);
+public sealed record ProcessAuthoringReceipt(Guid OperationId, ProcessAuthoringOutcome Outcome, ProcessAuthoringSnapshot? Snapshot) {
+    public ProcessAuthoringSelection? Selection { get; init; }
+}
+
+public interface IProcessAuthoringContext {
+    Guid DatabaseProfileId { get; }
+    string CallerId { get; }
+    Task<ProcessAuthoringAddress> CaptureReadAddressAsync(ProcessWorkspaceShellScope scope, ProcessDefinitionCatalogItemKey key, CancellationToken cancellationToken);
+}
 
 public interface IProcessAuthoringStore {
     Task<ProcessAuthoringSnapshot?> ReadAsync(ProcessAuthoringAddress address, CancellationToken cancellationToken = default);

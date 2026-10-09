@@ -28,6 +28,51 @@ public sealed class ProcessTemplatePackLoader
 
     public ProcessTemplatePack Load() => pack.Value;
 
+    public ProcessTemplateDefinitionStepDocument LoadStepTemplate(string actionId) {
+        var root = Load().RootPath;
+        var path = Path.Combine(root, "toolbox", "step-templates.json");
+        var action = ReadJson(path, ProcessTemplateJsonContext.Default.ProcessTemplateStepTemplateActionDocumentArray)
+            .SingleOrDefault(item => item.ActionId == actionId)
+            ?? throw new InvalidOperationException("The selected step template is unavailable.");
+        ProcessTemplateDefinitionDocument document = new() { Steps = [action.Template] };
+        ResolveExecutionGuidance(document, root, "toolbox", path);
+        return action.Template;
+    }
+
+    public IReadOnlyDictionary<string, ProcessTemplateRoleResourceDocument> LoadRoleResources(string definitionKey) {
+        var loaded = Load();
+        var summary = loaded.Definitions.Single(item => item.Key == definitionKey);
+        var resources = new Dictionary<string, ProcessTemplateRoleResourceDocument>(StringComparer.Ordinal);
+        foreach (var role in summary.RoleAuthoringDefaults.Roles) {
+            if (TryLoadRoleResource(loaded.RootPath, summary.RelativePath, role.RoleResourceKey) is { } resource) {
+                resources.Add(role.Key, resource);
+            }
+        }
+        return resources;
+    }
+
+    public ProcessTemplateDefinitionSummary ProjectDefinition(ProcessTemplateDefinitionDocument definition,
+        IReadOnlyDictionary<string, ProcessTemplateRoleResourceDocument> resources) {
+        var template = Load().Definitions.Single(item => item.Key == definition.Key);
+        var roles = definition.RoleUsages.Select((role, index) =>
+            CreateRoleSummary(role, index, resources.GetValueOrDefault(role.Key))).ToArray();
+        var names = roles.ToDictionary(role => role.Key, role => role.DisplayName, StringComparer.OrdinalIgnoreCase);
+        return template with {
+            DisplayName = definition.DisplayName, Summary = definition.Summary, Criticality = definition.Criticality,
+            OperatingMode = definition.OperatingMode, AutonomyLevel = definition.AutonomyLevel,
+            AuthoringDefaults = new(definition.ValueStatement, definition.CustomerName, definition.OwnerName,
+                definition.InterfaceContractSummary, definition.ManagerOverrideSummary, definition.GovernanceNotes,
+                definition.ChangeSummary, definition.GovernancePolicySummary, definition.ConstitutionRuleSummary,
+                definition.OperatingModeSummary, definition.SimulationReadinessSummary, definition.Steps.Count,
+                definition.RoleUsages.Count(role => role.IsRequired), definition.Steps.Sum(step => step.ArtifactExpectations.Count(artifact => artifact.IsRequired))),
+            RoleAuthoringDefaults = new(roles, template.RoleAuthoringDefaults.TemplateActions,
+                definition.Steps.SelectMany(step => step.RoleAssignments.Select(assignment => CreateStepRoleBinding(step, assignment, names))).ToArray()),
+            StepAuthoringDefaults = ProcessTemplateStepSummaryBuilder.Build(definition),
+            CanvasAuthoringDefaults = ProcessTemplateCanvasSummaryBuilder.Build(definition, template.CanvasAuthoringDefaults.ToolboxActions),
+            LibrarySummary = ProcessTemplateLibrarySummaryBuilder.Build(template.RelativePath, definition)
+        };
+    }
+
     public ProcessTemplateDefinitionDocument LoadDefinition(string processKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processKey);
@@ -727,6 +772,13 @@ public sealed class ProcessTemplatePackLoader
         var resource = string.IsNullOrWhiteSpace(resourceKey)
             ? null
             : TryLoadRoleResource(root, definitionRelativePath, resourceKey);
+        return CreateRoleSummary(usage, index, resource);
+    }
+
+    private static ProcessTemplateDefinitionRoleSummary CreateRoleSummary(
+        ProcessTemplateDefinitionRoleUsageDocument usage, int index, ProcessTemplateRoleResourceDocument? resource) {
+        var usageKey = NormalizeOptional(usage.Key, string.Empty);
+        var resourceKey = NormalizeOptional(usage.RoleResourceKey, usageKey);
         var key = NormalizeOptional(usageKey, NormalizeOptional(resource?.Key, $"role-{index + 1}"));
         var displayName = NormalizeOptional(usage.DisplayName, NormalizeOptional(resource?.DisplayName, $"Role {index + 1}"));
         var summary = NormalizeOptional(usage.Notes, NormalizeOptional(resource?.Summary, string.Empty));

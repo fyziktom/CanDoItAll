@@ -20,6 +20,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly ProcessCanvasAuthoringAdapter? authoring;
     private readonly object stateGate = new();
     private readonly Dictionary<ProcessDefinitionCanvasStateKey, ProcessDefinitionCanvasSnapshot> snapshots = [];
 
@@ -30,10 +31,21 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
 
     public ProcessDefinitionCanvasEditorProjectionService(
         ProcessTemplatePackLoader templatePackLoader,
-        IProcessProjectionClock clock)
+        IProcessProjectionClock clock,
+        ProcessCanvasAuthoringAdapter? authoring = null)
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.authoring = authoring;
+    }
+
+    internal void InitializeAuthored(ProcessAuthoringSession session) {
+        var summary = templatePackLoader.ProjectDefinition(session.Content.Definition, session.Content.RoleResources);
+        var snapshot = CreateTemplateSnapshot(session.Scope, summary, null);
+        var restored = ProcessAuthoringCanvasLayout.Restore(snapshot.Nodes, snapshot.Edges, session.Content.References);
+        snapshots[ProcessDefinitionCanvasStateKey.From(session.Scope, new(session.Address.DefinitionKey), null)] = snapshot with {
+            VersionToken = new(session.Token), Nodes = restored.Nodes, Edges = restored.Edges
+        };
     }
 
     public Task<ProcessDefinitionCanvasEditorProjection> GetCanvasAsync(
@@ -42,6 +54,10 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         CancellationToken cancellationToken = default,
         ProcessProjectionProjectBinding? projectBinding = null)
     {
+        if (authoring is not null) {
+            return authoring.ReadAsync(scope, definitionKey, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ValidateScope(scope, projectBinding);
 
@@ -69,6 +85,10 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
         CancellationToken cancellationToken = default,
         ProcessProjectionProjectBinding? projectBinding = null)
     {
+        if (authoring is not null) {
+            return authoring.ExecuteAsync(command, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Scope);

@@ -21,6 +21,7 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
 
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly ProcessRoleAuthoringAdapter? authoring;
     private readonly Dictionary<ProcessDefinitionRoleEditorStateKey, ProcessDefinitionRoleEditorSnapshot> snapshots = [];
 
     public ProcessDefinitionRoleEditorProjectionService(IProcessProjectionClock clock)
@@ -30,10 +31,20 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
 
     public ProcessDefinitionRoleEditorProjectionService(
         ProcessTemplatePackLoader templatePackLoader,
-        IProcessProjectionClock clock)
+        IProcessProjectionClock clock,
+        ProcessRoleAuthoringAdapter? authoring = null)
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.authoring = authoring;
+    }
+
+    internal void InitializeAuthored(ProcessAuthoringSession session) {
+        var summary = templatePackLoader.ProjectDefinition(session.Content.Definition, session.Content.RoleResources);
+        snapshots[ProcessDefinitionRoleEditorStateKey.From(session.Scope, new(session.Address.DefinitionKey))] = CreateTemplateSnapshot(session.Scope, summary) with {
+
+            VersionToken = new(session.Token)
+        };
     }
 
     public Task<ProcessDefinitionRoleEditorProjection> GetEditorAsync(
@@ -41,6 +52,10 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
         ProcessDefinitionCatalogItemKey definitionKey,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ReadAsync(scope, definitionKey, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ValidateScope(scope);
 
@@ -58,6 +73,10 @@ public sealed class ProcessDefinitionRoleEditorProjectionService
         ProcessDefinitionRoleEditorCommand command,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ExecuteAsync(command, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Scope);

@@ -14,6 +14,7 @@ public sealed class ProcessTemplateCatalogProjectionService
 
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly ProcessTemplateAuthoringAdapter? authoring;
     private readonly Dictionary<ProcessTemplateCatalogStateKey, ProcessTemplateCatalogImportSnapshot> importSnapshots = [];
     private readonly Lazy<IReadOnlyList<ProcessTemplateCatalogSourceItem>> sourceItems;
 
@@ -24,10 +25,12 @@ public sealed class ProcessTemplateCatalogProjectionService
 
     public ProcessTemplateCatalogProjectionService(
         ProcessTemplatePackLoader templatePackLoader,
-        IProcessProjectionClock clock)
+        IProcessProjectionClock clock,
+        ProcessTemplateAuthoringAdapter? authoring = null)
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.authoring = authoring;
         sourceItems = new Lazy<IReadOnlyList<ProcessTemplateCatalogSourceItem>>(
             () => CreateSourceItems(this.templatePackLoader.Load()),
             LazyThreadSafetyMode.ExecutionAndPublication);
@@ -40,6 +43,9 @@ public sealed class ProcessTemplateCatalogProjectionService
         ProcessDefinitionStepEditorProjection? stepEditor,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ReadAsync(scope, targetDefinitionKey, query, stepEditor, cancellationToken);
+        }
         cancellationToken.ThrowIfCancellationRequested();
         ValidateScope(scope);
         ArgumentNullException.ThrowIfNull(query);
@@ -61,6 +67,9 @@ public sealed class ProcessTemplateCatalogProjectionService
         ProcessDefinitionStepEditorProjection? stepEditor,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ExecuteAsync(command, stepEditor, cancellationToken);
+        }
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Scope);
@@ -622,6 +631,11 @@ public sealed class ProcessTemplateCatalogProjectionService
         {
             throw new ArgumentException("Global template catalog query cannot carry a project id.", nameof(scope));
         }
+    }
+
+    internal void InitializeAuthored(ProcessAuthoringSession session) {
+        importSnapshots[ProcessTemplateCatalogStateKey.From(session.Scope, new(session.Address.DefinitionKey))] =
+            new(checked((int)session.Revision), session.Content.Imports.Select(item => item.Component).ToArray());
     }
 
     private static ProcessTemplateCatalogImportSnapshot CreateEmptySnapshot()

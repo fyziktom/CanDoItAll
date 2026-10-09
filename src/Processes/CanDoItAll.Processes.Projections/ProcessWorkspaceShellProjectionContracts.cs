@@ -722,7 +722,8 @@ public enum ProcessDefinitionCatalogItemStatus
     TemplateDefault,
     Draft,
     Published,
-    RequiresReview
+    RequiresReview,
+    Archived
 }
 
 public enum ProcessDefinitionCatalogCommandKind
@@ -810,6 +811,7 @@ public enum ProcessDefinitionEditorLintSection
 [Description("Opaque catalog item key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCatalogItemKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCatalogItemKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -846,6 +848,7 @@ public readonly record struct ProcessDefinitionCatalogRefreshToken
 [Description("Opaque version of the editor projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionEditorVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionEditorVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -1008,7 +1011,10 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     [property: Description("Last recorded definition update time in UTC.")]
     DateTimeOffset UpdatedAtUtc,
     [property: Description("Number of compatibility findings for this definition.")]
-    int CompatibilityIssueCount);
+    int CompatibilityIssueCount) {
+    public Guid? PublishedId { get; init; }
+    public bool HasDraft { get; init; }
+}
 
 public sealed record ProcessDefinitionCatalogCommandReceipt(
     Guid ReceiptId,
@@ -1142,7 +1148,9 @@ public sealed record ProcessDefinitionEditorCommand(
     ProcessDefinitionCatalogItemKey DefinitionKey,
     ProcessDefinitionEditorCommandKind CommandKind,
     ProcessDefinitionEditorVersionToken? ExpectedVersionToken,
-    ProcessDefinitionEditorDraftProjection Draft);
+    ProcessDefinitionEditorDraftProjection Draft) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessDefinitionEditorCommandResult(
     ProcessDefinitionEditorCommandReceipt Receipt,
@@ -1171,6 +1179,8 @@ public sealed record ProcessDefinitionEditorProjection(
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
 {
+    public ProcessAuthoringObservation? Observation { get; init; }
+
     [Description("Optional role authoring projection associated with this definition.")]
     public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
 
