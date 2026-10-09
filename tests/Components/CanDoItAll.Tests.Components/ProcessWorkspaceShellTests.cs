@@ -3328,6 +3328,17 @@ public sealed partial class ProcessWorkspaceShellTests
         public bool DeferShellRequests { get; set; }
 
         public bool DeferEditorCommands { get; set; }
+        public TaskCompletionSource? AuthoringCompletion { get; set; }
+        public int AuthoringCommandCount { get; private set; }
+        public bool RejectAuthoringCommands { get; set; }
+        public List<ProcessDefinitionCanvasCommand> CanvasCommands { get; } = [];
+
+        private async Task WaitForAuthoringAsync(CancellationToken cancellationToken) {
+            AuthoringCommandCount++;
+            if (AuthoringCompletion is { } completion) {
+                await completion.Task.WaitAsync(cancellationToken);
+            }
+        }
 
         public int EditorCommandCount => Volatile.Read(ref editorCommandCount);
 
@@ -3405,6 +3416,7 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             LastEditorCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             if (DeferEditorCommands)
             {
                 var completion = new TaskCompletionSource(
@@ -3415,7 +3427,7 @@ public sealed partial class ProcessWorkspaceShellTests
             }
 
             var lint = CreateEditorLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionEditorCommandStatus.Rejected
                 : ProcessDefinitionEditorCommandStatus.Accepted;
             var authoringStatus = command.CommandKind == ProcessDefinitionEditorCommandKind.Publish && status == ProcessDefinitionEditorCommandStatus.Accepted
@@ -3438,13 +3450,14 @@ public sealed partial class ProcessWorkspaceShellTests
             return new ProcessDefinitionEditorCommandResult(receipt, projection);
         }
 
-        public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+        public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
             ProcessDefinitionRoleEditorCommand command,
             CancellationToken cancellationToken = default)
         {
             LastRoleCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var lint = CreateRoleLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionRoleCommandStatus.Rejected
                 : ProcessDefinitionRoleCommandStatus.Accepted;
             var versionToken = new ProcessDefinitionRoleEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
@@ -3461,35 +3474,38 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Role was not saved because blocking role lint issues remain.",
                 lint.Issues);
             var projection = CreateRoleEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt);
-            return Task.FromResult(new ProcessDefinitionRoleEditorCommandResult(receipt, projection));
+            return new ProcessDefinitionRoleEditorCommandResult(receipt, projection);
         }
 
-        public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+        public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
             ProcessDefinitionCanvasCommand command,
             CancellationToken cancellationToken = default)
         {
             LastCanvasCommand = command;
+            CanvasCommands.Add(command);
+            await WaitForAuthoringAsync(cancellationToken);
             var versionToken = new ProcessDefinitionCanvasVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
             var receipt = new ProcessDefinitionCanvasCommandReceipt(
                 Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                 command.CommandKind,
-                ProcessDefinitionCanvasCommandStatus.Accepted,
+                RejectAuthoringCommands ? ProcessDefinitionCanvasCommandStatus.Rejected : ProcessDefinitionCanvasCommandStatus.Accepted,
                 versionToken,
                 Now,
                 command.CommandKind == ProcessDefinitionCanvasCommandKind.Recompose
                     ? "Canvas recomposed."
                     : "Canvas command accepted.");
             var projection = CreateCanvas(command.DefinitionKey, versionToken, receipt, command.CommandKind);
-            return Task.FromResult(new ProcessDefinitionCanvasCommandResult(receipt, projection));
+            return new ProcessDefinitionCanvasCommandResult(receipt, projection);
         }
 
-        public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+        public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
             ProcessDefinitionStepEditorCommand command,
             CancellationToken cancellationToken = default)
         {
             LastStepCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var lint = CreateStepLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionStepCommandStatus.Rejected
                 : ProcessDefinitionStepCommandStatus.Accepted;
             var versionToken = new ProcessDefinitionStepEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
@@ -3510,19 +3526,20 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Step command rejected.",
                 lint.Issues);
             var projection = CreateStepEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt, command.CommandKind);
-            return Task.FromResult(new ProcessDefinitionStepEditorCommandResult(receipt, projection));
+            return new ProcessDefinitionStepEditorCommandResult(receipt, projection);
         }
 
-        public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+        public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
             ProcessTemplateImportCommand command,
             CancellationToken cancellationToken = default)
         {
             LastTemplateImportCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var versionToken = new ProcessTemplateCatalogVersionToken("templates:test:1");
             var receipt = new ProcessTemplateImportCommandReceipt(
                 Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
                 command.CommandKind,
-                ProcessTemplateImportCommandStatus.Accepted,
+                RejectAuthoringCommands ? ProcessTemplateImportCommandStatus.Rejected : ProcessTemplateImportCommandStatus.Accepted,
                 versionToken,
                 Now,
                 command.CommandKind switch
@@ -3549,7 +3566,7 @@ public sealed partial class ProcessWorkspaceShellTests
                     Now)
             };
             var projection = CreateTemplateCatalog(command.TargetDefinitionKey, command.Query, receipt, imported);
-            return Task.FromResult(new ProcessTemplateImportCommandResult(receipt, projection));
+            return new ProcessTemplateImportCommandResult(receipt, projection);
         }
 
         public Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(

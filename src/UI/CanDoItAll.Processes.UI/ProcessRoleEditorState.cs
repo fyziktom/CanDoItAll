@@ -145,7 +145,7 @@ public sealed class ProcessRoleEditorState {
     }
 
     public async Task ExecuteAsync(ProcessDefinitionRoleCommandKind commandKind) {
-        if (Disabled || NumericInputError is not null || commandKind == ProcessDefinitionRoleCommandKind.SaveRole && HasWorkflowInputErrors) {
+        if (executing || Disabled || NumericInputError is not null || commandKind == ProcessDefinitionRoleCommandKind.SaveRole && HasWorkflowInputErrors) {
             return;
         }
         var draft = CreateDraft();
@@ -159,8 +159,17 @@ public sealed class ProcessRoleEditorState {
             SyncedVersionToken ?? RoleEditor.VersionToken,
             draft,
             templateActionKey);
-        submission = CaptureInputs();
-        await ExecuteCommand.InvokeAsync(command);
+        var submitted = CaptureInputs();
+        submission = submitted;
+        executing = true;
+        try {
+            await ExecuteCommand.InvokeAsync(command);
+        } finally {
+            executing = false;
+            if (ReferenceEquals(submission, submitted)) {
+                submission = null;
+            }
+        }
     }
 
     public ProcessDefinitionRoleDraftProjection CreateDraft() {
@@ -347,6 +356,7 @@ public sealed class ProcessRoleEditorState {
     private ProcessWorkspaceShellScope? observedScope;
     private Inputs? baseline;
     private Inputs? submission;
+    private bool executing;
     private ProcessDefinitionCatalogItemKey? definitionKey;
     public bool HasConflict { get; private set; }
     public bool IsDirty => baseline is not null && !CaptureInputs().Matches(baseline);

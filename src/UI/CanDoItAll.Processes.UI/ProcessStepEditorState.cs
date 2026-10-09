@@ -186,7 +186,7 @@ public sealed class ProcessStepEditorState {
             : StepEditor.StepDrafts.FirstOrDefault(step => step.Basic.StepKey == stepKey);
 
     public async Task ExecuteAsync(ProcessDefinitionStepCommandKind commandKind) {
-        if (Disabled || HasInputErrors || SelectedStepKey is null) {
+        if (executing || Disabled || HasInputErrors || SelectedStepKey is null) {
             return;
         }
 
@@ -196,8 +196,17 @@ public sealed class ProcessStepEditorState {
             commandKind,
             SyncedVersionToken ?? StepEditor.VersionToken,
             CreateDraft());
-        submission = CaptureInputs();
-        await ExecuteCommand.InvokeAsync(command);
+        var submitted = CaptureInputs();
+        submission = submitted;
+        executing = true;
+        try {
+            await ExecuteCommand.InvokeAsync(command);
+        } finally {
+            executing = false;
+            if (ReferenceEquals(submission, submitted)) {
+                submission = null;
+            }
+        }
     }
 
     public ProcessDefinitionStepDraftProjection CreateDraft() {
@@ -458,6 +467,7 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
     private ProcessWorkspaceShellScope? observedScope;
     private Inputs? baseline;
     private Inputs? submission;
+    private bool executing;
     private ProcessDefinitionCatalogItemKey? definitionKey;
     public bool HasConflict { get; private set; }
     public bool IsDirty => HasInputErrors || baseline is not null && !CaptureInputs().Matches(baseline);

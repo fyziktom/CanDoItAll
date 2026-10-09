@@ -154,6 +154,13 @@
     private bool isBusy;
     private string? errorMessage;
     private long workspaceGeneration;
+    private long definitionOperationSequence;
+    private long definitionCompletionSequence;
+    private DefinitionEditorOperationFence? definitionOperation;
+    private bool definitionOutcomeUnknown;
+    private ProcessDefinitionCanvasCommand? pendingCanvasMove;
+    private bool WorkspaceBusy => isBusy || definitionOperation is not null || definitionOutcomeUnknown;
+    private const string UnknownAuthoringOutcome = "The authoring command's outcome is unknown. Further authoring is blocked in this opening. Refresh only reads; verify the original operation before reopening the editor.";
     private string? agentContextNotice;
     private string searchText = string.Empty;
     private string pendingSearchText = string.Empty;
@@ -171,6 +178,7 @@
     private ProcessStepEditorState stepEditorState = new();
     private string? editorCommandNotice;
     private string templateSearchText = string.Empty;
+    private long templateQuerySequence;
     private ProcessTemplateCatalogCategoryKind selectedTemplateCategory = ProcessTemplateCatalogCategoryKind.All;
     private ProcessTemplateCatalogItemKey? selectedTemplateItemKey;
     private ProcessTemplateCatalogPreviewTabKind selectedTemplatePreviewTab = ProcessTemplateCatalogPreviewTabKind.Overview;
@@ -270,7 +278,7 @@
         };
 
     private bool AgentContextDisabled
-        => isBusy || shell?.AgentEntry.IsAvailable != true;
+        => WorkspaceBusy || shell?.AgentEntry.IsAvailable != true;
 
     private string AgentContextTooltip
         => shell?.AgentEntry.DisabledReason ?? shell?.AgentEntry.ContextKey ?? "Process agent context is loading.";
@@ -371,7 +379,7 @@
         });
 
     private AgentChatContextAccessState AgentChatAccessState
-        => isBusy
+        => WorkspaceBusy
             ? AgentChatContextAccessState.Loading
             : !string.IsNullOrWhiteSpace(errorMessage)
                 ? AgentChatContextAccessState.Failed
@@ -475,17 +483,17 @@
         var generation = Interlocked.Increment(ref workspaceGeneration);
         var originScope = ResolveScope();
         var originProfileGeneration = DatabaseRuntimeState.GetSnapshot().Generation;
+        var completionSequence = definitionCompletionSequence;
         if (shell is not null && (shell.Scope != originScope || acceptedProfileGeneration != originProfileGeneration)) {
             shell = null;
-            definitionDraft = new();
-            roleEditorState = new();
-            templateBrowserState = new();
-            stepEditorState = new();
+            RetireDefinitionEditor();
             ResetManagerChatForSelectedRunChange();
             SynchronizeRouteSelections(force: true);
+        } else if (selectedDefinitionKey is not null && shell?.DefinitionCatalog.SelectedDefinitionKey?.Value != selectedDefinitionKey) {
+            RetireDefinitionEditor();
         }
         isBusy = true;
-        errorMessage = null;
+        errorMessage = definitionOutcomeUnknown ? UnknownAuthoringOutcome : null;
 
         try {
             var detailTabKey = ResolveRequestedDetailTabKey();
@@ -528,17 +536,17 @@
                 definitionLoadOptions) { ProjectBinding = shell?.ProjectBinding };
 
             var loadedShell = await ProjectionClient.GetShellAsync(request);
-            if (!OwnsWorkspaceOperation(generation)) {
+            if (!OwnsWorkspaceRead()) {
                 return;
             }
 
-            if (shell?.ProjectBinding != loadedShell.ProjectBinding) {
-                definitionDraft = new();
-                roleEditorState = new();
-                templateBrowserState = new();
-                stepEditorState = new();
+            if (shell?.ProjectBinding != loadedShell.ProjectBinding ||
+                shell?.DefinitionCatalog.SelectedDefinitionKey != loadedShell.DefinitionCatalog.SelectedDefinitionKey) {
+                RetireDefinitionEditor();
                 SynchronizeRouteSelections(force: true);
                 ResetManagerChatForSelectedRunChange();
+            } else {
+                loadedShell = ReconcileDefinitionRead(loadedShell, completionSequence);
             }
             shell = loadedShell;
             acceptedProfileGeneration = originProfileGeneration;
@@ -566,7 +574,7 @@
                 await EnsureManagerChatLoadedAsync();
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (!OwnsWorkspaceOperation(generation)) {
+            if (!OwnsWorkspaceRead()) {
                 return;
             }
 
@@ -579,6 +587,7 @@
                     : "The process workspace could not be read. Refresh to recheck its current scope and access.";
             if (!retainAccepted) {
                 shell = null;
+                RetireDefinitionEditor();
                 SynchronizeRouteSelections(force: true);
             }
             Logger.LogWarning("Process projection read failed. ProjectId={ProjectId} FailureType={FailureType} Retained={Retained}.", originScope.ProjectId, exception.GetType().Name, retainAccepted);
@@ -587,6 +596,67 @@
                 isBusy = false;
             }
         }
+
+        bool OwnsWorkspaceRead() => OwnsWorkspaceOperation(generation) && ResolveScope() == originScope &&
+            DatabaseRuntimeState.GetSnapshot().Generation == originProfileGeneration;
+    }
+
+    private ProcessWorkspaceShellProjection ReconcileDefinitionRead(ProcessWorkspaceShellProjection observed, long completionSequence) {
+        if (shell?.DefinitionCatalog.SelectedEditor is not { } current) {
+            return observed;
+        }
+        var editor = observed.DefinitionCatalog.SelectedEditor ?? current;
+        var pending = definitionOperation is not null || definitionOutcomeUnknown || completionSequence != definitionCompletionSequence;
+        var definitionMismatch = current.LastCommandReceipt?.Status == ProcessDefinitionEditorCommandStatus.Accepted && editor.VersionToken != current.VersionToken;
+        var roleMismatch = current.RoleEditor?.LastCommandReceipt?.Status == ProcessDefinitionRoleCommandStatus.Accepted &&
+            editor.RoleEditor is { } roles && roles.VersionToken != current.RoleEditor.VersionToken;
+        var stepMismatch = current.StepEditor?.LastCommandReceipt?.Status == ProcessDefinitionStepCommandStatus.Accepted &&
+            editor.StepEditor is { } steps && steps.VersionToken != current.StepEditor.VersionToken;
+        var canvasMismatch = current.Canvas?.LastCommandReceipt?.Status == ProcessDefinitionCanvasCommandStatus.Accepted &&
+            editor.Canvas is { } canvas && canvas.VersionToken != current.Canvas.VersionToken;
+        var templateMismatch = current.TemplateCatalog?.LastImportReceipt?.Status == ProcessTemplateImportCommandStatus.Accepted &&
+            editor.TemplateCatalog is { } templates && templates.VersionToken != current.TemplateCatalog.VersionToken;
+        if (!pending && (definitionMismatch || roleMismatch || stepMismatch || canvasMismatch || templateMismatch)) {
+            errorMessage = "The command was accepted, but this read does not confirm its version. The accepted result and draft remain visible. Refresh retries observation only; no command was replayed.";
+        }
+        var reconciled = pending || definitionMismatch ? current : editor with {
+            LastCommandReceipt = editor.LastCommandReceipt ?? current.LastCommandReceipt
+        };
+        reconciled = reconciled with {
+            RoleEditor = (pending || roleMismatch ? current.RoleEditor : editor.RoleEditor) ?? editor.RoleEditor ?? current.RoleEditor,
+            StepEditor = (pending || stepMismatch ? current.StepEditor : editor.StepEditor) ?? editor.StepEditor ?? current.StepEditor,
+            Canvas = (pending || canvasMismatch ? current.Canvas : editor.Canvas) ?? editor.Canvas ?? current.Canvas,
+            TemplateCatalog = editor.TemplateCatalog ?? current.TemplateCatalog
+        };
+        if (reconciled.RoleEditor is { } role && role.VersionToken == current.RoleEditor?.VersionToken) {
+            reconciled = reconciled with { RoleEditor = role with { LastCommandReceipt = role.LastCommandReceipt ?? current.RoleEditor.LastCommandReceipt } };
+        }
+        if (reconciled.StepEditor is { } step && step.VersionToken == current.StepEditor?.VersionToken) {
+            reconciled = reconciled with { StepEditor = step with { LastCommandReceipt = step.LastCommandReceipt ?? current.StepEditor.LastCommandReceipt } };
+        }
+        if (reconciled.Canvas is { } reconciledCanvas && reconciledCanvas.VersionToken == current.Canvas?.VersionToken) {
+            reconciled = reconciled with { Canvas = reconciledCanvas with { LastCommandReceipt = reconciledCanvas.LastCommandReceipt ?? current.Canvas.LastCommandReceipt } };
+        }
+        if (reconciled.TemplateCatalog is { } catalog && current.TemplateCatalog is { } currentCatalog &&
+            (pending || templateMismatch || catalog.VersionToken == currentCatalog.VersionToken)) {
+            reconciled = reconciled with { TemplateCatalog = catalog with {
+                VersionToken = currentCatalog.VersionToken,
+                ImportedComponents = currentCatalog.ImportedComponents,
+                LastImportReceipt = currentCatalog.LastImportReceipt
+            } };
+        }
+        return observed with { DefinitionCatalog = observed.DefinitionCatalog with { SelectedEditor = reconciled } };
+    }
+
+    private void RetireDefinitionEditor() {
+        definitionOperation = null;
+        definitionOutcomeUnknown = false;
+        pendingCanvasMove = null;
+        definitionDraft = new();
+        roleEditorState = new();
+        templateBrowserState = new();
+        stepEditorState = new();
+        editorCommandNotice = null;
     }
 
     private ProcessWorkspaceShellScope ResolveScope()
@@ -728,7 +798,7 @@
 
     private async Task LaunchSelectedDefinitionAsync() {
         var selectedDefinition = shell?.DefinitionCatalog.SelectedItem;
-        if (selectedDefinition is null || isBusy) {
+        if (selectedDefinition is null || WorkspaceBusy) {
             catalogCommandNotice = "Select a process definition before launching.";
             return;
         }
@@ -832,7 +902,7 @@
     }
 
     private async Task StartNewProcessLaunchAsync() {
-        if (isBusy || pendingLaunchStorageKey is not { } storageKey) {
+        if (WorkspaceBusy || pendingLaunchStorageKey is not { } storageKey) {
             return;
         }
         var generation = Interlocked.Increment(ref workspaceGeneration);
@@ -916,7 +986,7 @@
     }
 
     private async Task FeedDefaultsAsync() {
-        if (isBusy || isDisposed) {
+        if (WorkspaceBusy || isDisposed) {
             return;
         }
         var generation = Interlocked.Increment(ref workspaceGeneration);
@@ -1782,18 +1852,17 @@
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
+            definitionCompletionSequence++;
 
             editorCommandNotice = result.Receipt.Summary;
             if (result.Receipt.Status == ProcessDefinitionEditorCommandStatus.Accepted) {
                 definitionDraft.Accept(result.Projection, submitted);
             }
             ApplyDefinitionEditorProjection(result.Projection);
-        } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (IsCurrentDefinitionEditorOperation(operation.Value)) {
-                errorMessage = exception.Message;
-            }
+        } catch (Exception exception) {
+            RecordDefinitionOperationFailure(operation.Value, exception);
         } finally {
-            CompleteDefinitionEditorOperation(operation.Value);
+            await CompleteDefinitionEditorOperationAsync(operation.Value);
         }
     }
 
@@ -1840,17 +1909,16 @@
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
+            definitionCompletionSequence++;
 
             if (result.Receipt.Status == ProcessDefinitionRoleCommandStatus.Accepted) {
                 roleEditorState.Accept(result.Projection);
             }
             ApplyDefinitionRoleEditorProjection(result.Projection);
-        } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (IsCurrentDefinitionEditorOperation(operation.Value)) {
-                errorMessage = exception.Message;
-            }
+        } catch (Exception exception) {
+            RecordDefinitionOperationFailure(operation.Value, exception);
         } finally {
-            CompleteDefinitionEditorOperation(operation.Value);
+            await CompleteDefinitionEditorOperationAsync(operation.Value);
         }
     }
 
@@ -1870,6 +1938,7 @@
     }
 
     private async Task ApplyTemplateCatalogQueryAsync(ProcessTemplateCatalogQueryProjection query) {
+        templateQuerySequence++;
         templateSearchText = query.SearchText ?? string.Empty;
         selectedTemplateCategory = query.Category;
         selectedTemplateItemKey = query.SelectedItemKey;
@@ -1883,28 +1952,35 @@
             return;
         }
 
+        var querySequence = templateQuerySequence;
         try {
             var result = await ProjectionClient.ExecuteTemplateImportCommandAsync(command);
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
+            definitionCompletionSequence++;
 
-            ApplyTemplateCatalogProjection(result.Projection);
-        } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (IsCurrentDefinitionEditorOperation(operation.Value)) {
-                errorMessage = exception.Message;
-            }
+            ApplyTemplateCatalogProjection(result.Projection, querySequence != templateQuerySequence);
+        } catch (Exception exception) {
+            RecordDefinitionOperationFailure(operation.Value, exception);
         } finally {
-            CompleteDefinitionEditorOperation(operation.Value);
+            await CompleteDefinitionEditorOperationAsync(operation.Value);
         }
     }
 
-    private void ApplyTemplateCatalogProjection(ProcessTemplateCatalogProjection projection) {
+    private void ApplyTemplateCatalogProjection(ProcessTemplateCatalogProjection projection, bool preserveQuery) {
         if (shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
             currentEditor.DefinitionKey != projection.TargetDefinitionKey) {
             return;
         }
 
+        if (preserveQuery && currentEditor.TemplateCatalog is { } currentCatalog) {
+            projection = currentCatalog with {
+                VersionToken = projection.VersionToken,
+                ImportedComponents = projection.ImportedComponents,
+                LastImportReceipt = projection.LastImportReceipt
+            };
+        }
         var selectedEditor = currentEditor with {
             TemplateCatalog = projection
         };
@@ -1933,6 +2009,18 @@
     }
 
     private async Task ExecuteDefinitionCanvasCommandAsync(ProcessDefinitionCanvasCommand command) {
+        command = command with { NodePositions = command.NodePositions?.ToArray() };
+        if (command.CommandKind == ProcessDefinitionCanvasCommandKind.MoveNodes &&
+            definitionOperation is { } pending && IsCurrentDefinitionEditorOperation(pending) &&
+            command.DefinitionKey == pending.DefinitionKey && command.Scope == pending.Scope) {
+            var positions = (pendingCanvasMove?.NodePositions ?? [])
+                .Concat(command.NodePositions ?? [])
+                .GroupBy(position => position.NodeKey)
+                .Select(group => group.Last())
+                .ToArray();
+            pendingCanvasMove = command with { NodePositions = positions };
+            return;
+        }
         var operation = TryBeginDefinitionEditorOperation(command.DefinitionKey);
         if (operation is null) {
             return;
@@ -1943,14 +2031,13 @@
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
+            definitionCompletionSequence++;
 
             ApplyDefinitionCanvasProjection(result.Projection);
-        } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (IsCurrentDefinitionEditorOperation(operation.Value)) {
-                errorMessage = exception.Message;
-            }
+        } catch (Exception exception) {
+            RecordDefinitionOperationFailure(operation.Value, exception);
         } finally {
-            CompleteDefinitionEditorOperation(operation.Value);
+            await CompleteDefinitionEditorOperationAsync(operation.Value);
         }
     }
 
@@ -1981,17 +2068,16 @@
             if (!IsCurrentDefinitionEditorOperation(operation.Value)) {
                 return;
             }
+            definitionCompletionSequence++;
 
             if (result.Receipt.Status == ProcessDefinitionStepCommandStatus.Accepted) {
                 stepEditorState.Accept(result.Projection);
             }
             ApplyDefinitionStepEditorProjection(result.Projection);
-        } catch (Exception exception) when (exception is not OperationCanceledException) {
-            if (IsCurrentDefinitionEditorOperation(operation.Value)) {
-                errorMessage = exception.Message;
-            }
+        } catch (Exception exception) {
+            RecordDefinitionOperationFailure(operation.Value, exception);
         } finally {
-            CompleteDefinitionEditorOperation(operation.Value);
+            await CompleteDefinitionEditorOperationAsync(operation.Value);
         }
     }
 
@@ -2013,36 +2099,60 @@
 
     private DefinitionEditorOperationFence? TryBeginDefinitionEditorOperation(
         ProcessDefinitionCatalogItemKey definitionKey) {
-        if (isDisposed || shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
-            currentEditor.DefinitionKey != definitionKey) {
+        if (isDisposed || definitionOperation is not null || definitionOutcomeUnknown ||
+            shell?.DefinitionCatalog.SelectedEditor is not { } currentEditor ||
+            currentEditor.DefinitionKey != definitionKey || shell.Scope != ResolveScope() ||
+            acceptedProfileGeneration != DatabaseRuntimeState.GetSnapshot().Generation) {
             return null;
         }
 
         var operation = new DefinitionEditorOperationFence(
-            Interlocked.Increment(ref workspaceGeneration),
+            ++definitionOperationSequence,
             currentEditor.DefinitionKey,
-            currentEditor.VersionToken);
-        isBusy = true;
+            ResolveScope(),
+            DatabaseRuntimeState.GetSnapshot().Generation,
+            shell.ProjectBinding);
+        definitionOperation = operation;
         errorMessage = null;
         return operation;
     }
 
     private bool IsCurrentDefinitionEditorOperation(DefinitionEditorOperationFence operation)
-        => OwnsWorkspaceOperation(operation.Generation) &&
+        => !isDisposed && definitionOperation == operation &&
+           ResolveScope() == operation.Scope &&
+           DatabaseRuntimeState.GetSnapshot().Generation == operation.ProfileGeneration &&
+           shell?.ProjectBinding == operation.ProjectBinding &&
            shell?.DefinitionCatalog.SelectedEditor is { } currentEditor &&
-           currentEditor.DefinitionKey == operation.DefinitionKey &&
-           currentEditor.VersionToken == operation.VersionToken;
+           currentEditor.DefinitionKey == operation.DefinitionKey;
 
-    private void CompleteDefinitionEditorOperation(DefinitionEditorOperationFence operation) {
-        if (OwnsWorkspaceOperation(operation.Generation)) {
-            isBusy = false;
+    private void RecordDefinitionOperationFailure(DefinitionEditorOperationFence operation, Exception exception) {
+        if (!IsCurrentDefinitionEditorOperation(operation)) {
+            return;
+        }
+        definitionOutcomeUnknown = true;
+        errorMessage = UnknownAuthoringOutcome;
+        pendingCanvasMove = null;
+        Logger.LogWarning("Process authoring outcome is unknown. Operation={Operation} Definition={Definition} ProjectId={ProjectId} FailureType={FailureType}.",
+            operation.Sequence, operation.DefinitionKey, operation.Scope.ProjectId, exception.GetType().Name);
+    }
+
+    private async Task CompleteDefinitionEditorOperationAsync(DefinitionEditorOperationFence operation) {
+        if (!IsCurrentDefinitionEditorOperation(operation)) {
+            return;
+        }
+        definitionOperation = null;
+        if (!definitionOutcomeUnknown && pendingCanvasMove is { } move && shell?.DefinitionCatalog.SelectedEditor?.Canvas is { } canvas) {
+            pendingCanvasMove = null;
+            await ExecuteDefinitionCanvasCommandAsync(move with { ExpectedVersionToken = canvas.VersionToken });
         }
     }
 
     private readonly record struct DefinitionEditorOperationFence(
-        long Generation,
+        long Sequence,
         ProcessDefinitionCatalogItemKey DefinitionKey,
-        ProcessDefinitionEditorVersionToken VersionToken);
+        ProcessWorkspaceShellScope Scope,
+        long ProfileGeneration,
+        ProcessProjectionProjectBinding? ProjectBinding);
 
     private static string ResolveTabEyebrow(ProcessWorkspaceTabKey key)
         => key switch {
@@ -2091,6 +2201,7 @@
         }
 
         isDisposed = true;
+        RetireDefinitionEditor();
         agentChatFreshnessLease?.Dispose();
         agentChatFreshnessLease = null;
         await Task.WhenAll(managerChatVoiceCleanup, DisposeManagerChatVoiceOwnerAsync(managerChatVoiceOwnerId));
@@ -2183,7 +2294,7 @@
     string? IProcessWorkspaceSession.ErrorMessage => errorMessage;
     ProcessTimelineEventProjection? IProcessWorkspaceSession.EventDetail => eventDetail;
     bool IProcessWorkspaceSession.EventDetailDialogOpen => eventDetailDialogOpen;
-    bool IProcessWorkspaceSession.IsBusy => isBusy;
+    bool IProcessWorkspaceSession.IsBusy => WorkspaceBusy;
     bool IProcessWorkspaceSession.HasManagerChatAgent => managerChatAgent is not null;
     IReadOnlyList<ProcessManagerAgentOption> IProcessWorkspaceSession.ManagerChatAgents => managerChatAgents.Select(agent => new ProcessManagerAgentOption(agent.Id, agent.Name)).ToArray();
     string? IProcessWorkspaceSession.ManagerChatErrorMessage => managerChatErrorMessage;

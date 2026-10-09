@@ -94,13 +94,19 @@ public sealed class ProcessRendererTests {
         var state = new ProcessStepEditorState { StepEditor = ProcessScenarioData.CreateStepEditor(new("blazor-app-delivery")), Scope = ProcessWorkspaceShellScope.Global };
         state.Observe();
         ProcessDefinitionStepEditorCommand? sent = null;
-        state.ExecuteCommand = EventCallback.Factory.Create<ProcessDefinitionStepEditorCommand>(new object(), command => sent = command);
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        state.ExecuteCommand = EventCallback.Factory.Create<ProcessDefinitionStepEditorCommand>(new object(), async command => {
+            sent = command;
+            await completion.Task;
+        });
         var row = state.BranchOutcomes[0];
-        await state.ExecuteAsync(ProcessDefinitionStepCommandKind.AddBranchOutcome);
+        var running = state.ExecuteAsync(ProcessDefinitionStepCommandKind.AddBranchOutcome);
         state.UpdateBranchTitle(row.OutcomeKey, new() { Value = "Typed after send" });
         Assert.Equal(row.Title, sent!.Draft.BranchOutcomes[0].Title);
         var accepted = ProcessScenarioData.CreateStepEditor(sent.DefinitionKey, sent.Draft, new("accepted"), new([]), null, sent.CommandKind);
         state.Accept(accepted);
+        completion.SetResult();
+        await running;
         Assert.Equal(2, state.BranchOutcomes.Count);
         Assert.Equal("Typed after send", state.BranchOutcomes.Single(candidate => candidate.OutcomeKey == row.OutcomeKey).Title);
         Assert.True(state.IsDirty);
