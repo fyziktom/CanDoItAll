@@ -117,6 +117,28 @@ public sealed class ProcessRoleEditorState {
             ? RoleEditor.Roles.FirstOrDefault(candidate => candidate.RoleKey == roleKey)
             : RoleEditor.SelectedRole;
         if (role is null) {
+            SelectedRoleKey = null;
+            RoleDetailDialogOpen = false;
+            RoleDisplayName = string.Empty;
+            RolePurpose = string.Empty;
+            RoleStaffingIntent = string.Empty;
+            RoleTemplateSourceKey = string.Empty;
+            RoleTemplateSnapshotName = string.Empty;
+            RoleSnapshotSummary = string.Empty;
+            RoleExecutorKind = ProcessDefinitionRoleExecutorKind.Person;
+            RoleProjectAssignment = ProcessDefinitionRoleProjectAssignmentKind.Unspecified;
+            RoleOverrideStatus = ProcessDefinitionRoleTemplateOverrideStatus.None;
+            RoleWorkflowDefinitionId = null;
+            RoleWorkflowVersionId = null;
+            RoleWorkflowDefinitionIdInput = string.Empty;
+            RoleWorkflowVersionIdInput = string.Empty;
+            RoleWorkflowDefinitionIdError = null;
+            RoleWorkflowVersionIdError = null;
+            RoleIsRequired = false;
+            RoleAllowsFallback = false;
+            RoleRequiresApproval = false;
+            RoleDefaultAllocationPercentInput = "0";
+            baseline = null;
             return;
         }
 
@@ -161,6 +183,7 @@ public sealed class ProcessRoleEditorState {
             templateActionKey);
         var submitted = CaptureInputs();
         submission = submitted;
+        submissionKind = commandKind;
         executing = true;
         try {
             await ExecuteCommand.InvokeAsync(command);
@@ -356,6 +379,7 @@ public sealed class ProcessRoleEditorState {
     private ProcessWorkspaceShellScope? observedScope;
     private Inputs? baseline;
     private Inputs? submission;
+    private ProcessDefinitionRoleCommandKind submissionKind;
     private bool executing;
     private ProcessDefinitionCatalogItemKey? definitionKey;
     public bool HasConflict { get; private set; }
@@ -431,6 +455,12 @@ public sealed class ProcessRoleEditorState {
         submission = null;
         RoleEditor = projection;
         SyncedVersionToken = projection.VersionToken;
+        if (submissionKind is ProcessDefinitionRoleCommandKind.AddRole or ProcessDefinitionRoleCommandKind.DeleteRole) {
+            SelectedRoleKey = projection.SelectedRoleKey;
+            SyncSelectedRole();
+            HasConflict = false;
+            return;
+        }
         SyncSelectedRole();
         RoleDisplayName = current.RoleDisplayName == submitted.RoleDisplayName ? RoleDisplayName : current.RoleDisplayName;
         RolePurpose = current.RolePurpose == submitted.RolePurpose ? RolePurpose : current.RolePurpose;
@@ -455,6 +485,7 @@ public sealed class ProcessRoleEditorState {
     }
 
     public void Discard() {
+        submission = null;
         SyncedVersionToken = RoleEditor.VersionToken;
         SyncSelectedRole();
         HasConflict = false;

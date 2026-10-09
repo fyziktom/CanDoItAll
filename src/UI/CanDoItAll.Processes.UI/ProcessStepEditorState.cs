@@ -223,7 +223,7 @@ public sealed class ProcessStepEditorState {
                 AllowsSafeRefusal,
                 RequiresApproval,
                 RequiresDecisionRecord,
-                StepEditor.SelectedStep?.Basic.DecisionRoleKey),
+                ResolveDraft(stepKey)?.Basic.DecisionRoleKey),
             new ProcessDefinitionStepOperationContractProjection(
                 OperationTargetScope,
                 SelectedOperations.OrderBy(operation => operation.ToString(), StringComparer.Ordinal).ToArray()),
@@ -493,7 +493,9 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
             SubprocessSnapshotName,
             BranchOutcomes.ToArray(),
             RoleBindings.ToArray(),
-            ArtifactExpectations.ToArray());
+            ArtifactExpectations.ToArray(),
+            new Dictionary<ProcessDefinitionBranchOutcomeKey, string>(BranchNumberInputs),
+            new Dictionary<ProcessDefinitionArtifactExpectationKey, string>(ArtifactNumberInputs));
 
     private sealed record Inputs(
         string StepTitle,
@@ -516,7 +518,9 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
         string SubprocessSnapshotName,
         IReadOnlyList<ProcessDefinitionBranchOutcomeProjection> BranchOutcomes,
         IReadOnlyList<ProcessDefinitionStepRoleBindingProjection> RoleBindings,
-        IReadOnlyList<ProcessDefinitionArtifactExpectationProjection> ArtifactExpectations) {
+        IReadOnlyList<ProcessDefinitionArtifactExpectationProjection> ArtifactExpectations,
+        IReadOnlyDictionary<ProcessDefinitionBranchOutcomeKey, string> BranchNumberInputs,
+        IReadOnlyDictionary<ProcessDefinitionArtifactExpectationKey, string> ArtifactNumberInputs) {
         public bool Matches(Inputs other) => StepTitle == other.StepTitle &&
             StepSubtitle == other.StepSubtitle &&
             StepNotes == other.StepNotes &&
@@ -569,16 +573,16 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
         ExceptionPolicySummary = current.ExceptionPolicySummary == submitted.ExceptionPolicySummary ? ExceptionPolicySummary : current.ExceptionPolicySummary;
         SubprocessProcessKey = current.SubprocessProcessKey == submitted.SubprocessProcessKey ? SubprocessProcessKey : current.SubprocessProcessKey;
         SubprocessSnapshotName = current.SubprocessSnapshotName == submitted.SubprocessSnapshotName ? SubprocessSnapshotName : current.SubprocessSnapshotName;
-        BranchOutcomes = MergeRows(BranchOutcomes, submitted.BranchOutcomes, current.BranchOutcomes, row => row.OutcomeKey);
-        RoleBindings = MergeRows(RoleBindings, submitted.RoleBindings, current.RoleBindings, row => (row.StepKey, row.RoleKey, row.ResponsibilityKind));
-        ArtifactExpectations = MergeRows(ArtifactExpectations, submitted.ArtifactExpectations, current.ArtifactExpectations, row => row.ArtifactKey);
+        BranchOutcomes = MergeRows(BranchOutcomes, submitted.BranchOutcomes, current.BranchOutcomes, row => row.OutcomeKey, MergeBranch);
+        RoleBindings = MergeRows(RoleBindings, submitted.RoleBindings, current.RoleBindings, row => (row.StepKey, row.RoleKey, row.ResponsibilityKind), MergeBinding);
+        ArtifactExpectations = MergeRows(ArtifactExpectations, submitted.ArtifactExpectations, current.ArtifactExpectations, row => row.ArtifactKey, MergeArtifact);
         foreach (var (key, value) in branchInputs) {
-            if (BranchOutcomes.Any(row => row.OutcomeKey == key)) {
+            if (value != submitted.BranchNumberInputs.GetValueOrDefault(key) && BranchOutcomes.Any(row => row.OutcomeKey == key)) {
                 BranchNumberInputs[key] = value;
             }
         }
         foreach (var (key, value) in artifactInputs) {
-            if (ArtifactExpectations.Any(row => row.ArtifactKey == key)) {
+            if (value != submitted.ArtifactNumberInputs.GetValueOrDefault(key) && ArtifactExpectations.Any(row => row.ArtifactKey == key)) {
                 ArtifactNumberInputs[key] = value;
             }
         }
@@ -586,19 +590,71 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
     }
 
     public void Discard() {
+        submission = null;
         SyncedVersionToken = StepEditor.VersionToken;
         SyncSelectedStep();
         HasConflict = false;
     }
 
-    private static List<T> MergeRows<T, TKey>(IReadOnlyList<T> accepted, IReadOnlyList<T> submitted, IReadOnlyList<T> current, Func<T, TKey> key)
+    private static List<T> MergeRows<T, TKey>(IReadOnlyList<T> accepted, IReadOnlyList<T> submitted, IReadOnlyList<T> current,
+        Func<T, TKey> key, Func<T, T, T, T> merge)
         where TKey : notnull {
         var sent = submitted.ToDictionary(key);
         var edited = current.ToDictionary(key);
         return accepted.Where(row => !sent.ContainsKey(key(row)) || edited.ContainsKey(key(row)))
             .Select(row => edited.TryGetValue(key(row), out var local) && sent.TryGetValue(key(row), out var original)
-                && !EqualityComparer<T>.Default.Equals(local, original) ? local : row)
+                ? merge(row, original, local) : row)
             .Concat(current.Where(row => !sent.ContainsKey(key(row)) && !accepted.Any(saved => EqualityComparer<TKey>.Default.Equals(key(saved), key(row)))))
             .ToList();
     }
+
+    private static T Keep<T>(T accepted, T submitted, T current)
+        => EqualityComparer<T>.Default.Equals(submitted, current) ? accepted : current;
+
+    private static ProcessDefinitionBranchOutcomeProjection MergeBranch(ProcessDefinitionBranchOutcomeProjection accepted,
+        ProcessDefinitionBranchOutcomeProjection submitted, ProcessDefinitionBranchOutcomeProjection current) => accepted with {
+        Title = Keep(accepted.Title, submitted.Title, current.Title),
+        Description = Keep(accepted.Description, submitted.Description, current.Description),
+        IsBackwardRoute = Keep(accepted.IsBackwardRoute, submitted.IsBackwardRoute, current.IsBackwardRoute),
+        RouteTarget = accepted.RouteTarget with {
+            Kind = Keep(accepted.RouteTarget.Kind, submitted.RouteTarget.Kind, current.RouteTarget.Kind),
+            StepKey = Keep(accepted.RouteTarget.StepKey, submitted.RouteTarget.StepKey, current.RouteTarget.StepKey),
+            ArtifactExpectationKey = Keep(accepted.RouteTarget.ArtifactExpectationKey, submitted.RouteTarget.ArtifactExpectationKey, current.RouteTarget.ArtifactExpectationKey),
+            Summary = Keep(accepted.RouteTarget.Summary, submitted.RouteTarget.Summary, current.RouteTarget.Summary)
+        },
+        LoopBudget = accepted.LoopBudget with {
+            IsRequired = Keep(accepted.LoopBudget.IsRequired, submitted.LoopBudget.IsRequired, current.LoopBudget.IsRequired),
+            MaximumRepeats = Keep(accepted.LoopBudget.MaximumRepeats, submitted.LoopBudget.MaximumRepeats, current.LoopBudget.MaximumRepeats),
+            FingerprintPolicyKey = Keep(accepted.LoopBudget.FingerprintPolicyKey, submitted.LoopBudget.FingerprintPolicyKey, current.LoopBudget.FingerprintPolicyKey),
+            EscalationTargetKind = Keep(accepted.LoopBudget.EscalationTargetKind, submitted.LoopBudget.EscalationTargetKind, current.LoopBudget.EscalationTargetKind)
+        }
+    };
+
+    private static ProcessDefinitionStepRoleBindingProjection MergeBinding(ProcessDefinitionStepRoleBindingProjection accepted,
+        ProcessDefinitionStepRoleBindingProjection submitted, ProcessDefinitionStepRoleBindingProjection current) => accepted with {
+        StepTitle = Keep(accepted.StepTitle, submitted.StepTitle, current.StepTitle),
+        RoleDisplayName = Keep(accepted.RoleDisplayName, submitted.RoleDisplayName, current.RoleDisplayName),
+        IsRequired = Keep(accepted.IsRequired, submitted.IsRequired, current.IsRequired),
+        FallbackOrder = Keep(accepted.FallbackOrder, submitted.FallbackOrder, current.FallbackOrder),
+        RebindPolicySummary = Keep(accepted.RebindPolicySummary, submitted.RebindPolicySummary, current.RebindPolicySummary)
+    };
+
+    private static ProcessDefinitionArtifactExpectationProjection MergeArtifact(ProcessDefinitionArtifactExpectationProjection accepted,
+        ProcessDefinitionArtifactExpectationProjection submitted, ProcessDefinitionArtifactExpectationProjection current) => accepted with {
+        TemplateKey = Keep(accepted.TemplateKey, submitted.TemplateKey, current.TemplateKey),
+        Title = Keep(accepted.Title, submitted.Title, current.Title),
+        ArtifactKind = Keep(accepted.ArtifactKind, submitted.ArtifactKind, current.ArtifactKind),
+        IsRequired = Keep(accepted.IsRequired, submitted.IsRequired, current.IsRequired),
+        TrustRequirement = Keep(accepted.TrustRequirement, submitted.TrustRequirement, current.TrustRequirement),
+        SensitivityLevel = Keep(accepted.SensitivityLevel, submitted.SensitivityLevel, current.SensitivityLevel),
+        RetentionDays = Keep(accepted.RetentionDays, submitted.RetentionDays, current.RetentionDays),
+        WorkflowOutputId = Keep(accepted.WorkflowOutputId, submitted.WorkflowOutputId, current.WorkflowOutputId),
+        WorkflowOutputName = Keep(accepted.WorkflowOutputName, submitted.WorkflowOutputName, current.WorkflowOutputName),
+        WorkflowOutputKind = Keep(accepted.WorkflowOutputKind, submitted.WorkflowOutputKind, current.WorkflowOutputKind),
+        SubprocessChildArtifactExpectationId = Keep(accepted.SubprocessChildArtifactExpectationId, submitted.SubprocessChildArtifactExpectationId, current.SubprocessChildArtifactExpectationId),
+        SubprocessChildStepKey = Keep(accepted.SubprocessChildStepKey, submitted.SubprocessChildStepKey, current.SubprocessChildStepKey),
+        SubprocessChildArtifactTitle = Keep(accepted.SubprocessChildArtifactTitle, submitted.SubprocessChildArtifactTitle, current.SubprocessChildArtifactTitle),
+        AllowedFutureUsageSummary = Keep(accepted.AllowedFutureUsageSummary, submitted.AllowedFutureUsageSummary, current.AllowedFutureUsageSummary),
+        ValidationRequirementSummary = Keep(accepted.ValidationRequirementSummary, submitted.ValidationRequirementSummary, current.ValidationRequirementSummary)
+    };
 }
