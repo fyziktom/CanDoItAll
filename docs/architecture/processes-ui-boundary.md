@@ -67,6 +67,13 @@ workflow, retained preparation and the delivered link to the original project no
 
 ## Validation and current limits
 
+The [PC2 execution record](../validation/processes-ui-pc2.md) records the 2026-10-09
+mutation/editor corrections, 530 current affected tests, browser/assets, static closure
+and signed source checkpoints. Its [native authoring prerequisite](processes-authoring-authority-prerequisite.md)
+contains the real-client lifetime diagnosis and next owner/schema scope. Authoring
+durability remains blocked. The PC1 results and timings below retain their original
+provenance; they are not fresh PC2 results.
+
 The PC1 execution record is under the ignored `.artifacts/pc1-20261008` directory.
 Initial source was `6e4a894ddddd6976643caeb8797c47f492728d01` on `components-decoupling`;
 Components was `f3745356182444656edfdef56aa827095632d3ea` and FileTools was

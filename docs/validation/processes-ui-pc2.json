@@ -1,0 +1,2055 @@
+{
+  "schemaVersion": 1,
+  "assignmentId": "CDA-PROCESSES-UI-DECOUPLING-PC2",
+  "executionDateUtc": "2026-10-09",
+  "candidate": {
+    "branch": "components-decoupling",
+    "entryCommit": "a1042e97c38d20fc58ad60521fbe22c205bbccdc",
+    "entryTree": "2eb63b4d31c3eba3820359a3d0d85f35d271cd4e",
+    "sourceCommit": "72cbacef3185244c2633d0729443ba9819ddce18",
+    "testedTree": "430e5e1e0969dfbd46a23a3a5cffff06d44d63b5",
+    "browserStagedTreeBeforeBaselineRefresh": "128560d9130b15aaa1da72c59bb0bc4ffa25bb09",
+    "lastProductionChange": "8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+    "changedCodeDigest": "ada37311d31fdaf7f41d881ea9a3fd5e1fb5567d1501214ebd3fba85be5ed93d",
+    "changedCode": [
+      {
+        "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+        "gitBlob": "464db0973363bf77d4b75f7d920c2ade100b0389",
+        "normalizedSha256": "162556289fe6c561470ea6ef05d3bc2ba2934192ae74a6c6c056f58d00e7e608"
+      },
+      {
+        "path": "src/UI/CanDoItAll.Processes.UI/ProcessRoleEditorState.cs",
+        "gitBlob": "5d41bee04099ddc0e51618d16f4df7e6aae41e3c",
+        "normalizedSha256": "7032da9650c60f706a79d25bf4d07f06f755e49a937ebae10b984252fc4ba487"
+      },
+      {
+        "path": "src/UI/CanDoItAll.Processes.UI/ProcessStepEditorState.cs",
+        "gitBlob": "e013e821927318a3c8048619ea7161d50589ffb0",
+        "normalizedSha256": "12072720badf6cbf8b6a1d1441695d973679ab90b447108f12e7f32a226dda16"
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Processes.UI.Tests/ProcessRendererTests.cs",
+        "gitBlob": "841680b970749bf9352513050599e3369cd443fd",
+        "normalizedSha256": "3747540635a94c3662ea1e88f88d870ba3ecfb5e4f1eb8f1a81d3828c12b9635"
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/ProcessAuthoringEditorTests.cs",
+        "gitBlob": "eb65537a108ad4ead0f1541b1a2d7ce86ad569a1",
+        "normalizedSha256": "a8e4492980813737915da1ad4e5a916bc26206eec93440143865929f68728077"
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.Drafts.cs",
+        "gitBlob": "1d65cc5bc5636eb0c93c241d9d62121a1a496418",
+        "normalizedSha256": "fcff5e65fdd1ff2e836aea9837056c1bcdfd2af860a1ca6641acb9d670cae8d9"
+      },
+      {
+        "path": "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs",
+        "gitBlob": "bf9b9edf78757f10fa8f32cac1a0d5ec2fe6fbdc",
+        "normalizedSha256": "c05e291709b7e3c6e24e27c765f2cf7d3e4c6ba493d2442b8cff15db3f0814dc"
+      },
+      {
+        "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessAuthoringBrowserControl.cs",
+        "gitBlob": "58d82da48a602901f9fcf7e2175b76ebabe29a60",
+        "normalizedSha256": "ec7895a971fa9ab1b8787be31c063547372c91d31fb09f95c70e0d2633b0fe49"
+      },
+      {
+        "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessAuthoringBrowserTests.cs",
+        "gitBlob": "ca26fc93a1f8377ce46f96432a720cdbd03d5be5",
+        "normalizedSha256": "6d09a133929d60be81aa91fed1f9d1a2267eb4d708b6702fb1e9fcf41d5d3392"
+      },
+      {
+        "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessNativeBrowserHost.cs",
+        "gitBlob": "f494f8769f7d8cc7cdd4f6ce13ba59e2ec0f7b3e",
+        "normalizedSha256": "662f5db8889d35941522ce9200ea89f6678b3d3216ee5f93fcb595e2b1d5e9db"
+      }
+    ],
+    "attribution": "Lane metadata records HEAD before its tested working changes were committed. Git blobs and normalized changed-code hashes identify those final changes; later differences are tests, reviewed baseline and documentation only. Raw sourceDelta omits staged/untracked files and is not a complete candidate seal.",
+    "siblings": {
+      "CanDoItAll.Components": "f3745356182444656edfdef56aa827095632d3ea",
+      "CanDoItAll.FileTools": "3a080ecd31068a77c1e1bd639f7a78e21c93db85"
+    },
+    "siblingWorktrees": "CLEAN_UNCHANGED",
+    "sdk": "10.0.303",
+    "configuration": "ProcUiProofPC2",
+    "dependencyMode": "local sibling source",
+    "inputIntegrity": [
+      {
+        "bundle": "CanDoItAll_Processes_UI_Decoupling_PC2",
+        "status": "PASS",
+        "sealedFiles": 16,
+        "manifest": {
+          "path": "codex/bundles/CanDoItAll_Processes_UI_Decoupling_PC2/MANIFEST.json",
+          "sha256": "d3610f40a20d1947c113c7f0d9992a55b8e6effff8c176a031431deda013ba60"
+        }
+      },
+      {
+        "bundle": "UI_Decoupling_Shared_Bundle",
+        "status": "PASS",
+        "sealedFiles": 24,
+        "manifest": {
+          "path": "codex/bundles/UI_Decoupling_Shared_Bundle/MANIFEST.json",
+          "sha256": "ea708e0a5cf5b87f2fe5731a90efef475031d4219d89d2d1ee441f610a2e9867"
+        }
+      }
+    ]
+  },
+  "readiness": {
+    "assignedP0ThroughP5": "PASS",
+    "structural": "PASS",
+    "editorCorrectness": "PASS",
+    "nativeRuntime": "PASS",
+    "nativeAuthoringDurability": "BLOCKED",
+    "browserAssets": "PASS",
+    "portability": "PASS",
+    "release": "BLOCKED",
+    "assignedScopeLimit": "P3 completes diagnosis and the authority prerequisite; durable authoring implementation is excluded from PC2 and remains BLOCKED.",
+    "nativeRuntimeProof": "Actual native owners with controlled loopback upstream.",
+    "releaseLimit": "No release/demo clearance claimed while authoring durability is unresolved."
+  },
+  "findings": {
+    "F1": "REPRODUCED_FIXED",
+    "F2": "REPRODUCED_FIXED",
+    "F3": "REPRODUCED_FIXED",
+    "F4": "REPRODUCED_PREREQUISITE_DELIVERED_DURABILITY_BLOCKED",
+    "H1": "REPRODUCED_FIXED",
+    "H2": "PENDING_DISCARD_UNREACHABLE_REFUSAL_DISCARD_VERIFIED",
+    "H3": "REPRODUCED_FIXED"
+  },
+  "signing": {
+    "status": "PASS",
+    "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+    "checkpoints": [
+      {
+        "commit": "5ed0f67a46323cf0d70989b4fad983bf66de2fc5",
+        "parent": "a1042e97c38d20fc58ad60521fbe22c205bbccdc",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T10:20:09.2746588Z",
+        "subject": "Preserve process authoring operations across read refreshes"
+      },
+      {
+        "commit": "4b60ae3b2162ab7208807cb0bd79b4ae5466e3ad",
+        "parent": "5ed0f67a46323cf0d70989b4fad983bf66de2fc5",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T10:29:02.3642808Z",
+        "subject": "Retire process authoring on database profile notifications"
+      },
+      {
+        "commit": "8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+        "parent": "4b60ae3b2162ab7208807cb0bd79b4ae5466e3ad",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T10:38:17.4468004Z",
+        "subject": "Reconcile process editor identities and preserve semantic drafts"
+      },
+      {
+        "commit": "619f7057312abdaf086f102e7c148cbaed8de239",
+        "parent": "8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T10:50:19.2649726Z",
+        "subject": "Document the native process authoring authority prerequisite"
+      },
+      {
+        "commit": "ef06bb82b5ced2d6336894dbea619c5444f3b209",
+        "parent": "619f7057312abdaf086f102e7c148cbaed8de239",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T10:53:47.6205635Z",
+        "subject": "Cover retired authoring completions across scopes and disposal"
+      },
+      {
+        "commit": "72cbacef3185244c2633d0729443ba9819ddce18",
+        "parent": "ef06bb82b5ced2d6336894dbea619c5444f3b209",
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+        "verified": true,
+        "utc": "2026-10-09T11:04:59.6110856Z",
+        "subject": "Verify process authoring browser journeys and portability review"
+      }
+    ],
+    "policy": "Existing GPG agent/home/executable and dedicated committer; no unsigned commits, policy change, push or history rewrite. Final documentation commit is verified after creation and identifies this report by Git."
+  },
+  "builds": [
+    {
+      "id": "renderer",
+      "status": "PASS",
+      "command": "dotnet build src/UI/CanDoItAll.Processes.UI/CanDoItAll.Processes.UI.csproj --configuration ProcUiProofPC2 /m:1",
+      "evidence": {
+        "path": ".artifacts/pc2-20261009/p2-ui-build.log",
+        "sha256": "a3a2809087e55d20a60584ddeae72f6635863df05c649bcd442d2c7270da8203"
+      }
+    },
+    {
+      "id": "native",
+      "status": "PASS",
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj --configuration ProcUiProofPC2 /m:1",
+      "evidence": {
+        "path": ".artifacts/pc2-20261009/p2-native-build.log",
+        "sha256": "4b146c544c97bab58fd11e163998e135e04e4311375dd7a739430e7875538d09"
+      }
+    },
+    {
+      "id": "web",
+      "status": "PASS",
+      "command": "dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --configuration ProcUiProofPC2 /m:1",
+      "evidence": {
+        "path": ".artifacts/pc2-20261009/p4-web-build.log",
+        "sha256": "4740a5df1ee08221d867be6c3bbd33443e74ca2bfce9d36a942beb972fb7161f"
+      }
+    },
+    {
+      "id": "sandbox-fast",
+      "status": "PASS",
+      "command": "dotnet build src/Sandboxes/CanDoItAll.Processes.UiSandbox/CanDoItAll.Processes.UiSandbox.csproj --configuration ProcUiProofPC2 /p:ProcessesAssetMode=Fast /m:1",
+      "evidence": {
+        "path": ".artifacts/pc2-20261009/p4-sandbox-fast-build.log",
+        "sha256": "a212f9dcfe5b412c356abd8d876b23c56bd3f45674b64b115e762d7838ee83b6"
+      }
+    },
+    {
+      "id": "sandbox-parity",
+      "status": "PASS",
+      "command": "dotnet build src/Sandboxes/CanDoItAll.Processes.UiSandbox/CanDoItAll.Processes.UiSandbox.csproj --configuration ProcUiProofPC2 /p:ProcessesAssetMode=Parity /m:1",
+      "evidence": {
+        "path": ".artifacts/pc2-20261009/p4-sandbox-parity-build.log",
+        "sha256": "9637d7808b71e64a6d6f9a500a832c9a785b464ce5232164cf14cbba3506024b"
+      }
+    }
+  ],
+  "lanes": [
+    {
+      "id": "p2-light",
+      "status": "PASS",
+      "project": "tests/Components/CanDoItAll.Processes.UI.Tests/CanDoItAll.Processes.UI.Tests.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ProcessesUI",
+      "expectedDiscovery": 21,
+      "actualDiscovery": 21,
+      "executedCases": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 4.4538929,
+      "startUtc": "2026-10-09T10:37:56.3676629Z",
+      "endUtc": "2026-10-09T10:38:00.8215558Z",
+      "recordedHeadBeforeCheckpoint": "4b60ae3b2162ab7208807cb0bd79b4ae5466e3ad",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Components/CanDoItAll.Processes.UI.Tests/CanDoItAll.Processes.UI.Tests.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Components/CanDoItAll.Processes.UI.Tests/CanDoItAll.Processes.UI.Tests.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~CanDoItAll.Tests.Components.ProcessesUI\" /m:1",
+      "executionCommand": "dotnet test tests/Components/CanDoItAll.Processes.UI.Tests/CanDoItAll.Processes.UI.Tests.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~CanDoItAll.Tests.Components.ProcessesUI\" /m:1 --results-directory .artifacts/pc2-20261009/p2-light --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p2-light/results.trx",
+          "sha256": "00b53155924a7e94b2aab217460411011baaa09f5114293e20c0c13b59950271"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p2-light-discovery.log",
+          "sha256": "327ae633f5db51630c8e52a576afd15be416ac5333f5f4a3c3600f957e5ce5c6"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p2-light-result.json",
+          "sha256": "1e33f7bb5a03b0c5231d1772d10d9936ea121ff450bf7a75da0553ef11a077b8"
+        }
+      ]
+    },
+    {
+      "id": "p4-retirement-host",
+      "status": "PASS",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName~ProcessAuthoringEditorTests|FullyQualifiedName~ProcessWorkspaceShellTests",
+      "expectedDiscovery": 181,
+      "actualDiscovery": 181,
+      "executedCases": 181,
+      "passed": 181,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 15.0240033,
+      "startUtc": "2026-10-09T10:52:25.3262719Z",
+      "endUtc": "2026-10-09T10:52:40.3502752Z",
+      "recordedHeadBeforeCheckpoint": "619f7057312abdaf086f102e7c148cbaed8de239",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~ProcessAuthoringEditorTests|FullyQualifiedName~ProcessWorkspaceShellTests\" /m:1",
+      "executionCommand": "dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~ProcessAuthoringEditorTests|FullyQualifiedName~ProcessWorkspaceShellTests\" /m:1 --results-directory .artifacts/pc2-20261009/p4-retirement-host --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p4-retirement-host/results.trx",
+          "sha256": "a72077c35e2093ac6295798d1669cfe725c364850d23715503a0a2d5a6013d03"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-retirement-host-discovery.log",
+          "sha256": "743e3ccea22c763c7b563629774f094b27640f64402ed78233ec19b2ef173cab"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-retirement-host-result.json",
+          "sha256": "d974eccd77de36b8048283c77060459bde2e6211c76e8b0bb8c5a932df6f6bbd"
+        }
+      ]
+    },
+    {
+      "id": "p4-native-adjacent2",
+      "status": "PASS",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName~ProcessRunFilesDialogTests|FullyQualifiedName~ProcessRunCancellationActionTests|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~AgentExecutionActivityStatusTests|FullyQualifiedName~ProjectStructurePageProcessLaunchScopeTests",
+      "expectedDiscovery": 61,
+      "actualDiscovery": 61,
+      "executedCases": 61,
+      "passed": 61,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 70.6746619,
+      "startUtc": "2026-10-09T10:46:08.8301970Z",
+      "endUtc": "2026-10-09T10:47:19.5048589Z",
+      "recordedHeadBeforeCheckpoint": "8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~ProcessRunFilesDialogTests|FullyQualifiedName~ProcessRunCancellationActionTests|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~AgentExecutionActivityStatusTests|FullyQualifiedName~ProjectStructurePageProcessLaunchScopeTests\" /m:1",
+      "executionCommand": "dotnet test tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~ProcessRunFilesDialogTests|FullyQualifiedName~ProcessRunCancellationActionTests|FullyQualifiedName~ChatWorkspacePanelTests|FullyQualifiedName~AgentExecutionActivityStatusTests|FullyQualifiedName~ProjectStructurePageProcessLaunchScopeTests\" /m:1 --results-directory .artifacts/pc2-20261009/p4-native-adjacent2 --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p4-native-adjacent2/results.trx",
+          "sha256": "876f82678c153fa059ffdb476bd48931bcd9e94b7c1482bee439d7ab9aaadc85"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-native-adjacent2-discovery.log",
+          "sha256": "3c2fa7697590abb4b46f3bd2ea6080931c5907aa9d76186718f01e8aef615f60"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-native-adjacent2-result.json",
+          "sha256": "648e771f620e25581844e257fd5fbde63e61f4de8b658af5693b706ec80b7a0f"
+        }
+      ]
+    },
+    {
+      "id": "p4-unit",
+      "status": "PASS",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~ProcessDefinitionCatalogProjectionTests|FullyQualifiedName~ProcessProjectionPipelineTests|FullyQualifiedName~ProcessLaunchAtomicCommitTests|FullyQualifiedName~ProcessLaunchAgentOperationTests|FullyQualifiedName~ProcessLaunchProducerRequestTests|FullyQualifiedName~ProcessRuntimeOperatorApplicationServiceTests|FullyQualifiedName~ProcessRunFileScopeProviderTests|FullyQualifiedName~ProcessRunFilesCoordinatorTests|FullyQualifiedName~ProjectStructureProcessLaunchSourceSnapshotMapperTests|FullyQualifiedName~ProjectStructureProcessLaunchContextBuilderTests",
+      "expectedDiscovery": 238,
+      "actualDiscovery": 238,
+      "executedCases": 238,
+      "passed": 238,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 12.4560884,
+      "startUtc": "2026-10-09T10:50:07.7259315Z",
+      "endUtc": "2026-10-09T10:50:20.1820199Z",
+      "recordedHeadBeforeCheckpoint": "619f7057312abdaf086f102e7c148cbaed8de239",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~ProcessDefinitionCatalogProjectionTests|FullyQualifiedName~ProcessProjectionPipelineTests|FullyQualifiedName~ProcessLaunchAtomicCommitTests|FullyQualifiedName~ProcessLaunchAgentOperationTests|FullyQualifiedName~ProcessLaunchProducerRequestTests|FullyQualifiedName~ProcessRuntimeOperatorApplicationServiceTests|FullyQualifiedName~ProcessRunFileScopeProviderTests|FullyQualifiedName~ProcessRunFilesCoordinatorTests|FullyQualifiedName~ProjectStructureProcessLaunchSourceSnapshotMapperTests|FullyQualifiedName~ProjectStructureProcessLaunchContextBuilderTests\" /m:1",
+      "executionCommand": "dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~ProcessDefinitionCatalogProjectionTests|FullyQualifiedName~ProcessProjectionPipelineTests|FullyQualifiedName~ProcessLaunchAtomicCommitTests|FullyQualifiedName~ProcessLaunchAgentOperationTests|FullyQualifiedName~ProcessLaunchProducerRequestTests|FullyQualifiedName~ProcessRuntimeOperatorApplicationServiceTests|FullyQualifiedName~ProcessRunFileScopeProviderTests|FullyQualifiedName~ProcessRunFilesCoordinatorTests|FullyQualifiedName~ProjectStructureProcessLaunchSourceSnapshotMapperTests|FullyQualifiedName~ProjectStructureProcessLaunchContextBuilderTests\" /m:1 --results-directory .artifacts/pc2-20261009/p4-unit --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p4-unit/results.trx",
+          "sha256": "65450c731bbba1d97bf52b0d4f0277ab4f2d3340cad66b5dddbef2afd28748c3"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-unit-discovery.log",
+          "sha256": "6e7621ad7e1f71c8415e482717585af0c4bbd0f1e81d07ae137809f74195bfe6"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-unit-result.json",
+          "sha256": "a3575f4ebb7a7682cafed579c5f9441ba165874452e7877f253f9cd367798f51"
+        }
+      ]
+    },
+    {
+      "id": "p4-integration",
+      "status": "PASS",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~Maf122ProcessExecutionIntegrationTests|FullyQualifiedName~Maf122WorkflowProcessIntegrationTests|FullyQualifiedName~ProcessLaunchProducerApiTests",
+      "expectedDiscovery": 14,
+      "actualDiscovery": 14,
+      "executedCases": 14,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 202.5802794,
+      "startUtc": "2026-10-09T10:53:55.9463423Z",
+      "endUtc": "2026-10-09T10:57:18.5266217Z",
+      "recordedHeadBeforeCheckpoint": "ef06bb82b5ced2d6336894dbea619c5444f3b209",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~Maf122ProcessExecutionIntegrationTests|FullyQualifiedName~Maf122WorkflowProcessIntegrationTests|FullyQualifiedName~ProcessLaunchProducerApiTests\" /m:1",
+      "executionCommand": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~Maf122ProcessExecutionIntegrationTests|FullyQualifiedName~Maf122WorkflowProcessIntegrationTests|FullyQualifiedName~ProcessLaunchProducerApiTests\" /m:1 --results-directory .artifacts/pc2-20261009/p4-integration --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p4-integration/results.trx",
+          "sha256": "91e24c924518585486d37c2452e830d200a214755d20360b2502fed7db4b20fd"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-integration-discovery.log",
+          "sha256": "8b976f9ed4da16e6129ff10d968c5dba7fa9f4d75c99531f36ae8ab5ad75f526"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-integration-result.json",
+          "sha256": "a5fad8ec68600c730109d7315d8b3d8c7a4cca84319e266985c7409817b0633d"
+        }
+      ]
+    },
+    {
+      "id": "p4-browser-floor",
+      "status": "PASS",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "filter": "FullyQualifiedName~ProcessAuthoringBrowserTests|FullyQualifiedName~ProcessesSandboxBrowserTests|FullyQualifiedName~ProcessShellSmokeTests|FullyQualifiedName~ProcessNativeBrowserTests|FullyQualifiedName~ProcessWorkbenchBrowserTests|FullyQualifiedName~ProcessVoiceBrowserTests",
+      "expectedDiscovery": 15,
+      "actualDiscovery": 15,
+      "executedCases": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "elapsedSeconds": 438.6548761,
+      "startUtc": "2026-10-09T10:56:57.1896177Z",
+      "endUtc": "2026-10-09T11:04:15.8444938Z",
+      "recordedHeadBeforeCheckpoint": "ef06bb82b5ced2d6336894dbea619c5444f3b209",
+      "validatedCandidate": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "buildCommand": "dotnet build tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration ProcUiProofPC2 /m:1",
+      "discoveryCommand": "dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration ProcUiProofPC2 --no-build --no-restore --list-tests --filter \"FullyQualifiedName~ProcessAuthoringBrowserTests|FullyQualifiedName~ProcessesSandboxBrowserTests|FullyQualifiedName~ProcessShellSmokeTests|FullyQualifiedName~ProcessNativeBrowserTests|FullyQualifiedName~ProcessWorkbenchBrowserTests|FullyQualifiedName~ProcessVoiceBrowserTests\" /m:1",
+      "executionCommand": "dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration ProcUiProofPC2 --no-build --no-restore --filter \"FullyQualifiedName~ProcessAuthoringBrowserTests|FullyQualifiedName~ProcessesSandboxBrowserTests|FullyQualifiedName~ProcessShellSmokeTests|FullyQualifiedName~ProcessNativeBrowserTests|FullyQualifiedName~ProcessWorkbenchBrowserTests|FullyQualifiedName~ProcessVoiceBrowserTests\" /m:1 --results-directory .artifacts/pc2-20261009/p4-browser-floor --logger \"trx;LogFileName=results.trx\"",
+      "evidence": [
+        {
+          "path": ".artifacts/pc2-20261009/p4-browser-floor/results.trx",
+          "sha256": "36130f88a1f529f40c4ae875ff28abf4f79112f542002ac7c88d2723550c2327"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-browser-floor-discovery.log",
+          "sha256": "351d00390d61aac6520b2a369449e27ce4f30bbe8dbac80eef9f0f47462db96c"
+        },
+        {
+          "path": ".artifacts/pc2-20261009/p4-browser-floor-result.json",
+          "sha256": "b73552ed4786eb6f1d1620adda602c011f3fef1b17593e7947dcf7489be03a4d"
+        }
+      ]
+    }
+  ],
+  "totalRequiredPassed": 530,
+  "totalRequiredFailed": 0,
+  "totalRequiredSkipped": 0,
+  "discovery": {
+    "sourceCensus": {
+      "path": ".artifacts/pc2-20261009/floor-source-counts.json",
+      "sha256": "7af7f04b1c40a52a2ee31c4aada7fd788dc250201b6db026d82ff3f84c451906"
+    },
+    "theoryExpansion": "All selected InlineData cases were enumerated at discovery; discovery equals executed cases for every final filter.",
+    "adjacentCorrection": "Initial 56 expectation missed five facts in ProjectStructurePageProcessOpeningTests.cs, another partial of ProjectStructurePageProcessLaunchScopeTests. Source expectation corrected to 61 before execution."
+  },
+  "nativeAuthoringDiagnosis": {
+    "status": "PASS",
+    "durability": "BLOCKED",
+    "plan": "docs/architecture/processes-authoring-authority-prerequisite.md",
+    "reproducer": {
+      "path": ".artifacts/pc2-20261009/diagnosis/Program.cs",
+      "sha256": "8873f72818ba5a91c7a810410234a61947ab1a3c511e4c1361aae195787e89c5"
+    },
+    "project": {
+      "path": ".artifacts/pc2-20261009/diagnosis/diagnosis.csproj",
+      "sha256": "fdcbd57db02eb974c92714d2ab71a31bd169bc4efeba5c2d625143a702b67667"
+    },
+    "result": {
+      "path": ".artifacts/pc2-20261009/authoring-diagnosis2.json",
+      "sha256": "2b6b163c8eb6371247e41aa243569262ac98f43af0ff96fa8ab0fb1ee711adfb"
+    },
+    "buildCommand": "dotnet build .artifacts/pc2-20261009/diagnosis/diagnosis.csproj -c ProcUiProofPC2 /m:1",
+    "runCommand": "dotnet .artifacts/pc2-20261009/diagnosis/bin/ProcUiProofPC2/net10.0/diagnosis.dll .artifacts/pc2-20261009/authoring-diagnosis2.json",
+    "environment": "Explicit task-owned PostgreSQL 18.6 connection in environment only; no default development endpoint.",
+    "observations": [
+      "Definition Save/Publish, role Save, step Save and template Import return Accepted but content is lost on next client call/new scope/fresh native root.",
+      "Accepted definition revision is rejected by the next fresh command scope; catalog remains 27 published definitions and zero drafts.",
+      "Canvas 321,654 survives the same client but another client/root returns 260,0.",
+      "Project Save loses the name with identical captured profile, project and project-lifetime binding.",
+      "Real native operator authority and caller intent persist a preparation that survives fresh root, compiled from unchanged template name/version."
+    ],
+    "restartLimit": "Fresh DI root in the same OS process, against the same owned database; no claim of an OS process restart.",
+    "browserFixtureLimit": "J2/J3 retain actual role/step owner instances in a test-only wrapper to prove UI identities across commands. They are not durable native-client proof. J1 definition calls use actual fresh-scope client; P3 has unmodified DI/client lifetimes.",
+    "outcome": "DEFECT_CONFIRMED_PREREQUISITE_DELIVERED"
+  },
+  "codeanalytics": {
+    "status": "NOT_RUN",
+    "indexRevision": null,
+    "reason": "No CodeAnalytics, Components or dotnetwatch tool names were exposed by actual enabled-tool discovery. Playwright tools were available.",
+    "fallback": [
+      "Actual source and native/public consumers",
+      "Razor deferred children and DI lifetimes",
+      "Evaluated restore project-reference closure",
+      "Runtime assembly/public-type/injection guards with forbidden and unresolved negative controls"
+    ],
+    "blindSpots": "No fresh CodeAnalytics symbol/index result; fallback does not claim equivalent indexing coverage.",
+    "availability": "UNAVAILABLE"
+  },
+  "census": {
+    "status": "PASS",
+    "sourceCommit": "72cbacef3185244c2633d0729443ba9819ddce18",
+    "graphs": {
+      "native-web": {
+        "root": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "projects": 181,
+        "edges": 834,
+        "cycles": [],
+        "unresolved": [],
+        "forbiddenProjects": [],
+        "assetsSha256": "a808d504aa3583e63575d7e54ab0979f6a8ecfe4781d7895408744178ed5d6a3"
+      },
+      "renderer": {
+        "root": "src/UI/CanDoItAll.Processes.UI/CanDoItAll.Processes.UI.csproj",
+        "projects": 25,
+        "edges": 42,
+        "cycles": [],
+        "unresolved": [],
+        "forbiddenProjects": [],
+        "assetsSha256": "bae883b44c009f1c515069e7e8542f32a49da46c16e2b6927bffa4e64afc390b"
+      },
+      "sandbox": {
+        "root": "src/Sandboxes/CanDoItAll.Processes.UiSandbox/CanDoItAll.Processes.UiSandbox.csproj",
+        "projects": 27,
+        "edges": 47,
+        "cycles": [],
+        "unresolved": [],
+        "forbiddenProjects": [],
+        "assetsSha256": "d8f63a15fd43802753aca01384ce3e233e57d90990a8c0567738229fa9b66c9b"
+      }
+    },
+    "families": [
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor",
+        "sha256": "09686b3bca98dd80fd5f51e37e071ef50f70c4e407c32b1c689951463741a2e8",
+        "nativeConsumers": [
+          "Pages/ProcessesPage.razor",
+          "Pages/ProjectProcessesPage.razor",
+          "Components/ProcessWorkspaceShell.razor"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Alert",
+          "Button",
+          "CdaChart",
+          "CdaChartSeries",
+          "ChildContent",
+          "Cluster",
+          "CompactStat",
+          "CompactStatStrip",
+          "DetailContent",
+          "DetailHeader",
+          "Dialog",
+          "EmptyState",
+          "FilterBar",
+          "Filters",
+          "Footer",
+          "Grid",
+          "Header",
+          "ListContent",
+          "ListDetailShell",
+          "ListHeader",
+          "ListPanelHeader",
+          "LoadingState",
+          "PageHeaderActionButton",
+          "PageScaffold",
+          "ProcessDefinitionAutonomyLevel",
+          "ProcessDefinitionCanvasPanel",
+          "ProcessDefinitionCatalogScopeKind",
+          "ProcessDefinitionCriticalityLevel",
+          "ProcessDefinitionOperatingModeKind",
+          "ProcessDefinitionRoleEditorPanel",
+          "ProcessDefinitionStepEditorPanel",
+          "ProcessLiveRunEventProjection",
+          "ProcessManagerChatSurface",
+          "ProcessTemplateLibraryPanel",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "SurfaceCard",
+          "Tabs",
+          "TabsItem",
+          "TextBlock",
+          "Toolbar",
+          "ToolbarActions",
+          "ToolbarRow",
+          "TreeView",
+          "TreeViewNode"
+        ],
+        "testIds": [
+          "@BuildCommandTestId(command.Kind)",
+          "@BuildDefinitionEditorCommandTestId(command.Kind)",
+          "@BuildDetailPanelTestId(tab.Key)",
+          "@BuildDetailTabTestId(tab.Key)",
+          "@testId",
+          "processes-agent-context",
+          "processes-agent-context-notice",
+          "processes-analytics-tab",
+          "processes-child-run-wait-row",
+          "processes-child-run-waits",
+          "processes-command-strip",
+          "processes-current-step",
+          "processes-definition-basics-tab",
+          "processes-definition-discard",
+          "processes-definition-draft-conflict",
+          "processes-definition-editor",
+          "processes-definition-editor-autonomy",
+          "processes-definition-editor-change-summary",
+          "processes-definition-editor-constitution",
+          "processes-definition-editor-contracts",
+          "processes-definition-editor-criticality",
+          "processes-definition-editor-customer",
+          "processes-definition-editor-governance",
+          "processes-definition-editor-governance-notes",
+          "processes-definition-editor-governance-policy",
+          "processes-definition-editor-identity",
+          "processes-definition-editor-interface-contract",
+          "processes-definition-editor-manager-override",
+          "processes-definition-editor-name",
+          "processes-definition-editor-operating-mode",
+          "processes-definition-editor-operating-summary",
+          "processes-definition-editor-owner",
+          "processes-definition-editor-receipt",
+          "processes-definition-editor-sections",
+          "processes-definition-editor-simulation",
+          "processes-definition-editor-simulation-readiness",
+          "processes-definition-editor-summary",
+          "processes-definition-editor-value",
+          "processes-definition-exchange-tab",
+          "processes-definition-lint-panel",
+          "processes-definition-list-scroll",
+          "processes-definition-roles-tab",
+          "processes-definition-search",
+          "processes-definition-search-clear",
+          "processes-definition-search-submit",
+          "processes-definition-steps-tab",
+          "processes-definition-tree",
+          "processes-detail-tabs",
+          "processes-feed-defaults-receipt",
+          "processes-graph-metric-grid",
+          "processes-launch-new-intent",
+          "processes-manager-chat-agent-select",
+          "processes-manager-chat-context",
+          "processes-manager-chat-history-window",
+          "processes-manager-chat-open-agent-context",
+          "processes-manager-chat-reload",
+          "processes-manager-chat-run-select",
+          "processes-manager-chat-tab",
+          "processes-manager-chat-workspace",
+          "processes-operator-control-section",
+          "processes-page-scaffold",
+          "processes-process-graphs-load-button",
+          "processes-process-graphs-load-gate",
+          "processes-process-graphs-tab",
+          "processes-refresh",
+          "processes-run-activity",
+          "processes-run-coordination",
+          "processes-run-detail-dialog-content",
+          "processes-run-evidence",
+          "processes-run-launch-section",
+          "processes-run-open-manager-chat",
+          "processes-runs-launch-selected-definition",
+          "processes-runs-tab-shell",
+          "processes-runs-tabs",
+          "processes-runtime-analytics-ledger",
+          "processes-runtime-event-detail-content",
+          "processes-runtime-event-row",
+          "processes-runtime-events-next",
+          "processes-runtime-events-prev",
+          "processes-runtime-history-window",
+          "processes-runtime-host-readback",
+          "processes-runtime-incident-row",
+          "processes-runtime-manager-message-row",
+          "processes-runtime-refresh-button",
+          "processes-runtime-run-card",
+          "processes-runtime-run-open-details",
+          "processes-runtime-run-select",
+          "processes-runtime-tool-row",
+          "processes-selected-run-graphs-tab",
+          "processes-selected-run-summary",
+          "processes-shell",
+          "processes-shell-error",
+          "processes-shell-loading",
+          "processes-workspace-list-detail"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor",
+        "sha256": "52ed79b61cc9b93de878e9bcd579f9216d5ee94aad4b3d34fd482d8e4041e153",
+        "nativeConsumers": [
+          "Pages/LiveProcessesPage.razor",
+          "Components/LiveProcessesDashboard.razor"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Avatar",
+          "Button",
+          "CdaChart",
+          "CdaChartSeries",
+          "ChildContent",
+          "Cluster",
+          "CompactStat",
+          "CompactStatStrip",
+          "Dialog",
+          "EmptyState",
+          "Footer",
+          "Grid",
+          "Header",
+          "Icon",
+          "LoadingState",
+          "PageHeaderActionButton",
+          "PageScaffold",
+          "ProcessRuntimeActiveAgentProjection",
+          "ProgressBar",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "SurfaceCard",
+          "Tabs",
+          "TabsItem",
+          "TextArea",
+          "TextBlock",
+          "Toolbar",
+          "ToolbarActions",
+          "ToolbarRow"
+        ],
+        "testIds": [
+          "@testId",
+          "live-processes-active-agent-card",
+          "live-processes-activity",
+          "live-processes-activity-card",
+          "live-processes-activity-cards",
+          "live-processes-activity-request-rework",
+          "live-processes-agent-detail-dialog-content",
+          "live-processes-agent-open-details",
+          "live-processes-agents",
+          "live-processes-attention-card",
+          "live-processes-attention-decision",
+          "live-processes-attention-open-details",
+          "live-processes-attention-panel",
+          "live-processes-attention-project-badge",
+          "live-processes-attention-run-date",
+          "live-processes-attention-subprocess-escalation-badge",
+          "live-processes-attention-window",
+          "live-processes-child-run-wait-row",
+          "live-processes-child-run-waits",
+          "live-processes-command-strip",
+          "live-processes-current-step",
+          "live-processes-dashboard",
+          "live-processes-dialog-operator-note",
+          "live-processes-dialog-request-rework",
+          "live-processes-error",
+          "live-processes-event-ledger",
+          "live-processes-event-row",
+          "live-processes-events-next",
+          "live-processes-events-prev",
+          "live-processes-graphs",
+          "live-processes-hidden-count",
+          "live-processes-hide-run-group",
+          "live-processes-history-window",
+          "live-processes-mock-notification",
+          "live-processes-open-definitions",
+          "live-processes-operator-action-error",
+          "live-processes-operator-action-message",
+          "live-processes-operator-action-row",
+          "live-processes-operator-actions",
+          "live-processes-page",
+          "live-processes-refresh-button",
+          "live-processes-request-rework",
+          "live-processes-run-agent-name",
+          "live-processes-run-card",
+          "live-processes-run-cards",
+          "live-processes-run-detail-decision",
+          "live-processes-run-detail-dialog-content",
+          "live-processes-run-detail-hero",
+          "live-processes-run-detail-manager-summary",
+          "live-processes-run-files",
+          "live-processes-run-filter",
+          "live-processes-run-open-details",
+          "live-processes-run-process-name",
+          "live-processes-run-progress",
+          "live-processes-run-project-name",
+          "live-processes-run-subprocess-badge",
+          "live-processes-show-hidden-runs",
+          "live-processes-started-notification",
+          "live-processes-status-filter",
+          "live-processes-summary",
+          "live-processes-tabs",
+          "live-processes-tabs-frame",
+          "live-processes-tool-analytics",
+          "live-processes-tool-card",
+          "live-processes-tool-family-card",
+          "live-processes-tool-family-summary",
+          "live-processes-tool-history-chart",
+          "live-processes-tool-ledger"
+        ],
+        "injections": [
+          "@inject TooltipService TooltipService"
+        ],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionRoleEditorPanel.razor",
+        "sha256": "d7a7cda901d1499664f4620b2daedfdf9749a1f159d10e5dba6b048a59820e84",
+        "nativeConsumers": [
+          "ProcessWorkspaceSurface.RenderDetailTab / RenderRolesTab"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Alert",
+          "Button",
+          "ChildContent",
+          "Cluster",
+          "Dialog",
+          "EmptyState",
+          "Footer",
+          "FormField",
+          "Grid",
+          "Icon",
+          "ProcessDefinitionRoleEditorCommand",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "TextBlock",
+          "TextBox"
+        ],
+        "testIds": [
+          "@ProcessRoleEditorState.BuildRoleCommandTestId(command.Kind)",
+          "@ProcessRoleEditorState.BuildRoleItemTestId(role.RoleKey)",
+          "processes-definition-role-editor",
+          "processes-role-allocation",
+          "processes-role-approval",
+          "processes-role-card",
+          "processes-role-card-grid",
+          "processes-role-discard",
+          "processes-role-display-name",
+          "processes-role-draft-conflict",
+          "processes-role-editor-form",
+          "processes-role-editor-receipt",
+          "processes-role-executor-kind",
+          "processes-role-fallback",
+          "processes-role-lint-panel",
+          "processes-role-numeric-error",
+          "processes-role-project-assignment",
+          "processes-role-purpose",
+          "processes-role-required",
+          "processes-role-snapshot-summary",
+          "processes-role-staffing-intent",
+          "processes-role-step-bindings",
+          "processes-role-template-action",
+          "processes-role-template-and-bindings",
+          "processes-role-template-snapshot",
+          "processes-role-template-source",
+          "processes-role-workflow-binding",
+          "processes-role-workflow-id",
+          "processes-role-workflow-id-error",
+          "processes-role-workflow-version-id",
+          "processes-role-workflow-version-id-error"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionStepEditorPanel.razor",
+        "sha256": "b4abd1532b6bbed5f0339a2bcc3bf77d6191ec434b4f21fd256e8d0db3b89ace",
+        "nativeConsumers": [
+          "ProcessWorkspaceSurface.RenderDetailTab / RenderStepsTab"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Alert",
+          "Button",
+          "Cluster",
+          "EmptyState",
+          "Grid",
+          "ProcessDefinitionStepEditorCommand",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "TextBlock"
+        ],
+        "testIds": [
+          "@ProcessStepEditorState.BuildArtifactKindTestId(artifact.ArtifactKey)",
+          "@ProcessStepEditorState.BuildArtifactRetentionTestId(artifact.ArtifactKey)",
+          "@ProcessStepEditorState.BuildArtifactTestId(artifact.ArtifactKey)",
+          "@ProcessStepEditorState.BuildArtifactTitleTestId(artifact.ArtifactKey)",
+          "@ProcessStepEditorState.BuildBranchLoopBudgetTestId(branch.OutcomeKey)",
+          "@ProcessStepEditorState.BuildBranchRouteTargetTestId(branch.OutcomeKey)",
+          "@ProcessStepEditorState.BuildBranchTestId(branch.OutcomeKey)",
+          "@ProcessStepEditorState.BuildBranchTitleTestId(branch.OutcomeKey)",
+          "@ProcessStepEditorState.BuildCommandTestId(command.Kind)",
+          "@ProcessStepEditorState.BuildOperationTestId(operation)",
+          "@ProcessStepEditorState.BuildStepItemTestId(step.StepKey)",
+          "processes-definition-step-editor",
+          "processes-step-add-artifact-expectation",
+          "processes-step-add-branch-outcome",
+          "processes-step-allowed-operations",
+          "processes-step-allows-manual-skip",
+          "processes-step-allows-safe-refusal",
+          "processes-step-basic",
+          "processes-step-command-receipt",
+          "processes-step-contracts",
+          "processes-step-decision-rights",
+          "processes-step-discard",
+          "processes-step-draft-conflict",
+          "processes-step-editor-form",
+          "processes-step-editor-layout",
+          "processes-step-evidence-contract",
+          "processes-step-exception-policy",
+          "processes-step-input-contract",
+          "processes-step-kind",
+          "processes-step-lint-panel",
+          "processes-step-list",
+          "processes-step-map-subprocess",
+          "processes-step-notes",
+          "processes-step-numeric-error",
+          "processes-step-operation-contract",
+          "processes-step-operation-target-scope",
+          "processes-step-output-contract",
+          "processes-step-requires-approval",
+          "processes-step-requires-decision-record",
+          "processes-step-sidecar",
+          "processes-step-subprocess-definition",
+          "processes-step-subprocess-snapshot",
+          "processes-step-subtitle",
+          "processes-step-target-lead-hours",
+          "processes-step-title"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionCanvasPanel.razor",
+        "sha256": "842df108abe0dd53e4bf95cd312a2d24956df1c90791c7f408c1b8b9a2cab81b",
+        "nativeConsumers": [
+          "ProcessWorkspaceSurface.RenderDetailTab / RenderStepsTab"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Button",
+          "Canvas",
+          "CanvasFloatingWindow",
+          "CanvasWorkbench",
+          "CanvasWorkbenchAction",
+          "CanvasWorkbenchStage",
+          "CanvasWorkbenchStat",
+          "Cluster",
+          "HeaderActions",
+          "OverlayComponentToolbox",
+          "OverlayContent",
+          "OverlayToolboxBadge",
+          "OverlayToolboxSection",
+          "ProcessDefinitionCanvasCommand",
+          "ProcessDefinitionCanvasCommandProjection",
+          "ProcessDefinitionCanvasNodePosition",
+          "ProcessDefinitionCanvasToolboxActionProjection",
+          "Stack",
+          "StatusBadge",
+          "TextBlock",
+          "ToolbarLeftContent"
+        ],
+        "testIds": [
+          "@BuildCanvasCommandTestId(action.Kind)",
+          "@BuildEdgeTestId(edge.EdgeKey)",
+          "@BuildNodeTestId(node.NodeKey)",
+          "processes-canvas-clear-selection",
+          "processes-canvas-command-receipt",
+          "processes-canvas-editor",
+          "processes-canvas-open-editor-window",
+          "processes-canvas-recompose",
+          "processes-canvas-selection",
+          "processes-canvas-selection-key",
+          "processes-canvas-toggle-editor",
+          "processes-canvas-toggle-selection",
+          "processes-canvas-toggle-toolbox",
+          "processes-definition-canvas"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessTemplateLibraryPanel.razor",
+        "sha256": "5f398117125f40211d95401b4e54eede6ed00b8b8777977eec53eba40c747c88",
+        "nativeConsumers": [
+          "ProcessWorkspaceSurface.RenderDetailTab / RenderExchangeTab"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Button",
+          "Cluster",
+          "ConversationMarkdownRenderer",
+          "EmptyState",
+          "Grid",
+          "MermaidDiagram",
+          "ProcessTemplateCatalogQueryProjection",
+          "ProcessTemplateImportCommand",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "TextBlock"
+        ],
+        "testIds": [
+          "@BuildCategoryTestId(category.Kind)",
+          "@BuildItemTestId(item.Key)",
+          "@BuildPreviewContentTestId(TemplateCatalog.Query.PreviewTab)",
+          "@BuildPreviewTabTestId(tab)",
+          "@BuildRelatedImportTestId(ProcessTemplateImportCommandKind.ImportArtifact, related.Key)",
+          "@BuildRelatedImportTestId(ProcessTemplateImportCommandKind.ImportRole, related.Key)",
+          "@BuildRelatedTestId(related.Key)",
+          "processes-template-library",
+          "processes-template-library-artifact-target",
+          "processes-template-library-browser",
+          "processes-template-library-diagram",
+          "processes-template-library-import-artifact",
+          "processes-template-library-import-process",
+          "processes-template-library-import-receipt",
+          "processes-template-library-import-role",
+          "processes-template-library-imports",
+          "processes-template-library-json",
+          "processes-template-library-layout",
+          "processes-template-library-markdown",
+          "processes-template-library-preview",
+          "processes-template-library-related",
+          "processes-template-library-search",
+          "processes-template-library-search-clear",
+          "processes-template-library-search-submit",
+          "processes-template-library-structure"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor",
+        "sha256": "2ed030360f28efea334e8a4beec3392127a055ebc436137afcaa5b771502333f",
+        "nativeConsumers": [
+          "Components/LiveProcessesDashboard.razor",
+          "Components/ProcessRunFilesDialog.razor"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Actions",
+          "Alert",
+          "Button",
+          "ChildContent",
+          "Cluster",
+          "Dialog",
+          "EmptyState",
+          "FileBrowser",
+          "FileBrowserItemActionEventArgs",
+          "FileBrowserItemInvokedEventArgs",
+          "FileBrowserSnapshot",
+          "FileInteraction",
+          "FileInteractionRequest",
+          "Footer",
+          "HeaderActions",
+          "LoadingState",
+          "Split",
+          "Stack",
+          "StatusBadge",
+          "TextBlock"
+        ],
+        "testIds": [
+          "process-run-files-action-feedback",
+          "process-run-files-activation-error",
+          "process-run-files-back",
+          "process-run-files-refresh",
+          "process-run-files-retry"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      },
+      {
+        "renderer": "src/UI/CanDoItAll.Processes.UI/ProcessRunCancellationSurface.razor",
+        "sha256": "965f333ed56627b10d402babbab64e7cca4be7bc807e1a1ef20f369748db9ade",
+        "nativeConsumers": [
+          "Components/LiveProcessesDashboard.razor",
+          "Components/ProcessRunCancellationAction.razor"
+        ],
+        "sandboxConsumer": "ProcessScenarioSession / workspace and two-opening routes",
+        "children": [
+          "Alert",
+          "Button"
+        ],
+        "testIds": [
+          "process-run-cancel",
+          "process-run-cancellation-result"
+        ],
+        "injections": [],
+        "classification": "reusable-renderer"
+      }
+    ],
+    "deferredChildren": [
+      "Server tabs render actual role/step/canvas/template surfaces",
+      "ChatWorkspacePanel publishes typed ChatWorkspaceView to real chat surface",
+      "Live run dialog routes cancellation and files through native owners to light surfaces",
+      "Run file view uses the FileInteraction catalog and authorized content lease; Markdown is rendered by the real independent component"
+    ],
+    "nativeHostClassification": "route/selection/profile/project admission and effect ownership; no new extraction required",
+    "remainingNonStructuralPrerequisite": "native definition authoring authority prerequisite",
+    "localFullGraph": {
+      "path": ".artifacts/pc2-20261009/active-census.json",
+      "sha256": "f2805f8bb14682d42e7cb4517c31bda2e6191ee9084aa9fb202d2a5f378160bf"
+    }
+  },
+  "visualReview": [
+    {
+      "path": "output/playwright/processes-pc1/native-09adedbdd31a4a5ba912e63eacecedc2/pc2-save-read.png",
+      "sha256": "0d1ac95b55d6a2fbf27887d6806d013aa53c4e55f1825be409bd1a974d93d6e2",
+      "review": "Native Save: accepted submitted name, later typed name and explicit unconfirmed-read warning are visible together; no horizontal overflow.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-55e1f806f7304c9fbff9ece2434920c1/pc2-role-added-dialog.png",
+      "sha256": "c8eace7f837b4cebff805d1ba6fa9cee749a385188a6aca231b2dbbfdcb69744",
+      "review": "Added-role modal shows the returned role and editable fields; both columns and footer fit in the desktop viewport.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-55e1f806f7304c9fbff9ece2434920c1/pc2-role-identity.png",
+      "sha256": "07257c407eb6e6a17c4cfed49bad7726ec1aeaa52813c345d2e237e8644ab24c",
+      "review": "Last role deletion closes the dialog and shows the empty role editor. Shell tab count still reflects the template-based read; it is not evidence of aggregate durability.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-d8b4d7c2fb224a3d9e4d4092d19ea07f/pc2-step-edited-form.png",
+      "sha256": "e2b8d0f924d7c72c35672702f02375452064d0524905e304271ff6f144b5618a",
+      "review": "Second step remains selected with accepted edited title; first-step label is unchanged. Scroll stays within the detail pane; no horizontal overflow.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-d8b4d7c2fb224a3d9e4d4092d19ea07f/pc2-step-authority.png",
+      "sha256": "f3e42fd2051dc171bcf55ef619c202b898eea4b8ff584b3aadbe14303bc6e5d5",
+      "review": "Steps first viewport retains the real canvas, selected node and floating tools after tab return.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/published-parity-2c6f4046409e4fca8c70f1522831d604/canvas-maximized.png",
+      "sha256": "4921ce3a8901c23c96ddbb643622f61523f4258244e3c958f27d3a97d93fb7da",
+      "review": "Published Parity canvas fills the viewport with visible top controls, selection/editor windows and minimap; dock lifecycle is asserted by the test.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-0c8a183eba3a4baabedfe1223a12d481/native-authorized-files.png",
+      "sha256": "225561c5646b5026db5794a22255566f8828ffe855a9cad4c5a76423e5d4a52b",
+      "review": "Native authorized second file revision renders through actual FileInteraction; edit/diff controls are disabled and modal footer is visible.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/native-0c8a183eba3a4baabedfe1223a12d481/native-chat-attachment.png",
+      "sha256": "d6e0af369368b7bb73d9de1d1ac44274d3e9f69178939b7bd4e2c8a9b8d6ed0b",
+      "review": "Native project chat shows two completed responses including attachment acknowledgement, with context selectors and composer inside the viewport.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/source-fast-906248c520fa4e3e9be4204f3266f804/two-openings.png",
+      "sha256": "d3f071a807adeba8586c3cafa69c9cc41110dc498b3080e8eadc57ae3d1d4bb2",
+      "review": "Two stacked workspaces show different name drafts; each has its own bounded detail scroll region.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/published-fast-7db96ac2e15f4f6bbc0d69e46e867cbc/template-diagram.png",
+      "sha256": "59c1a9bf4d3634cbf700966209bbee930cfc527852a341382b202b7ac45ff6b4",
+      "review": "Published Fast template preview renders the actual Mermaid SVG and source with categories and controls visible.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    },
+    {
+      "path": "output/playwright/processes-pc1/source-parity-ef1d8ef9fd924dc28126012ed9f69122/role-invalid.png",
+      "sha256": "5bd8cb76fce43ca241ac594906c474547ef2a0b4265be72d84bbcac5c59cb29f",
+      "review": "Source Parity modal retains invalid GUID text, shows inline validation and disables Save; footer remains reachable.",
+      "viewport": "1920x1080",
+      "status": "INSPECTED"
+    }
+  ],
+  "browserEvidence": {
+    "inventory": {
+      "path": ".artifacts/pc2-20261009/browser-artifact-inventory.json",
+      "sha256": "4bc47633da7e743d5fe57510ef68c65ec606b82b95fe56eed4734eb7e7506fab"
+    },
+    "cases": "3 authoring, 4 sandbox source/published Fast/Parity, 3 shell smoke, 2 native global/project, 1 Workbench, 2 voice.",
+    "proofLimit": "Screenshots supplement DOM assertions and independent native identities/effects; controlled upstream is not live-provider evidence. Fixture names retain PC1 prefixes, but GUID directories and the final PC2 TRX identify this execution."
+  },
+  "portability": {
+    "status": "PASS",
+    "scannedFiles": 9304,
+    "findings": 35207,
+    "reviewedExecutableAllowances": 15358,
+    "addedReviewed": 1,
+    "stale": 0,
+    "delta": "ProcessStepEditorState.cs typed LoopBudget.EscalationTargetKind field reconciliation is semantic process-domain logic, without OS/process/native authority dependency.",
+    "fingerprint": "c8c96cc21c5a0395781038a53b8214c2f0a8635341a23349906b100b9ff39b58",
+    "scan": {
+      "path": ".artifacts/pc2-20261009/portability-closure-scan.json",
+      "sha256": "3bdb6cca099dce51a384d24794e1b7fbc819d1e501ebec44e757b45221b67def"
+    },
+    "enforcement": {
+      "path": ".artifacts/pc2-20261009/portability-closure-enforcement.log",
+      "sha256": "acefc7137e022d5a2851353bc6b53d96d00b5b1d3933896c934404f52b512be9"
+    },
+    "finalWriteBaseline": false,
+    "toolSelfTests": 6,
+    "secretToolSelfTests": 4,
+    "documentationOnlyDelta": "Closure rescan includes new maintained documents. Following report edits change validation metadata only; executable source and reviewed baseline remain identical."
+  },
+  "broadStable": {
+    "status": "NOT_RUN",
+    "trigger": null,
+    "reason": "Bounded PC2 state corrections; no production reference, schema, shared/root configuration, cross-cutting composition or shared test-bootstrap change. No new full-application frozen campaign, CI, release or merge closure requested. Mandatory affected union is executed; earlier PC1 Stable evidence remains historical."
+  },
+  "performance": {
+    "status": "NOT_APPLICABLE",
+    "reason": "No dependency/build/static-asset/watch configuration changes. Fresh native/sandbox source/published launchability passed. PC1 measurements remain historical under their original conditions; no new timing or speedup claimed."
+  },
+  "cleanup": {
+    "status": "PASS",
+    "utc": "2026-10-09T11:06:12.9357046Z",
+    "container": "candoitall-pc2-20261009-pg18",
+    "verifiedTaskLabel": "pc2-20261009",
+    "removedContainerId": "91761140cf9379ef9061ae2fbbf99630f9b4f8173cb131ebdab9cfbb5bf78603",
+    "ownedNativeTestProcessesRemaining": 0,
+    "unrelatedResources": "Untouched",
+    "outputs": "Retained under ignored task paths"
+  },
+  "secretScan": {
+    "privateEvidence": {
+      "path": ".artifacts/pc2-20261009/secret-scan-closure.json",
+      "sha256": "c41c00fefe6e9c4579749cc504015d206f1c1aa070cd243a2895882cb5d387ce"
+    },
+    "decodedBrowserText": {
+      "path": ".artifacts/pc2-20261009/secret-scan-browser.json",
+      "sha256": "498cec5885b712ae9848489fced22eb089e95d6e938bb3e76b0957418f86a148"
+    },
+    "browserTextPayloads": 627,
+    "browserFindings": 0,
+    "limit": "Binary images/media are excluded by text scans; inspected screenshots contain only task-owned fixtures. Initial literal variable-reference false positive in the private lane helper was removed; no actual credential was persisted.",
+    "sourceDelta": {
+      "status": "PASS",
+      "textFiles": 24,
+      "findings": 0,
+      "oversized": 0,
+      "scope": "Changed source, maintained reports, private diagnostic source/project and task helpers copied as UTF-8 text; exact final metadata is rescanned before commit.",
+      "localReport": ".artifacts/pc2-20261009/secret-scan-source.json",
+      "selfReferenceLimit": "The source-scan report hashes this document. Its own hash is therefore intentionally not embedded here; retain it in the external execution ledger."
+    },
+    "privateEvidenceStatus": "PASS",
+    "privateEvidenceTextFiles": 808,
+    "privateEvidenceFindings": 0
+  },
+  "documentation": {
+    "status": "PASS",
+    "maintainedMarkdownFiles": 402,
+    "evidenceSelfTests": 9,
+    "commands": [
+      "pwsh -NoProfile -File tools/Validation/Test-DocumentationEvidence.ps1",
+      "pwsh -NoProfile -File tools/Validation/Test-Documentation.ps1"
+    ],
+    "evidence": [
+      {
+        "path": ".artifacts/pc2-20261009/documentation-evidence.log",
+        "sha256": "176b2dc44f7acf35ec20b7160f4bd5d1eb545793823819cec76b24bfd04079d1"
+      },
+      {
+        "path": ".artifacts/pc2-20261009/documentation.log",
+        "sha256": "de7b251c165fa8bfc720984b2ae7e22480ebf02065247ffac7908b956869b1c3"
+      }
+    ]
+  },
+  "warnings": [
+    "Existing Workbench.Structure nullable warnings and test analyzer warnings.",
+    "Light test dependency AngleSharp 1.4.0 NU1902 advisory GHSA-pgww-w46g-26qg observed; dependency not changed by PC2."
+  ],
+  "attempts": [
+    {
+      "id": "p1-before",
+      "result": "3 failures reproduce receipt loss/premature slot release before P1."
+    },
+    {
+      "id": "h3-before",
+      "result": "2 failures reproduce missing database profile notification refresh before H3."
+    },
+    {
+      "id": "p2-before-build,p2-before2",
+      "result": "Fixture compile/property and unavailable historical default-template setup failures; not product defect reproductions."
+    },
+    {
+      "id": "p2-before3",
+      "result": "Owned template fixture reproduces 5 failures for role Add/Delete, nullable/distinct DecisionRoleKey and accepted row normalization."
+    },
+    {
+      "id": "p4-authoring-browser,p4-save-browser",
+      "result": "Save browser harness first used a wrong Definition tab test ID, then wrongly expected existing Refresh to be disabled. Final test clicks Refresh and checks that Save/Publish remain disabled; all 15 final browser cases pass."
+    },
+    {
+      "id": "portability-final-initial",
+      "result": "One added typed process-domain finding reviewed, baseline narrowly refreshed, final enforcement passes without write-baseline."
+    }
+  ],
+  "groups": [
+    {
+      "id": "A01",
+      "stage": "P0",
+      "title": "Startup local PGP request and signing preflight",
+      "status": "PASS",
+      "evidenceRefs": [
+        "signing"
+      ],
+      "resultOrBlocker": "Local unlock confirmed; configured fingerprint verified by challenge, incremental signed commits and parent checks."
+    },
+    {
+      "id": "A02",
+      "stage": "P0",
+      "title": "Current checkout and operator work preserved",
+      "status": "PASS",
+      "evidenceRefs": [
+        "candidate"
+      ],
+      "resultOrBlocker": "Current checkout was clean; review source seals matched; no reset, push, history rewrite or sibling edits."
+    },
+    {
+      "id": "A03",
+      "stage": "P0",
+      "title": "Current test impact and CodeAnalytics freshness",
+      "status": "PASS",
+      "evidenceRefs": [
+        "census"
+      ],
+      "resultOrBlocker": "CodeAnalytics, Components and dotnetwatch absent from enabled tool discovery. Source/DI/deferred-child inspection, evaluated restore graphs and actual assembly guards used; no MCP freshness claim."
+    },
+    {
+      "id": "A04",
+      "stage": "P1",
+      "title": "Accepted authoring result survives same-opening read",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "All five authoring families preserve the accepted receipt and identity through same-opening reads."
+    },
+    {
+      "id": "A05",
+      "stage": "P1",
+      "title": "Old read cannot regress acknowledged state",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Both read/write completion orders preserve opaque acknowledged versions; refresh only observes."
+    },
+    {
+      "id": "A06",
+      "stage": "P1",
+      "title": "Reentry cannot replace pending submission",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Alternate commands, repeat dispatch and Enter cannot replace a pending submission; later input remains editable."
+    },
+    {
+      "id": "A07",
+      "stage": "P1",
+      "title": "Outcomes are classified and not blindly replayed",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Rejected results retain drafts and release the matching slot; unknown outcomes block replay; read-back warnings preserve acceptance."
+    },
+    {
+      "id": "A08",
+      "stage": "P1",
+      "title": "Retired opening cannot update same-ID successor",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Profile notifications plus scope, definition, project lifetime and disposal retire ownership. Thirty additional all-family success/error successor cases passed."
+    },
+    {
+      "id": "A09",
+      "stage": "P1",
+      "title": "Canvas/template intent semantics preserved",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Canvas moves coalesce by stable node key and drain using acknowledged revision. Import retains submitted target while later browsing survives."
+    },
+    {
+      "id": "A10",
+      "stage": "P2",
+      "title": "Role Add adopts eligible authoritative selection",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Accepted Add selects the new role only if the originating submission remains current; later explicit selection is retained."
+    },
+    {
+      "id": "A11",
+      "stage": "P2",
+      "title": "Role Delete clears removed editor correctly",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Delete selects authoritative survivor; last deletion clears raw fields, errors, submission and dialog."
+    },
+    {
+      "id": "A12",
+      "stage": "P2",
+      "title": "Actual edited step keeps DecisionRoleKey",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Actual edited step owns nullable/distinct DecisionRoleKey; another step is unchanged; tab round trips preserve selection."
+    },
+    {
+      "id": "A13",
+      "stage": "P2",
+      "title": "Immutable submissions preserve later field edits",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p2-light"
+      ],
+      "resultOrBlocker": "Captured definition/role/step submissions reconcile accepted untouched fields without replacing later input or hidden metadata."
+    },
+    {
+      "id": "A14",
+      "stage": "P2",
+      "title": "Stable row and raw-number reconciliation",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "H1 reproduced; typed stable-row field merge retains accepted normalization, later row edits and invalid raw numbers."
+    },
+    {
+      "id": "A15",
+      "stage": "P2",
+      "title": "Submission lifecycle closes on reachable discard/refusal",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "H2 pending Discard is disabled in real renderer; reachable refusal then Discard clears submission and cannot accept an old result."
+    },
+    {
+      "id": "A16",
+      "stage": "P2",
+      "title": "Two openings and Server-tab raw drafts remain independent",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Independent openings, Server-tab raw drafts, actual canvases and dialog lifetimes remain separate."
+    },
+    {
+      "id": "A17",
+      "stage": "P3",
+      "title": "Actual cross-scope authoring diagnosis completed",
+      "status": "PASS",
+      "evidenceRefs": [
+        "native-authoring-diagnosis"
+      ],
+      "resultOrBlocker": "Unmodified native DI/client proved accepted data loss on next request, new scope and fresh root; same project/profile/lifetime and prepared plan checked."
+    },
+    {
+      "id": "A18",
+      "stage": "P3",
+      "title": "Native authoring owner outcome delivered",
+      "status": "PASS",
+      "evidenceRefs": [
+        "native-authoring-diagnosis"
+      ],
+      "resultOrBlocker": "No established durable authoring owner found. Committed implementation-ready aggregate/transaction/version/publish/launch/lifecycle/migration/test prerequisite."
+    },
+    {
+      "id": "A19",
+      "stage": "P3",
+      "title": "Durability readiness remains truthful",
+      "status": "PASS",
+      "evidenceRefs": [
+        "readiness"
+      ],
+      "resultOrBlocker": "Native authoring durability remains BLOCKED; no UI cache, singleton, template rewrite or new schema was introduced."
+    },
+    {
+      "id": "A20",
+      "stage": "P4",
+      "title": "PC1 feature groups carried forward",
+      "status": "PASS",
+      "evidenceRefs": [
+        "pc1CarryForward"
+      ],
+      "resultOrBlocker": "All 42 historical requirements have current evidence or explicit retained limits; authoring rows do not inherit durability PASS."
+    },
+    {
+      "id": "A21",
+      "stage": "P4",
+      "title": "Affected production projects and light closure validated",
+      "status": "PASS",
+      "evidenceRefs": [
+        "builds",
+        "census",
+        "p2-light"
+      ],
+      "resultOrBlocker": "Five direct production/mode builds and positive/forbidden/unresolved runtime assembly and public-type guards passed."
+    },
+    {
+      "id": "A22",
+      "stage": "P4",
+      "title": "Focused discovery and execution are source-valid",
+      "status": "PASS",
+      "evidenceRefs": [
+        "lanes"
+      ],
+      "resultOrBlocker": "All six final filters have source-derived expanded counts equal to discovery and execution; 530 passed, none skipped."
+    },
+    {
+      "id": "A23",
+      "stage": "P4",
+      "title": "Authoring browser journeys demonstrate new corrections",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "J1-J3 use actual UI events and native command/result identities. Role/step browser composition retains native owner instances only in the fixture; P3 separately uses unmodified lifetimes."
+    },
+    {
+      "id": "A24",
+      "stage": "P4",
+      "title": "Native launch/workflow/files/chat/cancel preserved",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor",
+        "p4-integration",
+        "p4-native-adjacent2",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Actual prepared launch/workflow, authorized current files, chat attachment and cancel effects passed in global/project scope; upstream is controlled loopback, not live inference."
+    },
+    {
+      "id": "A25",
+      "stage": "P4",
+      "title": "Affected Workbench/voice/shared chat consumers preserved",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor",
+        "p4-native-adjacent2",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Workbench link/executor mapping, voice permitted/denied/delayed lifecycle, default/typed chat and activity consumers passed."
+    },
+    {
+      "id": "A26",
+      "stage": "P4",
+      "title": "Fast/Parity source and published assets work",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Fast and Parity both pass source and published Production journeys with real canvas, modal, Mermaid, charts, files, chat and independent openings."
+    },
+    {
+      "id": "A27",
+      "stage": "P4",
+      "title": "Owned environments cleaned and private data safe",
+      "status": "PASS",
+      "evidenceRefs": [
+        "cleanup",
+        "secretScan"
+      ],
+      "resultOrBlocker": "Owned PostgreSQL identity/label checked then removed. No task-config native/test processes remain. Private artifacts and decoded browser text scanned; unrelated resources untouched."
+    },
+    {
+      "id": "A28",
+      "stage": "P5",
+      "title": "Active renderer and evaluated dependency census delivered",
+      "status": "PASS",
+      "evidenceRefs": [
+        "census"
+      ],
+      "resultOrBlocker": "Eight active renderer families; Web 181 projects/834 edges, UI 25/42, sandbox 27/47; zero cycles, unresolved or forbidden light projects."
+    },
+    {
+      "id": "A29",
+      "stage": "P5",
+      "title": "Mandatory portability and triggered broader gates recorded",
+      "status": "PASS",
+      "evidenceRefs": [
+        "portability",
+        "broadStable"
+      ],
+      "resultOrBlocker": "Final enforcement without write-baseline passes 15358 reviewed findings. Broad Stable NOT_RUN: no named broad invalidation/CI/release/merge campaign."
+    },
+    {
+      "id": "A30",
+      "stage": "P5",
+      "title": "Tracked source-addressed evidence and signed checkpoints",
+      "status": "PASS",
+      "evidenceRefs": [
+        "signing",
+        "evidencePolicy"
+      ],
+      "resultOrBlocker": "Tracked sanitized Markdown/JSON address tested source and verified signed stages. The containing documentation commit is verified separately after creation."
+    },
+    {
+      "id": "A31",
+      "stage": "P5",
+      "title": "No unsupported performance or full-completion claims",
+      "status": "PASS",
+      "evidenceRefs": [
+        "readiness",
+        "performance"
+      ],
+      "resultOrBlocker": "No dependency/build/assets/watch change; fresh launchability proved, old timings remain historical. No new speedup, durable authoring or release-green claim."
+    }
+  ],
+  "pc1CarryForward": [
+    {
+      "id": "PC-01",
+      "requirement": "Entry candidate",
+      "status": "PASS",
+      "evidenceRefs": [
+        "candidate"
+      ],
+      "resultOrBlocker": "Current entry and tested commit/tree recorded."
+    },
+    {
+      "id": "PC-02",
+      "requirement": "Preserved baseline",
+      "status": "PASS",
+      "evidenceRefs": [
+        "readiness"
+      ],
+      "resultOrBlocker": "PC1 structure and behavior preserved; inherited native authoring owner gap is explicit."
+    },
+    {
+      "id": "PC-03",
+      "requirement": "Dependency cut",
+      "status": "PASS",
+      "evidenceRefs": [
+        "census",
+        "p2-light"
+      ],
+      "resultOrBlocker": "Evaluated dependency cut and runtime negative controls remain valid."
+    },
+    {
+      "id": "PC-04",
+      "requirement": "Complete scenario host",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Complete scenario host and all tabs exercised in four build/mode combinations."
+    },
+    {
+      "id": "PC-05",
+      "requirement": "Routes and queries",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor",
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Global, project and live routes, query/selection and admission preserved."
+    },
+    {
+      "id": "PC-06",
+      "requirement": "Catalog and definition selection",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit",
+        "native-authoring-diagnosis"
+      ],
+      "resultOrBlocker": "Catalog selection works; catalog persistence still derives from templates after accepted authoring.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-07",
+      "requirement": "Definition draft across tabs",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Definition dirty/raw fields survive Server-tab read/unmount cycles."
+    },
+    {
+      "id": "PC-08",
+      "requirement": "Definition commands",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Command identity, outcomes and reentry corrected; durability remains blocked.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-09",
+      "requirement": "Submission reconciliation",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Immutable submission and later-edit reconciliation proved."
+    },
+    {
+      "id": "PC-10",
+      "requirement": "Role editing",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Role Add/Delete selection and raw drafts corrected; native cross-scope persistence remains blocked.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-11",
+      "requirement": "Step editing",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Actual-step semantic bindings and normalized row merge corrected; native cross-scope persistence remains blocked.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-12",
+      "requirement": "Interactive canvas",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-retirement-host",
+        "p4-browser-floor",
+        "native-authoring-diagnosis"
+      ],
+      "resultOrBlocker": "Canvas selection/drag/coalescing/recomposition works; geometry remains session-owned, not durable.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-13",
+      "requirement": "Canvas maximize lifecycle",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Maximized canvas survives selection/recomposition at 1920x1080 and 2048x1200; dock unlocks body."
+    },
+    {
+      "id": "PC-14",
+      "requirement": "Template browsing and previews",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Search/categories and Markdown/Mermaid/JSON/structure previews work."
+    },
+    {
+      "id": "PC-15",
+      "requirement": "Template imports",
+      "status": "BLOCKED",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Process/role/artifact imports preserve submitted target; native import persistence remains blocked.",
+      "preservedUiProof": "PASS",
+      "blocker": "Native authoring durability; current UI/native-session behavior is preserved and tested separately."
+    },
+    {
+      "id": "PC-16",
+      "requirement": "Run details and subsections",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Run detail and child sections stay composed with native effects."
+    },
+    {
+      "id": "PC-17",
+      "requirement": "Live tabs and filters",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Live tabs, filters and distinct graphs/activity/history rendered."
+    },
+    {
+      "id": "PC-18",
+      "requirement": "Bounded reads and polling",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Bounded read/poll ownership and stale completion tests passed."
+    },
+    {
+      "id": "PC-19",
+      "requirement": "Hidden run groups",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host"
+      ],
+      "resultOrBlocker": "Hidden run groups are fetched by explicit intent, not eagerly."
+    },
+    {
+      "id": "PC-20",
+      "requirement": "Retained launch intent",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Caller intent and accepted/prepared identity retained; no duplicate launch."
+    },
+    {
+      "id": "PC-21",
+      "requirement": "Accepted launch and read-back failure",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Injected accepted-run read failure retains receipt and retries reads only."
+    },
+    {
+      "id": "PC-22",
+      "requirement": "Explicit new launch intent",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Explicit new launch intent remains separate from refresh."
+    },
+    {
+      "id": "PC-23",
+      "requirement": "Run cancellation",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Native cancellation and receipt reconciliation; close is not cancel."
+    },
+    {
+      "id": "PC-24",
+      "requirement": "Operator actions and notes",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Live operator actions/notes retain receipt across same-opening refresh."
+    },
+    {
+      "id": "PC-25",
+      "requirement": "Authorized current run files",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Actual authorized Markdown content refreshed to current native revision."
+    },
+    {
+      "id": "PC-26",
+      "requirement": "File late errors",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2"
+      ],
+      "resultOrBlocker": "Late file errors/actions cannot update successor openings."
+    },
+    {
+      "id": "PC-27",
+      "requirement": "File cleanup and content lifetime",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Native content lease cleanup and ownership assertions passed."
+    },
+    {
+      "id": "PC-28",
+      "requirement": "Graphs, analytics and partial errors",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Graphs, charts, analytics and partial-error presentation preserved."
+    },
+    {
+      "id": "PC-29",
+      "requirement": "Context freshness and lifetime",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-native-adjacent2",
+        "p4-unit"
+      ],
+      "resultOrBlocker": "Context/project binding, same-ID retirement and stale publication fenced."
+    },
+    {
+      "id": "PC-30",
+      "requirement": "Manager chat and attachments",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Actual agent run, streamed answer, attachment content and typed/default children verified."
+    },
+    {
+      "id": "PC-31",
+      "requirement": "Voice and browser lifecycle",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Real browser media lifecycle exercised for permitted, denied and delayed completion."
+    },
+    {
+      "id": "PC-32",
+      "requirement": "Permissions and safe content",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-retirement-host",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Native admission, denied scope and adversarial content checks preserved."
+    },
+    {
+      "id": "PC-33",
+      "requirement": "Workbench integration",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-native-adjacent2",
+        "p4-unit",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Actual Workflow executor and original project-node delivered link checked."
+    },
+    {
+      "id": "PC-34",
+      "requirement": "End-to-end native execution",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-integration",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Real native runtime execution with controlled external responses; not paid/live-model evidence or durable authoring."
+    },
+    {
+      "id": "PC-35",
+      "requirement": "Boundary negative controls",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "census"
+      ],
+      "resultOrBlocker": "Forbidden transitive, unresolved reference and public/injected heavy-boundary controls passed."
+    },
+    {
+      "id": "PC-36",
+      "requirement": "Source and published assets",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Four source/published Fast/Parity journeys and served-asset inventories passed."
+    },
+    {
+      "id": "PC-37",
+      "requirement": "Measured development loop",
+      "status": "NOT_APPLICABLE",
+      "evidenceRefs": [
+        "performance"
+      ],
+      "resultOrBlocker": "PC2 did not change dependency/build/assets/watch paths; historical PC1 measurements are not rerun or relabeled."
+    },
+    {
+      "id": "PC-38",
+      "requirement": "Focused tests and registration",
+      "status": "PASS",
+      "evidenceRefs": [
+        "lanes"
+      ],
+      "resultOrBlocker": "Current build/discovery/expanded execution and unchanged registration verified."
+    },
+    {
+      "id": "PC-39",
+      "requirement": "Final frozen integration",
+      "status": "NOT_RUN",
+      "evidenceRefs": [
+        "broadStable"
+      ],
+      "resultOrBlocker": "No new full-application freeze/CI/release/merge campaign or cross-cutting invalidation; all mandatory affected lanes run."
+    },
+    {
+      "id": "PC-40",
+      "requirement": "Portability and maintained docs",
+      "status": "PASS",
+      "evidenceRefs": [
+        "portability",
+        "documentation"
+      ],
+      "resultOrBlocker": "Reviewed one intentional baseline delta; enforcement and documentation validation required at closure."
+    },
+    {
+      "id": "PC-41",
+      "requirement": "Independent openings and disposal",
+      "status": "PASS",
+      "evidenceRefs": [
+        "p2-light",
+        "p4-retirement-host",
+        "p4-browser-floor"
+      ],
+      "resultOrBlocker": "Two renderer openings, canvas identity and all-family retirement/disposal verified."
+    },
+    {
+      "id": "PC-42",
+      "requirement": "Residual census and delivery",
+      "status": "PASS",
+      "evidenceRefs": [
+        "census",
+        "readiness"
+      ],
+      "resultOrBlocker": "No remaining assigned renderer extraction. Native authoring authority is a separate nonstructural prerequisite."
+    }
+  ],
+  "evidencePolicy": "This committed summary is the durable sanitized result. Ignored local logs/TRX/traces are retained for this workspace and addressed by path/hash, not promised as published artifacts. A digest alone does not provide an unavailable artifact. Input bundle seals are unchanged. The report cannot embed its own future containing commit hash; verify that commit with git verify-commit."
+}
