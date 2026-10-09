@@ -1,0 +1,74 @@
+origin,group,requirement,pc3_treatment,current_execution_status
+PC1,PC-01,Entry candidate,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-02,Preserved baseline,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-03,Dependency cut,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-04,Complete scenario host,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-05,Routes and queries,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-06,Catalog and definition selection,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-07,Definition draft across tabs,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-08,Definition commands,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-09,Submission reconciliation,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-10,Role editing,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-11,Step editing,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-12,Interactive canvas,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-13,Canvas maximize lifecycle,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-14,Template browsing and previews,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-15,Template imports,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-16,Run details and subsections,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-17,Live tabs and filters,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-18,Bounded reads and polling,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-19,Hidden run groups,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-20,Retained launch intent,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-21,Accepted launch and read-back failure,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-22,Explicit new launch intent,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-23,Run cancellation,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-24,Operator actions and notes,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-25,Authorized current run files,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-26,File late errors,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-27,File cleanup and content lifetime,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-28,"Graphs, analytics and partial errors","Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-29,Context freshness and lifetime,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-30,Manager chat and attachments,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-31,Voice and browser lifecycle,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-32,Permissions and safe content,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-33,Workbench integration,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-34,End-to-end native execution,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-35,Boundary negative controls,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-36,Source and published assets,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-37,Measured development loop,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-38,Focused tests and registration,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-39,Final frozen integration,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-40,Portability and maintained docs,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-41,Independent openings and disposal,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC1,PC-42,Residual census and delivery,"Preserve the original behavior; map to current source and relevant PC3 acceptance/proof. Re-run on invalidation, not re-extraction.",NOT_RUN
+PC2,A01,Startup local PGP request and signing preflight,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A02,Current checkout and operator work preserved,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A03,Current test impact and CodeAnalytics freshness,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A04,Accepted authoring result survives same-opening read,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A05,Old read cannot regress acknowledged state,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A06,Reentry cannot replace pending submission,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A07,Outcomes are classified and not blindly replayed,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A08,Retired opening cannot update same-ID successor,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A09,Canvas/template intent semantics preserved,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A10,Role Add adopts eligible authoritative selection,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A11,Role Delete clears removed editor correctly,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A12,Actual edited step keeps DecisionRoleKey,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A13,Immutable submissions preserve later field edits,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A14,Stable row and raw-number reconciliation,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A15,Submission lifecycle closes on reachable discard/refusal,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A16,Two openings and Server-tab raw drafts remain independent,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A17,Actual cross-scope authoring diagnosis completed,PC2 plan/diagnosis-only boundary is superseded by PC3 implementation and real durable proof; do not repeat the prerequisite as the deliverable.,NOT_RUN
+PC2,A18,Native authoring owner outcome delivered,PC2 plan/diagnosis-only boundary is superseded by PC3 implementation and real durable proof; do not repeat the prerequisite as the deliverable.,NOT_RUN
+PC2,A19,Durability readiness remains truthful,PC2 plan/diagnosis-only boundary is superseded by PC3 implementation and real durable proof; do not repeat the prerequisite as the deliverable.,NOT_RUN
+PC2,A20,PC1 feature groups carried forward,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A21,Affected production projects and light closure validated,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A22,Focused discovery and execution are source-valid,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A23,Authoring browser journeys demonstrate new corrections,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A24,Native launch/workflow/files/chat/cancel preserved,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A25,Affected Workbench/voice/shared chat consumers preserved,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A26,Fast/Parity source and published assets work,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A27,Owned environments cleaned and private data safe,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A28,Active renderer and evaluated dependency census delivered,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A29,Mandatory portability and triggered broader gates recorded,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A30,Tracked source-addressed evidence and signed checkpoints,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN
+PC2,A31,No unsupported performance or full-completion claims,Preserve the PC2 behavior and regression tests; integrate the new owner and re-run affected evidence.,NOT_RUN

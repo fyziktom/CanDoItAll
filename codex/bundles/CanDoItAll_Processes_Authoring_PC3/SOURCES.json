@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "components-decoupling",
+  "review_commit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+  "comparison_base": "146067ed133f624878dfe5756c441a43c0f21b4a",
+  "review_date": "2026-10-09",
+  "execution_pin": false,
+  "coverage_kind": "Selected source/delta review through GitHub connector; no local checkout/runtime verification.",
+  "sources": [
+    {
+      "id": "S01",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+      "blob_sha": "464db0973363bf77d4b75f7d920c2ade100b0389",
+      "coverage": "Selected ranges 1-330, 400-900 (response truncated after the reconciliation region), 900-1150, 1250-1560, 1770-2300; not the entire file.",
+      "purpose": "Read/mutation fence, reconciliation, result application, profile notification and disposal paths",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor"
+    },
+    {
+      "id": "S02",
+      "path": "src/UI/CanDoItAll.Processes.UI/ProcessRoleEditorState.cs",
+      "blob_sha": "5d41bee04099ddc0e51618d16f4df7e6aae41e3c",
+      "coverage": "Initial full-file response truncated in later Inputs fields; explicit 450-650 suffix read.",
+      "purpose": "Selection/submission lifecycle and Add/Delete accepted result handling",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/UI/CanDoItAll.Processes.UI/ProcessRoleEditorState.cs"
+    },
+    {
+      "id": "S03",
+      "path": "src/UI/CanDoItAll.Processes.UI/ProcessStepEditorState.cs",
+      "blob_sha": "e013e821927318a3c8048619ea7161d50589ffb0",
+      "coverage": "Full file read through ranges 1-270, 270-425 and 420-720 (EOF).",
+      "purpose": "Actual-step DecisionRoleKey, accepted row normalization and raw numeric inputs",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/UI/CanDoItAll.Processes.UI/ProcessStepEditorState.cs"
+    },
+    {
+      "id": "S04",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.Drafts.cs",
+      "blob_sha": "1d65cc5bc5636eb0c93c241d9d62121a1a496418",
+      "coverage": "Ranges 1-435; remaining older tests not read in full.",
+      "purpose": "Controlled authoring read orders, retirement, profile notifications, unknown/refusal and canvas/import tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.Drafts.cs"
+    },
+    {
+      "id": "S05",
+      "path": "tests/Components/CanDoItAll.Tests.Components/ProcessAuthoringEditorTests.cs",
+      "blob_sha": "eb65537a108ad4ead0f1541b1a2d7ce86ad569a1",
+      "coverage": "Full code content received; response metadata tail was truncated.",
+      "purpose": "Native result identity/step binding/normalization tests",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/tests/Components/CanDoItAll.Tests.Components/ProcessAuthoringEditorTests.cs"
+    },
+    {
+      "id": "S06",
+      "path": "docs/validation/processes-ui-pc2.md",
+      "blob_sha": "376dd79c3cc051ee7227463b16eae2e3a7d84d43",
+      "coverage": "Full file. Execution claims are attributed to the repository report, not rerun by reviewer.",
+      "purpose": "530-case campaign, source/config/siblings, qualification and native diagnosis",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/docs/validation/processes-ui-pc2.md"
+    },
+    {
+      "id": "S07",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessAuthoringBrowserTests.cs",
+      "blob_sha": "ca26fc93a1f8377ce46f96432a720cdbd03d5be5",
+      "coverage": "Full file.",
+      "purpose": "Real controls and held Definition result; role/step assertions",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/tests/Playwright/CanDoItAll.Tests.Playwright/ProcessAuthoringBrowserTests.cs"
+    },
+    {
+      "id": "S08",
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ProcessNativeBrowserHost.cs",
+      "blob_sha": "f494f8769f7d8cc7cdd4f6ce13ba59e2ec0f7b3e",
+      "coverage": "Ranges 1-340 covering EOF.",
+      "purpose": "Production host setup and retained test-only role/step owner substitution",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/tests/Playwright/CanDoItAll.Tests.Playwright/ProcessNativeBrowserHost.cs"
+    },
+    {
+      "id": "S09",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs",
+      "blob_sha": "666b024f810b97d98753a86bea4faf37f7b717ae",
+      "coverage": "Full file within requested 1-260 range.",
+      "purpose": "Fresh per-operation scopes, captured project reads and session canvas",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessWorkspaceProjectionClient.cs"
+    },
+    {
+      "id": "S10",
+      "path": "docs/architecture/processes-authoring-authority-prerequisite.md",
+      "blob_sha": "c151b4f7e998cf5b5f2a0b3f5dd1c952c6dc34c5",
+      "coverage": "Full file.",
+      "purpose": "Existing bounded owner proposal and diagnosis limits",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/docs/architecture/processes-authoring-authority-prerequisite.md"
+    },
+    {
+      "id": "S11",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionEditorProjectionService.cs",
+      "blob_sha": "8f89a33cdfdae73bcad7a8e3c949ea6d6c5d0457",
+      "coverage": "Range 1-290.",
+      "purpose": "Instance dictionary, SaveDraft/Publish/Archive/Delete and reset-to-default semantics",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionEditorProjectionService.cs"
+    },
+    {
+      "id": "S12",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCanvasEditorProjectionService.cs",
+      "blob_sha": "9be494cb04f103c5d1bbbba2529b5556742e9a95",
+      "coverage": "Full file within requested 1-220 range; partial implementation files require current follow-up.",
+      "purpose": "Session dictionary and supported canvas command dispatch",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCanvasEditorProjectionService.cs"
+    },
+    {
+      "id": "S13",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs",
+      "blob_sha": "7cde8145a40f07286b0fe15d88ebaab9018112a7",
+      "coverage": "Range 1-200.",
+      "purpose": "Imports store provenance/display metadata rather than shared executable definition changes",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessTemplateCatalogProjectionService.cs"
+    },
+    {
+      "id": "S14",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCatalogProjectionService.cs",
+      "blob_sha": "ae256589c5aab849fa8aac281e6fd13cd6e70d53",
+      "coverage": "Range 1-230.",
+      "purpose": "Template-only list/counters, bounded query, FeedDefaults",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionCatalogProjectionService.cs"
+    },
+    {
+      "id": "S15",
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessPersistenceDbContext.cs",
+      "blob_sha": "a48c2ff3c7a2dab0a68867c48162010a58912561",
+      "coverage": "Full file.",
+      "purpose": "Existing runtime/prepared stores and no authored-definition DbSet",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Persistence/ProcessPersistenceDbContext.cs"
+    },
+    {
+      "id": "S16",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+      "blob_sha": "43cf8f8d523cdc261a16f3f51100a94db0ee10cd",
+      "coverage": "Ranges 1-490.",
+      "purpose": "Template-only resolution, existing launch lookup, compile/readiness/assignment source",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs"
+    },
+    {
+      "id": "S17",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.Prepared.cs",
+      "blob_sha": "9ae9c2db50de876ef81ab6eaddcf584b8e35fbae",
+      "coverage": "Range 1-250.",
+      "purpose": "Durable preparation lookup before resolution, acceptance and continuation/recovery",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.Prepared.cs"
+    },
+    {
+      "id": "S18",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessTemplateKernelBuilder.cs",
+      "blob_sha": "14bd63a3643288a84d44734f6203e1639e9897ba",
+      "coverage": "Full file read through ranges 1-200, 200-270 and 255-EOF.",
+      "purpose": "Stable IDs, typed graph construction and execution-guidance content fingerprint",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessTemplateKernelBuilder.cs"
+    },
+    {
+      "id": "S19",
+      "path": "src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs",
+      "blob_sha": "244953134821f8e2c22c904cbcc99255c55abf45",
+      "coverage": "Ranges 500-800 and 1040-1350. Not a full loader/codec audit.",
+      "purpose": "Typed child/output validation, resource-default resolution and rich document/step models",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Templates/ProcessTemplatePackLoader.cs"
+    },
+    {
+      "id": "S20",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchVariablePreparation.cs",
+      "blob_sha": "3b70e4f68628dc0230afa8dc6deb7757b0300498",
+      "coverage": "Full file within requested 1-240 range.",
+      "purpose": "Empty driver list triggers template activation fallback",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/ProcessLaunchVariablePreparation.cs"
+    },
+    {
+      "id": "S21",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessSubprocessContractResolver.cs",
+      "blob_sha": "6661a2b99832d610d600667319fba666dfd52422",
+      "coverage": "Full file.",
+      "purpose": "Pure decoder of captured launch variables, not a mutable template lookup",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessSubprocessContractResolver.cs"
+    },
+    {
+      "id": "S22",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessSubprocessCoordinator.cs",
+      "blob_sha": "74ec5dbfff041c4ab0e437737df5421f562510f2",
+      "coverage": "Range 1-240.",
+      "purpose": "Deferred child launch producer and parent outcome bridge consumer",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessSubprocessCoordinator.cs"
+    },
+    {
+      "id": "S23",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectLifetime.cs",
+      "blob_sha": "2ca035c0db2090774c34dd7125ee4fd806d01f22",
+      "coverage": "Full file within requested 1-240 range.",
+      "purpose": "Captured profile/project lifetime and enlisted mutation admission checks",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Projects/ProjectLifetime.cs"
+    },
+    {
+      "id": "S24",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectWriteAdmissionMutationGate.cs",
+      "blob_sha": "daabaa5186453890c251665cc73fe5f119733277",
+      "coverage": "Full file.",
+      "purpose": "Existing coordinated relational mutation gate",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Projects/ProjectWriteAdmissionMutationGate.cs"
+    },
+    {
+      "id": "S25",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/DatabaseTransfer/ProcessesProjectTransferTargetStateParticipant.cs",
+      "blob_sha": "faa033b58c60dcc44a223ecbbb205a340b578bf4",
+      "coverage": "Full file within requested 1-210 range.",
+      "purpose": "Existing lock types and target-state residue inspection",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/DatabaseTransfer/ProcessesProjectTransferTargetStateParticipant.cs"
+    },
+    {
+      "id": "S26",
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj",
+      "blob_sha": "dbb9b2d1da8ba630097ab7222b3c0e01ae6861e6",
+      "coverage": "Full file.",
+      "purpose": "Existing Application reference and pinned EF/Npgsql dependencies",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj"
+    },
+    {
+      "id": "S27",
+      "path": "src/Processes/CanDoItAll.Processes.Application/CanDoItAll.Processes.Application.csproj",
+      "blob_sha": "3ae25dd9373463b10628f3090ddf448e3ab530d6",
+      "coverage": "Full file.",
+      "purpose": "Existing Templates/Projections and native abstraction references",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Processes/CanDoItAll.Processes.Application/CanDoItAll.Processes.Application.csproj"
+    },
+    {
+      "id": "S28",
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/README.md",
+      "blob_sha": "c1e15e5ec164e8fc94783024952a24b8c4bbfa21",
+      "coverage": "Full file.",
+      "purpose": "Canonical composition-backed AppDbContext migration chain and validation",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Foundation/CanDoItAll.Migrations.PostgreSql/README.md"
+    },
+    {
+      "id": "S29",
+      "path": "docs/testing.md",
+      "blob_sha": "ae87efb3af63f9a87a71fbf9352cc7a441ba1212",
+      "coverage": "Range 1-240 response truncated near TestLab section; range 440-560 full. Not all module-specific guidance re-read.",
+      "purpose": "Targeted discovery, isolated PostgreSQL18, Processes floor and migration proof",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/docs/testing.md"
+    },
+    {
+      "id": "S30",
+      "path": ".github/workflows/ci.yml",
+      "blob_sha": "7df2677944375d0237367a34c2743b4cf2089731",
+      "coverage": "Range 1-150.",
+      "purpose": "Push/PR branch filters and sibling/platform source selection",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/.github/workflows/ci.yml"
+    },
+    {
+      "id": "S31",
+      "path": "AGENTS.md",
+      "blob_sha": "4d7ab165a035e032dcf327cf3e972316fb5b3d64",
+      "coverage": "Full file.",
+      "purpose": "Current source-of-truth and mandatory guard guidance",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/AGENTS.md"
+    },
+    {
+      "id": "S32",
+      "path": ".github/copilot-instructions.md",
+      "blob_sha": "a933ebf8bbea296c00c611e4659adec1e07529ee",
+      "coverage": "Full file within requested 1-150 range.",
+      "purpose": "Ownership, no silent fallbacks, current test/signing/portability policies",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/.github/copilot-instructions.md"
+    },
+    {
+      "id": "S33",
+      "path": "docs/architecture/ui-component-seams.md",
+      "blob_sha": "e1ca84e6eca20b51a4d1436d1962b1fb333d1c1e",
+      "coverage": "Range 1-200 containing the principal contract and anti-patterns.",
+      "purpose": "Canonical renderer/native boundaries, raw draft and outcome rules",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/docs/architecture/ui-component-seams.md"
+    },
+    {
+      "id": "S34",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+      "blob_sha": "3db6ae0466751dfeb8d6ba36f3c11557b438e7c9",
+      "coverage": "Ranges 1-230 and 250-EOF.",
+      "purpose": "Current native lifetimes, canonical profile context and migration assembly",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/095c418b7981511ba9c96a75b7d2950ff4f326a6/src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs"
+    }
+  ],
+  "remote_observations": [
+    {
+      "kind": "branch",
+      "sha": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+      "tree": "bd61e73dfb565c290e4d7ed9045fd90c22d7928e",
+      "commit_time_utc": "2026-10-09T11:18:52Z",
+      "head_github_signature_verified": true,
+      "local_signature_verification": "NOT_RUN"
+    },
+    {
+      "kind": "compare",
+      "base": "146067ed133f624878dfe5756c441a43c0f21b4a",
+      "head": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+      "ahead_by": 8,
+      "behind_by": 0,
+      "note": "One bundle-import commit plus seven work/final-report checkpoints; three production files changed."
+    },
+    {
+      "kind": "compare_tested_checkpoint",
+      "base": "72cbacef3185244c2633d0729443ba9819ddce18",
+      "head": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+      "ahead_by": 1,
+      "changed_paths": [
+        "docs/architecture/processes-ui-boundary.md",
+        "docs/validation/processes-ui-pc2.json",
+        "docs/validation/processes-ui-pc2.md"
+      ],
+      "note": "Remote compare shows documentation-only final delta. It does not independently rerun the reported tests."
+    },
+    {
+      "kind": "github_check_runs",
+      "head": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+      "total_count": 0,
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/commits/095c418b7981511ba9c96a75b7d2950ff4f326a6/check-runs"
+    },
+    {
+      "kind": "github_actions",
+      "head": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+      "total_count": 0,
+      "url": "https://api.github.com/repos/fyziktom/CanDoItAll/actions/runs?head_sha=095c418b7981511ba9c96a75b7d2950ff4f326a6&per_page=20"
+    },
+    {
+      "kind": "codeanalytics_discovery",
+      "result": "No matching available plugin returned by CanDoItAll CodeAnalytics search; no index query executed. Codex must check its own current local MCP setup."
+    }
+  ],
+  "not_claimed": [
+    "No .NET build, C# test, PostgreSQL, Playwright, performance or actual CodeAnalytics index run by this reviewer.",
+    "No full recursive-tree census or whole-repository semantic reachability proof; oversized tree/compare responses were not treated as complete.",
+    "GitHub code search was path discovery on its indexed default branch; implementation evidence was fetched at the immutable reviewed head.",
+    "Ignored raw PC2 diagnosis/trace bytes and sibling runtime source were not independently downloaded or executed.",
+    "The role/step owner implementations and all canvas partials require current implementation-time review; this registry is not an exhaustive patch list."
+  ],
+  "final_head_recheck": {
+    "sha": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+    "unchanged": true,
+    "date": "2026-10-09",
+    "method": "GitHub branch endpoint re-read at review closure."
+  }
+}
