@@ -8104,7 +8104,7 @@
       ],
       "recovery_attempt_status": "INTERRUPTED",
       "artifact_recovery_campaign": {
-        "status": "RUNNING",
+        "status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY",
         "source_commit": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
         "configuration": "Release",
         "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
@@ -8353,12 +8353,35 @@
         ],
         "plan": ".artifacts/pc4-recovery-20261010/stable-plan.json",
         "results": ".artifacts/pc4-recovery-20261010/stable-recovery-results.json",
-        "prior_results": "Original incomplete campaigns and deleted raw artifacts remain classified separately. This is evidence recovery, not a passing rerun claim."
+        "prior_results": "Original incomplete campaigns and deleted raw artifacts remain classified separately. This is evidence recovery, not a passing rerun claim.",
+        "terminal_disposition": {
+          "stopped_utc": "2026-10-10T12:47:30Z",
+          "reason": "User requested focus on old Docker resources, cache and largest artifact folders. Runner stopped with Ctrl+C; owned test processes confirmed absent.",
+          "accepted_complete_projects": 0,
+          "accepted_complete_tests": 0,
+          "completed_trx_available": false
+        },
+        "partial_observation": {
+          "utc": "2026-10-10T12:52:19.4697129Z",
+          "campaign_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY",
+          "elapsed_minutes": 116.3,
+          "complete_projects": 0,
+          "complete_passing_cases": null,
+          "current_project": "CanDoItAll.Tests.Integration",
+          "project_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY",
+          "discovered_cases": 3455,
+          "observed_passing_console_rows": 2597,
+          "observed_failure_console_rows": 0,
+          "last_observed_test": "CanDoItAll.Tests.Integration.WorkflowHitlEndToEndIntegrationTests.ConcurrentApprovalResponses_CreateOneActiveContinuationAndOneEffect",
+          "log_last_write_utc": "2026-10-10T12:47:30.1459653Z",
+          "available_memory_gib": 13.14,
+          "windows_free_gib": 44.36
+        }
       }
     }
   ],
   "broad_evidence": {
-    "kind": "INCOMPLETE_INTERRUPTED_AND_RECOVERING",
+    "kind": "INCOMPLETE_INTERRUPTED_OPERATOR_STORAGE_PRIORITY",
     "original_runs": [
       {
         "attempt": "original",
@@ -8384,7 +8407,7 @@
       "campaign_reference": "lanes[name=broad_gate].artifact_recovery_campaign",
       "new_campaign": ".artifacts/pc4-recovery-20261010/stable-recovery-results.json"
     },
-    "counting": "The fresh campaign reruns all 34 projects. No partial console results or lost raw reports are counted as completed current coverage. Historical focused results remain separately recorded."
+    "counting": "The fresh all-project campaign was stopped at user direction. Its 2,597 partial integration console passes and zero observed failure rows have no completed TRX and contribute no completed current coverage."
   },
   "signed_checkpoints": [
     {
@@ -8465,9 +8488,9 @@
     }
   ],
   "resource_cleanup": {
-    "status": "IN_PROGRESS",
+    "status": "OWNED_STORAGE_REMOVED_WITH_REPORTED_RESIDUALS",
     "native_fixture": "Prior data directory deleted by operator; old runner and native PostgreSQL no longer present.",
-    "docker": "Local Linux Docker CLI/socket restored API access without restarting Docker. Old bundle resources removed and verified; the existing PC4 PostgreSQL fixture is reused for unfinished validation.",
+    "docker": "Old bundle resources and the stopped PC4 fixture are removed. Retained container states and start times, including 5032, are unchanged. Windows VHD allocation and stale Docker listener remain separately recorded.",
     "protected": "5032 instance, its data, useful unrelated containers and installed MCP tooling.",
     "recovery": {
       "utc": "2026-10-10T10:26:39.648857+00:00",
@@ -8487,14 +8510,14 @@
           "bytes": 61514
         }
       ],
-      "docker": "Local Linux Docker CLI/socket restored API access without restarting Docker. Old bundle resources removed and verified; the existing PC4 PostgreSQL fixture is reused for unfinished validation.",
+      "docker": "Old bundle resources and the stopped PC4 fixture are removed. Retained container states and start times, including 5032, are unchanged. Windows VHD allocation and stale Docker listener remain separately recorded.",
       "ordinary_5032_mutated": false,
       "user_direction": "Prioritize hundreds of GB of Docker storage; no authorization to retry the two directory deletions."
     },
     "policy": "docs/testing.md#bundle-resource-cleanup",
     "policy_commit": "640fece824cfdf1f6c5985f6184c7eec199b7a9d",
     "docker_recovery": {
-      "status": "VERIFIED_OLD_RESOURCE_CLEANUP_COMPLETE_CURRENT_FIXTURE_IN_USE",
+      "status": "VERIFIED_OLD_RESOURCE_CLEANUP_COMPLETE",
       "completed_utc": "2026-10-10T10:53:07.7739769Z",
       "removed_container_count": 40,
       "explicit_container_removals": [
@@ -9669,7 +9692,7 @@
         "volume": "47f3cc9972548756c7490f3ac6e17a38212727cc41227bb9e5120a90a645a4f4",
         "endpoint": "127.0.0.1:55904",
         "server_version_num": 180006,
-        "cleanup": "After final required validation use."
+        "cleanup": "Removed with exclusive volume after the operator-directed interruption; see storage_priority."
       },
       "receipt_root": ".artifacts/pc4-recovery-20261010",
       "receipt_hashes": [
@@ -9706,6 +9729,523 @@
           "sha256": "25b485d5d553602ff622c5b7cdb9d0d7f3650167879f8d0b132b1eac5876109b"
         }
       ]
+    },
+    "storage_priority": {
+      "recorded_utc": "2026-10-10T12:56:29.085403+00:00",
+      "status": "OWNED_STORAGE_REMOVED_WITH_REPORTED_RESIDUALS",
+      "fixture_container_and_exclusive_volume_removed": true,
+      "fixture_container": "806dda3c2f8a3253715ae286203b6405f546571a4e1fb490184e3d5402b2e491",
+      "fixture_volume": "47f3cc9972548756c7490f3ac6e17a38212727cc41227bb9e5120a90a645a4f4",
+      "retained_containers_unchanged": 40,
+      "protected_5032_unchanged": true,
+      "total_bundle_containers_removed": 41,
+      "total_bundle_volumes_removed": 59,
+      "docker_build_cache_reclaimed": "257.7 GB reported by Docker",
+      "current_build_cache": "8 in-use records; 152.4 MB; 0 B reclaimable",
+      "port_residual": "No container publishes 55904, but com.docker.backend.exe PID 33216 retains a Windows listener. No restart or shared-process termination was attempted.",
+      "first_cleanup_receipt": ".artifacts/pc4-recovery-20261010/active-fixture-cleanup-receipt.json",
+      "docker_vhdx": {
+        "path": "C:\\Users\\lucys\\AppData\\Local\\Docker\\wsl\\disk\\docker_data.vhdx",
+        "bytes": 382204903424,
+        "gib": 355.956,
+        "compacted": false
+      },
+      "mcp_state": "User reported 25 GB and is deleting it independently; excluded from focused scan and not mutated by this cleanup.",
+      "artifact_folders_deleted": false,
+      "cleanup_policy_commit": "640fece824cfdf1f6c5985f6184c7eec199b7a9d",
+      "artifact_inventory": {
+        "scope": "Top-level artifact folders across CanDoItAll repository family and bounded current-checkout project bin/obj inventory; not a complete drive scan. Individual listed folder sizes are complete. User-deleting .mcp-state excluded.",
+        "measurement": "Logical bytes; reparse points skipped. Ancestor/child rows overlap and must not be added together.",
+        "output_children": [
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\m122finalw",
+            "bytes": 26111934143,
+            "gib": 24.319,
+            "files": 552327,
+            "complete": true,
+            "utc": "2026-10-10T12:53:46.9693653Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\m122w",
+            "bytes": 9377422520,
+            "gib": 8.733,
+            "files": 108109,
+            "complete": true,
+            "utc": "2026-10-10T12:53:50.5163186Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\maf-1.22",
+            "bytes": 9274784865,
+            "gib": 8.638,
+            "files": 26584,
+            "complete": true,
+            "utc": "2026-10-10T12:53:52.0416493Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\ci-96391207179",
+            "bytes": 6431656587,
+            "gib": 5.99,
+            "files": 112056,
+            "complete": true,
+            "utc": "2026-10-10T12:53:23.1904929Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\playwright",
+            "bytes": 3073555637,
+            "gib": 2.862,
+            "files": 4122,
+            "complete": true,
+            "utc": "2026-10-10T12:53:52.6261892Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\m120ui",
+            "bytes": 2917949014,
+            "gib": 2.718,
+            "files": 96130,
+            "complete": true,
+            "utc": "2026-10-10T12:53:26.2474491Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\usage-optimization",
+            "bytes": 701277447,
+            "gib": 0.653,
+            "files": 1100,
+            "complete": true,
+            "utc": "2026-10-10T12:53:52.7762143Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output\\agent-worktree-evidence",
+            "bytes": 205228314,
+            "gib": 0.191,
+            "files": 163,
+            "complete": true,
+            "utc": "2026-10-10T12:53:19.5279425Z"
+          }
+        ],
+        "web_bin_children": [
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Release",
+            "bytes": 1422468586,
+            "gib": 1.325,
+            "files": 6606,
+            "complete": true,
+            "utc": "2026-10-10T12:54:30.9141309Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\ProjectsUiProof",
+            "bytes": 865156957,
+            "gib": 0.806,
+            "files": 2941,
+            "complete": true,
+            "utc": "2026-10-10T12:54:30.6896281Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\ProcAuthoringPC3",
+            "bytes": 681091932,
+            "gib": 0.634,
+            "files": 1596,
+            "complete": true,
+            "utc": "2026-10-10T12:54:30.4535565Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\Debug",
+            "bytes": 678084880,
+            "gib": 0.632,
+            "files": 1592,
+            "complete": true,
+            "utc": "2026-10-10T12:54:30.1306544Z"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin\\ProcIntegrationPC4",
+            "bytes": 676874401,
+            "gib": 0.63,
+            "files": 1551,
+            "complete": true,
+            "utc": "2026-10-10T12:54:30.4843818Z"
+          }
+        ],
+        "output_total_bytes": 58492565741,
+        "web_bin_total_bytes": 40342883786,
+        "artifact_roots": [
+          {
+            "path": "C:\\repositories\\CanDoItAll.Demos\\artifacts",
+            "bytes": 3285008163,
+            "gib": 3.059,
+            "files": 9442,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll-bundlefree\\output",
+            "bytes": 207847157,
+            "gib": 0.194,
+            "files": 150,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\.artifacts",
+            "bytes": 177068238,
+            "gib": 0.165,
+            "files": 414,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\.playwright-mcp",
+            "bytes": 125032305,
+            "gib": 0.116,
+            "files": 3616,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\.vs",
+            "bytes": 124772016,
+            "gib": 0.116,
+            "files": 31,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Components\\artifacts",
+            "bytes": 51137791,
+            "gib": 0.048,
+            "files": 167,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Components\\.artifacts",
+            "bytes": 45253349,
+            "gib": 0.042,
+            "files": 68,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Components.CanvasState\\artifacts",
+            "bytes": 37393176,
+            "gib": 0.035,
+            "files": 700,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Components\\output",
+            "bytes": 22599609,
+            "gib": 0.021,
+            "files": 149,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.SharedInfo\\artifacts",
+            "bytes": 12619252,
+            "gib": 0.012,
+            "files": 107,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Demos\\output",
+            "bytes": 12202212,
+            "gib": 0.011,
+            "files": 12,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Components\\.vs",
+            "bytes": 5645136,
+            "gib": 0.005,
+            "files": 14,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.FileTools\\artifacts",
+            "bytes": 4425478,
+            "gib": 0.004,
+            "files": 93,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.CognitiveMemory\\.vs",
+            "bytes": 1302333,
+            "gib": 0.001,
+            "files": 10,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.FileTools\\output",
+            "bytes": 931863,
+            "gib": 0.001,
+            "files": 45,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\.artifacts",
+            "bytes": 596691,
+            "gib": 0.001,
+            "files": 18,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.IPFS\\artifacts",
+            "bytes": 75608,
+            "gib": 0.0,
+            "files": 1,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll-bundlefree\\artifacts",
+            "bytes": 67415,
+            "gib": 0.0,
+            "files": 26,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\artifacts",
+            "bytes": 47356,
+            "gib": 0.0,
+            "files": 1,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll-ReferenceClone\\outputs",
+            "bytes": 36408,
+            "gib": 0.0,
+            "files": 1,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.AgentFramework.Rag\\artifacts",
+            "bytes": 0,
+            "gib": 0.0,
+            "files": 0,
+            "complete": true,
+            "kind": "artifact_output"
+          }
+        ],
+        "largest_measured_folders": [
+          {
+            "path": "C:\\repositories\\CanDoItAll\\output",
+            "bytes": 58492565741,
+            "gib": 54.475,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\bin",
+            "bytes": 40342883786,
+            "gib": 37.572,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\CanDoItAll.Tests.Playwright\\bin",
+            "bytes": 30099479878,
+            "gib": 28.032,
+            "files": 79080,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\bin",
+            "bytes": 27520637508,
+            "gib": 25.631,
+            "files": 64242,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\bin",
+            "bytes": 25612641351,
+            "gib": 23.854,
+            "files": 60906,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\TestLabBrowserFixture\\bin",
+            "bytes": 25030017033,
+            "gib": 23.311,
+            "files": 43078,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\PluginsBrowserFixture\\bin",
+            "bytes": 24377531750,
+            "gib": 22.703,
+            "files": 42061,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\StorageCatalogBrowserFixture\\bin",
+            "bytes": 20452716088,
+            "gib": 19.048,
+            "files": 35718,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\StorageRecoveryBrowserFixture\\bin",
+            "bytes": 19159397537,
+            "gib": 17.844,
+            "files": 33638,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tools\\SharedProviders\\CanDoItAll.SharedProviders.E2E\\bin",
+            "bytes": 12921741818,
+            "gib": 12.034,
+            "files": 28830,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Memory\\CanDoItAll.Memory.Tests\\bin",
+            "bytes": 10145014223,
+            "gib": 9.448,
+            "files": 24407,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tools\\Seeding\\CanDoItAll.ScenarioSeeder\\bin",
+            "bytes": 7747901396,
+            "gib": 7.216,
+            "files": 17280,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tools\\Diagnostics\\CanDoItAll.OpenAiContextProbe\\bin",
+            "bytes": 6715007740,
+            "gib": 6.254,
+            "files": 11931,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Support\\CanDoItAll.Tests.Support\\bin",
+            "bytes": 5039730384,
+            "gib": 4.694,
+            "files": 66934,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\Foundation\\CanDoItAll.Migrations.PostgreSql\\bin",
+            "bytes": 5013841624,
+            "gib": 4.67,
+            "files": 74132,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Composition\\bin",
+            "bytes": 4721171347,
+            "gib": 4.397,
+            "files": 73820,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll.Demos\\artifacts",
+            "bytes": 3285008163,
+            "gib": 3.059,
+            "files": 9442,
+            "complete": true,
+            "kind": "artifact_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tools\\App\\CanDoItAll.Manager\\bin",
+            "bytes": 1271593113,
+            "gib": 1.184,
+            "files": 45596,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Playwright\\GovernanceBrowserFixture\\bin",
+            "bytes": 1266950917,
+            "gib": 1.18,
+            "files": 1864,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Unit\\CanDoItAll.Tests.Unit\\obj",
+            "bytes": 980889071,
+            "gib": 0.914,
+            "files": 623,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\obj",
+            "bytes": 970571513,
+            "gib": 0.904,
+            "files": 667,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\obj",
+            "bytes": 965626909,
+            "gib": 0.899,
+            "files": 7403,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.Agents.SimpleChats\\bin",
+            "bytes": 824994111,
+            "gib": 0.768,
+            "files": 49490,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\src\\Integration\\CanDoItAll.Agents.Storage\\bin",
+            "bytes": 776272623,
+            "gib": 0.723,
+            "files": 48890,
+            "complete": true,
+            "kind": "build_output"
+          },
+          {
+            "path": "C:\\repositories\\CanDoItAll\\tests\\Support\\CanDoItAll.DurableFileWriter.TestHost\\bin",
+            "bytes": 563751708,
+            "gib": 0.525,
+            "files": 30858,
+            "complete": true,
+            "kind": "build_output"
+          }
+        ],
+        "build_scan": {
+          "utc": "2026-10-10T12:56:41.5063120Z",
+          "elapsed_seconds": 90.2878527,
+          "available_projects": 248,
+          "measured_folder_count": 112
+        },
+        "measured_build_output_total_bytes": 283356576914,
+        "measured_build_output_folder_count": 128,
+        "raw_complete_inventory": ".artifacts/pc4-recovery-20261010/storage-priority-summary.json"
+      }
     }
   },
   "reviewer_limits": [
@@ -9714,7 +10254,7 @@
     "Actual old serialized plans are proven; historical external provider effects are not fabricated.",
     "Source/DI/reference census fallback is not a semantic CodeAnalytics index."
   ],
-  "generated_utc": "2026-10-10T11:03:27.194202+00:00",
+  "generated_utc": "2026-10-10T12:56:29.085403+00:00",
   "predecessor_fixtures": [
     {
       "SchemaSourceCommit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
@@ -11733,6 +12273,6 @@
     "partial_console_rows_counted_as_complete_coverage": false,
     "note": "Operator removed artifacts after further crashes. Prior recorded outcomes remain historical execution evidence; inaccessible raw paths are not represented as available. No claim that the interrupted broad campaign passed.",
     "current_recovery_root": ".artifacts/pc4-recovery-20261010",
-    "current_recovery_status": "RUNNING"
+    "current_recovery_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY"
   }
 }

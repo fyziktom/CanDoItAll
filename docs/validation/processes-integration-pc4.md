@@ -1,6 +1,6 @@
 # Processes integration PC4 validation
 
-Status: **IN PROGRESS — implementation and focused proof recorded; fresh Stable recovery running after artifact loss**.
+Status: **IN PROGRESS — implementation and focused proof recorded; Stable recovery stopped at operator direction to prioritize storage cleanup**.
 Tested source: `ca195c794349d4e4eb653bacb7605ed83df86c4b`.
 The [machine record](processes-integration-pc4.json) contains exact test identities,
 commands, source candidates, raw failures and acceptance dispositions. The
@@ -13,8 +13,11 @@ referenced raw TRXs, logs and recovery scripts are no longer available. The last
 integration count was 1,462 passing console rows, with no complete integration report;
 those partial rows do not close the gate. Browser files outside `.artifacts` still exist.
 Raw-artifact availability is recorded separately from the outcomes observed before deletion.
-The resumed Stable campaign reuses the existing PC4 Docker fixture after cleanup and
-tool restoration; it does not provision another database container.
+The resumed Stable campaign reused the existing PC4 Docker fixture after cleanup and
+tool restoration. At the operator's request it was stopped at 12:47 UTC to prioritize
+storage cleanup. It had 2,597 passing integration console rows and zero observed failure
+rows, but no completed TRX; this is incomplete validation, not accepted full coverage.
+The owned runner/test processes are gone and its database fixture has now been removed.
 
 CodeAnalytics was rebuilt with the repository installer after its configured executable
 was deleted. Both staged and installed protocol checks passed against a disposable
@@ -45,8 +48,8 @@ the hotel demos, manual provider stacks and WB6 manual candidate. No engine/WSL 
 ordinary database operation or blanket container/volume prune occurred.
 
 An online filesystem trim succeeded, but the Windows backing file remains 356 GiB and
-Windows free space remains about 34.8 GiB. Reclaimed Docker filesystem space is therefore
-not reported as reclaimed Windows disk space. Offline administrator compaction, with its
+Windows free space was about 34.8 GiB immediately after trim. Reclaimed Docker filesystem
+space is therefore not reported as reclaimed Windows disk space. Offline administrator compaction, with its
 service interruption, was not performed. Exact removal and protection receipts are under
 `.artifacts/pc4-recovery-20261010` and summarized in the machine record.
 
@@ -54,6 +57,23 @@ The cleanup policy is in [Testing](../testing.md#bundle-resource-cleanup) and ro
 instructions, signed at `640fece824cfdf1f6c5985f6184c7eec199b7a9d`. Documentation validation
 passed for 407 maintained Markdown files and portability enforcement passed with 15,380
 reviewed executable-source findings unchanged for that policy change.
+
+The subsequent operator-directed stop released the current PC4 fixture. Its exact container
+and exclusive volume were removed, bringing the totals to **41 bundle containers and 59
+volumes**. All 40 retained containers kept their state and start time, including the 5032
+database. Docker still reports zero reclaimable build cache. The original final cleanup
+check remains `INCOMPLETE` because Docker's shared backend retains the Windows 55904
+listener despite no container publishing it; no shared backend termination was attempted.
+
+The focused storage inventory found **54.48 GiB in `output`** and **37.57 GiB in the Web
+project's `bin`**. The largest output subfolders are `m122finalw` (24.32 GiB), `m122w`
+(8.73 GiB), `maf-1.22` (8.64 GiB), and `ci-96391207179` (5.99 GiB). The current `.artifacts`
+is only 0.17 GiB. Sizes are logical file bytes; parent and child totals overlap. The
+machine record carries the measured paths and build-folder inventory. Additional test
+build outputs include Playwright (28.03 GiB), Integration (25.63 GiB), Unit (23.85 GiB),
+TestLabBrowserFixture (23.31 GiB), and PluginsBrowserFixture (22.70 GiB). These folders
+were inventoried, not deleted. The operator's independent `.mcp-state` deletion (reported
+as 25 GB) was excluded from the focused scan and from claimed cleanup savings.
 
 ## Source and signatures
 
