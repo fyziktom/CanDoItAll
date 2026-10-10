@@ -2,6 +2,7 @@ using System.Data.Common;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
@@ -31,7 +32,7 @@ public sealed class ProcessRoleResourceLifecycleTests {
                 AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
                 options.AddInterceptors(fault);
                 return new EfProcessAuthoringStore(new ContextFactory(options.Options), provider.GetRequiredService<CoordinatedDatabaseTransaction>(),
-                    provider.GetRequiredService<IProcessAuthoringAdmissionPolicy>(), TimeProvider.System);
+                    provider.GetRequiredService<IProcessAuthoringAdmissionPolicy>(), TimeProvider.System, options.Options);
             });
         } });
         await using var seed = app.Services.CreateAsyncScope();
@@ -143,8 +144,65 @@ public sealed class ProcessRoleResourceLifecycleTests {
         Assert.True(fault.Reached);
     }
 
-    private static ProcessWorkspaceShellRequest Request(ProcessDefinitionCatalogItemKey key)
-        => new(ProcessWorkspaceShellScope.Global, new(null, null, null), new(null, key, ProcessDefinitionCatalogScopeKind.All, 50),
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delete_then_add_reuses_the_role_key_without_inheriting_obsolete_materialized_defaults(bool projectScoped) {
+        await using var app = await TestApplication.CreateAsync(new());
+        await using var seed = app.Services.CreateAsyncScope();
+        var services = seed.ServiceProvider;
+        var projectId = Guid.NewGuid();
+        Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Role resource key reuse" })).IsSuccess);
+        var scope = projectScoped ? ProcessWorkspaceShellScope.ForProject(projectId) : ProcessWorkspaceShellScope.Global;
+        var workspace = services.GetRequiredService<ProcessAuthoringWorkspace>();
+        var templates = services.GetRequiredService<ProcessTemplatePackLoader>();
+        var key = new ProcessDefinitionCatalogItemKey(templates.Load().Definitions[0].Key);
+        var otherKey = new ProcessDefinitionCatalogItemKey(templates.Load().Definitions[1].Key);
+        var unrelatedBefore = ProcessAuthoringCodec.Write((await workspace.ReadAsync(scope, otherKey, default)).Content);
+        var sourceBefore = ProcessAuthoringCodec.Write(workspace.ReadTemplate(key.Value));
+        var client = services.GetRequiredService<IProcessWorkspaceProjectionClient>();
+        var initial = (await client.GetShellAsync(Request(key, scope))).DefinitionCatalog.SelectedEditor!.RoleEditor!;
+        var action = initial.TemplateActions.First();
+        var roleKey = action.KeyPrefix + "-1";
+        var baseline = await workspace.ReadAsync(scope, key, default);
+        var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
+        content.Definition.RoleUsages = [new() { Key = roleKey, RoleResourceKey = "retired-source", DisplayName = "Retired role", PreferredExecutorKind = "person" }];
+        content.Definition.Steps = [new() { Key = "unbound-work", Title = "Unbound work", StepKind = "Work", OperationTargetScope = "ManagedProcessArtifactsOnly" }];
+        content = content with { RoleResources = new Dictionary<string, ProcessTemplateRoleResourceDocument> {
+            [roleKey] = new() { Key = "retired-source", Purpose = "Obsolete resource purpose", StaffingIntent = "Obsolete staffing", SnapshotSummary = "Obsolete snapshot" }
+        } };
+        var seeded = await workspace.CommitAsync(baseline, Guid.NewGuid(), ProcessAuthoringCodec.Hash("resource-backed generated key"), content,
+            ProcessAuthoringLifecycle.Draft, false, null, default);
+        var editor = (await client.GetShellAsync(Request(key, scope))).DefinitionCatalog.SelectedEditor!.RoleEditor!;
+        var old = Assert.Single(editor.Roles);
+        Assert.Equal("Obsolete resource purpose", old.Draft.Purpose);
+        ProcessDefinitionRoleEditorCommand delete = new(scope, key, ProcessDefinitionRoleCommandKind.DeleteRole, editor.VersionToken, old.Draft, null);
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Accepted, (await client.ExecuteDefinitionRoleEditorCommandAsync(delete)).Receipt.Status);
+
+        await using var independent = app.Services.CreateAsyncScope();
+        var reopened = independent.ServiceProvider.GetRequiredService<IProcessWorkspaceProjectionClient>();
+        var afterDelete = (await reopened.GetShellAsync(Request(key, scope))).DefinitionCatalog.SelectedEditor!.RoleEditor!;
+        Assert.Empty(afterDelete.Roles);
+        ProcessDefinitionRoleEditorCommand add = new(scope, key, ProcessDefinitionRoleCommandKind.AddRole, afterDelete.VersionToken, old.Draft, action.ActionKey);
+        var added = await reopened.ExecuteDefinitionRoleEditorCommandAsync(add);
+        Assert.Equal(ProcessDefinitionRoleCommandStatus.Accepted, added.Receipt.Status);
+        Assert.Equal(roleKey, added.Projection.SelectedRoleKey!.Value.Value);
+        Assert.Equal(action.Summary, added.Projection.SelectedRole!.Draft.Purpose);
+        Assert.NotEqual(old.Draft.StaffingIntent, added.Projection.SelectedRole.Draft.StaffingIntent);
+        Assert.NotEqual(old.Draft.SnapshotSummary, added.Projection.SelectedRole.Draft.SnapshotSummary);
+        var store = independent.ServiceProvider.GetRequiredService<IProcessAuthoringStore>();
+        var saved = (await store.ReadAsync(seeded.Snapshot!.Address))!;
+        Assert.Equal(seeded.Snapshot.Revision + 2, saved.Revision);
+        Assert.Empty(saved.Content.RoleResources);
+        Assert.Equal(added.Receipt, (await reopened.ExecuteDefinitionRoleEditorCommandAsync(add)).Receipt);
+        Assert.Equal(saved.Revision, (await store.ReadAsync(saved.Address))!.Revision);
+        var freshWorkspace = independent.ServiceProvider.GetRequiredService<ProcessAuthoringWorkspace>();
+        Assert.Equal(unrelatedBefore, ProcessAuthoringCodec.Write((await freshWorkspace.ReadAsync(scope, otherKey, default)).Content));
+        Assert.Equal(sourceBefore, ProcessAuthoringCodec.Write(freshWorkspace.ReadTemplate(key.Value)));
+    }
+
+    private static ProcessWorkspaceShellRequest Request(ProcessDefinitionCatalogItemKey key, ProcessWorkspaceShellScope? scope = null)
+        => new(scope ?? ProcessWorkspaceShellScope.Global, new(null, null, null), new(null, key, ProcessDefinitionCatalogScopeKind.All, 50),
             new(null, ProcessTemplateCatalogCategoryKind.All, null, ProcessTemplateCatalogPreviewTabKind.Overview, 500), false);
 
     private sealed class ContextFactory(DbContextOptions<ProcessPersistenceDbContext> options) : IDbContextFactory<ProcessPersistenceDbContext> {

@@ -637,6 +637,7 @@ public sealed partial class ProjectStructureProcessNodeService(
         if (retained?.RunId is not { } retainedRunId) {
             return null;
         }
+        definitionKey = retained.LaunchPlan.DefinitionKey;
         var state = await dependencies.StateStore.LoadAsync(retainedRunId, cancellationToken)
             ?? throw new InvalidOperationException("The retained stopped child has no runtime state.");
         if (!IsStoppedBlockingSubprocessStatus(state.Status)) {

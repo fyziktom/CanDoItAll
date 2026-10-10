@@ -36,6 +36,7 @@ public sealed class ProcessPredecessorRecoveryTests {
         ProcessRuntimeStateSnapshot child;
         ProcessStepInstanceId parentStep;
         string assignmentsBefore;
+        string linksBefore;
         await using (var setup = app.Services.CreateAsyncScope()) {
             var services = setup.ServiceProvider;
             Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Predecessor process recovery" })).IsSuccess);
@@ -49,7 +50,8 @@ public sealed class ProcessPredecessorRecoveryTests {
                 [ProcessRuntimeLaunchVariables.ProjectId] = projectId.ToString("D"),
                 [ProcessRuntimeLaunchVariables.ProjectNodeId] = nodeId
             };
-            parent = await ProcessPredecessorFixture.SeedRetainedAsync(database, true, admission, ProcessRuntimeStatus.Active, source);
+            parent = await ProcessPredecessorFixture.SeedRetainedAsync(database, true,
+                new(current.DatabaseProfileId, current.ProjectId, current.LifetimeId), ProcessRuntimeStatus.Active, source);
             var assigned = await services.GetRequiredService<IProcessRuntimeStepAssignmentStore>().LoadByRunAsync(parent.RunId);
             parentStep = Assert.Single(assigned, item => item.AllowedOperations.Contains(ProcessOperationContractNames.ExecuteExternalAction)).StepInstanceId;
             source[ProcessRuntimeLaunchVariables.ParentProcessRunId] = parent.RunId.ToString();
@@ -57,6 +59,11 @@ public sealed class ProcessPredecessorRecoveryTests {
             source[ProcessRuntimeLaunchVariables.SubprocessDefinitionKey] = ProcessPredecessorFixture.DefinitionKey;
             child = await ProcessPredecessorFixture.SeedRetainedAsync(database, false, admission, status, source, parent.RootRunId);
             assignmentsBefore = await AssignmentJsonAsync(database);
+            var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+            var childNode = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(child.RunId.Value);
+            await workbench.LinkObjectsAsync(projectId, nodeId, childNode, ProjectObjectLinkKind.Uses);
+            await workbench.LinkObjectsAsync(projectId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(parent.RunId.Value), childNode, ProjectObjectLinkKind.Uses);
+            linksBefore = await LinkJsonAsync(services, projectId);
         }
 
         for (var attempt = 0; attempt < 2; attempt++) {
@@ -82,6 +89,7 @@ public sealed class ProcessPredecessorRecoveryTests {
             Assert.Equal(ProcessPredecessorFixture.PlanJson, (await database.InstancePlans.SingleAsync(item => item.PlanId == child.PlanId.Value)).PayloadJson);
             Assert.Equal(ProcessPredecessorFixture.ParentPlanJson, (await database.InstancePlans.SingleAsync(item => item.PlanId == parent.PlanId.Value)).PayloadJson);
             Assert.Equal(assignmentsBefore, await AssignmentJsonAsync(database));
+            Assert.Equal(linksBefore, await LinkJsonAsync(services, projectId));
             Assert.Equal(parent.RootRunId, (await services.GetRequiredService<IProcessRuntimeStateStore>().LoadAsync(child.RunId))!.RootRunId);
             Assert.Empty(await database.PreparedLaunches.ToArrayAsync());
         }
@@ -123,4 +131,10 @@ public sealed class ProcessPredecessorRecoveryTests {
 
     private static async Task<string> AssignmentJsonAsync(ProcessPersistenceDbContext database)
         => JsonSerializer.Serialize(await database.RuntimeStepAssignments.AsNoTracking().OrderBy(item => item.RunId).ThenBy(item => item.StepInstanceId).ToArrayAsync());
+
+    private static async Task<string> LinkJsonAsync(IServiceProvider services, Guid projectId) {
+        await using var database = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
+        return JsonSerializer.Serialize(await database.Set<ProjectObjectLinkRecord>().AsNoTracking()
+            .Where(item => item.ProjectId == projectId).OrderBy(item => item.Id).ToArrayAsync());
+    }
 }
