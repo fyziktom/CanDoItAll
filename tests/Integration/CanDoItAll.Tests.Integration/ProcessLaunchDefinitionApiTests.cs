@@ -1,17 +1,21 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Templates;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
@@ -19,6 +23,130 @@ namespace CanDoItAll.Tests.Integration.Processes;
 public sealed class ProcessLaunchDefinitionApiTests {
     private const string DefinitionKey = "dotnet-solution-setup";
     private const string DriverProbe = "Pc4ObservedDrivers";
+    private const string ProbeDriver = "pc4.publication-probe";
+    private const string RevisionSetting = "Revision";
+    private const string RevisionVariable = "Pc4CapturedRevision";
+    private const string BindingVariable = "Pc4CapturedBinding";
+
+    [Theory]
+    [InlineData(BoundaryChange.Publication)]
+    [InlineData(BoundaryChange.ProjectDeletion)]
+    [InlineData(BoundaryChange.ProjectRecreation)]
+    public async Task HTTP_held_enrichment_keeps_captured_settings_and_rechecks_project_lifetime(BoundaryChange change) {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observer = new DriverObserver { AfterObservation = () => {
+            entered.TrySetResult();
+            release.Task.WaitAsync(TimeSpan.FromSeconds(40)).GetAwaiter().GetResult();
+        } };
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, services => services.AddSingleton<IProcessLaunchVariableContributor>(observer));
+        var (project, node) = await CreateTargetAsync(host.App.Services);
+        await PublishAsync(host.App.Services, null, "Global selection", content => SetProbe(content, "global"));
+        await PublishAsync(host.App.Services, project, "Captured A", content => SetProbe(content, "A"));
+        var request = new ProcessLaunchApiRequest(DefinitionKey: DefinitionKey, ProjectId: project, ProjectNodeId: node,
+            RunReadiness: false, Execute: false, CallerIntentId: Guid.NewGuid());
+        var operation = host.Client.PostAsJsonAsync("/api/processes/launch", request);
+        try {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(40));
+            if (change == BoundaryChange.Publication) {
+                await PublishAsync(host.App.Services, project, "Later B", content => SetProbe(content, "B"));
+            } else {
+                await using var retirement = host.App.Services.CreateAsyncScope();
+                var projects = retirement.ServiceProvider.GetRequiredService<ProjectsService>();
+                await projects.DeleteAsync(project);
+                if (change == BoundaryChange.ProjectRecreation) {
+                    Assert.True((await projects.CreateAsync(project, new() { Name = "Successor project lifetime" })).IsSuccess);
+                }
+            }
+        } finally {
+            release.TrySetResult();
+        }
+        using var response = await operation;
+        await using var independent = host.App.Services.CreateAsyncScope();
+        await using var database = await independent.ServiceProvider.GetRequiredService<IDbContextFactory<ProcessPersistenceDbContext>>().CreateDbContextAsync();
+        if (change != BoundaryChange.Publication) {
+            Assert.False(response.IsSuccessStatusCode);
+            Assert.Empty(await database.RuntimeStates.ToArrayAsync());
+            Assert.Empty(await database.RuntimeStepAssignments.ToArrayAsync());
+            Assert.DoesNotContain(await database.PreparedLaunches.ToArrayAsync(), item => item.AcceptedAtUtc != null);
+            return;
+        }
+        using var body = await ReadAsync(response);
+        var saved = (await independent.ServiceProvider.GetRequiredService<IProcessPreparedLaunchStore>()
+            .FindByIntentAsync(new(request.CallerIntentId!.Value)))!;
+        Assert.NotNull(saved.AcceptedAtUtc);
+        var plan = saved.Preparation.InitialCommit.InitialPlan!;
+        var captured = ProcessExecutableDefinitionResolver.Decode(plan.ExecutableDefinitions!, DefinitionKey).Definition;
+        Assert.Equal("Captured A", captured.DisplayName);
+        Assert.Equal("A", Assert.Single(captured.LaunchDriverActivations).Settings[RevisionSetting]);
+        Assert.Equal("evidence-A", Assert.Single(captured.LaunchDriverActivations[0].InputArtifactBindings).ArtifactExpectationKey);
+        Assert.Equal("A", saved.Preparation.Request.Variables[RevisionVariable]);
+        Assert.Equal("work/evidence-A", saved.Preparation.Request.Variables[BindingVariable]);
+        var assignments = await independent.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>()
+            .LoadByRunAsync(saved.Preparation.InitialCommit.Mutation.State.RunId);
+        Assert.NotEmpty(assignments);
+        Assert.All(assignments, assignment => Assert.Equal("A", assignment.LaunchVariables[RevisionVariable]));
+        using var replayResponse = await host.Client.PostAsJsonAsync("/api/processes/launch", request);
+        using var replay = await ReadAsync(replayResponse);
+        Assert.Equal(body.RootElement.GetProperty("runId").GetGuid(), replay.RootElement.GetProperty("runId").GetGuid());
+        Assert.Single(observer.Contexts);
+        Assert.Single(await database.RuntimeStates.ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task HTTP_contributor_failure_creates_no_preparation_or_run_and_allows_the_original_intent_to_retry() {
+        var observer = new DriverObserver { AfterObservation = () => throw new InvalidOperationException("PC4 controlled contributor failure") };
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, services => services.AddSingleton<IProcessLaunchVariableContributor>(observer));
+        var (project, node) = await CreateTargetAsync(host.App.Services);
+        await PublishAsync(host.App.Services, project, "Failure boundary", content => content.Definition.LaunchDriverActivations.Clear());
+        var request = new ProcessLaunchApiRequest(DefinitionKey: DefinitionKey, ProjectId: project, ProjectNodeId: node,
+            RunReadiness: false, Execute: false, CallerIntentId: Guid.NewGuid());
+        using var failed = await host.Client.PostAsJsonAsync("/api/processes/launch", request);
+        Assert.Equal(HttpStatusCode.BadRequest, failed.StatusCode);
+        await using (var scope = host.App.Services.CreateAsyncScope()) {
+            await using var database = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<ProcessPersistenceDbContext>>().CreateDbContextAsync();
+            Assert.Empty(await database.RuntimeStates.ToArrayAsync());
+            Assert.Empty(await database.PreparedLaunches.ToArrayAsync());
+            Assert.Empty(await database.RuntimeStepAssignments.ToArrayAsync());
+        }
+        observer.AfterObservation = null;
+        using var retry = await host.Client.PostAsJsonAsync("/api/processes/launch", request);
+        using var body = await ReadAsync(retry);
+        Assert.NotEqual(Guid.Empty, body.RootElement.GetProperty("runId").GetGuid());
+        Assert.Equal(2, observer.Contexts.Count);
+    }
+
+    [Fact]
+    public async Task HTTP_capture_preserves_authenticated_subject_and_requires_execution_capability() {
+        var observer = new DriverObserver();
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, services => services.AddSingleton<IProcessLaunchVariableContributor>(observer));
+        var (project, node) = await CreateTargetAsync(host.App.Services);
+        await PublishAsync(host.App.Services, project, "Authenticated selection", content => content.Definition.LaunchDriverActivations.Clear());
+        var request = new ProcessLaunchApiRequest(DefinitionKey: DefinitionKey, ProjectId: project, ProjectNodeId: node,
+            RunReadiness: false, Execute: false, CallerIntentId: Guid.NewGuid());
+        var tokens = host.App.Services.GetRequiredService<IApiTokenService>();
+        var deniedToken = tokens.IssueToken(new() { Subject = "pc4-reader", Scopes = [ApiAccessScopeNames.ReadProcesses] });
+        host.Client.DefaultRequestHeaders.Authorization = new(deniedToken.TokenType, deniedToken.Token);
+        using var denied = await host.Client.PostAsJsonAsync("/api/processes/launch/check", request);
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        Assert.Empty(observer.Contexts);
+        var allowedToken = tokens.IssueToken(new() { Subject = "pc4-operator", Scopes = [ApiAccessScopeNames.ExecuteProcesses] });
+        host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(allowedToken.TokenType, allowedToken.Token);
+        using var allowed = await host.Client.PostAsJsonAsync("/api/processes/launch/check", request);
+        using var body = await ReadAsync(allowed);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var saved = (await scope.ServiceProvider.GetRequiredService<IProcessPreparedLaunchStore>().FindByIntentAsync(new(request.CallerIntentId!.Value)))!;
+        var principal = Assert.IsType<ProcessLaunchPrincipal.AuthenticatedOperator>(saved.Preparation.Authority!.Principal);
+        Assert.Equal("pc4-operator", principal.SubjectId);
+        Assert.Equal(project, saved.Preparation.Authority.ProjectAdmission!.ProjectId);
+        Assert.Single(observer.Contexts);
+    }
+
+    private static void SetProbe(ProcessAuthoringContent content, string revision) {
+        content.Definition.LaunchDriverActivations = [new() { DriverKey = ProbeDriver, Settings = new() { [RevisionSetting] = revision },
+            InputArtifactBindings = [new() { BindingKey = "evidence", SourceStepKey = "work", ArtifactExpectationKey = "evidence-" + revision, PayloadSchema = "pc4-observation.v1" }] }];
+        content.Definition.Steps[0].ArtifactExpectations = [new() { Key = "evidence-" + revision, Title = "Captured evidence", ArtifactKind = "Artifact" }];
+    }
 
     [Theory]
     [InlineData(LaunchScope.Global)]
@@ -152,11 +280,19 @@ public sealed class ProcessLaunchDefinitionApiTests {
 
     private sealed class DriverObserver : IProcessLaunchVariableContributor {
         public ConcurrentQueue<ProcessLaunchPreparationContext> Contexts { get; } = new();
+        public Action? AfterObservation { get; set; }
         public void Enrich(ProcessLaunchPreparationContext context, IDictionary<string, string> variables) {
             Contexts.Enqueue(context);
             variables[DriverProbe] = context.DriverActivations.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (context.DriverActivations.SingleOrDefault(item => item.DriverKey == ProbeDriver) is { } activation) {
+                variables[RevisionVariable] = activation.Settings[RevisionSetting];
+                var binding = Assert.Single(activation.InputArtifactBindings);
+                variables[BindingVariable] = binding.SourceStepKey + "/" + binding.ArtifactExpectationKey;
+            }
+            AfterObservation?.Invoke();
         }
     }
 
     public enum LaunchScope { Global, Project, ProjectNode }
+    public enum BoundaryChange { Publication, ProjectDeletion, ProjectRecreation }
 }

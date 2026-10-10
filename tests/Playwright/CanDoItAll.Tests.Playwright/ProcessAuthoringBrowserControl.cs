@@ -11,6 +11,7 @@ internal sealed class ProcessAuthoringBrowserControl {
     internal bool DelayFirstRoleResponse;
     internal bool DelayFirstImportResponse;
     internal bool IncludeImportArtifact;
+    internal bool IncludeRoleResource;
     internal bool LoseFirstCommitResponse;
     internal bool FailReadAfterFirstCommit;
     internal int PendingReadFailures;

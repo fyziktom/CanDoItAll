@@ -28,6 +28,9 @@ namespace CanDoItAll.Tests.Playwright;
 internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     internal const string CompleteDefinition = "pc1-workflow-outcome";
     internal const string WaitingDefinition = "pc1-workflow-wait";
+    internal const string RolePurpose = "Review the retained workflow result.";
+    internal const string RoleStaffing = "One explicitly assigned workflow reviewer.";
+    internal const string RoleSnapshot = "PC4 original resource snapshot.";
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("process-native-browser");
     private NativeApplication? app;
     private HttpClient? client;
@@ -114,6 +117,14 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
         foreach (var (key, workflow) in Workflows) {
             var directory = Path.Combine(root, key);
             Directory.CreateDirectory(directory);
+            if (authoring?.IncludeRoleResource == true) {
+                var roles = Path.Combine(directory, "roles");
+                Directory.CreateDirectory(roles);
+                File.WriteAllText(Path.Combine(roles, "workflow-owner.json"), JsonSerializer.Serialize(new ProcessTemplateRoleResourceDocument {
+                    Key = "workflow-owner", DisplayName = "Workflow owner", Summary = "Original resource material",
+                    Purpose = RolePurpose, StaffingIntent = RoleStaffing, SnapshotSummary = RoleSnapshot
+                }));
+            }
             var definition = new ProcessTemplateDefinitionDocument {
                 Key = key, DisplayName = key, Summary = "A real saved workflow produces a typed process outcome.",
                 Criticality = "Low", OperatingMode = "GovernedLive", AutonomyLevel = "Guarded",

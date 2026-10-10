@@ -9,6 +9,57 @@ namespace CanDoItAll.Tests.Playwright;
 [Trait("Category", "Playwright")]
 [Trait("Category", "HostPlatform")]
 public sealed class ProcessAuthoringBrowserTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Native_resource_role_delete_and_reimport_persist_exact_defaults_in_an_independent_browser(bool wholeProcess)
+        => RunAsync(wholeProcess ? "pc4-role-resource-process" : "pc4-role-resource-role", async (page, control) => {
+            await page.GetByTestId("processes-detail-tab-roles").ClickAsync();
+            await page.GetByTestId("processes-role-workflow-owner").ClickAsync();
+            await AssertResourceAsync(page);
+            await page.GetByTestId("processes-role-delete").ClickAsync();
+            await Assertions.Expect(page.GetByTestId("processes-role-card")).ToHaveCountAsync(1);
+            Assert.Equal(ProcessDefinitionRoleCommandStatus.Accepted, control.RoleResult!.Receipt.Status);
+            Assert.Equal(new("second-owner"), control.RoleResult.Projection.SelectedRoleKey);
+            await page.GetByTestId("processes-role-details-dialog").GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
+
+            await using var independent = await page.Context.Browser!.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+            var reopened = await independent.NewPageAsync();
+            var errors = new List<string>();
+            reopened.PageError += (_, error) => errors.Add(error);
+            await reopened.GotoAsync(page.Url);
+            await PlaywrightAppFixture.CompleteDatabaseStartupAsync(reopened);
+            await Assertions.Expect(reopened.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
+            await reopened.GetByTestId("processes-definition-" + ProcessNativeBrowserHost.CompleteDefinition).ClickAsync();
+            await reopened.GetByTestId("processes-detail-tab-roles").ClickAsync();
+            await Assertions.Expect(reopened.GetByTestId("processes-role-workflow-owner")).ToHaveCountAsync(0);
+            await reopened.GetByTestId("processes-detail-tab-exchange").ClickAsync();
+            var category = wholeProcess ? "processes" : "roles";
+            var item = wholeProcess ? "process-pc1-workflow-outcome" : "role-pc1-workflow-outcome-workflow-owner";
+            var command = wholeProcess ? "process" : "role";
+            await reopened.GetByTestId("processes-template-library-category-" + category).ClickAsync();
+            await reopened.GetByTestId("processes-template-library-item-" + item).ClickAsync();
+            await reopened.GetByTestId("processes-template-library-import-" + command).ClickAsync();
+            await Assertions.Expect(reopened.GetByTestId("processes-template-library-import-receipt")).ToContainTextAsync("Accepted");
+            Assert.Equal(1, Volatile.Read(ref control.ImportCommandCount));
+            Assert.Equal(ProcessTemplateImportCommandStatus.Accepted, control.ImportResult!.Receipt.Status);
+
+            await reopened.ReloadAsync();
+            await Assertions.Expect(reopened.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
+            await reopened.GetByTestId("processes-definition-" + ProcessNativeBrowserHost.CompleteDefinition).ClickAsync();
+            await reopened.GetByTestId("processes-detail-tab-roles").ClickAsync();
+            await reopened.GetByTestId("processes-role-workflow-owner").ClickAsync();
+            await AssertResourceAsync(reopened);
+            await reopened.ScreenshotAsync(new() { Path = Path.Combine(control.Evidence, "pc4-resource-" + command + "-reopened.png"), FullPage = true });
+            Assert.Empty(errors);
+        });
+
+    private static async Task AssertResourceAsync(IPage page) {
+        await Assertions.Expect(page.GetByTestId("processes-role-purpose")).ToHaveValueAsync(ProcessNativeBrowserHost.RolePurpose);
+        await Assertions.Expect(page.GetByTestId("processes-role-staffing-intent")).ToHaveValueAsync(ProcessNativeBrowserHost.RoleStaffing);
+        await Assertions.Expect(page.GetByTestId("processes-role-snapshot-summary")).ToHaveValueAsync(ProcessNativeBrowserHost.RoleSnapshot);
+    }
+
     [Fact]
     public Task Native_save_survives_tab_reads_and_keeps_later_input_and_mutation_gate()
         => RunAsync("save-read", async (page, control) => {
@@ -140,9 +191,10 @@ public sealed class ProcessAuthoringBrowserTests {
 
     private static async Task RunAsync(string scenario, Func<IPage, ProcessAuthoringBrowserControl, Task> action) {
         await using var wire = await AgentResponseFixture.StartAsync("No external provider is used by authoring.");
-        var control = new ProcessAuthoringBrowserControl { IncludeImportArtifact = scenario == "import-origin" };
+        var control = new ProcessAuthoringBrowserControl { IncludeImportArtifact = scenario == "import-origin",
+            IncludeRoleResource = scenario is "pc4-role-resource-process" or "pc4-role-resource-role" };
         await using var host = await ProcessNativeBrowserHost.StartAsync(wire.BaseUrl, authoring: control);
-        if (scenario == "role-identity") {
+        if (scenario == "role-identity" || control.IncludeRoleResource) {
             await host.ReadAsync(async services => {
                 var workspace = services.GetRequiredService<ProcessAuthoringWorkspace>();
                 var baseline = await workspace.ReadAsync(ProcessWorkspaceShellScope.Global, new(ProcessNativeBrowserHost.CompleteDefinition), default);
@@ -192,6 +244,19 @@ public sealed class ProcessAuthoringBrowserTests {
                 Assert.Single(persisted.Content.Imports);
                 Assert.Single(persisted.Content.Definition.Steps.Single(step => step.Key == "outcome").ArtifactExpectations);
                 Assert.Empty(persisted.Content.Definition.Steps.Single(step => step.Key == "second-step").ArtifactExpectations);
+            }
+            if (control.IncludeRoleResource) {
+                Assert.Equal(initial.Revision + 2, persisted.Revision);
+                var imported = Assert.Single(persisted.Content.Imports);
+                Assert.Equal("workflow-owner", imported.Remap["role:workflow-owner"]);
+                var resource = Assert.Single(persisted.Content.RoleResources).Value;
+                Assert.Equal("workflow-owner", resource.Key);
+                Assert.Equal(ProcessNativeBrowserHost.RolePurpose, resource.Purpose);
+                Assert.Equal(ProcessNativeBrowserHost.RoleStaffing, resource.StaffingIntent);
+                Assert.Equal(ProcessNativeBrowserHost.RoleSnapshot, resource.SnapshotSummary);
+                var originalSurvivor = initial.Content.Definition.RoleUsages.Single(role => role.Key == "second-owner");
+                var survivor = persisted.Content.Definition.RoleUsages.Single(role => role.Key == "second-owner");
+                Assert.Equal(System.Text.Json.JsonSerializer.Serialize(originalSurvivor), System.Text.Json.JsonSerializer.Serialize(survivor));
             }
             Assert.Empty(errors);
             await Assertions.Expect(page.GetByTestId("processes-command-strip")).ToContainTextAsync("2 definition(s)");
