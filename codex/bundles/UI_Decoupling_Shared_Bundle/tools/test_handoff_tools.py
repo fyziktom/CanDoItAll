@@ -55,7 +55,7 @@ class PackageTests(unittest.TestCase):
     def test_crlf_text_checkout_is_supported(self) -> None:
         for file in self.root.rglob("*"):
             if file.is_file():
-                file.write_bytes(file.read_bytes().replace(b"\n", b"\r\n"))
+                file.write_bytes(file.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
         self.assertEqual([], tools.verify_package(self.root))
 
     def test_traversal_manifest_is_rejected(self) -> None:

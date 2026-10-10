@@ -6,7 +6,7 @@ runtime loader, vault, OAuth transport, package installer or application restart
 service is registered.
 
 ```powershell
-dotnet watch --project src/Sandboxes/CanDoItAll.Plugins.UiSandbox --configuration PluginsUiProof
+dotnet watch --project src/Sandboxes/CanDoItAll.Plugins.UiSandbox --configuration Debug
 ```
 
 The scenario selector covers all six sections; empty/100-entry catalogs; missing

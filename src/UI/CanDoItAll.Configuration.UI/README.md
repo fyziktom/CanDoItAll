@@ -11,7 +11,7 @@ configuration hosts. It uses the existing SharedKernel schema/state and BaseLib 
 - Target framework: `net10.0`
 
 ```powershell
-dotnet build src/UI/CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj --configuration ResourcesUiProof /m:1
+dotnet build src/UI/CanDoItAll.Configuration.UI/CanDoItAll.Configuration.UI.csproj --configuration Release /m:1
 ```
 
 ## Dependencies

@@ -147,7 +147,11 @@ The Web entry point and its full dependency graph passed a fresh `ProcIntegratio
 build at that tuple. Focused tests use refreshed `ProcAuthoringPC3` assemblies; actual
 predecessor OS restart hosts use the clean `ProcIntegrationPC4` Web output. Release
 product/Stable builds and broad execution have their own recorded outcome.
-Shared bundle status is `NO_CHANGE`.
+Shared bundle status at the product proof checkpoint was `NO_CHANGE`. The subsequent
+operator-directed storage-policy repair is `MINIMAL_REPO_CHANGE`: the existing shared
+bundle now requires standard Debug/Release output reuse, serialized builds, useful UI
+dotnetwatch iteration and reusable isolated fixtures with last-use cleanup. This changes
+execution guidance and its integrity manifest, not product ownership or the tested C# source.
 
 Architecture review retains the existing owners and small internal recovery seam. Final
 validation status is recorded alongside this document. No new

@@ -10,7 +10,7 @@ Registry and Browse state policy shared by the production Resources host and sta
 - Target framework: `net10.0`
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.Resources.Presentation/CanDoItAll.Modules.Resources.Presentation.csproj --configuration ResourcesUiProof /m:1
+dotnet build src/Modules/CanDoItAll.Modules.Resources.Presentation/CanDoItAll.Modules.Resources.Presentation.csproj --configuration Release /m:1
 ```
 
 ## Dependencies

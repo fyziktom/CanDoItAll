@@ -9,9 +9,9 @@ From the repository root:
 
 ```powershell
 npm run tailwind:build
-dotnet build src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox --configuration ProjectsFilesProof /m:1
-dotnet watch --project src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox run --configuration ProjectsFilesProof
-dotnet publish src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox --configuration ProjectsFilesProof --output artifacts/projects-files-sandbox-publish /m:1
+dotnet build src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox --configuration Release /m:1
+dotnet watch --project src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox run --configuration Debug
+dotnet publish src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox --configuration Release --output artifacts/projects-files-sandbox-publish /m:1
 ```
 
 The existing compiled application theme is a linked asset, not a Web project dependency.

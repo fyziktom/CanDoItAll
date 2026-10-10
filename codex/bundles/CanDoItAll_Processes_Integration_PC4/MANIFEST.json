@@ -60,11 +60,11 @@
     },
     {
       "path": "VALIDATION_PLAN.md",
-      "sha256": "cff38268841b85144d78583d198337de794ebaeba3ccc968e3b92f446511f0b1"
+      "sha256": "0e5f27e4bcc46f1a494fdf7321a2654fd89109e5d188b90d77f686833a9b1d18"
     },
     {
       "path": "acceptance-plan.json",
-      "sha256": "f9d7576ca283c81f1727ba6480bb5134b379164d677ec54846d3814df60a7f23"
+      "sha256": "ac80180edf93557aab1ec61c85199c72a51a1758b09bf1a258d01393702209ce"
     },
     {
       "path": "bundle.json",

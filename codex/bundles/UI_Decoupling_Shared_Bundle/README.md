@@ -14,6 +14,11 @@ Use this companion with **PC2**. Preserve the completed PC1 renderer extraction;
 
 Current `AGENTS.md`, `.github/copilot-instructions.md`, `docs/architecture/ui-component-seams.md`, `docs/testing.md`, evaluated configuration, and CI remain authoritative. These files do not waive security, ownership, signing, or validation requirements.
 
+Local maintenance on 2026-10-10 replaces custom output configurations with standard
+Debug/Release reuse, serialized builds and suitable dotnetwatch iteration. Reuse isolated
+test fixtures; a bundle/stage does not itself justify a new Docker stack. This is an
+in-repository policy repair, not a replacement archive or a new product-validation claim.
+
 ## Changes in v4.1
 
 - Request signing access at entry; make logical tested commits throughout the assignment, not one final batch. Keep the same GPG agent/home and a dedicated committer environment. Cache expiry is explicit, not a promise that an open PowerShell window keeps a key unlocked forever.

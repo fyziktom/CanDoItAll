@@ -17,3 +17,14 @@ The older v3 source-specific defect examples are not restated as current defects
 Reviews pushed PC1 at `146067ed133f624878dfe5756c441a43c0f21b4a`. Keeps the extracted libraries and native ownership. Adds the startup PGP request, same-agent continuity, safe cache handling, incremental signed checkpoint verification, independent mutation/read semantics, identity-aware selection/draft reconciliation, and pushed-candidate evidence reporting. Updates the current map and keeps the prior 31-entry survey explicitly historical.
 
 No application changes or product-test pass claims are delivered by this package revision.
+
+## Local maintenance — 2026-10-10
+
+At the operator's request, replace isolated/custom output configurations with standard
+Debug/Release reuse and serialized builds. Use dotnetwatch for useful UI iteration.
+Reuse suitable isolated test fixtures instead of provisioning a Docker stack per bundle
+or stage, and require bounded ownership/cleanup. This repairs the storage-growth rule;
+native database isolation, signing and validation obligations remain in force.
+
+The package-helper CRLF fixture now normalizes existing newlines before creating its
+Windows input, preserving the same integrity assertions without doubling native CRLF.

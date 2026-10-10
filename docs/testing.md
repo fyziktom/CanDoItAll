@@ -31,12 +31,42 @@ from installed resources, the application on port 5032 and retained manual-provi
 Leases create uniquely named databases and retain the existing bounded cleanup contract.
 CI records `server_version_num` before its database lanes.
 
-For local runs provision a disposable PostgreSQL 18 cluster, then set the existing
-connection variable privately for the test process. The role needs database-creation
+For local runs reuse a suitable explicitly isolated PostgreSQL 18 test server, or provision
+one temporary fixture for the development session if none exists. Reuse it across related
+lanes through the existing database leases. Set the connection variable privately for the
+test process. The role needs database-creation
 privileges. Record `show server_version_num` and the sanitized endpoint in the test report.
 Do not print the password-bearing connection string. An ignored `.env` can still override
 a new Compose image default; follow the [migration runbook](../tools/dev/Migrate-PostgreSql16To18.md)
 before changing any retained cluster.
+
+## Development Build And Fixture Reuse
+
+Local development and bundle execution use the standard `Debug` and `Release`
+configurations. Refresh the same affected project's `bin/<configuration>` and
+`obj/<configuration>` after source changes. Do not create bundle-, stage-, attempt- or
+timestamp-named configurations, build-output trees, or copies of the full output graph.
+Small run directories for reviewed logs/results are separate from compiled outputs.
+Reuse existing fixed asset-mode, target-framework and runtime suffixes required by the
+project; these bounded layouts do not justify adding a directory for each run.
+
+Serialize builds and test launches that write the same outputs. Stop only an owned host
+when its locks require a rebuild, then restart it from the refreshed standard output.
+Source/package and Fast/Parity properties remain independent of configuration: run those
+modes sequentially and rebuild when the selected properties change. A deleted or stale
+assembly cannot justify `--no-build`; build-backed discovery must refresh it first.
+
+For UI iteration, reuse the relevant application/sandbox dotnetwatch session when hot
+reload is useful. Follow the managed DotNetWatch lifecycle when available. Watch/browser
+iteration complements the final affected build and validation; it does not replace them.
+
+Reuse an explicitly isolated PostgreSQL 18 test endpoint and bounded database leases.
+The ordinary development application/database on 5032 is never a test fixture. Do not
+start a Docker stack merely because a new bundle or stage begins. Provision a dedicated
+fixture only when no suitable isolated fixture exists or the exact test requires its own
+container, OS, topology or destructive lifecycle. Reuse an owned temporary fixture across
+related lanes and remove it after its last use, including failure/cancellation/recovery.
+Recorded historical custom configurations and dedicated stacks do not prescribe new ones.
 
 ## Bundle Resource Cleanup
 
@@ -173,9 +203,10 @@ provider profile seam tests exercise both initial loading and a delayed selectio
 
 Build Processes.UI, the native Processes module and Web directly, followed by the
 [independent sandbox](../src/Sandboxes/CanDoItAll.Processes.UiSandbox/README.md) in both
-`ProcessesAssetMode=Parity` and `ProcessesAssetMode=Fast`. Use an isolated configuration
-such as `ProcUiProof` and set `CANDOITALL_TEST_CONFIGURATION` to that same value for browser
-child hosts. Production and native tests use an explicitly task-owned PostgreSQL 18
+`ProcessesAssetMode=Parity` and `ProcessesAssetMode=Fast`. Reuse standard Debug/Release
+outputs and rebuild each asset mode sequentially before its browser cases. Set
+`CANDOITALL_TEST_CONFIGURATION` to the same value for browser child hosts.
+Production and native tests use an explicitly isolated PostgreSQL 18
 endpoint; the sandbox itself does not require a database.
 
 | Owning project | Focused selection | Proof |
@@ -188,7 +219,7 @@ endpoint; the sandbox itself does not require a database.
 | `tests/Playwright/CanDoItAll.Tests.Playwright` | `FullyQualifiedName~ProcessWorkbenchBrowserTests\|FullyQualifiedName~ProcessVoiceBrowserTests` | Reviewed native workflow launch with delivered project link, plus actual voice ownership under permitted, denied and delayed browser media |
 
 Count expanded theories and partial test files before discovery. The browser host publishes
-from already built mode-specific outputs; build both modes before the four sandbox cases.
+from current mode-specific outputs; rebuild the selected mode before its sandbox cases.
 It launches owned processes on ephemeral loopback ports and removes their owned fixtures.
 Native upstream inference uses an explicit-free loopback fixture, not an external provider.
 The lightweight test project belongs to Components and Stable and all explicit CI component
@@ -203,10 +234,11 @@ Use the [native owner record](architecture/processes-authoring-pc3.md) and
 durability contract. The native client uses ordinary scopes for all five editor families;
 a retained projection service or sandbox dictionary does not prove a saved definition.
 
-The isolated configuration used for PC3 is `ProcAuthoringPC3`. Build the changed native
+PC3's historical configuration was `ProcAuthoringPC3`; new work reuses Debug/Release.
+Build the changed native
 Application, Persistence, module, UI, canonical migration and Web projects, then refresh
 the owning test assemblies. Set `CANDOITALL_TEST_CONFIGURATION` consistently for browser
-child hosts and use the explicit task-owned PostgreSQL 18 endpoint described above.
+child hosts and reuse the explicitly isolated PostgreSQL 18 test endpoint described above.
 
 | Project | Focused selection | Oracle |
 | --- | --- | --- |
@@ -234,8 +266,8 @@ submission wait for the captured context. Keep the same-project reopen and proje
 cases, and drive manager chat through the actual input event and Send callback. Browser
 readiness must observe the loaded manager selector before typing into its composer.
 
-Build both Fast and Parity sandbox outputs before their source/published browser cases.
-Run browser hosts after builds complete, since an owned Web process can lock the isolated
+Rebuild Fast and Parity sequentially before each mode's source/published browser cases.
+Run browser hosts after builds complete, since an owned Web process can lock the standard
 output just like an ordinary application. Restart tests stop only their owned PID and keep
 the same isolated database/profile while starting a new PID. Timing decorators can delay
 or lose a native result; they must not supply stored projections or replace the owner.
@@ -249,7 +281,7 @@ Broad Stable gate below. Browser and actual process-restart proof remain separat
 
 Build SchedulerPlanner.Contracts, SchedulerPlanner.UI, SchedulerPlanner.Presentation, the
 SchedulerPlanner module, Web and the [sandbox](../src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/README.md)
-directly in an isolated configuration such as `SchedulerUiProof`. Set
+directly in standard Debug/Release configurations. Set
 `CANDOITALL_TEST_CONFIGURATION` to the same configuration for browser child hosts.
 Use task-owned PostgreSQL for owner/page/browser lanes. Never reuse the ordinary application.
 Build-backed `--list-tests --filter` must confirm the expected count before execution.
@@ -271,7 +303,7 @@ subject to the named invalidation rules below.
 
 Build Plugins.Contracts, Plugins.UI, Plugins.Presentation, the Plugins module,
 Web and the [sandbox](../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md) directly.
-Use an isolated configuration such as `PluginsUiProof`, setting
+Reuse standard Debug/Release outputs, setting
 `CANDOITALL_TEST_CONFIGURATION` to the same value for browser child hosts.
 
 | Owning project | Focused selection | Proof |
@@ -312,8 +344,8 @@ case counts with `--list-tests` before execution. The mixed owner classes intent
 retain Resources rows; running a bounded whole class avoids silently missing theory data.
 
 Use the explicit isolated PostgreSQL 18 endpoint and leave external browser base URLs
-unset. A task configuration such as `TestLabProof` keeps project outputs separate from a
-running application; set `CANDOITALL_TEST_CONFIGURATION` to match browser child outputs.
+unset. Reuse standard Debug/Release outputs and serialize builds against an owned running
+host; set `CANDOITALL_TEST_CONFIGURATION` to the chosen standard browser child configuration.
 The test-only TestLabBrowserFixture uses the real Web entry point and standard-input
 controls, with no fault routes or production switches. The light test project is included
 in Components/Stable and the actual CI shards. See the
@@ -347,11 +379,9 @@ five-case mapping/token compatibility baseline. PostgreSQL lanes use only the is
 server described above. The browser fixture owns its random port and disposable database;
 leave `CANDOITALL_PLAYWRIGHT_BASEURL` unset to prevent attaching to another application.
 
-When a running developer app locks the ordinary output, a task-specific configuration
-such as `--configuration CollaborationProof` on the **project** commands avoids those
-outputs. Solution files support their declared configurations. Set
-`CANDOITALL_TEST_CONFIGURATION=CollaborationProof` for the browser child host. This is a
-local validation choice, not a new repository configuration or changed SDK/dependency mode.
+When an owned developer app locks the output, stop it, rebuild the same Debug/Release
+outputs and restart it. Set `CANDOITALL_TEST_CONFIGURATION` to match the chosen standard
+configuration for the browser child host. Preserve the selected SDK/dependency mode.
 
 See [the boundary record](architecture/collaboration-ui-boundary.md) and
 [sandbox README](../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/README.md).
@@ -552,9 +582,9 @@ satisfy that guard. Native helpers wait for accepted searches and confirmed muta
 
 The [CA1 architecture record](architecture/agent-authoring-ui-ca1.md) records the final
 source pair, original/follow-up attempts and signed checkpoints. Shared catalog/Core changes
-triggered one final broad Stable run. Isolated configurations keep ordinary application
-outputs untouched; a temporary solution must declare its custom configuration and preserve
-the exact Stable project set. Short configuration names avoid Windows copy path limits.
+triggered one final broad Stable run. Its custom configurations are historical provenance.
+New runs reuse Debug/Release outputs and serialize conflicting builds under the current
+development policy; preserve the exact Stable project set.
 Independent rendering tests do not replace that scope decision or portability enforcement.
 
 ## PostgreSQL 18 migration and installer proof
@@ -679,15 +709,15 @@ submission capture before asynchronous validation, acknowledgement reconciliatio
 renderer/sandbox dependency boundary. Discover its current cases before executing:
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --list-tests /m:1
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --no-build --no-restore
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 The real PostgreSQL composition topic is
 `FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests|FullyQualifiedName~CanDoItAll.Tests.Components.ProjectStructure.ProjectsEditorMutationTests`.
 It retains Files leases/filter scope, package constraints, exact lifetime refusal and partial
 cleanup checks alongside held native save/seed/read/deletion regressions. Use an owned test
-environment and isolated configuration; fake seed acknowledgements are not persistence proof.
+environment and standard Debug/Release configuration; fake seed acknowledgements are not persistence proof.
 
 The production browser entry is `ProjectsPortfolioBrowserTests`, with the shared five-step
 journey also used by deterministic File Agent and Workflow asset acceptance. New checks run
@@ -706,8 +736,8 @@ fixture content, independent session/content ownership and forbidden dependency 
 Discover current cases using the same configuration and filter before execution:
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --list-tests /m:1
-dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration ProjectsFilesProof --no-build --no-restore
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests/CanDoItAll.Projects.Files.UI.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 `ProjectFilesSurfaceSessionTests` and `ProjectFilesActionInteropTests` control delayed
@@ -1162,8 +1192,8 @@ controllers and complete Registry/Browse renderer with real BaseLib, FileBrowser
 read-only FileInteraction descendants. It needs no production database or file provider.
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
-dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration ResourcesUiProof --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration Release --list-tests --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi" /m:1
 ```
 
 Derive the expected count from current facts and expanded theory rows before discovery.

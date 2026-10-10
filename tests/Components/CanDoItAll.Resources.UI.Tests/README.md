@@ -10,7 +10,7 @@ Portable deterministic tests of the actual Resources controllers, renderer, conf
 - Target framework: `net10.0`
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj --configuration ResourcesUiProof /m:1
+dotnet test tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj --configuration Release /m:1
 ```
 
 ## Dependencies

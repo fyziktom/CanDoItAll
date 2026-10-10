@@ -10,7 +10,7 @@ A directly runnable, database-free Resources development host. It mounts the pro
 - Target framework: `net10.0`
 
 ```powershell
-dotnet build src/Sandboxes/CanDoItAll.Resources.UiSandbox/CanDoItAll.Resources.UiSandbox.csproj --configuration ResourcesUiProof /m:1
+dotnet build src/Sandboxes/CanDoItAll.Resources.UiSandbox/CanDoItAll.Resources.UiSandbox.csproj --configuration Release /m:1
 ```
 
 ## Dependencies
@@ -26,7 +26,7 @@ The scenario selector covers representative, empty, large, unavailable/retired r
 ## Development loop
 
 ```powershell
-dotnet watch --non-interactive --project src/Sandboxes/CanDoItAll.Resources.UiSandbox --configuration ResourcesUiProof --no-launch-profile -- --urls http://127.0.0.1:5097
+dotnet watch --non-interactive --project src/Sandboxes/CanDoItAll.Resources.UiSandbox --configuration Debug --no-launch-profile -- --urls http://127.0.0.1:5097
 ```
 
 Choose an unused task-owned loopback port. No production database configuration is required.

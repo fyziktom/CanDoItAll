@@ -22,6 +22,23 @@ scan after source edits. Refresh intentional, reviewed baseline deltas in the sa
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
 
+## Development Build And Fixture Reuse
+
+Use the standard `Debug` and `Release` configurations and refresh their existing `bin`
+and `obj` outputs after changes. Never create a configuration or output directory named
+after a bundle, stage, attempt or build. Serialize builds that share outputs; release an
+owned host's file locks before rebuilding. Historical custom-configuration commands are
+execution records, not instructions for new work.
+
+For UI iteration, reuse dotnetwatch for the relevant application or lightweight sandbox
+when hot reload is useful. Build and validate the final candidate with the same standard
+configuration. Follow [development build and fixture reuse](docs/testing.md#development-build-and-fixture-reuse).
+
+Reuse a suitable explicitly isolated test server and its database leases across related
+lanes. Do not create a Docker stack for every bundle or stage. A dedicated temporary
+fixture needs a concrete test requirement and cleanup after its last use. Preserve the
+ordinary application/database on 5032 and installed MCP tooling.
+
 ## Temporary Resource Cleanup
 
 Follow [bundle resource cleanup](docs/testing.md#bundle-resource-cleanup) for every bundle

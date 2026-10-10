@@ -272,7 +272,7 @@
       "id": "V07",
       "stage": "S4",
       "title": "Clean source dependency reproducibility",
-      "obligation": "Verify intended sibling tuple in clean isolated build; resolve CI/local pin difference with evidence, not blind repin.",
+      "obligation": "Verify intended sibling tuple in a fresh standard Release build; resolve CI/local pin difference with evidence, not blind repin.",
       "findings": []
     },
     {

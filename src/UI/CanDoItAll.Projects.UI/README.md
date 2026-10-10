@@ -37,9 +37,9 @@ these effects and does not claim database or file-authority proof.
 ## Validation
 
 ```powershell
-dotnet build src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj --configuration ProjectsUiProof /m:1
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --list-tests /m:1
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --no-build --no-restore
+dotnet build src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj --configuration Release /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 The [P1 record](../../../docs/architecture/projects-portfolio-ui-p1.md) separates renderer,

@@ -13,7 +13,7 @@ Standalone representative Scheduler workspace using the shipped renderers and pr
 ## Validation
 
 ```powershell
-dotnet build src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/CanDoItAll.SchedulerPlanner.UiSandbox.csproj --configuration SchedulerUiProof /m:1
+dotnet build src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/CanDoItAll.SchedulerPlanner.UiSandbox.csproj --configuration Release /m:1
 ```
 
 See the [Scheduler boundary and proof record](../../../docs/architecture/scheduler-ui-boundary.md).
@@ -27,7 +27,7 @@ are not displayed. Each renderer scopes CSS below its own real DOM root. Calenda
 `_content/CanDoItAll.SchedulerPlanner.UI/schedulerPlannerCalendarInterop.js`; registration
 belongs to one host/key and cannot detach another host's listener.
 
-Run `dotnet run --project src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox --configuration SchedulerUiProof --no-launch-profile -- --urls http://127.0.0.1:59137`
+Run `dotnet run --project src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox --configuration Debug --no-launch-profile -- --urls http://127.0.0.1:59137`
 with a task-owned free port. The project explicitly links the authoritative Web `output.css`
 as content, without a Web project reference. Rebuild it with `npm ci --prefix Tailwind`
 and `npm run tailwind:build` from the repository root when theme inputs change. Missing

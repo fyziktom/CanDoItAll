@@ -60,7 +60,7 @@
     "filetools_ci_pin": "498b36825bd5a5222429972af120b04becf4b3f6",
     "filetools_equal_tree": "6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d"
   },
-  "shared_change_status": "NO_CHANGE",
+  "shared_change_status": "MINIMAL_REPO_CHANGE",
   "codeanalytics": {
     "availability": "UNAVAILABLE",
     "index_source_commit": null,
@@ -12274,5 +12274,65 @@
     "note": "Operator removed artifacts after further crashes. Prior recorded outcomes remain historical execution evidence; inaccessible raw paths are not represented as available. No claim that the interrupted broad campaign passed.",
     "current_recovery_root": ".artifacts/pc4-recovery-20261010",
     "current_recovery_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY"
+  },
+  "development_resource_policy_maintenance": {
+    "date": "2026-10-10",
+    "scope": "Operator-directed development storage cleanup and instruction repair before resuming component decoupling.",
+    "product_source_changed": false,
+    "product_execution_repeated": false,
+    "shared_bundle": "Existing in-repository UI_Decoupling_Shared_Bundle repaired in place; reviewed file hashes refreshed, no replacement archive or version pin.",
+    "standard_configurations": [
+      "Debug",
+      "Release"
+    ],
+    "output_policy": "Reuse standard outputs and fixed required asset-mode/framework/runtime suffixes; serialize conflicting builds; no bundle/stage/attempt/timestamp output configurations.",
+    "ui_loop": "Reuse relevant dotnetwatch host when useful, followed by required affected build and validation.",
+    "fixtures": "Reuse explicitly isolated test endpoints and bounded database leases; dedicated Docker requires a concrete test reason, ownership and last-use cleanup.",
+    "protected": "Ordinary 5032 instance/database, installed MCP tooling, sibling outputs and unrelated useful resources.",
+    "sharedinfo_commit": "30330978cf48d702382663a3d5231880fc034936",
+    "sharedinfo_signature_verified": true,
+    "signer_fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+    "installed_skill_files_matching_canonical_sources": 4,
+    "sharedinfo_validation": {
+      "skills": 47,
+      "markdown_files": 411,
+      "powershell_files": 12,
+      "failures": 0
+    },
+    "shared_package_helper_tests": {
+      "passed": 18,
+      "failed": 0,
+      "repair": "Normalize preexisting CRLF before constructing the CRLF fixture on Windows; preserve integrity assertions."
+    },
+    "shared_package_integrity": "PASS",
+    "pc4_package_integrity": {
+      "status": "PASS",
+      "acceptance_groups": 36,
+      "carry_forward": 123,
+      "files": 24,
+      "sources": 40
+    },
+    "remaining_main_bin_inventory": {
+      "directories": 350,
+      "logical_gib": 147.028,
+      "tracked_files": 0,
+      "active_consumers_detected": 0,
+      "cleanup_status": "IN_PROGRESS"
+    },
+    "reentry": "Fresh standard builds and build-backed discovery required; no deleted or stale assembly justifies --no-build.",
+    "broad_gate": "Remains incomplete after the operator-directed interruption; no new product validation claimed.",
+    "documentation_validation": {
+      "status": "PASS",
+      "maintained_markdown_files": 407
+    },
+    "portability_static": {
+      "status": "PASS",
+      "tracked_files_scanned": 9411,
+      "scan_findings": 36976,
+      "reviewed_executable_source_findings": 15380,
+      "baseline_changed": false,
+      "enforcement_without_write_baseline": true,
+      "scan": ".artifacts/pc4-recovery-20261010/build-policy-portability-final.json"
+    }
   }
 }

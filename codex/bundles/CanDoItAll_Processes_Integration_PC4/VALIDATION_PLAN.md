@@ -84,7 +84,8 @@ closure. Run canonical pending-model checks when owner/model code could be affec
 schema edit is expected; if one becomes necessary, include populated migration/transfer
 coverage and no destructive SQL. Preserve existing transfer refusal tests.
 
-Build required production and sandbox outputs in isolated configurations before launching
+Build required production and sandbox outputs in standard Debug/Release configurations
+and serialize shared-output writes before launching
 browser hosts. Use the current Fast/Parity asset protocol if any assets or graph changed;
 otherwise reuse only evidence justified by unchanged source and still run the affected
 native UI journey. Record host startup/build/query samples under identical conditions if

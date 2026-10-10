@@ -10,7 +10,7 @@ The complete Resources Registry and Browse renderer, including connector fields,
 - Target framework: `net10.0`
 
 ```powershell
-dotnet build src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj --configuration ResourcesUiProof /m:1
+dotnet build src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj --configuration Release /m:1
 ```
 
 ## Dependencies

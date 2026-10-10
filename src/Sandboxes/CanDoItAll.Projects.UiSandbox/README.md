@@ -8,7 +8,7 @@ Use a task-owned port and 1920×1080 at default zoom:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
-dotnet run --project src/Sandboxes/CanDoItAll.Projects.UiSandbox --configuration ProjectsUiProof --no-launch-profile --urls http://127.0.0.1:5449
+dotnet run --project src/Sandboxes/CanDoItAll.Projects.UiSandbox --configuration Debug --no-launch-profile --urls http://127.0.0.1:5449
 ```
 
 The host needs no database or production services. Generate the existing parity CSS before

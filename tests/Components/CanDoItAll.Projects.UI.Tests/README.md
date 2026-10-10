@@ -7,8 +7,8 @@ accepted child identities and newer or replaced local rows. Boundary tests rejec
 transitive dependencies, unresolved edges and implementation types in the public seam.
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --list-tests /m:1
-dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration ProjectsUiProof --no-build --no-restore
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --list-tests /m:1
+dotnet test tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj --configuration Release --no-build --no-restore
 ```
 
 The suite requires no database. Native save, lifetime, seed, deletion, package and Files

@@ -26,7 +26,9 @@ A fundamental owner/API/schema redesign outside scope must be recorded with the 
 
 Respect existing repository signing and commit policy. Stage only owned files; inspect staged changes. Preserve GPG-agent/pinentry behavior without exporting secrets, requesting the passphrase in chat, changing global trust, or disabling signing. A signing block does not prevent independent coding/testing; report it accurately and do not call an unsigned checkpoint signed. No push/merge/release is authorized by these packages.
 
-Record the actual app/sibling/configuration pair for tested source and published output. A claimed sibling fix that is not present locally/remotely in the consumed pair is not delivered evidence. Rebuild affected outputs after a source/property change. Do not share ordinary application ports, retained databases, output folders or running processes with fixtures.
+Record the actual app/sibling/configuration pair for tested source and published output. A claimed sibling fix that is not present locally/remotely in the consumed pair is not delivered evidence. Refresh standard Debug/Release outputs after a source/property change and serialize conflicting builds. Do not create bundle-named configurations or duplicate output graphs. Reuse the relevant dotnetwatch host for useful UI iteration, then confirm the final affected build/tests.
+
+Keep fixture state, ports and processes separate from the ordinary application on 5032 and retained databases. Reuse a suitable explicitly isolated test server and its bounded database leases. A new bundle or stage does not require a new Docker stack. Provision a dedicated fixture only for a concrete missing prerequisite or test-specific container/OS/topology/lifecycle requirement. Reuse owned fixtures across related lanes and clean them after their last required use, including failure, cancellation and recovery. Inventory current ownership before provisioning replacements; preserve installed MCP tooling and useful unrelated resources.
 
 Finish with separate status for:
 

@@ -7,8 +7,8 @@ preview lifetime and the evaluated assembly boundary. They reference neither the
 production Projects module nor its file-authority implementation.
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests --configuration ProjectsFilesProof --list-tests --filter FullyQualifiedName~CanDoItAll.Tests.Components.ProjectsFilesUi /m:1
-dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests --configuration ProjectsFilesProof --no-build --no-restore --filter FullyQualifiedName~CanDoItAll.Tests.Components.ProjectsFilesUi /m:1
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests --configuration Release --list-tests --filter FullyQualifiedName~CanDoItAll.Tests.Components.ProjectsFilesUi /m:1
+dotnet test tests/Components/CanDoItAll.Projects.Files.UI.Tests --configuration Release --no-build --no-restore --filter FullyQualifiedName~CanDoItAll.Tests.Components.ProjectsFilesUi /m:1
 ```
 
 The first command builds and confirms discovery before the second uses those outputs.

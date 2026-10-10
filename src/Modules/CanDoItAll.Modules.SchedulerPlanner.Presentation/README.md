@@ -13,7 +13,7 @@ Shared production/scenario presentation policy. SchedulerWorkspace owns view and
 ## Validation
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/CanDoItAll.Modules.SchedulerPlanner.Presentation.csproj --configuration SchedulerUiProof /m:1
+dotnet build src/Modules/CanDoItAll.Modules.SchedulerPlanner.Presentation/CanDoItAll.Modules.SchedulerPlanner.Presentation.csproj --configuration Release /m:1
 ```
 
 See the [Scheduler boundary and proof record](../../../docs/architecture/scheduler-ui-boundary.md).

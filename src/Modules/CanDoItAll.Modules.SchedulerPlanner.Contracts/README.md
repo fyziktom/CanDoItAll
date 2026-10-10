@@ -13,7 +13,7 @@ Pure Scheduler target, plan/run, input-schema, history-query and observed mutati
 ## Validation
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/CanDoItAll.Modules.SchedulerPlanner.Contracts.csproj --configuration SchedulerUiProof /m:1
+dotnet build src/Modules/CanDoItAll.Modules.SchedulerPlanner.Contracts/CanDoItAll.Modules.SchedulerPlanner.Contracts.csproj --configuration Release /m:1
 ```
 
 See the [Scheduler boundary and proof record](../../../docs/architecture/scheduler-ui-boundary.md).

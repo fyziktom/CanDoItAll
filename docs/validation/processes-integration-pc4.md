@@ -77,6 +77,33 @@ as 25 GB) was excluded from the focused scan and from claimed cleanup savings.
 
 ## Source and signatures
 
+The operator subsequently cleared `.mcp-state` and the previously listed large build
+folders, then requested cleanup of the remaining main-repository `bin` directories and
+repair of build/fixture instructions before further component work. The remaining
+ownership-checked inventory measured 350 untracked, inactive build-output directories
+at 147.028 GiB. Native PowerShell cleanup is in progress; no completed removal total is
+claimed here yet. Installed MCP tools, sibling repositories and ordinary 5032 resources
+are excluded. Deleted assemblies require a fresh standard build and build-backed
+discovery before the next validation run; historical test results are not new execution.
+
+The current shared status is `MINIMAL_REPO_CHANGE` for this requested policy repair.
+Root guidance, Testing, maintained UI/test READMEs, the existing shared companion and
+PC4's future build instructions now use Debug/Release reuse and serialized conflicting
+builds. UI iteration uses dotnetwatch when useful. Fixed project asset-mode/framework/
+runtime layouts remain bounded and reusable. A new bundle/stage does not itself require
+a new Docker fixture; dedicated fixtures need a concrete test reason, ownership and
+last-use cleanup. Historical custom-configuration proof remains historical.
+
+Canonical SharedInfo standards, templates and skills were updated in verified signed
+commit `30330978cf48d702382663a3d5231880fc034936`. The four affected installed skill files
+match their canonical sources. SharedInfo validation passed 47 skills, 411 Markdown files
+and 12 PowerShell files with zero failures. The shared helper's Windows CRLF fixture was
+corrected without weakening its assertions; all 18 helper tests and both package integrity
+checks pass. Documentation validation passes all 407 maintained Markdown files. Fresh
+full-tracked portability enforcement passes without a baseline write: 9,411 files and
+15,380 reviewed executable-source findings unchanged. No product source/project change or new
+native/UI execution is claimed by this maintenance.
+
 Entry was clean `components-decoupling` at `247e72a2f1caccc8b3cc720291eb4094fdb8e9ff`,
 tree `9aef76a60d42631efd4c45575d48a40ba1b43740`. Work used the current checkout without
 reset, rebase, stash, history rewrite, push, merge or deployment. Historical handoffs
