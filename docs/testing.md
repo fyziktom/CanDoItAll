@@ -158,7 +158,57 @@ It launches owned processes on ephemeral loopback ports and removes their owned 
 Native upstream inference uses an explicit-free loopback fixture, not an external provider.
 The lightweight test project belongs to Components and Stable and all explicit CI component
 selections, never to the product solution. See the [boundary record](architecture/processes-ui-boundary.md)
-for owner placement and proof limits, including the existing request-local authoring storage.
+for renderer owner placement and historical proof limits. The PC3 section below supersedes
+that record's request-local authoring storage limitation.
+
+### Processes durable authoring (PC3)
+
+Use the [native owner record](architecture/processes-authoring-pc3.md) and
+[source-addressed validation](validation/processes-authoring-pc3.md) for the current
+durability contract. The native client uses ordinary scopes for all five editor families;
+a retained projection service or sandbox dictionary does not prove a saved definition.
+
+The isolated configuration used for PC3 is `ProcAuthoringPC3`. Build the changed native
+Application, Persistence, module, UI, canonical migration and Web projects, then refresh
+the owning test assemblies. Set `CANDOITALL_TEST_CONFIGURATION` consistently for browser
+child hosts and use the explicit task-owned PostgreSQL 18 endpoint described above.
+
+| Project | Focused selection | Oracle |
+| --- | --- | --- |
+| Integration | `FullyQualifiedName~ProcessAuthoring` | Independent native scopes, all commands, complete semantic preservation, CAS/replay/commit faults, immutable publication, exact preparation/child meaning, lifecycle and populated migration |
+| Integration | `FullyQualifiedName~ProjectTransferOwnerInspectionTests` | New head/publication/receipt residue cannot be silently lost during unsupported transfer |
+| Integration | `FullyQualifiedName~ProjectStructureAgentIntegrationTests\|FullyQualifiedName~ProjectStructureTaskHttpBoundaryTests` | Existing direct native project launches and child recovery without a separate optional admission; typed links and HTTP compatibility |
+| Integration | `FullyQualifiedName~ApiDocumentationCoverageTests` | Descriptions and enum values remain complete for every API family after public projection changes |
+| Unit | `FullyQualifiedName~ProcessAuthoringSemanticCoverageTests` | Hidden-field review manifest, partial child-mapping refusal and legacy identity compatibility for every distributed definition |
+| Components | `FullyQualifiedName~CanDoItAll.Tests.Components.Processes` | All host partials/editor states, pending and newer reads, opening retirement, raw drafts, receipts and reachable recovery |
+| Components | `FullyQualifiedName~ProjectStructurePageAssetAndActivationTests\|FullyQualifiedName~ProjectStructurePageProcessLaunchScopeTests` | Native project-run assets, transient source identities and late UI dispatch retain the correct launch/file scope |
+| Playwright | `FullyQualifiedName~ProcessAuthoringBrowserTests\|FullyQualifiedName~ProcessAuthoringMultiSessionBrowserTests\|FullyQualifiedName~ProcessAuthoringRestartBrowserTests` | Real native edits, independent browsers, postcommit recovery, actual canvas/imports and new OS-process PID with exact prepared execution |
+
+Keep the Processes UI regression floor above and expand it from current callers. PC3's
+native impact includes execution/catalog authority, prepared admissions, variable drivers,
+Workbench launch context/mapping, project lifecycle and transfer/migration consumers.
+The validation record distinguishes discovery from dynamic theory expansion and lists the
+actual filters; its counts are evidence for that candidate, not permanent constants.
+Native compatibility tests must retain commit-time refusal after deletion/recreation or
+archive and prevent exact lookup from crossing projects or lifetimes. Test classes whose
+owned fixtures write template files carry `Category=HostPlatform`; include
+`HostPlatformTestClassificationTests` when adding or changing those fixtures.
+
+Workbench opening tests hold the preparation read and verify that both Continue and direct
+submission wait for the captured context. Keep the same-project reopen and project-navigation
+cases, and drive manager chat through the actual input event and Send callback. Browser
+readiness must observe the loaded manager selector before typing into its composer.
+
+Build both Fast and Parity sandbox outputs before their source/published browser cases.
+Run browser hosts after builds complete, since an owned Web process can lock the isolated
+output just like an ordinary application. Restart tests stop only their owned PID and keep
+the same isolated database/profile while starting a new PID. Timing decorators can delay
+or lose a native result; they must not supply stored projections or replace the owner.
+
+The canonical `has-pending-model-changes` check, additive/idempotent migration SQL review,
+transfer/model coverage, fresh portability enforcement and documentation checks close the
+schema work. PC3's native persistence/composition/launch changes trigger the one frozen
+Broad Stable gate below. Browser and actual process-restart proof remain separate.
 
 ### Scheduler UI slice
 
