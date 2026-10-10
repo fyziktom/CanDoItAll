@@ -10277,6 +10277,25 @@
       "installed_codeanalytics_preserved": true,
       "savings_note": "Logical output sizes are not a claim of uniquely reclaimed physical bytes. User independently removed earlier large bins and mcp-state; those removals are not included in this remaining-bin inventory.",
       "docker": "No new Docker mutation, fixture, engine restart or compaction in this maintenance; retained 5032 and unrelated useful resources remain protected."
+    },
+    "closure_resume": {
+      "status": "PENDING_LAST_USE",
+      "docker_setup": {
+        "status": "PASS",
+        "task": "pc4-closure-20261010",
+        "container_created": false,
+        "setup_process_killed": "Linux PID 1547765, exact owned docker run command",
+        "removed_volume": "candoitall-pc4-closure-20261010-pg18-data",
+        "utc": "2026-10-10T16:16:39.4796890Z",
+        "reason": "Docker run hung before creating a container; no shared daemon restart or existing resource change."
+      },
+      "native_fixture": {
+        "endpoint": "127.0.0.1:55924",
+        "pid": 36108,
+        "server_version_num": 180006,
+        "source": "Installer-pinned EnterpriseDB PostgreSQL 18.6-4 binaries"
+      },
+      "plan": "Stop the exact owned native cluster after Stable, verify process/port release, remove its native directory, archive and protected fixture credential. Preserve standard Release outputs, installed tooling and all preexisting containers."
     }
   },
   "reviewer_limits": [
@@ -10285,7 +10304,7 @@
     "Actual old serialized plans are proven; historical external provider effects are not fabricated.",
     "Source/DI/reference census fallback is not a semantic CodeAnalytics index."
   ],
-  "generated_utc": "2026-10-10T12:56:29.085403+00:00",
+  "generated_utc": "2026-10-10T16:35:03.013228+00:00",
   "predecessor_fixtures": [
     {
       "SchemaSourceCommit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
@@ -12311,6 +12330,11 @@
       "build_backed_discovery_required": true,
       "historical_results_reclassified_as_new_validation": false,
       "note": "The original tested source/provenance remains recorded. Deleted or stale assemblies cannot justify no-build execution; required product/native/UI closure remains incomplete."
+    },
+    "closure_resume": {
+      "prior_five_screenshots_present": false,
+      "finding": "Operator storage cleanup also removed all five previously retained browser screenshots.",
+      "replacement": "All 18 distinct PC4 browser journeys were freshly discovered and executed using standard Release; current TRX and screenshots are present."
     }
   },
   "development_resource_policy_maintenance": {
@@ -12400,5 +12424,538 @@
       "plan_sha256": "e8e67020b74b0880c47b67b7e78e66ce48225f688eeda6be0cd2ff2db7f2a8b2",
       "receipt_sha256": "7016a95902e704a2012ee6df7db02a6f8885c73e871594c6a4f23105ab212f31"
     }
+  },
+  "resumed_closure": {
+    "status": "IN_PROGRESS",
+    "entry": {
+      "status": "IN_PROGRESS",
+      "entered_utc": "2026-10-10T16:09:36.7700439Z",
+      "branch": "components-decoupling",
+      "head": "8eba867a69d1a9987ec1793760ac8c9a657e4bd8",
+      "tree": "5935837a7afc3da21bb36c1d4d75aa343d25b0ec",
+      "tested_source": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+      "configuration": "Release",
+      "sdk": "10.0.303",
+      "dirty_at_entry": [],
+      "owner": "PC4 closure resumed at operator request; owned paths are this artifact directory and maintained PC4 reports.",
+      "gate": "S5 re-entry PASS: unchanged executable source and Components/FileTools tuple; rebuild required because prior bin directories were deleted; full Stable required by shared producer/recovery and test-support invalidation.",
+      "expected_discovery": 17346,
+      "expected_projects": 34,
+      "signing": "Local unlock requested; configured GPG executable and key unchanged."
+    },
+    "builds": [
+      {
+        "name": "restore-product",
+        "command": "dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true /m:1",
+        "started_utc": "2026-10-10T16:09:37.5283814Z",
+        "elapsed_seconds": 15.7476135,
+        "exit_code": 0
+      },
+      {
+        "name": "build-product",
+        "command": "dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1",
+        "started_utc": "2026-10-10T16:09:53.2868192Z",
+        "elapsed_seconds": 192.7416468,
+        "exit_code": 0
+      },
+      {
+        "name": "restore-stable",
+        "command": "dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx -p:UseLocalCanDoItAllLibraries=true /m:1",
+        "started_utc": "2026-10-10T16:13:06.0317131Z",
+        "elapsed_seconds": 16.4167451,
+        "exit_code": 0
+      },
+      {
+        "name": "build-stable",
+        "command": "dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1",
+        "started_utc": "2026-10-10T16:13:22.4509740Z",
+        "elapsed_seconds": 72.7736067,
+        "exit_code": 0
+      },
+      {
+        "name": "build-playwright",
+        "command": "dotnet build ./tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration Release -p:UseLocalCanDoItAllLibraries=true /m:1",
+        "started_utc": "2026-10-10T16:15:18.9072351Z",
+        "elapsed_seconds": 60.6182226,
+        "exit_code": 0
+      }
+    ],
+    "discovery": {
+      "status": "PASS",
+      "mode": "Discovery",
+      "head": "8eba867a69d1a9987ec1793760ac8c9a657e4bd8",
+      "executable_source": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+      "configuration": "Release",
+      "started_utc": "2026-10-10T16:18:07.2830395Z",
+      "projects": [
+        {
+          "name": "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests",
+          "discovered": 68,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Editor.UI.Tests",
+          "discovered": 25,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Providers.UI.Tests",
+          "discovered": 30,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.SharedProviders.UI.Tests",
+          "discovered": 51,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.UI.Tests",
+          "discovered": 144,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests",
+          "discovered": 30,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Collaboration.UI.Tests",
+          "discovered": 25,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Memory.UI.Tests",
+          "discovered": 36,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Plugins.UI.Tests",
+          "discovered": 50,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Processes.UI.Tests",
+          "discovered": 21,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Projects.Files.UI.Tests",
+          "discovered": 17,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Projects.UI.Tests",
+          "discovered": 25,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Resources.UI.Tests",
+          "discovered": 70,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.SchedulerPlanner.UI.Tests",
+          "discovered": 59,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.TestLab.UI.Tests",
+          "discovered": 38,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Tests.Components",
+          "discovered": 2975,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Content.UI.Tests",
+          "discovered": 45,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Execution.UI.Tests",
+          "discovered": 12,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Insights.UI.Tests",
+          "discovered": 23,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Operators.UI.Tests",
+          "discovered": 17,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Planning.UI.Tests",
+          "discovered": 44,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workbench.Structure.UI.Tests",
+          "discovered": 7,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.ApiAccess.UI.Tests",
+          "discovered": 82,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.DataSources.UI.Tests",
+          "discovered": 22,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.StorageCatalog.UI.Tests",
+          "discovered": 39,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.StorageRecovery.UI.Tests",
+          "discovered": 20,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.StorageSelection.UI.Tests",
+          "discovered": 30,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Workspace.UI.Tests",
+          "discovered": 52,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration",
+          "discovered": 3455,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Memory.Tests",
+          "discovered": 29,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Memory.Tests",
+          "discovered": 187,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Collaboration.Tests",
+          "discovered": 35,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.TestLab.Tests",
+          "discovered": 29,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit",
+          "discovered": 9554,
+          "status": "PASS",
+          "exact_prior_identities_match": true
+        }
+      ],
+      "discovered": 17346,
+      "error": "Unexpected Stable discovery total.",
+      "harness_repair": "Original final aggregation used Measure-Object on ordered dictionary entries and produced null. All 34 discoveries had completed with exact identity matches. Reparsed every raw discovery log and compared both prior and fresh plan identities; total is 17346. Original harness failure preserved separately.",
+      "completed_utc": "2026-10-10T16:24:04.3361898Z"
+    },
+    "browser": {
+      "status": "PASS",
+      "mode": "Browser",
+      "head": "8eba867a69d1a9987ec1793760ac8c9a657e4bd8",
+      "executable_source": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+      "configuration": "Release",
+      "started_utc": "2026-10-10T16:23:52.8611152Z",
+      "projects": [
+        {
+          "name": "CanDoItAll.Tests.Playwright",
+          "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+          "assembly_sha256": "C2559E4A0D74A1DFBA0504DB0504C203CE5A9AA7BF01E20F2A388E91F8971334",
+          "discovered": 18,
+          "status": "PASS",
+          "started_utc": "2026-10-10T16:23:58.6823009Z",
+          "command": "dotnet test tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~ProcessAuthoringBrowserTests|FullyQualifiedName~ProcessAuthoringMultiSessionBrowserTests|FullyQualifiedName~ProcessAuthoringRestartBrowserTests|FullyQualifiedName~ProcessNativeBrowserTests|FullyQualifiedName~ProcessWorkbenchBrowserTests|FullyQualifiedName~ProcessVoiceBrowserTests|FullyQualifiedName~ProcessPredecessorBrowserTests' -p:UseLocalCanDoItAllLibraries=true /m:1 --logger 'trx;LogFileName=results.trx' --logger 'console;verbosity=normal' --results-directory .artifacts/pc4-closure-20261010/browser/CanDoItAll.Tests.Playwright",
+          "exit_code": 0,
+          "elapsed_seconds": 636.5172812,
+          "completed_utc": "2026-10-10T16:34:35.2115827Z",
+          "total": 18,
+          "passed": 18,
+          "failed": 0,
+          "not_executed": 0,
+          "trx": ".artifacts/pc4-closure-20261010/browser/CanDoItAll.Tests.Playwright/results.trx",
+          "trx_sha256": "DC8737661930CA6DA2C0AD8873E1FA3B1F5990732CC51EA4C05DABB9BAE036BF",
+          "missing_discovered_cases": [],
+          "failed_cases": []
+        }
+      ],
+      "fixture": {
+        "pid": 36108,
+        "endpoint": "127.0.0.1:55924",
+        "server_version_num": 180006
+      },
+      "completed_utc": "2026-10-10T16:34:35.8526134Z",
+      "passed": 18.0
+    },
+    "static_checks": [
+      {
+        "name": "portability-tool-tests",
+        "exit_code": 0,
+        "command": "python tools/Validation/Portability/test_enforce_portability_baseline.py",
+        "utc": "2026-10-10T16:24:59.4644759Z"
+      },
+      {
+        "name": "redaction-tool-tests",
+        "exit_code": 0,
+        "command": "python tools/Validation/Portability/test_scan_artifacts_for_secrets.py",
+        "utc": "2026-10-10T16:25:00.8271815Z"
+      },
+      {
+        "name": "portability-scan",
+        "exit_code": 0,
+        "command": "python tools/Validation/Portability/scan_portability.py --repo-root . --output C:\\repositories\\CanDoItAll\\.artifacts\\pc4-closure-20261010\\portability.json --tracked-only",
+        "utc": "2026-10-10T16:26:32.2581206Z"
+      },
+      {
+        "name": "portability-enforcement",
+        "exit_code": 0,
+        "command": "python tools/Validation/Portability/enforce_portability_baseline.py --scan C:\\repositories\\CanDoItAll\\.artifacts\\pc4-closure-20261010\\portability.json --baseline tools/Validation/Portability/portability-risk-baseline.json",
+        "utc": "2026-10-10T16:26:33.0749053Z"
+      },
+      {
+        "name": "package-pc4",
+        "exit_code": 0,
+        "command": "python codex/bundles/CanDoItAll_Processes_Integration_PC4/tools/verify_package.py",
+        "utc": "2026-10-10T16:26:33.3037605Z"
+      },
+      {
+        "name": "package-pc4-tests",
+        "exit_code": 0,
+        "command": "python -B -m unittest discover -s codex/bundles/CanDoItAll_Processes_Integration_PC4/tools -p test_*.py",
+        "utc": "2026-10-10T16:26:34.6739588Z"
+      },
+      {
+        "name": "package-shared",
+        "exit_code": 0,
+        "command": "python -B codex/bundles/UI_Decoupling_Shared_Bundle/tools/handoff_tools.py verify codex/bundles/UI_Decoupling_Shared_Bundle",
+        "utc": "2026-10-10T16:26:34.9109734Z"
+      }
+    ],
+    "pending_model": {
+      "status": "PASS",
+      "exit_code": 0,
+      "configuration": "Release",
+      "database_connection_used": false,
+      "command": "dotnet ef migrations has-pending-model-changes --project src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --context AppDbContext --configuration Release --no-build"
+    },
+    "codeanalytics": {
+      "status": "PASS_SCOPED",
+      "source_head": "8eba867a69d1a9987ec1793760ac8c9a657e4bd8",
+      "snapshot_id": "snap-20261010161841-a5c372cc",
+      "created_utc": "2026-10-10T16:18:41.9691901+00:00",
+      "scope": [
+        "src/Processes/CanDoItAll.Processes.Application/CanDoItAll.Processes.Application.csproj"
+      ],
+      "summary": {
+        "projectCount": 1,
+        "typeCount": 307,
+        "memberCount": 3713,
+        "serviceRegistrationCount": 0,
+        "entityCount": 0,
+        "findingCount": 0,
+        "openQuestionCount": 0,
+        "diagnosticCount": 0
+      },
+      "diagnostics": [],
+      "recovery_references": [
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 182,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(CanDoItAll.Processes.Application.ProcessExistingLaunchLookupRequest, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 197,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(CanDoItAll.Processes.Application.ProcessExistingLaunchLookupRequest, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 200,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(CanDoItAll.Processes.Application.ProcessExistingLaunchLookupRequest, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 206,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(CanDoItAll.Processes.Application.ProcessExistingLaunchLookupRequest, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 218,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.FindExistingLaunchAsync(CanDoItAll.Processes.Application.ProcessExistingLaunchLookupRequest, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 235,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.ReadExistingLaunchOriginAsync(System.Guid?, CanDoItAll.Processes.Runtime.ProcessRuntimeStateSnapshot, CanDoItAll.Processes.Builder.ProcessInstancePlan, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+          "line": 59,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessRetainedLaunchRecovery.ReadAsync(System.Guid?, CanDoItAll.Processes.Runtime.ProcessRuntimeStateSnapshot, CanDoItAll.Processes.Builder.ProcessInstancePlan, System.Threading.CancellationToken)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+          "line": 125,
+          "kind": "Invocation",
+          "member": "CanDoItAll.Processes.Application.ProcessRetainedLaunchRecovery.LegacyReview(CanDoItAll.Processes.Builder.ProcessInstancePlan, System.Collections.Generic.IReadOnlyList<CanDoItAll.Processes.Runtime.ProcessRuntimeStepAssignment>, System.Collections.Generic.IReadOnlyList<CanDoItAll.Processes.Application.ProcessLaunchReadinessFinding>)"
+        },
+        {
+          "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+          "line": 56,
+          "kind": "Field",
+          "member": "CanDoItAll.Processes.Application.ProcessLaunchApplicationService.retainedLaunches"
+        }
+      ],
+      "limits": "One-project semantic snapshot. External Workbench/HTTP/Razor/test consumers are outside this index; source/call-site review and fresh full Stable plus explicit browser coverage supplement it. Zero project-reference rows in this scoped index are not a claim of no dependencies."
+    },
+    "database": {
+      "endpoint": "127.0.0.1:55924",
+      "pid": 36108,
+      "server_version_num": 180006,
+      "source": "Installer-pinned EnterpriseDB PostgreSQL 18.6-4 binaries"
+    },
+    "signatures_reverified": [
+      {
+        "commit": "3b558ed8a4caaa84da316633a3d55432b4af7cc1",
+        "parent": "247e72a2f1caccc8b3cc720291eb4094fdb8e9ff",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "104800ab6d1c37fc886137ac34eb4ac8addad97d",
+        "parent": "3b558ed8a4caaa84da316633a3d55432b4af7cc1",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "284f0de20d1bdae568cafafee6d06c3d5c102ca9",
+        "parent": "104800ab6d1c37fc886137ac34eb4ac8addad97d",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "cabefec67be46c15cd4108a14ddee47702db2863",
+        "parent": "284f0de20d1bdae568cafafee6d06c3d5c102ca9",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "20b62598d1ea0a28d7a5c63dd21fe8289c182278",
+        "parent": "cabefec67be46c15cd4108a14ddee47702db2863",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "e9472752ad68c7d1add689ac1364021cb310f5b1",
+        "parent": "20b62598d1ea0a28d7a5c63dd21fe8289c182278",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "77ccb70d6361fd65a4b92d1d68b783de89e52f1c",
+        "parent": "e9472752ad68c7d1add689ac1364021cb310f5b1",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+        "parent": "77ccb70d6361fd65a4b92d1d68b783de89e52f1c",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "640fece824cfdf1f6c5985f6184c7eec199b7a9d",
+        "parent": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "86a7659b8e44014cdd66887ce20a1b66d745e364",
+        "parent": "a09cc3784a818e62afe2335af4b0f51d6e6f7b2d",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "e7f616165b762d2352c747f4b28fef19cabaa6fc",
+        "parent": "640fece824cfdf1f6c5985f6184c7eec199b7a9d",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "a09cc3784a818e62afe2335af4b0f51d6e6f7b2d",
+        "parent": "e7f616165b762d2352c747f4b28fef19cabaa6fc",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      },
+      {
+        "commit": "8eba867a69d1a9987ec1793760ac8c9a657e4bd8",
+        "parent": "86a7659b8e44014cdd66887ce20a1b66d745e364",
+        "verified": true,
+        "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6"
+      }
+    ],
+    "remaining": [
+      "Complete the full Stable campaign",
+      "Inspect and index fresh browser evidence",
+      "Verify owned fixture cleanup",
+      "Close maintained acceptance/carry-forward records and signed report"
+    ],
+    "shared_delta_this_resume": "NO_CHANGE",
+    "raw_evidence_root": ".artifacts/pc4-closure-20261010"
   }
 }

@@ -33,8 +33,11 @@ contradictory explicit identifiers.
 Actual source consumers reviewed include HTTP check/launch, Workbench node start,
 Workbench launch-dialog preparation, child preparation, and application compilation.
 Direct native compatibility and replay remain separate test families. CodeAnalytics
-was unavailable; this is source/caller, serializer, DI and evaluated-reference review,
-not a semantic-index completeness claim.
+was unavailable during implementation. Closure later rebuilt scoped Application snapshot
+`snap-20261010161841-a5c372cc` (307 types, 3,713 members, zero diagnostics) and confirmed
+nine retained-recovery references. HTTP/Workbench/Razor consumers are outside that index;
+source/caller, serializer, DI, evaluated references and fresh executable proof supplement it.
+This is not a repository-wide semantic-index completeness claim.
 
 ## Retained predecessor recovery
 

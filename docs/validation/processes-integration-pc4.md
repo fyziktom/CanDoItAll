@@ -1,10 +1,60 @@
 # Processes integration PC4 validation
 
-Status: **IN PROGRESS — implementation and focused proof recorded; Stable recovery stopped at operator direction to prioritize storage cleanup**.
+Status: **IN PROGRESS — fresh Release builds and all 18 browser journeys pass; final Stable execution and cleanup remain**.
 Tested source: `ca195c794349d4e4eb653bacb7605ed83df86c4b`.
 The [machine record](processes-integration-pc4.json) contains exact test identities,
 commands, source candidates, raw failures and acceptance dispositions. The
 [architecture record](../architecture/processes-integration-pc4.md) describes the corrections.
+
+## Current closure campaign
+
+The operator resumed PC4 after storage recovery. Entry was clean
+`8eba867a69d1a9987ec1793760ac8c9a657e4bd8`; product/test source still matches
+`ca195c794349d4e4eb653bacb7605ed83df86c4b`. Subsequent protected-path differences
+are maintained Markdown guidance. Components and FileTools remain at the same clean
+commits recorded below. All new execution uses **Release**, SDK 10.0.303, sibling
+source dependencies and serialized shared outputs.
+
+Fresh product, Stable and Playwright builds pass. Build-backed Stable discovery matches
+all **17,346 exact identities across 34 projects**. A temporary runner aggregation error
+occurred only after every discovery completed; the corrected total was independently
+recomputed from all complete discovery logs and both identity lists. The original
+harness failure is retained. Fresh Chromium execution passes **18/18 PC4 browser cases**,
+including native voice/files/chat, resource deletion/import, HTTP/Workbench agreement,
+independent sessions, actual OS restart/prepared workflow and predecessor recovery.
+The earlier five screenshots were also deleted during storage cleanup; current browser
+artifacts replace their availability rather than retroactively restoring old raw files.
+
+Portability tooling and final no-write enforcement pass with **15,380 reviewed findings
+unchanged**. Both instruction-package integrity checks pass. The current Release model
+has no pending canonical migration changes; no database update was performed.
+The existing EF CLI emits its 10.0.3 versus runtime 10.0.4 version warning.
+
+Docker fixture creation stalled before a container existed. Only its exact owned CLI
+and empty volume were removed. The same installer-pinned, checksum-verified PostgreSQL
+18.6 Windows distribution now serves the single isolated native fixture on loopback
+55924 (`server_version_num=180006`). The fixture is retained until the last required
+test and will then be removed; no shared Docker/WSL restart or ordinary database use
+occurred. The initial native setup script also required trimming the newline from its
+DPAPI credential input before initialization; no product or database test failed in
+that setup step.
+
+The restored CodeAnalytics tool produced scoped snapshot
+`snap-20261010161841-a5c372cc`: one Processes Application project, 102 documents,
+307 types, 3,713 members and zero diagnostics. Nine retained-recovery references agree
+with current source. External HTTP/Workbench/Razor/test consumers remain outside this
+one-project index and are covered by explicit source review and executable checks.
+Components MCP remains absent from discovery; no UI implementation change was required.
+All 13 existing PC4/maintenance checkpoints were reverified against the configured
+OpenPGP fingerprint. This resume makes no shared-bundle or sibling source edit.
+
+The remaining required gate is one complete fresh Stable execution at this frozen
+executable source, followed by exact TRX reconciliation, owned-resource cleanup and the
+signed closure report. Previous interrupted campaigns remain incomplete. Detailed
+current commands, discovery, source identities and receipts are in the machine record's
+`resumed_closure` field and ignored `.artifacts/pc4-closure-20261010` proof directory.
+
+## Earlier attempts and storage recovery (historical)
 
 On October 10 the operator removed `.artifacts` after further crashes. The prior native
 test server and runner are gone. The maintained machine record retains the reported
