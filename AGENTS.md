@@ -22,6 +22,20 @@ scan after source edits. Refresh intentional, reviewed baseline deltas in the sa
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
 
+## Temporary Resource Cleanup
+
+Follow [bundle resource cleanup](docs/testing.md#bundle-resource-cleanup) for every bundle
+run, including recovery after a crash. Record ownership before creating containers,
+volumes, networks, processes or temporary directories. Clean them up after their last
+required use and verify cleanup before closing the bundle. Keep only the reviewed proof
+needed by its validation record.
+
+Preserve the ordinary instance on port 5032, its databases, useful unrelated containers,
+and installed MCP tools. Never prune Docker globally or delete the entire `.artifacts`
+directory: it also contains persistent tool installations. If cleanup is blocked, record
+the exact remaining resources and resolve or explicitly report the blocker; do not claim
+cleanup succeeded or keep accumulating replacement fixtures.
+
 ## UI and module boundaries
 
 [UI component seams](docs/architecture/ui-component-seams.md) is the canonical guidance for

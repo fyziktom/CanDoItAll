@@ -38,6 +38,41 @@ Do not print the password-bearing connection string. An ignored `.env` can still
 a new Compose image default; follow the [migration runbook](../tools/dev/Migrate-PostgreSql16To18.md)
 before changing any retained cluster.
 
+## Bundle Resource Cleanup
+
+Cleanup is part of bundle execution, including failed runs and crash recovery. Before
+provisioning a fixture, inventory existing resources and record the exact resources owned
+by this bundle and run. Preserve the ordinary application on port 5032, its database,
+manual-provider data, unrelated useful containers, and installed MCP tools. A resource's
+age or location under `.artifacts` is not evidence that it is disposable.
+
+- Give temporary containers unique names and ownership labels identifying the bundle and
+  run. Record container IDs, mounts, volume and network names, process IDs and start times,
+  sanitized endpoints, and resolved temporary paths. Record which resources are shared,
+  retained for another lane, or permanent installations.
+- Put cleanup in `finally` or the fixture's disposal path. Release each resource after its
+  last required use, including cancellation or failure. On resume, reconcile the saved
+  ownership record with actual resources before creating replacements. Use automatic
+  container removal where compatible with the required evidence capture.
+- Stop owned test hosts and database processes before deleting their data. Inspect each
+  container's current identity, labels, mounts and ports before stopping and removing it.
+  Remove only its proven temporary volumes and networks, after checking that no retained
+  container uses them. Never use global Docker prune, delete by age alone, or restart the
+  shared Docker engine without authorization for the resulting interruption.
+- Keep a small reviewed proof set: source identities, test discovery and results, relevant
+  failure diagnostics, and necessary browser evidence. Preserve the evidence required to
+  reconcile an unfinished gate. Delete owned database clusters, redundant archives,
+  staging directories, duplicate build outputs and other bulk temporary data when no
+  remaining proof depends on them. Verify each resolved deletion target stays inside its
+  explicitly owned root and has no active consumer. Never delete the whole `.artifacts`
+  tree; `mcp-installs` and active MCP shadow builds are installed tooling.
+- Before declaring completion, verify owned containers and processes are gone, temporary
+  ports are released, and disposable directories, volumes and networks were removed.
+  Record cleanup outcomes and any deliberately retained proof. If Docker or another owner
+  is unavailable, name the exact blocked resources and the required recovery action.
+  Do not report successful cleanup or accumulate replacement fixtures without a bounded
+  recovery and cleanup plan.
+
 ## Test Entry Points
 
 | Entry point | Scope |
