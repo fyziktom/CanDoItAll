@@ -56,7 +56,7 @@
     "sdk": "10.0.303",
     "platform": "Windows",
     "configuration": "Focused tests: ProcAuthoringPC3; clean Web and predecessor OS hosts: ProcIntegrationPC4; Broad Stable: Release",
-    "owned_database_server_version": "PostgreSQL 18.6, server_version_num 180006; historical native fixture on loopback 55914 was removed during operator cleanup; current recovery reuses the owned Docker fixture on loopback 55904.",
+    "owned_database_server_version": "Historical native/recovery proof used PostgreSQL 18.6, server_version_num 180006, on native loopback 55914 and later Docker loopback 55904. Both owned fixtures were removed during operator-directed cleanup. The next required native/Stable execution needs a suitable explicitly isolated PostgreSQL 18 endpoint.",
     "filetools_ci_pin": "498b36825bd5a5222429972af120b04becf4b3f6",
     "filetools_equal_tree": "6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d"
   },
@@ -8473,6 +8473,14 @@
       "verified": true,
       "utc": "2026-10-10T10:28:55.844568+00:00",
       "scope": "Cleanup policy in AGENTS.md and docs/testing.md; report and product source unchanged by this commit."
+    },
+    {
+      "commit": "86a7659b8e44014cdd66887ce20a1b66d745e364",
+      "parent": "a09cc3784a818e62afe2335af4b0f51d6e6f7b2d",
+      "fingerprint": "96E836FAA8854EE98ABC10903C206549E1D7EAD6",
+      "verified": true,
+      "utc": "2026-10-10T14:46:35.0828530Z",
+      "scope": "Development output reuse and isolated fixture policy; current report records ongoing native bin cleanup without claiming product validation."
     }
   ],
   "residuals": [
@@ -10246,6 +10254,29 @@
         "measured_build_output_folder_count": 128,
         "raw_complete_inventory": ".artifacts/pc4-recovery-20261010/storage-priority-summary.json"
       }
+    },
+    "main_build_outputs": {
+      "status": "PASS",
+      "scope": "Remaining untracked, inactive bin directories in the main CanDoItAll repository only.",
+      "verified_absent_directories": 350,
+      "originally_measured_logical_gib": 147.028,
+      "native_powershell_worker_limit": 8,
+      "fresh_remaining": [],
+      "cleanup_verified_utc": "2026-10-10T15:01:33.9824736Z",
+      "ownership_plan_sha256": "e8e67020b74b0880c47b67b7e78e66ce48225f688eeda6be0cd2ff2db7f2a8b2",
+      "cleanup_receipt_sha256": "7016a95902e704a2012ee6df7db02a6f8885c73e871594c6a4f23105ab212f31",
+      "verification_path": ".artifacts/pc4-recovery-20261010/remaining-bin-cleanup-verification.json",
+      "protected": [
+        ".git",
+        "node_modules",
+        ".artifacts installed tooling and prior policy-blocked temporary directories",
+        ".mcp-state",
+        "reparse points",
+        "sibling repositories"
+      ],
+      "installed_codeanalytics_preserved": true,
+      "savings_note": "Logical output sizes are not a claim of uniquely reclaimed physical bytes. User independently removed earlier large bins and mcp-state; those removals are not included in this remaining-bin inventory.",
+      "docker": "No new Docker mutation, fixture, engine restart or compaction in this maintenance; retained 5032 and unrelated useful resources remain protected."
     }
   },
   "reviewer_limits": [
@@ -12273,7 +12304,14 @@
     "partial_console_rows_counted_as_complete_coverage": false,
     "note": "Operator removed artifacts after further crashes. Prior recorded outcomes remain historical execution evidence; inaccessible raw paths are not represented as available. No claim that the interrupted broad campaign passed.",
     "current_recovery_root": ".artifacts/pc4-recovery-20261010",
-    "current_recovery_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY"
+    "current_recovery_status": "INTERRUPTED_OPERATOR_STORAGE_PRIORITY",
+    "current_build_outputs": {
+      "status": "REMOVED_FOR_OPERATOR_REQUESTED_STANDARD_BUILD_RESTART",
+      "fresh_standard_build_required": true,
+      "build_backed_discovery_required": true,
+      "historical_results_reclassified_as_new_validation": false,
+      "note": "The original tested source/provenance remains recorded. Deleted or stale assemblies cannot justify no-build execution; required product/native/UI closure remains incomplete."
+    }
   },
   "development_resource_policy_maintenance": {
     "date": "2026-10-10",
@@ -12317,7 +12355,9 @@
       "logical_gib": 147.028,
       "tracked_files": 0,
       "active_consumers_detected": 0,
-      "cleanup_status": "IN_PROGRESS"
+      "cleanup_status": "PASS",
+      "verified_absent": 350,
+      "fresh_unprotected_bin_directories_remaining": 0
     },
     "reentry": "Fresh standard builds and build-backed discovery required; no deleted or stale assembly justifies --no-build.",
     "broad_gate": "Remains incomplete after the operator-directed interruption; no new product validation claimed.",
@@ -12333,6 +12373,32 @@
       "baseline_changed": false,
       "enforcement_without_write_baseline": true,
       "scan": ".artifacts/pc4-recovery-20261010/build-policy-portability-final.json"
+    },
+    "main_policy_commit": "86a7659b8e44014cdd66887ce20a1b66d745e364",
+    "main_policy_signature_verified": true,
+    "cleanup_verification": {
+      "utc": "2026-10-10T15:01:33.9824736Z",
+      "status": "PASS",
+      "root": "C:\\repositories\\CanDoItAll",
+      "reviewed_directories": 350,
+      "originally_measured_logical_gib": 147.028,
+      "removed_by_final_worker_run": 271,
+      "already_absent_after_preceding_owned_cleanup": 79,
+      "blocked": [],
+      "planned_remaining": [],
+      "fresh_remaining": [],
+      "excluded": [
+        ".git",
+        "node_modules",
+        ".artifacts installed tooling and prior policy-blocked temporary directories",
+        ".mcp-state",
+        "reparse points",
+        "sibling repositories"
+      ],
+      "installed_codeanalytics_preserved": true,
+      "windows_free_gib": 521.14,
+      "plan_sha256": "e8e67020b74b0880c47b67b7e78e66ce48225f688eeda6be0cd2ff2db7f2a8b2",
+      "receipt_sha256": "7016a95902e704a2012ee6df7db02a6f8885c73e871594c6a4f23105ab212f31"
     }
   }
 }

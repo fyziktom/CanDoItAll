@@ -81,10 +81,17 @@ The operator subsequently cleared `.mcp-state` and the previously listed large b
 folders, then requested cleanup of the remaining main-repository `bin` directories and
 repair of build/fixture instructions before further component work. The remaining
 ownership-checked inventory measured 350 untracked, inactive build-output directories
-at 147.028 GiB. Native PowerShell cleanup is in progress; no completed removal total is
-claimed here yet. Installed MCP tools, sibling repositories and ordinary 5032 resources
-are excluded. Deleted assemblies require a fresh standard build and build-backed
-discovery before the next validation run; historical test results are not new execution.
+at 147.028 GiB. All 350 directories are now verified absent. A fresh full inventory
+within the same scope found zero remaining `bin` directories; no tracked files or active
+consumers required deletion. Native PowerShell used a bounded maximum of eight workers
+and repeated path/consumer checks. Installed MCP tools, sibling repositories and ordinary
+5032 resources were excluded. The restored CodeAnalytics executable remains present.
+The cleanup verification at `2026-10-10T15:01:33.9824736Z` records plan/receipt hashes and
+Windows free space of 521.14 GiB. Logical output sizes are
+not uniquely reclaimed physical bytes; the operator's earlier independent deletions are
+not attributed to this remaining-bin cleanup. Deleted assemblies require a fresh standard
+build and build-backed discovery before the next validation run; historical test results
+are not new execution.
 
 The current shared status is `MINIMAL_REPO_CHANGE` for this requested policy repair.
 Root guidance, Testing, maintained UI/test READMEs, the existing shared companion and
@@ -107,7 +114,9 @@ native/UI execution is claimed by this maintenance.
 Entry was clean `components-decoupling` at `247e72a2f1caccc8b3cc720291eb4094fdb8e9ff`,
 tree `9aef76a60d42631efd4c45575d48a40ba1b43740`. Work used the current checkout without
 reset, rebase, stash, history rewrite, push, merge or deployment. Historical handoffs
-and the existing shared bundle remain unchanged: **NO_CHANGE**.
+were unchanged at the product-proof checkpoint: **NO_CHANGE**. The subsequent requested
+shared execution-policy repair is **MINIMAL_REPO_CHANGE**, as recorded above; historical
+handoffs and product proof retain their original provenance.
 
 Windows / SDK 10.0.303 used clean siblings Components `f3745356182444656edfdef56aa827095632d3ea`,
 FileTools `3a080ecd31068a77c1e1bd639f7a78e21c93db85`, SharedInfo `6acab7a59325bdb9c5b36539d52403fa9b274cd6`.
@@ -131,6 +140,7 @@ and expected-parent checks using fingerprint `96E836FAA8854EE98ABC10903C206549E1
 | `77ccb70d6361fd65a4b92d1d68b783de89e52f1c` | Paired Workbench/HTTP publication proof |
 | `ca195c794349d4e4eb653bacb7605ed83df86c4b` | Populated upgrade and native/OS restart proof |
 | `640fece824cfdf1f6c5985f6184c7eec199b7a9d` | Verified temporary-resource cleanup policy |
+| `86a7659b8e44014cdd66887ce20a1b66d745e364` | Standard build-output and isolated-fixture reuse policy; installed canonical skills synchronized |
 
 Production last changed at `e9472752`; later checkpoints change tests or documentation. A report-only
 commit references the tested source, avoiding a circular self-hash.
