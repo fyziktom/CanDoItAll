@@ -1,0 +1,124 @@
+origin,group,requirement,pc4_treatment,current_execution_status
+PC1,PC-01,Entry candidate,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-02,Preserved baseline,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-03,Dependency cut,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-04,Complete scenario host,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-05,Routes and queries,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-06,Catalog and definition selection,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-07,Definition draft across tabs,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-08,Definition commands,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-09,Submission reconciliation,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-10,Role editing,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-11,Step editing,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-12,Interactive canvas,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-13,Canvas maximize lifecycle,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-14,Template browsing and previews,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-15,Template imports,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-16,Run details and subsections,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-17,Live tabs and filters,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-18,Bounded reads and polling,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-19,Hidden run groups,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-20,Retained launch intent,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-21,Accepted launch and read-back failure,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-22,Explicit new launch intent,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-23,Run cancellation,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-24,Operator actions and notes,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-25,Authorized current run files,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-26,File late errors,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-27,File cleanup and content lifetime,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-28,"Graphs, analytics and partial errors",Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-29,Context freshness and lifetime,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-30,Manager chat and attachments,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-31,Voice and browser lifecycle,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-32,Permissions and safe content,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-33,Workbench integration,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-34,End-to-end native execution,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-35,Boundary negative controls,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-36,Source and published assets,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-37,Measured development loop,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-38,Focused tests and registration,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-39,Final frozen integration,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-40,Portability and maintained docs,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-41,Independent openings and disposal,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC1,PC-42,Residual census and delivery,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A01,Startup local PGP request and signing preflight,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A02,Current checkout and operator work preserved,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A03,Current test impact and CodeAnalytics freshness,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A04,Accepted authoring result survives same-opening read,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A05,Old read cannot regress acknowledged state,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A06,Reentry cannot replace pending submission,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A07,Outcomes are classified and not blindly replayed,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A08,Retired opening cannot update same-ID successor,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A09,Canvas/template intent semantics preserved,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A10,Role Add adopts eligible authoritative selection,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A11,Role Delete clears removed editor correctly,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A12,Actual edited step keeps DecisionRoleKey,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A13,Immutable submissions preserve later field edits,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A14,Stable row and raw-number reconciliation,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A15,Submission lifecycle closes on reachable discard/refusal,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A16,Two openings and Server-tab raw drafts remain independent,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A17,Actual cross-scope authoring diagnosis completed,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A18,Native authoring owner outcome delivered,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A19,Durability readiness remains truthful,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A20,PC1 feature groups carried forward,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A21,Affected production projects and light closure validated,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A22,Focused discovery and execution are source-valid,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A23,Authoring browser journeys demonstrate new corrections,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A24,Native launch/workflow/files/chat/cancel preserved,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A25,Affected Workbench/voice/shared chat consumers preserved,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A26,Fast/Parity source and published assets work,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A27,Owned environments cleaned and private data safe,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A28,Active renderer and evaluated dependency census delivered,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A29,Mandatory portability and triggered broader gates recorded,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A30,Tracked source-addressed evidence and signed checkpoints,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC2,A31,No unsupported performance or full-completion claims,Preserve. Inspect current consumers; rerun when invalidated and required regression floor. No repeated renderer extraction.,NOT_RUN
+PC3,N01,Local PGP and verified committer,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N02,Current checkout and operator work,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N03,Fresh impact plan,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N04,Positive reproducible regression baseline,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N05,Native dependency boundary,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N06,Single scoped aggregate,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N07,Database uniqueness,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N08,Canonical additive migration,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N09,Atomic revision and receipt,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N10,Idempotent operation identity,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N11,Definition actions are durable,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N12,Role actions are durable,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N13,Actual step and hidden fields,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N14,Canvas semantic actions,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N15,Geometry and independent views,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N16,Materialized imports,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N17,Truthful catalog and defaults,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N18,Complete semantic round trip,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N19,Pinned guidance and resource defaults,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N20,Native permissions and referential integrity,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N21,Accepted result versus stale read,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N22,Authoritative newer observation,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N23,Coherent sibling revision,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N24,Raw drafts and selected identities,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N25,Unknown and postcommit recovery,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N26,Exact opening retirement,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N27,Immutable publication,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N28,Scope and lifecycle selection,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N29,Resolved driver source,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N30,Exact executable pipeline,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N31,Prepared launch and republish,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N32,Pinned child meaning,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N33,API and producer compatibility,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N34,Fresh production scopes and process restart,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N35,Populated upgrade preservation,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N36,Captured mutation admission,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N37,Transfer and model coverage,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N38,Schema validation and rollback truth,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N39,Production browser J1-J2,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N40,Production browser J3-J4,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N41,Production browser J5,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N42,Preserved runtime and UI journeys,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N43,Sandbox and delivered assets,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N44,Measured query and loop effects,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N45,Final targeted union,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N46,Frozen broad Stable gate,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N47,Portability and artifact safety,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N48,Current architecture and residual map,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N49,Source-addressed delivery,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN
+PC3,N50,Signed incremental completion,"Preserve implemented native/semantic boundary. Map impact; retain exact prior evidence only if justified, never import a historical PASS.",NOT_RUN

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "review_commit": "a13c1add605d1ceec43dedc0513acb7ac5959f96",
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "high",
+      "status": "SOURCE_ESTABLISHED_NOT_EXECUTED",
+      "title": "HTTP enrichment and compiled publication can disagree",
+      "sources": [
+        "S17",
+        "S26",
+        "S27",
+        "S29",
+        "S31"
+      ],
+      "implementation_scope": "S1"
+    },
+    {
+      "id": "F02",
+      "priority": "high",
+      "status": "SOURCE_FILTER_ESTABLISHED_DUPLICATE_EFFECT_HYPOTHESIS",
+      "title": "Legacy project-run candidate may be reduced to absence",
+      "sources": [
+        "S08",
+        "S17",
+        "S25",
+        "S26",
+        "S28",
+        "S37"
+      ],
+      "implementation_scope": "S2"
+    },
+    {
+      "id": "F03",
+      "priority": "medium_high",
+      "status": "CONDITIONAL_SOURCE_PATH_NOT_EXECUTED",
+      "title": "Deleted materialized role resource collides with reimport",
+      "sources": [
+        "S09",
+        "S10",
+        "S11",
+        "S22",
+        "S23"
+      ],
+      "implementation_scope": "S3"
+    },
+    {
+      "id": "F04",
+      "priority": "medium",
+      "status": "SOURCE_CONTRACT_DRIFT_NOT_EXECUTED",
+      "title": "Input normalization and explicit-ID XML contract drift",
+      "sources": [
+        "S08",
+        "S17",
+        "S27",
+        "S29"
+      ],
+      "implementation_scope": "S1"
+    }
+  ]
+}
