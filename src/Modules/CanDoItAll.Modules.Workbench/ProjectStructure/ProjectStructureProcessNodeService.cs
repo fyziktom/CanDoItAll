@@ -136,7 +136,8 @@ public sealed partial class ProjectStructureProcessNodeService(
     public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
         ProjectStructureProcessLaunchVariableBuildRequest request,
         IProcessLaunchVariablePreparer launchVariablePreparationService,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
@@ -159,7 +160,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var projectWorkbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
-        var definitions = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
+        var catalog = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
         var surface = await LoadSurfaceAsync(
             projectWorkbench,
             request.ProjectId,
@@ -170,15 +171,17 @@ public sealed partial class ProjectStructureProcessNodeService(
                 "ProjectStructureNodeNotFound",
                 $"Node '{request.ProjectNodeId}' was not found in project '{request.ProjectId:D}'.");
 
-        var processDefinitionId = request.ProcessDefinitionId?.Value ?? Guid.Empty;
+        var processDefinitionId = definitions is null ? request.ProcessDefinitionId?.Value ?? Guid.Empty
+            : ProcessDefinitionCatalogProjectionService.CreateDefinitionId(new(definitions.DefinitionKey)).Value;
         var processDefinitionNodeId = processDefinitionId == Guid.Empty
             ? "process-api"
             : ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(processDefinitionId);
         var definitionKey = FirstNonEmpty(
+            definitions?.DefinitionKey,
             request.DefinitionKey,
             processDefinitionId == Guid.Empty
                 ? string.Empty
-                : definitions.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
+                : catalog.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
         var agent = new ProjectStructureAgentContext(
             AgentId: "process-api",
             AgentName: string.IsNullOrWhiteSpace(request.RequestedBy) ? "Process API" : request.RequestedBy.Trim(),
@@ -194,7 +197,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             targetNode,
             agent,
             launchVariablePreparationService,
-            definitionKey);
+            definitionKey,
+            definitions);
         var variables = CopyLaunchVariables(request.Variables);
 
         foreach (var item in derivedVariables)

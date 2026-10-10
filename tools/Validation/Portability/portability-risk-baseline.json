@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-09T14:14:58.804103+00:00",
+  "generated_utc": "2026-10-10T01:34:16.539764+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15372,
+  "allowance_count": 15374,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -66740,6 +66740,12 @@
       "count": 1
     },
     {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessExecutableDefinitionResolver.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c9e43186e5882d44d1f08965d88262b9fd3aaedcf8902f6f572ff91bf330374a",
+      "count": 1
+    },
+    {
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.Prepared.cs",
       "category": "link-reparse",
       "source_fingerprint": "0ac287c6612aa51a82b0bd4db2b667f970b11965a2bbc59dd4f659af0d098560",
@@ -66857,6 +66863,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
       "category": "case-policy",
       "source_fingerprint": "7cc20153b985cfdea0c84edcfb12c3163dfb2544e958072ba0fbe4e33881a5bd",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "860cc9ac6ec95cb7614f5b4c1b2822aa8c770a9f7719c6e2070129731b978461",
       "count": 1
     },
     {

@@ -24,6 +24,29 @@ public sealed class ProcessLaunchAtomicCommitTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Explicit_definition_identity_must_match_the_canonical_key_before_runtime_effects(bool matching) {
+        var runtime = new StatefulRuntimeStore();
+        var queue = new RecordingDispatchQueue();
+        var service = NewOperationalService(runtime, new NoOpArtifactInitializer(), queue);
+        var canonical = NewLaunchRequest(execute: false);
+        var request = canonical with {
+            DefinitionKey = "  " + canonical.DefinitionKey!.ToUpperInvariant() + "  ",
+            ProcessDefinitionId = matching ? ProcessTemplateKernelBuilder.CreateDefinitionId(canonical.DefinitionKey) : new(Guid.NewGuid())
+        };
+        if (matching) {
+            var preview = await service.PreviewAsync(request);
+            Assert.Equal(canonical.DefinitionKey, preview.LaunchPlan.DefinitionKey);
+            Assert.Equal(request.ProcessDefinitionId, preview.DefinitionId);
+        } else {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.LaunchAsync(request));
+        }
+        Assert.Empty(runtime.Requests);
+        Assert.Empty(queue.Requests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Launch_passes_compiled_plan_to_initial_runtime_commit_without_separate_plan_write(bool withProjectAdmission) {
         var admission = withProjectAdmission ? new ProcessProjectAdmission(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()) : null;
         var planStore = new TrackingPlanStore();

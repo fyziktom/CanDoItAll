@@ -47,6 +47,15 @@ public sealed class ProcessExecutableDefinitionResolver(IProcessAuthoringStore s
             ?? throw new InvalidOperationException("The explicitly requested process definition is unavailable.");
     }
 
+    public async Task<string> CanonicalizeKeyAsync(ProcessWorkspaceShellScope scope, string key, CancellationToken cancellationToken) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        var rows = await workspace.CatalogAsync(scope, cancellationToken);
+        var matches = rows.Select(row => row.Address.DefinitionKey).Concat(templates.Load().Definitions.Select(definition => definition.Key))
+            .Distinct(StringComparer.Ordinal).Where(candidate => string.Equals(candidate, key.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+        return matches.Length == 1 ? matches[0]
+            : throw new InvalidOperationException("The explicitly requested process definition is unavailable or ambiguous.");
+    }
+
     public async Task<ProcessAuthoringContent> PinPublicationAsync(ProcessAuthoringSession baseline, ProcessAuthoringContent content, CancellationToken cancellationToken) {
         content = content with { Dependencies = new Dictionary<string, ProcessExecutableDefinitionSource>() };
         var closure = await CloseAsync(baseline.Address, Source(baseline.Address, baseline.Revision + 1, null, null, content), cancellationToken);

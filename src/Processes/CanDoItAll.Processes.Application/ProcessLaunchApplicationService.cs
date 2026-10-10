@@ -411,11 +411,14 @@ public sealed partial class ProcessLaunchApplicationService(
         }
 
         var definition = templatePackLoader.LoadDefinition(definitionKey);
+        if (request.ProcessDefinitionId is { } expected && ProcessTemplateKernelBuilder.CreateDefinitionId(definition.Key) != expected) {
+            throw new InvalidOperationException("The requested definition key and identity disagree.");
+        }
         return new ProcessTemplateSelection(pack.Manifest.Version, definition, liveProfile, null);
     }
 
     public async Task<ProcessExecutableDefinitionClosure?> ResolveForPreparationAsync(string? key, ProcessDefinitionId? id, Guid? projectId,
-        ProcessProjectAdmission? admission = null, CancellationToken cancellationToken = default) {
+        ProcessProjectAdmission? admission = null, CancellationToken cancellationToken = default, string? liveRunProfileKey = null) {
         if (executableDefinitions is null) {
             return null;
         }
@@ -423,10 +426,15 @@ public sealed partial class ProcessLaunchApplicationService(
         if (string.IsNullOrWhiteSpace(key)) {
             key = id is { } definitionId
                 ? await executableDefinitions.ResolveKeyAsync(scope, definitionId, cancellationToken)
-                : ResolveDefinition(new(null, null, null, projectId, null, "process-launch", new Dictionary<string, string>(), false, false)).Definition.Key;
+                : ResolveDefinition(new(null, null, liveRunProfileKey, projectId, null, "process-launch", new Dictionary<string, string>(), false, false)).Definition.Key;
         }
+        key = await executableDefinitions.CanonicalizeKeyAsync(scope, key, cancellationToken);
         if (id is { } expected && ProcessTemplateKernelBuilder.CreateDefinitionId(key) != expected) {
             throw new InvalidOperationException("The requested definition key and identity disagree.");
+        }
+        if (!string.IsNullOrWhiteSpace(liveRunProfileKey)) {
+            ResolveLiveRunProfile(new(key, id, liveRunProfileKey, projectId, null, "process-launch", new Dictionary<string, string>(), false, false),
+                templatePackLoader.LoadLiveRunProfiles(), key);
         }
         return await executableDefinitions.ResolveAsync(scope, key, admission, cancellationToken);
     }
@@ -451,12 +459,9 @@ public sealed partial class ProcessLaunchApplicationService(
             return ResolveDefinition(request);
         }
         var key = request.DefinitionKey;
-        if (string.IsNullOrWhiteSpace(key) && request.ProcessDefinitionId is null && !string.IsNullOrWhiteSpace(request.LiveRunProfileKey)) {
-            key = ResolveDefinition(request).Definition.Key;
-        }
         var closure = request.ResolvedDefinitions ?? await ResolveForPreparationAsync(key, request.ProcessDefinitionId, request.ProjectId,
-            request.ProjectAdmission, cancellationToken) ?? throw new InvalidOperationException("Executable definition resolution is unavailable.");
-        if (closure.ProjectId != (request.ProjectId ?? Guid.Empty) || !string.IsNullOrWhiteSpace(key) && closure.DefinitionKey != key ||
+            request.ProjectAdmission, cancellationToken, request.LiveRunProfileKey) ?? throw new InvalidOperationException("Executable definition resolution is unavailable.");
+        if (closure.ProjectId != (request.ProjectId ?? Guid.Empty) || !string.IsNullOrWhiteSpace(key) && !string.Equals(closure.DefinitionKey, key.Trim(), StringComparison.OrdinalIgnoreCase) ||
                 request.ProcessDefinitionId is { } id && ProcessTemplateKernelBuilder.CreateDefinitionId(closure.DefinitionKey) != id ||
                 request.ProjectAdmission is { } admission && (closure.ProjectLifetimeId != admission.LifetimeId || closure.DatabaseProfileId != admission.DatabaseProfileId)) {
             throw new InvalidOperationException("The captured executable content does not match the launch request.");
