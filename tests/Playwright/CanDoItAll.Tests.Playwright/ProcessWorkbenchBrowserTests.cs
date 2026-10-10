@@ -1,11 +1,14 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Net.Http.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.WebUtilities;
@@ -31,6 +34,24 @@ public sealed class ProcessWorkbenchBrowserTests {
             await workbench.LinkObjectsAsync(host.ProjectId, node.Id, processNode, ProjectObjectLinkKind.Uses);
             return node;
         });
+        var published = await host.ReadAsync(async services => {
+            var workspace = services.GetRequiredService<ProcessAuthoringWorkspace>();
+            var baseline = await workspace.ReadAsync(ProcessWorkspaceShellScope.ForProject(host.ProjectId), new(ProcessNativeBrowserHost.CompleteDefinition), default);
+            var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
+            content.Definition.DisplayName = "PC4 project workflow publication";
+            content.Definition.LaunchDriverActivations.Clear();
+            content = await services.GetRequiredService<ProcessExecutableDefinitionResolver>().PinPublicationAsync(baseline, content, default);
+            return (await workspace.CommitAsync(baseline, Guid.NewGuid(), ProcessAuthoringCodec.Hash("paired native and HTTP launch"), content,
+                ProcessAuthoringLifecycle.Published, true, null, default)).Snapshot!;
+        });
+        using var http = new HttpClient { BaseAddress = new(host.BaseUrl) };
+        HttpLaunchRequest httpRequest = new(DefinitionKey: ProcessNativeBrowserHost.CompleteDefinition, ProjectId: host.ProjectId,
+            ProjectNodeId: target.Id, RunReadiness: false, Execute: false, CallerIntentId: Guid.NewGuid());
+        using var checkedResponse = await http.PostAsJsonAsync("/api/processes/launch/check", httpRequest);
+        checkedResponse.EnsureSuccessStatusCode();
+        using var checkedBody = JsonDocument.Parse(await checkedResponse.Content.ReadAsStringAsync());
+        var httpAdmission = new ProcessLaunchAdmissionId(checkedBody.RootElement.GetProperty("observation").GetProperty("admissionId").GetGuid());
+        var httpPreparation = (await host.ReadAsync(services => services.GetRequiredService<IProcessPreparedLaunchStore>().GetAsync(httpAdmission)))!;
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
@@ -88,6 +109,15 @@ public sealed class ProcessWorkbenchBrowserTests {
             Assert.NotNull(preparation.DeliveredLinkId);
             Assert.Equal(host.ProjectId, preparation.Preparation.LinkTarget!.ProjectId);
             Assert.Equal(target.Id, preparation.Preparation.LinkTarget.SourceNodeKey);
+            var uiDefinitions = preparation.Preparation.InitialCommit.InitialPlan!.ExecutableDefinitions!;
+            var httpDefinitions = httpPreparation.Preparation.InitialCommit.InitialPlan!.ExecutableDefinitions!;
+            var uiSource = uiDefinitions.Definitions[ProcessNativeBrowserHost.CompleteDefinition];
+            var httpSource = httpDefinitions.Definitions[ProcessNativeBrowserHost.CompleteDefinition];
+            Assert.Equal(published.PublishedId, uiSource.PublicationId);
+            Assert.Equal(uiSource, httpSource);
+            Assert.Empty(ProcessExecutableDefinitionResolver.Decode(httpDefinitions, ProcessNativeBrowserHost.CompleteDefinition).Definition.LaunchDriverActivations);
+            Assert.Equal(target.Id, httpPreparation.Preparation.Request.Variables[ProcessRuntimeLaunchVariables.ProjectNodeId]);
+            Assert.Equal(host.ProjectId.ToString("D"), httpPreparation.Preparation.Request.Variables[ProcessRuntimeLaunchVariables.ProjectId]);
             var structure = await host.ReadAsync(services => services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(host.ProjectId));
             var link = Assert.Single(structure.Links, item => item.RecordId == preparation.DeliveredLinkId);
             Assert.Equal(target.Id, link.SourceId);
@@ -113,9 +143,23 @@ public sealed class ProcessWorkbenchBrowserTests {
             await Assertions.Expect(page.GetByTestId("live-processes-summary")).ToBeVisibleAsync();
             await Assertions.Expect(page.GetByTestId("live-processes-run-open-details").First).ToBeVisibleAsync();
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "workbench-native-result.png") });
+            using var launchedResponse = await http.PostAsJsonAsync("/api/processes/launch", httpRequest with { PreparedAdmissionId = httpAdmission.Value });
+            launchedResponse.EnsureSuccessStatusCode();
+            using var launchedBody = JsonDocument.Parse(await launchedResponse.Content.ReadAsStringAsync());
+            var httpRun = new ProcessRunId(launchedBody.RootElement.GetProperty("runId").GetGuid());
+            using var replayResponse = await http.PostAsJsonAsync("/api/processes/launch", httpRequest with { PreparedAdmissionId = httpAdmission.Value });
+            replayResponse.EnsureSuccessStatusCode();
+            using var replayBody = JsonDocument.Parse(await replayResponse.Content.ReadAsStringAsync());
+            Assert.Equal(httpRun.Value, replayBody.RootElement.GetProperty("runId").GetGuid());
+            var httpAccepted = (await host.ReadAsync(services => services.GetRequiredService<IProcessPreparedLaunchStore>().FindByRunAsync(httpRun)))!;
+            Assert.Equal(httpPreparation.Preparation.Review.PlanHash, httpAccepted.Preparation.Review.PlanHash);
+            var httpAssignments = await host.ReadAsync(async services => await services.GetRequiredService<IProcessRuntimeStepAssignmentStore>().LoadByRunAsync(httpRun));
+            Assert.All(httpAssignments, item => Assert.Equal(target.Id, item.LaunchVariables[ProcessRuntimeLaunchVariables.ProjectNodeId]));
+            Assert.NotEmpty(httpAssignments);
             await File.WriteAllTextAsync(Path.Combine(host.Evidence, "workbench-oracle.json"), JsonSerializer.Serialize(new {
                 Project = host.ProjectId, Target = target.Id, Run = runId.Value, preparation.Preparation.CallerIntentId,
                 preparation.Preparation.AdmissionId, preparation.LinkDeliveryState, preparation.DeliveredLinkId,
+                HttpRun = httpRun.Value, HttpAdmission = httpAdmission.Value, Publication = published.PublishedId, uiSource.ContentHash,
                 WorkflowRun = child.RunId, Summary = state.AppliedResults.Single().UserSafeSummary
             }));
             Assert.Empty(errors);
@@ -127,4 +171,7 @@ public sealed class ProcessWorkbenchBrowserTests {
             await context.Tracing.StopAsync(new() { Path = Path.Combine(host.Evidence, "workbench-trace.zip") });
         }
     }
+
+    private sealed record HttpLaunchRequest(string DefinitionKey, Guid ProjectId, string ProjectNodeId, bool RunReadiness, bool Execute,
+        Guid CallerIntentId, Guid? PreparedAdmissionId = null);
 }
