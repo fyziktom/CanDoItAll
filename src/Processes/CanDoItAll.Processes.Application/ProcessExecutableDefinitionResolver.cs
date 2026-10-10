@@ -10,6 +10,12 @@ public sealed class ProcessExecutableDefinitionResolver(IProcessAuthoringStore s
     ProcessAuthoringWorkspace workspace, ProcessTemplatePackLoader templates, IProcessLaunchDriverCatalogProvider drivers) {
     private const int MaximumDefinitions = 256;
 
+    public async Task<bool> MatchesRetainedOriginAsync(Guid? projectId, ProcessAuthoringAddress origin, CancellationToken cancellationToken) {
+        var scope = projectId is { } project ? ProcessWorkspaceShellScope.ForProject(project) : ProcessWorkspaceShellScope.Global;
+        var current = await context.CaptureReadAddressAsync(scope, new(origin.DefinitionKey), cancellationToken);
+        return current == origin;
+    }
+
     public async Task<bool> MatchesCurrentScopeAsync(Guid? projectId, ProcessProjectAdmission? admission,
         ProcessExecutableDefinitionClosure? captured, CancellationToken cancellationToken) {
         var scope = projectId is { } project ? ProcessWorkspaceShellScope.ForProject(project) : ProcessWorkspaceShellScope.Global;

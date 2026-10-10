@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-10T01:34:16.539764+00:00",
+  "generated_utc": "2026-10-10T02:36:03.508681+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15374,
+  "allowance_count": 15380,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -66784,6 +66784,12 @@
     {
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
       "category": "case-policy",
+      "source_fingerprint": "05040cdcdf429422bb70a839bb37687e183fd5eca3ff6f7d43ede3a907a28ad6",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+      "category": "case-policy",
       "source_fingerprint": "09e9bb296fd3c3b40e57fe8252813eb3356f4a8e21ba058652fd7b22c8f3eb6c",
       "count": 1
     },
@@ -66923,6 +66929,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
       "category": "case-policy",
       "source_fingerprint": "a5aa16824a4e41164eeb9561775e1745fdf9b6a7560b457959441b0dbc194176",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessLaunchApplicationService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b0ab126032956c17bbbf7938a5e85d2b8ca5037bb4d7cc9c84ac3f2e135bde50",
       "count": 1
     },
     {
@@ -67319,6 +67331,30 @@
       "path": "src/Processes/CanDoItAll.Processes.Application/ProcessProductReadbackFailureParser.cs",
       "category": "windows-path",
       "source_fingerprint": "baae15161fe43a52712b52f4734b47266148b554863a46dbbab84ab2bb7cd83c",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "068a547214ee5230f58d6332bb3d92d11dc4c3f04214acae228ffe8daf06177a",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4a46f956247c0d496195accf02dbc93eae5c70b7d71b0aae1a8fbdb1ad6ee963",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "80e7627da3bfe65c4693af84b3451ef045ad275d257714c99a2024080646a847",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessRetainedLaunchRecovery.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c6b21accd5a25dd47fb210866afd4f30c3d801346008496241457a787e3da0db",
       "count": 1
     },
     {

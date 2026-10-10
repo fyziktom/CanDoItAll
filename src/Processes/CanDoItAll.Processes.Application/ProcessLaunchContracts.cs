@@ -46,7 +46,9 @@ public sealed record ProcessExistingLaunchLookupRequest(
     string DefinitionKey,
     string? LiveRunProfileKey,
     Guid? ProjectId,
-    IReadOnlyDictionary<string, string> RequiredLaunchVariables);
+    IReadOnlyDictionary<string, string> RequiredLaunchVariables) {
+    public bool StoppedOnly { get; init; }
+}
 
 public sealed record ProcessLaunchExecutorOverride(
     string StepKey,

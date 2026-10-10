@@ -1,0 +1,65 @@
+using System.Collections;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Security.Cryptography;
+using System.Text.Json;
+
+var predecessor = Path.GetFullPath(args[0]);
+var destination = Path.GetFullPath(args[1]);
+AssemblyLoadContext.Default.Resolving += (_, name) => {
+    var path = Path.Combine(predecessor, name.Name + ".dll");
+    return File.Exists(path) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(path) : null;
+};
+Assembly Load(string name) => AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(predecessor, name + ".dll"));
+var builder = Load("CanDoItAll.Processes.Builder");
+var planType = builder.GetType("CanDoItAll.Processes.Builder.ProcessInstancePlan", true)!;
+if (planType.GetProperty("ExecutableDefinitions") is not null) {
+    throw new InvalidOperationException("The supplied binary is not the predecessor plan schema.");
+}
+var unit = Load("CanDoItAll.Tests.Unit");
+var tests = unit.GetType("CanDoItAll.Tests.Unit.Processes.ProcessLaunchAtomicCommitTests", true)!;
+object Nested(string name, params object?[] parameters) => Activator.CreateInstance(tests.GetNestedType(name, BindingFlags.NonPublic)!,
+    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, parameters, null)!;
+var runtimeAssembly = Load("CanDoItAll.Processes.Runtime");
+var eventTypes = runtimeAssembly.GetType("CanDoItAll.Processes.Runtime.ProcessRuntimeEventTypes", true)!;
+var createdEvent = eventTypes.GetField("ProcessRunCreated")?.GetValue(null)
+    ?? eventTypes.GetProperty("ProcessRunCreated")!.GetValue(null);
+var runtime = Nested("StatefulRuntimeStore", new object?[] { createdEvent });
+var service = tests.GetMethod("NewOperationalService", BindingFlags.NonPublic | BindingFlags.Static)!
+    .Invoke(null, [runtime, Nested("NoOpArtifactInitializer"), Nested("RecordingDispatchQueue")])!;
+var request = tests.GetMethod("NewLaunchRequest", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [false])!;
+var variables = (IDictionary<string, string>)request.GetType().GetProperty("Variables")!.GetValue(request)!;
+variables.Add("Pc4LegacyProbe", "predecessor-retained-run");
+var task = (Task)service.GetType().GetMethod("LaunchAsync")!.Invoke(service, [request, CancellationToken.None])!;
+await task;
+var commits = ((IEnumerable)runtime.GetType().GetProperty("Requests")!.GetValue(runtime)!).Cast<object>().ToArray();
+var initial = commits.First(commit => commit.GetType().GetProperty("InitialPlan")!.GetValue(commit) is not null);
+var plan = initial.GetType().GetProperty("InitialPlan")!.GetValue(initial)!;
+var persistence = Load("CanDoItAll.Processes.Persistence");
+var mapper = persistence.GetType("CanDoItAll.Processes.Persistence.ProcessInstancePlanPersistenceMapper", true)!;
+var entity = mapper.GetMethod("ToEntity", BindingFlags.Public | BindingFlags.Static)!.Invoke(null, [plan])!;
+var planJson = (string)entity.GetType().GetProperty("PayloadJson")!.GetValue(entity)!;
+var options = (JsonSerializerOptions)mapper.GetMethod("CreateSerializerOptions", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null)!;
+var commitJson = JsonSerializer.Serialize(initial, initial.GetType(), options);
+using var parsed = JsonDocument.Parse(planJson);
+if (parsed.RootElement.TryGetProperty("executableDefinitions", out _)) {
+    throw new InvalidOperationException("The predecessor payload unexpectedly contains a captured closure.");
+}
+Directory.CreateDirectory(destination);
+await File.WriteAllTextAsync(Path.Combine(destination, "plan.json"), planJson);
+await File.WriteAllTextAsync(Path.Combine(destination, "initial-commit.json"), commitJson);
+var provenance = new {
+    SchemaSourceCommit = "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+    SourceDescription = "Retained ProcUiProofPC2 binaries, checked against the predecessor DTO and native launch fixture; no template source change since PC2. Actual predecessor launch preparation captured at a rejecting test commit boundary, then serialized by the predecessor persistence mapper. No production effects executed.",
+    HasExecutableDefinitionsProperty = false,
+    PlanHash = planType.GetProperty("PlanHash")!.GetValue(plan),
+    PlanSha256 = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(planJson))).ToLowerInvariant(),
+    CommitSha256 = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(commitJson))).ToLowerInvariant(),
+    Binaries = new[] { builder, persistence, unit, service.GetType().Assembly }.Select(assembly => new {
+        Name = assembly.GetName().Name,
+        InformationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
+        Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))).ToLowerInvariant()
+    }).ToArray()
+};
+await File.WriteAllTextAsync(Path.Combine(destination, "provenance.json"), JsonSerializer.Serialize(provenance, new JsonSerializerOptions { WriteIndented = true }));
+Console.WriteLine(JsonSerializer.Serialize(provenance));

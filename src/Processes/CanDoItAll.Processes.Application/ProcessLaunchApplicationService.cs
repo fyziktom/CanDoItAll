@@ -54,6 +54,7 @@ public sealed partial class ProcessLaunchApplicationService(
     private const string MultipleBranchGatesUnsupportedCode = "process.launch.multiple_branch_gates_unsupported";
     private const int MaximumLaunchLifecycleConcurrencyRetries = 3;
     private static readonly TimeSpan LaunchLifecycleConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
+    private readonly ProcessRetainedLaunchRecovery retainedLaunches = new(preparedLaunchStore, executableDefinitions);
 
     public async Task<ProcessLaunchResult> PreviewAsync(
         ProcessLaunchRequest request,
@@ -178,9 +179,8 @@ public sealed partial class ProcessLaunchApplicationService(
             throw new ArgumentException("At least one launch variable is required for existing launch lookup.", nameof(request));
         }
 
-        var expectedDefinitionId = ProcessTemplateKernelBuilder.CreateDefinitionId(request.DefinitionKey);
         var matchingAssignments = await assignmentStore
-            .FindByLaunchVariablesAsync(request.RequiredLaunchVariables, cancellationToken)
+            .FindByLaunchVariablesAsync(ProcessRetainedLaunchRecovery.LookupVariables(request), cancellationToken)
             .ConfigureAwait(false);
 
         foreach (var runGroup in matchingAssignments
@@ -193,39 +193,30 @@ public sealed partial class ProcessLaunchApplicationService(
                 throw new InvalidOperationException($"Existing launch lookup found assignments for missing process run '{runGroup.Key}'.");
             }
 
-            if (state.Status is ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled or ProcessRuntimeStatus.Blocked)
-            {
-                continue;
-            }
-
-            if (state.ProjectAdmission is { } admission && admission.ProjectId != (request.ProjectId ?? Guid.Empty) && executableDefinitions is not null) {
-                continue;
-            }
-
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Existing launch lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
-            if (plan.Definition.DefinitionId != expectedDefinitionId)
-            {
+            if (!string.Equals(ProcessRetainedLaunchRecovery.DefinitionKey(plan), request.DefinitionKey.Trim(), StringComparison.OrdinalIgnoreCase)) {
                 continue;
             }
-            if (executableDefinitions is not null && !await executableDefinitions.MatchesCurrentScopeAsync(request.ProjectId,
-                    state.ProjectAdmission, plan.ExecutableDefinitions, cancellationToken)) {
+            var retained = await retainedLaunches.ReadAsync(request.ProjectId, state, plan, cancellationToken);
+            if (retained is null) {
                 continue;
             }
 
             var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
-            var selected = plan.ExecutableDefinitions is { } captured
-                ? new ProcessTemplateSelection("captured", ProcessExecutableDefinitionResolver.Decode(captured, captured.DefinitionKey).Definition, null, captured)
-                : ResolveDefinition(new(request.DefinitionKey, null, request.LiveRunProfileKey, request.ProjectId, null,
-                    "existing-launch-lookup", new Dictionary<string, string>(), false, false));
-            var launchPlan = CreateLaunchPlanView(
-                selected,
-                plan,
-                assignments,
-                [new ProcessLaunchReadinessFinding(
+            if (!ProcessRetainedLaunchRecovery.MatchesProfile(request.LiveRunProfileKey, retained, state.RunId, assignments) ||
+                    (request.StoppedOnly ? state.Status is not (ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Blocked)
+                        : state.Status is ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled or ProcessRuntimeStatus.Blocked)) {
+                continue;
+            }
+            ProcessLaunchReadinessFinding[] findings = [new(
                     ProcessLaunchReadinessSeverity.Info,
                     "process.launch.existing_reused",
-                    $"Reused existing process run '{state.RunId.Value:D}' for matching launch variables.")]);
+                    $"Reused existing process run '{state.RunId.Value:D}' for matching launch variables.")];
+            var launchPlan = retained.Review is { } review ? review with { ReadinessFindings = [.. review.ReadinessFindings, .. findings] }
+                : plan.ExecutableDefinitions is { } captured ? CreateLaunchPlanView(
+                    new("captured", ProcessExecutableDefinitionResolver.Decode(captured, captured.DefinitionKey).Definition, null, captured), plan, assignments, findings)
+                : ProcessRetainedLaunchRecovery.LegacyReview(plan, assignments, findings);
 
             return new ProcessLaunchResult(
                 plan.Definition.DefinitionId,
@@ -239,6 +230,10 @@ public sealed partial class ProcessLaunchApplicationService(
 
         return null;
     }
+
+    public async Task<ProcessAuthoringAddress?> ReadExistingLaunchOriginAsync(Guid? projectId, ProcessRuntimeStateSnapshot state, ProcessInstancePlan plan,
+        CancellationToken cancellationToken = default)
+        => (await retainedLaunches.ReadAsync(projectId, state, plan, cancellationToken))?.Origin;
 
     private async Task<ProcessLaunchPreparation> PrepareLaunchAsync(
         ProcessLaunchRequest request,
@@ -448,10 +443,11 @@ public sealed partial class ProcessLaunchApplicationService(
         }
         var document = ProcessExecutableDefinitionResolver.Decode(captured, captured.DefinitionKey).Definition;
         var step = document.Steps.Single(item => item.Key == parent.StepKey);
-        if ((step.SubprocessContract?.DefinitionKey ?? step.SubprocessProcessKey) != key) {
+        var childKey = step.SubprocessContract?.DefinitionKey ?? step.SubprocessProcessKey;
+        if (!string.Equals(childKey, key.Trim(), StringComparison.OrdinalIgnoreCase)) {
             throw new InvalidOperationException("The child definition differs from the parent's captured executable contract.");
         }
-        return ProcessExecutableDefinitionResolver.SelectCaptured(captured, key);
+        return ProcessExecutableDefinitionResolver.SelectCaptured(captured, childKey);
     }
 
     private async Task<ProcessTemplateSelection> ResolveExecutableSelectionAsync(ProcessLaunchRequest request, CancellationToken cancellationToken) {
