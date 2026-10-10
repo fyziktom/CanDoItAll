@@ -1,5 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
@@ -11,12 +13,46 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProcessPredecessorRecoveryTests {
+    [Fact]
+    public async Task Authentic_predecessor_payload_and_assignments_survive_a_populated_canonical_schema_upgrade() {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var lease = PostgresTestDatabaseLease.Create("pc4-predecessor-upgrade");
+        await using var application = new AppDbContext(lease.CreateAppDbContextOptions());
+        await application.GetService<IMigrator>().MigrateAsync("20261007193102_AddProjectExternalIdentity");
+        var options = new DbContextOptionsBuilder<ProcessPersistenceDbContext>().UseNpgsql(lease.ConnectionString).Options;
+        await using (var original = new ProcessPersistenceDbContext(options)) {
+            await ProcessPredecessorFixture.SeedRetainedAsync(original, false, null, ProcessRuntimeStatus.Active,
+                new Dictionary<string, string>());
+        }
+        var before = await ReadRowsAsync();
+        Assert.NotEmpty(before);
+        await application.Database.MigrateAsync();
+        await application.Database.MigrateAsync();
+        Assert.False(application.Database.HasPendingModelChanges());
+        Assert.Equal(before, await ReadRowsAsync());
+        await using var independent = new ProcessPersistenceDbContext(options);
+        Assert.Equal(ProcessPredecessorFixture.PlanJson, (await independent.InstancePlans.SingleAsync()).PayloadJson);
+        var restored = await new EfProcessInstancePlanStore(independent).LoadAsync(ProcessPredecessorFixture.ReadInitialCommit().InitialPlan!.Header.PlanId);
+        Assert.Null(restored!.ExecutableDefinitions);
+        Assert.Equal(ProcessPredecessorFixture.ReadInitialCommit().InitialPlan!.PlanHash, restored.PlanHash);
+
+        Task<string[]> ReadRowsAsync() => application.Database.SqlQueryRaw<string>("""
+            SELECT to_jsonb(p)::text AS "Value" FROM process_instance_plans p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_states p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_steps p
+            UNION ALL SELECT to_jsonb(p)::text AS "Value" FROM process_runtime_step_assignments p
+            ORDER BY "Value"
+            """).ToArrayAsync();
+    }
+
     [Theory]
     [InlineData(false, ProcessRuntimeStatus.Active)]
     [InlineData(false, ProcessRuntimeStatus.Completed)]

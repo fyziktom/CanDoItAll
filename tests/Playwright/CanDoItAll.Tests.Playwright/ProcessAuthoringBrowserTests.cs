@@ -261,6 +261,25 @@ public sealed class ProcessAuthoringBrowserTests {
             Assert.Empty(errors);
             await Assertions.Expect(page.GetByTestId("processes-command-strip")).ToContainTextAsync("2 definition(s)");
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "pc2-" + scenario + ".png"), FullPage = true });
+            if (control.IncludeRoleResource) {
+                await host.RestartAsync();
+                var restarted = await host.ReadAsync(services => services.GetRequiredService<ProcessAuthoringWorkspace>()
+                    .ReadAsync(ProcessWorkspaceShellScope.Global, new(ProcessNativeBrowserHost.CompleteDefinition), default));
+                Assert.Equal(persisted.Revision, restarted.Revision);
+                Assert.Equal(ProcessAuthoringCodec.Write(persisted.Content), ProcessAuthoringCodec.Write(restarted.Content));
+                await using var freshContext = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1920, Height = 1080 } });
+                var freshPage = await freshContext.NewPageAsync();
+                freshPage.PageError += (_, error) => errors.Add(error);
+                await freshPage.GotoAsync(host.BaseUrl + "/processes");
+                await PlaywrightAppFixture.CompleteDatabaseStartupAsync(freshPage);
+                await Assertions.Expect(freshPage.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
+                await freshPage.GetByTestId("processes-definition-" + ProcessNativeBrowserHost.CompleteDefinition).ClickAsync();
+                await freshPage.GetByTestId("processes-detail-tab-roles").ClickAsync();
+                await freshPage.GetByTestId("processes-role-workflow-owner").ClickAsync();
+                await AssertResourceAsync(freshPage);
+                await freshPage.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "pc4-" + scenario + "-restarted.png"), FullPage = true });
+                Assert.Empty(errors);
+            }
         } catch {
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "pc2-" + scenario + "-failure.png"), FullPage = true });
             throw;

@@ -36,6 +36,8 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     private HttpClient? client;
     private readonly AcceptedRunReadFault readFault = new();
     private ProcessAuthoringBrowserControl? authoring;
+    private TestDatabaseProfile profile = null!;
+    private string pack = string.Empty;
     internal Task ReadFailure => readFault.Observed.Task;
     internal int ReadFailures => readFault.Count;
     internal Guid ProjectId { get; private set; }
@@ -58,7 +60,7 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
     }
     private async Task StartCoreAsync(string upstream, bool allowVoice) {
         Directory.CreateDirectory(Evidence);
-        var profile = environment.CreatePostgreSqlProfile("native");
+        profile = environment.CreatePostgreSqlProfile("native");
         await using (var seed = await TestApplicationBootstrap.BuildServiceProviderAsync(profile, "ProcessNativeBrowserSeed", TestSchemaBootstrapModules.Full)) {
             await using var scope = seed.CreateAsyncScope();
             var services = scope.ServiceProvider;
@@ -90,10 +92,20 @@ internal sealed class ProcessNativeBrowserHost : IAsyncDisposable {
                 ProjectStructureAccess = new() { CanRead = true, AllowedProjectIds = [ProjectId] }
             });
         }
-        var pack = WritePack();
+        pack = WritePack();
+        StartApplication();
+    }
+    private void StartApplication() {
         app = new(profile, pack, readFault, authoring);
         app.UseKestrel(0);
         client = app.CreateClient(new() { AllowAutoRedirect = false });
+    }
+    internal async Task RestartAsync() {
+        var previousServices = app!.Services;
+        client!.Dispose();
+        await app.DisposeAsync();
+        StartApplication();
+        Assert.NotSame(previousServices, app!.Services);
     }
     internal async Task<T> ReadAsync<T>(Func<IServiceProvider, Task<T>> action) {
         await using var scope = app!.Services.CreateAsyncScope();
