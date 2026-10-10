@@ -32,14 +32,23 @@ public sealed class ProcessRoleAuthoringAdapter(ProcessAuthoringWorkspace worksp
             return normalized with { Projection = normalized.Projection with { Observation = baseline.Observation } };
         }
         var content = ProcessAuthoringCodec.Read(ProcessAuthoringCodec.Write(baseline.Content));
+        var selected = normalized.Projection.SelectedRoleKey?.Value;
         if (command.CommandKind == ProcessDefinitionRoleCommandKind.DeleteRole) {
             content.Definition.RoleUsages.RemoveAll(role => role.Key == command.Draft.RoleKey.Value);
+            content = content with {
+                RoleResources = content.RoleResources.Where(pair => pair.Key != command.Draft.RoleKey.Value).ToDictionary(),
+                References = content.References.Where(item => item.Kind != ProcessDefinitionCanvasNodeKind.Role ||
+                    item.SemanticKey != command.Draft.RoleKey.Value).ToArray()
+            };
         } else {
             var patch = normalized.Projection.SelectedRole!.Draft;
             var target = content.Definition.RoleUsages.SingleOrDefault(role => role.Key == patch.RoleKey.Value);
             if (target is null) {
+                patch = patch with { RoleKey = new(ProcessAuthoringCanvasPatch.UniqueKey(
+                    content.Definition.RoleUsages.Select(role => role.Key).Concat(content.RoleResources.Keys), patch.RoleKey.Value)) };
                 target = new() { Key = patch.RoleKey.Value };
                 content.Definition.RoleUsages.Add(target);
+                selected = target.Key;
             }
             Apply(target, patch);
             if (content.RoleResources.TryGetValue(target.Key, out var resource)) {
@@ -53,7 +62,6 @@ public sealed class ProcessRoleAuthoringAdapter(ProcessAuthoringWorkspace worksp
                 resource.SnapshotSummary = target.SnapshotSummary;
             }
         }
-        var selected = normalized.Projection.SelectedRoleKey?.Value;
         var saved = await workspace.CommitAsync(baseline, command.OperationId, fingerprint, content, ProcessAuthoringLifecycle.Draft,
             false, new(RoleKey: selected), cancellationToken);
         return await ResultAsync(command, workspace.FromReceipt(command.Scope, saved), saved.Outcome, saved.Selection?.RoleKey, null, cancellationToken);

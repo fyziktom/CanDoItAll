@@ -4,6 +4,8 @@ using CanDoItAll.Processes.Templates;
 namespace CanDoItAll.Processes.Application;
 
 internal static class ProcessAuthoringImportPatch {
+    private const string ImportedPlacementPrefix = "import:";
+
     public static ProcessAuthoringContent Apply(ProcessAuthoringContent target, ProcessAuthoringContent source,
         ProcessTemplateImportCommand command, ProcessTemplateImportedComponentProjection imported) {
         var provenance = new ProcessAuthoringProvenance(command.ItemKey.Value, source.Base.Version, ProcessAuthoringCodec.Hash(ProcessAuthoringCodec.Write(source)));
@@ -30,13 +32,29 @@ internal static class ProcessAuthoringImportPatch {
             default:
                 throw new ArgumentOutOfRangeException(nameof(command));
         }
-        return target with { RoleResources = resources, Guidance = guidance, Imports = [.. target.Imports,
+        var placements = target.References.ToList();
+        foreach (var placement in source.References.Where(item => command.CommandKind == ProcessTemplateImportCommandKind.ImportProcess ||
+                command.CommandKind == ProcessTemplateImportCommandKind.ImportRole && item.Kind == ProcessDefinitionCanvasNodeKind.Role &&
+                item.SemanticKey == imported.SourceComponentKey)) {
+            var semanticKey = placement.Kind switch {
+                ProcessDefinitionCanvasNodeKind.Role => MapRole(placement.SemanticKey),
+                ProcessDefinitionCanvasNodeKind.Artifact => MapArtifact(placement.StepKey ??
+                    throw new InvalidOperationException("The imported artifact placement has no owning step."), placement.SemanticKey),
+                _ => MapStep(placement.SemanticKey)
+            };
+            placements.Add(placement with {
+                Key = ProcessAuthoringCanvasPatch.UniqueKey(placements.Select(item => item.Key), ImportedPlacementPrefix + command.OperationId.ToString("D") + ":" + placement.Key),
+                SemanticKey = semanticKey,
+                StepKey = command.CommandKind == ProcessTemplateImportCommandKind.ImportRole || placement.StepKey is null ? null : MapStep(placement.StepKey)
+            });
+        }
+        return target with { RoleResources = resources, Guidance = guidance, References = placements, Imports = [.. target.Imports,
             new(command.OperationId, provenance,
                 command.TargetStepKey?.Value, remap, imported)] };
 
         void AddRole(ProcessTemplateDefinitionRoleUsageDocument role) {
             var original = role.Key;
-            role.Key = ProcessAuthoringCanvasPatch.UniqueKey(target.Definition.RoleUsages.Select(item => item.Key), original);
+            role.Key = ProcessAuthoringCanvasPatch.UniqueKey(target.Definition.RoleUsages.Select(item => item.Key).Concat(resources.Keys), original);
             target.Definition.RoleUsages.Add(role);
             remap.Add("role:" + original, role.Key);
             if (source.RoleResources.TryGetValue(original, out var resource)) {
