@@ -7325,7 +7325,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "sha256_lf": "fa7940b004aa91dde1a43c13df1385a981b4f3923d56b32989ea1e71eaa177d3",
+      "sha256_lf": "cd417d1638a8370c86ee55a81685446bd4a7acc438a6d39a41b0f80939d1fd4a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",
@@ -7346,7 +7346,7 @@
       "assets": "CanDoItAll.AgentFramework.Components",
       "scenario": "CanDoItAll.AgentFramework.Components",
       "evidence": "CanDoItAll.AgentFramework.Components",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution. Active work masks consumed approval projections and reports Working; approval execution remains with the native host.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ChatWorkspacePanel",
@@ -9704,7 +9704,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "e12202f997a33166f2ff7d32fbd40ab9a46a5331eeabf54f011052d81a5602c0",
+      "sha256_lf": "57962b432fa4fe62e8b2e08e29194487bef81a68f688f0b5ceadcb75f9c4fedf",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -9719,7 +9719,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The native owner reconciles the first live run into its selected transcript and runtime detail; older execution entries cannot replace current activity."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDefaultsConfirmationDialog.razor",
@@ -29691,7 +29691,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Workforce/CrmHrWorkforceWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Workforce/CrmHrWorkforceWorkspaceSurface.razor",
-      "sha256_lf": "24fd5d180a3e2631c9ffc7f305cbc4d4203b1cdf8f461eda6baca42962bb6e96",
+      "sha256_lf": "30953453f496664f20306bcebe522d3ca3cd5aa5f056e8ab40e296bb8c340ad5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Workforce.CrmHrWorkforceWorkspaceSurface",
@@ -29714,7 +29714,7 @@
       "assets": "CanDoItAll.CrmHr.UI",
       "scenario": "CanDoItAll.CrmHr.UI",
       "evidence": "CanDoItAll.CrmHr.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects. Deferred dialog fragments capture the selected immutable workspace snapshot before the native owner clears selection on close."
     },
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Workforce/SkillMatrixPanel.razor",

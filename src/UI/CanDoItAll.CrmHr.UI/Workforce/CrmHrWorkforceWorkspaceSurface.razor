@@ -56,11 +56,11 @@
                 </Stack>
             </SurfaceCard>
 
-            @if (View.IsRecordDialogOpen && View.SelectedWorkspace is not null)
+            @if (View.IsRecordDialogOpen && View.SelectedWorkspace is { } workspaceModel)
             {
                 <Dialog IsOpen="true"
                         Eyebrow="Workforce record"
-                        Title="@View.SelectedWorkspace.DisplayName"
+                        Title="@workspaceModel.DisplayName"
                         Subtitle="Profile, skills, allocation-driven availability, and workforce history."
                         Size="ModalSize.Full"
                         DenseChrome="true"
@@ -73,10 +73,10 @@
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <p class="cda-eyebrow">Selected workforce record</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@View.SelectedWorkspace.DisplayName</h2>
-                                    @if (!string.IsNullOrWhiteSpace(View.SelectedWorkspace.Summary))
+                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@workspaceModel.DisplayName</h2>
+                                    @if (!string.IsNullOrWhiteSpace(workspaceModel.Summary))
                                     {
-                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@View.SelectedWorkspace.Summary</p>
+                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@workspaceModel.Summary</p>
                                     }
                                     <p class="mt-2 text-sm font-medium text-slate-700"
                                        data-testid="crmhr-workforce-availability-message">
@@ -87,10 +87,10 @@
                                     <StatusBadge Tone="@View.SelectedClassificationTone"
                                                  Text="@View.SelectedClassificationLabel"
                                                  data-testid="crmhr-workforce-classification" />
-                                    <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveLifecycleTone(View.SelectedWorkspace.LifecycleStatus)"
-                                                 Text="@View.SelectedWorkspace.LifecycleStatus.ToString()"
+                                    <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveLifecycleTone(workspaceModel.LifecycleStatus)"
+                                                 Text="@workspaceModel.LifecycleStatus.ToString()"
                                                  data-testid="crmhr-workforce-lifecycle" />
-                                    @if (View.SelectedWorkspace.Profile.Id.HasValue)
+                                    @if (workspaceModel.Profile.Id.HasValue)
                                     {
                                         <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveStatusTone(View.ProfileEditor.Status)"
                                                      Text="@View.ProfileEditor.Status" />
@@ -137,9 +137,9 @@
                                       data-testid="crmhr-workforce-tab-overview">
                                 <Stack GapScale="LayoutGap.Medium"
                                        AlignItems="AlignItems.Stretch">
-                                    <SensitiveDataCallout IsSensitive="View.SelectedWorkspace.IsSensitive"
-                                                         LastChangedBy="@View.SelectedWorkspace.LastChangedBy"
-                                                         UpdatedAtUtc="View.SelectedWorkspace.UpdatedAtUtc"
+                                    <SensitiveDataCallout IsSensitive="workspaceModel.IsSensitive"
+                                                         LastChangedBy="@workspaceModel.LastChangedBy"
+                                                         UpdatedAtUtc="workspaceModel.UpdatedAtUtc"
                                                          DataTestId="crmhr-workforce-sensitive-callout"
                                                          StandardDescription="Use this summary before staffing or line-management changes so ownership and broad visibility stay explicit."
                                                          SensitiveDescription="Sensitive workforce records stay out of global search while still preserving assignment, manager, and capacity context for trusted operators." />
@@ -148,20 +148,20 @@
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Home unit</p>
                                             <p class="mt-1 text-sm font-medium text-slate-950"
-                                               data-testid="crmhr-workforce-summary-home-unit">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.HomeUnitName)</p>
+                                               data-testid="crmhr-workforce-summary-home-unit">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.HomeUnitName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Manager</p>
                                             <p class="mt-1 text-sm font-medium text-slate-950"
-                                               data-testid="crmhr-workforce-summary-manager">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.ManagerName)</p>
+                                               data-testid="crmhr-workforce-summary-manager">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.ManagerName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Primary email</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.PrimaryEmail)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.PrimaryEmail)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Primary phone</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.PrimaryPhone)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.PrimaryPhone)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Available now</p>
@@ -175,11 +175,11 @@
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Contract end</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatDate(View.SelectedWorkspace.Profile.EndDate)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatDate(workspaceModel.Profile.EndDate)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Searchable skills</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(CrmHrWorkforceWorkspacePresentation.BuildSkillCoverage(View.SelectedWorkspace.Skills))</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(CrmHrWorkforceWorkspacePresentation.BuildSkillCoverage(workspaceModel.Skills))</p>
                                         </SurfaceCard>
                                     </Grid>
                                 </Stack>
@@ -255,14 +255,14 @@
                                                      TestIdPrefix="crmhr-workforce-home-unit"
                                                      SelectedPartyId="@View.ProfileEditor.HomeUnitPartyId"
                                                      SelectedPartyIdChanged="View.HandleHomeUnitChangedAsync"
-                                                     ExcludedPartyId="@View.SelectedWorkspace.PartyId"
+                                                     ExcludedPartyId="@workspaceModel.PartyId"
                                                      AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
                                                      InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)" />
                                         <PartyPicker Label="Manager"
                                                      TestIdPrefix="crmhr-workforce-manager"
                                                      SelectedPartyId="@View.ProfileEditor.ManagerPartyId"
                                                      SelectedPartyIdChanged="View.HandleManagerChangedAsync"
-                                                     ExcludedPartyId="@View.SelectedWorkspace.PartyId"
+                                                     ExcludedPartyId="@workspaceModel.PartyId"
                                                      AllowedScope="PartyRecordScope.People"
                                                      InitialScope="PartyRecordScope.People" />
                                     </Grid>
@@ -347,10 +347,10 @@
 
                             <TabsItem Text="Skills"
                                       Icon="psychology"
-                                      BadgeText="@View.SelectedWorkspace.Skills.Count.ToString()"
+                                      BadgeText="@workspaceModel.Skills.Count.ToString()"
                                       data-testid="crmhr-workforce-tab-skills">
-                                <SkillMatrixPanel SkillCatalog="View.SelectedWorkspace.SkillCatalog"
-                                                  Skills="View.SelectedWorkspace.Skills"
+                                <SkillMatrixPanel SkillCatalog="workspaceModel.SkillCatalog"
+                                                  Skills="workspaceModel.Skills"
                                                   SkillDraft="View.SkillEditor"
                                                   SkillDefinitionDraft="View.SkillDefinitionEditor"
                                                   SavePartySkill="View.SavePartySkillAsync"

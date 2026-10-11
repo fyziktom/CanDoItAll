@@ -216,7 +216,7 @@
     }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
-        => ActiveRun?.PendingApprovals ?? [];
+        => IsBusy ? [] : ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
@@ -422,6 +422,9 @@
            !string.IsNullOrWhiteSpace(VoiceStatusText);
 
     private string ResolveSessionBadge() {
+        if (IsBusy) {
+            return "Working";
+        }
         if (Session is null) {
             return "Idle";
         }
