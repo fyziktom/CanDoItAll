@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "IN_PROGRESS",
+  "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "entry_commit": "663fb1391e4acb12439173f1cb1d287fb1f24685",
   "implementation_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
   "coverage": "1184 bounded current source inputs; 199 src projects evaluated in source mode plus package evaluation of the new Application UI and scenario host. Actual static asset manifests, compiled tests, dynamic activation review and browser evidence complement source analysis.",

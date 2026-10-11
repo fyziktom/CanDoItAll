@@ -1,7 +1,9 @@
 # Components decoupling closure
 
-CD1 is **in progress**. This record is the current closure register; historical family
-receipts and the shared bundle retain their original scope and results.
+CD1 is **COMPONENTS_DECOUPLING_COMPLETE**. This is the current execution record; historical
+family receipts and the existing shared bundle retain their original scope and results.
+The frozen CD1 package keeps its verifier-required preparation `NOT_RUN` metadata. The
+maintained register and evidence beside this document record completed execution.
 
 ## Current decision
 
@@ -96,7 +98,9 @@ The authoritative [source register](components-decoupling-register.json) and
 preceding checkpoint counts retain their historical meaning. Current focused results are
 28 independent application cases, 41 native Dashboard/cache/Runtime cases and 21 native
 shell/admission/lifetime cases. Root and Stable Release builds passed. The final canonical
-Broad Stable run is required by the root project and shared-shell changes and is running.
+Broad Stable run passed: 17,434 execution rows, zero failures, across all 35 assemblies.
+Its 17,379 discovered entries reconcile to those rows through expanded theories and display
+identities. The exact local aggregate command and retained TRX hashes are in the evidence.
 
 | Rendering owner | Retained native responsibility |
 | --- | --- |
@@ -261,14 +265,15 @@ independent reads, accepted/unknown/rejected distinctions and retirement when re
 | Wider release/platform/live-provider certification | Release/CI and external-provider owners. | Their exact platform/deployment/migration and permission/budget gates; CD1 does not certify them. |
 | Watch status parser | Shared MCP owner; unrelated local work remains preserved. | Recognize current SDK messages and reconcile status with the persistent browser without concealing failed waits. |
 
-No additional generic component-extraction wave is proposed. Final validation, signature ancestry,
-startup timings and owned-resource disposition must be recorded before the global completion state changes.
+No additional generic component-extraction wave is required. The next refactor can consume
+these seams and the preserved regression contracts.
 
 Portability review at this checkpoint moves two existing `/processes/live` lexical findings
 with the Dashboard and adds the documented route and shell code-fence findings. These are
 route/documentation text, not process discovery or elevation. Both portability tool suites
 pass and full no-write enforcement passes with 15,383 reviewed executable-source findings.
-The final source, shell, browser and broad gates remain required.
+These were checkpoint counts. The final no-write gate uses 15,384 reviewed allowances;
+source, shell, browser and broad validation have now completed.
 
 ## Shell and profile checkpoint
 
@@ -291,7 +296,7 @@ admission pause or synthetic lost acknowledgement, and actual PostgreSQL profile
 
 ## C# Architecture Gate Result
 
-Status: Pass for the implemented boundary; final validation remains in progress.
+Status: Pass. Implementation, dependency review and required final validation are complete.
 
 ### Findings
 
@@ -322,7 +327,58 @@ publication and every affected shell family; loopback model fixtures are labelle
 
 ### Closure decision
 
-The component architecture may be consumed by the next refactor. Global CD1 completion waits for
-the running broad Stable gate, comparable final startup samples,
-documentation/signature receipts and removal of the owned PostgreSQL fixture after its last use.
+The component architecture is ready for the next refactor. The first four completion
+dimensions and verified source commits pass. No active unfinished rendering edge remains.
 PC4's captured launch, retained-origin recovery and role-resource corrections remain unchanged.
+Resource disposition is COMPLETE_WITH_REPORTED_EXTERNAL_BLOCKER only for the two previously
+denied inactive paths below; all newly owned runtime and private fixture resources are closed.
+
+
+## Final validation and resource disposition
+
+The fresh canonical local Stable invocation passed **17,434 rows in 35 assemblies**,
+with zero failures or skips. Discovery reported 17,379 entries; the audit reconciles expanded
+nonserializable theories, repeated display labels, escaped display values, execution IDs and
+the recorded Release assembly digests. This is the serial local command from Testing, not a
+claim that the differently sharded CI campaign ran. The 28 independent, 41 native Dashboard/
+Runtime and 21 native shell cases are focused proof within the same scope, not extra Stable
+coverage. The **26 unique browser cases** form the explicitly recorded current composite;
+failed attempts remain retained, and repeated publication/keyboard cases are not double-counted.
+The original hash inventory omitted the 29-test Memory assembly. Its Release binary predates
+the aggregate; its source is unchanged, and a bounded 29-case repeat passed with the same
+newly recorded binary hash. That post-aggregate capture is labelled explicitly and the repeat
+adds no rows to the original Stable total. The first audit's inventory error remains retained.
+
+After Stable exited, the final native Release host reached its HTTP readiness route in
+11.54, 7.70, 7.67 seconds, versus 8.33, 9.20, 9.27 seconds at entry. Both sets use the
+same private database and roots with a warm filesystem. The new independent host measured
+1.89, 1.24, 1.27 seconds. These are launch-to-HTTP200 observations, not interactive
+readiness or a causal speedup claim. No pre-extraction independent-host baseline exists.
+
+Five implementation/report checkpoints are signed and verified with fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6`: `b680693c`, `7d392a42`, `5afa860d`,
+`5ce7db59` and `b0b10740`. Production is unchanged after `7d392a42`; executable browser/guard
+changes end at `5ce7db59`. The final report-only commit follows `b0b10740` and is verified
+separately after creation; its unknown hash is not embedded in itself. No push, merge or
+deployment is part of this result.
+
+Both watch hosts and all current browser helpers are stopped. Final benchmark processes and
+ports are closed. PostgreSQL on 55925 was stopped through its verified owned `pg_ctl`; its
+original launcher exited naturally. The owned native database/binaries, private entry-Web
+state, downloaded archive and DPAPI credential file were removed and absence verified.
+Final proof scanning checked 686 text files and all 118 Process
+authoring trace entries against the actual fixture secret with zero matches or unreadable
+inputs. Heuristic findings were reviewed as test vectors or PowerShell expressions. No
+profile trace was produced. Only the bounded reviewed logs, receipts and standard reusable
+Debug/Release outputs remain.
+
+The prior inactive paths `.artifacts/mcp-installs/CanDoItAll.Mcp.CodeAnalytics/failed/failed-20261010-101825372`
+and `.artifacts/pc4-recovery-20261010/codeanalytics-smoke` remain under their original cleanup
+denial. They were not retried. This is the exact external resource qualification permitted
+by CD1; no newly owned running database or exposed credential is deferred. The ordinary
+5032 application/database, installed MCP tooling and eight pre-existing MCP edits were
+preserved. Current sibling heads match the recorded tuple.
+
+All 32 acceptance groups are resolved in the structured evidence. Package publication,
+broader deployment/platform certification and paid/live-provider qualification remain with
+their separate owners. They do not conceal unfinished in-scope rendering work.

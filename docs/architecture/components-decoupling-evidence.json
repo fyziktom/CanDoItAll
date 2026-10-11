@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "state": "IN_PROGRESS",
+  "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "source_register": "docs/architecture/components-decoupling-register.json",
   "source_tuple": {
     "entry": "663fb1391e4acb12439173f1cb1d287fb1f24685",
     "production_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-    "report_head_at_recording": "5ce7db59501b300c6f98af50481a256cac755f67",
+    "report_head_at_recording": "b0b107402fac4adf00108e451014a85aebde79f1",
     "branch": "components-decoupling",
     "sdk": "10.0.303",
     "platform": "Windows",
@@ -19,15 +19,17 @@
       "CanDoItAll.Mcp": "abeaea463aa906bca2d83a1b608ff432dbc29d8d"
     },
     "protected_work": "Eight pre-existing MCP DotNetWatch/security/integration/validation modifications preserved; shared bundle unchanged; no push, reset, merge or deploy.",
-    "shared_bundle_delta_from_entry": []
+    "shared_bundle_delta_from_entry": [],
+    "executable_test_checkpoint": "5ce7db59501b300c6f98af50481a256cac755f67",
+    "final_report_relationship": "Report-only child of the recorded head; its own unknown hash is deliberately not embedded. Verify that child separately after signing. Production remains 7d392a42; executable browser/guard changes end at 5ce7db595."
   },
   "dimensions": {
     "structure": "PASS",
-    "functional_parity": "PASS_FOCUSED_PENDING_BROAD",
-    "assets_and_dev_loop": "PENDING_FINAL_STARTUP",
-    "required_validation": "RUNNING",
-    "signatures": "VERIFIED_SOURCE_CHECKPOINTS",
-    "resource_disposition": "OWNED_DATABASE_IN_USE"
+    "functional_parity": "PASS",
+    "assets_and_dev_loop": "PASS",
+    "required_validation": "PASS",
+    "signatures": "PASS",
+    "resource_disposition": "COMPLETE_WITH_REPORTED_EXTERNAL_BLOCKER"
   },
   "census": {
     "inputs": 1184,
@@ -537,13 +539,13 @@
   ],
   "broad_stable": {
     "kind": "NEW_EXECUTION",
-    "status": "RUNNING",
+    "status": "PASS",
     "trigger": "Root solution registration and shared MainLayout composition; incomplete impact selection requires the broad native consumer gate.",
     "project": "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
     "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
     "configuration": "Release",
-    "command": "dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter \"Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true\" /m:1",
-    "execution_shape": "One canonical local aggregate command; assemblies execute serially. Completed assembly receipts are retained. No claim of the differently partitioned parallel CI campaign.",
+    "command": "dotnet test tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter \"Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true\" /m:1 --logger trx --results-directory .artifacts/cd1-closure-20261011/stable-results",
+    "execution_shape": "One fresh canonical local aggregate command from Testing, with serial assemblies and exact exclusions. All 35 receipts passed; this is not the differently partitioned parallel CI campaign. Focused/browser runs are separate and not added to this total.",
     "discovered": 17379,
     "discovery": {
       "path": ".artifacts/cd1-closure-20261011/final-stable-discovery.log",
@@ -552,490 +554,794 @@
     },
     "completed_assemblies": [
       {
+        "project": "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_30_net10.0.trx",
         "sha256": "44bd6347adf3ae66a44f875c2e711918a3fecec7b250f2ba9f5588df0c5cc292",
         "bytes": 118584,
+        "discovered": 68,
         "counts": {
-          "total": 68,
           "executed": 68,
           "passed": 68,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:30.0515404-04:00",
-          "queuing": "2026-10-11T08:40:30.0515408-04:00",
-          "start": "2026-10-11T08:40:28.8421708-04:00",
-          "finish": "2026-10-11T08:40:31.1401543-04:00"
-        },
-        "classes": [
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityAuthoringFormTests",
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityAuthoringStateTests",
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityBoundaryTests",
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityModeTests",
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilitySetupAttributionTests",
-          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityUploadTests"
-        ],
+        "assembly_sha256": "e2586647ccb3e622412d24f73e09de8682e808f549573ba72d12dac70cb63172",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_30_net10.0.json",
-          "sha256": "b71d52d166d42436fba1bac9195e57c132bed878f5e02b755dc5e9370f6efa62",
-          "bytes": 22844
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.json",
+          "sha256": "563f89dae64768cd6504318a2a9d1f19a236222d087e32952d62723372ebbc26",
+          "bytes": 22708
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.AgentFramework.Editor.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_33_net10.0.trx",
         "sha256": "cb6051a1c1c3c4569fd4e826226adf0183d1fff5b3ad884a17b9b079c481891f",
         "bytes": 42327,
+        "discovered": 25,
         "counts": {
-          "total": 25,
           "executed": 25,
           "passed": 25,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:33.7885008-04:00",
-          "queuing": "2026-10-11T08:40:33.7885012-04:00",
-          "start": "2026-10-11T08:40:31.5848353-04:00",
-          "finish": "2026-10-11T08:40:34.2670160-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.AgentEditorUi.EditorAccessRendererTests",
-          "CanDoItAll.Tests.Components.AgentEditorUi.EditorBoundaryTests",
-          "CanDoItAll.Tests.Components.AgentEditorUi.EditorRendererTests"
-        ],
+        "assembly_sha256": "1364329f66fe6f687f55c3e91475a0e4ae8d01a6e1b9fbbec905c7104a36c8c9",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_33_net10.0.json",
-          "sha256": "a59ccb3e6acb0e8a3adaf58449d7bd73a3fba81bf5a91f82cf2a9187cc2df9f1",
-          "bytes": 8032
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.Editor.UI.Tests.json",
+          "sha256": "6fc84b737563a8e0ff24c7d36568dbed9baba2be110d86125675aa3adda758ae",
+          "bytes": 7982
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.AgentFramework.Memory.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_15_04_04_net10.0.trx",
+        "sha256": "e68f3882ef640b0935f4a1840614bcaca2ac890f6c76a53287152bec55a98587",
+        "bytes": 48633,
+        "discovered": 29,
+        "counts": {
+          "executed": 29,
+          "passed": 29,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "405b94caba87408e969cb3bf56b63b8623af8767a0b2bfa957b1067d1bc8022f",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.Memory.Tests.json",
+          "sha256": "de8d948f460e0b20d2a65ec8cdbc7db8a02f294240fa29e22e5f1c4a5d82fe63",
+          "bytes": 9410
+        },
+        "hash_inventory": "supplemental post-aggregate capture with bounded repeat",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.AgentFramework.Providers.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_36_net10.0.trx",
         "sha256": "06e00164ce601397a1a885fee1c221d2634432f76bc378a1e56b166ca53f7012",
         "bytes": 50423,
+        "discovered": 30,
         "counts": {
-          "total": 30,
           "executed": 30,
           "passed": 30,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:36.2046094-04:00",
-          "queuing": "2026-10-11T08:40:36.2046098-04:00",
-          "start": "2026-10-11T08:40:34.7249296-04:00",
-          "finish": "2026-10-11T08:40:39.2167952-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ProviderProfilesUi.ProviderBoundaryTests",
-          "CanDoItAll.Tests.Components.ProviderProfilesUi.ProviderRendererTests"
-        ],
+        "assembly_sha256": "7bfbdb9f916099dbaa13f0b986fc451f25f61182f5f2f76ff59b442fc8e6c42c",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_36_net10.0.json",
-          "sha256": "243c1fb3c91938b23d1ccd7289e6e43dab376463508df8b0e4c6356ab92d89f3",
-          "bytes": 9520
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.Providers.UI.Tests.json",
+          "sha256": "0a3efea01956bd46d62b2d7bf159e9438381828d0fe9217f5c327e12ab4f0c0a",
+          "bytes": 9460
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.AgentFramework.SharedProviders.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_40_net10.0.trx",
         "sha256": "466de5535f17fa470d216edcfaad66031b8e37ba0e7605c4450932274df9e274",
         "bytes": 87235,
+        "discovered": 51,
         "counts": {
-          "total": 51,
           "executed": 51,
           "passed": 51,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:40.5972869-04:00",
-          "queuing": "2026-10-11T08:40:40.5972873-04:00",
-          "start": "2026-10-11T08:40:39.6305561-04:00",
-          "finish": "2026-10-11T08:40:41.5443270-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.SharedProvidersUi.SharedProviderBoundaryTests",
-          "CanDoItAll.Tests.Components.SharedProvidersUi.SharingRendererTests",
-          "CanDoItAll.Tests.Components.SharedProvidersUi.SourceRendererTests"
-        ],
+        "assembly_sha256": "59bc6eb1cd4da934a73c05c77fe5baad2da2e5e15110ce2bf8b72c8911cc9f3e",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_40_net10.0.json",
-          "sha256": "bfc0c1fe78991036ff6ed91bccd51153bfc800281c971af3624545afa0b10983",
-          "bytes": 16733
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.SharedProviders.UI.Tests.json",
+          "sha256": "7b4f8153920f8c29b88baed865a2b83d5c939d4a208a409fd282ed4488f56d9a",
+          "bytes": 16631
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.AgentFramework.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_43_net10.0.trx",
         "sha256": "228ad0fdeea69521a2cfc89119863ac9d182304e86b3aed427878f4845a6846d",
         "bytes": 229920,
+        "discovered": 144,
         "counts": {
-          "total": 144,
           "executed": 144,
           "passed": 144,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:43.1272060-04:00",
-          "queuing": "2026-10-11T08:40:43.1272064-04:00",
-          "start": "2026-10-11T08:40:41.9857908-04:00",
-          "finish": "2026-10-11T08:40:44.7060617-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.AgentFramework.AgentsAdjunctSurfaceTests",
-          "CanDoItAll.Tests.Components.AgentFramework.AgentsCompletionSurfaceTests",
-          "CanDoItAll.Tests.Components.AgentFramework.ConversationDialogSurfaceTests",
-          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryFilterTests",
-          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryScenarioTests",
-          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistorySeamTests",
-          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryWorkspaceTests",
-          "CanDoItAll.Tests.Components.AgentFramework.TeamAuthoringTests",
-          "CanDoItAll.Tests.Unit.ProviderHistorySearchStateTests"
-        ],
+        "assembly_sha256": "30f9aee2e1e207bb1449bd404d96a22a3ccda44ba0a7983d07a0a4a7aa66e8c5",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_43_net10.0.json",
-          "sha256": "1b292bebd7daba7d311f201bf9ceaaff8577d52fae56a886de85ddc300c88283",
-          "bytes": 45642
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.UI.Tests.json",
+          "sha256": "0f50f77081ed5ff5c866f5455476b1a7de05a21c3776a4bf98dda0f491737878",
+          "bytes": 45354
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_46_net10.0.trx",
         "sha256": "251b25c03ea0a88b965173aebed845f6175d57a36ca1e49738d7dfdd08f5c796",
         "bytes": 52091,
+        "discovered": 30,
         "counts": {
-          "total": 30,
           "executed": 30,
           "passed": 30,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:46.4285886-04:00",
-          "queuing": "2026-10-11T08:40:46.4285889-04:00",
-          "start": "2026-10-11T08:40:45.1436102-04:00",
-          "finish": "2026-10-11T08:40:47.4387787-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowCanvasAcceptanceTests",
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowExecutorSettingsTests",
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowPortProjectionTests",
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowPromptAcceptanceTests",
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowProviderSelectionTests",
-          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowRouteFieldsTests"
-        ],
+        "assembly_sha256": "302d26cc587a2cf24a041d28750a48615920f869d95d9b9d4301901aba8f6dff",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_46_net10.0.json",
-          "sha256": "0640d060591a31e485ceeefe2a890716da8b15dde17bcabedc590eb795b34011",
-          "bytes": 9607
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.AgentFramework.WorkflowAuthoring.UI.Tests.json",
+          "sha256": "46eda631107a66d006d56ef028464b18a95a51b5520b37249dd4f42376ff5156",
+          "bytes": 9547
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Application.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_48_net10.0.trx",
         "sha256": "00f968dfe4f23e4944452a2653669d755740ed1458787ee9f5033bce3b581af1",
         "bytes": 45761,
+        "discovered": 28,
         "counts": {
-          "total": 28,
           "executed": 28,
           "passed": 28,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:49.0029449-04:00",
-          "queuing": "2026-10-11T08:40:49.0029453-04:00",
-          "start": "2026-10-11T08:40:47.8513764-04:00",
-          "finish": "2026-10-11T08:40:49.6485034-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationBoundaryTests",
-          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationDescendantTests",
-          "CanDoItAll.Tests.Components.ApplicationUI.DashboardSurfaceTests",
-          "CanDoItAll.Tests.Components.ApplicationUI.ProfileSurfaceTests",
-          "CanDoItAll.Tests.Components.ApplicationUI.RuntimeSurfaceTests"
-        ],
+        "assembly_sha256": "8210f97137df5570e6e09eeb387e5d8ed00cf6b877c0788c7b0c7fe9857a5ab7",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_48_net10.0.json",
-          "sha256": "e75c5d04c35e08bb2fd0b0ee9b9bbbe5caaea708406ae689d1001a80934c9727",
-          "bytes": 8888
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Application.UI.Tests.json",
+          "sha256": "bbb719ee4e236350a77dd156ed1270a46d7277beed2216f7bb79737283e967ed",
+          "bytes": 8832
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Collaboration.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_15_04_15_net10.0.trx",
+        "sha256": "56cafaa823f3de64defe8c74e2a8da5a5ee363c1a7316fb0107177fc0882bb13",
+        "bytes": 57686,
+        "discovered": 35,
+        "counts": {
+          "executed": 35,
+          "passed": 35,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "1780888b40aba8557832656178098722a888d55787e699878489dcd738061790",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Collaboration.Tests.json",
+          "sha256": "7c858415f86cb6d40d353c1bca92717337843a24da19659ab47ca905a5aa3208",
+          "bytes": 11496
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Collaboration.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_51_net10.0.trx",
         "sha256": "9e002092f0fa65c41e2d81eaf55f9421080c66bad0449e50d8f244ecda662668",
         "bytes": 41759,
+        "discovered": 25,
         "counts": {
-          "total": 25,
           "executed": 25,
           "passed": 25,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:51.4561137-04:00",
-          "queuing": "2026-10-11T08:40:51.4561141-04:00",
-          "start": "2026-10-11T08:40:50.1244183-04:00",
-          "finish": "2026-10-11T08:40:52.4494118-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.Collaboration.CollaborationBoundaryTests",
-          "CanDoItAll.Tests.Components.Collaboration.CollaborationScenarioTests",
-          "CanDoItAll.Tests.Components.Collaboration.CollaborationSurfaceTests"
-        ],
+        "assembly_sha256": "e076b7100a2ae8eb284dfc74c47344f316e10307904f6f1d72020e0d02d2bbba",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_51_net10.0.json",
-          "sha256": "81d99e146fe537389dcfec7b7f8266174d53897ecd8db97cbc9295fe56c30ac3",
-          "bytes": 8095
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Collaboration.UI.Tests.json",
+          "sha256": "abbeee6b37b06a025b3121721417b0909d7e8ac2b1318c67e18750f0b6f14e8e",
+          "bytes": 8045
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Memory.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_15_04_06_net10.0.trx",
+        "sha256": "ee6f3f0b540cc49333fd896cc068db0f0865bdcf7ebd750f61831eb2d6b10b6e",
+        "bytes": 300892,
+        "discovered": 187,
+        "counts": {
+          "executed": 203,
+          "passed": 203,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "bd2346a21a261f254043b567669f4d21a09fe3edc5c85fe4af67b68927ff8279",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Memory.Tests.json",
+          "sha256": "2a4d93d37edbf378e9265e11db0926ba15d8d0b63ce6d61c9a27be4b051128d3",
+          "bytes": 67766
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Memory.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_54_net10.0.trx",
         "sha256": "d27063c97824bf17466f3b293f992079a1d3cb67ac67d30e0f1e50fbd159d386",
         "bytes": 56809,
+        "discovered": 36,
         "counts": {
-          "total": 36,
           "executed": 36,
           "passed": 36,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:54.3401694-04:00",
-          "queuing": "2026-10-11T08:40:54.3401698-04:00",
-          "start": "2026-10-11T08:40:52.9291676-04:00",
-          "finish": "2026-10-11T08:40:55.0493578-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.Memory.MemoryBoundaryTests",
-          "CanDoItAll.Tests.Components.MemoryUi.MemoryExtensionLifetimeTests",
-          "CanDoItAll.Tests.Components.MemoryUi.MemoryResultOriginTests",
-          "CanDoItAll.Tests.Components.MemoryUi.MemoryWorkspaceTests"
-        ],
+        "assembly_sha256": "7820ac3b2249ccecf4de69736e4df7b396044e65063a6505ffff830f50c1288d",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_54_net10.0.json",
-          "sha256": "1b13b59f895c6704e4403a2f6a3c23181b3bd21b017482b93a0942a12c73a233",
-          "bytes": 11092
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Memory.UI.Tests.json",
+          "sha256": "9b75472f0550b7070c2195c529d59d2e2fa2bcf34a42128560c5108d8be54116",
+          "bytes": 11020
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Plugins.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_56_net10.0.trx",
         "sha256": "e5b0ce0c55d081e7a4ff335a354c6293a25a8358ea3c6077d0a1b77f2ab45991",
         "bytes": 78673,
+        "discovered": 50,
         "counts": {
-          "total": 50,
           "executed": 50,
           "passed": 50,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:40:56.9668649-04:00",
-          "queuing": "2026-10-11T08:40:56.9668653-04:00",
-          "start": "2026-10-11T08:40:55.5041437-04:00",
-          "finish": "2026-10-11T08:40:58.4118953-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.Plugins.PluginsBoundaryTests",
-          "CanDoItAll.Tests.Components.Plugins.PluginsEffectTests",
-          "CanDoItAll.Tests.Components.Plugins.PluginsSelectionRecoveryTests",
-          "CanDoItAll.Tests.Components.Plugins.PluginsSurfaceTests",
-          "CanDoItAll.Tests.Components.Plugins.PluginsWorkspaceTests"
-        ],
+        "assembly_sha256": "429c8b5a451361cf48163540c2553b639f0de5865af40d9189f737641a4c20d7",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_56_net10.0.json",
-          "sha256": "4a902a3463d8acaa18a8c0a4ec56eab0a720a10efc2916dfb2bc447ccf2c1106",
-          "bytes": 15478
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Plugins.UI.Tests.json",
+          "sha256": "18cd1d9ba3b49effcf6ef3fef2c83499fbc00f991b8577571575fcd26c7307ef",
+          "bytes": 15378
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Processes.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_01_net10.0.trx",
         "sha256": "66ef53653a0f6209525d2c015c868c66ed8d99bce8d34fd7f86f32a056342f0c",
         "bytes": 34089,
+        "discovered": 21,
         "counts": {
-          "total": 21,
           "executed": 21,
           "passed": 21,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:01.1082708-04:00",
-          "queuing": "2026-10-11T08:41:01.1082711-04:00",
-          "start": "2026-10-11T08:40:58.9415843-04:00",
-          "finish": "2026-10-11T08:41:02.4180234-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ProcessesUI.ProcessBoundaryTests",
-          "CanDoItAll.Tests.Components.ProcessesUI.ProcessRendererTests"
-        ],
+        "assembly_sha256": "ec6fc14991e94f67756c34d704b504c471dc99e34c7264dd34709979e66ebd79",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_01_net10.0.json",
-          "sha256": "0d02cf287e99d004e7b003db146040915e6d03b336a8cc2346b9249988264446",
-          "bytes": 6513
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Processes.UI.Tests.json",
+          "sha256": "092c5b28d805a8b6a3f20f1e5611d821a42a0fd2bf597a1ce1332f49db9b1fd4",
+          "bytes": 6471
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Projects.Files.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_04_net10.0.trx",
         "sha256": "5142469c8569c899c5786347afa79d741619c9d1c4ea91498f962992699312fa",
         "bytes": 28345,
+        "discovered": 17,
         "counts": {
-          "total": 17,
           "executed": 17,
           "passed": 17,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:04.7945521-04:00",
-          "queuing": "2026-10-11T08:41:04.7945525-04:00",
-          "start": "2026-10-11T08:41:02.8528956-04:00",
-          "finish": "2026-10-11T08:41:04.9330777-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ProjectsFilesUi.FilesBoundaryTests",
-          "CanDoItAll.Tests.Components.ProjectsFilesUi.FilesRendererTests"
-        ],
+        "assembly_sha256": "a3a09105a976dabe5d4635fb2ea92137237b1fb1523aa59ad9ad0dd2e8abc850",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_04_net10.0.json",
-          "sha256": "c2e32c715af3a5b6c502dfb9c9b393381938dc20fa8e3913eba0dfc92c72809b",
-          "bytes": 5254
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Projects.Files.UI.Tests.json",
+          "sha256": "b8dc42ab8bdff9064ea09b39aa7aea4d7a62099455de44d6202d8b72d0125e48",
+          "bytes": 5220
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Projects.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_07_net10.0.trx",
         "sha256": "7c0185329171a8f403f581c6f01b99ee71d83a83f4b16bc933d7796b36bf39f4",
         "bytes": 40632,
+        "discovered": 25,
         "counts": {
-          "total": 25,
           "executed": 25,
           "passed": 25,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:07.1117477-04:00",
-          "queuing": "2026-10-11T08:41:07.1117481-04:00",
-          "start": "2026-10-11T08:41:05.3444497-04:00",
-          "finish": "2026-10-11T08:41:07.5031242-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ProjectsUi.ProjectDeletionStatusSurfaceTests",
-          "CanDoItAll.Tests.Components.ProjectsUi.ProjectEditorInteropTests",
-          "CanDoItAll.Tests.Components.ProjectsUi.ProjectEditorSurfaceTests",
-          "CanDoItAll.Tests.Components.ProjectsUi.ProjectsBoundaryTests"
-        ],
+        "assembly_sha256": "9eaf49218b103ccac2e81b9f20328f02eed24991acf9945543f65c60fd52eaf6",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_07_net10.0.json",
-          "sha256": "42522d37987e7ba97045c40df22fee7e8bf8e668c323af7a35c9755e737e69f8",
-          "bytes": 7827
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Projects.UI.Tests.json",
+          "sha256": "9507a0f34aa8d61ff72ceb5dd5a647092d63452861a765d79567a69247a06db3",
+          "bytes": 7777
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.Resources.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_09_net10.0.trx",
         "sha256": "00ab6fa2d0fae4d8ddc1f97f21a787827659e2b55cdcec677ae0c5626f4f5828",
         "bytes": 111967,
+        "discovered": 70,
         "counts": {
-          "total": 70,
           "executed": 70,
           "passed": 70,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:09.1574513-04:00",
-          "queuing": "2026-10-11T08:41:09.1574517-04:00",
-          "start": "2026-10-11T08:41:07.9092727-04:00",
-          "finish": "2026-10-11T08:41:10.5835608-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceBoundaryTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceBrowseTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceContractCompatibilityTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceEditorReadinessTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceRegistryTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTests",
-          "CanDoItAll.Tests.Components.ResourcesUi.ResourcesPageLoadGenerationTests"
-        ],
+        "assembly_sha256": "ac3aa30f3c4dc808eb556d0a18ccbd65fc67213a95d1fc3e7dabcdfb30da98d0",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_09_net10.0.json",
-          "sha256": "0ff5f99c95754cf5d91f68da444ff9a7c7fd04e18c8e596660ba6d47702e9a20",
-          "bytes": 22423
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Resources.UI.Tests.json",
+          "sha256": "c5c915ec2a82c76f022af3711b0da48cdbd99a2565e9d0c3a59ffe161f297565",
+          "bytes": 22283
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.SchedulerPlanner.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_12_net10.0.trx",
         "sha256": "467fd5e830cd6f571f1feac76aa8a28187c3076301637ae6fc4e5dac9e0adb6a",
         "bytes": 96821,
+        "discovered": 59,
         "counts": {
-          "total": 59,
           "executed": 59,
           "passed": 59,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:12.3023552-04:00",
-          "queuing": "2026-10-11T08:41:12.3023557-04:00",
-          "start": "2026-10-11T08:41:10.9802421-04:00",
-          "finish": "2026-10-11T08:41:12.8310260-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerCalendarTests",
-          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerPlannerBoundaryTests",
-          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerReviewRegressionTests",
-          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerWorkspaceTests"
-        ],
+        "assembly_sha256": "25caa60f6957a5c92e3cd8acafedce9d5f232b4237a8e1f91a0a337c8d3f0844",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_12_net10.0.json",
-          "sha256": "f007119dee3676ea6d3b75c1c963505761ac06364468ee2304dee1c627a28a56",
-          "bytes": 19062
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.SchedulerPlanner.UI.Tests.json",
+          "sha256": "aa2611eb20bdaecf78edfa81b279ff712f4109d972f9520f6bb025a4507733e8",
+          "bytes": 18944
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       },
       {
+        "project": "CanDoItAll.TestLab.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_15_04_17_net10.0.trx",
+        "sha256": "677715234e3801a4d7e9c7d585f865f1356a5dd38f7b5ab52e8f5f952b33d859",
+        "bytes": 44773,
+        "discovered": 29,
+        "counts": {
+          "executed": 29,
+          "passed": 29,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "bdab7fb597058e38abfbd8de16e8f94d8bc090a31c4570a90af996ef6cbcf8fc",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.TestLab.Tests.json",
+          "sha256": "cca4fcddeecd2322170ba786c22052899b11ea0f63e7dbd20d5a86fa6c68f299",
+          "bytes": 8672
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.TestLab.UI.Tests",
         "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_14_net10.0.trx",
         "sha256": "1e850c74cbbdadf0e542cd96d621f181ab180e6bb264acb867a528f2a2a1a2a1",
         "bytes": 61187,
+        "discovered": 38,
         "counts": {
-          "total": 38,
           "executed": 38,
           "passed": 38,
           "failed": 0,
-          "notExecuted": 0
+          "not_executed": 0
         },
-        "times": {
-          "creation": "2026-10-11T08:41:14.4265995-04:00",
-          "queuing": "2026-10-11T08:41:14.4265999-04:00",
-          "start": "2026-10-11T08:41:13.2589737-04:00",
-          "finish": "2026-10-11T08:41:15.4391287-04:00"
-        },
-        "classes": [
-          "CanDoItAll.Tests.Components.TestLab.TestLabBoundaryTests",
-          "CanDoItAll.Tests.Components.TestLab.TestLabSandboxReviewTests",
-          "CanDoItAll.Tests.Components.TestLab.TestLabSurfaceTests"
-        ],
+        "assembly_sha256": "68660cb0beb1cfc40f5baecf295dcd8824e9636cb4800aa271df4fe600764aba",
         "identities": {
-          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_14_net10.0.json",
-          "sha256": "45f483d38594cc5ecd6943bae5b5996001668619b1f1db9ffe7a00a832e5ad20",
-          "bytes": 12267
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.TestLab.UI.Tests.json",
+          "sha256": "6f66ddf03a8a8e167293259ea18eea4855b1b93ef559cbeff1b465587a2de741",
+          "bytes": 12191
         },
-        "failed": []
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Tests.Components",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_30_net10.0.trx",
+        "sha256": "c267d55c9c1bb7fb6697eeda898d17a40996ff24dda2ec4a5c42f1bdd490276b",
+        "bytes": 4733546,
+        "discovered": 2980,
+        "counts": {
+          "executed": 2980,
+          "passed": 2980,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "51b32ffcfe9982af83f09da2b88f4f73612d71aeb81fde893fb12e202340994f",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Tests.Components.json",
+          "sha256": "c6c646680d34c2ccc67b9d8cbcde07d73e685ea729b90d4eb55d74f0ed44427e",
+          "bytes": 967144
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Tests.Integration",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_23_08_net10.0.trx",
+        "sha256": "6a970ac268c6fc1dadbeaaa6d962f7bd4dc2faf2ac718f335af42f04f88f4d26",
+        "bytes": 126549206,
+        "discovered": 3455,
+        "counts": {
+          "executed": 3460,
+          "passed": 3460,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "fa2268d59e2e9846719bffe0301623cb47d394a367f73fc55c09074446c9d37d",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Tests.Integration.json",
+          "sha256": "4735460cb5087087a35edd8d10b761eb8becbadf688bc5ae82e3f26cb1b988eb",
+          "bytes": 1200485
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Tests.Unit",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_15_04_25_net10.0.trx",
+        "sha256": "073732faff8918085558d0fabde4809b791253183c0dadd50d57f380a03e2456",
+        "bytes": 14827736,
+        "discovered": 9554,
+        "counts": {
+          "executed": 9588,
+          "passed": 9588,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "2ba521f772a2fb4efcdc37beb374bc4bf9140725dd1fea422ec31d4d47cd3012",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Tests.Unit.json",
+          "sha256": "7c2b67b81aad4f1d89977e3b1dfc007158b2275122d5995433248e56b19f7ae4",
+          "bytes": 3119261
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Content.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_19_net10.0.trx",
+        "sha256": "f9e74a7c3d4571ebccc0cc57f483e2026ad2ef83d5173f75b617ce188da54892",
+        "bytes": 74232,
+        "discovered": 45,
+        "counts": {
+          "executed": 45,
+          "passed": 45,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "6f37ba452c2f51eaf9bea70f9cbca50abebeb3f71999deb54ece7e08004f9b00",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Content.UI.Tests.json",
+          "sha256": "d1a30eaf1cf15824b2f0481d43c56391e026aabf1b3f3df79cdc07f4eb9eeb5b",
+          "bytes": 14474
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Execution.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_21_net10.0.trx",
+        "sha256": "ed54b1256fa80f38925889ee038caa21809c37b045f49ebb93d0afcf0b424aae",
+        "bytes": 20694,
+        "discovered": 12,
+        "counts": {
+          "executed": 12,
+          "passed": 12,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "07df6200eb0c36089bbbbc7e2e19b97811c4ef26ab99f8d337f66659f8de0ac1",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Execution.UI.Tests.json",
+          "sha256": "ed25134d563bb88cf0450492743db25813707e912d1c6deb4ad37cc4d2271712",
+          "bytes": 3650
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Insights.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_23_net10.0.trx",
+        "sha256": "d9f117a2c820b420b93f9fba2b5d2cf5e4ed261dd8e8916c51129d0c2bc27e93",
+        "bytes": 38055,
+        "discovered": 23,
+        "counts": {
+          "executed": 23,
+          "passed": 23,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "f04083e06a72ed48f0c530a3b43249df1b7fb402daeeee88c66a4b0f9dcbfd2a",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Insights.UI.Tests.json",
+          "sha256": "0eb5903c8e98fc9e2067fd16117a301eae5521a1c88cd3fee301218145e1e303",
+          "bytes": 7017
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Operators.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_26_net10.0.trx",
+        "sha256": "f92d735d45bb79156fae32a13fd4f661f9092b438226e410772cd7239fd2cf49",
+        "bytes": 28535,
+        "discovered": 17,
+        "counts": {
+          "executed": 17,
+          "passed": 17,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "5ccffaf3de70401c9ed1ffe30604cab694374fede78f40c9d4d7bec861550399",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Operators.UI.Tests.json",
+          "sha256": "3452c187d176d19f4ca3c46d1efbe10f1b418f9754bdd66777c275aaa82e6b58",
+          "bytes": 5146
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Planning.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_28_net10.0.trx",
+        "sha256": "36f5ca018fb86953eaea4c9d8d806cd14c1c57809b0218f76ec3332084264c8c",
+        "bytes": 72073,
+        "discovered": 44,
+        "counts": {
+          "executed": 44,
+          "passed": 44,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "3c1849c52c8938d617d3f6e54501d3dc44c7c46e1de96b008caadf128eb42071",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Planning.UI.Tests.json",
+          "sha256": "84c8ed6d98e4eac3ecfaf29ea0d4ad4281bbba3bf6eb936f074879c75319fd55",
+          "bytes": 13793
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workbench.Structure.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_32_net10.0.trx",
+        "sha256": "7ae6cc0824ffeb0322c0fedbb362ce8439ced5dd40f75637f5b3d773ef772598",
+        "bytes": 12897,
+        "discovered": 7,
+        "counts": {
+          "executed": 7,
+          "passed": 7,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "ad2d3de36945db704116d48c80c31bccff1b4cc8479e6ca45702943b26a01a67",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workbench.Structure.UI.Tests.json",
+          "sha256": "729f5e53ef2e0276d1710134099e908fa7fe170d48892b72284fdd7f03ace8ee",
+          "bytes": 2177
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.ApiAccess.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_33_net10.0.trx",
+        "sha256": "bce441bcc76c244a9955052b7f449f28ab0b1956ec4d99f2e02a090ccc8edd30",
+        "bytes": 132782,
+        "discovered": 82,
+        "counts": {
+          "executed": 82,
+          "passed": 82,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "2792744407a4823e1e01ae10f4b4484ac5a8693814eaf8c1dce50b90cb6ebbfa",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.ApiAccess.UI.Tests.json",
+          "sha256": "41c4f46d86f0698339754ec3f93f0a8400e1a6671a7e0fc041c2d13ec1508354",
+          "bytes": 25675
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.DataSources.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_36_net10.0.trx",
+        "sha256": "75d13e3bdb98b81eb8792f95bf0009125ba3d72016cc35a5354ca977312ef898",
+        "bytes": 38039,
+        "discovered": 22,
+        "counts": {
+          "executed": 22,
+          "passed": 22,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "a27397dd809619fe551c79ae520e700d03ea728ddb6023181cd4d99158736602",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.DataSources.UI.Tests.json",
+          "sha256": "a0beb8c7334218ba109d78f6c03f430f0fb84398b0d8b95e29e6dfe0977048b7",
+          "bytes": 7134
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.StorageCatalog.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_39_net10.0.trx",
+        "sha256": "58afa675cd5a1e8d5c565a5091cca1f57f196061eb41bc3e84734b4e2709e36d",
+        "bytes": 67786,
+        "discovered": 39,
+        "counts": {
+          "executed": 39,
+          "passed": 39,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "5262c6bd9438329f253c3da48d423d30de7289f3bf07635267b2c702d600d704",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.StorageCatalog.UI.Tests.json",
+          "sha256": "d1751f66bab4abd9c3fa5282bc5f481261149e58cb8a54791808e4216f113e39",
+          "bytes": 13262
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.StorageRecovery.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_41_net10.0.trx",
+        "sha256": "698008b852a02fa0e129d31d8c04d3ae015b8adc01550dd8e383733b3de6fc4a",
+        "bytes": 35277,
+        "discovered": 20,
+        "counts": {
+          "executed": 20,
+          "passed": 20,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "9a50191cdfb41de54954a2229455cbcf8645c8f64185ad3ac4d58037e9fc0c4d",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.StorageRecovery.UI.Tests.json",
+          "sha256": "fe0158c5366e660c835ebbcfde7ae6215ef2d24beed2bc0a32b9ffc5e966dcd0",
+          "bytes": 6668
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.StorageSelection.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_44_net10.0.trx",
+        "sha256": "8939ad3e4f3f3bee54b2d75334bd60ee8dd440dacfe7c388f54bae947df9a28e",
+        "bytes": 51891,
+        "discovered": 30,
+        "counts": {
+          "executed": 30,
+          "passed": 30,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "0d714bdaf5dfdb546c39a064b31a6b8d33f14733d2ff45da00c48976a50ca7a0",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.StorageSelection.UI.Tests.json",
+          "sha256": "02e9d714dd45d62a3615f8348c64001d30a096afb4b9d474bc039f359de9b4a6",
+          "bytes": 9776
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
+      },
+      {
+        "project": "CanDoItAll.Workspace.UI.Tests",
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_10_22_47_net10.0.trx",
+        "sha256": "7677962eba7bfd4f19435974e1aedd7a991c18ca113f4259e95d0f88a0fcaad7",
+        "bytes": 82517,
+        "discovered": 52,
+        "counts": {
+          "executed": 52,
+          "passed": 52,
+          "failed": 0,
+          "not_executed": 0
+        },
+        "assembly_sha256": "11aae98b5ab50f5889a266a7c98fc0a21aa7f0e29af61b49d1ac73e7446795d6",
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/stable-CanDoItAll.Workspace.UI.Tests.json",
+          "sha256": "b757084119b8a32dc09a272090e1e460d6c2166a82721dc83f634cfbc45d3b9a",
+          "bytes": 16161
+        },
+        "hash_inventory": "original inventory captured during the aggregate",
+        "reconciliation": "Expanded theories, duplicate display-label multiplicity, encoded labels, execution IDs and recorded assembly hashes verified in the aggregate audit."
       }
-    ]
+    ],
+    "executed": 17434,
+    "passed": 17434,
+    "failed": 0,
+    "not_executed": 0,
+    "reconciliation": {
+      "path": ".artifacts/cd1-closure-20261011/stable-reconciliation-final.json",
+      "sha256": "19fde63e9c6d733b84e10702acaa0f2876fa308e8e8f2b722a16867e07b2cb25",
+      "bytes": 91153
+    },
+    "identity_audit_attempts": [
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-audit-final.log",
+        "sha256": "6137a22b85465ec7538d95b84a9cad255665be0603dcdd21f49c15946c1f904e",
+        "bytes": 313
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-audit-2.log",
+        "sha256": "c574202ab3f22889437798ebfae98f490730c1415da8d740501c361091881d50",
+        "bytes": 193
+      }
+    ],
+    "supplemental_hash_capture": {
+      "path": ".artifacts/cd1-closure-20261011/supplemental-stable-test-assemblies.json",
+      "sha256": "dd6682e428df2458387a893fbb4aaedf1b27861f5583cbb18c9d2ea04ff24941",
+      "bytes": 817
+    },
+    "hash_confirmation_repeat": {
+      "trx": {
+        "path": ".artifacts/cd1-closure-20261011/tests/memory-hash-confirmation.trx",
+        "sha256": "99882f29cc568128e2fd2c82b3d94a0af0652d18ae1e44fa94d2b52aa14f2fce",
+        "bytes": 48633
+      },
+      "log": {
+        "path": ".artifacts/cd1-closure-20261011/memory-hash-confirmation.log",
+        "sha256": "9b32bed5d2ce3bb188519b36aa16e4fa2ab55a60a6adbaaab075f1df6338f719",
+        "bytes": 557
+      },
+      "passed": 29,
+      "qualification": "Memory was missing from the original assembly inventory. Its binary predates the aggregate; the post-aggregate hash is unchanged across this bounded repeat. The repeat is not added to the original 17,434 aggregate rows."
+    },
+    "termination_source_qualification": "The timing wrapper sampled HEAD at completion. Production remains 7d392a42 and later source/test/report ancestry is recorded separately; the termination source field is not a claim that every binary was built from the report-only head.",
+    "log": {
+      "path": ".artifacts/cd1-closure-20261011/final-stable-test.log",
+      "sha256": "57680d67b0a452e1fb225ce5900d52faead3234786c256d9c96b80ba2b851c2f",
+      "bytes": 20406
+    },
+    "termination": {
+      "seconds": 23263.8031583,
+      "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "discovered": 17379,
+      "exit_code": 0,
+      "source": "b0b107402fac4adf00108e451014a85aebde79f1"
+    }
   },
   "retained_attempts": [
     {
@@ -1393,7 +1699,7 @@
   "browser_unique_cases": 26,
   "browser_count_basis": "3 new application cases,21 cross-family cases,2 native Dashboard modes; Workbench rerun and later repeated keyboard cases do not add coverage.",
   "development_loop": {
-    "status": "PENDING_FINAL_STARTUP",
+    "status": "PASS",
     "entry_startup": [
       {
         "sample": 1,
@@ -1488,27 +1794,147 @@
         "bytes": 259
       },
       "environment_qualification": "Published Web runs in Development only to expose its explicit test readiness endpoint; the runtime source-asset manifest is absent. Independent published sandbox runs Production."
+    },
+    "final_native_startup": [
+      {
+        "executable_sha256": "4C4DDBEE1563328E5B4D63AB5D66CB7E913091CC13FE3B3E47AA9934D37D4CF8",
+        "source": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+        "elapsed_seconds": 11.5392156,
+        "condition": "same seeded database, warm filesystem",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "configuration": "Release",
+        "pid": 80780,
+        "source_dependencies": true,
+        "start_utc": "2026-10-11T19:11:09.4986830Z",
+        "sample": 1
+      },
+      {
+        "executable_sha256": "4C4DDBEE1563328E5B4D63AB5D66CB7E913091CC13FE3B3E47AA9934D37D4CF8",
+        "source": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+        "elapsed_seconds": 7.6993062,
+        "condition": "same seeded database, warm filesystem",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "configuration": "Release",
+        "pid": 75928,
+        "source_dependencies": true,
+        "start_utc": "2026-10-11T19:11:22.2079474Z",
+        "sample": 2
+      },
+      {
+        "executable_sha256": "4C4DDBEE1563328E5B4D63AB5D66CB7E913091CC13FE3B3E47AA9934D37D4CF8",
+        "source": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+        "elapsed_seconds": 7.6655785,
+        "condition": "same seeded database, warm filesystem",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "configuration": "Release",
+        "pid": 49572,
+        "source_dependencies": true,
+        "start_utc": "2026-10-11T19:11:31.0482333Z",
+        "sample": 3
+      }
+    ],
+    "final_sandbox_startup": [
+      {
+        "elapsed_seconds": 1.8925106,
+        "configuration": "Release",
+        "sample": 1,
+        "measurement": "process launch to HTTP200 /dashboard, not interactive circuit",
+        "source_dependencies": true,
+        "pid": 74848,
+        "condition": "warm filesystem, no database or native registrations",
+        "comparison": "New independent application host has no pre-extraction independent-host baseline; this is an observed after value, not an invented before/after speedup.",
+        "executable_sha256": "3F8C3695DA08BD10BB273A468DA953E5BF8BC17C91FFE026CF57A5CBC32F5512",
+        "start_utc": "2026-10-11T19:11:52.4896411Z"
+      },
+      {
+        "elapsed_seconds": 1.2433763,
+        "configuration": "Release",
+        "sample": 2,
+        "measurement": "process launch to HTTP200 /dashboard, not interactive circuit",
+        "source_dependencies": true,
+        "pid": 65620,
+        "condition": "warm filesystem, no database or native registrations",
+        "comparison": "New independent application host has no pre-extraction independent-host baseline; this is an observed after value, not an invented before/after speedup.",
+        "executable_sha256": "3F8C3695DA08BD10BB273A468DA953E5BF8BC17C91FFE026CF57A5CBC32F5512",
+        "start_utc": "2026-10-11T19:11:55.5209506Z"
+      },
+      {
+        "elapsed_seconds": 1.266812,
+        "configuration": "Release",
+        "sample": 3,
+        "measurement": "process launch to HTTP200 /dashboard, not interactive circuit",
+        "source_dependencies": true,
+        "pid": 70308,
+        "condition": "warm filesystem, no database or native registrations",
+        "comparison": "New independent application host has no pre-extraction independent-host baseline; this is an observed after value, not an invented before/after speedup.",
+        "executable_sha256": "3F8C3695DA08BD10BB273A468DA953E5BF8BC17C91FFE026CF57A5CBC32F5512",
+        "start_utc": "2026-10-11T19:11:57.7999312Z"
+      }
+    ],
+    "startup_receipts": [
+      {
+        "path": ".artifacts/cd1-closure-20261011/entry-startup.json",
+        "sha256": "c4663b88c0bf1911b6e9a7e7b5d32f999896b368c99ea8cb8813bb10ee2f42a7",
+        "bytes": 1022
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/final-startup.json",
+        "sha256": "20490ac3c3ae07953ff21cd60fa7e7032f81cdd4eee60533f0257d634f0b9d2e",
+        "bytes": 1512
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/final-sandbox-startup.json",
+        "sha256": "ba37e7056ce3ef3dcc832138d03c886e4ce99eeff356237f109cbbfc09ff1edb",
+        "bytes": 1885
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/final-web-ownership.json",
+        "sha256": "88b7eb48eef581f33fe9638e0e9f62594438d8e209704f9b20f099398424c4f0",
+        "bytes": 215
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/final-sandbox-ownership.json",
+        "sha256": "f9984b72b501d9e1484e66393b1596ad51492235938db6f78d3d7a56c257ce84",
+        "bytes": 195
+      }
+    ],
+    "startup_comparison": {
+      "entry_native_median_seconds": 9.2039305,
+      "final_native_median_seconds": 7.6993062,
+      "independent_host_median_seconds": 1.266812,
+      "qualification": "Three warm-filesystem Release samples per tuple; native samples reuse the same private database and roots. Final samples run after Stable exits. These measure process launch to HTTP200, not interactive readiness. The new independent host has no pre-extraction baseline; no causal speedup claim."
     }
   },
   "rendering_guard": {
     "status": "PASS",
     "cases": 7,
     "command": "python -m unittest discover -s tools/Validation/Rendering -p test_*.py; python tools/Validation/Rendering/check_rendering_register.py --repo .",
-    "qualification": "Bounded source review guard, not semantic proof or an automatic baseline updater."
+    "qualification": "Bounded source review guard, not semantic proof or an automatic baseline updater.",
+    "final_enforcement": {
+      "path": ".artifacts/cd1-closure-20261011/rendering-completion.log",
+      "sha256": "7e7ca7638b75f6d00338dd8a246f39b9b69e16440f61f582ab08efc899a3f60d",
+      "bytes": 115
+    }
   },
   "static": {
     "portability": {
       "status": "PASS",
       "scan": {
-        "path": ".artifacts/cd1-closure-20261011/portability-activation-review.json",
-        "sha256": "8a3d46ba5f138dea971509765f3ee77c2ca5b1dfd5bbf17a385bddab1d9a9ec3",
-        "bytes": 24745719
+        "path": ".artifacts/cd1-closure-20261011/portability-completion-final.json",
+        "sha256": "2d1544ed285af376eef74fb077e1b9a6ef86233c48bd9f21836c2f2945e403a5",
+        "bytes": 24750889
       },
       "allowances": 15384,
       "review": "One additional CI shell: pwsh occurrence for the rendering guard; existing portable CI interpreter, no elevation. All prior route/display deltas reviewed with their source checkpoints. Final enforcement ran without --write-baseline.",
       "files": 9472,
-      "findings": 37728,
-      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-activation-review.log"
+      "findings": 37735,
+      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-completion-final.log",
+      "completion_delta_review": {
+        "path": ".artifacts/cd1-closure-20261011/portability-completion-review.json",
+        "sha256": "3e95a1ae829dfdcbe32c39b59a74bfb614e8f96dbde2f3ec43918d702cce4e4b",
+        "bytes": 6457
+      },
+      "final_scan_matches_reviewed_finding_set": true
     },
     "documentation": {
       "status": "PASS",
@@ -1518,7 +1944,8 @@
         ".artifacts/cd1-closure-20261011/documentation-evidence-1.log",
         ".artifacts/cd1-closure-20261011/documentation-2.log",
         ".artifacts/cd1-closure-20261011/documentation-assets.log",
-        ".artifacts/cd1-closure-20261011/documentation-activation-review.log"
+        ".artifacts/cd1-closure-20261011/documentation-activation-review.log",
+        ".artifacts/cd1-closure-20261011/documentation-completion.log"
       ],
       "retained_failure": "documentation-1.log identified the missing new test-project README, now supplied."
     },
@@ -1528,7 +1955,19 @@
       "source_entries": 39,
       "links": 24,
       "helper_tests": 34,
-      "shared_bundle": "UNCHANGED"
+      "shared_bundle": "UNCHANGED",
+      "final_package_verification": {
+        "path": ".artifacts/cd1-closure-20261011/bundle-completion.log",
+        "sha256": "69c1e472d5b35ac0b71a01104ab5dd7f5996c012a1149f15831d9be329ff51aa",
+        "bytes": 180
+      },
+      "semantic_execution_validation": {
+        "status": "PASS",
+        "mode": "Compatible existing CD1 package; no scaffold migration or shared archive replacement.",
+        "scope": "All32 acceptance groups, six separate completion dimensions, current owner/activation census, evaluated boundaries, executed versus reused proof, protected work and next-refactor handoff reviewed against the actual assignment.",
+        "preparation_metadata": "The frozen verifier reports product_validation=NOT_RUN for preparation only; maintained execution evidence supplies the actual result.",
+        "helper_test_disposition": "REUSED_UNCHANGED:34 package helper tests passed earlier against unchanged verifier inputs; no fresh helper rerun claimed."
+      }
     }
   },
   "reuse": {
@@ -1576,6 +2015,15 @@
         "path": ".artifacts/cd1-closure-20261011/signature-checkpoint-4.log",
         "sha256": "f22b2af6fa0f021b09bb456ae1a80e7731fbd62c0a66d606a9e55495ecabb68d",
         "bytes": 613
+      }
+    },
+    {
+      "commit": "b0b107402fac4adf00108e451014a85aebde79f1",
+      "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 5ce7db59501b300c6f98af50481a256cac755f67",
+      "receipt": {
+        "path": ".artifacts/cd1-closure-20261011/signature-checkpoint-5.log",
+        "sha256": "dc601a2f2be2a7d486705410e7827163059b784cb8f3db59fb9a0908d2bbd862",
+        "bytes": 698
       }
     }
   ],
@@ -1682,7 +2130,8 @@
       "evidence": [
         "cross-workspace-browser",
         "native-shell",
-        "application-browser"
+        "application-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
       ]
     },
     {
@@ -1707,7 +2156,8 @@
       "evidence": [
         "native-dashboard-runtime",
         "native-shell",
-        "cross-workspace-browser"
+        "cross-workspace-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
       ]
     },
     {
@@ -1716,7 +2166,8 @@
       "evidence": [
         "native-shell",
         "application-independent",
-        "cross-workspace-browser"
+        "cross-workspace-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
       ]
     },
     {
@@ -1729,7 +2180,7 @@
     },
     {
       "id": "CD1-19",
-      "status": "PENDING",
+      "status": "PASS",
       "evidence": [
         "native-shell",
         "native-dashboard-runtime",
@@ -1748,7 +2199,8 @@
       "id": "CD1-21",
       "status": "PASS",
       "evidence": [
-        "cross-workspace-browser"
+        "cross-workspace-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
       ]
     },
     {
@@ -1761,7 +2213,7 @@
     },
     {
       "id": "CD1-23",
-      "status": "PENDING",
+      "status": "PASS",
       "evidence": [
         "development_loop"
       ]
@@ -1791,7 +2243,7 @@
     },
     {
       "id": "CD1-27",
-      "status": "PENDING",
+      "status": "PASS",
       "evidence": [
         "static",
         "broad_stable"
@@ -1803,7 +2255,8 @@
       "evidence": [
         "reuse",
         "broad_stable",
-        "cross-workspace-browser"
+        "cross-workspace-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
       ]
     },
     {
@@ -1830,7 +2283,7 @@
     },
     {
       "id": "CD1-32",
-      "status": "PENDING",
+      "status": "PASS",
       "evidence": [
         "dimensions",
         "signatures",
@@ -1839,13 +2292,14 @@
     }
   ],
   "resources": {
-    "status": "IN_USE",
+    "status": "COMPLETE_WITH_REPORTED_EXTERNAL_BLOCKER",
     "postgres": {
       "pid": 66316,
       "port": 55925,
       "database": "cd1_entry plus framework-owned temporary leases",
       "launcher_pid": 27552,
-      "last_use": "Broad Stable and comparable final startup; pg_ctl stop then wait for launcher natural exit"
+      "last_use": "Final native startup samples after Stable completed; pg_ctl stopped the verified postmaster, the original launcher exited naturally, then the four bounded owned paths were removed.",
+      "status": "STOPPED_AND_OWNED_FILES_REMOVED"
     },
     "native_watch": {
       "started_utc": "2026-10-11T13:14:44.3809374Z",
@@ -1878,7 +2332,7 @@
       ".artifacts/mcp-installs/CanDoItAll.Mcp.CodeAnalytics/failed/failed-20261010-101825372",
       ".artifacts/pc4-recovery-20261010/codeanalytics-smoke"
     ],
-    "qualification": "Prior inactive cleanup-denied paths are not retried. Current fixture/private state will be removed after last use; no cleanup claim while it is running.",
+    "qualification": "All newly owned hosts, listeners, fixture state and private credential material are closed or removed. Only the two prior inactive cleanup-denied paths remain; they were not retried or bypassed and do not interfere with execution. Ordinary5032, installed MCP, sibling work and standard Debug/Release outputs remain preserved.",
     "proof_safety": {
       "preliminary_exact": {
         "path": ".artifacts/cd1-closure-20261011/exact-secret-proof-preliminary.json",
@@ -1890,7 +2344,7 @@
         "sha256": "188f3037243fb52db10e35889f57917673a8d45e5d2e40e7ef30cde6489fb0e4",
         "bytes": 5716
       },
-      "final_required_after_tests": true,
+      "final_required_after_tests": false,
       "browser_host_heuristic": {
         "path": ".artifacts/cd1-closure-20261011/browser-host-secret-summary.json",
         "sha256": "fabd7a692552c8278ccb42076b079ba5362b8fb5d182975acff54e8eda422b4e",
@@ -1900,7 +2354,47 @@
         "path": ".artifacts/cd1-closure-20261011/browser-tool-proof-secrets.json",
         "sha256": "4650e7eb4771618843ba4b695348cfac645392899b056b72c6cf5d940506bbf1",
         "bytes": 893
-      }
+      },
+      "status": "PASS",
+      "final_exact": {
+        "path": ".artifacts/cd1-closure-20261011/exact-secret-proof-final.json",
+        "sha256": "d16f2a52fb691f34bd28a3b7ab3b3d51b9afb0689203b82b7b052c944031e164",
+        "bytes": 1563
+      },
+      "final_heuristic_scan": {
+        "path": ".artifacts/cd1-closure-20261011/heuristic-proof-scan-final-2.json",
+        "sha256": "fead109618beecfa094ae6ee194ba279b46282404bc8bd209c0990594b9c8d37",
+        "bytes": 10637
+      },
+      "retained_heuristic_coverage_gap": {
+        "receipt": {
+          "path": ".artifacts/cd1-closure-20261011/heuristic-proof-scan-final.json",
+          "sha256": "048f8b347c0e5362ed0e847956787cc5f712ae0f6e89b16ced51988c8a4985bb",
+          "bytes": 10777
+        },
+        "resolution": "The first final scan used a 50MB cap and omitted the 126MB Integration TRX. The second final scan raises the cap to 200MB and must have zero oversized or unreadable text files. Exact scanning has no size exclusion."
+      },
+      "final_heuristic_review": {
+        "path": ".artifacts/cd1-closure-20261011/heuristic-finding-review-final.json",
+        "sha256": "456f0fe85ba822b23f0b1a7abf4cfea75a5430c01d34e02490f8c88e8b049746",
+        "bytes": 19919
+      },
+      "sandbox_heuristic": {
+        "path": ".artifacts/cd1-closure-20261011/sandbox-proof-secrets.json",
+        "sha256": "b07fa8da7f268eff1f636c972633aa2bf3c77653e051ab54c4a56cf13f37eb4c",
+        "bytes": 912
+      },
+      "current_browser_manifest": {
+        "path": ".artifacts/cd1-closure-20261011/current-browser-proof-files.json",
+        "sha256": "1fa17145d8566d1fb0f61f01f68034d38e869ad363e02b658040832dcfaba1d9",
+        "bytes": 43937
+      },
+      "current_browser_heuristic_and_process_trace": {
+        "path": ".artifacts/cd1-closure-20261011/current-browser-proof-secret-review.json",
+        "sha256": "cc68779e69bcb666ad2c7364d9b586c405f576c983594c855d9ee6d3328f0cc9",
+        "bytes": 10249
+      },
+      "qualification": "Final exact fixture-secret scan ran after PostgreSQL and the original launcher stopped, before DPAPI removal. Browser trace inspection covers the Process authoring trace; no profile trace exists. Reviewed fake Unit inputs and PowerShell expressions are not real credentials. Representative screenshots were inspected separately; no OCR claim."
     },
     "browser_hosts": {
       "path": ".artifacts/cd1-closure-20261011/browser-resource-disposition.json",
@@ -1911,6 +2405,40 @@
       "path": ".artifacts/cd1-closure-20261011/watch-browser-closed.json",
       "sha256": "2641379273dae25afba9688107762bc7949443065b104bca7d092ce1d0a44833",
       "bytes": 288
-    }
-  }
+    },
+    "final_receipts": [
+      {
+        "path": ".artifacts/cd1-closure-20261011/native-final-stop.json",
+        "sha256": "fd55538e7701f9e3096052ca8f20747c083309d52535d020d19565ecd57015f1",
+        "bytes": 223
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/native-launcher-final.json",
+        "sha256": "cb9fa18abc7ef3b3148d4d396b05e1f19c5cecbfd2166cd0ca4162c8de6c3cea",
+        "bytes": 404
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/fixture-removal.json",
+        "sha256": "25c1119df42804721a3653e84b58020a185188a11ccea2a6f97a2c796dd73fd0",
+        "bytes": 655
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/protected-resources-final.json",
+        "sha256": "07d9b57eaebdde612c78a051d2c6cf644d7aa99e5aa08d08c440aac6c29927b3",
+        "bytes": 2297
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/sandbox-resource-disposition.json",
+        "sha256": "328fb88cd15d3617c43b7af76b2539e7e2384ba11cf180e89b048172e9f6170b",
+        "bytes": 12635
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/cross-browser-resource-disposition.json",
+        "sha256": "e8d33a5495e5aa61043413a309dd8b69759bdce07cdc14c807a5b02a12697eb0",
+        "bytes": 1161
+      }
+    ]
+  },
+  "completed_utc": "2026-10-11T19:18:09.475644+00:00",
+  "preparation_package": "The existing CD1 bundle and shared bundle remain unchanged. CD1 bundle.json NOT_RUN fields are immutable preparation metadata required by its verifier; this maintained execution record carries the current completion state."
 }
