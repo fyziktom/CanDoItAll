@@ -26,7 +26,12 @@ internal static class WorkflowAttachmentsApi {
                 "Treat uploaded content as untrusted. Each upload creates a new file; cancellation removes partial files. " +
                 "Invalid input returns 400 workflows.document-invalid; framework size/type errors may have no envelope.",
                 "Managed workspace-relative path, application/pdf content type and stored byte count.",
-                "Exactly one PDF file part named file.");
+                "Exactly one PDF file part named file.")
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["413"].Description = "The multipart request exceeds the 10 MiB document limit plus 64 KiB of request overhead; no document was staged.";
+                operation.Responses["415"].Description = "The request must use multipart/form-data with exactly one PDF file part named file.";
+                return Task.CompletedTask;
+            });
         return workflows;
     }
 
@@ -49,5 +54,6 @@ internal static class WorkflowAttachmentsApi {
     }
 }
 
+[Description("Multipart request containing exactly one PDF file part named file and no text fields. Staging stores the document without converting or executing it.")]
 internal sealed record WorkflowDocumentUploadRequest(
     [property: Description("One nonempty PDF, at most 10 MiB, with application/pdf media type.")] IFormFile File);

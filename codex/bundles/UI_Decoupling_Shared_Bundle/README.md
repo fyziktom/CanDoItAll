@@ -1,39 +1,47 @@
-# CanDoItAll · Shared UI Decoupling Bundle
+# UI Decoupling Shared Bundle v4.1
 
-**Reference:** `CDA-UI-DECOUPLING-SHARED-v3` · **Edition:** 2026-09-28
+**ID:** `CDA-UI-DECOUPLING-SHARED-v4.1`  
+**Review:** 2026-10-09, `components-decoupling`, `146067ed133f624878dfe5756c441a43c0f21b4a`  
+**Purpose:** one execution companion, not an independent implementation assignment.
 
-Incrementally separate production renderers from persistence, runtime and application composition so a developer can work on a module in a small, representative `dotnet watch` host. Keep the modular application and its existing in-process services. This is **not** an API-only migration, a new UI framework, a backend rewrite, or authorization to refactor every module at once.
+Use this companion with **PC2**. Preserve the completed PC1 renderer extraction; do not replay an old roadmap. The reviewed commit is provenance, never an instruction to reset the operator's checkout.
 
-## Start here
+## Start
 
-Read [the execution brief](prompt.md), [boundaries](architecture/01-boundaries.md), [state and effects](architecture/02-state-and-effects.md), [sandboxes and the development loop](architecture/03-sandboxes-and-dev-loop.md), and [validation](VALIDATION.md). Consult [domain safeguards](architecture/04-domain-safeguards.md) where a slice crosses an owner boundary. A module-specific assignment can be a single document based on [the child template](templates/module-slice.md); it does not need numbered subbundles or a prescribed class hierarchy.
+1. Install the two directories beside each other under `codex/bundles`, following [migration](MIGRATION_FROM_V4.md).
+2. Read the child's `prompt.md`, this [shared contract](prompt.md), [execution protocol](EXECUTION.md), [signing protocol](SIGNING_AND_COMMITS.md), and [validation rules](VALIDATION.md).
+3. Before implementation, request the operator's local PGP unlock, establish a verified signing session, inspect current source/sibling drift, and discover affected tests using the configured CodeAnalytics MCP.
 
-The [review](audit/REVIEW.md), [input reconciliation](audit/input-reconciliation.md), [module map](audit/module-map.md) and [source register](audit/source-register.md) explain why this edition differs from the supplied bundles. They are reference material, not a mandatory reading loop for every edit. [České shrnutí](README.cs.md).
+Current `AGENTS.md`, `.github/copilot-instructions.md`, `docs/architecture/ui-component-seams.md`, `docs/testing.md`, evaluated configuration, and CI remain authoritative. These files do not waive security, ownership, signing, or validation requirements.
 
-## Authority and currency
+Local maintenance on 2026-10-10 replaces custom output configurations with standard
+Debug/Release reuse, serialized builds and suitable dotnetwatch iteration. Reuse isolated
+test fixtures; a bundle/stage does not itself justify a new Docker stack. This is an
+in-repository policy repair, not a replacement archive or a new product-validation claim.
 
-The current repository's `AGENTS.md`, `.github/copilot-instructions.md`, **`docs/architecture/ui-component-seams.md`**, `docs/testing.md` and applicable CI configuration remain the product authority. Family-wide standards and reusable agent skills belong in `CanDoItAll.SharedInfo`. This bundle is their UI-decoupling execution companion, not a competing permanent architecture manual.
+## Changes in v4.1
 
-The review used `fyziktom/CanDoItAll`, **development**, commit `7db3543ab437376baeca55089cb331fbe1b30483` (2026-09-27). The branch was checked again at the end of source inspection and had not changed. This identifies the evidence, **not a required execution checkout**. Begin a child on the branch supplied by the owner, record its actual HEAD and dirty state, then refresh the affected source and test map. Do not reset to the review SHA, silently change branches, or assume a newer checkout is compatible because its filenames match.
+- Request signing access at entry; make logical tested commits throughout the assignment, not one final batch. Keep the same GPG agent/home and a dedicated committer environment. Cache expiry is explicit, not a promise that an open PowerShell window keeps a key unlocked forever.
+- Distinguish a read generation from a pending mutation and its accepted receipt. A refresh must not erase an acknowledged write.
+- Reconcile authoritative selections, hidden semantic fields, raw inputs, and concurrent edits by actual identity. Preserve completed PC1 draft and file-lifetime improvements.
+- Commit a sanitized source-addressed verification summary. An ignored local ledger alone cannot support review of a pushed candidate.
+- Mark all eight Processes renderer families extracted but functionally qualified; do not confuse preexisting authoring storage debt with a failed file extraction.
 
-When code and guidance disagree, distinguish intended behavior, current implementation and a defect. Preserve safety and the authorized behavior; record and resolve the relevant discrepancy at its real owner. Neither historical prose nor accidental current behavior automatically wins. Any lasting clarification belongs in the existing canonical document, not a second copied manual.
+The [current map](audit/module-map.md) supersedes the explicitly historical [v4 map](audit/module-map-v4-historical.md). The [current source register](audit/sources.json) is a partial review navigation aid. The [31-entry historical survey](audit/bundle-history.md) remains attributed to the earlier review and was not repeated wholesale for v4.1.
 
-## What “done” means for a slice
+## Read-only helpers
 
-Production uses the extracted renderers; their complete useful scenario can run without production module implementations or a database; dependencies and assets really reflect that separation; state, mutations and owner authority remain correct; the affected behavior has current evidence. Report architecture, sandbox fidelity, production behavior and measured development performance separately. A working sandbox alone does not close production work, and a smaller graph alone does not prove a speedup.
-
-A bounded preparation step may finish with an explicit remaining extraction blocker. It must not be labelled a completed module. The program tracks surfaces and owner roles, not the number of `.UI` projects.
-
-## Package and tooling
-
-This archive contains guidance and two optional Python 3.10+ utilities. It contains no application patch, dependency binaries, old browser/TRX evidence or fonts. `tools/check_review_drift.py` reads local Git metadata and reports reviewed files that changed; it does not fetch, switch branches, stage files or run tests. `tools/validate_bundle.py` checks this archive's internal integrity, not application correctness.
+From this installed directory:
 
 ```text
-python tools/validate_bundle.py
-python tools/check_review_drift.py --repo <path-to-CanDoItAll>
-python tools/test_tooling.py
+python -B tools/handoff_tools.py verify .
+python -B tools/handoff_tools.py verify ../CanDoItAll_Processes_UI_Decoupling_PC2 --shared .
+python -B tools/handoff_tools.py inspect --repo ../../.. --sources audit/sources.json --output <owned-existing-directory>/entry-inspection.json
+python -B -m unittest discover -s tools -p "test_*.py" -v
 ```
 
-The drift utility prints JSON to standard output (redirect it to an owned evidence file as needed). Exit code 0 means a report was produced, even when drift is found; code 2 means the utility could not complete. It compares registered file blobs and reports working-tree/index changes, not the complete new module inventory.
+Use Python 3.10+; repository inspection also requires Git. `verify` returns 0 for integrity, 1 for a mismatch, 2 for an input/tool error. `inspect` returns 3 for source/worktree drift, not a product failure and not authorization to reset. Output files are created exclusively. Inspect private paths before sharing reports.
 
-The review is source/configuration analysis. No .NET build, product test, live browser journey, sibling build or watch benchmark was executed for this package. Prior repository completion reports remain historical evidence with their own scope. See [validation status](audit/package-validation.md).
+The helper performs no MCP query, .NET build, C# test, browser test, authentication, or product mutation. Hashes prove delivery consistency, not source authenticity or executed product behavior. See [package-only checks](PACKAGE_VALIDATION.md).
+
+All repository and package content is English. No private keys, credentials, font binaries, compiled application files, or raw product traces belong in these packages.

@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CD1",
+  "hash_algorithm": "SHA256",
+  "self_excluded": "MANIFEST.json",
+  "files": [
+    {
+      "path": "APPLICATION_SURFACES.md",
+      "bytes": 7410,
+      "sha256": "7e1566bdc40a9e49e559f50545d86de8790e06e622203f452a63c726fd59291d"
+    },
+    {
+      "path": "BROWSER_JOURNEYS.md",
+      "bytes": 5261,
+      "sha256": "d2f1b7a56d45beb4fcac0275e66612f5cf5f4826671b1d59baf2de9436b67125"
+    },
+    {
+      "path": "CENSUS_AND_GUARDS.md",
+      "bytes": 5103,
+      "sha256": "d2f62f44654b657223d1f3a7a616bf29eda707c0832c205cc95829f016434a82"
+    },
+    {
+      "path": "COMPLETION_AND_HANDOFF.md",
+      "bytes": 4327,
+      "sha256": "4c6df6a2a5b8152f46376f45256a5dc1a44611e94a274bdec49a44784b76a78c"
+    },
+    {
+      "path": "EXECUTION_PLAN.md",
+      "bytes": 3414,
+      "sha256": "218fdd94954a4fba63c82afb07b2507e98acb5983e96e6642e86c2a51cb7fc8a"
+    },
+    {
+      "path": "OPERATIONS_AND_SIGNING.md",
+      "bytes": 3433,
+      "sha256": "640174640f364875091a3266f1a49e80d0a719ce6d3e8e7206cef52c500e38d1"
+    },
+    {
+      "path": "PACKAGE_VALIDATION.md",
+      "bytes": 1544,
+      "sha256": "13c1bf720c39b2a29b66687c26b14f5906ce73c1bddc272c7b2d3c6b77191659"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3032,
+      "sha256": "99b5783b17b3ce39e10d34e7a5a4c732e1b7ac9fcdda196224ccd4bb44905514"
+    },
+    {
+      "path": "REMAINING_SCOPE.md",
+      "bytes": 5444,
+      "sha256": "beb95e76536c34390f3b35125a78331562b97dd4ed7018a44aad809641018812"
+    },
+    {
+      "path": "REVIEW_PC4.md",
+      "bytes": 5027,
+      "sha256": "42851cc747f38c68ed98d417ed8faa656967e4cfbacd406ded04cfb97cc7149c"
+    },
+    {
+      "path": "VALIDATION_AND_REUSE.md",
+      "bytes": 6854,
+      "sha256": "e22ee2645b9e55c411c89f15c17f93b2b3c581fab486423798dca7d062ad4ad4"
+    },
+    {
+      "path": "acceptance-plan.json",
+      "bytes": 7044,
+      "sha256": "3de9def0e45886d888855b2baccb8d9d42496db000f90ebb9f8eb0fa58468f1a"
+    },
+    {
+      "path": "bundle.json",
+      "bytes": 2381,
+      "sha256": "5dee812faf31900968f3405881a392a06e42c7dd491dae50b80a8f31d65307a1"
+    },
+    {
+      "path": "evidence-template.json",
+      "bytes": 5498,
+      "sha256": "7ad0371e2696caac3c48439eefae9a04fe4282005856466f7a026ef55af762b2"
+    },
+    {
+      "path": "family-register.json",
+      "bytes": 9160,
+      "sha256": "118222338dc27ff5f78d950cdc6596697efedb130eddab3ce86bb10736fb7eb7"
+    },
+    {
+      "path": "inventory-seed.json",
+      "bytes": 4078,
+      "sha256": "a0f94aa6af7340b5e395803950078e9f1e71307a82bd385507178614a99d4236"
+    },
+    {
+      "path": "progress-template.md",
+      "bytes": 865,
+      "sha256": "67295adeebdaa8074d49d99008799975e74b81c6d177397d15631f50588ae997"
+    },
+    {
+      "path": "prompt.md",
+      "bytes": 6237,
+      "sha256": "3cb9b8b66bf7c56073880454ebb8916d78618138e15c9b27d85585d05215f440"
+    },
+    {
+      "path": "review-sources.json",
+      "bytes": 22131,
+      "sha256": "555fbdc7e1eed309c23ed2270c8077248b4c6baba9a8e5ccd404c740fa473ca9"
+    },
+    {
+      "path": "tools/collect_inventory.py",
+      "bytes": 7488,
+      "sha256": "c79ac9d2191df3b110be877403386de4fef6bcc7f092799e0815eaaf0680e58e"
+    },
+    {
+      "path": "tools/test_bundle_tools.py",
+      "bytes": 10264,
+      "sha256": "f3362466882e8872de6df77b3bbbe4e3b22b22dc1a0dba711a853a9ac92123c2"
+    },
+    {
+      "path": "tools/verify_bundle.py",
+      "bytes": 7156,
+      "sha256": "e80e10b62501004efc538e8ea4ab01224a3c653548f36dc72ba48d520bd895ba"
+    }
+  ]
+}

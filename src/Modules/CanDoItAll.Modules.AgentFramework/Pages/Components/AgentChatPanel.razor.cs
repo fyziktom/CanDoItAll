@@ -16,7 +16,7 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 
 public partial class AgentChatPanel : IAsyncDisposable {
-    private const string UpdatingWorkspaceContextRunState = "Updating current workspace context...";
+    private const string UpdatingWorkspaceContextRunState = "Preparing context";
 
     private readonly object voiceOwnerGate = new();
     private CancellationTokenSource voiceOperationCancellation = new();
@@ -142,6 +142,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private AgentExecutionActivityStreamId? sessionStartRejectionStreamId;
     private AgentExecutionActivityStreamId? activeActivityStreamId;
     private Guid? terminalWorkspaceRefreshRunId;
+    private Guid? activeWorkspaceRefreshRunId;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
     private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
 
@@ -158,6 +159,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private bool IsChatInteractionBusy
         => isBusy || chatSession.IsLoading ||
            PersistedActiveChatRunState == ActiveAgentChatRunState.Running ||
+           workspace?.SelectedRun is { State: ExecutionState.WaitingOnTool, PendingApprovals.Count: 0, CompletedAtUtc: null } ||
            workspace?.SelectedRun?.State is
                ExecutionState.Preparing or
                ExecutionState.Running or
@@ -243,6 +245,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         isBusy = false;
         activeActivityStreamId = null;
         terminalWorkspaceRefreshRunId = null;
+        activeWorkspaceRefreshRunId = null;
         switchDialogOpen = false;
         runStateText = "";
         runStateTone = "neutral";
@@ -1340,13 +1343,35 @@ public partial class AgentChatPanel : IAsyncDisposable {
         if (!chatSession.TryObserveExecution(entry, generation)) {
             return;
         }
-        if (workspace?.SelectedRun?.Id == entry.ExecutionRunId) {
-            runStateText = entry.State.ToString();
-            runStateTone = ResolveExecutionTone(entry.State);
-            SynchronizeActiveChatRunState(entry.State);
+        if (executionLog[0].Id != entry.Id) {
+            return;
         }
-
+        runStateText = entry.State.ToString();
+        runStateTone = ResolveExecutionTone(entry.State);
+        SynchronizeActiveChatRunState(entry.State);
         StateHasChanged();
+        if (entry.State is not (ExecutionState.Completed or ExecutionState.Failed) &&
+            entry.ExecutionRunId != Guid.Empty && selectedSessionId.HasValue &&
+            workspace?.SelectedRun?.Id != entry.ExecutionRunId && activeWorkspaceRefreshRunId != entry.ExecutionRunId) {
+            activeWorkspaceRefreshRunId = entry.ExecutionRunId;
+            try {
+                await LoadWorkspaceAsync(entry.AgentId, entry.ChatSessionId, entry.ExecutionRunId);
+                if (selectedAgentId != entry.AgentId || selectedSessionId != entry.ChatSessionId ||
+                    workspace?.SelectedRun?.Id != entry.ExecutionRunId) {
+                    return;
+                }
+                if (pendingUserCreatedAtUtc is { } queuedAt && workspace.SelectedSession?.Messages.Any(
+                    message => message.Role == ChatMessageRole.User && message.CreatedAtUtc >= queuedAt) == true) {
+                    pendingUserPrompt = "";
+                    pendingUserCreatedAtUtc = null;
+                }
+                StateHasChanged();
+            } finally {
+                if (activeWorkspaceRefreshRunId == entry.ExecutionRunId) {
+                    activeWorkspaceRefreshRunId = null;
+                }
+            }
+        }
         if (!ShouldReloadWorkspaceAfterExternalTerminalUpdate(entry)) {
             return;
         }
@@ -1755,7 +1780,9 @@ Use these workspace artifacts as input:
             ExecutionState.Preparing or
             ExecutionState.Running or
             ExecutionState.Persisting => ActiveAgentChatRunState.Running,
-            ExecutionState.WaitingOnTool => ActiveAgentChatRunState.AwaitingApproval,
+            ExecutionState.WaitingOnTool => isBusy || workspace?.SelectedRun?.PendingApprovals.Count == 0
+                ? ActiveAgentChatRunState.Running
+                : ActiveAgentChatRunState.AwaitingApproval,
             _ => ActiveAgentChatRunState.Idle
         };
         SetActiveChatRunState(activeState);

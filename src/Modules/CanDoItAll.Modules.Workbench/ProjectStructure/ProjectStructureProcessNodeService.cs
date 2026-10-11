@@ -29,8 +29,8 @@ public sealed partial class ProjectStructureProcessNodeService(
     private const string TargetProcessRunNodeIdVariableName = "TargetProcessRunNodeId";
     private const string ParentProcessStepIdVariableName = ProcessRuntimeLaunchVariables.ParentProcessStepId;
     private const string ParentProcessStepKeyVariableName = "ParentProcessStepKey";
-    private const string SubprocessDefinitionKeyVariableName = "SubprocessDefinitionKey";
-    private const string SubprocessLiveRunProfileKeyVariableName = "SubprocessLiveRunProfileKey";
+    private const string SubprocessDefinitionKeyVariableName = ProcessRuntimeLaunchVariables.SubprocessDefinitionKey;
+    private const string SubprocessLiveRunProfileKeyVariableName = ProcessRuntimeLaunchVariables.SubprocessLiveRunProfileKey;
     private const string AgentIdVariableName = "AgentId";
     private const string AgentNameVariableName = "AgentName";
     private const string MachineNameVariableName = "MachineName";
@@ -136,7 +136,8 @@ public sealed partial class ProjectStructureProcessNodeService(
     public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
         ProjectStructureProcessLaunchVariableBuildRequest request,
         IProcessLaunchVariablePreparer launchVariablePreparationService,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
@@ -159,7 +160,7 @@ public sealed partial class ProjectStructureProcessNodeService(
 
         await using var scope = serviceScopeFactory.CreateAsyncScope();
         var projectWorkbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
-        var definitions = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
+        var catalog = scope.ServiceProvider.GetRequiredService<ProcessDefinitionCatalogProjectionService>();
         var surface = await LoadSurfaceAsync(
             projectWorkbench,
             request.ProjectId,
@@ -170,15 +171,17 @@ public sealed partial class ProjectStructureProcessNodeService(
                 "ProjectStructureNodeNotFound",
                 $"Node '{request.ProjectNodeId}' was not found in project '{request.ProjectId:D}'.");
 
-        var processDefinitionId = request.ProcessDefinitionId?.Value ?? Guid.Empty;
+        var processDefinitionId = definitions is null ? request.ProcessDefinitionId?.Value ?? Guid.Empty
+            : ProcessDefinitionCatalogProjectionService.CreateDefinitionId(new(definitions.DefinitionKey)).Value;
         var processDefinitionNodeId = processDefinitionId == Guid.Empty
             ? "process-api"
             : ProjectStructureProcessNodeKeys.BuildProcessDefinitionNodeKey(processDefinitionId);
         var definitionKey = FirstNonEmpty(
+            definitions?.DefinitionKey,
             request.DefinitionKey,
             processDefinitionId == Guid.Empty
                 ? string.Empty
-                : definitions.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
+                : catalog.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId)));
         var agent = new ProjectStructureAgentContext(
             AgentId: "process-api",
             AgentName: string.IsNullOrWhiteSpace(request.RequestedBy) ? "Process API" : request.RequestedBy.Trim(),
@@ -194,7 +197,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             targetNode,
             agent,
             launchVariablePreparationService,
-            definitionKey);
+            definitionKey,
+            definitions);
         var variables = CopyLaunchVariables(request.Variables);
 
         foreach (var item in derivedVariables)
@@ -295,6 +299,9 @@ public sealed partial class ProjectStructureProcessNodeService(
         }
 
         var definitionKey = dependencies.ProcessDefinitionCatalogService.ResolveDefinitionKey(new ProcessDefinitionId(processDefinitionId.Value));
+        var definitions = await dependencies.ProcessLaunchApplicationService.ResolveForPreparationAsync(NormalizeOptional(definitionKey),
+            new ProcessDefinitionId(processDefinitionId.Value), projectId, cancellationToken: cancellationToken);
+        definitionKey = definitions?.DefinitionKey ?? definitionKey;
         var launchRequest = new ProcessLaunchRequest(
             DefinitionKey: NormalizeOptional(definitionKey),
             new ProcessDefinitionId(processDefinitionId.Value),
@@ -303,9 +310,9 @@ public sealed partial class ProjectStructureProcessNodeService(
             ProjectNodeId: targetNode.Id,
             RequestedBy: string.IsNullOrWhiteSpace(request.RequestedBy) ? agent.AgentName : request.RequestedBy,
             Variables: CreateVariables(surface, processNode, processDefinitionNodeId ?? nodeId, processDefinitionId.Value,
-                targetNode, agent, dependencies.LaunchVariablePreparationService, definitionKey),
+                targetNode, agent, dependencies.LaunchVariablePreparationService, definitionKey, definitions),
             RunReadiness: request.RunHrMatch,
-            Execute: request.Execute);
+            Execute: request.Execute) { ResolvedDefinitions = definitions };
         if (agent.ProcessLaunchInvocation is { } admittedInvocation) {
             launchRequest = await BindInvocationAsync(dependencies, launchRequest, targetNode, admittedInvocation, cancellationToken);
         }
@@ -419,6 +426,11 @@ public sealed partial class ProjectStructureProcessNodeService(
         }
 
         ValidateParentProjectScope(projectId, parentAssignment);
+        var parentPlan = await dependencies.PlanStore.LoadAsync(parentState.PlanId, cancellationToken)
+            ?? throw new InvalidOperationException("The subprocess parent has no retained immutable plan.");
+        var parentOrigin = await dependencies.ProcessLaunchApplicationService.ReadExistingLaunchOriginAsync(projectId, parentState, parentPlan, cancellationToken)
+            ?? throw new ProjectStructureAgentException(403, "ProcessSubprocessParentOriginMismatch", "The parent run belongs to another database profile or project lifetime.");
+        ProcessProjectAdmission childAdmission = new(parentOrigin.DatabaseProfileId, parentOrigin.ProjectId, parentOrigin.ProjectLifetimeId);
         var surface = await LoadSurfaceAsync(
             dependencies.ProjectWorkbenchService,
             projectId,
@@ -451,19 +463,6 @@ public sealed partial class ProjectStructureProcessNodeService(
                 $"Parent project node '{projectNodeId}' was not found in project '{projectId:D}'.");
         }
 
-        var launchVariables = CreateSubprocessVariables(
-            projectId,
-            surface,
-            projectNode,
-            parentRunId,
-            parentStepId,
-            parentAssignment,
-            parentState,
-            definitionKey,
-            request,
-            agent,
-            dependencies.WorkspaceFiles,
-            dependencies.LaunchVariablePreparationService);
         var subprocessIdentityVariables = CreateSubprocessIdentityVariables(
             projectId,
             projectNode.Id,
@@ -495,8 +494,21 @@ public sealed partial class ProjectStructureProcessNodeService(
                     projectId,
                     subprocessIdentityVariables),
                 cancellationToken)
-            .ConfigureAwait(false)
-            ?? await dependencies.ProcessLaunchApplicationService.LaunchAsync(
+            .ConfigureAwait(false);
+        IReadOnlyDictionary<string, string> launchVariables;
+        if (launch is not null) {
+            var retainedAssignments = await dependencies.AssignmentStore.LoadByRunAsync(launch.RunId!.Value, cancellationToken);
+            launchVariables = retainedAssignments.FirstOrDefault()?.LaunchVariables
+                ?? throw new InvalidOperationException("The retained child has no launch assignments.");
+        } else {
+            var definitions = await dependencies.ProcessLaunchApplicationService.ResolveChildForPreparationAsync(parentAssignment, definitionKey, cancellationToken)
+                ?? await dependencies.ProcessLaunchApplicationService.ResolveForPreparationAsync(definitionKey, null, projectId, childAdmission,
+                    cancellationToken, request.LiveRunProfileKey)
+                ?? throw new InvalidOperationException("The child definition could not be captured in the retained parent's origin.");
+            definitionKey = definitions.DefinitionKey;
+            launchVariables = CreateSubprocessVariables(projectId, surface, projectNode, parentRunId, parentStepId, parentAssignment, parentState,
+                definitionKey, request, agent, dependencies.WorkspaceFiles, dependencies.LaunchVariablePreparationService, definitions);
+            launch = await dependencies.ProcessLaunchApplicationService.LaunchAsync(
                 new ProcessLaunchRequest(
                     DefinitionKey: definitionKey,
                     ProcessDefinitionId: null,
@@ -511,10 +523,13 @@ public sealed partial class ProjectStructureProcessNodeService(
                     Execute: request.Execute)
                 {
                     RootRunIdOverride = parentState.RootRunId,
+                    ResolvedDefinitions = definitions,
                     ProjectAdmission = parentState.ProjectAdmission
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+        }
+        definitionKey = launch.LaunchPlan.DefinitionKey;
 
         var warnings = preLaunchWarnings
             .Concat(launch.Warnings)
@@ -615,67 +630,64 @@ public sealed partial class ProjectStructureProcessNodeService(
         bool includeLaunchPlan,
         CancellationToken cancellationToken)
     {
-        var matchingAssignments = await dependencies.AssignmentStore
-            .FindByLaunchVariablesAsync(subprocessIdentityVariables, cancellationToken)
-            .ConfigureAwait(false);
-        foreach (var runGroup in matchingAssignments
-            .GroupBy(assignment => assignment.RunId)
-            .OrderByDescending(group => group.Max(assignment => assignment.CreatedAtUtc)))
-        {
-            var state = await dependencies.StateStore.LoadAsync(runGroup.Key, cancellationToken).ConfigureAwait(false);
-            if (state is null || !IsStoppedBlockingSubprocessStatus(state.Status))
-            {
-                continue;
-            }
-
-            var plan = await dependencies.PlanStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Blocked subprocess lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
-            var childAssignments = await dependencies.AssignmentStore
-                .LoadByRunAsync(state.RunId, cancellationToken)
-                .ConfigureAwait(false);
-            var childManagedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(state.RunId);
-            var childStepsArtifactRoot = $"{childManagedArtifactRoot}/steps";
-            var childLiveProcessesRoute = BuildScopedRunRoute(projectId, state.RunId);
-            var expectedChildEvidenceRefs = BuildExpectedChildEvidenceRefs(
-                childManagedArtifactRoot,
-                childAssignments.Select(assignment => assignment.StepKey));
-            var childLaunchVariables = runGroup
-                .OrderBy(assignment => assignment.CreatedAtUtc)
-                .Select(assignment => assignment.LaunchVariables)
-                .FirstOrDefault()
-                ?? new Dictionary<string, string>(StringComparer.Ordinal);
-            var parentTargetContext = BuildParentOutcomeTargetContext(childLaunchVariables);
-            var parentEvidenceRefs = expectedChildEvidenceRefs
-                .Concat(parentTargetContext.EvidenceRefs)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-            var warning = $"Subprocess launch did not start a replacement child because matching child process run '{state.RunId.Value:D}' is {state.Status}. Propagate that stopped child blocker with child run and evidence refs, or explicitly rework the child run before relaunch.";
-
-            return new ProjectStructureProcessSubprocessLaunchResult(
-                projectId,
-                projectNodeId,
-                parentRunId.ToString(),
-                parentStepId.ToString(),
-                parentAssignment.StepKey,
-                definitionKey,
-                plan.Definition.DefinitionId.Value,
-                state.PlanId.Value,
-                state.RunId.Value,
-                MapStoppedBlockingSubprocessStage(state.Status),
-                childLiveProcessesRoute,
-                includeLaunchPlan ? BuildStoppedSubprocessLaunchPlanSummary(plan, definitionKey, childAssignments, state.Status) : null,
-                childManagedArtifactRoot,
-                childStepsArtifactRoot,
-                childLiveProcessesRoute,
-                parentEvidenceRefs,
-                [warning])
-            {
-                ParentDeferredOutcomeInstruction = "Do not launch a replacement child for this parent step while the matching child run is stopped with blocker status. Submit ParentDeferredOutcomeJson exactly, or rework the stopped child run explicitly.",
-                ParentDeferredOutcomeJson = BuildParentStoppedChildOutcomeJson(state.RunId, state.Status, parentEvidenceRefs, childLiveProcessesRoute, parentTargetContext)
-            };
+        var retained = await dependencies.ProcessLaunchApplicationService.FindExistingLaunchAsync(new(definitionKey,
+            subprocessIdentityVariables.GetValueOrDefault(SubprocessLiveRunProfileKeyVariableName), projectId, subprocessIdentityVariables) {
+                StoppedOnly = true
+            }, cancellationToken);
+        if (retained?.RunId is not { } retainedRunId) {
+            return null;
         }
+        definitionKey = retained.LaunchPlan.DefinitionKey;
+        var state = await dependencies.StateStore.LoadAsync(retainedRunId, cancellationToken)
+            ?? throw new InvalidOperationException("The retained stopped child has no runtime state.");
+        if (!IsStoppedBlockingSubprocessStatus(state.Status)) {
+            throw new InvalidOperationException("The retained child changed status during stopped-run reconciliation; retry the original request.");
+        }
+        var plan = await dependencies.PlanStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Blocked subprocess lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
+        var childAssignments = await dependencies.AssignmentStore
+            .LoadByRunAsync(state.RunId, cancellationToken)
+            .ConfigureAwait(false);
+        var childManagedArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(state.RunId);
+        var childStepsArtifactRoot = $"{childManagedArtifactRoot}/steps";
+        var childLiveProcessesRoute = BuildScopedRunRoute(projectId, state.RunId);
+        var expectedChildEvidenceRefs = BuildExpectedChildEvidenceRefs(
+            childManagedArtifactRoot,
+            childAssignments.Select(assignment => assignment.StepKey));
+        var childLaunchVariables = childAssignments
+            .OrderBy(assignment => assignment.CreatedAtUtc)
+            .Select(assignment => assignment.LaunchVariables)
+            .FirstOrDefault()
+            ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        var parentTargetContext = BuildParentOutcomeTargetContext(childLaunchVariables);
+        var parentEvidenceRefs = expectedChildEvidenceRefs
+            .Concat(parentTargetContext.EvidenceRefs)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var warning = $"Subprocess launch did not start a replacement child because matching child process run '{state.RunId.Value:D}' is {state.Status}. Propagate that stopped child blocker with child run and evidence refs, or explicitly rework the child run before relaunch.";
 
-        return null;
+        return new ProjectStructureProcessSubprocessLaunchResult(
+            projectId,
+            projectNodeId,
+            parentRunId.ToString(),
+            parentStepId.ToString(),
+            parentAssignment.StepKey,
+            definitionKey,
+            plan.Definition.DefinitionId.Value,
+            state.PlanId.Value,
+            state.RunId.Value,
+            MapStoppedBlockingSubprocessStage(state.Status),
+            childLiveProcessesRoute,
+            includeLaunchPlan ? BuildStoppedSubprocessLaunchPlanSummary(plan, definitionKey, childAssignments, state.Status) : null,
+            childManagedArtifactRoot,
+            childStepsArtifactRoot,
+            childLiveProcessesRoute,
+            parentEvidenceRefs,
+            [warning])
+        {
+            ParentDeferredOutcomeInstruction = "Do not launch a replacement child for this parent step while the matching child run is stopped with blocker status. Submit ParentDeferredOutcomeJson exactly, or rework the stopped child run explicitly.",
+            ParentDeferredOutcomeJson = BuildParentStoppedChildOutcomeJson(state.RunId, state.Status, parentEvidenceRefs, childLiveProcessesRoute, parentTargetContext)
+        };
     }
 
     private static bool IsStoppedBlockingSubprocessStatus(ProcessRuntimeStatus status)
@@ -1060,7 +1072,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureNode targetNode,
         ProjectStructureAgentContext agent,
         IProcessLaunchVariablePreparer launchVariablePreparationService,
-        string? definitionKey)
+        string? definitionKey,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -1103,7 +1116,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             targetNode,
             definitionKey,
             isSubprocess: false,
-            variables: variables);
+            variables: variables,
+            definitions: definitions);
 
         return variables;
     }
@@ -1120,7 +1134,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureProcessSubprocessLaunchInput request,
         ProjectStructureAgentContext agent,
         IWorkspaceFileService workspaceFiles,
-        IProcessLaunchVariablePreparer launchVariablePreparationService)
+        IProcessLaunchVariablePreparer launchVariablePreparationService,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         var variables = CopyInheritableSubprocessLaunchVariables(parentAssignment.LaunchVariables);
         if (request.Variables is not null)
@@ -1180,7 +1195,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             projectNode,
             definitionKey,
             isSubprocess: true,
-            variables: variables);
+            variables: variables,
+            definitions: definitions);
         RemoveSubprocessReservedLaunchVariables(variables);
 
         return variables;
@@ -1277,7 +1293,8 @@ public sealed partial class ProjectStructureProcessNodeService(
         ProjectStructureNode targetNode,
         string? definitionKey,
         bool isSubprocess,
-        IDictionary<string, string> variables)
+        IDictionary<string, string> variables,
+        ProcessExecutableDefinitionClosure? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
 
@@ -1290,7 +1307,8 @@ public sealed partial class ProjectStructureProcessNodeService(
             definitionKey,
             isSubprocess,
             contextSummary);
-        launchVariablePreparationService.Enrich(context, variables);
+        launchVariablePreparationService.Enrich(definitions is null ? context : context.WithDefinition(
+            ProcessExecutableDefinitionResolver.Decode(definitions, definitions.DefinitionKey).Definition), variables);
     }
 
     private static ProjectStructureNode? ResolveProcessStartTargetNode(

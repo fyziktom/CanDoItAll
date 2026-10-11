@@ -1,0 +1,86 @@
+@page "/profiles"
+
+<PageTitle>Application profile and shell scenarios</PageTitle>
+<AppShell ShowRightRail="false" DefaultNavigationMode="AppShellNavigationMode.Expanded" CurrentRoute="/profiles">
+    <BottomUtilities>
+        <ShellUtilitiesSurface View="@ProfileScenarios.Utilities(view)"
+                               OpenConversations="@(() => Record("Conversations"))"
+                               OpenSettings="@(() => Record("Settings"))"
+                               OpenRuntimeCapabilities="@(() => Record("Runtime capabilities"))"
+                               OpenDatabaseDialog="Open" ActivateProfile="Activate" />
+    </BottomUtilities>
+    <TopBar>
+        <ShellStatusBar ActiveWorkspaceTitle="Scenario workspace" ActiveNavigationTitle="Profiles"
+                        ActiveProjectTitle="Release planning" ActivePhaseTitle="Review" OpenedItemCount="2" TabCount="3" CurrentRouteDisplay="/profiles" />
+    </TopBar>
+    <Body>
+        <ScenarioNavigation />
+        <PageScaffold>
+            <Header><PageHeader Title="Profile and shell scenarios" Description="Synthetic profile outcomes through the production controls." /></Header>
+            <ChildContent>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    @foreach (var scenario in Enum.GetValues<ProfileScenario>()) {
+                        <Button Text="@scenario.ToString()" Click="@(() => Choose(scenario))" data-testid="@($"profile-scenario-{scenario}")" />
+                    }
+                </Cluster>
+                <TextBlock Value="@lastAction" data-testid="profile-scenario-action" />
+                <TextBlock Value="@($"Activation requests: {activations}")" data-testid="profile-scenario-activations" />
+                <Button Text="Open profile dialog" Click="@(() => Open(view.OpeningId))" data-testid="profile-scenario-open" />
+            </ChildContent>
+        </PageScaffold>
+    </Body>
+</AppShell>
+<DatabaseProfileDialogSurface View="@view" SelectDatabaseProfile="Select" SwitchDatabaseProfile="Activate"
+                              ContinueWithCurrentDatabase="Close" CloseDatabaseDialog="Close" OpenDatabaseSettings="Settings" />
+
+@code {
+    private DatabaseProfileDialogPresentation view = ProfileScenarios.Create(ProfileScenario.Selected) with { IsOpen = false };
+    private string lastAction = "No action yet";
+    private int activations;
+
+    private void Choose(ProfileScenario scenario) => view = ProfileScenarios.Create(scenario);
+    private void Record(string action) => lastAction = action;
+
+    private void Open(Guid openingId) {
+        if (openingId == view.OpeningId) {
+            view = view with { OpeningId = Guid.NewGuid(), IsOpen = true };
+        }
+    }
+
+    private void Close(Guid openingId) {
+        if (openingId == view.OpeningId) {
+            view = view with { OpeningId = Guid.NewGuid(), IsOpen = false, IsStartupMode = false };
+            Record("Closed the rendered opening");
+        }
+    }
+
+    private void Settings(Guid openingId) {
+        Close(openingId);
+        Record("Data Sources intent");
+    }
+
+    private void Select(DatabaseProfileIntent intent) {
+        if (intent.OpeningId != view.OpeningId || view.DatabaseDialogBusy) {
+            return;
+        }
+        var selected = view.DatabaseProfiles.Single(profile => profile.Id == intent.ProfileId);
+        view = view with { SelectedDatabaseProfileId = selected.Id, SelectedDialogProfileIsActive = selected.IsActive,
+            SelectedDialogProfileIsPendingRestart = selected.IsPendingRestartActivation,
+            CanSwitchSelectedProfile = !selected.IsActive && !selected.IsPendingRestartActivation && view.DatabaseSelection?.IsRuntimeLocked != true };
+        Record($"Selected {selected.DisplayName}");
+    }
+
+    private void Activate(DatabaseProfileIntent intent) {
+        if (intent.OpeningId != view.OpeningId || view.DatabaseDialogBusy || view.DatabaseSelection?.IsRuntimeLocked == true) {
+            return;
+        }
+        activations++;
+        var selected = view.DatabaseProfiles.Single(profile => profile.Id == intent.ProfileId);
+        view = view with { IsOpen = true, IsStartupMode = false, SelectedDatabaseProfileId = selected.Id,
+            SelectedDialogProfileIsActive = false, SelectedDialogProfileIsPendingRestart = true, CanSwitchSelectedProfile = false,
+            DatabaseSelection = view.DatabaseSelection! with { PendingRestartProfileId = selected.Id, PendingRestartDisplayName = selected.DisplayName },
+            DatabaseProfiles = view.DatabaseProfiles.Select(profile => profile with { IsPendingRestartActivation = profile.Id == selected.Id }).ToArray(),
+            Message = new("Scenario activation saved for restart; the running profile is unchanged.", DatabaseProfileMessageTone.RestartRequired) };
+        Record($"Activation intent for {selected.DisplayName}");
+    }
+}

@@ -1,0 +1,1278 @@
+{
+  "schema_version": 3,
+  "assignment_id": "CDA-PROCESSES-AUTHORING-PC3",
+  "input_status": "NOT_RUN",
+  "candidate": {
+    "source_commit": null,
+    "tested_tree_or_source_digest": null,
+    "worktree_delta": null,
+    "siblings": {},
+    "configuration": null,
+    "schema_migration": null
+  },
+  "codeanalytics": {
+    "status": "NOT_RUN",
+    "availability": null,
+    "index_revision": null,
+    "queries": [],
+    "fallback_and_blind_spots": []
+  },
+  "signing": {
+    "status": "NOT_RUN",
+    "public_fingerprint": null,
+    "checkpoints": []
+  },
+  "production_oracles": {
+    "normal_registrations_verified": false,
+    "retained_test_owner_bypass_removed_from_durable_proof": false,
+    "postgres_version": null,
+    "sanitized_fixture_id": null,
+    "restart_before_pid": null,
+    "restart_after_pid": null,
+    "same_fixture_across_restart": null,
+    "independent_native_reads": [],
+    "actual_commit_faults": []
+  },
+  "groups": [
+    {
+      "id": "N01",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N02",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N03",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N04",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N05",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N06",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N07",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N08",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N09",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N10",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N11",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N12",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N13",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N14",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N15",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N16",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N17",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N18",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N19",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N20",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N21",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N22",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N23",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N24",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N25",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N26",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N27",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N28",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N29",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N30",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N31",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N32",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N33",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N34",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N35",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N36",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N37",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N38",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N39",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N40",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N41",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N42",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N43",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N44",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N45",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N46",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N47",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N48",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N49",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    },
+    {
+      "id": "N50",
+      "status": "NOT_RUN",
+      "source_candidate": null,
+      "proof_kind": null,
+      "commands": [],
+      "expected_discovery": null,
+      "actual_discovery": null,
+      "executed_cases": null,
+      "real_effect_oracle": null,
+      "evidence_locations": [],
+      "result_or_blocker": null
+    }
+  ],
+  "carry_forward": [
+    {
+      "origin": "PC1",
+      "id": "PC-01",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-02",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-03",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-04",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-05",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-06",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-07",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-08",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-09",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-10",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-11",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-12",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-13",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-14",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-15",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-16",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-17",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-18",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-19",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-20",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-21",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-22",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-23",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-24",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-25",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-26",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-27",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-28",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-29",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-30",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-31",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-32",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-33",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-34",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-35",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-36",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-37",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-38",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-39",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-40",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-41",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC1",
+      "id": "PC-42",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A01",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A02",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A03",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A04",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A05",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A06",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A07",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A08",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A09",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A10",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A11",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A12",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A13",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A14",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A15",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A16",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A17",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A18",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A19",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A20",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A21",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A22",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A23",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A24",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A25",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A26",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A27",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A28",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A29",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A30",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    },
+    {
+      "origin": "PC2",
+      "id": "A31",
+      "status": "NOT_RUN",
+      "mapped_current_groups": [],
+      "evidence_or_invalidation_reason": null
+    }
+  ],
+  "closure_dimensions": {
+    "renderer_boundary": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "native_durable_authoring": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "publication_and_exact_launch": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "schema_upgrade_and_scope": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "production_browser": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "sandbox_assets": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "performance_observations": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "frozen_stable": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "portability": {
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    "signed_delivery": {
+      "status": "NOT_RUN",
+      "evidence": []
+    }
+  },
+  "historical_evidence": {
+    "pc2_report_path": "docs/validation/processes-ui-pc2.md",
+    "reported_cases": 530,
+    "reviewer_independently_reran": false,
+    "not_current_pc3_proof": true
+  },
+  "allowed_statuses": [
+    "NOT_RUN",
+    "PASS",
+    "FAIL",
+    "BLOCKED",
+    "NOT_APPLICABLE",
+    "STALE"
+  ],
+  "rule": "PASS requires actual execution plus relevant oracle and candidate; NOT_APPLICABLE cannot erase required native/browser/schema/frozen proof.",
+  "shared_baseline": {
+    "status": "NOT_RUN",
+    "canonical_repository_path": null,
+    "source_commit": null,
+    "observed_package_id": null,
+    "observed_manifest_sha256": null,
+    "local_changes_at_entry": [],
+    "provenance_only_not_a_pin": true,
+    "decision": null,
+    "allowed_decisions": [
+      "NO_CHANGE",
+      "MINIMAL_REPO_CHANGE",
+      "BLOCKED"
+    ],
+    "rationale": null,
+    "changed_paths": [],
+    "checks": [],
+    "signed_checkpoint": null,
+    "separate_download_required": false
+  }
+}

@@ -23,6 +23,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Processes.UI/CanDoItAll.Processes.UI.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj" />
     <ProjectReference Include="..\..\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />

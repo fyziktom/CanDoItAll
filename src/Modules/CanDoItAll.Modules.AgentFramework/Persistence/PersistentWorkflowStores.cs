@@ -1479,6 +1479,7 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
     private const int MaximumOverviewRecentTake = 12;
     private const int MaximumOverviewTopWorkflowTake = 10;
     private const int MaximumTransactionAttempts = 5;
+    private const int InitialTransactionRetryDelayMilliseconds = 100;
 
     public Task CreateRunWithStartedEventAsync(WorkflowRunSnapshot run, WorkflowEventRecord startedEvent,
         CancellationToken cancellationToken = default) => RetryAbortedTransactionAsync(async () => {
@@ -1780,7 +1781,9 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
             try {
                 return await operation();
             } catch (Exception error) when (attempt < MaximumTransactionAttempts && IsPostgresTransactionAbort(error)) {
-                await Task.Delay(TimeSpan.FromMilliseconds(20 * attempt), cancellationToken);
+                var delayCeiling = InitialTransactionRetryDelayMilliseconds << (attempt - 1);
+                var delay = Random.Shared.Next(delayCeiling / 2, delayCeiling + 1);
+                await Task.Delay(TimeSpan.FromMilliseconds(delay), cancellationToken);
             }
         }
     }

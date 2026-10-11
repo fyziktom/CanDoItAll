@@ -103,6 +103,12 @@ proof that its external effect did not occur. Transport hashing omits only the p
 per-call provider-history request identifier through the existing transport normalization.
 Actual messages, tool schemas and provider options still participate in the digest.
 
+Recovery of an approval checkpoint or a segment created by approval continuation
+rebuilds its tools with the original approval wrappers. A later run-level auto-approval
+choice controls subsequent decisions without changing that saved tool contract. The
+MAF owner reads this distinction from its typed restart checkpoint before composition;
+ordinary initial segments retain their requested approval policy.
+
 Trusted pre-dispatch denial can complete a fresh Prepared proposal as `NotCommitted`.
 It cannot overwrite an earlier claimed, committed or uncertain effect during recovery.
 Explicit owner observations control required reconciliation; a generic completed result

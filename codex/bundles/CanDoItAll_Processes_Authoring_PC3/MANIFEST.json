@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "algorithm": "sha256",
+  "canonicalization": "UTF-8; CRLF normalized to LF",
+  "files": {
+    "BROWSER_JOURNEYS.md": "72aa555e16f9468ace2dc00a795cdd0ca4eb248fc6d54fbdbb94b2b0279c4e24",
+    "CARRY_FORWARD.csv": "f195e62b7ebf695d1374ba3ba07e1f211840c62858d3570a116106ed051562dc",
+    "MIGRATION_AND_SCOPE.md": "976d52d998296cadbac2fb97721c87deb9c5ed63db5d45b8a5908e2df51f23c7",
+    "NATIVE_OWNER_DESIGN.md": "e2eb6a5a2811ca748f94f3373e9f2bbfcb680f52b775066b376a14f7a56f55ab",
+    "OBSERVATION_AND_MUTATIONS.md": "76658970df1433f0cbae1478f9edd316c2d428b768612523dd9bd82869935900",
+    "PACKAGE_VALIDATION.md": "7acaf33814d656030a83efaabf74d212c454b029ae9e9a464877bf1549f8cb5c",
+    "PRIMARY_REFERENCES.md": "6c00c4dc2b1b01795c058a5229f2417802eab387f45bbf8af56fcc7be401f5c9",
+    "PUBLISH_AND_LAUNCH.md": "f52ffa56d12b33dae48730038d8ecdd6cd8066d66ed632add20d0aa0d829647f",
+    "README.md": "8ec7c982239cffb89edbfc59a05a6224faeb64d2aaceaccc3fdb8fc2fd19a72f",
+    "REVIEW_PC2.md": "e626f07554ecbf536beaa65078361b1300636198a3d883faa904d233e928ab9b",
+    "SCOPE_AND_STAGES.md": "07003a41e5495192d12eb8dd4119942a4d66bdbe68d75d025ebb3754370b29ab",
+    "SEMANTIC_COVERAGE.md": "d3c8de81d1e1e073b5a30260e552c6809f16272833af3cefe7f5ffc37853119e",
+    "SHARED_BUNDLE_POLICY.md": "46988475f49fa6c96ab3d13591a4d55d5f2d2cd5c629f00739bdbee50b03ca78",
+    "SIGNING_AND_COMMITS.md": "5adf57648b8f1b5c120924f7231b391adb106180c9783bc5d9aacd8b43b58b8b",
+    "SOURCES.json": "a0d891efadb45adb12338501241caa36c1b37d43280aa9b75210078239b74703",
+    "VALIDATION_PLAN.md": "a6cc46ac27053611d459ee99e325523e2064893dce7292f56ffa95c62c452da9",
+    "acceptance-plan.json": "1babdf77ed9b89b6ef12e52fdab14746ba6f331cd3a1b1ee04b1cd730ba03d18",
+    "bundle.json": "2b941076be8d2c2b56dc5b4f40f264b92b5dca68a68577e7aca597fa69c3a196",
+    "evidence-template.json": "914cb0c4337eeca6dff5eab5f88ad25f02f6fd1dce717fdf04a98587bcfec546",
+    "progress-template.md": "b5edc17f890f14efbea3b04a9e2c8592c0041cba86cdb28ea0bf649858a4b62d",
+    "prompt.md": "6d86ec69db0d9eddc2c871f3aa4d348617041b556d7b7efef7c48e2d69877f5a",
+    "tools/test_verify_package.py": "584f26fd0561505d5f6184e45a0aa10e8365ebdae5b208b361cede0b681705e9",
+    "tools/verify_package.py": "234337036681efee5a89681cf2fe11d151bdc7f95b138f4e583f09dcb3b2b77a"
+  }
+}

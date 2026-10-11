@@ -243,7 +243,7 @@ public sealed class ProcessRuntimeProjectionQueryService(
             query.ProjectBinding);
         if (query.ProjectBinding is { } project && query.SelectedRunId is { } requestedRun &&
                 !(await FilterProjectRunIdsAsync([requestedRun], project, enrichmentCache, cancellationToken)).Contains(requestedRun)) {
-            throw new InvalidOperationException("The selected Process run does not belong to this exact project lifetime.");
+            throw new ProcessProjectionAccessException("The selected Process run does not belong to this exact project lifetime.");
         }
         var liveProcesses = query.PreviouslyLoadedRuns is null
             ? await GetLiveProcessesCoreAsync(

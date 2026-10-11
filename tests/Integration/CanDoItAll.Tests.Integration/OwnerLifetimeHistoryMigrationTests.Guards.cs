@@ -218,7 +218,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
             Assert.Equal(asset.ReceiptJson, restoredAsset.ReceiptJson);
             Assert.Empty(await database.Set<ProjectWorkAssignmentRecord>().ToArrayAsync());
             Assert.Empty(await database.Set<ProjectObjectRecord>().ToArrayAsync());
-            Assert.Empty(await database.Set<Project>().ToArrayAsync());
+            Assert.Empty(await database.Set<Project>().Select(project => project.Id).ToArrayAsync());
         }
     }
 

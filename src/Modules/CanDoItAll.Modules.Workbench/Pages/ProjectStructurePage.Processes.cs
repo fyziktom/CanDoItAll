@@ -339,7 +339,7 @@ public partial class ProjectStructurePage
             targetNode?.Title ?? string.Empty,
             null,
             ProjectStructureProcessStartStage.Confirm,
-            false,
+            true,
             false,
             string.Empty,
             [],
@@ -389,6 +389,7 @@ public partial class ProjectStructurePage
                 return;
             }
             processStartDialog = dialog with {
+                IsBusy = false,
                 LaunchAuthority = authority,
                 LaunchLinkTarget = linkTarget,
                 IntentStorageKey = storageKey,
@@ -528,7 +529,7 @@ public partial class ProjectStructurePage
         }
 
         dialog = dialog with { PreparedRequest = null, LaunchObservation = null, LaunchIntentId = new(Guid.NewGuid()), AssignmentsReviewed = false };
-        var launchRequest = CreateProcessLaunchRequest(dialog, execute: false, runReadiness);
+        var launchRequest = await CreateProcessLaunchRequestAsync(dialog, execute: false, runReadiness);
         processStartDialog = dialog with {
             IsBusy = true,
             Error = string.Empty,
@@ -708,16 +709,19 @@ public partial class ProjectStructurePage
         }
     }
 
-    private ProcessLaunchRequest CreateProcessLaunchRequest(
+    private async Task<ProcessLaunchRequest> CreateProcessLaunchRequestAsync(
         ProjectStructureProcessStartDialogState dialog,
         bool execute,
         bool runReadiness = true) {
         var sourceVariables = dialog.LaunchVariables
             ?? throw new InvalidOperationException("The process launch context could not be prepared. Close the dialog and try again.");
         var variables = new Dictionary<string, string>(sourceVariables, StringComparer.Ordinal);
+        var definitions = await ProcessLaunchService.ResolveForPreparationAsync(dialog.DefinitionKey, new ProcessDefinitionId(dialog.ProcessDefinitionId),
+            dialog.ProjectId, dialog.LaunchAuthority?.ProjectAdmission);
         if (dialog.SourceSnapshot is { } snapshot && !string.IsNullOrWhiteSpace(dialog.DefinitionKey)) {
+            var context = new ProcessLaunchPreparationContext(dialog.DefinitionKey, IsSubprocess: false, snapshot);
             ProcessLaunchVariablePreparationService.Enrich(
-                new ProcessLaunchPreparationContext(dialog.DefinitionKey, IsSubprocess: false, snapshot), variables);
+                definitions is null ? context : context.WithDefinition(ProcessExecutableDefinitionResolver.Decode(definitions, definitions.DefinitionKey).Definition), variables);
         }
         return new ProcessLaunchRequest(
             DefinitionKey: string.IsNullOrWhiteSpace(dialog.DefinitionKey) ? null : dialog.DefinitionKey,
@@ -729,7 +733,8 @@ public partial class ProjectStructurePage
             variables,
             RunReadiness: runReadiness,
             Execute: execute) {
-            ExecutorOverrides = CreateExecutorOverrides(dialog)
+            ExecutorOverrides = CreateExecutorOverrides(dialog),
+            ResolvedDefinitions = definitions
         };
     }
 
@@ -811,7 +816,7 @@ public partial class ProjectStructurePage
             {
                 var selectedCandidate = role.Candidates.FirstOrDefault(candidate => candidate.IsSelected && candidate.IsResolvable);
                 if (selectedCandidate is null ||
-                    selectedCandidate.TechnicalAgentId is not { } agentId ||
+                    selectedCandidate.TechnicalAgentId is not { } executorId ||
                     string.IsNullOrWhiteSpace(role.StepKey) ||
                     string.IsNullOrWhiteSpace(role.RoleKey))
                 {
@@ -821,8 +826,8 @@ public partial class ProjectStructurePage
                 return new ProcessLaunchExecutorOverride(
                     role.StepKey,
                     role.RoleKey,
-                    ProcessLaunchExecutorKinds.Agent,
-                    agentId.ToString("D"),
+                    selectedCandidate.ExecutorKind,
+                    executorId.ToString("D"),
                     selectedCandidate.DisplayName,
                     selectedCandidate.IsRecommended
                         ? "Accepted HR manager recommendation during project-structure launch review."

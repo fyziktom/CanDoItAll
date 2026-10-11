@@ -125,9 +125,11 @@ public sealed partial class AppSmokeTests
         await CaptureLocatorAsync(
             startDialog,
             Path.Combine(artifactsDir, "project-structure-start-workflow-confirmation.png"));
-        await startDialog.GetByTestId("project-structure-workflow-start-submit")
-            .EvaluateAsync("button => button.click()");
-
+        await startDialog.GetByTestId("project-structure-workflow-start-submit").ClickAsync();
+        await Assertions.Expect(startDialog.GetByTestId("project-structure-workflow-start-submit"))
+            .ToHaveTextAsync("Observe original start");
+        await Assertions.Expect(startDialog.GetByTestId("project-structure-workflow-start-error")).ToHaveCountAsync(0);
+        await startDialog.GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-workflow-start-dialog\"]')");
         await EnsureCanvasSelectionAsync(page, workflowSelector);
         try

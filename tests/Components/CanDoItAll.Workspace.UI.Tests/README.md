@@ -5,8 +5,8 @@ controllers through controlled in-memory owners. They depend on the standalone s
 host, not the production Web module or shared database test harness.
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration WorkspaceSettingsUiProof --list-tests --filter FullyQualifiedName~WorkspaceUi /m:1
-dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration WorkspaceSettingsUiProof --no-build --no-restore --filter FullyQualifiedName~WorkspaceUi /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration Release --list-tests --filter FullyQualifiedName~WorkspaceUi /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration Release --no-build --no-restore --filter FullyQualifiedName~WorkspaceUi /m:1
 ```
 
 See [the proof record](../../../docs/architecture/workspace-settings-core-ui-boundary.md)

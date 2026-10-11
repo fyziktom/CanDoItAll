@@ -45,6 +45,12 @@ internal sealed class MafToolRunContext {
     internal AgentToolInvocationSegment Segment { get; }
     internal bool HasActiveProviderDispatch { get; private set; }
 
+    internal static bool RequiresApprovalContinuationContract(AgentToolJournalRecord saved) {
+        var latest = saved.Segments.LastOrDefault();
+        return latest is not null && (latest.ApprovalCheckpoint is not null ||
+            MafToolProtocolCodec.Decode<RestartCheckpoint>(latest.RestartCheckpoint).IsApprovalContinuation);
+    }
+
     internal IDisposable Bind() {
         var previous = Ambient.Value;
         Ambient.Value = this;

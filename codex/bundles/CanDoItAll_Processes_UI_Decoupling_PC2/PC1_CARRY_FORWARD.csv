@@ -1,0 +1,43 @@
+pc1_group,original_requirement,pc2_obligation,current_execution_status
+PC-01,Entry candidate,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-02,Preserved baseline,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-03,Dependency cut,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-04,Complete scenario host,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-05,Routes and queries,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-06,Catalog and definition selection,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-07,Definition draft across tabs,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-08,Definition commands,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-09,Submission reconciliation,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-10,Role editing,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-11,Step editing,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-12,Interactive canvas,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-13,Canvas maximize lifecycle,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-14,Template browsing and previews,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-15,Template imports,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-16,Run details and subsections,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-17,Live tabs and filters,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-18,Bounded reads and polling,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-19,Hidden run groups,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-20,Retained launch intent,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-21,Accepted launch and read-back failure,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-22,Explicit new launch intent,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-23,Run cancellation,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-24,Operator actions and notes,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-25,Authorized current run files,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-26,File late errors,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-27,File cleanup and content lifetime,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-28,"Graphs, analytics and partial errors",Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-29,Context freshness and lifetime,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-30,Manager chat and attachments,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-31,Voice and browser lifecycle,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-32,Permissions and safe content,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-33,Workbench integration,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-34,End-to-end native execution,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-35,Boundary negative controls,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-36,Source and published assets,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-37,Measured development loop,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-38,Focused tests and registration,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-39,Final frozen integration,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-40,Portability and maintained docs,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-41,Independent openings and disposal,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN
+PC-42,Residual census and delivery,Preserve function; map current source/proof and rerun when invalidated; never re-extract solely from this historical row.,NOT_RUN

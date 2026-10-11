@@ -1,0 +1,19 @@
+@namespace CanDoItAll.Processes.UI
+@if (Message is not null) {
+    <Alert AlertStyle="@Tone" data-testid="process-run-cancellation-result">@Message</Alert>
+}
+@if (Status is ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention) {
+    <Button Text="Cancel run" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+            Disabled="@(Busy || CommandFinished)" IsBusy="@Busy" Click="CancelAsync"
+            data-testid="process-run-cancel" />
+}
+
+
+@code {
+    [Parameter] public ProcessProjectedRunStatus Status { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public AlertStyle Tone { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool CommandFinished { get; set; }
+    [Parameter] public EventCallback CancelAsync { get; set; }
+}

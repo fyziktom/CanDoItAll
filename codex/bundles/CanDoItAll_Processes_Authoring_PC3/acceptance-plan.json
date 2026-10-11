@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "assignment_id": "CDA-PROCESSES-AUTHORING-PC3",
+  "review_commit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+  "execution_pin": false,
+  "group_count": 50,
+  "note": "Coverage groups, not fixed tests, types, files or commit counts. PC3 implements the native prerequisite; another plan alone is not completion.",
+  "groups": [
+    {
+      "id": "N01",
+      "stage": "S0",
+      "title": "Local PGP and verified committer",
+      "obligation": "Request local unlock, protect secrets, establish configured signer, preserve agent/environment and verify incremental commits."
+    },
+    {
+      "id": "N02",
+      "stage": "S0",
+      "title": "Current checkout and operator work",
+      "obligation": "Record current refs/tree/siblings/configuration and dirty/index ownership; reconcile drift without reset."
+    },
+    {
+      "id": "N03",
+      "stage": "S0",
+      "title": "Fresh impact plan",
+      "obligation": "Actual CodeAnalytics availability/index queries or explicit fallback; add native/API/Razor/DI/asset and new-test blind spots."
+    },
+    {
+      "id": "N04",
+      "stage": "S0",
+      "title": "Positive reproducible regression baseline",
+      "obligation": "Capture current data-loss counterexample safely and commit repaired-contract tests, not a permanently green loss-of-data oracle."
+    },
+    {
+      "id": "N05",
+      "stage": "S1",
+      "title": "Native dependency boundary",
+      "obligation": "Reuse existing native model/project edges; light UI/public contracts expose no Application/Persistence/EF or authority services."
+    },
+    {
+      "id": "N06",
+      "stage": "S1",
+      "title": "Single scoped aggregate",
+      "obligation": "One canonical complete authored definition and revision across five families; no second production dictionary authority."
+    },
+    {
+      "id": "N07",
+      "stage": "S1",
+      "title": "Database uniqueness",
+      "obligation": "Global and project identity constraints enforced under concurrent first writes, including NULL/case/scope semantics."
+    },
+    {
+      "id": "N08",
+      "stage": "S1",
+      "title": "Canonical additive migration",
+      "obligation": "Complete composition/AppDbContext registration, append-only migration/snapshot, no unrelated SQL changes or runtime parallel schema."
+    },
+    {
+      "id": "N09",
+      "stage": "S1",
+      "title": "Atomic revision and receipt",
+      "obligation": "Expected-version CAS and head/publication/receipt commit together; no partial result on a real precommit fault."
+    },
+    {
+      "id": "N10",
+      "stage": "S1",
+      "title": "Idempotent operation identity",
+      "obligation": "Same ID/payload returns original result across contexts/hosts; changed payload conflict and concurrent duplicate produce one effect."
+    },
+    {
+      "id": "N11",
+      "stage": "S2",
+      "title": "Definition actions are durable",
+      "obligation": "SaveDraft, Publish, Archive, Delete preserve supported lifecycle/reset meanings and survive a new native scope."
+    },
+    {
+      "id": "N12",
+      "stage": "S2",
+      "title": "Role actions are durable",
+      "obligation": "Supported role operations, selection identities, template defaults/workflow bindings and all references share the owner."
+    },
+    {
+      "id": "N13",
+      "stage": "S2",
+      "title": "Actual step and hidden fields",
+      "obligation": "Non-first-step DecisionRoleKey and rich step execution data persist correctly; unrelated fields/steps unchanged."
+    },
+    {
+      "id": "N14",
+      "stage": "S2",
+      "title": "Canvas semantic actions",
+      "obligation": "All nine reviewed canvas action kinds persist their intended structure/reference/layout meaning into the shared aggregate."
+    },
+    {
+      "id": "N15",
+      "stage": "S2",
+      "title": "Geometry and independent views",
+      "obligation": "Final coalesced positions survive reload; no pointer-frame write storm, lost move, recreated deleted node or cross-canvas bleed."
+    },
+    {
+      "id": "N16",
+      "stage": "S2",
+      "title": "Materialized imports",
+      "obligation": "Process/role/artifact content, target, provenance and collision remap are real and atomic; no label-only success or duplicate replay."
+    },
+    {
+      "id": "N17",
+      "stage": "S2",
+      "title": "Truthful catalog and defaults",
+      "obligation": "Accurate scope/search/count/status/selection, draft plus published presence, bounded queries and non-destructive idempotent FeedDefaults."
+    },
+    {
+      "id": "N18",
+      "stage": "S2",
+      "title": "Complete semantic round trip",
+      "obligation": "Supported hidden governance/operation/capability/workflow/artifact/child fields survive serialization and command-owned patches."
+    },
+    {
+      "id": "N19",
+      "stage": "S2",
+      "title": "Pinned guidance and resource defaults",
+      "obligation": "JsonIgnore guidance/materialized role resources preserved with content/provenance; no-op legacy identity/hash compatibility."
+    },
+    {
+      "id": "N20",
+      "stage": "S2",
+      "title": "Native permissions and referential integrity",
+      "obligation": "Existing policy and typed relationship validation enforced natively; no dangling role/step/branch/artifact references."
+    },
+    {
+      "id": "N21",
+      "stage": "S3",
+      "title": "Accepted result versus stale read",
+      "obligation": "Both read/commit completion orders preserve known result and exact operation ownership across all families."
+    },
+    {
+      "id": "N22",
+      "stage": "S3",
+      "title": "Authoritative newer observation",
+      "obligation": "Clean advances and dirty conflicts/reconciles on real newer revision; receipt retained separately; no opaque token ordering or permanent pin."
+    },
+    {
+      "id": "N23",
+      "stage": "S3",
+      "title": "Coherent sibling revision",
+      "obligation": "Role/step/canvas/import/definition projections agree; stale dirty baseline is not stamped with a newer expected revision."
+    },
+    {
+      "id": "N24",
+      "stage": "S3",
+      "title": "Raw drafts and selected identities",
+      "obligation": "Retain PC2 role Add/Delete, later selection, row normalization, invalid inputs, discard/refusal and import origin behavior."
+    },
+    {
+      "id": "N25",
+      "stage": "S3",
+      "title": "Unknown and postcommit recovery",
+      "obligation": "Native durable status resolves unknown and accepted-warning without blind replay; same operation identity survives a new host."
+    },
+    {
+      "id": "N26",
+      "stage": "S3",
+      "title": "Exact opening retirement",
+      "obligation": "Profile/project lifetime/definition/dispose A-B-A success/error/finally/notification cannot affect a same-public-ID successor."
+    },
+    {
+      "id": "N27",
+      "stage": "S4",
+      "title": "Immutable publication",
+      "obligation": "Complete validated version with draft coexistence and stable content identity; publish repetition/recovery cannot retarget prior revision."
+    },
+    {
+      "id": "N28",
+      "stage": "S4",
+      "title": "Scope and lifecycle selection",
+      "obligation": "Explicit project/global/default precedence, named executable source, no hidden archive/missing-data fallback; Delete/reset semantics explicit."
+    },
+    {
+      "id": "N29",
+      "stage": "S4",
+      "title": "Resolved driver source",
+      "obligation": "Same snapshot in variable preparation/compile; explicitly empty drivers stay empty, no sync-over-async database resolution."
+    },
+    {
+      "id": "N30",
+      "stage": "S4",
+      "title": "Exact executable pipeline",
+      "obligation": "Kernel, readiness, executor assignments/briefs, current approvals and launch producers consume the same selected content."
+    },
+    {
+      "id": "N31",
+      "stage": "S4",
+      "title": "Prepared launch and republish",
+      "obligation": "Saved preparation/intent retained through v1-v2 publication changes; current launchability/authority checks never recompile it silently."
+    },
+    {
+      "id": "N32",
+      "stage": "S4",
+      "title": "Pinned child meaning",
+      "obligation": "Delayed child dispatch uses reviewed immutable child/resources and typed mappings, with existing supported loops and recovery preserved."
+    },
+    {
+      "id": "N33",
+      "stage": "S4",
+      "title": "API and producer compatibility",
+      "obligation": "Standalone, Workbench, HTTP and agent-tool callers retain request/result/idempotency/link semantics without a legacy bypass."
+    },
+    {
+      "id": "N34",
+      "stage": "S5",
+      "title": "Fresh production scopes and process restart",
+      "obligation": "All families and publication reread via normal registrations across scopes, browser sessions and a new owned OS-process PID."
+    },
+    {
+      "id": "N35",
+      "stage": "S5",
+      "title": "Populated upgrade preservation",
+      "obligation": "Pre-PC3 schema upgrade preserves workflows, runtime plans/assignments/prepared admissions and existing recovery; reapply idempotent."
+    },
+    {
+      "id": "N36",
+      "stage": "S5",
+      "title": "Captured mutation admission",
+      "obligation": "Actual coordinated project/profile guard rejects retirement/recreation or switch; no cross-DB/lifetime state/receipt bleed."
+    },
+    {
+      "id": "N37",
+      "stage": "S5",
+      "title": "Transfer and model coverage",
+      "obligation": "New facts participate in current transfer residue/lock/schema policy; supported transfer preserved and unsupported cases rejected atomically."
+    },
+    {
+      "id": "N38",
+      "stage": "S5",
+      "title": "Schema validation and rollback truth",
+      "obligation": "Pending-model/SQL/bootstrap checks plus operating guide; no old-binary mixed-version or lost in-memory draft recovery claim."
+    },
+    {
+      "id": "N39",
+      "stage": "S6",
+      "title": "Production browser J1-J2",
+      "obligation": "Actual saved/reopened editors, roles/canvas/materialized imports with independent native effect oracles and production lifetimes."
+    },
+    {
+      "id": "N40",
+      "stage": "S6",
+      "title": "Production browser J3-J4",
+      "obligation": "Two browser contexts conflict/newer revision and genuine native commit/read-back fault recovery; exact one-effect checks."
+    },
+    {
+      "id": "N41",
+      "stage": "S6",
+      "title": "Production browser J5",
+      "obligation": "Real process restart plus immutable publication/preview/launch behavior and typed native outcome, not only a title or Saved label."
+    },
+    {
+      "id": "N42",
+      "stage": "S6",
+      "title": "Preserved runtime and UI journeys",
+      "obligation": "J6 affected files, cancel/operator, workflow/Workbench, chat/attachments/voice, context/permissions, graph/chart/Markdown/dialog behavior."
+    },
+    {
+      "id": "N43",
+      "stage": "S6",
+      "title": "Sandbox and delivered assets",
+      "obligation": "Same complete renderers; source/published Fast/Parity and dependency guards still hold without production native owner services."
+    },
+    {
+      "id": "N44",
+      "stage": "S7",
+      "title": "Measured query and loop effects",
+      "obligation": "Actual source/fixture/config samples; bounded queries/no N+1, layout writes and startup/compile effects; no fabricated speedup."
+    },
+    {
+      "id": "N45",
+      "stage": "S7",
+      "title": "Final targeted union",
+      "obligation": "All affected assemblies refreshed; exact discovery/filter/theory counts and reruns for invalidated source; preserved legacy obligations."
+    },
+    {
+      "id": "N46",
+      "stage": "S7",
+      "title": "Frozen broad Stable gate",
+      "obligation": "Run required final Stable at frozen candidate under current filters; keep browser/live/host lanes separate and failures honest."
+    },
+    {
+      "id": "N47",
+      "stage": "S7",
+      "title": "Portability and artifact safety",
+      "obligation": "Required helper tests/scan/secret checks; review each baseline change and final enforcement without write-baseline."
+    },
+    {
+      "id": "N48",
+      "stage": "S7",
+      "title": "Current architecture and residual map",
+      "obligation": "Re-evaluate actual dependency/render closure and native ownership; no artificial next module, untracked required fix or retained production fallback."
+    },
+    {
+      "id": "N49",
+      "stage": "S7",
+      "title": "Source-addressed delivery",
+      "obligation": "Committed generic tests and sanitized reports with candidate/siblings/config/oracles/evidence; report-only final delta distinguished."
+    },
+    {
+      "id": "N50",
+      "stage": "S7",
+      "title": "Signed incremental completion",
+      "obligation": "Logical tested commits throughout, each cryptographically verified, no all-at-end batch or automatic push/deployment."
+    }
+  ]
+}

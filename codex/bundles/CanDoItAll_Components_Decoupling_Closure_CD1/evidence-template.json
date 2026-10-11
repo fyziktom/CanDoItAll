@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CD1",
+  "status": "NOT_RUN",
+  "review_source": "fd9e43547457eb18901185da47de123efdfd8108",
+  "actual_execution_source": null,
+  "source_tuple": {
+    "main": null,
+    "siblings": [],
+    "sdk": null,
+    "configuration": null,
+    "asset_and_dependency_modes": [],
+    "worktree_changes": []
+  },
+  "census": {
+    "status": "NOT_RUN",
+    "register_path": null,
+    "scope": [],
+    "indexed_projects": [],
+    "unresolved_inputs": [],
+    "remaining": null,
+    "unclassified": null
+  },
+  "dimensions": {
+    "structure": "NOT_RUN",
+    "functional_parity": "NOT_RUN",
+    "assets_and_dev_loop": "NOT_RUN",
+    "required_validation": "NOT_RUN",
+    "signatures": "NOT_RUN",
+    "resource_disposition": "NOT_RUN"
+  },
+  "acceptance": [
+    {
+      "id": "CD1-01",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-02",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-03",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-04",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-05",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-06",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-07",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-08",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-09",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-10",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-11",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-12",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-13",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-14",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-15",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-16",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-17",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-18",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-19",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-20",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-21",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-22",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-23",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-24",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-25",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-26",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-27",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-28",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-29",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-30",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-31",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "id": "CD1-32",
+      "status": "NOT_RUN",
+      "evidence_kind": null,
+      "evidence_refs": [],
+      "notes": null
+    }
+  ],
+  "evidence_ledger": [],
+  "executed_lanes": [],
+  "reused_prior_evidence": [],
+  "baseline_artifact_availability": [],
+  "browser_journeys": [],
+  "measurements": [],
+  "signed_commits": [],
+  "resource_ledger": [],
+  "separate_future_work": [],
+  "blockers": [],
+  "final_report_commit": null
+}

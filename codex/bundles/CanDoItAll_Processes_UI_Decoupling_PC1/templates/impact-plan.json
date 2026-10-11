@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "baseline_commit": null,
+  "current_commit": null,
+  "configuration": null,
+  "mcp": {
+    "actual_tool_names": [],
+    "index_revision": null,
+    "freshness_verified": false,
+    "query_artifacts": []
+  },
+  "changed_files": [],
+  "changed_symbols": [],
+  "new_or_untracked_files": [],
+  "mandatory_families": [
+    "ProcessWorkspaceShellTests including its launch partial and Live rows",
+    "ProcessRunFilesDialogTests",
+    "ProcessRunCancellationActionTests",
+    "ProcessShellSmokeTests reconciled with current controls",
+    "New light Processes UI/session/guard cases",
+    "Affected native launch/operator/admission/file/context owners",
+    "Affected Workbench execution and actual HTTP/serialization consumers"
+  ],
+  "blind_spots_to_review": [
+    "Razor/generated bindings",
+    "Dynamic/deferred dialogs and RenderFragments",
+    "Private reflection and partial test classes",
+    "DI and actual route composition",
+    "CSS/JS/Tailwind/static assets",
+    "New/untracked source and tests",
+    "Changed public type/serialization identity",
+    "Native effect and security boundaries"
+  ],
+  "selections": [],
+  "excluded_topics_with_reasons": [],
+  "broad_gate_trigger": null,
+  "invalidation_log": []
+}

@@ -149,7 +149,7 @@ public sealed partial class ProcessDefinitionCanvasEditorProjectionService
                     IsBackwardRoute: false));
             }
 
-            foreach (var artifact in step.ArtifactExpectations.Where(artifact => artifact.IsRequired).Take(3))
+            foreach (var artifact in step.ArtifactExpectations.Where(artifact => artifact.IsRequired))
             {
                 var artifactPosition = ProcessDefinitionCanvasPlacementPolicy.PlaceAttachment(
                     nodes,

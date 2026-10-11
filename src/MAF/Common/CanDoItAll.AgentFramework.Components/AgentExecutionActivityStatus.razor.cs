@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,10 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
 
     [Parameter, EditorRequired]
     public required AgentExecutionActivityStreamId StreamId { get; set; }
+
+    [Parameter] public bool Headless { get; set; }
+    [Parameter] public EventCallback<AgentActivityState> StateChanged { get; set; }
+    private AgentActivityState Presentation => new(StreamId.OperationId, StatusLabel, StatusTone, StatusMessage, HasSequenceGap);
 
     [Inject]
     public IAgentExecutionActivityReader ActivityReader { get; set; } = default!;
@@ -95,6 +100,7 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
             isUnavailable = true;
             LogReaderFailure(exception);
         }
+        await StateChanged.InvokeAsync(Presentation);
     }
 
     private async Task PumpReaderAsync(
@@ -206,7 +212,7 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
             return;
         }
 
-        await InvokeAsync(() =>
+        await InvokeAsync(async () =>
         {
             if (cancellationToken.IsCancellationRequested ||
                 generation != Volatile.Read(ref readerGeneration) ||
@@ -216,6 +222,7 @@ public partial class AgentExecutionActivityStatus : IAsyncDisposable
             }
 
             update();
+            await StateChanged.InvokeAsync(Presentation);
             StateHasChanged();
         });
     }

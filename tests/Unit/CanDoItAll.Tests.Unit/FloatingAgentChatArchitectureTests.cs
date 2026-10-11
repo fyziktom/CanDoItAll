@@ -2089,6 +2089,15 @@ public sealed class FloatingAgentChatCoordinatorTests
             firstRunId,
             ExecutionState.WaitingOnTool));
         Assert.Equal(
+            ActiveAgentChatRunState.Running,
+            FindChat(coordinator, chat.HandleId).RunState);
+
+        workspaceProxy.RaiseExecutionUpdated(CreateExecutionUpdate(
+            agent.Id,
+            sessionId,
+            firstRunId,
+            ExecutionState.WaitingOnTool) with { Phase = "Approval" });
+        Assert.Equal(
             ActiveAgentChatRunState.AwaitingApproval,
             FindChat(coordinator, chat.HandleId).RunState);
 
@@ -2110,7 +2119,7 @@ public sealed class FloatingAgentChatCoordinatorTests
             agent.Id,
             sessionId,
             secondRunId,
-            ExecutionState.WaitingOnTool));
+            ExecutionState.WaitingOnTool) with { Phase = "Approval" });
         Assert.Equal(
             ActiveAgentChatRunState.AwaitingApproval,
             FindChat(coordinator, chat.HandleId).RunState);

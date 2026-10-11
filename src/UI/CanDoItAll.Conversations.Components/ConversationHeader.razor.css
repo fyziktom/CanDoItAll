@@ -20,9 +20,10 @@
 }
 
 .chat-panel-header__main {
-    align-items: center;
+    align-items: stretch;
     display: flex;
     flex: 1 1 auto;
+    flex-direction: column;
     gap: 0.5rem;
     min-width: 0;
 }
@@ -31,10 +32,9 @@
     align-items: center;
     display: flex;
     flex: 1 1 auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.35rem;
     min-width: 0;
-    overflow: hidden;
 }
 
 .chat-panel-header__meta .cda-status-badge,
@@ -46,7 +46,7 @@
 .chat-panel-header__title-row {
     align-items: center;
     display: flex;
-    flex: 0 0 min(12rem, 45%);
+    flex: 1 1 auto;
     min-width: 0;
     order: -1;
 }

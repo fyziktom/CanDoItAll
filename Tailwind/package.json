@@ -21,6 +21,8 @@
     "structure:build": "tailwindcss -i ./structure-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/wwwroot/css/structure-fast.css",
     "content:build": "tailwindcss -i ./content-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/wwwroot/css/content-fast.css",
     "operators:build": "tailwindcss -i ./operators-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/wwwroot/css/operators-fast.css",
-    "execution:build": "tailwindcss -i ./execution-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/wwwroot/css/execution-fast.css"
+    "execution:build": "tailwindcss -i ./execution-fast.css -o ../src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/wwwroot/css/execution-fast.css",
+    "processes:build": "tailwindcss -i ./processes-fast.css -o ../src/Sandboxes/CanDoItAll.Processes.UiSandbox/wwwroot/css/processes-fast.css --minify",
+    "processes:watch": "tailwindcss -i ./processes-fast.css -o ../src/Sandboxes/CanDoItAll.Processes.UiSandbox/wwwroot/css/processes-fast.css --minify --watch"
   }
 }

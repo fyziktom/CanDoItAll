@@ -30,7 +30,8 @@ public sealed partial class ProcessLaunchApplicationService(
     ILaunchVariableTemplateResolver launchVariableTemplateResolver,
     IExternalTargetPathRegistry externalTargetPathRegistry,
     IProcessPreparedLaunchStore? preparedLaunchStore = null,
-    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null)
+    IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null,
+    ProcessExecutableDefinitionResolver? executableDefinitions = null)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -53,6 +54,7 @@ public sealed partial class ProcessLaunchApplicationService(
     private const string MultipleBranchGatesUnsupportedCode = "process.launch.multiple_branch_gates_unsupported";
     private const int MaximumLaunchLifecycleConcurrencyRetries = 3;
     private static readonly TimeSpan LaunchLifecycleConcurrencyRetryDelay = TimeSpan.FromMilliseconds(100);
+    private readonly ProcessRetainedLaunchRecovery retainedLaunches = new(preparedLaunchStore, executableDefinitions);
 
     public async Task<ProcessLaunchResult> PreviewAsync(
         ProcessLaunchRequest request,
@@ -177,19 +179,8 @@ public sealed partial class ProcessLaunchApplicationService(
             throw new ArgumentException("At least one launch variable is required for existing launch lookup.", nameof(request));
         }
 
-        var selected = ResolveDefinition(new ProcessLaunchRequest(
-            request.DefinitionKey,
-            ProcessDefinitionId: null,
-            request.LiveRunProfileKey,
-            request.ProjectId,
-            ProjectNodeId: null,
-            RequestedBy: "existing-launch-lookup",
-            Variables: new Dictionary<string, string>(StringComparer.Ordinal),
-            RunReadiness: false,
-            Execute: false));
-        var expectedDefinitionId = ProcessTemplateKernelBuilder.CreateDefinitionId(selected.Definition.Key);
         var matchingAssignments = await assignmentStore
-            .FindByLaunchVariablesAsync(request.RequiredLaunchVariables, cancellationToken)
+            .FindByLaunchVariablesAsync(ProcessRetainedLaunchRecovery.LookupVariables(request), cancellationToken)
             .ConfigureAwait(false);
 
         foreach (var runGroup in matchingAssignments
@@ -202,27 +193,30 @@ public sealed partial class ProcessLaunchApplicationService(
                 throw new InvalidOperationException($"Existing launch lookup found assignments for missing process run '{runGroup.Key}'.");
             }
 
-            if (state.Status is ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled or ProcessRuntimeStatus.Blocked)
-            {
-                continue;
-            }
-
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Existing launch lookup found process run '{state.RunId}' with missing plan '{state.PlanId}'.");
-            if (plan.Definition.DefinitionId != expectedDefinitionId)
-            {
+            if (!string.Equals(ProcessRetainedLaunchRecovery.DefinitionKey(plan), request.DefinitionKey.Trim(), StringComparison.OrdinalIgnoreCase)) {
+                continue;
+            }
+            var retained = await retainedLaunches.ReadAsync(request.ProjectId, state, plan, cancellationToken);
+            if (retained is null) {
                 continue;
             }
 
             var assignments = await assignmentStore.LoadByRunAsync(state.RunId, cancellationToken).ConfigureAwait(false);
-            var launchPlan = CreateLaunchPlanView(
-                selected,
-                plan,
-                assignments,
-                [new ProcessLaunchReadinessFinding(
+            if (!ProcessRetainedLaunchRecovery.MatchesProfile(request.LiveRunProfileKey, retained, state.RunId, assignments) ||
+                    (request.StoppedOnly ? state.Status is not (ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Blocked)
+                        : state.Status is ProcessRuntimeStatus.Failed or ProcessRuntimeStatus.Cancelled or ProcessRuntimeStatus.Blocked)) {
+                continue;
+            }
+            ProcessLaunchReadinessFinding[] findings = [new(
                     ProcessLaunchReadinessSeverity.Info,
                     "process.launch.existing_reused",
-                    $"Reused existing process run '{state.RunId.Value:D}' for matching launch variables.")]);
+                    $"Reused existing process run '{state.RunId.Value:D}' for matching launch variables.")];
+            var launchPlan = retained.Review is { } review ? review with { ReadinessFindings = [.. review.ReadinessFindings, .. findings] }
+                : plan.ExecutableDefinitions is { } captured ? CreateLaunchPlanView(
+                    new("captured", ProcessExecutableDefinitionResolver.Decode(captured, captured.DefinitionKey).Definition, null, captured), plan, assignments, findings)
+                : ProcessRetainedLaunchRecovery.LegacyReview(plan, assignments, findings);
 
             return new ProcessLaunchResult(
                 plan.Definition.DefinitionId,
@@ -237,6 +231,10 @@ public sealed partial class ProcessLaunchApplicationService(
         return null;
     }
 
+    public async Task<ProcessAuthoringAddress?> ReadExistingLaunchOriginAsync(Guid? projectId, ProcessRuntimeStateSnapshot state, ProcessInstancePlan plan,
+        CancellationToken cancellationToken = default)
+        => (await retainedLaunches.ReadAsync(projectId, state, plan, cancellationToken))?.Origin;
+
     private async Task<ProcessLaunchPreparation> PrepareLaunchAsync(
         ProcessLaunchRequest request,
         DateTimeOffset nowUtc,
@@ -246,15 +244,17 @@ public sealed partial class ProcessLaunchApplicationService(
         {
             RequestedBy = ProcessActorIdentityPolicy.Normalize(request.RequestedBy, "process-launch")
         };
-        var selected = ResolveDefinition(request);
+        var selected = await ResolveExecutableSelectionAsync(request, cancellationToken).ConfigureAwait(false);
         var driverCatalog = await driverCatalogProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
         var kernelBuild = ProcessTemplateKernelBuilder.Build(
             selected.Definition,
-            selected.Pack.Manifest.Version,
-            driverCatalog.StepExecutionStrategyId);
-        var compileRequest = CreateCompileRequest(
+            selected.ContentVersion,
+            driverCatalog.StepExecutionStrategyId,
+            selected.Closure is null ? null : ProcessExecutableDefinitionResolver.ExecutableIdentity(selected.Closure));
+        var compileRequest = ProcessDefinitionCompilation.CreateRequest(
             kernelBuild,
-            selected,
+            selected.Definition,
+            selected.ContentVersion,
             driverCatalog);
         var compileResult = new ProcessInstancePlanCompiler().Compile(compileRequest);
         if (!compileResult.Succeeded || compileResult.Plan is null)
@@ -292,7 +292,7 @@ public sealed partial class ProcessLaunchApplicationService(
                 BlockingFindings: findings);
         }
 
-        var plan = compileResult.Plan;
+        var plan = compileResult.Plan with { ExecutableDefinitions = selected.Closure };
         var executorResolution = await executorResolver.ResolveAsync(
             new ProcessLaunchExecutorResolutionRequest(
                 selected.Definition,
@@ -384,6 +384,9 @@ public sealed partial class ProcessLaunchApplicationService(
             definitionKey = pack.Definitions
                 .FirstOrDefault(definition => ProcessTemplateKernelBuilder.CreateDefinitionId(definition.Key) == definitionId)
                 ?.Key;
+            if (definitionKey is null) {
+                throw new InvalidOperationException("The explicitly requested process definition is unavailable.");
+            }
         }
 
         var liveProfile = ResolveLiveRunProfile(request, liveProfiles, definitionKey);
@@ -403,7 +406,68 @@ public sealed partial class ProcessLaunchApplicationService(
         }
 
         var definition = templatePackLoader.LoadDefinition(definitionKey);
-        return new ProcessTemplateSelection(pack, definition, liveProfile);
+        if (request.ProcessDefinitionId is { } expected && ProcessTemplateKernelBuilder.CreateDefinitionId(definition.Key) != expected) {
+            throw new InvalidOperationException("The requested definition key and identity disagree.");
+        }
+        return new ProcessTemplateSelection(pack.Manifest.Version, definition, liveProfile, null);
+    }
+
+    public async Task<ProcessExecutableDefinitionClosure?> ResolveForPreparationAsync(string? key, ProcessDefinitionId? id, Guid? projectId,
+        ProcessProjectAdmission? admission = null, CancellationToken cancellationToken = default, string? liveRunProfileKey = null) {
+        if (executableDefinitions is null) {
+            return null;
+        }
+        var scope = projectId is { } project ? ProcessWorkspaceShellScope.ForProject(project) : ProcessWorkspaceShellScope.Global;
+        if (string.IsNullOrWhiteSpace(key)) {
+            key = id is { } definitionId
+                ? await executableDefinitions.ResolveKeyAsync(scope, definitionId, cancellationToken)
+                : ResolveDefinition(new(null, null, liveRunProfileKey, projectId, null, "process-launch", new Dictionary<string, string>(), false, false)).Definition.Key;
+        }
+        key = await executableDefinitions.CanonicalizeKeyAsync(scope, key, cancellationToken);
+        if (id is { } expected && ProcessTemplateKernelBuilder.CreateDefinitionId(key) != expected) {
+            throw new InvalidOperationException("The requested definition key and identity disagree.");
+        }
+        if (!string.IsNullOrWhiteSpace(liveRunProfileKey)) {
+            ResolveLiveRunProfile(new(key, id, liveRunProfileKey, projectId, null, "process-launch", new Dictionary<string, string>(), false, false),
+                templatePackLoader.LoadLiveRunProfiles(), key);
+        }
+        return await executableDefinitions.ResolveAsync(scope, key, admission, cancellationToken);
+    }
+
+    public async Task<ProcessExecutableDefinitionClosure?> ResolveChildForPreparationAsync(ProcessRuntimeStepAssignment parent, string key,
+        CancellationToken cancellationToken = default) {
+        var plan = await planStore.LoadAsync(parent.PlanId, cancellationToken)
+            ?? throw new InvalidOperationException("The parent process has no immutable execution plan.");
+        if (plan.ExecutableDefinitions is not { } captured) {
+            return null;
+        }
+        var document = ProcessExecutableDefinitionResolver.Decode(captured, captured.DefinitionKey).Definition;
+        var step = document.Steps.Single(item => item.Key == parent.StepKey);
+        var childKey = step.SubprocessContract?.DefinitionKey ?? step.SubprocessProcessKey;
+        if (!string.Equals(childKey, key.Trim(), StringComparison.OrdinalIgnoreCase)) {
+            throw new InvalidOperationException("The child definition differs from the parent's captured executable contract.");
+        }
+        return ProcessExecutableDefinitionResolver.SelectCaptured(captured, childKey);
+    }
+
+    private async Task<ProcessTemplateSelection> ResolveExecutableSelectionAsync(ProcessLaunchRequest request, CancellationToken cancellationToken) {
+        if (executableDefinitions is null) {
+            return ResolveDefinition(request);
+        }
+        var key = request.DefinitionKey;
+        var closure = request.ResolvedDefinitions ?? await ResolveForPreparationAsync(key, request.ProcessDefinitionId, request.ProjectId,
+            request.ProjectAdmission, cancellationToken, request.LiveRunProfileKey) ?? throw new InvalidOperationException("Executable definition resolution is unavailable.");
+        if (closure.ProjectId != (request.ProjectId ?? Guid.Empty) || !string.IsNullOrWhiteSpace(key) && !string.Equals(closure.DefinitionKey, key.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                request.ProcessDefinitionId is { } id && ProcessTemplateKernelBuilder.CreateDefinitionId(closure.DefinitionKey) != id ||
+                request.ProjectAdmission is { } admission && (closure.ProjectLifetimeId != admission.LifetimeId || closure.DatabaseProfileId != admission.DatabaseProfileId)) {
+            throw new InvalidOperationException("The captured executable content does not match the launch request.");
+        }
+        await executableDefinitions.RequireCurrentAsync(closure, cancellationToken);
+        var identity = ProcessExecutableDefinitionResolver.ExecutableIdentity(closure);
+        var profile = identity is null || !string.IsNullOrWhiteSpace(request.LiveRunProfileKey)
+            ? ResolveLiveRunProfile(request, templatePackLoader.LoadLiveRunProfiles(), closure.DefinitionKey) : null;
+        return new(identity ?? templatePackLoader.Load().Manifest.Version,
+            ProcessExecutableDefinitionResolver.Decode(closure, closure.DefinitionKey).Definition, profile, closure);
     }
 
     private static ProcessTemplateLiveRunProfileDocument? ResolveLiveRunProfile(
@@ -434,50 +498,6 @@ public sealed partial class ProcessLaunchApplicationService(
         }
 
         return liveProfiles.FirstOrDefault();
-    }
-
-    private static ProcessInstancePlanCompileRequest CreateCompileRequest(
-        ProcessTemplateKernelBuildResult kernelBuild,
-        ProcessTemplateSelection selection,
-        ProcessLaunchDriverCatalog driverCatalog)
-    {
-        var templateComponent = new ProcessTemplateComponentReference(
-            new TemplateComponentId(ProcessTemplateKernelBuilder.CreateDefinitionId(selection.Definition.Key).Value),
-            selection.Definition.Key,
-            selection.Pack.Manifest.Version,
-            kernelBuild.DefinitionContentHash);
-
-        return new ProcessInstancePlanCompileRequest(
-            new ProcessPlanCompileSource(
-                SourceSchemaVersion: "runtime/1.0",
-                TargetSchemaVersion: "runtime/1.0",
-                kernelBuild.Definition,
-                kernelBuild.DefinitionContentHash,
-                driverCatalog.DriverCatalog,
-                new ProcessCapabilityRequest(
-                    driverCatalog.RequiredCapabilityTags,
-                    driverCatalog.RequiredCapabilityTags,
-                    new HashSet<CapabilityTag>())
-                {
-                    HostCapabilities = driverCatalog.HostCapabilities
-                },
-                [templateComponent],
-                [templateComponent],
-                [],
-                new HashSet<string>(StringComparer.Ordinal),
-                [],
-                new ProcessManagerPlanRequest(
-                    ManagerStrategyId: null,
-                    RecoveryStrategyIds: [],
-                    ResupplyStrategyIds: [],
-                    PolicyHash: ComputeHash(selection.Definition.GovernancePolicySummary)),
-                new ProcessMonitoringPlanRequest(
-                    Enabled: true,
-                    ProjectionConfigHash: ComputeHash("runtime-projections:v1")),
-                new ProcessSecurityPlanRequest(
-                    GovernancePolicyHash: ComputeHash(selection.Definition.GovernancePolicySummary),
-                    RequiredApprovalKeys: [])),
-            Subprocesses: []);
     }
 
     private ProcessLaunchAssignmentBuildResult BuildAssignments(
@@ -1935,7 +1955,8 @@ public sealed partial class ProcessLaunchApplicationService(
         IReadOnlyList<ProcessLaunchReadinessFinding> Findings);
 
     private sealed record ProcessTemplateSelection(
-        ProcessTemplatePack Pack,
+        string ContentVersion,
         ProcessTemplateDefinitionDocument Definition,
-        ProcessTemplateLiveRunProfileDocument? LiveRunProfile);
+        ProcessTemplateLiveRunProfileDocument? LiveRunProfile,
+        ProcessExecutableDefinitionClosure? Closure);
 }

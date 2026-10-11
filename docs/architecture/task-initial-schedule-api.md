@@ -21,6 +21,14 @@ preconditions. Set `scheduleChange` to null and supply:
 }
 ```
 
+Task updates must echo the stored node's `progressPercent` from a fresh canonical
+read, not the percentage projected by Gantt. Gantt and plan summaries use the
+recorded execution state: NotStarted displays 0%, Completed displays 100%, and
+Cancelled displays untracked progress. Updating a stored progress hint alone does
+not change that execution state. A Started task displays the stored percentage
+and requires an authorized actual start timestamp; tools must not invent one to
+make the chart match a requested percentage.
+
 All five inner members must be present. Echo the current nullable dates and duration
 from the node; the example's null duration is correct only when the read returned null.
 The current start and end must both be null and the proposed end must follow its start.
@@ -28,6 +36,12 @@ For a task with persisted dates, keep using `scheduleChange` with its exact prev
 interval. Sending both modes, an inverted interval or a snapshot of an already
 scheduled task is HTTP 400. A schedule changed after the read is HTTP 409 `StaleTask`.
 Missing/wrong project lifetime admission retains its existing HTTP 409 behavior.
+
+The internal `project_structure_read` compact response includes the canonical node's
+nullable `startUtc`, `endUtc` and `durationSeconds`. Scheduled timestamps retain their
+exact precision and offset so the agent can echo the previous interval into
+`scheduleChange`; explicit null dates distinguish an unscheduled task. The response
+projection must not omit dates or substitute display values from the chart.
 
 The existing task application transaction owns assignment, pricing, execution and
 date persistence. A small schedule value/policy validates the new request and compares
@@ -43,6 +57,8 @@ rejections without partial title changes. Existing task-update tests cover compa
 
 Build Workbench and Web, then discover and run `ProjectStructureInitialTaskScheduleTests`,
 `ProjectStructureTaskUpdateAgentInputTests` and `ProjectStructureTaskUpdateRawJsonTests`.
+`ProjectStructureReadScheduleContractTests` verifies the serialized compact response
+for scheduled and unscheduled nodes and its round trip into a task-date request.
 Follow [Testing](../testing.md) for the isolated PostgreSQL host and portability gate.
 Both OpenAPI document routes must expose the five required initial-schedule members
 and their source-owned `Description` attributes.

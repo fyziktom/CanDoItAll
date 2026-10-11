@@ -16,6 +16,28 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 [Trait("Category", "HostPlatform")]
 public sealed class ChatWorkspacePanelTests
 {
+    [Fact]
+    public void Continuing_an_approval_shows_working_and_hides_the_consumed_approval_until_refreshed() {
+        using var context = CreateContext();
+        var now = DateTimeOffset.UtcNow;
+        var agentId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var run = CreateRun(agentId, sessionId, Guid.NewGuid(), ExecutionState.WaitingOnTool, now) with {
+            PendingApprovals = [new("approval", "call", "workspace_write_file", "function", "Write the result.", "{}")]
+        };
+        var cut = context.Render<ChatWorkspacePanel>(p => p.Add(x => x.DraftPrompt, "")
+            .Add(x => x.Session, CreateSession(agentId, sessionId, run.Id, now))
+            .Add(x => x.ActiveRun, run).Add(x => x.IsBusy, true));
+
+        Assert.Empty(cut.FindComponent<AgentChatSurface>().Instance.Presentation.Approvals);
+        Assert.Contains("Working", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Approval required", cut.Markup, StringComparison.Ordinal);
+
+        cut.Render(p => p.Add(x => x.IsBusy, false));
+        Assert.Single(cut.FindComponent<AgentChatSurface>().Instance.Presentation.Approvals);
+        Assert.Contains("Waiting", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("cs-CZ")]
     [InlineData("ar-SA")]

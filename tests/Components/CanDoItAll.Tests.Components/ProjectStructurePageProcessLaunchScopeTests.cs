@@ -27,6 +27,88 @@ public sealed partial class ProjectStructurePageProcessLaunchScopeTests {
     private static readonly Guid DefinitionId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
         new ProcessDefinitionCatalogItemKey("customer-onboarding")).Value;
 
+    [Fact]
+    public async Task Opening_context_must_finish_before_continue_can_prepare_a_launch() {
+        var probe = new ProcessLaunchProbe();
+        await using var harness = await CreateHarnessAsync(probe);
+        var target = await CreateTargetAsync(harness, "Pending launch context");
+        var pending = harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true);
+        var cut = RenderProject(harness, target);
+        var opening = OpenStartDialogAsync(cut, target);
+        Guid openingId;
+        try {
+            cut.WaitForAssertion(() => Assert.Single(pending.Invocations));
+            var dialog = GetStartDialog(cut);
+            openingId = dialog.DialogId;
+            Assert.True(dialog.IsBusy);
+            Assert.Null(dialog.LaunchVariables);
+            Assert.True(cut.Find("[data-testid='project-structure-process-start-continue']").HasAttribute("disabled"));
+            await cut.InvokeAsync(() => cut.FindComponent<CanDoItAll.Workbench.Execution.UI.Processes.ProcessStartDialog>()
+                .Instance.Actions.Submit());
+            Assert.Empty(probe.ResolutionRequests);
+            Assert.Empty(GetStartDialog(cut).Error);
+        } finally {
+            pending.SetResult(null);
+            await opening;
+        }
+        cut.WaitForAssertion(() => {
+            var ready = GetStartDialog(cut);
+            Assert.Equal(openingId, ready.DialogId);
+            Assert.False(ready.IsBusy);
+            Assert.NotNull(ready.LaunchVariables);
+            Assert.NotNull(ready.LaunchAuthority);
+            Assert.False(cut.Find("[data-testid='project-structure-process-start-continue']").HasAttribute("disabled"));
+        });
+        await cut.Find("[data-testid='project-structure-process-start-continue']").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() => Assert.Equal(ProjectStructureProcessStartStage.Staffing, GetStartDialog(cut).Stage));
+        AssertOrigin(Assert.Single(probe.ResolutionRequests), target);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Late_opening_context_cannot_replace_a_reopened_or_new_project_dialog(bool navigate) {
+        var probe = new ProcessLaunchProbe();
+        await using var harness = await CreateHarnessAsync(probe);
+        var first = await CreateTargetAsync(harness, "Original opening");
+        var second = navigate ? await CreateTargetAsync(harness, "Replacement opening") : first;
+        var hold = true;
+        var pending = harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => hold);
+        var cut = RenderProject(harness, first);
+        var opening = OpenStartDialogAsync(cut, first);
+        Guid currentId;
+        try {
+            cut.WaitForAssertion(() => Assert.Single(pending.Invocations));
+            var oldId = GetStartDialog(cut).DialogId;
+            hold = false;
+            if (navigate) {
+                NavigateToProject(harness, cut, second);
+            } else {
+                await cut.InvokeAsync(() => cut.FindComponent<CanDoItAll.Workbench.Execution.UI.Processes.ProcessStartDialog>()
+                    .Instance.Actions.Close());
+            }
+            await OpenStartDialogAsync(cut, second);
+            var current = GetStartDialog(cut);
+            currentId = current.DialogId;
+            Assert.NotEqual(oldId, currentId);
+            Assert.False(current.IsBusy);
+            Assert.NotNull(current.LaunchVariables);
+        } finally {
+            pending.SetResult(null);
+            await opening;
+        }
+        cut.WaitForAssertion(() => {
+            var current = GetStartDialog(cut);
+            Assert.Equal(currentId, current.DialogId);
+            Assert.Equal(second.ProjectId, current.ProjectId);
+            Assert.Equal(second.ProjectId.ToString("D"), current.LaunchVariables!["ProjectId"]);
+            Assert.False(current.IsBusy);
+            Assert.Empty(current.Error);
+            AssertCurrentNavigation(harness, second);
+        });
+        Assert.Empty(probe.ResolutionRequests);
+    }
+
     [Theory]
     [InlineData(true, false)]
     [InlineData(false, false)]

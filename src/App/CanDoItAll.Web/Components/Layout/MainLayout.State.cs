@@ -1,4 +1,5 @@
 using CanDoItAll.AppComponents;
+using CanDoItAll.Application.UI.Profiles;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
@@ -30,7 +31,10 @@ public partial class MainLayout
     private bool databaseDialogOpen;
     private bool databaseDialogStartupMode;
     private bool databaseDialogBusy;
-    private string? databaseProfileMessage;
+    private DatabaseProfileMessage? databaseProfileMessage;
+    private Guid databaseDialogOpeningId = Guid.NewGuid();
+    private long databaseProfileReadGeneration;
+    private bool databaseActivationUncertain;
     private long lastObservedDatabaseSwitchGeneration;
     private string? databaseSwitchAlert;
     private int collaborationUnreadCount;
@@ -42,8 +46,6 @@ public partial class MainLayout
 
     [Inject]
     private IEnumerable<IShellNavigationContributor> ShellNavigationContributors { get; set; } = [];
-
-    private static readonly TimeSpan ShellMenuTooltipDelay = TimeSpan.FromSeconds(2);
 
     private string CurrentLocation => Navigation.ToBaseRelativePath(Navigation.Uri);
 
@@ -93,6 +95,7 @@ public partial class MainLayout
 
     private bool CanSwitchSelectedProfile
         => CanManageDatabases &&
+           !databaseActivationUncertain &&
            selectedDatabaseProfileId.HasValue &&
            !SelectedDialogProfileIsActive &&
            !SelectedDialogProfileIsPendingRestart;

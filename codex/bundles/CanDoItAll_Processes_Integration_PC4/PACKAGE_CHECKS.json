@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "scope": "Instruction artifact only; no product execution.",
+  "checks": [
+    "JSON/schema invariants",
+    "SHA-256 manifest coverage",
+    "single task/no shared copy",
+    "local Markdown links",
+    "acceptance/finding references",
+    "exact PC1/PC2/PC3 carry-forward identifiers",
+    "NOT_RUN initial product evidence",
+    "fresh ZIP extraction"
+  ],
+  "verifier_test_count": 16,
+  "product_status": "NOT_RUN",
+  "verifier_failed": 0,
+  "verifier_skipped": 0,
+  "fresh_extraction": "PASS",
+  "integrity": "PASS",
+  "note": "Verified the instruction package and its verifier, including corruption tests; no C#/.NET, database, browser or product runtime execution."
+}

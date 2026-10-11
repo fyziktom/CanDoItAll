@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "assignment_id": "CDA-PROCESSES-INTEGRATION-PC4",
+  "review_commit": "a13c1add605d1ceec43dedc0513acb7ac5959f96",
+  "product_execution_status": "NOT_RUN",
+  "execution_tuple": {
+    "branch": null,
+    "source_commit": null,
+    "tree": null,
+    "source_dirty": null,
+    "components_commit": null,
+    "filetools_commit": null,
+    "other_siblings": [],
+    "sdk": null,
+    "platform": null,
+    "configuration": null,
+    "owned_database_server_version": null
+  },
+  "shared_change_status": "NO_CHANGE",
+  "codeanalytics": {
+    "availability": "NOT_CHECKED_BY_EXECUTOR",
+    "index_source_commit": null,
+    "queries": [],
+    "fallback": null
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "reproduction_status": "NOT_RUN",
+      "source_resolution": null,
+      "proof": []
+    },
+    {
+      "id": "F02",
+      "reproduction_status": "NOT_RUN",
+      "source_resolution": null,
+      "proof": []
+    },
+    {
+      "id": "F03",
+      "reproduction_status": "NOT_RUN",
+      "source_resolution": null,
+      "proof": []
+    },
+    {
+      "id": "F04",
+      "reproduction_status": "NOT_RUN",
+      "source_resolution": null,
+      "proof": []
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "E01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "E02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "E03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "E04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H05",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H06",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H07",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H08",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "H09",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L05",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "L06",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "R01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "R02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "R03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "R04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "R05",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V05",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V06",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "V07",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "C01",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "C02",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "C03",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "C04",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "id": "C05",
+      "status": "NOT_RUN",
+      "evidence": []
+    }
+  ],
+  "lanes": [
+    {
+      "name": "targeted_unit",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "native_integration",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "http_producer",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "legacy_compatibility",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "component_host",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "browser",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "restart_workflow",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "clean_build",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "portability_static",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "broad_gate",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    },
+    {
+      "name": "dependency_census",
+      "status": "NOT_RUN",
+      "source_tuple": null,
+      "build_command": null,
+      "discovery_command": null,
+      "expected_count": null,
+      "discovered_count": null,
+      "expanded_count": null,
+      "execute_command": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "evidence_paths": []
+    }
+  ],
+  "broad_evidence": {
+    "kind": "NOT_RUN",
+    "original_runs": [],
+    "retained_identities": [],
+    "replaced_identities": [],
+    "additional_identities": [],
+    "source_bridge": null
+  },
+  "signed_checkpoints": [],
+  "residuals": [],
+  "resource_cleanup": "NOT_RUN",
+  "reviewer_limits": [
+    "No C# build/test, PostgreSQL or browser execution by reviewer.",
+    "Prior PC3 results are source-reported, not current PC4 test evidence."
+  ]
+}

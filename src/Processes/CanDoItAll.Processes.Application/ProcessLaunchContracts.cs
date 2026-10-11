@@ -25,6 +25,9 @@ public sealed record ProcessLaunchRequest(
     [JsonIgnore]
     public ProcessProjectAdmission? ProjectAdmission { get; init; }
 
+    [JsonIgnore]
+    public ProcessExecutableDefinitionClosure? ResolvedDefinitions { get; init; }
+
     public ProcessLaunchIntentId? CallerIntentId { get; init; }
     public ProcessLaunchAdmissionId? PreparedAdmissionId { get; init; }
     public string? ProducerInputFingerprint { get; init; }
@@ -43,7 +46,9 @@ public sealed record ProcessExistingLaunchLookupRequest(
     string DefinitionKey,
     string? LiveRunProfileKey,
     Guid? ProjectId,
-    IReadOnlyDictionary<string, string> RequiredLaunchVariables);
+    IReadOnlyDictionary<string, string> RequiredLaunchVariables) {
+    public bool StoppedOnly { get; init; }
+}
 
 public sealed record ProcessLaunchExecutorOverride(
     string StepKey,

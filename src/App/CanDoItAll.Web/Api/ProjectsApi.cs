@@ -32,13 +32,24 @@ internal static class ProjectsApi
             .WithSummary("Resolve a project by its stable external namespace and key.")
             .WithDescription("Trims and lowercases both identity tokens. Returns the current project id and lifetime; never searches display names. An optional expectedLifetimeId rejects a replaced binding. The pair is unique within the active database profile, including archived projects.")
             .Produces<ProjectExternalIdentityResolution>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict)
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["200"].Description = "The uniquely bound project identifier, current lifetime and normalized external namespace/key pair in the active database profile.";
+                operation.Responses["400"].Description = "An external identity token is invalid or expectedLifetimeId is empty; no binding was resolved.";
+                operation.Responses["404"].Description = "No project has the supplied normalized external namespace/key pair in the active database profile.";
+                operation.Responses["409"].Description = "The identity has conflicting bindings or expectedLifetimeId names an earlier project lifetime. Review the current binding before continuing.";
+                return Task.CompletedTask;
+            });
 
         projects.MapPost("/", SaveProjectAsync)
             .WithName("SaveProject")
             .Produces<Guid>()
             .ProducesApiErrors(StatusCodes.Status400BadRequest)
-            .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict)
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["409"].Description = "The external identity is already bound to another project, or an existing binding cannot be changed. The project was not saved.";
+                return Task.CompletedTask;
+            });
 
         projects.MapDelete("/{projectId:guid}", DeleteProjectAsync)
             .WithName("DeleteProject")

@@ -10,7 +10,7 @@ Stable Resource metadata, connector configuration values, project admission and 
 - Target framework: `net10.0`
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.Resources.Contracts/CanDoItAll.Modules.Resources.Contracts.csproj --configuration ResourcesUiProof /m:1
+dotnet build src/Modules/CanDoItAll.Modules.Resources.Contracts/CanDoItAll.Modules.Resources.Contracts.csproj --configuration Release /m:1
 ```
 
 ## Dependencies

@@ -22,6 +22,37 @@ scan after source edits. Refresh intentional, reviewed baseline deltas in the sa
 change, inspect the diff, and require final enforcement without `--write-baseline`.
 Report that result alongside the focused tests; do not claim completion while it fails.
 
+## Development Build And Fixture Reuse
+
+Use the standard `Debug` and `Release` configurations and refresh their existing `bin`
+and `obj` outputs after changes. Never create a configuration or output directory named
+after a bundle, stage, attempt or build. Serialize builds that share outputs; release an
+owned host's file locks before rebuilding. Historical custom-configuration commands are
+execution records, not instructions for new work.
+
+For UI iteration, reuse dotnetwatch for the relevant application or lightweight sandbox
+when hot reload is useful. Build and validate the final candidate with the same standard
+configuration. Follow [development build and fixture reuse](docs/testing.md#development-build-and-fixture-reuse).
+
+Reuse a suitable explicitly isolated test server and its database leases across related
+lanes. Do not create a Docker stack for every bundle or stage. A dedicated temporary
+fixture needs a concrete test requirement and cleanup after its last use. Preserve the
+ordinary application/database on 5032 and installed MCP tooling.
+
+## Temporary Resource Cleanup
+
+Follow [bundle resource cleanup](docs/testing.md#bundle-resource-cleanup) for every bundle
+run, including recovery after a crash. Record ownership before creating containers,
+volumes, networks, processes or temporary directories. Clean them up after their last
+required use and verify cleanup before closing the bundle. Keep only the reviewed proof
+needed by its validation record.
+
+Preserve the ordinary instance on port 5032, its databases, useful unrelated containers,
+and installed MCP tools. Never prune Docker globally or delete the entire `.artifacts`
+directory: it also contains persistent tool installations. If cleanup is blocked, record
+the exact remaining resources and resolve or explicitly report the blocker; do not claim
+cleanup succeeded or keep accumulating replacement fixtures.
+
 ## UI and module boundaries
 
 [UI component seams](docs/architecture/ui-component-seams.md) is the canonical guidance for

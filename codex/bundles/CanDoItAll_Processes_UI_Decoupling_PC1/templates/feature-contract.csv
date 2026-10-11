@@ -1,0 +1,2 @@
+acceptance_id,entry,field_action_or_child,current_renderer,native_owner,permission_or_unavailable_rule,draft_or_operation_lifetime,new_renderer,selected_tests,browser_journey,native_oracle,status
+PC-07,/processes,definition draft across all detail tabs,ProcessWorkspaceShell,definition editor owner,preserve current admission,active editor opening,TO_IMPLEMENT,TO_DISCOVER,J1,zero writes until explicit save,NOT_RUN

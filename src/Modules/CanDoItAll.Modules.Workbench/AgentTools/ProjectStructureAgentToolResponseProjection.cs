@@ -46,6 +46,8 @@ internal static class ProjectStructureAgentToolResponseProjection
             node.X,
             node.Y,
             node.DurationSeconds,
-            node.ActionCapabilities);
+            node.ActionCapabilities,
+            node.StartUtc,
+            node.EndUtc);
     }
 }

@@ -1,3 +1,5 @@
+@using CanDoItAll.Application.UI.Profiles
+@using CanDoItAll.Application.UI.Shell
 @inherits LayoutComponentBase
 @implements IDisposable
 @using CanDoItAll.AppComponents
@@ -53,175 +55,12 @@
           ReopenRecentTab="HandleReopenRecentAsync"
           ClearRecentTabs="HandleClearRecentTabsAsync">
     <BottomUtilities>
-        <div class="cda-shell-utility-stack">
-            <TooltipTarget Position="TooltipPosition.Right"
-                           Delay="@ShellMenuTooltipDelay"
-                           TriggerClass="w-full"
-                           Text="Open floating conversations"
-                           TestId="shell-agent-chats-tooltip">
-                <ChildContent>
-                    <button type="button"
-                            class="cda-shell-utility-button"
-                            data-testid="shell-agent-chats-action"
-                            @onclick="OpenFloatingConversations">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="smart_toy" /></span>
-                        <span class="cda-shell-utility-label">Chats</span>
-                    </button>
-                </ChildContent>
-            </TooltipTarget>
-
-            <TooltipTarget Position="TooltipPosition.Right"
-                           Delay="@ShellMenuTooltipDelay"
-                           TriggerClass="w-full"
-                           Text="Open workspace settings"
-                           TestId="shell-settings-tooltip">
-                <ChildContent>
-                    <button type="button"
-                            class="cda-shell-utility-button"
-                            data-testid="shell-settings-action"
-                            @onclick="OpenSettingsFromShellAsync">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="settings" /></span>
-                        <span class="cda-shell-utility-label">Settings</span>
-                    </button>
-                </ChildContent>
-            </TooltipTarget>
-
-            <TooltipTarget Position="TooltipPosition.Right"
-                           Delay="@ShellMenuTooltipDelay"
-                           TriggerClass="w-full"
-                           Text="Inspect runtime capabilities and readiness"
-                           TestId="shell-runtime-capabilities-tooltip">
-                <ChildContent>
-                    <button type="button"
-                            class="cda-shell-utility-button"
-                            data-testid="shell-runtime-capabilities-action"
-                            @onclick="OpenRuntimeCapabilitiesFromShellAsync">
-                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="health_and_safety" /></span>
-                        <span class="cda-shell-utility-label">Runtime capabilities</span>
-                    </button>
-                </ChildContent>
-            </TooltipTarget>
-
-            @{
-                var safeDatabaseDetails = BuildSafeDatabaseDetails(databaseSelection, currentDatabaseEditor);
-                var recentDatabaseProfiles = RecentDatabaseProfiles;
-            }
-            <div class="cda-shell-db-flyout-anchor"
-                 data-testid="database-shell-flyout-anchor">
-                <button type="button"
-                        class="cda-shell-utility-button cda-shell-utility-button--database"
-                        disabled="@databaseDialogBusy"
-                        aria-haspopup="dialog"
-                        data-testid="database-shell-action"
-                        @onclick="OpenDatabaseDialogAsync">
-                    <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="database" /></span>
-                    <span class="cda-shell-utility-label">Switch Database</span>
-                </button>
-
-                <section class="cda-shell-db-flyout"
-                         aria-label="Switch database"
-                         data-testid="database-shell-flyout">
-                    <span class="cda-shell-db-flyout__arrow" aria-hidden="true"></span>
-                    <Stack GapScale="LayoutGap.Medium"
-                           Class="cda-shell-db-flyout-card"
-                           data-testid="database-shell-flyout-card">
-                        <Cluster Gap="LayoutGap.Small"
-                                 Wrap="FlexWrap.NoWrap"
-                                 AlignItems="AlignItems.Center">
-                            <span class="cda-shell-db-flyout__icon" aria-hidden="true"><Icon Name="database" /></span>
-                            <h2 class="cda-shell-db-flyout__heading">Switch Database</h2>
-                        </Cluster>
-
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="cda-shell-db-flyout__section">
-                            <p class="cda-shell-db-flyout__section-title">Current Database</p>
-                            <Cluster Gap="LayoutGap.Small"
-                                     Wrap="FlexWrap.NoWrap"
-                                     AlignItems="AlignItems.Center"
-                                     Class="w-full">
-                                <span class="cda-shell-db-flyout__status-dot" aria-hidden="true"></span>
-                                <span class="cda-shell-db-flyout__current-name">@(databaseSelection?.DisplayName ?? "Loading runtime profile")</span>
-                                <StatusBadge Tone="success" Text="Active" />
-                            </Cluster>
-
-                            <div class="cda-shell-db-flyout__facts">
-                                <div class="cda-shell-db-flyout__fact">
-                                    <span>Server</span>
-                                    <strong>@safeDatabaseDetails.Server</strong>
-                                    <CopyButton Value="@safeDatabaseDetails.Server"
-                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                                Size="CopyButtonSize.ExtraSmall"
-                                                AriaLabel="Copy safe database server"
-                                                data-testid="database-shell-copy-server" />
-                                </div>
-                                <div class="cda-shell-db-flyout__fact">
-                                    <span>Database</span>
-                                    <strong>@safeDatabaseDetails.Database</strong>
-                                    <CopyButton Value="@safeDatabaseDetails.Database"
-                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                                Size="CopyButtonSize.ExtraSmall"
-                                                AriaLabel="Copy safe database name"
-                                                data-testid="database-shell-copy-database" />
-                                </div>
-                                <div class="cda-shell-db-flyout__fact">
-                                    <span>User</span>
-                                    <strong>@safeDatabaseDetails.User</strong>
-                                    <CopyButton Value="@safeDatabaseDetails.User"
-                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                                Size="CopyButtonSize.ExtraSmall"
-                                                AriaLabel="Copy safe database user"
-                                                data-testid="database-shell-copy-user" />
-                                </div>
-                            </div>
-
-                            <CopyButton Value="@BuildSafeDatabaseSummary(databaseSelection, currentDatabaseEditor)"
-                                        Text="Copy safe summary"
-                                        DisplayMode="CopyButtonDisplayMode.TextWithIcon"
-                                        Size="CopyButtonSize.Small"
-                                        ButtonStyle="ButtonStyle.Info"
-                                        Variant="Variant.Outlined"
-                                        Class="cda-shell-db-flyout__copy"
-                                        AriaLabel="Copy safe database summary"
-                                        data-testid="database-shell-copy-summary" />
-                        </Stack>
-
-                        <Stack GapScale="LayoutGap.Small"
-                               Class="cda-shell-db-flyout__section">
-                            <p class="cda-shell-db-flyout__section-title">Recent Databases</p>
-                            @if (recentDatabaseProfiles.Count == 0)
-                            {
-                                <p class="cda-shell-db-flyout__empty">No recent databases yet.</p>
-                            }
-                            else
-                            {
-                                <div class="cda-shell-db-flyout__recent-list">
-                                    @foreach (var profile in recentDatabaseProfiles)
-                                    {
-                                        <button type="button"
-                                                class="cda-shell-db-flyout__recent-button"
-                                                disabled="@(databaseDialogBusy || !CanManageDatabases)"
-                                                data-testid="@($"database-shell-recent-profile-{profile.Id:N}")"
-                                                @onclick="@(() => SwitchDatabaseProfileFromFlyoutAsync(profile.Id))">
-                                            <span>@profile.DisplayName</span>
-                                            <Icon Name="chevron_right" />
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </Stack>
-
-                        <Button Text="Open database dialog..."
-                                ButtonStyle="ButtonStyle.Info"
-                                Variant="Variant.Text"
-                                Size="ButtonSize.Small"
-                                Disabled="@databaseDialogBusy"
-                                Class="cda-shell-db-flyout__dialog-button"
-                                Click="OpenDatabaseDialogAsync"
-                                data-testid="database-shell-open-dialog" />
-                    </Stack>
-                </section>
-            </div>
-        </div>
+        <ShellUtilitiesSurface View="@UtilitiesPresentation"
+                               OpenConversations="OpenFloatingConversations"
+                               OpenSettings="OpenSettingsFromShellAsync"
+                               OpenRuntimeCapabilities="OpenRuntimeCapabilitiesFromShellAsync"
+                               OpenDatabaseDialog="OpenDatabaseDialogAsync"
+                               ActivateProfile="SwitchDatabaseProfileFromFlyoutAsync" />
     </BottomUtilities>
     <TopBar>
         @if (layoutInitializationFailed) {
@@ -233,7 +72,7 @@
                 </Stack>
             </Alert>
         }
-        <MainLayoutTopBar DatabaseSwitchAlert="@databaseSwitchAlert"
+        <ShellStatusBar DatabaseSwitchAlert="@databaseSwitchAlert"
                           ActiveWorkspaceTitle="@ActiveWorkspaceTitle"
                           ActiveNavigationTitle="@ActiveNavigation.Title"
                           ShellMode="@ShellMode"
@@ -245,14 +84,11 @@
     </TopBar>
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
-        @if (databaseDialogStartupMode && databaseDialogOpen)
-        {
+        @if (databaseDialogStartupMode && databaseDialogOpen) {
             <EmptyState Eyebrow="Database startup"
                         Title="Continue with the active database to load the workspace"
                         Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
-        }
-        else
-        {
+        } else {
             @Body
         }
     </Body>
@@ -263,26 +99,12 @@
 <DialogHost />
 <Tooltip />
 
-<MainLayoutDatabaseDialog IsOpen="@databaseDialogOpen"
-                          IsStartupMode="@databaseDialogStartupMode"
-                          DatabaseSelection="@databaseSelection"
-                          DatabaseProfileMessage="@databaseProfileMessage"
-                          DatabaseMessageClass="@ResolveDatabaseMessageClass()"
-                          DatabaseProfiles="@databaseProfiles"
-                          SelectedDatabaseProfileId="@selectedDatabaseProfileId"
-                          DatabaseDialogBusy="@databaseDialogBusy"
-                          CanManageDatabases="@CanManageDatabases"
-                          SelectedDialogProfileIsActive="@SelectedDialogProfileIsActive"
-                          SelectedDialogProfileIsPendingRestart="@SelectedDialogProfileIsPendingRestart"
-                          CanSwitchSelectedProfile="@CanSwitchSelectedProfile"
-                          DescribeDatabaseProvider="DescribeDatabaseProvider"
-                          DescribeDatabaseSource="DescribeDatabaseSource"
-                          DescribeResolutionSource="DescribeResolutionSource"
-                          SelectDatabaseProfile="SelectDatabaseProfileAsync"
-                          ContinueWithCurrentDatabase="ContinueWithCurrentDatabaseAsync"
-                          CloseDatabaseDialog="CloseDatabaseDialogAsync"
-                          OpenDatabaseSettings="OpenDatabaseSettingsAsync"
-                          SwitchDatabaseProfile="SwitchDatabaseProfileAsync" />
+<DatabaseProfileDialogSurface View="@DatabaseDialogPresentation"
+                              SelectDatabaseProfile="SelectDatabaseProfileAsync"
+                              ContinueWithCurrentDatabase="CloseDatabaseDialogAsync"
+                              CloseDatabaseDialog="CloseDatabaseDialogAsync"
+                              OpenDatabaseSettings="OpenDatabaseSettingsAsync"
+                              SwitchDatabaseProfile="SwitchDatabaseProfileAsync" />
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

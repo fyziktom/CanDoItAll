@@ -13,7 +13,7 @@ Complete Scheduler rendering: Calendar, Schedules, New schedule, History, target
 ## Validation
 
 ```powershell
-dotnet build src/UI/CanDoItAll.SchedulerPlanner.UI/CanDoItAll.SchedulerPlanner.UI.csproj --configuration SchedulerUiProof /m:1
+dotnet build src/UI/CanDoItAll.SchedulerPlanner.UI/CanDoItAll.SchedulerPlanner.UI.csproj --configuration Release /m:1
 ```
 
 See the [Scheduler boundary and proof record](../../../docs/architecture/scheduler-ui-boundary.md).

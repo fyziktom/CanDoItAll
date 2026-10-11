@@ -17,7 +17,10 @@ public sealed record ProcessInstancePlan(
     BudgetPlan Budgets,
     MonitoringPlan Monitoring,
     SecurityPlan Security,
-    string PlanHash);
+    string PlanHash) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessExecutableDefinitionClosure? ExecutableDefinitions { get; init; }
+}
 
 public sealed record ProcessInstancePlanHeader(
     ProcessInstancePlanId PlanId,

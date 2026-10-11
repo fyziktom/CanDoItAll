@@ -713,6 +713,7 @@ internal static class ProcessesApi
                 context,
                 authoritySource,
                 preparations,
+                launchService,
                 launchVariablePreparationService,
                 projectStructureProcessNodeService,
                 cancellationToken).ConfigureAwait(false);
@@ -772,6 +773,7 @@ internal static class ProcessesApi
         HttpContext context,
         IProcessLaunchOperatorAuthoritySource authoritySource,
         IProcessPreparedLaunchStore preparations,
+        ProcessLaunchApplicationService launchService,
         IProcessLaunchVariablePreparer launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         CancellationToken cancellationToken)
@@ -795,6 +797,8 @@ internal static class ProcessesApi
         var authority = input.ProjectId is null ? caller
             : await ResolveOperatorAsync(context, authoritySource, input.ProjectId, cancellationToken);
         var producerFingerprint = ProcessLaunchProducerRequests.InputFingerprint(input, caller);
+        var definitions = await launchService.ResolveForPreparationAsync(input.DefinitionKey, input.ProcessDefinitionId,
+            input.ProjectId, authority.ProjectAdmission, cancellationToken, input.LiveRunProfileKey);
         if (request.ProjectId is { } projectId &&
             projectId != Guid.Empty &&
             !string.IsNullOrWhiteSpace(request.ProjectNodeId))
@@ -804,16 +808,19 @@ internal static class ProcessesApi
                     new ProjectStructureProcessLaunchVariableBuildRequest(
                         projectId,
                         request.ProjectNodeId,
-                        request.DefinitionKey,
+                        definitions?.DefinitionKey ?? request.DefinitionKey,
                         request.ProcessDefinitionId is { } scopedDefinitionId ? new ProcessDefinitionId(scopedDefinitionId) : null,
                         string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
                         variables),
                     launchVariablePreparationService,
-                    cancellationToken).ConfigureAwait(false),
+                    cancellationToken,
+                    definitions).ConfigureAwait(false),
                 StringComparer.Ordinal);
         }
 
         return input with {
+            DefinitionKey = definitions?.DefinitionKey ?? input.DefinitionKey,
+            ResolvedDefinitions = definitions,
             Variables = variables,
             Authority = authority,
             ProjectAdmission = authority.ProjectAdmission,
@@ -1092,19 +1099,21 @@ internal sealed record ProcessApiContractResponse(
 /// </summary>
 /// <param name="DefinitionKey">
 /// Key of the process definition to launch, for example <c>blazor-app-delivery</c>; matched case-insensitively after
-/// trimming, and it takes precedence over <c>processDefinitionId</c>. When neither member selects a definition, the
-/// server falls back to the definition of the requested or first configured live-run profile, so always send one. An
+/// trimming. When both it and <c>processDefinitionId</c> are supplied, they must identify the same definition. When
+/// neither member selects a definition, the server uses the requested or first configured live-run profile, then
+/// the first configured definition if no profile exists. Send an explicit identity for a predictable selection. An
 /// unknown key fails the request.
 /// </param>
 /// <param name="ProcessDefinitionId">
-/// Identifier of the process definition (<c>definitionId</c> of an earlier launch response), used only when
-/// <c>definitionKey</c> is omitted or blank. An identifier that matches no definition is not rejected: the fallback
-/// described for <c>definitionKey</c> applies. The all-zero GUID fails the request.
+/// Identifier of the process definition (<c>definitionId</c> of an earlier launch response). When
+/// <c>definitionKey</c> is also supplied, both must agree. An explicitly unknown identifier, including the all-zero
+/// GUID, fails the request; it never selects a default definition.
 /// </param>
 /// <param name="LiveRunProfileKey">
 /// Key of a live-run profile, which chooses the roles, executor kinds and workflow bindings of the definition's steps,
 /// for example <c>generic-blazor-wasm-pwa-app</c>; matched case-insensitively. It must belong to the selected
-/// definition. Omitted means the first profile configured for that definition, if any; the applied key is returned
+/// definition. Omitted uses the published authored bindings when available; otherwise it selects the first profile
+/// configured for that definition, if any. The applied key is returned
 /// in <c>launchPlan.liveRunProfileKey</c>.
 /// </param>
 /// <param name="ProjectId">

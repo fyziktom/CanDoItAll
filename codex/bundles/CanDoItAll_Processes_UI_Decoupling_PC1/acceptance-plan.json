@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "assignment_id": "CDA-PROCESSES-UI-DECOUPLING-PC1",
+  "coverage_groups_not_test_counts": true,
+  "groups": [
+    {
+      "id": "PC-01",
+      "title": "Entry candidate",
+      "source_refs": "G01–G04",
+      "owner": "Current repository/sibling/worktree/configuration inspection",
+      "preserve": "No reset; changed/new/renamed sources and actual consumed dependencies recorded",
+      "oracle": "Source and configuration receipt; no invented build/test status",
+      "lane": "Entry",
+      "required": true
+    },
+    {
+      "id": "PC-02",
+      "title": "Preserved baseline",
+      "source_refs": "T01–T05",
+      "owner": "Existing native/component/browser tests",
+      "preserve": "Retain existing behavior/theory rows; separate existing failures from new regressions",
+      "oracle": "Exact baseline selections and observed results",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-03",
+      "title": "Dependency cut",
+      "source_refs": "P01/P10/P11/P19–P21",
+      "owner": "Native module versus new render library",
+      "preserve": "No Application/Runtime/Persistence/native module service edge in render closure; reuse suitable neutral projections",
+      "oracle": "Evaluated recursive graph and resolved dependencies, not name-only checks",
+      "lane": "Build + guard",
+      "required": true
+    },
+    {
+      "id": "PC-04",
+      "title": "Complete scenario host",
+      "source_refs": "P02–P09",
+      "owner": "All actual renderers and meaningful children",
+      "preserve": "No production DI/database/worker/credential requirement; no placeholder child closure",
+      "oracle": "Start independent host and exercise every family",
+      "lane": "Independent browser",
+      "required": true
+    },
+    {
+      "id": "PC-05",
+      "title": "Routes and queries",
+      "source_refs": "P12–P14",
+      "owner": "Three native page hosts/four routes",
+      "preserve": "Preserve processId/runId/launchPlanId/q/definitionKey/processStarted/mockScenario meanings and unavailable-target handling",
+      "oracle": "Actual route/back-forward/query round trip with correct selected native identity",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-06",
+      "title": "Catalog and definition selection",
+      "source_refs": "P02/P10",
+      "owner": "Native projection/catalog owner",
+      "preserve": "Search/filter/tree, selected definition, permissions and all current feed/catalog commands preserved",
+      "oracle": "Requested query and correct catalog/selection; no accidental mutation",
+      "lane": "Component + native",
+      "required": true
+    },
+    {
+      "id": "PC-07",
+      "title": "Definition draft across tabs",
+      "source_refs": "P02/R1",
+      "owner": "Stable active editor above Server tab unmount",
+      "preserve": "All eight detail tabs retained; unsaved fields/raw validation survive same-definition refresh",
+      "oracle": "Type sentinel, switch real tabs, assert raw text and zero writes before Save",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-08",
+      "title": "Definition commands",
+      "source_refs": "P02/P10",
+      "owner": "Native definition editor owner",
+      "preserve": "All currently exposed fields and save/publish/other native commands; correct version/refusal handling",
+      "oracle": "Actual native receipt and persisted selected definition/version",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-09",
+      "title": "Submission reconciliation",
+      "source_refs": "P02/P05/R1/R6",
+      "owner": "Editor submission owner",
+      "preserve": "Later edits retained; assigned IDs/revisions adopted without rebasing old content onto unrelated versions",
+      "oracle": "Held native commit/read-back plus subsequent edit and conflict controls",
+      "lane": "Component + integration",
+      "required": true
+    },
+    {
+      "id": "PC-10",
+      "title": "Role editing",
+      "source_refs": "P05",
+      "owner": "Native role owner + complete role dialog",
+      "preserve": "Executor/assignment/template/fallback/approval/allocation/workflow fields and raw GUID validation preserved",
+      "oracle": "All current field round trips and explicit invalid save rejection",
+      "lane": "Component + native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-11",
+      "title": "Step editing",
+      "source_refs": "P06",
+      "owner": "Native step owner",
+      "preserve": "Basic, operation, routes, roles, artifacts, subprocess mappings and selection preserved",
+      "oracle": "Actual command/persistence matching all edited fields and targets",
+      "lane": "Component + native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-12",
+      "title": "Interactive canvas",
+      "source_refs": "P04/P10",
+      "owner": "CanvasWorkbench renderer + native canvas command owner",
+      "preserve": "Toolbox, node/edge/selection/movement/context actions/recompose and floating windows preserved",
+      "oracle": "Real pointer/keyboard gestures, correct typed native command and graph result",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-13",
+      "title": "Canvas maximize lifecycle",
+      "source_refs": "P04/T05",
+      "owner": "Actual canvas JS and window state",
+      "preserve": "Selection/recomposition keep maximize and correct body lock; closing releases own lock",
+      "oracle": "Real JS/computed layout and no leaked lock/overlay after retirement",
+      "lane": "Browser",
+      "required": true
+    },
+    {
+      "id": "PC-14",
+      "title": "Template browsing and previews",
+      "source_refs": "P07",
+      "owner": "Native catalogue + real preview renderers",
+      "preserve": "Search/category/target selection, Markdown/Mermaid/canonical JSON/structure previews and source metadata",
+      "oracle": "Actual controls and safe/complete preview content, not text placeholders",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-15",
+      "title": "Template imports",
+      "source_refs": "P07/P10",
+      "owner": "Native template import owner",
+      "preserve": "Every currently exposed import kind, target, permissions/lint and honest outcome preserved",
+      "oracle": "Exact native target/receipt, persisted import; no duplicate on refresh",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-16",
+      "title": "Run details and subsections",
+      "source_refs": "P02/P03",
+      "owner": "Native run projection owner",
+      "preserve": "Launch, Activity, Control, Execution, Graphs, Coordination, Evidence and all exposed details retained",
+      "oracle": "Select actual run; each subsection uses the same requested identity and permitted data",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-17",
+      "title": "Live tabs and filters",
+      "source_refs": "P03",
+      "owner": "Native live projection/session owner",
+      "preserve": "Activity/Agents/Graphs/Tool history; project/global scope, status/history and selected-run behavior",
+      "oracle": "Real tab/filter changes and corresponding bounded native requests",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-18",
+      "title": "Bounded reads and polling",
+      "source_refs": "P02/P03/P10",
+      "owner": "One native read/poll owner per view",
+      "preserve": "Current lazy loading, history windows/event paging, one poll loop and clean retirement",
+      "oracle": "Query/event counts under clock control; no full-history load or render-triggered fan-out",
+      "lane": "Unit + native",
+      "required": true
+    },
+    {
+      "id": "PC-19",
+      "title": "Hidden run groups",
+      "source_refs": "P03",
+      "owner": "Native browser-state adapter and view owner",
+      "preserve": "Current hide/restore grouping/storage-key/retention behavior; no cross-profile/project presentation leak",
+      "oracle": "Fresh/reopened state and exact group identity; stale stored entries handled by current policy",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-20",
+      "title": "Retained launch intent",
+      "source_refs": "P02/T02",
+      "owner": "Native launch/preparation store",
+      "preserve": "Restore accepted browser intent; do not recapture a different project lifetime or fabricate missing preparation",
+      "oracle": "Existing exact retained-intent controls plus real native owner identity",
+      "lane": "Component + integration",
+      "required": true
+    },
+    {
+      "id": "PC-21",
+      "title": "Accepted launch and read-back failure",
+      "source_refs": "P02/T02",
+      "owner": "Native launch/continuation/link owners",
+      "preserve": "Accepted, started and delivered are distinct; a failed refresh or reopen cannot launch twice",
+      "oracle": "Single caller intent/run/preparation, native journal/continuation/link oracle",
+      "lane": "Integration + production browser",
+      "required": true
+    },
+    {
+      "id": "PC-22",
+      "title": "Explicit new launch intent",
+      "source_refs": "P02/R4",
+      "owner": "Origin-bound native owner + sessionStorage adapter",
+      "preserve": "New explicit user action only; delayed cleanup cannot clear successor state or launch against current unrelated target",
+      "oracle": "Held storage/launch completion with A→B→A and exact dispatch/key counts",
+      "lane": "Component + native",
+      "required": true
+    },
+    {
+      "id": "PC-23",
+      "title": "Run cancellation",
+      "source_refs": "P09/T03",
+      "owner": "Native operator client",
+      "preserve": "Duplicate gate, correct receipt identity, requested/cancelled/unknown/refused and committed-refresh warning preserved",
+      "oracle": "Existing nine source-expanded controls plus exact native effect; no replay on refresh",
+      "lane": "Component + integration",
+      "required": true
+    },
+    {
+      "id": "PC-24",
+      "title": "Operator actions and notes",
+      "source_refs": "P02/P03/P10",
+      "owner": "Native operator action owner",
+      "preserve": "All current action catalogue, required notes/approval and exact run/step identity preserved",
+      "oracle": "Native authorization/refusal and one admitted action on original target",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-25",
+      "title": "Authorized current run files",
+      "source_refs": "P08/P15–P17",
+      "owner": "Native file scope/coordinator/actions",
+      "preserve": "Current root re-resolution, real FileBrowser/FileInteraction, read-only 16 MiB viewer limit and supported actions",
+      "oracle": "Real bounded content/native scope; denied/stale source cannot be opened/downloaded",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-26",
+      "title": "File late errors",
+      "source_refs": "P08/R2",
+      "owner": "Origin-bound file session/operation",
+      "preserve": "Late Open/Activate/action errors and feedback cannot appear on a successor",
+      "oracle": "Noncooperative A error after B opens; B UI and busy state unchanged",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-27",
+      "title": "File cleanup and content lifetime",
+      "source_refs": "P08/R3",
+      "owner": "Actual owned file/browser/content sessions",
+      "preserve": "Detach old resources before awaited cleanup; independent content lease survives correctly; close only own opening",
+      "oracle": "Held disposal, two dialogs and A→B→A; exact disposal/lease counts",
+      "lane": "Component + native",
+      "required": true
+    },
+    {
+      "id": "PC-28",
+      "title": "Graphs, analytics and partial errors",
+      "source_refs": "P02/P03/R5",
+      "owner": "Native bounded projection + real Charts",
+      "preserve": "All graphs/totals/diagnostics; unavailable is not zero, stale is not current, denial does not retain access",
+      "oracle": "One lane fails while same-scope accepted lanes remain honest; actual chart/legend data",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-29",
+      "title": "Context freshness and lifetime",
+      "source_refs": "P02/P03/T01",
+      "owner": "Native AgentChatContext/snapshot mapper",
+      "preserve": "Current database/project lifetime, route/view/run/definition, focused dialogs and expiry preserved",
+      "oracle": "Atomic context publication; no extra projection query; removed/recreated target never gets old facts",
+      "lane": "Unit + native",
+      "required": true
+    },
+    {
+      "id": "PC-30",
+      "title": "Manager chat and attachments",
+      "source_refs": "P02",
+      "owner": "Native ChatExecutionOrchestrator + existing conversation renderers",
+      "preserve": "Messages, streaming, manager selection, attachments, status and current actions retained",
+      "oracle": "Real production UI with deterministic upstream and persisted message/attachment/effect oracles",
+      "lane": "Component + production browser",
+      "required": true
+    },
+    {
+      "id": "PC-31",
+      "title": "Voice and browser lifecycle",
+      "source_refs": "P02",
+      "owner": "Existing native voice/session/JS owners",
+      "preserve": "Microphone/speech/status/permission/unavailable controls and cleanup retained; no cross-opening callbacks",
+      "oracle": "Supported deterministic media/JS fixture and native adapter controls; state actual hardware/live TTS coverage separately",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-32",
+      "title": "Permissions and safe content",
+      "source_refs": "P02–P10/G02",
+      "owner": "Current native admission/governance/file/context owners",
+      "preserve": "Hidden versus enforced authority, safe errors, sanitization and no secrets/physical roots in generic views",
+      "oracle": "Denied native requests and adversarial text/URL/reference inputs; no fake admin grants",
+      "lane": "Native + browser",
+      "required": true
+    },
+    {
+      "id": "PC-33",
+      "title": "Workbench integration",
+      "source_refs": "G05/P10",
+      "owner": "Existing Workbench Execution UI + native launch/staffing/approval owners",
+      "preserve": "Completed WB6 links, workflow/process actions, retained preparation and relevant project lifetime behavior preserved",
+      "oracle": "Current targeted Workbench consumer controls and actual launch/link integration",
+      "lane": "Component + integration + browser",
+      "required": true
+    },
+    {
+      "id": "PC-34",
+      "title": "End-to-end native execution",
+      "source_refs": "P02/P10/G04",
+      "owner": "Real process/workflow/agent owners with deterministic external boundary",
+      "preserve": "Author/select/launch/observe/cancel-or-complete and read actual artifact/message result",
+      "oracle": "Native run ID/journal/project link and actual content; not a mocked successful root owner",
+      "lane": "Integration + production browser",
+      "required": true
+    },
+    {
+      "id": "PC-35",
+      "title": "Boundary negative controls",
+      "source_refs": "P01/P19–P21",
+      "owner": "Evaluated/rendered closure guard",
+      "preserve": "Forbidden transitive and unresolved relevant dependencies must fail; actual children included",
+      "oracle": "Deliberately contaminated guard fixtures are rejected; clean supported closure accepted",
+      "lane": "Light guard",
+      "required": true
+    },
+    {
+      "id": "PC-36",
+      "title": "Source and published assets",
+      "source_refs": "G03/P04/P08",
+      "owner": "Current build scripts/static web assets/renderer namespaces",
+      "preserve": "Real CSS/JS/Tailwind/_content, current supported Parity/Fast modes and clean published startup",
+      "oracle": "Actual computed styles, network responses, no unexpected console/errors or stale generated artifacts",
+      "lane": "Build + independent/production browser",
+      "required": true
+    },
+    {
+      "id": "PC-37",
+      "title": "Measured development loop",
+      "source_refs": "G03",
+      "owner": "Source/watch/asset graph",
+      "preserve": "Honest Web versus representative sandbox, warm/cold Razor/C#/CSS/JS save-to-visible observations",
+      "oracle": "Commands, configuration, samples and actual refresh/restart outcome; no guessed speedup",
+      "lane": "Measurement",
+      "required": true
+    },
+    {
+      "id": "PC-38",
+      "title": "Focused tests and registration",
+      "source_refs": "G04/T01–T05",
+      "owner": "Current actual test projects/solutions/CI",
+      "preserve": "CodeAnalytics union, counted discovery, unchanged behavioral obligations and refreshed assemblies",
+      "oracle": "Exact filters/counts/results and all real CI component selection registrations",
+      "lane": "Discovery + focused tests",
+      "required": true
+    },
+    {
+      "id": "PC-39",
+      "title": "Final frozen integration",
+      "source_refs": "G04/G05",
+      "owner": "Final actual app/sibling/configuration candidate",
+      "preserve": "Justified broad Stable once at final contract/composition freeze; separate browser/live/platform lanes",
+      "oracle": "Exact current trigger, command/traits/result and explicit invalidation/rerun record",
+      "lane": "Final gate",
+      "required": true
+    },
+    {
+      "id": "PC-40",
+      "title": "Portability and maintained docs",
+      "source_refs": "G02/G04",
+      "owner": "Current portability/secret/doc tooling",
+      "preserve": "All protected/new files covered; genuine findings fixed; intentional baseline changes reviewed",
+      "oracle": "Final enforcement without baseline-writing and current English docs/links",
+      "lane": "Static gate",
+      "required": true
+    },
+    {
+      "id": "PC-41",
+      "title": "Independent openings and disposal",
+      "source_refs": "P02/P03/P08/P09",
+      "owner": "Per-view session ownership",
+      "preserve": "Two workspaces/dialogs share no draft/operation gate; all late success/error/finally/close paths fenced",
+      "oracle": "Held operations, parameter echoes, same-ID reopening and retirement with positive controls",
+      "lane": "Component + browser",
+      "required": true
+    },
+    {
+      "id": "PC-42",
+      "title": "Residual census and delivery",
+      "source_refs": "G03/G05",
+      "owner": "Actual final route/render/effect inventory",
+      "preserve": "Zero in-scope unfinished active renderers; native/dormant rows explicitly classified; other candidates recorded only",
+      "oracle": "Feature matrix, graph/census, source pair and qualified closure report",
+      "lane": "Closure",
+      "required": true
+    }
+  ]
+}

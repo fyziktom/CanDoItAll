@@ -462,7 +462,7 @@ internal static class ProcessAgentChatContextBuilder
                 "definition-count",
                 shell is null
                     ? null
-                    : (shell.DefinitionCatalog.PublishedDefinitionCount + shell.DefinitionCatalog.DraftDefinitionCount)
+                    : shell.DefinitionCatalog.TotalDefinitionCount
                         .ToString(CultureInfo.InvariantCulture));
         }
 

@@ -18,7 +18,7 @@ refusal or known commit results. Unclassified exceptions remain uncertain outcom
 ## Validation
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.Workspace.Contracts --configuration WorkspaceSettingsUiProof /m:1
+dotnet build src/Modules/CanDoItAll.Modules.Workspace.Contracts --configuration Release /m:1
 ```
 
 See [the boundary and validation record](../../../docs/architecture/workspace-settings-core-ui-boundary.md).

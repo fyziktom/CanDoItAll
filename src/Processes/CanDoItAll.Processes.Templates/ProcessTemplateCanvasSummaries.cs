@@ -67,13 +67,17 @@ internal static class ProcessTemplateCanvasSummaryBuilder
     public static ProcessTemplateDefinitionCanvasAuthoringDefaults Build(
         string root,
         ProcessTemplateDefinitionDocument definition)
+        => Build(definition, LoadToolboxActions(root));
+
+    public static ProcessTemplateDefinitionCanvasAuthoringDefaults Build(ProcessTemplateDefinitionDocument definition,
+        IReadOnlyList<ProcessTemplateDefinitionCanvasToolboxActionSummary> toolboxActions)
         => new(
             definition.Steps
                 .Select(CreateStepSummary)
                 .OrderBy(step => step.Order)
                 .ThenBy(step => step.Key, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            LoadToolboxActions(root));
+            toolboxActions);
 
     private static ProcessTemplateDefinitionCanvasStepSummary CreateStepSummary(
         ProcessTemplateDefinitionStepDocument step)

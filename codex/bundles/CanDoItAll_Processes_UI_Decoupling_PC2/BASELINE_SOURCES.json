@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "review_commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+  "purpose": "Historical comparisons only. Never reset to this commit.",
+  "sources": [
+    {
+      "id": "B01",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+      "blob_sha": "ff0bf6946aa7d2e739c4b093960fd9c01700265e",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "coverage": "ranges: 3900-4035; 4035-4095",
+      "purpose": "Inherited shared generation/definition editor completion fence.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor"
+    },
+    {
+      "id": "B02",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionRoleEditorPanel.razor",
+      "blob_sha": "ca208898a195decd38b5848aa1484df01f5a30ee",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "coverage": "range: 365-475",
+      "purpose": "Old role OnParametersSet adopted authoritative SelectedRoleKey.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionRoleEditorPanel.razor"
+    },
+    {
+      "id": "B03",
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionStepEditorPanel.razor",
+      "blob_sha": "8a19180fb7c139f044f168864624f509a309187d",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "coverage": "range: 420-620",
+      "purpose": "Same inherited DecisionRoleKey expression using projection-selected step.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Modules/CanDoItAll.Modules.Processes/Components/ProcessDefinitionStepEditorPanel.razor"
+    },
+    {
+      "id": "B04",
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionEditorProjectionService.cs",
+      "blob_sha": "8f89a33cdfdae73bcad7a8e3c949ea6d6c5d0457",
+      "commit": "8549e6a18a22638d595bc76ba4240a61ba70351d",
+      "coverage": "range: 14-38 plus whole-file blob identity comparison",
+      "purpose": "Per-instance snapshot dictionary existed before PC1; whole blob unchanged.",
+      "url": "https://github.com/fyziktom/CanDoItAll/blob/8549e6a18a22638d595bc76ba4240a61ba70351d/src/Processes/CanDoItAll.Processes.Application/ProcessDefinitionEditorProjectionService.cs"
+    }
+  ]
+}

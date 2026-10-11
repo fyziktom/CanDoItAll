@@ -58,6 +58,7 @@ public enum ProcessTemplateStructureNodeKind
 [Description("Opaque catalog item key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessTemplateCatalogItemKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessTemplateCatalogItemKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -77,6 +78,7 @@ public readonly record struct ProcessTemplateCatalogItemKey
 [Description("Opaque version of the catalog projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessTemplateCatalogVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessTemplateCatalogVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -271,11 +273,15 @@ public sealed record ProcessTemplateImportCommand(
     ProcessTemplateCatalogItemKey ItemKey,
     ProcessTemplateCatalogVersionToken? ExpectedVersionToken,
     ProcessTemplateCatalogQueryProjection Query,
-    ProcessDefinitionStepKey? TargetStepKey);
+    ProcessDefinitionStepKey? TargetStepKey) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessTemplateImportCommandResult(
     ProcessTemplateImportCommandReceipt Receipt,
-    ProcessTemplateCatalogProjection Projection);
+    ProcessTemplateCatalogProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Template catalog for the selected definition, including previews and existing imported components.")]
 public sealed record ProcessTemplateCatalogProjection(
@@ -306,4 +312,7 @@ public sealed record ProcessTemplateCatalogProjection(
     [property: Description("Template components already imported into the current definition.")]
     IReadOnlyList<ProcessTemplateImportedComponentProjection> ImportedComponents,
     [property: Description("Most recent template import receipt, or null when none is recorded.")]
-    ProcessTemplateImportCommandReceipt? LastImportReceipt);
+    ProcessTemplateImportCommandReceipt? LastImportReceipt) {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
+    public ProcessAuthoringObservation? Observation { get; init; }
+}

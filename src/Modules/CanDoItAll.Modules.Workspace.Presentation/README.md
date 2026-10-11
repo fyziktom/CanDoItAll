@@ -19,8 +19,8 @@ the existing ProviderHistory.Abstractions service and policy types.
 ## Validation
 
 ```powershell
-dotnet build src/Modules/CanDoItAll.Modules.Workspace.Presentation --configuration WorkspaceSettingsUiProof /m:1
-dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration WorkspaceSettingsUiProof --filter FullyQualifiedName~WorkspaceUi /m:1
+dotnet build src/Modules/CanDoItAll.Modules.Workspace.Presentation --configuration Release /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration Release --filter FullyQualifiedName~WorkspaceUi /m:1
 ```
 
 See [the boundary record](../../../docs/architecture/workspace-settings-core-ui-boundary.md).

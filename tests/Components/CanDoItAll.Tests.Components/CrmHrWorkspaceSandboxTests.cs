@@ -105,6 +105,25 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
 
     // --- Workforce -------------------------------------------------------------------------------
 
+    [Fact]
+    public void Deferred_workforce_header_keeps_its_record_snapshot_when_the_owner_clears_selection() {
+        var view = new CrmHrWorkforceSandboxView(context.Services.GetRequiredService<CrmHrSandboxPartyStore>());
+        view.Apply(CrmHrWorkforceWorkspaceSandboxScenario.SelectedExisting);
+        var displayName = view.SelectedWorkspace!.DisplayName;
+        var cut = context.Render<CrmHrWorkforceWorkspaceSurface>(p => p.Add(x => x.View, view));
+        var header = cut.FindComponents<Split>().Single(component =>
+            component.Markup.Contains("Selected workforce record", StringComparison.Ordinal));
+        var deferredHeader = header.Instance.ChildContent!;
+
+        view.Apply(CrmHrWorkforceWorkspaceSandboxScenario.Catalog);
+
+        Assert.Null(view.SelectedWorkspace);
+        var deferred = context.Render(deferredHeader);
+        Assert.Contains(displayName, deferred.Markup, StringComparison.Ordinal);
+        cut.Render();
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-record-dialog']"));
+    }
+
     [Theory]
     [InlineData("catalog", "data-testid=\"crmhr-workforce-catalog\"")]
     [InlineData("selected-existing", "Elena Ward")]

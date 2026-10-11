@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed partial class AgentVoiceApiIntegrationTests {
     private const string TranscriptionsPath = "/api/agents/voice/transcriptions";
     private const string SpeechPath = "/api/agents/voice/speech";

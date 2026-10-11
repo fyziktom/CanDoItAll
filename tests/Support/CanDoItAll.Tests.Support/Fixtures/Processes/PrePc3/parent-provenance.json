@@ -1,0 +1,30 @@
+{
+  "SchemaSourceCommit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+  "SourceDescription": "Retained ProcUiProofPC2 binaries, checked against the predecessor DTO and native launch fixture; no template source change since PC2. Actual predecessor launch preparation captured at a rejecting test commit boundary, then serialized by the predecessor persistence mapper. No production effects executed.",
+  "HasExecutableDefinitionsProperty": false,
+  "PlanHash": "sha256:40fc46317a4e5f0d83f11e09ccc8ca485bd13dbb18637cab74a72eed94b451c5",
+  "PlanSha256": "ee72f03df9ab35fb223e122dff7a573c4613ce1b2abb69ac6b9051c93ef29014",
+  "CommitSha256": "159becebbf681fcadf11bc9c784b2d2a4b42db6e427a11f92e0748615db7bb96",
+  "Binaries": [
+    {
+      "Name": "CanDoItAll.Processes.Builder",
+      "InformationalVersion": "1.0.0\u002B8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+      "Sha256": "bd566d86d692eb70f2e906cee9984a17989f517a3d3abf5f049cf474e070609a"
+    },
+    {
+      "Name": "CanDoItAll.Processes.Persistence",
+      "InformationalVersion": "1.0.0\u002B8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+      "Sha256": "47c7777bb485f945aad651564af5f32d8a71e8055efef84fb86ec3632c48a187"
+    },
+    {
+      "Name": "CanDoItAll.Tests.Unit",
+      "InformationalVersion": "1.0.0\u002B8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+      "Sha256": "c9b374d60c4a109fe4b24f12cea5648f482f074b6d831a9279ef955fa87b1915"
+    },
+    {
+      "Name": "CanDoItAll.Processes.Application",
+      "InformationalVersion": "1.0.0\u002B8951ffdf7d35aaf0b00b7fe8220f1aad8d9e3d59",
+      "Sha256": "7689030fa4da4138d9a686dc3b1a1211660240f9c066ea56ce4937ae16786f12"
+    }
+  ]
+}

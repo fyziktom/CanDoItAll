@@ -83,7 +83,7 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
         Assert.Equal(currentRun, Assert.Single(workspace.ProjectRunIds!));
         Assert.All(workspace.Events, item => Assert.Equal(currentRun, item.RunId));
         foreach (var excluded in new[] { oldRun, foreignRun, legacyRun }) {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => query.GetRuntimeWorkspaceAsync(workspaceRequest with { SelectedRunId = excluded }));
+            await Assert.ThrowsAsync<ProcessProjectionAccessException>(() => query.GetRuntimeWorkspaceAsync(workspaceRequest with { SelectedRunId = excluded }));
         }
         Assert.Equal(oldRun, (await query.GetRunDetailAsync(new(oldRun)))!.RunId);
         Assert.Empty((await query.GetLiveProcessesAsync(new(now, TimeSpan.FromDays(1), 10, ProjectBinding:

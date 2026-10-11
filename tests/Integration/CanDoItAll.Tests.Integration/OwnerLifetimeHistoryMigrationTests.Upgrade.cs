@@ -25,7 +25,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await using var readback = await ContextAsync(restarted);
         await MigrateCurrentAsync(readback);
         Assert.Empty(await SnapshotDataAsync(readback));
-        Assert.Equal(161, readback.Model.GetEntityTypes().Count());
+        Assert.Equal(164, readback.Model.GetEntityTypes().Count());
         Assert.False(readback.Database.HasPendingModelChanges());
     }
 
@@ -67,8 +67,7 @@ public sealed partial class OwnerLifetimeHistoryMigrationTests {
         await using var database = await ContextAsync(services);
         await MigrateCurrentAsync(database);
         var project = new Project { Name = "New project", Slug = Guid.NewGuid().ToString("N") };
-        database.Add(project);
-        await database.SaveChangesAsync();
+        await InsertLegacyProjectAsync(database, project);
         await InsertLegacyReferencesAsync(database, project.Id);
         var references = await ReadReferencesAsync(database);
         Assert.Equal(5, references.Length);

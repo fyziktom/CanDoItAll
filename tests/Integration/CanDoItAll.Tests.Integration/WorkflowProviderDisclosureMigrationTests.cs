@@ -29,7 +29,7 @@ public sealed class WorkflowProviderDisclosureMigrationTests {
             expectedSchema = await SnapshotSchemaAsync(database);
 
             await database.GetService<IMigrator>().MigrateAsync(CurrentMigration(database));
-            Assert.Equal(161, database.Model.GetEntityTypes().Count());
+            Assert.Equal(164, database.Model.GetEntityTypes().Count());
             Assert.False(database.Database.HasPendingModelChanges());
             Assert.Equal(CurrentMigration(database), (await database.Database.GetAppliedMigrationsAsync()).Last());
             Assert.Equal(expectedEvents, await SnapshotEventsAsync(database));

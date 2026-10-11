@@ -19,7 +19,7 @@ remains invalid until corrected; no clamping hides a parse or range error.
 ## Validation
 
 ```powershell
-dotnet build src/UI/CanDoItAll.Workspace.UI --configuration WorkspaceSettingsUiProof /m:1
+dotnet build src/UI/CanDoItAll.Workspace.UI --configuration Release /m:1
 ```
 
 Use [the sandbox](../../Sandboxes/CanDoItAll.Workspace.UiSandbox/README.md) for interactions

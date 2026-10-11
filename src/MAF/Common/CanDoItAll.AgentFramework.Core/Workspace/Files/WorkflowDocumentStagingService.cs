@@ -3,6 +3,7 @@ using System.ComponentModel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+[Description("A validated PDF stored in the managed workspace for a later workflow conversion. The receipt describes the stored file; no conversion or execution has occurred.")]
 public sealed record WorkflowDocumentStagingResult(
     [property: Description("Managed workspace-relative path to supply as document.to-markdown sourcePath.")] string RelativePath,
     [property: Description("Validated media type: application/pdf.")] string ContentType,

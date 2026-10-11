@@ -146,6 +146,7 @@ public enum ProcessDefinitionStepLintSection
 [Description("Opaque version of the step editor projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionStepEditorVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionStepEditorVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -165,6 +166,7 @@ public readonly record struct ProcessDefinitionStepEditorVersionToken
 [Description("Opaque branch outcome key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionBranchOutcomeKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionBranchOutcomeKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -184,6 +186,7 @@ public readonly record struct ProcessDefinitionBranchOutcomeKey
 [Description("Opaque artifact expectation key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionArtifactExpectationKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionArtifactExpectationKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -427,11 +430,15 @@ public sealed record ProcessDefinitionStepEditorCommand(
     ProcessDefinitionCatalogItemKey DefinitionKey,
     ProcessDefinitionStepCommandKind CommandKind,
     ProcessDefinitionStepEditorVersionToken? ExpectedVersionToken,
-    ProcessDefinitionStepDraftProjection Draft);
+    ProcessDefinitionStepDraftProjection Draft) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessDefinitionStepEditorCommandResult(
     ProcessDefinitionStepCommandReceipt Receipt,
-    ProcessDefinitionStepEditorProjection Projection);
+    ProcessDefinitionStepEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Definition step list, editable step snapshots, selected step and validation findings.")]
 public sealed record ProcessDefinitionStepEditorProjection(
@@ -454,4 +461,7 @@ public sealed record ProcessDefinitionStepEditorProjection(
     [property: Description("Validation findings for the current authoring snapshot.")]
     ProcessDefinitionStepLintProjection Lint,
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
-    ProcessDefinitionStepCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionStepCommandReceipt? LastCommandReceipt) {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
+    public ProcessAuthoringObservation? Observation { get; init; }
+}

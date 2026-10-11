@@ -29,8 +29,8 @@ No feature scoped CSS or feature JavaScript was added.
 From the repository root, use a free task-owned port:
 
 ```powershell
-dotnet watch --project src/Sandboxes/CanDoItAll.Workspace.UiSandbox --configuration WorkspaceSettingsUiProof --no-launch-profile -- --urls http://127.0.0.1:5149
-dotnet publish src/Sandboxes/CanDoItAll.Workspace.UiSandbox --configuration WorkspaceSettingsUiProof --output artifacts/workspace-settings-sandbox-publish /m:1
+dotnet watch --project src/Sandboxes/CanDoItAll.Workspace.UiSandbox --configuration Debug --no-launch-profile -- --urls http://127.0.0.1:5149
+dotnet publish src/Sandboxes/CanDoItAll.Workspace.UiSandbox --configuration Release --output artifacts/workspace-settings-sandbox-publish /m:1
 ```
 
 Run the published DLL with its output directory as the working directory and both
@@ -41,7 +41,7 @@ lifetime; release completes a held operation in its original store.
 ## Validation
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration WorkspaceSettingsUiProof --filter FullyQualifiedName~WorkspaceUi /m:1
+dotnet test tests/Components/CanDoItAll.Workspace.UI.Tests --configuration Release --filter FullyQualifiedName~WorkspaceUi /m:1
 ```
 
 See [the proof record](../../../docs/architecture/workspace-settings-core-ui-boundary.md)

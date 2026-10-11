@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "assignment_id": "CDA-PROCESSES-INTEGRATION-PC4",
+  "review_commit": "a13c1add605d1ceec43dedc0513acb7ac5959f96",
+  "execution_pin": false,
+  "group_count": 36,
+  "groups": [
+    {
+      "id": "E01",
+      "stage": "S0",
+      "title": "Entry signer and owned work",
+      "obligation": "Request local PGP unlock immediately; retain approved signing environment, protect operator work and verify incremental signed commits.",
+      "findings": []
+    },
+    {
+      "id": "E02",
+      "stage": "S0",
+      "title": "Current execution tuple",
+      "obligation": "Record branch/tree/drift, siblings, SDK/configuration, isolated resources and no execution pin.",
+      "findings": []
+    },
+    {
+      "id": "E03",
+      "stage": "S0",
+      "title": "Fresh impact and regression baseline",
+      "obligation": "Use fresh CodeAnalytics or stated evidence-based fallback; reproduce source-derived findings without treating hypotheses as executed defects.",
+      "findings": [
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ]
+    },
+    {
+      "id": "E04",
+      "stage": "S0",
+      "title": "Stable shared",
+      "obligation": "Reuse repository shared unchanged by default; one task archive, no version/manifest pin and no historical bundle rewrite.",
+      "findings": []
+    },
+    {
+      "id": "H01",
+      "stage": "S1",
+      "title": "Actual HTTP producer closure",
+      "obligation": "Project+node HTTP preparation and compile consume one captured effective executable closure.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H02",
+      "stage": "S1",
+      "title": "Explicit empty drivers",
+      "obligation": "A published empty driver list never causes template driver contribution to reappear through HTTP or native producers.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H03",
+      "stage": "S1",
+      "title": "Authored settings and bindings",
+      "obligation": "Distinct authored/project driver settings and artifact bindings govern actual stored variables/assignments.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H04",
+      "stage": "S1",
+      "title": "Publication race consistency",
+      "obligation": "Held selection/enrichment followed by republish cannot create mixed-version preparation or plan.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H05",
+      "stage": "S1",
+      "title": "Replay before recomputation",
+      "obligation": "Retained intent returns original preparation/run without definition/context reload or enrichment and without duplicate effects.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H06",
+      "stage": "S1",
+      "title": "Producer input fingerprint",
+      "obligation": "Original raw producer input/caller semantics stay distinct from enriched variables and selected internal closure.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H07",
+      "stage": "S1",
+      "title": "Canonical supported input matrix",
+      "obligation": "Test key/id/omission/profile and supported normalization; reject explicit unknown/inconsistent identities, keep exact storage identity.",
+      "findings": [
+        "F04"
+      ]
+    },
+    {
+      "id": "H08",
+      "stage": "S1",
+      "title": "Authority and public boundary",
+      "obligation": "No wire-deserialized trusted closure; capability/caller/profile/project lifetime/archive are checked at native boundaries.",
+      "findings": [
+        "F01"
+      ]
+    },
+    {
+      "id": "H09",
+      "stage": "S1",
+      "title": "API descriptions and producer consumers",
+      "obligation": "Correct XML/OpenAPI drift, inspect all helper callers, preserve Workbench and captured-child producer behavior.",
+      "findings": [
+        "F01",
+        "F04"
+      ]
+    },
+    {
+      "id": "L01",
+      "stage": "S2",
+      "title": "Authentic predecessor fixtures",
+      "obligation": "Use provenance-backed old payloads with no closure and optional/no admission; verify serialization and plan hash integrity.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "L02",
+      "stage": "S2",
+      "title": "Same-origin retained reuse",
+      "obligation": "Authoritatively provable legacy candidate reuses exact run/plan/assignments without resolving a replacement definition.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "L03",
+      "stage": "S2",
+      "title": "Unproven is not absent",
+      "obligation": "Historical candidate with unproven origin yields safe actionable recovery/refusal, never automatic null-to-new-child behavior.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "L04",
+      "stage": "S2",
+      "title": "Lifetime and profile isolation",
+      "obligation": "Different/recreated project, database profile and global/project mismatch do not acquire old authority or expose another origin.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "L05",
+      "stage": "S2",
+      "title": "Full child recovery path",
+      "obligation": "Actual parent/subprocess re-entry covers active/completed/stopped children, bridges and retries with no duplicate child.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "L06",
+      "stage": "S2",
+      "title": "Old state immutability",
+      "obligation": "Preserve accepted plans, receipts and payloads across upgrade/restart; no fabricated current-lifetime backfill.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "R01",
+      "stage": "S3",
+      "title": "Resource-backed reimport",
+      "obligation": "Delete then ImportRole/ImportProcess in independent scopes succeeds under valid inputs without stale dictionary collision.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "R02",
+      "stage": "S3",
+      "title": "Head resource ownership",
+      "obligation": "Usage/source/materialized keys handled consistently; no unrelated resource removal or global template mutation.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "R03",
+      "stage": "S3",
+      "title": "AddRole reuse and references",
+      "obligation": "New role does not inherit deleted role defaults; role selection and owned visual references remain correct.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "R04",
+      "stage": "S3",
+      "title": "Immutable history preservation",
+      "obligation": "Existing publications/receipt snapshots/prepared launches remain byte/hash stable across draft delete and import.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "R05",
+      "stage": "S3",
+      "title": "Role replay conflict and postcommit",
+      "obligation": "Same operation replay allocates no new key/revision; stale version and lost response follow native receipt rules.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "V01",
+      "stage": "S4",
+      "title": "Real HTTP/native proof",
+      "obligation": "Exercise actual API routes plus native producers with authoritative database/plan/variable assertions.",
+      "findings": [
+        "F01",
+        "F04"
+      ]
+    },
+    {
+      "id": "V02",
+      "stage": "S4",
+      "title": "Real role browser journey",
+      "obligation": "Drive resource-backed delete/import and fresh context/reopen through production renderers and read-back.",
+      "findings": [
+        "F03"
+      ]
+    },
+    {
+      "id": "V03",
+      "stage": "S4",
+      "title": "Legacy operator path",
+      "obligation": "Show supported legacy reuse or explicit unresolved-origin outcome; full path asserts no second child.",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "id": "V04",
+      "stage": "S4",
+      "title": "Restart and workflow floor",
+      "obligation": "Retain old preparation across later publication/new owned OS PID and exact native workflow/result completion.",
+      "findings": []
+    },
+    {
+      "id": "V05",
+      "stage": "S4",
+      "title": "UI and integration preservation",
+      "obligation": "Protect dirty drafts, late results, canvas, files, chat/context/attachments, cancellation, voice and Workbench consumers according to impact.",
+      "findings": []
+    },
+    {
+      "id": "V06",
+      "stage": "S4",
+      "title": "Fresh test assemblies and counts",
+      "obligation": "Changed filters list/discover exact expected and expanded cases; no zero-test pass or stale no-build evidence.",
+      "findings": []
+    },
+    {
+      "id": "V07",
+      "stage": "S4",
+      "title": "Clean source dependency reproducibility",
+      "obligation": "Verify intended sibling tuple in a fresh standard Release build; resolve CI/local pin difference with evidence, not blind repin.",
+      "findings": []
+    },
+    {
+      "id": "C01",
+      "stage": "S5",
+      "title": "Portability and required broad gate",
+      "obligation": "Final static enforcement and impact-triggered broad campaign/qualified source bridge; no per-stage full-suite loop.",
+      "findings": []
+    },
+    {
+      "id": "C02",
+      "stage": "S5",
+      "title": "Structural dependency and active census",
+      "obligation": "Verify real light UI/public/deferred/assets edges; classify residual native hosts without artificial extraction.",
+      "findings": []
+    },
+    {
+      "id": "C03",
+      "stage": "S5",
+      "title": "Preserved transfer and schema boundaries",
+      "obligation": "No transfer guard removal, history loss or new schema workaround; owner/transfer/model checks remain valid.",
+      "findings": []
+    },
+    {
+      "id": "C04",
+      "stage": "S5",
+      "title": "Truthful evidence and source checkpoints",
+      "obligation": "Exact source/sibling/test identities, reported versus executed outcomes, failure preservation and verified signed commits.",
+      "findings": []
+    },
+    {
+      "id": "C05",
+      "stage": "S5",
+      "title": "Maintainable completion record",
+      "obligation": "Update current docs outside shared/historical bundles; state completed dimensions and remaining independent work.",
+      "findings": []
+    }
+  ],
+  "note": "Coverage groups, not test/class/file/commit counts. Scope is corrective implementation and integration closure, not a new persistence or UI extraction."
+}

@@ -5,14 +5,8 @@
 @inject IProcessWorkspaceProjectionClient Client
 @inject ILogger<ProcessRunCancellationAction> Logger
 
-@if (message is not null) {
-    <Alert AlertStyle="@tone" data-testid="process-run-cancellation-result">@message</Alert>
-}
-@if (Status is ProcessProjectedRunStatus.Active or ProcessProjectedRunStatus.NeedsAttention) {
-    <Button Text="Cancel run" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-            Disabled="@(busy || commandFinished)" IsBusy="@busy" Click="CancelAsync"
-            data-testid="process-run-cancel" />
-}
+<ProcessRunCancellationSurface Status="Status" Message="@message" Tone="tone" Busy="busy"
+                               CommandFinished="commandFinished" CancelAsync="CancelAsync" />
 
 @code {
     [Parameter, EditorRequired] public ProcessRunId RunId { get; set; }

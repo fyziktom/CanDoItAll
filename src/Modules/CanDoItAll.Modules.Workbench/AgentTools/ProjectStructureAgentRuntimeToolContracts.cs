@@ -42,7 +42,9 @@ public sealed record ProjectStructureCompactNode(
     double? X = null,
     double? Y = null,
     int? DurationSeconds = null,
-    ProjectStructureNodeActionCapabilities? ActionCapabilities = null);
+    ProjectStructureNodeActionCapabilities? ActionCapabilities = null,
+    DateTimeOffset? StartUtc = null,
+    DateTimeOffset? EndUtc = null);
 
 public sealed record ProjectStructureReadToolData(
     Guid ProjectId,

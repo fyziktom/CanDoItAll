@@ -17,8 +17,8 @@ waits. No PostgreSQL, Quartz scheduler, production application or live Agent sta
 Build-backed discovery and execution:
 
 ```powershell
-dotnet test tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests --configuration SchedulerUiProof --list-tests
-dotnet test tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests --configuration SchedulerUiProof --no-build
+dotnet test tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests --configuration Release --list-tests
+dotnet test tests/Components/CanDoItAll.SchedulerPlanner.UI.Tests --configuration Release --no-build
 ```
 
 Registered in Components and Stable test solutions and each CI component selection.

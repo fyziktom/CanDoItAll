@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "CD1",
+  "title": "Application surfaces and components-decoupling closure",
+  "repository": "fyziktom/CanDoItAll",
+  "review_branch": "components-decoupling",
+  "review_commit": "fd9e43547457eb18901185da47de123efdfd8108",
+  "comparison_base": "a13c1add605d1ceec43dedc0513acb7ac5959f96",
+  "execution_pin": false,
+  "entry_point": "prompt.md",
+  "language": "English",
+  "single_archive": true,
+  "shared_policy": {
+    "use_existing": true,
+    "ship_shared": false,
+    "require_version": null,
+    "default_action": "UNCHANGED",
+    "minimal_repo_correction_by_codex_only_if_necessary": true
+  },
+  "objective": "Complete every real remaining active rendering boundary and the repository-wide components-decoupling closure in one staged assignment.",
+  "required_known_clusters": [
+    "Dashboard",
+    "Runtime Capabilities and CapabilityFact",
+    "Database profile dialog",
+    "MainLayout utilities and database flyout",
+    "MainLayout status top bar"
+  ],
+  "stages": [
+    "S0",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5"
+  ],
+  "acceptance_plan": "acceptance-plan.json",
+  "evidence_template": "evidence-template.json",
+  "review_product_execution": "NOT_RUN",
+  "review_semantic_census": "NOT_EXECUTED_EXHAUSTIVELY",
+  "product_completion_state": "NOT_RUN",
+  "completion_success": "COMPONENTS_DECOUPLING_COMPLETE",
+  "completion_blocked": "COMPONENTS_DECOUPLING_BLOCKED",
+  "signing": {
+    "request_local_unlock_at_entry": true,
+    "incremental_signed_commits": true,
+    "verify_each_commit": true,
+    "automatic_push_authorized": false
+  },
+  "operations": {
+    "configurations": [
+      "Debug",
+      "Release"
+    ],
+    "bundle_named_build_outputs": false,
+    "reuse_isolated_fixtures": true,
+    "protect_ordinary_5032": true,
+    "global_prune": false
+  },
+  "scope_exclusions": [
+    "unrelated backend/module-ownership redesign",
+    "authoring-history transfer/export implementation",
+    "catalog paging enhancement",
+    "new authentication/transport",
+    "unapproved paid live-provider campaigns"
+  ],
+  "validation": {
+    "affected_tests_first": true,
+    "codeanalytics_plus_real_consumers": true,
+    "native_browser_required": true,
+    "full_stable_per_stage": false,
+    "final_broad_gate": "Current repository policy and actual impact; source-addressed reuse cannot waive a required fresh gate."
+  }
+}

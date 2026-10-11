@@ -7829,6 +7829,148 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_artifact_ledger_events", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringHeadEntity", b => {
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Criticality")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Lifecycle")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("OperatingMode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("PublishedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "DefinitionKey");
+
+                    b.HasIndex("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "Lifecycle");
+
+                    b.ToTable("process_authoring_heads", null, t => {
+                            t.HasCheckConstraint("CK_process_authoring_heads_revision", "\"Revision\" > 0");
+
+                            t.HasCheckConstraint("CK_process_authoring_heads_scope", "(\"ProjectId\" = '00000000-0000-0000-0000-000000000000'::uuid) = (\"ProjectLifetimeId\" = '00000000-0000-0000-0000-000000000000'::uuid)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringPublicationEntity", b => {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "DefinitionKey", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("process_authoring_publications", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringReceiptEntity", b => {
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CallerId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.HasKey("DatabaseProfileId", "CallerId", "OperationId");
+
+                    b.ToTable("process_authoring_receipts", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b => {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");

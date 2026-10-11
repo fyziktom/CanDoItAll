@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "CDA-PROCESSES-AUTHORING-PC3",
+  "version": "1.1",
+  "target_executor": "Codex GPT-6 Astra Max",
+  "review_commit": "095c418b7981511ba9c96a75b7d2950ff4f326a6",
+  "review_date": "2026-10-09",
+  "execution_pin": false,
+  "language": "en",
+  "entry": "prompt.md",
+  "standalone_assignment": true,
+  "acceptance_plan": "acceptance-plan.json",
+  "coverage_group_count": 50,
+  "pc1_carry_forward_count": 42,
+  "pc2_carry_forward_count": 31,
+  "product_evidence_status": "NOT_RUN",
+  "commit_policy": "Local PGP unlock at entry; verified signed incremental checkpoints; no automatic push.",
+  "scope": "Explicit bounded implementation of native durable authoring, additive canonical schema, coherent catalog/editors, immutable publication and exact launch/recovery; preserve the existing UI cut.",
+  "operational_limits": "Only task-owned isolated fixtures; no real profile migration/deployment, paid inference, auth rewrite or unrelated engine redesign.",
+  "delivery": "single_archive_task_only",
+  "shared_policy": {
+    "mode": "reuse_existing_repository_baseline",
+    "repository_path": "codex/bundles/UI_Decoupling_Shared_Bundle",
+    "version_pin": false,
+    "manifest_pin": false,
+    "separate_download_required": false,
+    "default_change_policy": "NO_CHANGE",
+    "necessary_change_owner": "Codex, in the current repository, with minimal reviewed signed changes",
+    "instructions": "SHARED_BUNDLE_POLICY.md"
+  },
+  "revision_note": "Packaging/policy revision only; original PC3 product scope and acceptance obligations retained; no new source review."
+}

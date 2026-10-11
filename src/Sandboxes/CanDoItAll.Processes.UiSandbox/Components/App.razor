@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" data-asset-mode="@ProcessesAssets.Mode">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-symbols.css"]" />
+    <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
+    <link rel="stylesheet" href="@Assets[ProcessesAssets.ThemePath]" />
+    <link rel="stylesheet" href="@Assets["CanDoItAll.Processes.UiSandbox.styles.css"]" />
+    <link rel="stylesheet" href="@Assets["sandbox.css"]" />
+    <ImportMap />
+    <CanvasLibHeadAssets />
+    <CanDoItAll.Components.Mermaid.MermaidHeadAssets />
+    <CanDoItAll.Components.Charts.ChartsHeadAssets />
+    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+</head>
+<body>
+    <CanvasLibBodyAssets IncludePreviewAssets="true" IncludeCalendarAssets="false" />
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+@using CanDoItAll.AgentFramework.UI.Chat
+
+<AgentChatSurface Presentation="Binding.Presentation" Intent="Binding.Intent">
+    <ActivityContent>
+        @if (Binding.Activity is { } activity) {
+            <AgentActivitySurface State="activity" />
+        }
+    </ActivityContent>
+</AgentChatSurface>
+
+@code {
+    [Parameter, EditorRequired] public required ChatWorkspaceBinding Binding { get; set; }
+}

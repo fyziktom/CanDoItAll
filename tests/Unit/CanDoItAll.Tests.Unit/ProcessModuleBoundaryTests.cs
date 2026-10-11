@@ -48,6 +48,7 @@ public sealed class ProcessModuleBoundaryTests
     [
         ("CanDoItAll.Modules.Processes", "CanDoItAll.Processes.Application"),
         ("CanDoItAll.Modules.Processes", "CanDoItAll.Processes.Persistence"),
+        ("CanDoItAll.Modules.Processes", "CanDoItAll.Processes.UI"),
         ("CanDoItAll.Processes.Persistence", "CanDoItAll.Processes.Application"),
         ("CanDoItAll.Components.Git", "CanDoItAll.Git")
     ];
@@ -62,7 +63,7 @@ public sealed class ProcessModuleBoundaryTests
         ["CanDoItAll.Git"] = ["CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure.Abstractions"],
         ["CanDoItAll.Modules.Processes"] =
         [
-            "CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure", "CanDoItAll.AppComponents",
+            "CanDoItAll.SharedKernel", "CanDoItAll.Infrastructure", "CanDoItAll.AppComponents", "CanDoItAll.Processes.UI",
             "CanDoItAll.FileTools.Integration.Abstractions", "CanDoItAll.Memory.Abstractions", "CanDoItAll.Memory.Application",
             "CanDoItAll.AgentFramework.Capabilities.Abstractions", "CanDoItAll.AgentFramework.Tooling",
             "CanDoItAll.AgentFramework.Components", "CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models",
