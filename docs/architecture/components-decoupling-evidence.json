@@ -5,7 +5,7 @@
   "source_tuple": {
     "entry": "663fb1391e4acb12439173f1cb1d287fb1f24685",
     "production_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-    "report_head_at_recording": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+    "report_head_at_recording": "5afa860d0451d70c27bc874592aa3dca250fed6a",
     "branch": "components-decoupling",
     "sdk": "10.0.303",
     "platform": "Windows",
@@ -179,6 +179,16 @@
       "sha256": "313a75383360bc2fddd4ca95718e02a95687b5d1d7cace6a07f464aba73bef29",
       "count": 39,
       "qualification": "Current Release binaries recorded after browser rebuild8. Historical focused attempts retain their own TRX; no retroactive claim that this file captured an earlier binary."
+    },
+    "browser_asset_assertion_build": {
+      "path": ".artifacts/cd1-closure-20261011/browser-build-9.log",
+      "sha256": "8367eb47bf4c208e909c22c300b0805bcf06afff56c4aebc2bd9c2843633a8b2",
+      "bytes": 51812
+    },
+    "browser_current_binary": {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/CanDoItAll.Tests.Playwright.dll",
+      "sha256": "5e5efe387389a844f7c33662ab849f2feb054e3a3532368e3c4b66957dfcb217",
+      "bytes": 4932096
     }
   },
   "lanes": [
@@ -487,6 +497,36 @@
         },
         "failed": []
       }
+    },
+    {
+      "id": "native-published-asset-isolation",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~ApplicationDashboardNativeBrowserTests",
+      "discovered": 2,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/published-assets-discovery.log",
+        "sha256": "8cdbda8b5867813c27dd38178374e1839c0dc458c9e50ed588465288dde150db",
+        "bytes": 544
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/native-published-assets.trx",
+        "sha256": "ba9400d5ce4da14cd65cfc0e432a92376ca1bccc2d4b3670da4b892ff3b0353b",
+        "bytes": 4860,
+        "counts": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/native-published-assets.json",
+          "sha256": "d0b1d97f8d6e2e3ee73626b67e3fa979ae55d71dbbb04d3ab23c095733225133",
+          "bytes": 668
+        }
+      },
+      "qualification": "Additional assertions prove actual published theme and absence of the Web development asset manifest; duplicate source/published case identities do not increase the26 unique browser total."
     }
   ],
   "broad_stable": {
@@ -1270,23 +1310,23 @@
     },
     {
       "path": "output/playwright/components-decoupling-closure/published-native-dashboard-populated.png",
-      "sha256": "728f97e5f4a88344109676234075380d8d66b6ca868501e2cc9a3c2145e8c59b",
-      "bytes": 165864
+      "sha256": "b29fdeab396178ee9095b5edde0d8dbb303eeb9aea19e8f05ca17615559cea6b",
+      "bytes": 165866
     },
     {
       "path": "output/playwright/components-decoupling-closure/published-native-dashboard-stale.png",
-      "sha256": "69f4d693089b81951234d30709aec821b274247461ab7bbd52d4b422b79ea9e5",
-      "bytes": 163816
+      "sha256": "36a4de0d4b9d3a9518b049300531e7d9d7f10943816f423f3ec93510517e3771",
+      "bytes": 163778
     },
     {
       "path": "output/playwright/components-decoupling-closure/published-native-dashboard.json",
-      "sha256": "2517a28aed15eeaac4ba07ecfdfad3d608bf322bc88072226a318bc0711d25e3",
+      "sha256": "313854c35156cde3661dae8436dc8419ffb1c83c36a4af27dc063768b584cfb2",
       "bytes": 382
     },
     {
       "path": "output/playwright/components-decoupling-closure/published-native-runtime.png",
-      "sha256": "69fa61da112b1293c8d3f04364fbc552e9be0a2c3a51713ad5e055c1539832d6",
-      "bytes": 235545
+      "sha256": "c2dad1a5a66202b6f0357c1732fb3d143220315beac7ad815f754a8c78b8d411",
+      "bytes": 235884
     },
     {
       "path": "output/playwright/components-decoupling-closure/published-profiles-constrained.png",
@@ -1320,18 +1360,18 @@
     },
     {
       "path": "output/playwright/components-decoupling-closure/source-native-dashboard-stale.png",
-      "sha256": "8aeca3bdb0fd71f003ab8bc0295afb0f1fb2a8ee0f561ec85a145d607fbe45bb",
-      "bytes": 163460
+      "sha256": "6c59de504e215b82519404e0159e1159e6c58fba3895a896b71da31fb219550b",
+      "bytes": 163893
     },
     {
       "path": "output/playwright/components-decoupling-closure/source-native-dashboard.json",
-      "sha256": "dc37b52626ebc9010e163b85e8ef7236035fa910da7acdcf8adc341daa6ae26e",
+      "sha256": "80ba14dfd1661eb0015ec582e5a8169967e4f8c568e13f9eee51d2e2bd28c4e4",
       "bytes": 383
     },
     {
       "path": "output/playwright/components-decoupling-closure/source-native-runtime.png",
-      "sha256": "973633512148413fe3c410b2a072c953cbf71cce8e0dbada4ea4221a05806f48",
-      "bytes": 235404
+      "sha256": "67a9e0f953814a134bddadb4457d94d19e03b003605c4d7a91928b5a6be8d4d3",
+      "bytes": 235398
     },
     {
       "path": "output/playwright/components-decoupling-closure/source-profiles-constrained.png",
@@ -1430,7 +1470,19 @@
         "0.1.18"
       ]
     },
-    "scoped_css_js": "NOT_APPLICABLE: no feature-owned scoped CSS/JS was introduced or moved. Existing sibling assets and theme are exercised in source and published browser modes."
+    "scoped_css_js": "NOT_APPLICABLE: no feature-owned scoped CSS/JS was introduced or moved. Existing sibling assets and theme are exercised in source and published browser modes.",
+    "published_native_assets": {
+      "sourceManifestAbsent": true,
+      "copiedThemeSha256": "25AB6ACDBFFAA7591D92162707A7AC5BC4060CAE017ED7362D2414A77A938D29",
+      "contentRoot": "C:\\Users\\lucys\\AppData\\Local\\Temp\\data-sources-browser\\da30e6fa115d483caf8c50954ae9ae23\\publish",
+      "copiedAssetCount": 805,
+      "receipt": {
+        "path": "output/playwright/data-sources-hosts/20261011T140537268Z-432b71ebd4ae43d5907308f829380472/published-assets.json",
+        "sha256": "9008b2e3dde39670d48058a43f935e949cc935b7ac1dae6b4e2ffe6f836eeb9c",
+        "bytes": 259
+      },
+      "environment_qualification": "Published Web runs in Development only to expose its explicit test readiness endpoint; the runtime source-asset manifest is absent. Independent published sandbox runs Production."
+    }
   },
   "rendering_guard": {
     "status": "PASS",
@@ -1442,14 +1494,14 @@
     "portability": {
       "status": "PASS",
       "scan": {
-        "path": ".artifacts/cd1-closure-20261011/portability-precommit-3.json",
-        "sha256": "59275473373bb77fb3e9127cfa238a11005041874ee26a64afba377be3269b43"
+        "path": ".artifacts/cd1-closure-20261011/portability-assets.json",
+        "sha256": "cf645c7106dbad4cbc7cf78d9d256d1719e1f20b990fc0947c0c53080e9f813c"
       },
       "allowances": 15384,
       "review": "One additional CI shell: pwsh occurrence for the rendering guard; existing portable CI interpreter, no elevation. All prior route/display deltas reviewed with their source checkpoints. Final enforcement ran without --write-baseline.",
       "files": 9472,
-      "findings": 37720,
-      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-precommit-3.log"
+      "findings": 37728,
+      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-assets.log"
     },
     "documentation": {
       "status": "PASS",
@@ -1457,7 +1509,8 @@
       "evidence_validator_cases": 9,
       "logs": [
         ".artifacts/cd1-closure-20261011/documentation-evidence-1.log",
-        ".artifacts/cd1-closure-20261011/documentation-2.log"
+        ".artifacts/cd1-closure-20261011/documentation-2.log",
+        ".artifacts/cd1-closure-20261011/documentation-assets.log"
       ],
       "retained_failure": "documentation-1.log identified the missing new test-project README, now supplied."
     },
@@ -1503,6 +1556,10 @@
     {
       "commit": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
       "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 b680693caccddf9398c991307c413da1e9581c2d"
+    },
+    {
+      "commit": "5afa860d0451d70c27bc874592aa3dca250fed6a",
+      "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 7d392a42a3cde07da968ea2fee90a03530dc17ef"
     }
   ],
   "acceptance": [
@@ -1804,6 +1861,19 @@
       ".artifacts/mcp-installs/CanDoItAll.Mcp.CodeAnalytics/failed/failed-20261010-101825372",
       ".artifacts/pc4-recovery-20261010/codeanalytics-smoke"
     ],
-    "qualification": "Prior inactive cleanup-denied paths are not retried. Current fixture/private state will be removed after last use; no cleanup claim while it is running."
+    "qualification": "Prior inactive cleanup-denied paths are not retried. Current fixture/private state will be removed after last use; no cleanup claim while it is running.",
+    "proof_safety": {
+      "preliminary_exact": {
+        "path": ".artifacts/cd1-closure-20261011/exact-secret-proof-preliminary.json",
+        "sha256": "90dca1c6596dd36458a7a9f609a501b16084da214e03e2ec19e4dd6c6f7893ad",
+        "bytes": 492
+      },
+      "heuristic_review": {
+        "path": ".artifacts/cd1-closure-20261011/heuristic-finding-review.json",
+        "sha256": "188f3037243fb52db10e35889f57917673a8d45e5d2e40e7ef30cde6489fb0e4",
+        "bytes": 5716
+      },
+      "final_required_after_tests": true
+    }
   }
 }

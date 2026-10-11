@@ -197,6 +197,11 @@ projection lag, controlled owner-read failure, retained totals, retry, back navi
 Runtime utility/refresh. The temporary owned-database table rename is restored in finally.
 Seeded run history is data proof, not workflow execution. Expected server read errors are retained;
 page-error and failed-asset collections are empty in both cases.
+The published Web assertion also confirms 805 copied assets, the exact copied theme digest
+and absence of the development runtime asset manifest. Thus the published host cannot obtain
+these assets from the checkout through that manifest. Native published tests retain Development
+only for their explicit readiness endpoint; the independent published sandbox uses Production.
+Both native Dashboard modes passed again with this additional assertion.
 
 The cross-workspace selection discovered 21 cases: 20 passed initially; one old Workbench test
 expected pre-PC4 dialog dismissal. It now verifies the retained original intent, closes explicitly

@@ -102,6 +102,16 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
             Directory.CreateDirectory(ArtifactDirectory);
             await File.WriteAllTextAsync(Path.Combine(ArtifactDirectory, "publish.log"), await output + await error);
             Assert.Equal(0, publishing.ExitCode);
+            Assert.False(File.Exists(Path.Combine(publishedDirectory, "CanDoItAll.Web.staticwebassets.runtime.json")),
+                "Published proof must not resolve assets through a development source manifest.");
+            Assert.True(File.Exists(Path.Combine(publishedDirectory, "wwwroot", "css", "output.css")));
+            await File.WriteAllTextAsync(Path.Combine(ArtifactDirectory, "published-assets.json"), System.Text.Json.JsonSerializer.Serialize(new {
+                sourceManifestAbsent = true,
+                copiedThemeSha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    await File.ReadAllBytesAsync(Path.Combine(publishedDirectory, "wwwroot", "css", "output.css")))),
+                contentRoot = publishedDirectory,
+                copiedAssetCount = Directory.EnumerateFiles(Path.Combine(publishedDirectory, "wwwroot"), "*", SearchOption.AllDirectories).Count()
+            }));
         }
         await StartProcessAsync();
     }
