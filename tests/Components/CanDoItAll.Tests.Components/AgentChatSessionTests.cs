@@ -218,6 +218,55 @@ public sealed class AgentChatSessionTests {
     }
 
     [Fact]
+    public async Task Run_detail_completion_reconciles_the_transcript_from_an_earlier_workspace_read() {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var thread = CreateSession(agent.Id);
+        var running = CreateRunningRun(agent.Id, thread.Id);
+        var message = new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.Assistant, "The approved mutation was saved.", DateTimeOffset.UtcNow, 1);
+        var messages = new List<ChatMessageRecord> { message };
+        var completedThread = thread with { Messages = messages, UpdatedAtUtc = message.CreatedAtUtc, LatestExecutionRunId = running.Id };
+        var completed = running with { State = ExecutionState.Completed, CompletedAtUtc = message.CreatedAtUtc };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, thread, running));
+        reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(completed, completedThread, [], []));
+        using var session = Session(service);
+
+        Assert.True(await session.LoadAsync(agent.Id, thread.Id, false));
+        messages.Clear();
+
+        Assert.Equal(ExecutionState.Completed, session.Workspace!.SelectedRun!.State);
+        Assert.Equal(message, Assert.Single(session.Workspace.SelectedSession!.Messages));
+        Assert.Equal(completedThread.UpdatedAtUtc, session.Workspace.SelectedSession.UpdatedAtUtc);
+        Assert.Empty(thread.Messages);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Run_detail_cannot_supply_a_missing_transcript_or_one_from_another_agent_or_thread(bool? differentAgent) {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var thread = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, thread.Id);
+        var unrelated = differentAgent switch {
+            true => thread with { AgentId = Guid.NewGuid() },
+            false => thread with { Id = Guid.NewGuid() },
+            null => null
+        };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, thread, run));
+        reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(run, unrelated, [], []));
+        using var session = Session(service);
+
+        Assert.False(await session.LoadAsync(agent.Id, thread.Id, false));
+
+        Assert.Null(session.Workspace);
+        Assert.Contains("run is not available", session.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Explicit_missing_session_never_relabels_the_fallback_session() {
         var (service, reads) = CreateReads();
         var agent = CreateAgent();

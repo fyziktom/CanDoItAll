@@ -108,12 +108,17 @@ public sealed class AgentChatSession(
                     return false;
                 }
                 if (detail.Run.Id != selectedRunId || detail.Run.AgentId != nextAgent.Id
-                    || detail.Run.ChatSessionId != nextWorkspace.SelectedSessionId) {
+                    || detail.Run.ChatSessionId != nextWorkspace.SelectedSessionId
+                    || nextWorkspace.SelectedSessionId.HasValue && detail.ChatSession is null
+                    || detail.ChatSession is { } runSession && (runSession.Id != nextWorkspace.SelectedSessionId || runSession.AgentId != nextAgent.Id)) {
                     ErrorMessage = "The requested run is not available for this thread.";
                     Revision++;
                     return false;
                 }
-                nextWorkspace = nextWorkspace with { SelectedRun = detail.Run with { PendingApprovals = detail.Run.PendingApprovals.ToImmutableArray() } };
+                nextWorkspace = CopyWorkspace(nextWorkspace with {
+                    SelectedRun = detail.Run,
+                    SelectedSession = detail.ChatSession
+                });
             }
             AcceptAgent(nextAgent);
             Workspace = nextWorkspace;
