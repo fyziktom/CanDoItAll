@@ -1,60 +1,162 @@
 # Processes integration PC4 validation
 
-Status: **IN PROGRESS — fresh Release builds and all 18 browser journeys pass; final Stable execution and cleanup remain**.
-Tested source: `ca195c794349d4e4eb653bacb7605ed83df86c4b`.
-The [machine record](processes-integration-pc4.json) contains exact test identities,
-commands, source candidates, raw failures and acceptance dispositions. The
+Status: **COMPLETE for implementation and required validation; prior tool-directory cleanup remains explicitly blocked**.
+Tested executable source: `ca195c794349d4e4eb653bacb7605ed83df86c4b`.
+The [machine record](processes-integration-pc4.json) contains commands, test identities,
+source tuples, original failures and all acceptance dispositions. The
 [architecture record](../architecture/processes-integration-pc4.md) describes the corrections.
 
-## Current closure campaign
+## Current closure result
 
-The operator resumed PC4 after storage recovery. Entry was clean
-`8eba867a69d1a9987ec1793760ac8c9a657e4bd8`; product/test source still matches
-`ca195c794349d4e4eb653bacb7605ed83df86c4b`. Subsequent protected-path differences
-are maintained Markdown guidance. Components and FileTools remain at the same clean
-commits recorded below. All new execution uses **Release**, SDK 10.0.303, sibling
-source dependencies and serialized shared outputs.
+All **36 acceptance groups**, **123 carry-forward rows** and stages S0–S5 have current
+evidence. HTTP enrichment/compilation share one captured authorized definition closure;
+predecessor recovery reuses only proven origin and refuses an unproven retained candidate
+without a replacement child; role deletion removes owned head material so Add/ImportRole/
+ImportProcess preserve exact defaults and unrelated immutable data. The final proof also
+covers original workflow, chat, file, cancellation, voice, scope and replay behavior.
 
-Fresh product, Stable and Playwright builds pass. Build-backed Stable discovery matches
-all **17,346 exact identities across 34 projects**. A temporary runner aggregation error
-occurred only after every discovery completed; the corrected total was independently
-recomputed from all complete discovery logs and both identity lists. The original
-harness failure is retained. Fresh Chromium execution passes **18/18 PC4 browser cases**,
-including native voice/files/chat, resource deletion/import, HTTP/Workbench agreement,
-independent sessions, actual OS restart/prepared workflow and predecessor recovery.
-The earlier five screenshots were also deleted during storage cleanup; current browser
-artifacts replace their availability rather than retroactively restoring old raw files.
+The operator resumed after storage recovery at clean
+`8eba867a69d1a9987ec1793760ac8c9a657e4bd8`. Product/test source still matches `ca195c794`;
+subsequent protected-path changes are Markdown guidance. Fresh proof uses **Release**,
+Windows, SDK **10.0.303**, clean Components
+`f3745356182444656edfdef56aa827095632d3ea` and FileTools
+`3a080ecd31068a77c1e1bd639f7a78e21c93db85`. FileTools' current CI pin
+`498b36825bd5a5222429972af120b04becf4b3f6` has the same tree
+`6bc360281b6ad13ddec5e813f0a00e26b5bc7d6d`; no repin was required.
+SharedInfo is `30330978cf48d702382663a3d5231880fc034936`. This resume changes no product,
+test, sibling or shared-bundle source. Standard outputs were reused and builds serialized.
 
-Portability tooling and final no-write enforcement pass with **15,380 reviewed findings
-unchanged**. Both instruction-package integrity checks pass. The current Release model
-has no pending canonical migration changes; no database update was performed.
-The existing EF CLI emits its 10.0.3 versus runtime 10.0.4 version warning.
+| Fresh check | Outcome |
+| --- | --- |
+| Product Release build | PASS; 192.74 s |
+| Stable Release build | PASS; 72.77 s |
+| Playwright Release build | PASS; 60.62 s |
+| Stable discovery | 17,346 cases, 34 canonical projects |
+| Complete Stable execution | **17,401 passed**, zero failed/skipped; 361.15 min summed shard command time |
+| Integration / Unit / Components | 3,460 / 9,588 / 2,975 passed |
+| Remaining 31 Stable projects | 1,378 passed |
+| Chromium native browser union | **18/18 passed**, 636.52 s |
+| Portability static | PASS; 15,380 reviewed findings unchanged; final enforcement without baseline write |
+| Canonical pending-model check | PASS; no pending changes and no database update |
+| PC4/shared package integrity and helper checks | PASS |
+| Documentation validation | PASS; 407 maintained Markdown files |
 
-Docker fixture creation stalled before a container existed. Only its exact owned CLI
-and empty volume were removed. The same installer-pinned, checksum-verified PostgreSQL
-18.6 Windows distribution now serves the single isolated native fixture on loopback
-55924 (`server_version_num=180006`). The fixture is retained until the last required
-test and will then be removed; no shared Docker/WSL restart or ordinary database use
-occurred. The initial native setup script also required trimming the newline from its
-DPAPI credential input before initialization; no product or database test failed in
-that setup step.
+The broad gate is a **fresh complete union of 63 class shards across 34 projects**, using
+the canonical repository shard runner and Stable filter from [Testing](../testing.md),
+matching Release assembly hashes and a complete TRX for every shard. All shard indices
+are included and run serially. Browser proof is separate. Reconciliation checks discovery
+multiplicities, expanded theories, distinct execution IDs and exact outcomes. Each class
+belongs to exactly one completed shard. Nonserializable theory rows can share a parent
+test ID; those groups are explicitly reconciled with the discovered theory and separate
+row execution IDs.
+Seven nonserializable theory stubs expand into 55 additional execution rows:
+16 in Memory, 34 in Unit and five in Integration. Every expansion is accounted for.
+The longest local shard took 33.11 minutes.
+Current CI gives each of three host shards 180 minutes and each of five Linux shards
+90 minutes, including their own build/setup. Local serial execution and its finer
+partition do not certify those remote budgets; no timeout or filter was changed.
+Eight unit display labels are repeated because the adapter truncates long arguments;
+their multiplicities are preserved rather than silently deduplicated. The full identity
+manifest and SHA256 receipts are under `resumed_closure.reconciliation`.
+Five Unit labels contain supplementary Unicode characters that TRX writes as literal
+UTF-16 surrogate escape pairs. Their exact discovered counterparts are recorded alongside
+the unchanged raw labels; no other display-name differences are ignored.
+Earlier partial campaigns and overlapping focused runs contribute no additional total.
+
+An application crash stopped the initial unsharded Integration process and its owned
+database. Its last log write was at 18:49:59 UTC on 2026-10-10, retaining 1,667 passing
+console rows but no complete TRX, so it contributes zero to the final total. The existing
+database cluster recovered and was reused. Whole-class batches now preserve complete result files at
+bounded checkpoints; this is a complete sharded union, not one uninterrupted invocation.
+A second app crash then stopped Integration shard 9 before it produced a complete TRX.
+All 51 completed shards (15,529 passes) survived and were checked before reuse. The same
+native data directory recovered again, and only the unfinished shard was retried in a
+new attempt directory. Its interrupted first attempt contributes zero to the final total.
+
+A temporary discovery-runner aggregation error occurred after all 34 discovery commands
+completed. Its corrected total was independently recomputed from the complete logs;
+the original harness failure remains recorded. No product assertion was changed.
+The restarted runner's initial process-identity guard compared a parsed timestamp with
+a string; that preflight error was corrected before any tests started and is retained
+separately from product outcomes.
+Initial native fixture setup also required trimming the newline from its encrypted
+credential input before initialization. This was a setup-script correction; no product
+or database test failed in that setup step.
+The EF CLI emitted its existing 10.0.3 versus runtime 10.0.4 warning.
+
+## Browser, architecture and evidence review
+
+The 18-case union covers role deletion/reimport, independent editors, lost-response and
+read-back recovery, HTTP/Workbench publication agreement, native workflow/chat/files/
+cancellation, both voice scopes, actual OS restart/exact prepared workflow, canvas/import
+durability and known/unproven predecessor origin after same-ID project recreation.
+Native read-back and stored plan/resource assertions supply behavioral proof.
+
+The current index hashes **71 browser files**; six 1920×1080 screenshots
+were visually inspected, including normal workflow state, maximized canvas, role dialogs,
+Workbench launch and retained run detail. Fields and primary/footer actions are visible;
+overlays and scroll ownership remain usable. The reviewed nine Processes renderers and
+their active owners have no remaining forbidden rendering edge. Structural UI decoupling
+is closed; no new renderer extraction or asset graph change was needed.
+
+Captured traces contain no HTTP response status 400 or higher. Six restart traces retain
+old pages while owned hosts stop, producing expected socket/negotiation console errors.
+Both voice traces also record a fixture init-script TypeError on `about:blank` before
+navigation, when `mediaDevices` is absent. The actual application-page assertions pass
+with four requests, three track retirements, two starts and zero model requests per scope.
+Deliberately unavailable projection reads and disposed-provider teardown logs are retained.
+This is not a claim that all browser/server logs are empty. Deterministic media/provider
+fixtures do not prove live speech or paid model services.
 
 The restored CodeAnalytics tool produced scoped snapshot
-`snap-20261010161841-a5c372cc`: one Processes Application project, 102 documents,
-307 types, 3,713 members and zero diagnostics. Nine retained-recovery references agree
-with current source. External HTTP/Workbench/Razor/test consumers remain outside this
-one-project index and are covered by explicit source review and executable checks.
-Components MCP remains absent from discovery; no UI implementation change was required.
-All 13 existing PC4/maintenance checkpoints were reverified against the configured
-OpenPGP fingerprint. This resume makes no shared-bundle or sibling source edit.
+`snap-20261010161841-a5c372cc`: one Application project, 102 documents, 307 types,
+3,713 members, zero diagnostics and nine retained-recovery references. HTTP/Workbench/
+Razor/test consumers are outside this index and were reviewed explicitly and executed.
+Components MCP was absent from discovery. No repository-wide semantic-index completeness
+claim is made. Existing Fast/Parity evidence applies only to the unchanged asset graph.
 
-The remaining required gate is one complete fresh Stable execution at this frozen
-executable source, followed by exact TRX reconciliation, owned-resource cleanup and the
-signed closure report. Previous interrupted campaigns remain incomplete. Detailed
-current commands, discovery, source identities and receipts are in the machine record's
-`resumed_closure` field and ignored `.artifacts/pc4-closure-20261010` proof directory.
+Current raw proof is in `.artifacts/pc4-closure-20261010` and `output/playwright`.
+Exact fixture-credential scanning covers proof files and every uncompressed trace member;
+heuristic findings were reviewed as public synthetic test data or executable expressions.
+The current safety receipt reports zero exact credential occurrences and no unreadable or
+oversized text omission. Historical missing raw files were not retroactively restored.
+
+## Signatures and resource disposition
+
+All 13 preceding PC4/maintenance commits were reverified using fingerprint
+`96E836FAA8854EE98ABC10903C206549E1D7EAD6`. The new build/browser checkpoint is
+`3ca1fe0c8e22c3cc806fc14733d73c413f847779`, with verified parent `8eba867a69d1a9987ec1793760ac8c9a657e4bd8`.
+The final report-only commit references the tested source and is verified after creation;
+its hash is not inserted into itself. No push, merge, deployment or history rewrite occurred.
+
+Docker fixture setup stalled before a container existed. Its exact owned CLI and empty
+volume were removed. One checksum-verified installer-pinned PostgreSQL 18.6 native cluster
+on `127.0.0.1:55924` served browser and Stable lanes. After the last test its exact process
+was stopped, the listener was released, and its runtime/data, archive and encrypted
+credential were removed. All **40 preexisting containers** retain their IDs, states,
+start times, mounts and ports, including the ordinary 5032 database. Standard Release
+outputs and installed MCP tooling are preserved.
+
+**Cleanup blocker:** automatic approval review rejected removal of two inactive, untracked
+prior tool-recovery directories, reporting only `blocked by policy`:
+
+- `.artifacts/mcp-installs/CanDoItAll.Mcp.CodeAnalytics/failed/failed-20261010-101825372` — 33,034,877 bytes.
+- `.artifacts/pc4-recovery-20261010/codeanalytics-smoke` — 61,514 bytes.
+
+They remain; their deletion is not claimed. The historical Windows 55904 listener belongs
+to the shared Docker backend and was not terminated. Current PC4 fixture cleanup is
+verified separately from those explicitly retained resources. No Docker/WSL restart,
+global prune or offline VHD compaction was performed during this resume.
+
+Authoring-aware portable transfer/export remains safely refused pending its separate
+versioned-history/remapping design. Database paging for large catalogs is also separate
+work. Local Windows results are not a dispatched multi-platform GitHub CI run.
 
 ## Earlier attempts and storage recovery (historical)
+
+The following execution and cleanup history retains its original source/configuration
+scope and incomplete outcomes. The current result above supersedes its open product gate;
+it does not change a failed/interrupted run into a pass or restore deleted artifacts.
 
 On October 10 the operator removed `.artifacts` after further crashes. The prior native
 test server and runner are gone. The maintained machine record retains the reported
@@ -125,7 +227,7 @@ TestLabBrowserFixture (23.31 GiB), and PluginsBrowserFixture (22.70 GiB). These 
 were inventoried, not deleted. The operator's independent `.mcp-state` deletion (reported
 as 25 GB) was excluded from the focused scan and from claimed cleanup savings.
 
-## Source and signatures
+### Source and signatures
 
 The operator subsequently cleared `.mcp-state` and the previously listed large build
 folders, then requested cleanup of the remaining main-repository `bin` directories and
@@ -195,7 +297,7 @@ and expected-parent checks using fingerprint `96E836FAA8854EE98ABC10903C206549E1
 Production last changed at `e9472752`; later checkpoints change tests or documentation. A report-only
 commit references the tested source, avoiding a circular self-hash.
 
-## Isolated resources and builds
+### Isolated resources and builds
 
 The first fresh ProcIntegrationPC4 build exhausted disk; its owned process and incomplete
 output were cleaned and the failure retained. Focused PC4 builds subsequently refreshed
@@ -229,7 +331,7 @@ All 34 test assemblies identify source `ca195c7`, and executable source and sibl
 are unchanged. The new campaign records discovery, binary hashes and a complete TRX per
 project. Its running or partial results are not a completed Stable gate.
 
-## Focused proof and replacement sets
+### Focused proof and replacement sets
 
 Each selection was discovered from a matching freshly built assembly. Counts are not
 additive across intersecting runs; zero discovery never counts as PASS.
@@ -264,7 +366,7 @@ tests separately cover active/completed/failed/blocked cases. A later OS attempt
 before Blazor interactivity because its context had already dismissed startup. Independent
 contexts using the actual startup flow fixed the test synchronization. Both failures remain.
 
-## Native behavior and rendered review
+### Native behavior and rendered review
 
 Real HTTP routes cover captured publication/explicit-empty drivers, authored settings and
 bindings, held enrichment plus republish/retirement, capability/caller checks, retry,
@@ -306,7 +408,7 @@ Bounded same-configuration Windows/native-PG/ProcIntegrationPC4 observations: kn
 startup 28,082 ms, restart 12,057 ms, reentry 654/215 ms; unproven-origin startup 16,994 ms,
 restart 11,113 ms, refusal 159/177 ms. These are samples, not a speedup or statistical benchmark.
 
-## Final gate and residuals
+### Final gate and residuals
 
 Full tracked portability scan passes no-write enforcement with 15,380 reviewed executable
 findings. Eight intentional PC4 allowances concern public definition/profile aliases;
