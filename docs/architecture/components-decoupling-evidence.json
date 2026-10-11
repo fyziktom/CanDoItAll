@@ -5,7 +5,7 @@
   "source_tuple": {
     "entry": "663fb1391e4acb12439173f1cb1d287fb1f24685",
     "production_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-    "report_head_at_recording": "5afa860d0451d70c27bc874592aa3dca250fed6a",
+    "report_head_at_recording": "5ce7db59501b300c6f98af50481a256cac755f67",
     "branch": "components-decoupling",
     "sdk": "10.0.303",
     "platform": "Windows",
@@ -40,7 +40,13 @@
       "EXTRACTED_RENDERER": 342
     },
     "active_remaining": 0,
-    "unclassified": 0
+    "unclassified": 0,
+    "final_activation_metadata_review": {
+      "path": ".artifacts/cd1-closure-20261011/final-activation-metadata-review.json",
+      "sha256": "ca21ad65e3dd770f491a0094cf009a3e36c4741b3d0e1e94580382cb2f91347d",
+      "explicit_bootstrap_callers": 32,
+      "nonrendering_logger_references": 38
+    }
   },
   "codeanalytics": {
     "health": {
@@ -1494,14 +1500,15 @@
     "portability": {
       "status": "PASS",
       "scan": {
-        "path": ".artifacts/cd1-closure-20261011/portability-assets.json",
-        "sha256": "cf645c7106dbad4cbc7cf78d9d256d1719e1f20b990fc0947c0c53080e9f813c"
+        "path": ".artifacts/cd1-closure-20261011/portability-activation-review.json",
+        "sha256": "8a3d46ba5f138dea971509765f3ee77c2ca5b1dfd5bbf17a385bddab1d9a9ec3",
+        "bytes": 24745719
       },
       "allowances": 15384,
       "review": "One additional CI shell: pwsh occurrence for the rendering guard; existing portable CI interpreter, no elevation. All prior route/display deltas reviewed with their source checkpoints. Final enforcement ran without --write-baseline.",
       "files": 9472,
       "findings": 37728,
-      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-assets.log"
+      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-activation-review.log"
     },
     "documentation": {
       "status": "PASS",
@@ -1510,7 +1517,8 @@
       "logs": [
         ".artifacts/cd1-closure-20261011/documentation-evidence-1.log",
         ".artifacts/cd1-closure-20261011/documentation-2.log",
-        ".artifacts/cd1-closure-20261011/documentation-assets.log"
+        ".artifacts/cd1-closure-20261011/documentation-assets.log",
+        ".artifacts/cd1-closure-20261011/documentation-activation-review.log"
       ],
       "retained_failure": "documentation-1.log identified the missing new test-project README, now supplied."
     },
@@ -1560,6 +1568,15 @@
     {
       "commit": "5afa860d0451d70c27bc874592aa3dca250fed6a",
       "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 7d392a42a3cde07da968ea2fee90a03530dc17ef"
+    },
+    {
+      "commit": "5ce7db59501b300c6f98af50481a256cac755f67",
+      "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 5afa860d0451d70c27bc874592aa3dca250fed6a",
+      "receipt": {
+        "path": ".artifacts/cd1-closure-20261011/signature-checkpoint-4.log",
+        "sha256": "f22b2af6fa0f021b09bb456ae1a80e7731fbd62c0a66d606a9e55495ecabb68d",
+        "bytes": 613
+      }
     }
   ],
   "acceptance": [
@@ -1865,15 +1882,35 @@
     "proof_safety": {
       "preliminary_exact": {
         "path": ".artifacts/cd1-closure-20261011/exact-secret-proof-preliminary.json",
-        "sha256": "90dca1c6596dd36458a7a9f609a501b16084da214e03e2ec19e4dd6c6f7893ad",
-        "bytes": 492
+        "sha256": "256e4a055162dc97cb4665990e6992eb1dcf8000ba412fa995c5bfed98e750e5",
+        "bytes": 1138
       },
       "heuristic_review": {
         "path": ".artifacts/cd1-closure-20261011/heuristic-finding-review.json",
         "sha256": "188f3037243fb52db10e35889f57917673a8d45e5d2e40e7ef30cde6489fb0e4",
         "bytes": 5716
       },
-      "final_required_after_tests": true
+      "final_required_after_tests": true,
+      "browser_host_heuristic": {
+        "path": ".artifacts/cd1-closure-20261011/browser-host-secret-summary.json",
+        "sha256": "fabd7a692552c8278ccb42076b079ba5362b8fb5d182975acff54e8eda422b4e",
+        "bytes": 3605
+      },
+      "watch_browser_heuristic": {
+        "path": ".artifacts/cd1-closure-20261011/browser-tool-proof-secrets.json",
+        "sha256": "4650e7eb4771618843ba4b695348cfac645392899b056b72c6cf5d940506bbf1",
+        "bytes": 893
+      }
+    },
+    "browser_hosts": {
+      "path": ".artifacts/cd1-closure-20261011/browser-resource-disposition.json",
+      "sha256": "19b4f80859fa1248798ed6bf4ab770d8901b5473254a6a459bf83125f7d8d630",
+      "bytes": 3769
+    },
+    "watch_browser": {
+      "path": ".artifacts/cd1-closure-20261011/watch-browser-closed.json",
+      "sha256": "2641379273dae25afba9688107762bc7949443065b104bca7d092ce1d0a44833",
+      "bytes": 288
     }
   }
 }

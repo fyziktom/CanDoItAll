@@ -123,6 +123,13 @@ being deferred. The prior 247-row agent census has 186 matching normalized diges
 changed inputs and no missing files. Changed descendants were reviewed against current
 source; old results were not promoted to fresh execution.
 
+Final activation review resolves all 32 document roots to the actual project-local
+`MapRazorComponents<App>` call and its exact namespace import. It also removes 38 typed
+logger references from descendant lists; these are not recursive renderers. Every remaining
+recorded Razor descendant has a matching markup or explicit dynamic-activation source site.
+Those source facts complement evaluated ownership and executable proof; generic names alone
+do not establish reachability. These corrections change census metadata only.
+
 Ordinary C# rendering, component partials, dialogs, deferred slots, routes and registrations
 were reviewed alongside native Razor bodies. The important indirect activations are:
 

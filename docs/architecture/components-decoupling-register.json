@@ -6141,9 +6141,9 @@
       "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "Public family component; reviewed dynamic/composition activation is recorded in the family boundary, not inferred from a generic type token."
+        "src/App/CanDoItAll.Web/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Web",
+      "native_owner": "CanDoItAll.Web: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "ReconnectModal, Routes",
       "descendants": [
         "ReconnectModal",
@@ -6154,7 +6154,6 @@
       "evidence": "CanDoItAll.Web",
       "rationale": "Native document, routing, reconnect or error recovery boundary; framework lifecycle and application route discovery stay here.",
       "excluded_lexical_candidates": [
-        "src/App/CanDoItAll.Web/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Components/Routes.razor",
@@ -6214,7 +6213,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/App/CanDoItAll.Web/Program.cs:148 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
@@ -7342,13 +7341,21 @@
       "descendants": [
         "AgentChatSurface",
         "AgentExecutionActivityStatus",
-        "AgentImageAttachmentPicker",
-        "ChatWorkspacePanel"
+        "AgentImageAttachmentPicker"
       ],
       "assets": "CanDoItAll.AgentFramework.Components",
       "scenario": "CanDoItAll.AgentFramework.Components",
       "evidence": "CanDoItAll.AgentFramework.Components",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ChatWorkspacePanel",
+          "lines": [
+            5
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
@@ -7365,13 +7372,21 @@
       "native_owner": "Retained public compatibility/legacy type",
       "visual_owner": "CanDoItAll.AgentFramework.Components",
       "descendants": [
-        "ChatWorkspacePanel",
-        "ContextualAgentWorkspaceWindows"
+        "ChatWorkspacePanel"
       ],
       "assets": "CanDoItAll.AgentFramework.Components",
       "scenario": "CanDoItAll.AgentFramework.Components",
       "evidence": "CanDoItAll.AgentFramework.Components",
-      "rationale": "No current repository product route, symbol caller, component registry or generic/dynamic dialog registration. Test-only consumers do not make it a product surface. Kept intact; no execution claimed."
+      "rationale": "No current repository product route, symbol caller, component registry or generic/dynamic dialog registration. Test-only consumers do not make it a product surface. Kept intact; no execution claimed.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ContextualAgentWorkspaceWindows",
+          "lines": [
+            16
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor.css",
@@ -9643,13 +9658,21 @@
       "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders",
       "visual_owner": "AgentCatalogPanel; Alert; Button",
       "descendants": [
-        "AgentCatalogHost",
         "AgentCatalogPanel"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentCatalogHost",
+          "lines": [
+            6
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
@@ -9849,13 +9872,21 @@
       "visual_owner": "CanDoItAll.AgentFramework.UI/Chat/AgentConversationContextSurface",
       "descendants": [
         "AgentChatPanel",
-        "AgentConversationContextSurface",
-        "AgentFloatingConversationContent"
+        "AgentConversationContextSurface"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf."
+      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentFloatingConversationContent",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentGovernancePanel.razor",
@@ -9914,13 +9945,21 @@
       "native_owner": "Native provider-driver eligibility read and editor lifetime; AgentMemorySection renders",
       "visual_owner": "AgentMemorySection",
       "descendants": [
-        "AgentMemorySection",
-        "AgentMemorySettingsPanel"
+        "AgentMemorySection"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentMemorySettingsPanel",
+          "lines": [
+            8
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentOverviewUsageList.razor",
@@ -10003,13 +10042,21 @@
       "native_owner": "Native metadata-only write, profile lifetime and icon dialog; TeamMetadataEditor renders without changing membership",
       "visual_owner": "TeamMetadataEditor",
       "descendants": [
-        "AgentTeamDetailsDialog",
         "TeamMetadataEditor"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentTeamDetailsDialog",
+          "lines": [
+            10
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentTeamMembersDialog.razor",
@@ -10414,13 +10461,21 @@
       "native_owner": "Capability mutations, validation and attempt diagnostics; CA1 typed operations",
       "visual_owner": "CapabilityAuthoringForm",
       "descendants": [
-        "CapabilityAuthoringForm",
-        "NativeCapabilityAuthoringHost"
+        "CapabilityAuthoringForm"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "NativeCapabilityAuthoringHost",
+          "lines": [
+            11
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelThinkingEditor.razor",
@@ -10807,13 +10862,21 @@
       "native_owner": "Native component-library model reads and registry adaptation; WorkflowImageGenerationSettingsSurface renders",
       "visual_owner": "WorkflowImageGenerationSettingsSurface",
       "descendants": [
-        "WorkflowImageGenerationSettingsRenderer",
         "WorkflowImageGenerationSettingsSurface"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "WorkflowImageGenerationSettingsRenderer",
+          "lines": [
+            9
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowNativeSettingsSlot.razor",
@@ -11258,15 +11321,23 @@
         "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.razor"
       ],
       "native_owner": "IAgentRecruitingEvidenceService EvidenceService; IAgentFrameworkWorkspaceService AgentWorkspaceService; NotificationService NotificationService; ILogger<AgentRecruitingEvidencePanel> Logger",
-      "visual_owner": "AgentRecruitingEvidencePanel, AgentRecruitingEvidenceSurface",
+      "visual_owner": "AgentRecruitingEvidenceSurface",
       "descendants": [
-        "AgentRecruitingEvidencePanel",
         "AgentRecruitingEvidenceSurface"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentRecruitingEvidencePanel",
+          "lines": [
+            9
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmAgentChatContextProvider.razor",
@@ -11301,15 +11372,23 @@
         "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor"
       ],
       "native_owner": "ICrmFinancialSnapshotQueryService Financials; ILogger<CrmFinancialsPanel> Logger",
-      "visual_owner": "CrmFinancialsPanel, CrmHrFinancialsSurface",
+      "visual_owner": "CrmHrFinancialsSurface",
       "descendants": [
-        "CrmFinancialsPanel",
         "CrmHrFinancialsSurface"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmFinancialsPanel",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Components/CrmHrSecondaryTabs.razor",
@@ -11441,17 +11520,25 @@
         "/crm-hr/assignments"
       ],
       "native_owner": "ProjectWriteAdmissionService ProjectWriteAdmissions; IProjectRecordQueryService ProjectRecordQueryService; ProjectPartyIntegrationService ProjectPartyIntegrationService; IProjectNodeDetailsBridge ProjectNodeDetailsBridge; HrService HrService; CanDoItAll.SharedKernel.IClock Clock; NavigationManager Navigation; NotificationService NotificationService; Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrAssignmentsPage, CrmHrAssignmentsWorkspaceSurface, CrmHrSecondaryTabs",
+      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrAssignmentsWorkspaceSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
-        "CrmHrAssignmentsPage",
         "CrmHrAssignmentsWorkspaceSurface",
         "CrmHrSecondaryTabs"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrAssignmentsPage",
+          "lines": [
+            16
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.View.cs",
@@ -11486,12 +11573,11 @@
         "/crm-hr/crm"
       ],
       "native_owner": "CrmService CrmService; ProjectWriteAdmissionService ProjectWriteAdmissions; IPartyRecordQueryService PartyRecordQueryService; IAgentChatLauncher AgentChatLauncher; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrCrmPage> Logger",
-      "visual_owner": "AccountSummaryPanel, CrmAgentChatContextProvider, CrmFinancialsPanel, CrmHrCrmPage, CrmHrCrmWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
+      "visual_owner": "AccountSummaryPanel, CrmAgentChatContextProvider, CrmFinancialsPanel, CrmHrCrmWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
       "descendants": [
         "AccountSummaryPanel",
         "CrmAgentChatContextProvider",
         "CrmFinancialsPanel",
-        "CrmHrCrmPage",
         "CrmHrCrmWorkspaceSurface",
         "CrmHrSecondaryTabs",
         "InteractionTimeline"
@@ -11499,7 +11585,16 @@
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrCrmPage",
+          "lines": [
+            15
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.View.cs",
@@ -11534,10 +11629,9 @@
         "/crm-hr/directory"
       ],
       "native_owner": "PartyDirectoryService PartyDirectoryService; PartyDirectoryManagementService ManagementService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrDirectoryPage> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrDirectoryPage, CrmHrDirectoryWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
+      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrDirectoryWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
       "descendants": [
         "AgentChatContextSurfaceProvider",
-        "CrmHrDirectoryPage",
         "CrmHrDirectoryWorkspaceSurface",
         "CrmHrSecondaryTabs",
         "InteractionTimeline"
@@ -11545,7 +11639,16 @@
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrDirectoryPage",
+          "lines": [
+            11
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrHomePage.razor",
@@ -11560,17 +11663,25 @@
         "/crm-hr"
       ],
       "native_owner": "ICrmHrHomeQueryService HomeQueryService; NavigationManager Navigation; ILogger<CrmHrHomePage> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrHomePage, CrmHrHomeSurface, CrmHrSecondaryTabs",
+      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrHomeSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
-        "CrmHrHomePage",
         "CrmHrHomeSurface",
         "CrmHrSecondaryTabs"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrHomePage",
+          "lines": [
+            5
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.View.cs",
@@ -11605,18 +11716,26 @@
         "/crm-hr/recruiting"
       ],
       "native_owner": "RecruitingService RecruitingService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrRecruitingPage> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, AgentRecruitingEvidencePanel, CrmHrRecruitingPage, CrmHrRecruitingWorkspaceSurface, CrmHrSecondaryTabs",
+      "visual_owner": "AgentChatContextSurfaceProvider, AgentRecruitingEvidencePanel, CrmHrRecruitingWorkspaceSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
         "AgentRecruitingEvidencePanel",
-        "CrmHrRecruitingPage",
         "CrmHrRecruitingWorkspaceSurface",
         "CrmHrSecondaryTabs"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrRecruitingPage",
+          "lines": [
+            10
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.View.cs",
@@ -11651,18 +11770,26 @@
         "/crm-hr/workforce"
       ],
       "native_owner": "HrService HrService; PartyDirectoryService PartyDirectoryService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrWorkforcePage> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrSecondaryTabs, CrmHrWorkforcePage, CrmHrWorkforceWorkspaceSurface, InteractionTimeline",
+      "visual_owner": "AgentChatContextSurfaceProvider, CrmHrSecondaryTabs, CrmHrWorkforceWorkspaceSurface, InteractionTimeline",
       "descendants": [
         "AgentChatContextSurfaceProvider",
         "CrmHrSecondaryTabs",
-        "CrmHrWorkforcePage",
         "CrmHrWorkforceWorkspaceSurface",
         "InteractionTimeline"
       ],
       "assets": "CanDoItAll.Modules.CrmHr",
       "scenario": "CanDoItAll.Modules.CrmHr",
       "evidence": "CanDoItAll.Modules.CrmHr",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "CrmHrWorkforcePage",
+          "lines": [
+            12
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/_Imports.razor",
@@ -11901,10 +12028,9 @@
         "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor"
       ],
       "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; ProcessWorkspaceMockProjectionFactory MockProjectionFactory; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; NotificationService Notifications; TooltipService TooltipService; IJSRuntime JsRuntime; IDatabaseRuntimeState DatabaseRuntimeState; TimeProvider TimeProvider; ILogger<LiveProcessesDashboard> Logger",
-      "visual_owner": "AgentChatContextSurfaceProvider, LiveProcessesDashboard, LiveProcessesSurface, ProcessRunCancellationAction, ProcessRunFilesDialog",
+      "visual_owner": "AgentChatContextSurfaceProvider, LiveProcessesSurface, ProcessRunCancellationAction, ProcessRunFilesDialog",
       "descendants": [
         "AgentChatContextSurfaceProvider",
-        "LiveProcessesDashboard",
         "LiveProcessesSurface",
         "ProcessRunCancellationAction",
         "ProcessRunFilesDialog"
@@ -11912,7 +12038,16 @@
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "LiveProcessesDashboard",
+          "lines": [
+            26
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunCancellationAction.razor",
@@ -11927,15 +12062,23 @@
         "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor"
       ],
       "native_owner": "IProcessWorkspaceProjectionClient Client; ILogger<ProcessRunCancellationAction> Logger",
-      "visual_owner": "ProcessRunCancellationAction, ProcessRunCancellationSurface",
+      "visual_owner": "ProcessRunCancellationSurface",
       "descendants": [
-        "ProcessRunCancellationAction",
         "ProcessRunCancellationSurface"
       ],
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProcessRunCancellationAction",
+          "lines": [
+            6
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessRunFilesDialog.razor",
@@ -11950,15 +12093,23 @@
         "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor"
       ],
       "native_owner": "ProcessRunFilesCoordinator Coordinator; IFileToolsBrowseItemActionService ItemActionService; FileInteractionComponentComposition InteractionComposition; IJSRuntime JSRuntime; ILogger<ProcessRunFilesDialog> Logger",
-      "visual_owner": "ProcessRunFilesDialog, ProcessRunFilesSurface",
+      "visual_owner": "ProcessRunFilesSurface",
       "descendants": [
-        "ProcessRunFilesDialog",
         "ProcessRunFilesSurface"
       ],
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProcessRunFilesDialog",
+          "lines": [
+            7
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
@@ -11974,17 +12125,25 @@
         "src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor"
       ],
       "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; IServiceProvider Services; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IJSRuntime JsRuntime; ILogger<ProcessWorkspaceShell> Logger; IDatabaseRuntimeState DatabaseRuntimeState; IDatabaseSwitchNotificationService DatabaseChanges; TimeProvider TimeProvider; IAgentChatExecutionOrchestrator ChatExecutionOrchestrator",
-      "visual_owner": "AgentChatContextSurfaceProvider, ChatWorkspacePanel, ProcessWorkspaceShell, ProcessWorkspaceSurface",
+      "visual_owner": "AgentChatContextSurfaceProvider, ChatWorkspacePanel, ProcessWorkspaceSurface",
       "descendants": [
         "AgentChatContextSurfaceProvider",
         "ChatWorkspacePanel",
-        "ProcessWorkspaceShell",
         "ProcessWorkspaceSurface"
       ],
       "assets": "CanDoItAll.Modules.Processes",
       "scenario": "CanDoItAll.Modules.Processes",
       "evidence": "CanDoItAll.Modules.Processes",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProcessWorkspaceShell",
+          "lines": [
+            25
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor",
@@ -12126,15 +12285,23 @@
         "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
       ],
       "native_owner": "IFileToolsBrowseItemActionService ItemActionService; IFileAccessContextProvider Contexts; FileInteractionComponentComposition InteractionComposition; IJSRuntime JSRuntime; IProjectFilesPilotCoordinator Coordinator; ILogger<ProjectFilesDialog> Logger",
-      "visual_owner": "ProjectFilesDialog, ProjectFilesDialogView",
+      "visual_owner": "ProjectFilesDialogView",
       "descendants": [
-        "ProjectFilesDialog",
         "ProjectFilesDialogView"
       ],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
       "evidence": "CanDoItAll.Modules.Projects",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectFilesDialog",
+          "lines": [
+            8
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectFilesPortfolioPane.razor",
@@ -12149,15 +12316,23 @@
         "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
       ],
       "native_owner": "IFileToolsBrowseItemActionService ItemActionService; IFileAccessContextProvider Contexts; FileInteractionComponentComposition InteractionComposition; IJSRuntime JSRuntime; IProjectFilePortfolioCoordinator Coordinator; ILogger<ProjectFilesPortfolioPane> Logger",
-      "visual_owner": "ProjectFilesPortfolioPane, ProjectFilesPortfolioPaneView",
+      "visual_owner": "ProjectFilesPortfolioPaneView",
       "descendants": [
-        "ProjectFilesPortfolioPane",
         "ProjectFilesPortfolioPaneView"
       ],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
       "evidence": "CanDoItAll.Modules.Projects",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectFilesPortfolioPane",
+          "lines": [
+            8
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/Components/ProjectsAgentChatContextProvider.razor",
@@ -12172,14 +12347,21 @@
         "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
       ],
       "native_owner": "IAgentChatContextRegistry ContextRegistry; IAgentChatExecutionNotificationHub ExecutionNotificationHub; IAgentReferenceDataProvider ReferenceDataProvider; IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator; ILogger<ProjectsAgentChatContextProvider> Logger",
-      "visual_owner": "ProjectsAgentChatContextProvider",
-      "descendants": [
-        "ProjectsAgentChatContextProvider"
-      ],
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
       "evidence": "CanDoItAll.Modules.Projects",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectsAgentChatContextProvider",
+          "lines": [
+            9
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
@@ -12194,7 +12376,7 @@
         "/projects"
       ],
       "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation",
-      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard, ProjectsPage",
+      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard",
       "descendants": [
         "ProjectDeletionStatusSurface",
         "ProjectFilesDialog",
@@ -12202,13 +12384,21 @@
         "ProjectHierarchyModal",
         "ProjectModalHost",
         "ProjectsAgentChatContextProvider",
-        "ProjectsBoard",
-        "ProjectsPage"
+        "ProjectsBoard"
       ],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
       "evidence": "CanDoItAll.Modules.Projects",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectsPage",
+          "lines": [
+            20
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/_Imports.razor",
@@ -12916,14 +13106,21 @@
         "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor"
       ],
       "native_owner": "IAgentChatContextRegistry ContextRegistry; IAgentChatExecutionNotificationHub ExecutionNotificationHub; IAgentReferenceDataProvider ReferenceDataProvider; IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator; IDatabaseRuntimeState DatabaseRuntimeState; IExternalTargetPathRegistry ExternalTargetPathRegistry; TimeProvider TimeProvider; ILogger<ProjectStructureAgentChatContextProvider> Logger; NavigationManager Navigation",
-      "visual_owner": "ProjectStructureAgentChatContextProvider",
-      "descendants": [
-        "ProjectStructureAgentChatContextProvider"
-      ],
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectStructureAgentChatContextProvider",
+          "lines": [
+            20
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureAttachmentPreviewDialog.razor",
@@ -13029,15 +13226,23 @@
         "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor"
       ],
       "native_owner": "ProjectStructureFileActionCoordinator Coordinator; IFileToolsBrowseItemActionService ItemActionService; FileInteractionComponentComposition InteractionComposition; ILogger<ProjectStructureFileBrowserWindow> Logger; IJSRuntime JSRuntime",
-      "visual_owner": "ContentFileCollectionWindow, ProjectStructureFileBrowserWindow",
+      "visual_owner": "ContentFileCollectionWindow",
       "descendants": [
-        "ContentFileCollectionWindow",
-        "ProjectStructureFileBrowserWindow"
+        "ContentFileCollectionWindow"
       ],
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectStructureFileBrowserWindow",
+          "lines": [
+            9
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttPanel.razor",
@@ -13957,7 +14162,7 @@
         "/projects/{ProjectId:guid}/structure"
       ],
       "native_owner": "ProjectsService ProjectsService; IProjectPartyIntegrationBridge ProjectPartyIntegrationBridge; ProjectWorkbenchService ProjectWorkbenchService; ProjectStructureSubprojectTransferCoordinator SubprojectTransferCoordinator; IProjectWorkbenchSeedService ProjectWorkbenchSeedService; IProjectStructureLocalFileOpener LocalFileOpener; IProjectStructureRuntimeLauncher RuntimeLauncher; DialogService DialogService; ProjectStructureFileActionCoordinator FileActionCoordinator; ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator; ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator; WorkspaceService WorkspaceService; IProviderRuntimeProfileSource ProviderRuntimeProfileSource; IProviderPromptExecutionService ProviderPromptExecutionService; NavigationManager Navigation; IJSRuntime JSRuntime; ILogger<ProjectStructurePage> Logger; IConversationShellCoordinator ConversationShellCoordinator",
-      "visual_owner": "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog, CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow, CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor, CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor, Insights, Planning, ProjectManagerSummaryPanel, ProjectModalHost, ProjectStructureAgentChatContextProvider, ProjectStructureCanvasDialogs, ProjectStructureCanvasHealthWindow, ProjectStructureDeferredSurface, ProjectStructureFileBrowserWindow, ProjectStructureGanttPanel, ProjectStructureObjectIndexWindow, ProjectStructurePage, ProjectStructureSignalsWindow, ProjectStructureSupportDialogs, StructureWorkspace",
+      "visual_owner": "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog, CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow, CanDoItAll.Workbench.Operators.UI.Parties.PartyEditor, CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor, Insights, Planning, ProjectManagerSummaryPanel, ProjectModalHost, ProjectStructureAgentChatContextProvider, ProjectStructureCanvasDialogs, ProjectStructureCanvasHealthWindow, ProjectStructureDeferredSurface, ProjectStructureFileBrowserWindow, ProjectStructureGanttPanel, ProjectStructureObjectIndexWindow, ProjectStructureSignalsWindow, ProjectStructureSupportDialogs, StructureWorkspace",
       "descendants": [
         "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog",
         "CanDoItAll.Workbench.Insights.UI.InsightsSelectionWindow",
@@ -13974,7 +14179,6 @@
         "ProjectStructureFileBrowserWindow",
         "ProjectStructureGanttPanel",
         "ProjectStructureObjectIndexWindow",
-        "ProjectStructurePage",
         "ProjectStructureSignalsWindow",
         "ProjectStructureSupportDialogs",
         "StructureWorkspace"
@@ -13982,7 +14186,16 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectStructurePage",
+          "lines": [
+            45
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor.css",
@@ -14776,9 +14989,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox",
       "descendants": [
         "Routes"
@@ -14789,7 +15002,6 @@
       "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof.",
       "excluded_lexical_candidates": [
         "src/App/CanDoItAll.Web/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Components/Routes.razor",
@@ -14847,7 +15059,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Components/Authoring.razor",
@@ -15019,9 +15231,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.Editor.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.Editor.UiSandbox",
       "descendants": [
         "Routes"
@@ -15034,7 +15246,6 @@
         "src/App/CanDoItAll.Web/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor",
@@ -15090,7 +15301,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs:11 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Components/Editor.razor",
@@ -15296,9 +15507,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/CanDoItAll.AgentFramework.Providers.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.Providers.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.Providers.UiSandbox",
       "descendants": [
         "Routes"
@@ -15313,7 +15524,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
@@ -15367,7 +15577,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Components/Providers.razor",
@@ -15539,9 +15749,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/CanDoItAll.AgentFramework.SharedProviders.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.SharedProviders.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.SharedProviders.UiSandbox",
       "descendants": [
         "Routes"
@@ -15558,7 +15768,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs",
@@ -15610,7 +15819,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor",
@@ -15859,9 +16068,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "Public family component; reviewed dynamic/composition activation is recorded in the family boundary, not inferred from a generic type token."
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.UiSandbox",
       "descendants": [
         "Routes"
@@ -15880,7 +16089,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Components/Routes.razor",
@@ -15931,7 +16139,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs:19 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CapabilitiesSpecimen.razor",
@@ -16459,9 +16667,9 @@
       "project": "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs"
       ],
-      "native_owner": "Deterministic scenario host only",
+      "native_owner": "CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox",
       "descendants": [
         "Routes"
@@ -16481,7 +16689,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.SharedProviders.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Components/Routes.razor",
@@ -16530,7 +16737,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/Authoring.razor",
@@ -16751,9 +16958,9 @@
       "project": "src/Sandboxes/CanDoItAll.Application.UiSandbox/CanDoItAll.Application.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Application.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Application.UiSandbox",
+      "native_owner": "CanDoItAll.Application.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -16775,7 +16982,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Routes.razor",
@@ -16822,7 +17028,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Application.UiSandbox/Components/DashboardPage.razor",
@@ -17045,9 +17251,9 @@
       "project": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Collaboration.UiSandbox",
+      "native_owner": "CanDoItAll.Collaboration.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -17071,7 +17277,6 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs",
@@ -17116,7 +17321,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Components/Home.razor",
@@ -17271,9 +17476,9 @@
       "project": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Configuration.UiSandbox",
+      "native_owner": "CanDoItAll.Configuration.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -17299,7 +17504,6 @@
         "src/Sandboxes/CanDoItAll.Application.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs",
@@ -17342,7 +17546,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Configuration.razor",
@@ -17514,9 +17718,9 @@
       "project": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/CanDoItAll.CrmHr.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "Public family component; reviewed dynamic/composition activation is recorded in the family boundary, not inferred from a generic type token."
+        "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.CrmHr.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -17544,7 +17748,6 @@
         "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Components/Routes.razor",
@@ -17586,7 +17789,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs:19 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Components/CrmHrAccountActivitySpecimen.razor",
@@ -17947,9 +18150,9 @@
       "project": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/CanDoItAll.Memory.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Memory.UiSandbox",
+      "native_owner": "CanDoItAll.Memory.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -17978,7 +18181,6 @@
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Configuration.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Components/Routes.razor",
@@ -18018,7 +18220,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs:11 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Components/Routes.razor",
@@ -18168,9 +18370,9 @@
       "project": "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/CanDoItAll.Plugins.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Plugins.UiSandbox",
+      "native_owner": "CanDoItAll.Plugins.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -18201,7 +18403,6 @@
         "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Components/Routes.razor",
@@ -18239,7 +18440,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs:11 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Components/Home.razor",
@@ -18393,9 +18594,9 @@
       "project": "src/Sandboxes/CanDoItAll.Processes.UiSandbox/CanDoItAll.Processes.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Processes.UiSandbox",
+      "native_owner": "CanDoItAll.Processes.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -18428,7 +18629,6 @@
         "src/Sandboxes/CanDoItAll.Memory.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor",
@@ -18464,7 +18664,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs:18 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Components/Routes.razor",
@@ -18666,9 +18866,9 @@
       "project": "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Projects.Files.UiSandbox",
+      "native_owner": "CanDoItAll.Projects.Files.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -18703,7 +18903,6 @@
         "src/Sandboxes/CanDoItAll.Plugins.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs",
@@ -18737,7 +18936,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs:13 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Components/FilesFixtureMermaidView.razor",
@@ -18928,9 +19127,9 @@
       "project": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/CanDoItAll.Projects.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Projects.UiSandbox",
+      "native_owner": "CanDoItAll.Projects.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -18967,7 +19166,6 @@
         "src/Sandboxes/CanDoItAll.Processes.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
@@ -18999,7 +19197,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
@@ -19152,9 +19350,9 @@
       "project": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/CanDoItAll.Prompts.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "Public family component; reviewed dynamic/composition activation is recorded in the family boundary, not inferred from a generic type token."
+        "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Prompts.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -19193,7 +19391,6 @@
         "src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Components/Routes.razor",
@@ -19224,7 +19421,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs:13 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Components/PromptGallerySpecimen.razor",
@@ -19398,9 +19595,9 @@
       "project": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/CanDoItAll.Resources.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Resources.UiSandbox",
+      "native_owner": "CanDoItAll.Resources.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -19440,7 +19637,6 @@
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Components/Routes.razor",
@@ -19469,7 +19665,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs:12 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Routes.razor",
@@ -19619,9 +19815,9 @@
       "project": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/CanDoItAll.SchedulerPlanner.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.SchedulerPlanner.UiSandbox",
+      "native_owner": "CanDoItAll.SchedulerPlanner.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -19663,7 +19859,6 @@
         "src/Sandboxes/CanDoItAll.Prompts.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/Routes.razor",
@@ -19690,7 +19885,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Components/Home.razor",
@@ -19844,9 +20039,9 @@
       "project": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/CanDoItAll.TestLab.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.TestLab.UiSandbox",
+      "native_owner": "CanDoItAll.TestLab.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -19890,7 +20085,6 @@
         "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/Routes.razor",
@@ -19915,7 +20109,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Components/Home.razor",
@@ -20070,9 +20264,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/CanDoItAll.Workbench.Content.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Content.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -20118,7 +20312,6 @@
         "src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Components/Routes.razor",
@@ -20141,7 +20334,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs:21 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/Content.razor",
@@ -20606,9 +20799,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/CanDoItAll.Workbench.Execution.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Execution.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -20656,7 +20849,6 @@
         "src/Sandboxes/CanDoItAll.TestLab.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Components/Routes.razor",
@@ -20677,7 +20869,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs:15 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/ProcessScenarios.razor",
@@ -20919,9 +21111,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/CanDoItAll.Workbench.Insights.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Insights.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -20971,7 +21163,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Content.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Components/Routes.razor",
@@ -20990,7 +21181,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs:17 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Components/Insights.razor",
@@ -21211,9 +21402,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/CanDoItAll.Workbench.Operators.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Operators.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -21265,7 +21456,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Execution.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Routes.razor",
@@ -21282,7 +21472,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs:16 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Components/Pages/Home.razor",
@@ -21546,9 +21736,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/CanDoItAll.Workbench.Planning.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Planning.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -21602,7 +21792,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Insights.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/Routes.razor",
@@ -21617,7 +21806,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs:15 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Components/CalendarSpecimens.razor",
@@ -21901,9 +22090,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/CanDoItAll.Workbench.Structure.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs"
       ],
-      "native_owner": "IWebHostEnvironment Environment",
+      "native_owner": "CanDoItAll.Workbench.Structure.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -21959,7 +22148,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Operators.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Components/Routes.razor",
@@ -21972,7 +22160,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs:15 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Routes.razor",
@@ -22229,9 +22417,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.ApiAccess.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.ApiAccess.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -22289,7 +22477,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Planning.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Components/Routes.razor",
@@ -22300,7 +22487,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/Routes.razor",
@@ -22428,9 +22615,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/CanDoItAll.Workspace.DataSources.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.DataSources.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.DataSources.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -22490,7 +22677,6 @@
         "src/Sandboxes/CanDoItAll.Workbench.Structure.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Routes.razor",
@@ -22499,7 +22685,7 @@
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Components/DataSources.razor",
@@ -22649,9 +22835,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.StorageCatalog.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.StorageCatalog.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -22713,14 +22899,13 @@
         "src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Components/Routes.razor",
@@ -22871,9 +23056,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/CanDoItAll.Workspace.StorageRecovery.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.StorageRecovery.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.StorageRecovery.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -22937,12 +23122,11 @@
         "src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Recovery.razor",
@@ -23092,9 +23276,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/CanDoItAll.Workspace.StorageSelection.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "Public family component; reviewed dynamic/composition activation is recorded in the family boundary, not inferred from a generic type token."
+        "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.StorageSelection.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.StorageSelection.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -23160,11 +23344,10 @@
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs:14 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Components/Home.razor",
@@ -23338,9 +23521,9 @@
       "project": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj",
       "classification": "FRAMEWORK_HOST",
       "caller": [
-        "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor"
+        "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
       ],
-      "native_owner": "CanDoItAll.Workspace.UiSandbox",
+      "native_owner": "CanDoItAll.Workspace.UiSandbox: document bootstrap and interactive-server endpoint registration in Program.cs.",
       "visual_owner": "Routes",
       "descendants": [
         "Routes"
@@ -23406,10 +23589,9 @@
         "src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/Program.cs",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs",
-        "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs"
+        "src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/Program.cs"
       ],
-      "caller_review": "Removed generic-type text and references outside the evaluated consumer closure. Remaining source activations are complemented by routes and the reviewed family registries; a name match alone is not reachability proof."
+      "caller_review": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Program.cs:10 explicitly maps this project-local App type; its exact Components namespace import and evaluated project ownership resolve the generic argument. Other projects' App tokens are unrelated."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Routes.razor",
@@ -25881,13 +26063,20 @@
       ],
       "native_owner": "Callers above own effects and authority",
       "visual_owner": "CanDoItAll.AgentFramework.UI",
-      "descendants": [
-        "TeamMetadataEditor"
-      ],
+      "descendants": [],
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "TeamMetadataEditor",
+          "lines": [
+            4
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMetadataEditor.razor.css",
@@ -28184,13 +28373,21 @@
         "ConversationFloatingCatalog",
         "ConversationFloatingWindow",
         "ConversationParticipantCompactList",
-        "ConversationShellHost",
         "DynamicComponent"
       ],
       "assets": "CanDoItAll.Conversations.Shell",
       "scenario": "CanDoItAll.Conversations.Shell",
       "evidence": "CanDoItAll.Conversations.Shell",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
+      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ConversationShellHost",
+          "lines": [
+            4
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Conversations.Shell/ConversationShellHost.razor.cs",
@@ -28802,13 +28999,21 @@
       "visual_owner": "CanDoItAll.CrmHr.UI",
       "descendants": [
         "OpportunityBoard",
-        "OpportunityPipeline",
         "PartyRecordPickerDialog"
       ],
       "assets": "CanDoItAll.CrmHr.UI",
       "scenario": "CanDoItAll.CrmHr.UI",
       "evidence": "CanDoItAll.CrmHr.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "OpportunityPipeline",
+          "lines": [
+            4
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/CrmHrWorkspaceSurface.cs",
@@ -29147,13 +29352,21 @@
       "native_owner": "IProjectRecordQueryService ProjectRecordQueryService; ILogger<ProjectMultiPicker> Logger",
       "visual_owner": "CanDoItAll.CrmHr.UI",
       "descendants": [
-        "ProjectMultiPicker",
         "ProjectRecordPickerDialog"
       ],
       "assets": "CanDoItAll.CrmHr.UI",
       "scenario": "CanDoItAll.CrmHr.UI",
       "evidence": "CanDoItAll.CrmHr.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectMultiPicker",
+          "lines": [
+            4
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Pickers/ProjectMultiPicker.razor.css",
@@ -31051,13 +31264,21 @@
       "native_owner": "IJSRuntime JS; ILogger<ProjectModalHost> Logger",
       "visual_owner": "CanDoItAll.Projects.UI",
       "descendants": [
-        "Dialog",
-        "ProjectModalHost"
+        "Dialog"
       ],
       "assets": "CanDoItAll.Projects.UI",
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectModalHost",
+          "lines": [
+            8
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor.css",
@@ -32110,13 +32331,20 @@
       ],
       "native_owner": "ILogger<ContentFileInteractionDialog> Logger",
       "visual_owner": "CanDoItAll.Workbench.Content.UI",
-      "descendants": [
-        "ContentFileInteractionDialog"
-      ],
+      "descendants": [],
       "assets": "CanDoItAll.Workbench.Content.UI",
       "scenario": "CanDoItAll.Workbench.Content.UI",
       "evidence": "CanDoItAll.Workbench.Content.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ContentFileInteractionDialog",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor.css",
@@ -32216,13 +32444,20 @@
       ],
       "native_owner": "ILogger<ContentTextForm> Logger",
       "visual_owner": "CanDoItAll.Workbench.Content.UI",
-      "descendants": [
-        "ContentTextForm"
-      ],
+      "descendants": [],
       "assets": "CanDoItAll.Workbench.Content.UI",
       "scenario": "CanDoItAll.Workbench.Content.UI",
       "evidence": "CanDoItAll.Workbench.Content.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ContentTextForm",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
@@ -33136,13 +33371,20 @@
       ],
       "native_owner": "IJSRuntime JsRuntime; ILogger<PlanningCalendarSurface> Logger",
       "visual_owner": "CanDoItAll.Workbench.Planning.UI",
-      "descendants": [
-        "PlanningCalendarSurface"
-      ],
+      "descendants": [],
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "CanDoItAll.Workbench.Planning.UI",
       "evidence": "CanDoItAll.Workbench.Planning.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "PlanningCalendarSurface",
+          "lines": [
+            6
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj",
@@ -33223,7 +33465,6 @@
       "native_owner": "ILogger<PlanningGanttTaskEditor> Logger",
       "visual_owner": "CanDoItAll.Workbench.Planning.UI",
       "descendants": [
-        "PlanningGanttTaskEditor",
         "PlanningTaskFormActions",
         "ProjectStructureTaskEstimateEditor",
         "ProjectStructureTaskExecutionEditor",
@@ -33233,7 +33474,16 @@
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "CanDoItAll.Workbench.Planning.UI",
       "evidence": "CanDoItAll.Workbench.Planning.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "PlanningGanttTaskEditor",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningGanttTaskEditor.razor.css",
@@ -33271,7 +33521,6 @@
       "native_owner": "ILogger<PlanningStructureTaskEditor> Logger",
       "visual_owner": "CanDoItAll.Workbench.Planning.UI",
       "descendants": [
-        "PlanningStructureTaskEditor",
         "PlanningTaskFormActions",
         "ProjectStructureTaskEstimateEditor",
         "ProjectStructureTaskExecutionEditor",
@@ -33281,7 +33530,16 @@
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "CanDoItAll.Workbench.Planning.UI",
       "evidence": "CanDoItAll.Workbench.Planning.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "PlanningStructureTaskEditor",
+          "lines": [
+            3
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor.css",
@@ -33404,13 +33662,20 @@
       ],
       "native_owner": "ILogger<ProjectStructureTaskResourceCostEstimator> Logger",
       "visual_owner": "CanDoItAll.Workbench.Planning.UI",
-      "descendants": [
-        "ProjectStructureTaskResourceCostEstimator"
-      ],
+      "descendants": [],
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "CanDoItAll.Workbench.Planning.UI",
       "evidence": "CanDoItAll.Workbench.Planning.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectStructureTaskResourceCostEstimator",
+          "lines": [
+            5
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/ProjectStructureTaskResourcePicker.razor",
