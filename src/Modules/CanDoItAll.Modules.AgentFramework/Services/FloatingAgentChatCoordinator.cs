@@ -465,7 +465,9 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             ExecutionState.Preparing or
             ExecutionState.Running or
             ExecutionState.Persisting => ActiveAgentChatRunState.Running,
-            ExecutionState.WaitingOnTool => ActiveAgentChatRunState.AwaitingApproval,
+            ExecutionState.WaitingOnTool when AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(entry.State, entry.Phase)
+                == AgentExecutionActivityPhase.AwaitingApproval => ActiveAgentChatRunState.AwaitingApproval,
+            ExecutionState.WaitingOnTool => ActiveAgentChatRunState.Running,
             _ => ActiveAgentChatRunState.Idle
         };
         lock (gate)
