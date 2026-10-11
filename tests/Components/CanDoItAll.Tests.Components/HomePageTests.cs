@@ -1,3 +1,4 @@
+using CanDoItAll.Application.UI.Dashboard;
 using System.Globalization;
 using Bunit;
 using CanDoItAll.AppComponents;

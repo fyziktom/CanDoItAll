@@ -1,0 +1,18 @@
+@page "/"
+@page "/dashboard"
+
+<PageTitle>Application dashboard scenarios</PageTitle>
+<Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="p-3">
+    @foreach (var scenario in Enum.GetValues<DashboardScenario>()) {
+        <Button Text="@scenario.ToString()" Click="@(() => SetScenario(scenario))" />
+    }
+</Cluster>
+<DashboardSurface View="@view" Refresh="Refresh" ActivityChanged="SelectActivity" />
+
+@code {
+    private DashboardPresentation view = DashboardScenarios.Create(DashboardScenario.Populated);
+
+    private void SetScenario(DashboardScenario scenario) => view = DashboardScenarios.Create(scenario, view.Activity);
+    private void Refresh() => SetScenario(DashboardScenario.Populated);
+    private void SelectActivity(DashboardActivityTab activity) => view = view with { Activity = activity };
+}

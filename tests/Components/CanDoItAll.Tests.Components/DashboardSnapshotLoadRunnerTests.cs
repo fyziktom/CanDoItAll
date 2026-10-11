@@ -1,3 +1,4 @@
+using CanDoItAll.Application.UI.Dashboard;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;

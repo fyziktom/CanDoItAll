@@ -1,0 +1,97 @@
+<PageScaffold MaxWidthClass="max-w-[1400px]">
+    <Header>
+        <PageHeader Eyebrow="Settings"
+                    Title="Runtime capabilities"
+                    Description="Owner-reported host readiness, support level, and execution boundaries for this application instance."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="Host profile"
+                             Value="@View.Profile"
+                             TooltipText="The explicitly resolved runtime host profile." />
+                <CompactStat Label="Core readiness"
+                             Value="@(View.IsReady ? "Ready" : "Blocked")"
+                             Tone="@(View.IsReady ? "success" : "warning")"
+                             TooltipText="Mandatory capabilities must be available before startup can complete." />
+                <CompactStat Label="Capabilities"
+                             Value="@View.Capabilities.Count.ToString()"
+                             TooltipText="The complete typed capability catalog for this runtime." />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh capabilities"
+                                        TooltipText="Run the owner readiness probes again."
+                                        Click="Refresh"
+                                        TestId="runtime-capabilities-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Alert AlertStyle="@(View.IsReady ? AlertStyle.Success : AlertStyle.Danger)"
+               Variant="Variant.Outlined"
+               data-testid="runtime-readiness-summary">
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="@(View.IsReady ? "Mandatory runtime capabilities are ready." : "Startup is blocked by a mandatory runtime capability.")" />
+            <TextBlock TextStyle="TextStyle.Body2"
+                       Value="@($"Profile {View.Profile}; operating system {View.OperatingSystem}; interactive {View.IsInteractive}.")" />
+        </Alert>
+
+        <Grid Columns="1"
+              ColumnsLg="2"
+              Gap="LayoutGap.Large"
+              data-testid="runtime-capability-grid">
+            @foreach (var capability in View.Capabilities) {
+                <Stack Section="true"
+                       GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       Class="cda-section-card w-full"
+                       data-testid="@capability.TestId">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow"
+                                       Value="@capability.Criticality" />
+                            <TextBlock TextStyle="TextStyle.H3"
+                                       Value="@capability.Name" />
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@capability.AvailabilityTone"
+                                         Text="@capability.Availability" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@capability.SupportLevel" />
+                        </Cluster>
+                    </Split>
+
+                    <Grid Columns="1" ColumnsMd="2" Gap="LayoutGap.Small">
+                        <CapabilityFact Label="Reason" Value="@capability.Reason" />
+                        <CapabilityFact Label="Execution boundary" Value="@capability.ExecutionBoundary" />
+                        <CapabilityFact Label="Implementation" Value="@capability.ImplementationRegistration" />
+                        <CapabilityFact Label="Observed" Value="@capability.ObservedAtUtc.ToString("u")" />
+                    </Grid>
+
+                    @if (capability.ImplementationIdentity is not null) {
+                        <CapabilityFact Label="Implementation identity"
+                                        Value="@capability.ImplementationIdentity" />
+                    }
+
+                    <Alert AlertStyle="@capability.RemediationStyle"
+                           Variant="Variant.Outlined">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Remediation" />
+                        <TextBlock TextStyle="TextStyle.Body2" Value="@capability.Remediation" />
+                    </Alert>
+                </Stack>
+            }
+        </Grid>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [Parameter, EditorRequired]
+    public RuntimeCapabilitiesPresentation View { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback Refresh { get; set; }
+}

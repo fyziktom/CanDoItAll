@@ -1,15 +1,13 @@
 using System.Collections.Immutable;
 
-namespace CanDoItAll.Web.Dashboard;
+namespace CanDoItAll.Application.UI.Dashboard;
 
-public enum DashboardActivityMode
-{
+public enum DashboardActivityMode {
     Active,
     RecentFallback
 }
 
-public enum DashboardStatusTone
-{
+public enum DashboardStatusTone {
     Neutral,
     Info,
     Success,
@@ -62,8 +60,7 @@ public sealed record DashboardSnapshot(
     DashboardSnapshotData Data,
     DateTimeOffset CapturedAtUtc);
 
-public enum DashboardSnapshotState
-{
+public enum DashboardSnapshotState {
     Current,
     StaleAfterRefreshFailure
 }
@@ -72,7 +69,6 @@ public sealed record DashboardSnapshotRead(
     DashboardSnapshot Snapshot,
     DateTimeOffset NextAutomaticRefreshAtUtc,
     DashboardSnapshotState State,
-    DateTimeOffset? LastRefreshFailureAtUtc)
-{
+    DateTimeOffset? LastRefreshFailureAtUtc) {
     public bool HasRefreshFailure => State == DashboardSnapshotState.StaleAfterRefreshFailure;
 }

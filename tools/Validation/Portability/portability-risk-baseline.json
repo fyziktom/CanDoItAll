@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-10T02:36:03.508681+00:00",
+  "generated_utc": "2026-10-11T11:41:02.797503+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15380,
+  "allowance_count": 15383,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7655,18 +7655,6 @@
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayoutDatabaseDialog.razor",
       "category": "absolute-path-field",
       "source_fingerprint": "d8fa92544de9dc62ab492df48785e3c7ef9216cbb4a6699d26026fd586de5c40",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Components/Pages/Home.razor",
-      "category": "manager-discovery",
-      "source_fingerprint": "1e297d0b53724e9dc0fbfb4abed888cddedff265be91823ea33b1919b3b7fb27",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Components/Pages/Home.razor",
-      "category": "manager-discovery",
-      "source_fingerprint": "8e55d06c402b699c4058c7446894108d0ccdb72a8beac2767e978486405bf9bb",
       "count": 1
     },
     {
@@ -71480,6 +71468,18 @@
       "count": 1
     },
     {
+      "path": "src/Sandboxes/CanDoItAll.Application.UiSandbox/README.md",
+      "category": "shell-elevation",
+      "source_fingerprint": "c400b9c5efe20433fbc6c8d32084095152f99b5118b6f18195b6dae1c258bc33",
+      "count": 1
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Application.UiSandbox/README.md",
+      "category": "windows-executable",
+      "source_fingerprint": "3b8c4f08f9e9db11f2c2e4ff59b83e448b1c5528b8c116640aafc16d91faef5a",
+      "count": 1
+    },
+    {
       "path": "src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CollaborationScenarioWorkspace.cs",
       "category": "process-domain",
       "source_fingerprint": "3092abca48f5287f6d8f5c9aa194bf9ac987d7d837169274688b770bb2415152",
@@ -74675,6 +74675,24 @@
       "path": "src/UI/CanDoItAll.AppComponents/README.md",
       "category": "windows-executable",
       "source_fingerprint": "cf20ae960b7877edcd2cb76429e2597c1ebb62298e8a3481d1e1dad7459cedcd",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/Dashboard/DashboardSurface.razor",
+      "category": "manager-discovery",
+      "source_fingerprint": "010b749092869afddc7cb83f47e544dbaec903cbcaf14df124b63192a40fea55",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/Dashboard/DashboardSurface.razor",
+      "category": "manager-discovery",
+      "source_fingerprint": "888748d790dce8b289ab87c5219d9b89f522e05f39108ab45b8aa0ee11978418",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/README.md",
+      "category": "manager-discovery",
+      "source_fingerprint": "1fad0229c32b562a711ff407fb2ca01a887b794f3f31245ef2d406df1a291533",
       "count": 1
     },
     {

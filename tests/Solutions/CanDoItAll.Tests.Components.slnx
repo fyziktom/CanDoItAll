@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.Application.UI.Tests/CanDoItAll.Application.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workbench.Planning.UI.Tests/CanDoItAll.Workbench.Planning.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workbench.Insights.UI.Tests/CanDoItAll.Workbench.Insights.UI.Tests.csproj" />
     <Project Path="../Components/CanDoItAll.Workbench.Structure.UI.Tests/CanDoItAll.Workbench.Structure.UI.Tests.csproj" />

@@ -1,0 +1,27 @@
+@page "/runtime"
+
+<PageTitle>Application runtime scenarios</PageTitle>
+<RuntimeCapabilitiesSurface View="@view" Refresh="Refresh" />
+<TextBlock Value="@($"Scenario refreshes: {refreshes}")" data-testid="runtime-scenario-refreshes" />
+
+@code {
+    private int refreshes;
+    private RuntimeCapabilitiesPresentation view = CreateView(false);
+
+    private void Refresh() {
+        refreshes++;
+        view = CreateView(!view.IsReady);
+    }
+
+    private static RuntimeCapabilitiesPresentation CreateView(bool ready) => new("Scenario", "Independent host", false, ready, [
+        new("runtime-capability-core", "Core storage", "Mandatory", ready ? "Available" : "Misconfigured",
+            ready ? "success" : "danger", "Supported", ready ? "Ready" : "Configuration Missing", "Local Process", "Registered",
+            DashboardScenarios.Now, "ScenarioStorage 1.0", ready ? "None." : "Configure the storage owner.", ready ? AlertStyle.Light : AlertStyle.Danger),
+        new("runtime-capability-terminal", "Interactive terminal", "Optional", "Unsupported", "warning", "Unsupported", "Platform Unsupported",
+            "External Process", "Not Registered", DashboardScenarios.Now, null, "Choose a supported host.", AlertStyle.Warning),
+        new("runtime-capability-vault", "Secret vault", "Optional", "Unverified", "warning", "Actual Host Unverified", "Validation Deferred",
+            "Operating System", "Registered", DashboardScenarios.Now, "ScenarioVault 2.0", "Validate the actual host.", AlertStyle.Warning),
+        new("runtime-capability-worker", "Worker", "Optional", "Unavailable", "danger", "Supported", "Dependency Unavailable",
+            "External Process", "Registered", DashboardScenarios.Now, "ScenarioWorker 3.0", "Start the worker.", AlertStyle.Danger)
+    ]);
+}
