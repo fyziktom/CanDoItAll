@@ -10,7 +10,7 @@ public sealed class AgentEditorSandboxBrowserTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Complete_editor_runs_independently_with_real_children_assets_and_two_lifetimes(bool published) {
-        await using var host = new AgentEditorSandboxHost();
+        await using var host = new RazorSandboxHost();
         await host.StartAsync(published);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });

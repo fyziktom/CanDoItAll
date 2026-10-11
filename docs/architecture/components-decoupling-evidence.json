@@ -1,0 +1,1809 @@
+{
+  "schema_version": 1,
+  "state": "IN_PROGRESS",
+  "source_register": "docs/architecture/components-decoupling-register.json",
+  "source_tuple": {
+    "entry": "663fb1391e4acb12439173f1cb1d287fb1f24685",
+    "production_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+    "report_head_at_recording": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+    "branch": "components-decoupling",
+    "sdk": "10.0.303",
+    "platform": "Windows",
+    "configuration": "Debug and Release",
+    "dependency_mode": "UseLocalCanDoItAllLibraries=true",
+    "siblings": {
+      "CanDoItAll.Components": "f3745356182444656edfdef56aa827095632d3ea",
+      "CanDoItAll.FileTools": "3a080ecd31068a77c1e1bd639f7a78e21c93db85",
+      "CanDoItAll.SharedInfo": "30330978cf48d702382663a3d5231880fc034936",
+      "CanDoItAll.CodeAnalysis": "b023500eee239a56358843f1380adb4610f72850",
+      "CanDoItAll.Mcp": "abeaea463aa906bca2d83a1b608ff432dbc29d8d"
+    },
+    "protected_work": "Eight pre-existing MCP DotNetWatch/security/integration/validation modifications preserved; shared bundle unchanged; no push, reset, merge or deploy.",
+    "shared_bundle_delta_from_entry": []
+  },
+  "dimensions": {
+    "structure": "PASS",
+    "functional_parity": "PASS_FOCUSED_PENDING_BROAD",
+    "assets_and_dev_loop": "PENDING_FINAL_STARTUP",
+    "required_validation": "RUNNING",
+    "signatures": "VERIFIED_SOURCE_CHECKPOINTS",
+    "resource_disposition": "OWNED_DATABASE_IN_USE"
+  },
+  "census": {
+    "inputs": 1184,
+    "families": 200,
+    "classifications": {
+      "NON_RENDERING": 437,
+      "FRAMEWORK_HOST": 98,
+      "NATIVE_HOST": 291,
+      "RETAINED_COMPATIBILITY": 16,
+      "EXTRACTED_RENDERER": 342
+    },
+    "active_remaining": 0,
+    "unclassified": 0
+  },
+  "codeanalytics": {
+    "health": {
+      "snapshot": "snap-20261011130319-b8328ec3",
+      "created": "2026-10-11T13:03:19.7196154+00:00",
+      "sha256": "d6b90c432bf25e4e4a01a79368efac6dac90a44422a94223459f834c28b58fa5",
+      "counts": {
+        "projects": 217,
+        "documents": 4702,
+        "modules": 309,
+        "namespaces": 518,
+        "types": 12405,
+        "members": 92427,
+        "memberRelationships": 53803,
+        "typeRelationships": 47037,
+        "serviceRegistrations": 532,
+        "dbContexts": 0,
+        "entities": 0,
+        "entityRelationships": 0,
+        "dependencies": 34442
+      },
+      "solution": {
+        "name": "CanDoItAll",
+        "path": "C:\\repositories\\CanDoItAll\\CanDoItAll.slnx",
+        "projectCount": 217,
+        "documentCount": 4702
+      },
+      "diagnostics": {
+        "DEP0002": 4,
+        "DEP0003": 602,
+        "DI0001": 95,
+        "DI0002": 27
+      },
+      "summary": {
+        "projectCount": 217,
+        "typeCount": 12405,
+        "memberCount": 92427,
+        "serviceRegistrationCount": 532,
+        "entityCount": 0,
+        "findingCount": 3569,
+        "openQuestionCount": 122,
+        "diagnosticCount": 728
+      }
+    },
+    "final_snapshot_sha256": "d6b90c432bf25e4e4a01a79368efac6dac90a44422a94223459f834c28b58fa5",
+    "impact": {
+      "ok": true,
+      "confidence": "Low",
+      "isComplete": false,
+      "fallbackKind": "AllSuppliedSuites",
+      "fallbackReason": "At least one supplied test workspace is unhealthy or has no supported source tests.",
+      "workspaceHealth": [
+        {
+          "name": "Stable",
+          "healthy": false,
+          "projects": 248,
+          "tests": 12096,
+          "diagnostics": 1308
+        },
+        {
+          "name": "Playwright",
+          "healthy": true,
+          "projects": 1,
+          "tests": 217,
+          "diagnostics": 0
+        }
+      ],
+      "diagnostics": {
+        "WS0002": 7,
+        "TIA1004": 1,
+        "TIA1006": 1300,
+        "TIA2001": 1,
+        "TIA3001": 1,
+        "TIA3002": 1,
+        "TIA3004": 1
+      },
+      "requiredSelections": [
+        {
+          "suite": "All supplied suites",
+          "project": "All test projects",
+          "count": 12313,
+          "scope": "AllSuppliedSuites",
+          "selectors": []
+        }
+      ]
+    },
+    "impact_request": {
+      "path": ".artifacts/cd1-closure-20261011/impact-final-request.json",
+      "sha256": "a5bfcf5652c115707186c4aea979e308dde3838e55128447cc8482910127488c",
+      "bytes": 21274
+    },
+    "dependency_receipt": {
+      "path": ".artifacts/cd1-closure-20261011/codeanalytics-final-dependencies.json",
+      "sha256": "d1a0a1028f5539219965136beee2b8711da19b1314fc73ce25675cc49f18c1dd",
+      "bytes": 14217
+    },
+    "cycles": {
+      "project": 0,
+      "module": 3,
+      "type": 17,
+      "new_application_cycle": false,
+      "qualification": "Returned cycles are global even with a text filter; existing backend/module and primitive type cycles are not new application project cycles."
+    },
+    "manual_impact": "AllSuppliedSuites is a conservative source-analysis fallback, not a claim of exact executable test discovery. Broad Stable remains fresh. Browser selection separately spans every shell consumer family and new source/published seams. Unchanged deeper family-specific browser scenarios are not counted as a fresh complete browser suite; live paid providers and unrelated release/platform lanes are outside this closure."
+  },
+  "evaluated": {
+    "source_projects": 199,
+    "project_mode_tuples": 201,
+    "missing_references": 0,
+    "mode_notes": "Package mode is evaluated, not runtime-certified. The supported new application source/deployment path has fresh browser proof.",
+    "receipt": {
+      "path": ".artifacts/cd1-closure-20261011/evaluated/summary.json",
+      "sha256": "f869707313ad6f13188a0755b875cd320083ca72aa6fe73bd329be3c7c4e87a7",
+      "bytes": 276938
+    }
+  },
+  "builds": {
+    "root": {
+      "path": ".artifacts/cd1-closure-20261011/final-root-build.log",
+      "sha256": "34944cd984c12fb22ba8a05bd9017c3c0d98fdd3e9ce03eae47756abe8fe2354",
+      "bytes": 40100
+    },
+    "stable": {
+      "path": ".artifacts/cd1-closure-20261011/final-stable-build.log",
+      "sha256": "eb8e282f5c02b46eaeea086f88183eba0613c4d8a51c071af8bb5d06b78bdb5b",
+      "bytes": 70500
+    },
+    "timing": {
+      "configuration": "Release",
+      "seconds": 130.3242327,
+      "phase": "root and Stable restore/build",
+      "source": "7d392a42a3cde07da968ea2fee90a03530dc17ef"
+    },
+    "current_test_assemblies": {
+      "path": ".artifacts/cd1-closure-20261011/current-test-assemblies.json",
+      "sha256": "313a75383360bc2fddd4ca95718e02a95687b5d1d7cace6a07f464aba73bef29",
+      "count": 39,
+      "qualification": "Current Release binaries recorded after browser rebuild8. Historical focused attempts retain their own TRX; no retroactive claim that this file captured an earlier binary."
+    }
+  },
+  "lanes": [
+    {
+      "id": "application-independent",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Components/CanDoItAll.Application.UI.Tests/CanDoItAll.Application.UI.Tests.csproj",
+      "configuration": "Release",
+      "filter": "",
+      "discovered": 28,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/discovery-application-3.log",
+        "sha256": "bf229e26b72dce510112840c308f8a6944d5007ce66b36ed42305afdab847137",
+        "bytes": 4432
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/application-3.trx",
+        "sha256": "625be25958ba40ed55124bb5ddad1f65b3a91de75c2d17b098502981c946e5d3",
+        "bytes": 45761,
+        "counts": {
+          "total": 28,
+          "executed": 28,
+          "passed": 28,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:02:19.5494318-04:00",
+          "queuing": "2026-10-11T08:02:19.5494324-04:00",
+          "start": "2026-10-11T08:02:18.3427644-04:00",
+          "finish": "2026-10-11T08:02:20.1047496-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationBoundaryTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationDescendantTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.DashboardSurfaceTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.ProfileSurfaceTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.RuntimeSurfaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/application-3.json",
+          "sha256": "e89186cbe5ddbd9cb30204b427fa6e1cd419bd1fa959f4e49e19b0e44fb9e1c3",
+          "bytes": 8888
+        },
+        "failed": []
+      }
+    },
+    {
+      "id": "native-dashboard-runtime",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~HomePageTests|FullyQualifiedName~DashboardSnapshotCacheTests|FullyQualifiedName~DashboardSnapshotLoadRunnerTests|FullyQualifiedName~DashboardSnapshotLoaderTests|FullyQualifiedName~RuntimeCapabilitiesPageTests",
+      "discovered": 41,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/discovery-native-application-1.log",
+        "sha256": "6dd63b0adf9c244fed51e028b55909a552815326bd0ccc4d325de8e93075f6ae",
+        "bytes": 5685
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/native-application-2.trx",
+        "sha256": "36321e3b1c4fe2e7c786032a05a4c0b8bfadede0218ea4515010ec7b2babb0c7",
+        "bytes": 63893,
+        "counts": {
+          "total": 41,
+          "executed": 41,
+          "passed": 41,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T07:45:46.9728192-04:00",
+          "queuing": "2026-10-11T07:45:46.9728196-04:00",
+          "start": "2026-10-11T07:45:40.4431666-04:00",
+          "finish": "2026-10-11T07:46:39.4080884-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests",
+          "CanDoItAll.Tests.Components.AgentFramework.RuntimeCapabilitiesPageTests",
+          "CanDoItAll.Tests.Components.CrmHr.CrmHrHomePageTests",
+          "CanDoItAll.Tests.Components.Shell.DashboardSnapshotCacheTests",
+          "CanDoItAll.Tests.Components.Shell.DashboardSnapshotLoadRunnerTests",
+          "CanDoItAll.Tests.Components.Shell.DashboardSnapshotLoaderTests",
+          "CanDoItAll.Tests.Components.Shell.HomePageTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/native-application-2.json",
+          "sha256": "cf08470d4aaf7db65f55e994c980470561c58e4334c36845c70afa11a1a88063",
+          "bytes": 12283
+        },
+        "failed": []
+      }
+    },
+    {
+      "id": "native-shell",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~MainLayoutCollaborationTests|FullyQualifiedName~MainLayoutDatabaseProfileTests|FullyQualifiedName~MainLayoutProfileAdmissionTests|FullyQualifiedName~MainLayoutRetirementTests|FullyQualifiedName~MainLayoutTopBarTests",
+      "discovered": 21,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/discovery-native-shell-1.log",
+        "sha256": "6f041a196499b5bc25b80ea56ee1458b0def38d9dd8710dab5ddcd25888e802c",
+        "bytes": 3113
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/native-shell-2.trx",
+        "sha256": "3ac5fed096c3b5f8666f07ff0e5f50a368f3131813004c55c425bb7003646aab",
+        "bytes": 33833,
+        "counts": {
+          "total": 21,
+          "executed": 21,
+          "passed": 21,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:13:09.4101902-04:00",
+          "queuing": "2026-10-11T08:13:09.4101907-04:00",
+          "start": "2026-10-11T08:12:50.8230768-04:00",
+          "finish": "2026-10-11T08:15:23.6407128-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.Shell.MainLayoutCollaborationTests",
+          "CanDoItAll.Tests.Components.Shell.MainLayoutDatabaseProfileTests",
+          "CanDoItAll.Tests.Components.Shell.MainLayoutProfileAdmissionTests",
+          "CanDoItAll.Tests.Components.Shell.MainLayoutRetirementTests",
+          "CanDoItAll.Tests.Components.Shell.MainLayoutTopBarTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/native-shell-2.json",
+          "sha256": "725cddae26ccbc158ebaf6ba7b44e6115037590dfbe171be29f4e6d62bdbdd92",
+          "bytes": 6391
+        },
+        "failed": []
+      }
+    },
+    {
+      "id": "application-browser",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~ApplicationClosureBrowserTests",
+      "discovered": 3,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/discover-browser-1.log",
+        "sha256": "cbc47b2abc130ce9418621ed41749f8ba21db68330e5a5cd90b2c52d49beaccb",
+        "bytes": 696
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/application-browser-4.trx",
+        "sha256": "5b8205c0c094041a50525aac5e11b2c7419c1167bece61580ff0376caa61d3f5",
+        "bytes": 6435,
+        "counts": {
+          "total": 3,
+          "executed": 3,
+          "passed": 3,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:34:34.5602965-04:00",
+          "queuing": "2026-10-11T08:34:34.5602969-04:00",
+          "start": "2026-10-11T08:33:38.7419026-04:00",
+          "finish": "2026-10-11T08:35:15.1933732-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/application-browser-4.json",
+          "sha256": "cfdc8b8e747a56fab9c38a79071ffade64a5fbe163ee48de37b5feaef7addf69",
+          "bytes": 986
+        },
+        "failed": []
+      }
+    },
+    {
+      "id": "cross-workspace-browser",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "configuration": "Release",
+      "filter": "(FullyQualifiedName~AgentEditorSandboxBrowserTests.Complete_editor_runs_independently|FullyQualifiedName~ProcessAuthoringBrowserTests.Native_save_survives_tab_reads|FullyQualifiedName~AgentRuntimeUiTests.Actual_MAF_chat_approval_activity|FullyQualifiedName~AppSmokeTests.Dashboard_and_project_creation|FullyQualifiedName~AppSmokeTests.Direct_module_routes|FullyQualifiedName~AppSmokeTests.Structure_typed_file_create|FullyQualifiedName~AppSmokeTests.Settings_data_sources_locked|FullyQualifiedName~AppSmokeTests.Project_structure_workflow_nodes|FullyQualifiedName~CollaborationBrowserTests.Production_create_reply|FullyQualifiedName~CrmHrHomeBrowserTests.Home_shows_the_seeded|FullyQualifiedName~MemoryBrowserTests.Production_page_saves|FullyQualifiedName~PluginsBrowserTests.Production_real_owners|FullyQualifiedName~ProjectsPortfolioBrowserTests.Ui_created_project|FullyQualifiedName~PromptGalleryBrowserTests.Gallery_creates_saves|FullyQualifiedName~PromptGalleryBrowserTests.Embedded_chat_picker|FullyQualifiedName~ResourcesBrowserTests.Production_registry_crud|FullyQualifiedName~SchedulerBrowserTests.Production_route_uses|FullyQualifiedName~TestLabBrowserTests.Production_all_sections|FullyQualifiedName~AgentFrameworkSimpleChatsConsolidationPlaywrightTests.MainAndFloating)&Category!=Quarantined",
+      "discovered": 21,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/cross-workspace-discovery.log",
+        "sha256": "36e598391a7dc43f6601404aef658f18603c7bf3d04a9fd948d399b804298e64",
+        "bytes": 3180
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/cross-workspace-1.trx",
+        "sha256": "a72c79e61fc217cc7e2d99971b7f62184d7f717e63649667c8a7dd8e3ae8ba12",
+        "bytes": 43558,
+        "counts": {
+          "total": 21,
+          "executed": 21,
+          "passed": 20,
+          "failed": 1,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:48:04.6059127-04:00",
+          "queuing": "2026-10-11T08:48:04.6059131-04:00",
+          "start": "2026-10-11T08:47:15.9511831-04:00",
+          "finish": "2026-10-11T08:58:34.6958019-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Playwright.AgentEditorSandboxBrowserTests",
+          "CanDoItAll.Tests.Playwright.Flows.AgentFrameworkSimpleChatsConsolidationPlaywrightTests",
+          "CanDoItAll.Tests.Playwright.ProcessAuthoringBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.AgentRuntimeUiTests",
+          "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests",
+          "CanDoItAll.Tests.Playwright.Smoke.CollaborationBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.CrmHrHomeBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.MemoryBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.PluginsBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.ProjectsPortfolioBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.PromptGalleryBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.ResourcesBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.SchedulerBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.TestLabBrowserTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/cross-workspace-1.json",
+          "sha256": "15b87ee940022da1afdb3499cce2683b6d722ea2f5319b47cc82adbc396265a1",
+          "bytes": 6458
+        },
+        "failed": [
+          "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Project_structure_workflow_nodes_can_be_added_started_and_inspected_in_browser"
+        ]
+      }
+    },
+    {
+      "id": "native-dashboard-source-published-and-workbench-rerun",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~ApplicationDashboardNativeBrowserTests|FullyQualifiedName~AppSmokeTests.Project_structure_workflow_nodes_can_be_added_started_and_inspected_in_browser",
+      "discovered": 3,
+      "discovery": "Identity reconciliation against current named methods and theory inputs",
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/native-dashboard-1.trx",
+        "sha256": "de43d552ae59537dc8e83cc80f0b1730c442499f7fe858852dff510c7716540c",
+        "bytes": 6375,
+        "counts": {
+          "total": 3,
+          "executed": 3,
+          "passed": 3,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T09:08:24.8858784-04:00",
+          "queuing": "2026-10-11T09:08:24.8858789-04:00",
+          "start": "2026-10-11T09:07:23.9657328-04:00",
+          "finish": "2026-10-11T09:11:08.4642223-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Playwright.ApplicationDashboardNativeBrowserTests",
+          "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/native-dashboard-1.json",
+          "sha256": "4061fddaeec3fd446bbdd07896967e2753ff5cebb89d9c0065b068789e882038",
+          "bytes": 966
+        },
+        "failed": []
+      }
+    },
+    {
+      "id": "application-browser-keyboard",
+      "kind": "NEW_EXECUTION",
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "configuration": "Release",
+      "filter": "FullyQualifiedName~ApplicationClosureBrowserTests",
+      "discovered": 3,
+      "discovery": {
+        "path": ".artifacts/cd1-closure-20261011/browser-keyboard-discovery-2.log",
+        "sha256": "cbc47b2abc130ce9418621ed41749f8ba21db68330e5a5cd90b2c52d49beaccb",
+        "bytes": 696
+      },
+      "result": {
+        "path": ".artifacts/cd1-closure-20261011/tests/application-browser-keyboard-2.trx",
+        "sha256": "406870f531e92b310ba7423dcc973c5e62968c8f388d1f0f172f93ed786d962f",
+        "bytes": 6435,
+        "counts": {
+          "total": 3,
+          "executed": 3,
+          "passed": 3,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T09:35:21.8718885-04:00",
+          "queuing": "2026-10-11T09:35:21.8718889-04:00",
+          "start": "2026-10-11T09:34:03.0772614-04:00",
+          "finish": "2026-10-11T09:36:04.7340074-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/application-browser-keyboard-2.json",
+          "sha256": "4c44516e14488bf30075852aad2f729f90ddc7936902379d3cc026ce6fa6d36e",
+          "bytes": 986
+        },
+        "failed": []
+      }
+    }
+  ],
+  "broad_stable": {
+    "kind": "NEW_EXECUTION",
+    "status": "RUNNING",
+    "trigger": "Root solution registration and shared MainLayout composition; incomplete impact selection requires the broad native consumer gate.",
+    "project": "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+    "filter": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+    "configuration": "Release",
+    "command": "dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter \"Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true\" /m:1",
+    "execution_shape": "One canonical local aggregate command; assemblies execute serially. Completed assembly receipts are retained. No claim of the differently partitioned parallel CI campaign.",
+    "discovered": 17379,
+    "discovery": {
+      "path": ".artifacts/cd1-closure-20261011/final-stable-discovery.log",
+      "sha256": "e3deec265e4b1913f6d0f0b31b891f0632c7dc819376dbfb2c4e8ac302d63958",
+      "bytes": 2820643
+    },
+    "completed_assemblies": [
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_30_net10.0.trx",
+        "sha256": "44bd6347adf3ae66a44f875c2e711918a3fecec7b250f2ba9f5588df0c5cc292",
+        "bytes": 118584,
+        "counts": {
+          "total": 68,
+          "executed": 68,
+          "passed": 68,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:30.0515404-04:00",
+          "queuing": "2026-10-11T08:40:30.0515408-04:00",
+          "start": "2026-10-11T08:40:28.8421708-04:00",
+          "finish": "2026-10-11T08:40:31.1401543-04:00"
+        },
+        "classes": [
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityAuthoringFormTests",
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityAuthoringStateTests",
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityBoundaryTests",
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityModeTests",
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilitySetupAttributionTests",
+          "CanDoItAll.AgentFramework.CapabilityAuthoring.UI.Tests.CapabilityUploadTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_30_net10.0.json",
+          "sha256": "b71d52d166d42436fba1bac9195e57c132bed878f5e02b755dc5e9370f6efa62",
+          "bytes": 22844
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_33_net10.0.trx",
+        "sha256": "cb6051a1c1c3c4569fd4e826226adf0183d1fff5b3ad884a17b9b079c481891f",
+        "bytes": 42327,
+        "counts": {
+          "total": 25,
+          "executed": 25,
+          "passed": 25,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:33.7885008-04:00",
+          "queuing": "2026-10-11T08:40:33.7885012-04:00",
+          "start": "2026-10-11T08:40:31.5848353-04:00",
+          "finish": "2026-10-11T08:40:34.2670160-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.AgentEditorUi.EditorAccessRendererTests",
+          "CanDoItAll.Tests.Components.AgentEditorUi.EditorBoundaryTests",
+          "CanDoItAll.Tests.Components.AgentEditorUi.EditorRendererTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_33_net10.0.json",
+          "sha256": "a59ccb3e6acb0e8a3adaf58449d7bd73a3fba81bf5a91f82cf2a9187cc2df9f1",
+          "bytes": 8032
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_36_net10.0.trx",
+        "sha256": "06e00164ce601397a1a885fee1c221d2634432f76bc378a1e56b166ca53f7012",
+        "bytes": 50423,
+        "counts": {
+          "total": 30,
+          "executed": 30,
+          "passed": 30,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:36.2046094-04:00",
+          "queuing": "2026-10-11T08:40:36.2046098-04:00",
+          "start": "2026-10-11T08:40:34.7249296-04:00",
+          "finish": "2026-10-11T08:40:39.2167952-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ProviderProfilesUi.ProviderBoundaryTests",
+          "CanDoItAll.Tests.Components.ProviderProfilesUi.ProviderRendererTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_36_net10.0.json",
+          "sha256": "243c1fb3c91938b23d1ccd7289e6e43dab376463508df8b0e4c6356ab92d89f3",
+          "bytes": 9520
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_40_net10.0.trx",
+        "sha256": "466de5535f17fa470d216edcfaad66031b8e37ba0e7605c4450932274df9e274",
+        "bytes": 87235,
+        "counts": {
+          "total": 51,
+          "executed": 51,
+          "passed": 51,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:40.5972869-04:00",
+          "queuing": "2026-10-11T08:40:40.5972873-04:00",
+          "start": "2026-10-11T08:40:39.6305561-04:00",
+          "finish": "2026-10-11T08:40:41.5443270-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.SharedProvidersUi.SharedProviderBoundaryTests",
+          "CanDoItAll.Tests.Components.SharedProvidersUi.SharingRendererTests",
+          "CanDoItAll.Tests.Components.SharedProvidersUi.SourceRendererTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_40_net10.0.json",
+          "sha256": "bfc0c1fe78991036ff6ed91bccd51153bfc800281c971af3624545afa0b10983",
+          "bytes": 16733
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_43_net10.0.trx",
+        "sha256": "228ad0fdeea69521a2cfc89119863ac9d182304e86b3aed427878f4845a6846d",
+        "bytes": 229920,
+        "counts": {
+          "total": 144,
+          "executed": 144,
+          "passed": 144,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:43.1272060-04:00",
+          "queuing": "2026-10-11T08:40:43.1272064-04:00",
+          "start": "2026-10-11T08:40:41.9857908-04:00",
+          "finish": "2026-10-11T08:40:44.7060617-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.AgentFramework.AgentsAdjunctSurfaceTests",
+          "CanDoItAll.Tests.Components.AgentFramework.AgentsCompletionSurfaceTests",
+          "CanDoItAll.Tests.Components.AgentFramework.ConversationDialogSurfaceTests",
+          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryFilterTests",
+          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryScenarioTests",
+          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistorySeamTests",
+          "CanDoItAll.Tests.Components.AgentFramework.ProviderHistoryWorkspaceTests",
+          "CanDoItAll.Tests.Components.AgentFramework.TeamAuthoringTests",
+          "CanDoItAll.Tests.Unit.ProviderHistorySearchStateTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_43_net10.0.json",
+          "sha256": "1b292bebd7daba7d311f201bf9ceaaff8577d52fae56a886de85ddc300c88283",
+          "bytes": 45642
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_46_net10.0.trx",
+        "sha256": "251b25c03ea0a88b965173aebed845f6175d57a36ca1e49738d7dfdd08f5c796",
+        "bytes": 52091,
+        "counts": {
+          "total": 30,
+          "executed": 30,
+          "passed": 30,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:46.4285886-04:00",
+          "queuing": "2026-10-11T08:40:46.4285889-04:00",
+          "start": "2026-10-11T08:40:45.1436102-04:00",
+          "finish": "2026-10-11T08:40:47.4387787-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowCanvasAcceptanceTests",
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowExecutorSettingsTests",
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowPortProjectionTests",
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowPromptAcceptanceTests",
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowProviderSelectionTests",
+          "CanDoItAll.Tests.Components.WorkflowAuthoring.WorkflowRouteFieldsTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_46_net10.0.json",
+          "sha256": "0640d060591a31e485ceeefe2a890716da8b15dde17bcabedc590eb795b34011",
+          "bytes": 9607
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_48_net10.0.trx",
+        "sha256": "00f968dfe4f23e4944452a2653669d755740ed1458787ee9f5033bce3b581af1",
+        "bytes": 45761,
+        "counts": {
+          "total": 28,
+          "executed": 28,
+          "passed": 28,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:49.0029449-04:00",
+          "queuing": "2026-10-11T08:40:49.0029453-04:00",
+          "start": "2026-10-11T08:40:47.8513764-04:00",
+          "finish": "2026-10-11T08:40:49.6485034-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationBoundaryTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.ApplicationDescendantTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.DashboardSurfaceTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.ProfileSurfaceTests",
+          "CanDoItAll.Tests.Components.ApplicationUI.RuntimeSurfaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_48_net10.0.json",
+          "sha256": "e75c5d04c35e08bb2fd0b0ee9b9bbbe5caaea708406ae689d1001a80934c9727",
+          "bytes": 8888
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_51_net10.0.trx",
+        "sha256": "9e002092f0fa65c41e2d81eaf55f9421080c66bad0449e50d8f244ecda662668",
+        "bytes": 41759,
+        "counts": {
+          "total": 25,
+          "executed": 25,
+          "passed": 25,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:51.4561137-04:00",
+          "queuing": "2026-10-11T08:40:51.4561141-04:00",
+          "start": "2026-10-11T08:40:50.1244183-04:00",
+          "finish": "2026-10-11T08:40:52.4494118-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.Collaboration.CollaborationBoundaryTests",
+          "CanDoItAll.Tests.Components.Collaboration.CollaborationScenarioTests",
+          "CanDoItAll.Tests.Components.Collaboration.CollaborationSurfaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_51_net10.0.json",
+          "sha256": "81d99e146fe537389dcfec7b7f8266174d53897ecd8db97cbc9295fe56c30ac3",
+          "bytes": 8095
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_54_net10.0.trx",
+        "sha256": "d27063c97824bf17466f3b293f992079a1d3cb67ac67d30e0f1e50fbd159d386",
+        "bytes": 56809,
+        "counts": {
+          "total": 36,
+          "executed": 36,
+          "passed": 36,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:54.3401694-04:00",
+          "queuing": "2026-10-11T08:40:54.3401698-04:00",
+          "start": "2026-10-11T08:40:52.9291676-04:00",
+          "finish": "2026-10-11T08:40:55.0493578-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.Memory.MemoryBoundaryTests",
+          "CanDoItAll.Tests.Components.MemoryUi.MemoryExtensionLifetimeTests",
+          "CanDoItAll.Tests.Components.MemoryUi.MemoryResultOriginTests",
+          "CanDoItAll.Tests.Components.MemoryUi.MemoryWorkspaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_54_net10.0.json",
+          "sha256": "1b13b59f895c6704e4403a2f6a3c23181b3bd21b017482b93a0942a12c73a233",
+          "bytes": 11092
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_40_56_net10.0.trx",
+        "sha256": "e5b0ce0c55d081e7a4ff335a354c6293a25a8358ea3c6077d0a1b77f2ab45991",
+        "bytes": 78673,
+        "counts": {
+          "total": 50,
+          "executed": 50,
+          "passed": 50,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:40:56.9668649-04:00",
+          "queuing": "2026-10-11T08:40:56.9668653-04:00",
+          "start": "2026-10-11T08:40:55.5041437-04:00",
+          "finish": "2026-10-11T08:40:58.4118953-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.Plugins.PluginsBoundaryTests",
+          "CanDoItAll.Tests.Components.Plugins.PluginsEffectTests",
+          "CanDoItAll.Tests.Components.Plugins.PluginsSelectionRecoveryTests",
+          "CanDoItAll.Tests.Components.Plugins.PluginsSurfaceTests",
+          "CanDoItAll.Tests.Components.Plugins.PluginsWorkspaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_40_56_net10.0.json",
+          "sha256": "4a902a3463d8acaa18a8c0a4ec56eab0a720a10efc2916dfb2bc447ccf2c1106",
+          "bytes": 15478
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_01_net10.0.trx",
+        "sha256": "66ef53653a0f6209525d2c015c868c66ed8d99bce8d34fd7f86f32a056342f0c",
+        "bytes": 34089,
+        "counts": {
+          "total": 21,
+          "executed": 21,
+          "passed": 21,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:01.1082708-04:00",
+          "queuing": "2026-10-11T08:41:01.1082711-04:00",
+          "start": "2026-10-11T08:40:58.9415843-04:00",
+          "finish": "2026-10-11T08:41:02.4180234-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ProcessesUI.ProcessBoundaryTests",
+          "CanDoItAll.Tests.Components.ProcessesUI.ProcessRendererTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_01_net10.0.json",
+          "sha256": "0d02cf287e99d004e7b003db146040915e6d03b336a8cc2346b9249988264446",
+          "bytes": 6513
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_04_net10.0.trx",
+        "sha256": "5142469c8569c899c5786347afa79d741619c9d1c4ea91498f962992699312fa",
+        "bytes": 28345,
+        "counts": {
+          "total": 17,
+          "executed": 17,
+          "passed": 17,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:04.7945521-04:00",
+          "queuing": "2026-10-11T08:41:04.7945525-04:00",
+          "start": "2026-10-11T08:41:02.8528956-04:00",
+          "finish": "2026-10-11T08:41:04.9330777-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ProjectsFilesUi.FilesBoundaryTests",
+          "CanDoItAll.Tests.Components.ProjectsFilesUi.FilesRendererTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_04_net10.0.json",
+          "sha256": "c2e32c715af3a5b6c502dfb9c9b393381938dc20fa8e3913eba0dfc92c72809b",
+          "bytes": 5254
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_07_net10.0.trx",
+        "sha256": "7c0185329171a8f403f581c6f01b99ee71d83a83f4b16bc933d7796b36bf39f4",
+        "bytes": 40632,
+        "counts": {
+          "total": 25,
+          "executed": 25,
+          "passed": 25,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:07.1117477-04:00",
+          "queuing": "2026-10-11T08:41:07.1117481-04:00",
+          "start": "2026-10-11T08:41:05.3444497-04:00",
+          "finish": "2026-10-11T08:41:07.5031242-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ProjectsUi.ProjectDeletionStatusSurfaceTests",
+          "CanDoItAll.Tests.Components.ProjectsUi.ProjectEditorInteropTests",
+          "CanDoItAll.Tests.Components.ProjectsUi.ProjectEditorSurfaceTests",
+          "CanDoItAll.Tests.Components.ProjectsUi.ProjectsBoundaryTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_07_net10.0.json",
+          "sha256": "42522d37987e7ba97045c40df22fee7e8bf8e668c323af7a35c9755e737e69f8",
+          "bytes": 7827
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_09_net10.0.trx",
+        "sha256": "00ab6fa2d0fae4d8ddc1f97f21a787827659e2b55cdcec677ae0c5626f4f5828",
+        "bytes": 111967,
+        "counts": {
+          "total": 70,
+          "executed": 70,
+          "passed": 70,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:09.1574513-04:00",
+          "queuing": "2026-10-11T08:41:09.1574517-04:00",
+          "start": "2026-10-11T08:41:07.9092727-04:00",
+          "finish": "2026-10-11T08:41:10.5835608-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceBoundaryTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceBrowseTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceContractCompatibilityTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceEditorReadinessTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceRegistryTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTests",
+          "CanDoItAll.Tests.Components.ResourcesUi.ResourcesPageLoadGenerationTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_09_net10.0.json",
+          "sha256": "0ff5f99c95754cf5d91f68da444ff9a7c7fd04e18c8e596660ba6d47702e9a20",
+          "bytes": 22423
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_12_net10.0.trx",
+        "sha256": "467fd5e830cd6f571f1feac76aa8a28187c3076301637ae6fc4e5dac9e0adb6a",
+        "bytes": 96821,
+        "counts": {
+          "total": 59,
+          "executed": 59,
+          "passed": 59,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:12.3023552-04:00",
+          "queuing": "2026-10-11T08:41:12.3023557-04:00",
+          "start": "2026-10-11T08:41:10.9802421-04:00",
+          "finish": "2026-10-11T08:41:12.8310260-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerCalendarTests",
+          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerPlannerBoundaryTests",
+          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerReviewRegressionTests",
+          "CanDoItAll.Tests.Components.SchedulerPlanner.SchedulerWorkspaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_12_net10.0.json",
+          "sha256": "f007119dee3676ea6d3b75c1c963505761ac06364468ee2304dee1c627a28a56",
+          "bytes": 19062
+        },
+        "failed": []
+      },
+      {
+        "path": ".artifacts/cd1-closure-20261011/stable-results/lucys_LUCYSPOWER_2026-10-11_08_41_14_net10.0.trx",
+        "sha256": "1e850c74cbbdadf0e542cd96d621f181ab180e6bb264acb867a528f2a2a1a2a1",
+        "bytes": 61187,
+        "counts": {
+          "total": 38,
+          "executed": 38,
+          "passed": 38,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "times": {
+          "creation": "2026-10-11T08:41:14.4265995-04:00",
+          "queuing": "2026-10-11T08:41:14.4265999-04:00",
+          "start": "2026-10-11T08:41:13.2589737-04:00",
+          "finish": "2026-10-11T08:41:15.4391287-04:00"
+        },
+        "classes": [
+          "CanDoItAll.Tests.Components.TestLab.TestLabBoundaryTests",
+          "CanDoItAll.Tests.Components.TestLab.TestLabSandboxReviewTests",
+          "CanDoItAll.Tests.Components.TestLab.TestLabSurfaceTests"
+        ],
+        "identities": {
+          "path": ".artifacts/cd1-closure-20261011/identities/lucys_LUCYSPOWER_2026-10-11_08_41_14_net10.0.json",
+          "sha256": "45f483d38594cc5ecd6943bae5b5996001668619b1f1db9ffe7a00a832e5ad20",
+          "bytes": 12267
+        },
+        "failed": []
+      }
+    ]
+  },
+  "retained_attempts": [
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-1.trx",
+      "sha256": "7ea2faf767e8d93309b408aa709ad9f5ab91b2b9a6b064f0d84155967eef01a5",
+      "bytes": 23509,
+      "counts": {
+        "total": 14,
+        "executed": 14,
+        "passed": 14,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T07:34:41.1240217-04:00",
+        "queuing": "2026-10-11T07:34:41.1240222-04:00",
+        "start": "2026-10-11T07:34:39.3814619-04:00",
+        "finish": "2026-10-11T07:34:41.8134029-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Components.ApplicationUI.ApplicationBoundaryTests",
+        "CanDoItAll.Tests.Components.ApplicationUI.DashboardSurfaceTests",
+        "CanDoItAll.Tests.Components.ApplicationUI.RuntimeSurfaceTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-1.json",
+        "sha256": "113b5fcc75f3eecae75b472c2b2dc46f72482c2e0abe01dc535d02c39260f7e7",
+        "bytes": 4351
+      },
+      "failed": []
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-2.trx",
+      "sha256": "10b2aa34b17c5454fb7ce8a64bfa24c3e8787c3e5869f334c922b80b52104105",
+      "bytes": 41048,
+      "counts": {
+        "total": 25,
+        "executed": 25,
+        "passed": 25,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T07:59:05.3357249-04:00",
+        "queuing": "2026-10-11T07:59:05.3357252-04:00",
+        "start": "2026-10-11T07:59:04.2910546-04:00",
+        "finish": "2026-10-11T07:59:06.1260186-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Components.ApplicationUI.ApplicationBoundaryTests",
+        "CanDoItAll.Tests.Components.ApplicationUI.DashboardSurfaceTests",
+        "CanDoItAll.Tests.Components.ApplicationUI.ProfileSurfaceTests",
+        "CanDoItAll.Tests.Components.ApplicationUI.RuntimeSurfaceTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-2.json",
+        "sha256": "676d54fc2b524c647f428978adf4bfe9ebad6a651523f06b31e0289e8f4e8986",
+        "bytes": 7954
+      },
+      "failed": []
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-browser-1.trx",
+      "sha256": "7112b1ccf87b3cf53f2a69c82fd59f562d506f12f0ec2848679bf889669ea8f0",
+      "bytes": 19333,
+      "counts": {
+        "total": 3,
+        "executed": 3,
+        "passed": 0,
+        "failed": 3,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T08:23:10.9961533-04:00",
+        "queuing": "2026-10-11T08:23:10.9961537-04:00",
+        "start": "2026-10-11T08:22:41.3943790-04:00",
+        "finish": "2026-10-11T08:23:52.8964468-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-browser-1.json",
+        "sha256": "f2e7760dc6ff437f9b2f53083b633a24113a8a6a9f059016a010e966207b776c",
+        "bytes": 986
+      },
+      "failed": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: True)",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Native_shell_activation_readback_and_owned_process_restart_preserve_runtime_authority",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: False)"
+      ]
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-browser-2.trx",
+      "sha256": "b64fc973e8d0e571d3566a02ef1558311ae70424326d932cfd9026c54a0c9db8",
+      "bytes": 25446,
+      "counts": {
+        "total": 3,
+        "executed": 3,
+        "passed": 0,
+        "failed": 3,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T08:26:21.2733823-04:00",
+        "queuing": "2026-10-11T08:26:21.2733827-04:00",
+        "start": "2026-10-11T08:25:58.5687946-04:00",
+        "finish": "2026-10-11T08:26:56.9797309-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-browser-2.json",
+        "sha256": "5dc88ae3bb24cd07c45b853a3bc06d1615149a3412d8f2550c6d89d33bae317e",
+        "bytes": 986
+      },
+      "failed": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: False)",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Native_shell_activation_readback_and_owned_process_restart_preserve_runtime_authority",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: True)"
+      ]
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-browser-3.trx",
+      "sha256": "4c213351ac9d786420dbc07f5698920e3f498a0ce72c7c597c437a6f6052b673",
+      "bytes": 23178,
+      "counts": {
+        "total": 3,
+        "executed": 3,
+        "passed": 0,
+        "failed": 3,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T08:30:35.7957364-04:00",
+        "queuing": "2026-10-11T08:30:35.7957368-04:00",
+        "start": "2026-10-11T08:29:52.1756667-04:00",
+        "finish": "2026-10-11T08:32:14.8558020-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-browser-3.json",
+        "sha256": "359148bdadcc542594109aeb6ec89346dd846bd06763ae6e0098bc1c3303ee0e",
+        "bytes": 986
+      },
+      "failed": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: True)",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: False)",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Native_shell_activation_readback_and_owned_process_restart_preserve_runtime_authority"
+      ]
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/application-browser-keyboard.trx",
+      "sha256": "7b5e3b9a828df800bb6e06e158d8d9a892818f19ff417dbc945330e33fbfc954",
+      "bytes": 13115,
+      "counts": {
+        "total": 2,
+        "executed": 2,
+        "passed": 0,
+        "failed": 2,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T09:31:40.2140695-04:00",
+        "queuing": "2026-10-11T09:31:40.2140699-04:00",
+        "start": "2026-10-11T09:31:22.4703347-04:00",
+        "finish": "2026-10-11T09:32:05.0946191-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/application-browser-keyboard.json",
+        "sha256": "55aeb0644551cd94d5c41bac8d98c920e7f6a853f10e658f1b161de12ca42ce4",
+        "bytes": 670
+      },
+      "failed": [
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: True)",
+        "CanDoItAll.Tests.Playwright.ApplicationClosureBrowserTests.Independent_application_controls_children_clipboard_and_geometry_survive_publication(published: False)"
+      ]
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/native-application-1.trx",
+      "sha256": "8db6c0feb0a170537a1ca26f98bd0a517819e469c6fc79f0fca053b6b34eec82",
+      "bytes": 63893,
+      "counts": {
+        "total": 41,
+        "executed": 41,
+        "passed": 41,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T07:42:10.7163878-04:00",
+        "queuing": "2026-10-11T07:42:10.7163882-04:00",
+        "start": "2026-10-11T07:42:08.4837058-04:00",
+        "finish": "2026-10-11T07:43:09.6399341-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Components.AgentFramework.AgentsHomePageTests",
+        "CanDoItAll.Tests.Components.AgentFramework.RuntimeCapabilitiesPageTests",
+        "CanDoItAll.Tests.Components.CrmHr.CrmHrHomePageTests",
+        "CanDoItAll.Tests.Components.Shell.DashboardSnapshotCacheTests",
+        "CanDoItAll.Tests.Components.Shell.DashboardSnapshotLoadRunnerTests",
+        "CanDoItAll.Tests.Components.Shell.DashboardSnapshotLoaderTests",
+        "CanDoItAll.Tests.Components.Shell.HomePageTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/native-application-1.json",
+        "sha256": "7b8dc793587b6b51008538ca95c4353ab2ded415f5008aadf5d682624fd40469",
+        "bytes": 12283
+      },
+      "failed": []
+    },
+    {
+      "path": ".artifacts/cd1-closure-20261011/tests/native-shell-1.trx",
+      "sha256": "b5ffeb328d5cc7cab14fa87e24feef64f13015a61d725f827d5f4ad223da96fd",
+      "bytes": 52912,
+      "counts": {
+        "total": 21,
+        "executed": 21,
+        "passed": 19,
+        "failed": 2,
+        "notExecuted": 0
+      },
+      "times": {
+        "creation": "2026-10-11T08:02:07.9361136-04:00",
+        "queuing": "2026-10-11T08:02:07.9361142-04:00",
+        "start": "2026-10-11T08:02:05.6774274-04:00",
+        "finish": "2026-10-11T08:04:30.0670210-04:00"
+      },
+      "classes": [
+        "CanDoItAll.Tests.Components.Shell.MainLayoutCollaborationTests",
+        "CanDoItAll.Tests.Components.Shell.MainLayoutDatabaseProfileTests",
+        "CanDoItAll.Tests.Components.Shell.MainLayoutProfileAdmissionTests",
+        "CanDoItAll.Tests.Components.Shell.MainLayoutRetirementTests",
+        "CanDoItAll.Tests.Components.Shell.MainLayoutTopBarTests"
+      ],
+      "identities": {
+        "path": ".artifacts/cd1-closure-20261011/identities/native-shell-1.json",
+        "sha256": "8034c37a6e20c537ee2234f230dd1833a2dc6eae8ba6b70d1f515135db38bbb7",
+        "bytes": 6391
+      },
+      "failed": [
+        "CanDoItAll.Tests.Components.Shell.MainLayoutProfileAdmissionTests.Duplicate_activation_and_selection_during_admission_keep_the_captured_profile_and_require_restart",
+        "CanDoItAll.Tests.Components.Shell.MainLayoutProfileAdmissionTests.Retired_layout_cannot_publish_activation_into_a_successor_layout"
+      ]
+    }
+  ],
+  "browser_artifacts": [
+    {
+      "path": "output/playwright/components-decoupling-closure/native-pending-restart.png",
+      "sha256": "523847426ff3197287a7c29dd38804ea0ebb80db8af37a6481262a47711b9f5f",
+      "bytes": 253331
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/native-profile-readback.json",
+      "sha256": "a462a6c39c7a727fa4819f0da59252511f95ba9385ffdd3cd2cb0cd7f1142ef5",
+      "bytes": 742
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-browser.json",
+      "sha256": "82cc865d34f905a6fbd6e0eaa06f8efa9a437257b1c49cbf56c13a241f58c080",
+      "bytes": 48
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-dashboard-stale.png",
+      "sha256": "ed926ba7f911bba834abff08e15cf17d0f52dbb433203653bcb258ab69d7e97d",
+      "bytes": 85671
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-last.png",
+      "sha256": "4b9096d232f5988cc228d2c24635dca9b2c47ead5e472333bb947b011f0339a6",
+      "bytes": 69964
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-native-dashboard-populated.png",
+      "sha256": "728f97e5f4a88344109676234075380d8d66b6ca868501e2cc9a3c2145e8c59b",
+      "bytes": 165864
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-native-dashboard-stale.png",
+      "sha256": "69f4d693089b81951234d30709aec821b274247461ab7bbd52d4b422b79ea9e5",
+      "bytes": 163816
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-native-dashboard.json",
+      "sha256": "2517a28aed15eeaac4ba07ecfdfad3d608bf322bc88072226a318bc0711d25e3",
+      "bytes": 382
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-native-runtime.png",
+      "sha256": "69fa61da112b1293c8d3f04364fbc552e9be0a2c3a51713ad5e055c1539832d6",
+      "bytes": 235545
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-profiles-constrained.png",
+      "sha256": "554ca747f3ca249479417f77385647d71ed1aec3ccd621d41aca6f3c378fcf46",
+      "bytes": 77410
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/published-profiles-desktop.png",
+      "sha256": "f63d047764a1f9e5f669c690879c0eda681368fa780cc2eaa3de17413ecdac5e",
+      "bytes": 148154
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-browser.json",
+      "sha256": "b11ad93dffa3d17666af3f2fbc2ecce0b2ac1ff898694bfef4dfa8ebc9827e98",
+      "bytes": 49
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-dashboard-stale.png",
+      "sha256": "60caf61858ee6573a2e08bc4019171f9cd19538151fb6cfa90bb602d1b07a9f8",
+      "bytes": 85657
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-last.png",
+      "sha256": "4b9096d232f5988cc228d2c24635dca9b2c47ead5e472333bb947b011f0339a6",
+      "bytes": 69964
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-native-dashboard-populated.png",
+      "sha256": "c9bfb35f6bad019a85e436c079e4d8425c2ef755af91af521cb2a9086d422c87",
+      "bytes": 165820
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-native-dashboard-stale.png",
+      "sha256": "8aeca3bdb0fd71f003ab8bc0295afb0f1fb2a8ee0f561ec85a145d607fbe45bb",
+      "bytes": 163460
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-native-dashboard.json",
+      "sha256": "dc37b52626ebc9010e163b85e8ef7236035fa910da7acdcf8adc341daa6ae26e",
+      "bytes": 383
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-native-runtime.png",
+      "sha256": "973633512148413fe3c410b2a072c953cbf71cce8e0dbada4ea4221a05806f48",
+      "bytes": 235404
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-profiles-constrained.png",
+      "sha256": "554ca747f3ca249479417f77385647d71ed1aec3ccd621d41aca6f3c378fcf46",
+      "bytes": 77410
+    },
+    {
+      "path": "output/playwright/components-decoupling-closure/source-profiles-desktop.png",
+      "sha256": "79526ca044179490e4ba29e3b525a6de3eff88bdbf054768daafac96b2b10851",
+      "bytes": 148178
+    }
+  ],
+  "browser_unique_cases": 26,
+  "browser_count_basis": "3 new application cases,21 cross-family cases,2 native Dashboard modes; Workbench rerun and later repeated keyboard cases do not add coverage.",
+  "development_loop": {
+    "status": "PENDING_FINAL_STARTUP",
+    "entry_startup": [
+      {
+        "sample": 1,
+        "source": "663fb1391e4acb12439173f1cb1d287fb1f24685",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "elapsed_seconds": 8.3305858,
+        "source_dependencies": true,
+        "condition": "same seeded database, warm filesystem",
+        "configuration": "Release"
+      },
+      {
+        "sample": 2,
+        "source": "663fb1391e4acb12439173f1cb1d287fb1f24685",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "elapsed_seconds": 9.2039305,
+        "source_dependencies": true,
+        "condition": "same seeded database, warm filesystem",
+        "configuration": "Release"
+      },
+      {
+        "sample": 3,
+        "source": "663fb1391e4acb12439173f1cb1d287fb1f24685",
+        "measurement": "process launch to HTTP 200 readiness route, not interactive circuit",
+        "elapsed_seconds": 9.2698813,
+        "source_dependencies": true,
+        "condition": "same seeded database, warm filesystem",
+        "configuration": "Release"
+      }
+    ],
+    "watch_inputs": {
+      "sandbox": 704,
+      "native": 4929
+    },
+    "sandbox": {
+      "session": "app_f44b30ec1d474670bdc3cee4b2175f63",
+      "pid": 55132,
+      "document": "fc7acf13-9ce6-41d0-84c2-583483e3f48e",
+      "raw_apply_ms": {
+        "razor": 4174,
+        "razor_restore": 353,
+        "csharp": 444,
+        "csharp_restore": 58
+      },
+      "state": "STOPPED",
+      "qualification": "SDK and browser confirm updates; installed MCP WatchReady/WatchSettled parser remained ChangeDetected. Failed waits retained, tooling preserved."
+    },
+    "native": {
+      "pid": 32748,
+      "document": "65ce5fc4-7952-4aa0-8238-e801eb5b5e83",
+      "state": "STOPPED",
+      "raw_apply_ms": {
+        "razor": 5746,
+        "razor_restore": 3457,
+        "csharp_first_attempt": 5304,
+        "csharp_first_restore": 4699,
+        "csharp": 3276,
+        "csharp_restore": 3327
+      },
+      "razor_edit_visible_ms": 3853,
+      "razor_restore_visible_ms": 1563,
+      "csharp_normal_refresh_to_visible_ms": 192,
+      "browser": {
+        "path": ".artifacts/cd1-closure-20261011/native-watch-final-browser.json",
+        "sha256": "12c6403d628e61cc3fc3af36e77590006bcdc456ff12b6471489c0b405c7e399",
+        "bytes": 502
+      },
+      "qualification": "Same process and document. C# owner projection requires normal Refresh capabilities; compilation/application and operator interaction are separate timings. Wrong Refresh locator in first attempt retained. SDK reports Missing Asset manifest warnings; actual source and published asset requests separately passed. Initial automatic denial resolved by explicit user authorization of the prepared script."
+    },
+    "scope": "Three before/after warm native startup samples; no invented pre-extraction independent host. No feature-owned scoped CSS or JS introduced. Standard shared asset browser proof remains required; no arbitrary speed threshold or live-provider claim.",
+    "package_availability": {
+      "checked_utc": "2026-10-11T13:42:22.4998046+00:00",
+      "qualification": "Read-only package availability check. Current repository defaults to mandatory sibling source builds; no restore or binary/package override performed.",
+      "configured_present": false,
+      "source": "https://api.nuget.org/v3-flatcontainer/candoitall.components.baselib/index.json",
+      "configured": "0.3.0",
+      "package": "CanDoItAll.Components.BaseLib",
+      "versions": [
+        "0.1.15",
+        "0.1.17",
+        "0.1.18"
+      ]
+    },
+    "scoped_css_js": "NOT_APPLICABLE: no feature-owned scoped CSS/JS was introduced or moved. Existing sibling assets and theme are exercised in source and published browser modes."
+  },
+  "rendering_guard": {
+    "status": "PASS",
+    "cases": 7,
+    "command": "python -m unittest discover -s tools/Validation/Rendering -p test_*.py; python tools/Validation/Rendering/check_rendering_register.py --repo .",
+    "qualification": "Bounded source review guard, not semantic proof or an automatic baseline updater."
+  },
+  "static": {
+    "portability": {
+      "status": "PASS",
+      "scan": {
+        "path": ".artifacts/cd1-closure-20261011/portability-precommit-3.json",
+        "sha256": "59275473373bb77fb3e9127cfa238a11005041874ee26a64afba377be3269b43"
+      },
+      "allowances": 15384,
+      "review": "One additional CI shell: pwsh occurrence for the rendering guard; existing portable CI interpreter, no elevation. All prior route/display deltas reviewed with their source checkpoints. Final enforcement ran without --write-baseline.",
+      "files": 9472,
+      "findings": 37720,
+      "final_enforcement": ".artifacts/cd1-closure-20261011/portability-precommit-3.log"
+    },
+    "documentation": {
+      "status": "PASS",
+      "maintained_markdown_files": 411,
+      "evidence_validator_cases": 9,
+      "logs": [
+        ".artifacts/cd1-closure-20261011/documentation-evidence-1.log",
+        ".artifacts/cd1-closure-20261011/documentation-2.log"
+      ],
+      "retained_failure": "documentation-1.log identified the missing new test-project README, now supplied."
+    },
+    "bundle": {
+      "payload_files": 22,
+      "acceptance_groups": 32,
+      "source_entries": 39,
+      "links": 24,
+      "helper_tests": 34,
+      "shared_bundle": "UNCHANGED"
+    }
+  },
+  "reuse": {
+    "status": "NO_HISTORICAL_RESULT_COUNTED_AS_CURRENT_EXECUTION",
+    "pc4_source": "ca195c794349d4e4eb653bacb7605ed83df86c4b",
+    "pc4_report": "fd9e43547457eb18901185da47de123efdfd8108",
+    "historical_browser_receipt": {
+      "path": ".artifacts/pc4-closure-20261010/browser/CanDoItAll.Tests.Playwright/results.trx",
+      "sha256": "dc8737661930ca6da2c0ad8873e1fa3b1f5990732cc51ea4c05dabb9bae036bf",
+      "bytes": 381624
+    },
+    "qualification": "Historical proof remains historical supporting owner semantics. Current shared Web shell invalidates using old whole-Web binaries as current runtime proof; fresh current Stable and browser lanes supply that dimension. Native Process/Workbench authoring/launch/predecessor/role-resource production source and contracts are unchanged by CD1. No blanket old Stable or full browser pass is reused.",
+    "source_bridge": {
+      "path": ".artifacts/cd1-closure-20261011/unchanged-owner-source-bridge.json",
+      "sha256": "0d66ed169380a15d42442df5ab0d0be2bf7ea75c5f265b1a004da864bc516dbc",
+      "files": 721,
+      "changed": []
+    }
+  },
+  "architecture_review": {
+    "status": "PASS",
+    "record": "docs/architecture/components-decoupling-closure.md",
+    "findings": [],
+    "dependency_direction": "Native Web -> Application.UI -> existing AppComponents/BaseLib presentation closure; no reverse/native/service-provider injection; evaluated and compiled negative controls passed.",
+    "partial_class_policy": "Existing native partial files retain effects; no new native partial added. Old display partial removed; application leaves are real Razor components.",
+    "testability": "Independent28 includes actual descendants,public contract,unresolved/direct/transitive/native dynamic child negative controls. Native21 includes real activation/readback and delayed/retired outcomes. New seams are used by actual routes and MainLayout."
+  },
+  "signatures": [
+    {
+      "commit": "b680693caccddf9398c991307c413da1e9581c2d",
+      "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 663fb1391e4acb12439173f1cb1d287fb1f24685"
+    },
+    {
+      "commit": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
+      "verification": "G 96E836FAA8854EE98ABC10903C206549E1D7EAD6 b680693caccddf9398c991307c413da1e9581c2d"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "CD1-01",
+      "status": "PASS",
+      "evidence": [
+        "source_tuple"
+      ]
+    },
+    {
+      "id": "CD1-02",
+      "status": "PASS",
+      "evidence": [
+        "signatures"
+      ]
+    },
+    {
+      "id": "CD1-03",
+      "status": "PASS",
+      "evidence": [
+        "source_register",
+        "codeanalytics",
+        "evaluated"
+      ]
+    },
+    {
+      "id": "CD1-04",
+      "status": "PASS",
+      "evidence": [
+        "source_register",
+        "architecture_review"
+      ]
+    },
+    {
+      "id": "CD1-05",
+      "status": "PASS",
+      "evidence": [
+        "application-independent",
+        "evaluated",
+        "architecture_review"
+      ]
+    },
+    {
+      "id": "CD1-06",
+      "status": "PASS",
+      "evidence": [
+        "native-dashboard-runtime",
+        "native-dashboard-source-published-and-workbench-rerun"
+      ]
+    },
+    {
+      "id": "CD1-07",
+      "status": "PASS",
+      "evidence": [
+        "native-dashboard-runtime",
+        "application-independent"
+      ]
+    },
+    {
+      "id": "CD1-08",
+      "status": "PASS",
+      "evidence": [
+        "native-dashboard-runtime",
+        "application-browser"
+      ]
+    },
+    {
+      "id": "CD1-09",
+      "status": "PASS",
+      "evidence": [
+        "application-browser",
+        "native-shell"
+      ]
+    },
+    {
+      "id": "CD1-10",
+      "status": "PASS",
+      "evidence": [
+        "application-browser",
+        "application-independent"
+      ]
+    },
+    {
+      "id": "CD1-11",
+      "status": "PASS",
+      "evidence": [
+        "native-shell",
+        "application-browser"
+      ]
+    },
+    {
+      "id": "CD1-12",
+      "status": "PASS",
+      "evidence": [
+        "application-browser",
+        "native-shell"
+      ]
+    },
+    {
+      "id": "CD1-13",
+      "status": "PASS",
+      "evidence": [
+        "cross-workspace-browser",
+        "native-shell",
+        "application-browser"
+      ]
+    },
+    {
+      "id": "CD1-14",
+      "status": "PASS",
+      "evidence": [
+        "source_register",
+        "architecture_review"
+      ]
+    },
+    {
+      "id": "CD1-15",
+      "status": "PASS",
+      "evidence": [
+        "source_register",
+        "architecture_review"
+      ]
+    },
+    {
+      "id": "CD1-16",
+      "status": "PASS",
+      "evidence": [
+        "native-dashboard-runtime",
+        "native-shell",
+        "cross-workspace-browser"
+      ]
+    },
+    {
+      "id": "CD1-17",
+      "status": "PASS",
+      "evidence": [
+        "native-shell",
+        "application-independent",
+        "cross-workspace-browser"
+      ]
+    },
+    {
+      "id": "CD1-18",
+      "status": "PASS",
+      "evidence": [
+        "application-independent",
+        "application-browser"
+      ]
+    },
+    {
+      "id": "CD1-19",
+      "status": "PENDING",
+      "evidence": [
+        "native-shell",
+        "native-dashboard-runtime",
+        "broad_stable"
+      ]
+    },
+    {
+      "id": "CD1-20",
+      "status": "PASS",
+      "evidence": [
+        "application-browser",
+        "native-dashboard-source-published-and-workbench-rerun"
+      ]
+    },
+    {
+      "id": "CD1-21",
+      "status": "PASS",
+      "evidence": [
+        "cross-workspace-browser"
+      ]
+    },
+    {
+      "id": "CD1-22",
+      "status": "PASS",
+      "evidence": [
+        "application-browser-keyboard",
+        "browser_artifacts"
+      ]
+    },
+    {
+      "id": "CD1-23",
+      "status": "PENDING",
+      "evidence": [
+        "development_loop"
+      ]
+    },
+    {
+      "id": "CD1-24",
+      "status": "PASS",
+      "evidence": [
+        "application-independent",
+        "rendering_guard"
+      ]
+    },
+    {
+      "id": "CD1-25",
+      "status": "PASS",
+      "evidence": [
+        "codeanalytics",
+        "broad_stable"
+      ]
+    },
+    {
+      "id": "CD1-26",
+      "status": "PASS",
+      "evidence": [
+        "reuse"
+      ]
+    },
+    {
+      "id": "CD1-27",
+      "status": "PENDING",
+      "evidence": [
+        "static",
+        "broad_stable"
+      ]
+    },
+    {
+      "id": "CD1-28",
+      "status": "PASS",
+      "evidence": [
+        "reuse",
+        "broad_stable",
+        "cross-workspace-browser"
+      ]
+    },
+    {
+      "id": "CD1-29",
+      "status": "PASS",
+      "evidence": [
+        "resources"
+      ]
+    },
+    {
+      "id": "CD1-30",
+      "status": "PASS",
+      "evidence": [
+        "source_register",
+        "static"
+      ]
+    },
+    {
+      "id": "CD1-31",
+      "status": "PASS",
+      "evidence": [
+        "architecture_review"
+      ]
+    },
+    {
+      "id": "CD1-32",
+      "status": "PENDING",
+      "evidence": [
+        "dimensions",
+        "signatures",
+        "resources"
+      ]
+    }
+  ],
+  "resources": {
+    "status": "IN_USE",
+    "postgres": {
+      "pid": 66316,
+      "port": 55925,
+      "database": "cd1_entry plus framework-owned temporary leases",
+      "launcher_pid": 27552,
+      "last_use": "Broad Stable and comparable final startup; pg_ctl stop then wait for launcher natural exit"
+    },
+    "native_watch": {
+      "started_utc": "2026-10-11T13:14:44.3809374Z",
+      "pid": 32748,
+      "project": "C:\\repositories\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj",
+      "port": 58746,
+      "owner": "CD1",
+      "root": "C:\\repositories\\CanDoItAll\\.artifacts\\cd1-closure-20261011\\entry-web",
+      "database": "cd1_entry",
+      "configuration": "Debug",
+      "status": "STOPPED",
+      "stopped_utc": "2026-10-11T13:26:42.0715273+00:00"
+    },
+    "sandbox_watch": {
+      "logicalAppId": "cd1-application-sandbox",
+      "project": "src/Sandboxes/CanDoItAll.Application.UiSandbox",
+      "status": "STOPPED",
+      "configuration": "Debug",
+      "port": 58745,
+      "owner": "CD1",
+      "evidence": "watch-stopped-sandbox.json",
+      "app_id": "app_f44b30ec1d474670bdc3cee4b2175f63"
+    },
+    "protected": [
+      "ordinary application/database on5032",
+      "installed MCP and unrelated tool sessions",
+      "unrelated sibling edits"
+    ],
+    "prior_external_blockers": [
+      ".artifacts/mcp-installs/CanDoItAll.Mcp.CodeAnalytics/failed/failed-20261010-101825372",
+      ".artifacts/pc4-recovery-20261010/codeanalytics-smoke"
+    ],
+    "qualification": "Prior inactive cleanup-denied paths are not retried. Current fixture/private state will be removed after last use; no cleanup claim while it is running."
+  }
+}

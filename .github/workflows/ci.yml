@@ -559,6 +559,12 @@ jobs:
           python ./tools/Validation/Portability/test_enforce_portability_baseline.py
           python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py
 
+      - name: Require reviewed rendering inputs
+        shell: pwsh
+        run: |
+          python -m unittest discover -s ./tools/Validation/Rendering -p "test_*.py"
+          python ./tools/Validation/Rendering/check_rendering_register.py --repo .
+
       - name: Scan portability-sensitive sources
         shell: pwsh
         run: >-

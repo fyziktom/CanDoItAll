@@ -8,10 +8,17 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Playwright;
 
-internal sealed class AgentEditorSandboxHost : IAsyncDisposable {
+internal enum RazorSandboxTarget { AgentEditor, Application }
+
+internal sealed class RazorSandboxHost(RazorSandboxTarget target = RazorSandboxTarget.AgentEditor) : IAsyncDisposable {
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("agent-editor-sandbox");
     private readonly ConcurrentQueue<string> logs = new();
-    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "artifacts", "agent-editor-a2", "sandbox-hosts", Guid.NewGuid().ToString("N"));
+    private readonly string projectName = target switch {
+        RazorSandboxTarget.AgentEditor => "CanDoItAll.AgentFramework.Editor.UiSandbox",
+        RazorSandboxTarget.Application => "CanDoItAll.Application.UiSandbox",
+        _ => throw new ArgumentOutOfRangeException(nameof(target))
+    };
+    private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "sandbox-hosts", target.ToString(), Guid.NewGuid().ToString("N"));
     private Process? process;
     private bool publishedHost;
     private Task[] pumps = [];
@@ -20,7 +27,7 @@ internal sealed class AgentEditorSandboxHost : IAsyncDisposable {
 
     public async Task StartAsync(bool published) {
         publishedHost = published;
-        var root = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "Sandboxes", "CanDoItAll.AgentFramework.Editor.UiSandbox");
+        var root = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "Sandboxes", projectName);
         var directory = published ? Path.Combine(environment.RootPath, "publish") : root;
         if (published) {
             var publish = StartInfo(root);
@@ -52,14 +59,14 @@ internal sealed class AgentEditorSandboxHost : IAsyncDisposable {
         BaseUrl = $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}";
         listener.Stop();
         var start = StartInfo(directory);
-        start.ArgumentList.Add(published ? Path.Combine(directory, "CanDoItAll.AgentFramework.Editor.UiSandbox.dll")
-            : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", "CanDoItAll.AgentFramework.Editor.UiSandbox.dll"));
+        start.ArgumentList.Add(published ? Path.Combine(directory, projectName + ".dll")
+            : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", projectName + ".dll"));
         start.ArgumentList.Add("--urls");
         start.ArgumentList.Add(BaseUrl);
         start.Environment["ASPNETCORE_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment["DOTNET_ENVIRONMENT"] = published ? "Production" : "Development";
         start.Environment.Remove("CANDOITALL_TESTS_POSTGRES_CONNECTION");
-        process = Process.Start(start) ?? throw new InvalidOperationException("Owned Agent editor sandbox did not start.");
+        process = Process.Start(start) ?? throw new InvalidOperationException("Owned Razor sandbox did not start.");
         logs.Enqueue($"Owned sandbox PID={process.Id}; published={published}; URL={BaseUrl}");
         pumps = [PumpAsync(process.StandardOutput), PumpAsync(process.StandardError)];
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };

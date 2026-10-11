@@ -27,6 +27,7 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     };
     private Process? process;
     private Task[] pumps = [];
+    private string? publishedDirectory;
     private PostgresTestDatabaseLease? targetLease;
     public TestDatabaseProfile A { get; private set; } = null!;
     public TestDatabaseProfile B { get; private set; } = null!;
@@ -42,7 +43,7 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     public string ArtifactDirectory { get; } = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "data-sources-hosts", $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Guid.NewGuid():N}");
     public string LogSnapshot => string.Join(System.Environment.NewLine, logs);
 
-    public async Task StartAsync(bool enableApiManagement = false) {
+    public async Task StartAsync(bool enableApiManagement = false, bool published = false) {
         if (enableApiManagement) {
             configuration["Api:Authorization:Enabled"] = "true";
             configuration["Api:Authorization:SigningKey"] = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
@@ -84,6 +85,24 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
         listener.Start();
         BaseUrl = $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}";
         listener.Stop();
+        if (published) {
+            publishedDirectory = Path.Combine(Environment.RootPath, "publish");
+            var publish = new ProcessStartInfo("dotnet") {
+                WorkingDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"),
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            foreach (var argument in new[] { "publish", "--no-build", "--no-restore", "/m:1", "/nr:false", "--configuration", PlaywrightTestHostPaths.BuildConfiguration, "--output", publishedDirectory }) {
+                publish.ArgumentList.Add(argument);
+            }
+            logs.Enqueue($"Owned Data Sources publication: {publishedDirectory}");
+            using var publishing = Process.Start(publish) ?? throw new InvalidOperationException("Owned Web publication did not start.");
+            var output = publishing.StandardOutput.ReadToEndAsync();
+            var error = publishing.StandardError.ReadToEndAsync();
+            await publishing.WaitForExitAsync();
+            Directory.CreateDirectory(ArtifactDirectory);
+            await File.WriteAllTextAsync(Path.Combine(ArtifactDirectory, "publish.log"), await output + await error);
+            Assert.Equal(0, publishing.ExitCode);
+        }
         await StartProcessAsync();
     }
 
@@ -108,10 +127,12 @@ internal sealed class DataSourcesBrowserHost : IAsyncDisposable {
     }
     private async Task StartProcessAsync() {
         var start = new ProcessStartInfo("dotnet") {
-            WorkingDirectory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"),
+            WorkingDirectory = publishedDirectory ?? Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "App", "CanDoItAll.Web"),
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
         };
-        start.ArgumentList.Add(Path.Combine(start.WorkingDirectory, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", "CanDoItAll.Web.dll"));
+        start.ArgumentList.Add(publishedDirectory is null
+            ? Path.Combine(start.WorkingDirectory, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", "CanDoItAll.Web.dll")
+            : Path.Combine(publishedDirectory, "CanDoItAll.Web.dll"));
         start.ArgumentList.Add("--urls");
         start.ArgumentList.Add(BaseUrl);
         foreach (var pair in A.CreateEnvironmentVariables(configuration)) {

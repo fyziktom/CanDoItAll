@@ -14,6 +14,14 @@ the five-minute timer, clock, refresh admission and retirement. The route contra
 `CapabilityFact` children. The Web mapper owns native enum meanings and safe implementation
 identity projection. Refresh requests a new native snapshot; the renderer performs no probes.
 
+`DatabaseProfileDialogSurface` and `ShellUtilitiesSurface` receive safe display fields and
+emit an opening identity plus the profile captured by the rendered control. MainLayout owns
+activation admission, canonical readback, startup gating and pending-restart acknowledgement.
+The native credential-bearing editor never enters this assembly. `ShellStatusBar` uses the
+actual shared HelpPopover and retains its keyboard, hover and pinned behavior.
+
 The [independent scenario host](../../Sandboxes/CanDoItAll.Application.UiSandbox/README.md)
 uses the same production renderers. The [closure record](../../../docs/architecture/components-decoupling-closure.md)
-tracks native integration, remaining shell work, assets and evidence separately.
+tracks the current census, native integration, assets and evidence separately. The application
+boundary tests inspect resolved assemblies, exported contracts and actual rendered children;
+their negative controls include native parameters and a dynamically supplied native child.

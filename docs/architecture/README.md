@@ -3,6 +3,9 @@
 The architecture documentation is intentionally small:
 
 - [Overview](overview.md) defines boundaries and dependency direction.
+- [Current components closure](components-decoupling-closure.md) and its
+  [source register](components-decoupling-register.json) map rendering, retained native
+  owners, dynamic activation, validation and the next backend refactoring handoff.
 - [Storage, paths, and host portability](storage-and-path-portability.md) defines provider
   dispatch, logical locators, host-bound filesystem roots, and cross-host rebind.
 - [Runtime execution and shell portability](runtime-execution-portability.md) distinguishes
