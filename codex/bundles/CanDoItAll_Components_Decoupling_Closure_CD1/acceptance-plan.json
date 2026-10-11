@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "bundle_id": "CD1",
+  "interpretation": "Obligations, not a fixed number of tests, commits, types or projects.",
+  "groups": [
+    {
+      "id": "CD1-01",
+      "area": "entry",
+      "requirement": "Current checkout, sibling/source/mode tuple and protected work are recorded; no reset to the review SHA."
+    },
+    {
+      "id": "CD1-02",
+      "area": "signing",
+      "requirement": "Local PGP unlock is requested at entry and coherent tested signed commits are verified incrementally."
+    },
+    {
+      "id": "CD1-03",
+      "area": "census",
+      "requirement": "All current production rendering roots and evaluated/linked items are reconciled with the existing inventories."
+    },
+    {
+      "id": "CD1-04",
+      "area": "census",
+      "requirement": "Routes, C# renderers, dynamic/dialog/deferred/contributor descendants and compatibility activations have explicit owners."
+    },
+    {
+      "id": "CD1-05",
+      "area": "boundary",
+      "requirement": "Light renderer public types and actual evaluated direct/transitive/runtime dependencies are free of forbidden native edges; unresolved inputs are not called passes."
+    },
+    {
+      "id": "CD1-06",
+      "area": "dashboard",
+      "requirement": "Both dashboard routes preserve quick actions, identity-bearing links, recent/active meanings, usage and cost uncertainty."
+    },
+    {
+      "id": "CD1-07",
+      "area": "dashboard",
+      "requirement": "Native snapshot/cache/timer ownership, manual retry, stale display, independent tab state and disposal remain correct."
+    },
+    {
+      "id": "CD1-08",
+      "area": "runtime",
+      "requirement": "Full Runtime Capabilities and CapabilityFact presentation is independent while native readiness probes and every status meaning remain unchanged."
+    },
+    {
+      "id": "CD1-09",
+      "area": "profiles",
+      "requirement": "Database startup/runtime/selected/active/pending/config-lock states and all current actions retain their distinctions."
+    },
+    {
+      "id": "CD1-10",
+      "area": "profiles",
+      "requirement": "Only safe profile display/copy data crosses the seam; synthetic fixture secrets are absent from browser/evidence output."
+    },
+    {
+      "id": "CD1-11",
+      "area": "profiles",
+      "requirement": "Native activation-for-restart, selection identity, busy/admission and delayed outcome behavior are preserved without a live-switch shortcut."
+    },
+    {
+      "id": "CD1-12",
+      "area": "shell",
+      "requirement": "Actual utilities/database flyout and status top bar use suitable light renderers with real children and callbacks."
+    },
+    {
+      "id": "CD1-13",
+      "area": "shell",
+      "requirement": "Startup routed-body gating, navigation/tabs, context, floating conversations, notifications and framework recovery remain owned and functional."
+    },
+    {
+      "id": "CD1-14",
+      "area": "completion",
+      "requirement": "Every further feasible in-scope active residual found in the current census is implemented in this task, not merely put in a new bundle."
+    },
+    {
+      "id": "CD1-15",
+      "area": "retention",
+      "requirement": "Native/framework/compatibility/marker classifications have evidence; no forced file-count extraction or unsupported deletion."
+    },
+    {
+      "id": "CD1-16",
+      "area": "contracts",
+      "requirement": "Current routes/public parameters/type identities and actual caller semantics are preserved or explicitly migrated with real consumer tests."
+    },
+    {
+      "id": "CD1-17",
+      "area": "state",
+      "requirement": "Affected drafts, EditContext, read lanes, rendered targets, accepted/unknown outcomes and two-view/late completion boundaries remain safe."
+    },
+    {
+      "id": "CD1-18",
+      "area": "sandbox",
+      "requirement": "Independent scenario host uses the same complete renderers without native/module/DB registrations and covers meaningful non-happy states."
+    },
+    {
+      "id": "CD1-19",
+      "area": "native",
+      "requirement": "Affected owner/component/integration tests verify native effects/readback rather than only a fake callback."
+    },
+    {
+      "id": "CD1-20",
+      "area": "browser",
+      "requirement": "Fresh dashboard/readiness/profile/native startup browser journeys verify actual interactions and honest layer labels."
+    },
+    {
+      "id": "CD1-21",
+      "area": "browser",
+      "requirement": "Current cross-family shell/navigation/deferred-overlay coverage is complete; affected real workflow/process/chat/file/collaboration paths are exercised."
+    },
+    {
+      "id": "CD1-22",
+      "area": "assets",
+      "requirement": "Moved source and published assets, CSS/Tailwind, JS, icons, focus/scroll/overlay behavior and route discovery are verified."
+    },
+    {
+      "id": "CD1-23",
+      "area": "dev-loop",
+      "requirement": "Representative comparable startup/watch/edit-visible measurements and restart limitations are recorded without fabricated speedups."
+    },
+    {
+      "id": "CD1-24",
+      "area": "guard",
+      "requirement": "Current boundary/inventory guards reject relevant negative controls without architecture-by-filename or interface/file-count quotas."
+    },
+    {
+      "id": "CD1-25",
+      "area": "testing",
+      "requirement": "CodeAnalytics coverage and complementary impact analysis select actual owning tests with current builds and verified discovery."
+    },
+    {
+      "id": "CD1-26",
+      "area": "reuse",
+      "requirement": "Every reused prior proof has a valid source/dependency/fixture/asset rationale and is never counted as fresh execution."
+    },
+    {
+      "id": "CD1-27",
+      "area": "final-gates",
+      "requirement": "Final broad integration policy decision, all required test/static/doc/portability gates and retained original failures are explicitly closed."
+    },
+    {
+      "id": "CD1-28",
+      "area": "pc4",
+      "requirement": "PC4 captured launch, retained-origin refusal/reuse and role-resource behavior stay intact; unrelated Process work is not restarted."
+    },
+    {
+      "id": "CD1-29",
+      "area": "operations",
+      "requirement": "Standard Debug/Release outputs, serialized builds and reusable isolated fixtures prevent new output/DB accumulation; protected resources stay untouched."
+    },
+    {
+      "id": "CD1-30",
+      "area": "docs",
+      "requirement": "Current complete closure/family/evidence register and maintained indexes live outside shared; no replacement shared archive/version requirement is introduced."
+    },
+    {
+      "id": "CD1-31",
+      "area": "handoff",
+      "requirement": "Separate native transfer/paging/backend/release limitations and stable seam/owner invariants are handed to the next refactor without hidden scope expansion."
+    },
+    {
+      "id": "CD1-32",
+      "area": "closure",
+      "requirement": "Final completion dimensions, verified source/report ancestry and exact resource disposition satisfy the stated end conditions or honestly identify blockers."
+    }
+  ]
+}

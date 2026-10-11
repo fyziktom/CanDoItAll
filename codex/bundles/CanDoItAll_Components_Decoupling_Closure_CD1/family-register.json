@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "review_source": "fd9e43547457eb18901185da47de123efdfd8108",
+  "inventory_source_tree": "dfacf173bd845154a41deb8e92d5a76f3555645a",
+  "interpretation": "Observed directory inventory, not a fresh semantic certification. Reconcile all active paths and closures at execution.",
+  "projects": [
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.SharedProviders.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents.EmbeddedBrowser",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.AppComponents",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Collaboration.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Components.Git",
+      "status": "OBSERVED_MARKER_ONLY",
+      "next_action": "Retain marker/compatibility unless current usage proves a real change is necessary; do not invent a Git renderer."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Configuration.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Conversations.Components",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Conversations.Shell",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.CrmHr.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Memory.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Plugins.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Processes.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.Files.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Projects.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Prompts.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.SchedulerPlanner.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.TestLab.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Content.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Execution.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Insights.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Operators.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Structure.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.ApiAccess.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.DataSources.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageCatalog.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageRecovery.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.StorageSelection.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workspace.UI",
+      "status": "OBSERVED_NOT_RECERTIFIED",
+      "next_action": "Preserve correct existing seams; classify current real renderers, dependencies and evidence by impact."
+    }
+  ],
+  "known_missing_application_family": "See inventory-seed.json and APPLICATION_SURFACES.md; these Web sources are not part of the observed UI project directory count.",
+  "whole_repository_semantic_census": "REQUIRED_IN_CD1"
+}
