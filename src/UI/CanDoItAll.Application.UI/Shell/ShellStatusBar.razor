@@ -1,11 +1,9 @@
-@namespace CanDoItAll.Web.Components.Layout
 @using CanDoItAll.AppComponents
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.SharedKernel
 
-@if (!string.IsNullOrWhiteSpace(DatabaseSwitchAlert))
-{
+@if (!string.IsNullOrWhiteSpace(DatabaseSwitchAlert)) {
     <div class="mb-3 rounded-[1.35rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
          data-testid="database-switch-alert">
         @DatabaseSwitchAlert
@@ -44,12 +42,10 @@
                          AlignItems="AlignItems.Center">
                     <StatusBadge Tone="neutral" Text="@ActiveWorkspaceTitle" />
                     <StatusBadge Tone="info" Text="@ActiveNavigationTitle" />
-                    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle))
-                    {
+                    @if (!string.IsNullOrWhiteSpace(ActiveProjectTitle)) {
                         <StatusBadge Tone="info" Text="@ActiveProjectTitle" />
                     }
-                    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle))
-                    {
+                    @if (!string.IsNullOrWhiteSpace(ActivePhaseTitle)) {
                         <StatusBadge Tone="neutral" Text="@ActivePhaseTitle" />
                     }
                     <StatusBadge Tone="info" Text="Interactive Server" />

@@ -95,7 +95,26 @@ route/documentation text, not process discovery or elevation. Both portability t
 pass and full no-write enforcement passes with 15,383 reviewed executable-source findings.
 The final source, shell, browser and broad gates remain required.
 
-## Remaining closure
+## Shell and profile checkpoint
+
+The actual MainLayout consumes DatabaseProfileDialogSurface, ShellUtilitiesSurface and
+ShellStatusBar. Safe display projections exclude the native credential-bearing editor.
+Profile callbacks carry the rendered opening and profile identities. The native owner
+rejects duplicate admission and stale selection, retires closed openings before awaiting
+browser storage, preserves an accepted activation through close/disposal, and requires
+explicit canonical readback after an uncertain acknowledgement. Successful activation
+reports pending restart without replacing the running database identity.
+
+The independent assembly now discovers and passes 28 cases, including real nested dialog,
+copy, row, status and utility controls, public native parameter rejection and an actually
+rendered forbidden DynamicComponent negative control. The native shell filter discovers
+21 cases and passes all 21 after rebuilding Release. The first attempt passed 19 and
+failed two new tests because a rerender retired the DOM click handler between lookup and
+dispatch. Atomic renderer-dispatch interaction corrected the tests; assertions and product
+behavior were preserved. Five tests use the real activation coordinator with a controlled
+admission pause or synthetic lost acknowledgement, and actual PostgreSQL profile readback.
+
+## Remaining closure work
 
 The five application clusters, full source-addressed census, forbidden-edge guards,
 independent/native/browser/published/development-loop proof, final required integration,

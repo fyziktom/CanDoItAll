@@ -1,18 +1,9 @@
 <ThemeHost>
-    <Layout FitViewport="true" LockOverflow="true">
-        <Body FillHeight="true" Scrollable="true">
-            <Cluster Gap="LayoutGap.Medium" Class="p-3">
-                <a href="/dashboard">Dashboard scenarios</a>
-                <a href="/runtime">Runtime scenarios</a>
-                <a href="/profiles">Profile and shell scenarios</a>
-            </Cluster>
-            <Router AppAssembly="@typeof(App).Assembly">
-                <Found Context="routeData">
-                    <RouteView RouteData="@routeData" />
-                </Found>
-            </Router>
-        </Body>
-    </Layout>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" />
+        </Found>
+    </Router>
     <DialogHost />
     <Tooltip />
     <Notification />

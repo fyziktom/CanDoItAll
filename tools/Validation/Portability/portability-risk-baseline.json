@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-11T11:41:02.797503+00:00",
+  "generated_utc": "2026-10-11T12:18:12.808581+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -7461,8 +7461,8 @@
     },
     {
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
-      "category": "case-policy",
-      "source_fingerprint": "3443b8999423ee921356989e5701155a3fb29b1b40f121c98a17b0ed0853ae51",
+      "category": "absolute-path-field",
+      "source_fingerprint": "9ebed96a0f4b136394772d0b0a55c350bd81630bb769924a7c7dc3e0c12bdd5e",
       "count": 1
     },
     {
@@ -7475,12 +7475,6 @@
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
       "category": "case-policy",
       "source_fingerprint": "732bba05349f1612cf3309b97e9cd74096a333b6f20b8225a0aee099b2a06d14",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.DatabaseProfiles.cs",
-      "category": "case-policy",
-      "source_fingerprint": "93c2bfa58fc6569f4c1168dc23f5c1f63fb84e01b751cb6d315ad6b111c776af",
       "count": 1
     },
     {
@@ -7643,18 +7637,6 @@
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
       "category": "path-normalization",
       "source_fingerprint": "dfb4db772da6cbecc98ad92647f73350ba31864f230956a0c275e4dc828c6afe",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayoutDatabaseDialog.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "b7b1f428491c873e667037186742204714f18124e9acc53e8ceb9b7c7b535a05",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayoutDatabaseDialog.razor",
-      "category": "absolute-path-field",
-      "source_fingerprint": "d8fa92544de9dc62ab492df48785e3c7ef9216cbb4a6699d26026fd586de5c40",
       "count": 1
     },
     {
@@ -74687,6 +74669,24 @@
       "path": "src/UI/CanDoItAll.Application.UI/Dashboard/DashboardSurface.razor",
       "category": "manager-discovery",
       "source_fingerprint": "888748d790dce8b289ab87c5219d9b89f522e05f39108ab45b8aa0ee11978418",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/Profiles/DatabaseProfileDialogSurface.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0fab05116ed63d31b638d510859689c3ace2a3edc087d71c0ede384d228e73e7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/Profiles/DatabaseProfileDialogSurface.razor",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f9c52e71562a07ba551689834aed58714fb8ae7118cfa8d33d34dcb5ef7e42e6",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Application.UI/Profiles/DatabaseProfilePresentation.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a6fa2c1b43f9bf74d8ff9acd30bd1fe5370f15745076634477bb4d52bf4f1d72",
       "count": 1
     },
     {

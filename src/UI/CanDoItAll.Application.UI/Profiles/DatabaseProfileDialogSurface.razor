@@ -1,22 +1,21 @@
-@namespace CanDoItAll.Web.Components.Layout
-@using CanDoItAll.AppComponents
-@using CanDoItAll.Components.BaseLib
-@using CanDoItAll.Components.Common
-@using CanDoItAll.Infrastructure.ControlPlane
+@{
+    var rendered = View;
+    var openingId = rendered.OpeningId;
+    var selectedProfileId = rendered.SelectedDatabaseProfileId;
+}
 
-<Dialog IsOpen="@IsOpen"
+<Dialog IsOpen="@rendered.IsOpen"
         Title="Database profiles"
-        Eyebrow="@(IsStartupMode ? "Startup" : "Runtime")"
-        Subtitle="@(IsStartupMode
+        Eyebrow="@(rendered.IsStartupMode ? "Startup" : "Runtime")"
+        Subtitle="@(rendered.IsStartupMode
             ? "Continue with the resolved runtime database or activate another saved PostgreSQL profile for the next restart."
             : "Review the active runtime database and save profile activation for the next process start.")"
         Size="ModalSize.Wide"
-        TestId="@(IsStartupMode ? "database-startup-modal" : "database-switcher-dialog")"
-        OnClose="CloseDatabaseDialog">
+        TestId="@(rendered.IsStartupMode ? "database-startup-modal" : "database-switcher-dialog")"
+        OnClose="@(() => CloseDatabaseDialog.InvokeAsync(openingId))">
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            @if (DatabaseSelection is not null)
-            {
+            @if (rendered.DatabaseSelection is not null) {
                 <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4"
                      data-testid="database-dialog-current-selection">
                     <Split Breakpoint="LayoutBreakpoint.None"
@@ -26,20 +25,18 @@
                            Wrap="FlexWrap.Wrap">
                         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                             <p class="cda-eyebrow">Current runtime profile</p>
-                            <p class="text-base font-semibold text-slate-950">@DatabaseSelection.DisplayName</p>
-                            @if (DatabaseSelection.HasPendingRestartActivation)
-                            {
+                            <p class="text-base font-semibold text-slate-950">@rendered.DatabaseSelection.DisplayName</p>
+                            @if (rendered.DatabaseSelection.HasPendingRestartActivation) {
                                 <p class="text-sm leading-6 text-amber-700">
-                                    Pending restart: @DatabaseSelection.PendingRestartDisplayName
+                                    Pending restart: @rendered.DatabaseSelection.PendingRestartDisplayName
                                 </p>
                             }
                         </Stack>
 
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                            <StatusBadge Tone="info" Text="@DescribeDatabaseProvider(DatabaseSelection.ProviderKind)" />
-                            <StatusBadge Tone="neutral" Text="@DescribeDatabaseSource(DatabaseSelection.SourceKind)" />
-                            @if (DatabaseSelection.IsRuntimeLocked)
-                            {
+                            <StatusBadge Tone="info" Text="@rendered.DatabaseSelection.Provider" />
+                            <StatusBadge Tone="neutral" Text="@rendered.DatabaseSelection.Source" />
+                            @if (rendered.DatabaseSelection.IsRuntimeLocked) {
                                 <StatusBadge Tone="warning" Text="Config lock" />
                             }
                         </Cluster>
@@ -56,9 +53,9 @@
                                    Class="min-w-0 flex-1">
                                 <p class="cda-eyebrow">Runtime target</p>
                                 <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
-                                   data-testid="database-dialog-active-target">@DatabaseSelection.Descriptor</p>
+                                   data-testid="database-dialog-active-target">@rendered.DatabaseSelection.Descriptor</p>
                             </Stack>
-                            <CopyButton Value="@DatabaseSelection.Descriptor"
+                            <CopyButton Value="@rendered.DatabaseSelection.Descriptor"
                                         DisplayMode="CopyButtonDisplayMode.IconButton"
                                         Size="CopyButtonSize.Small"
                                         AriaLabel="Copy active database target"
@@ -74,9 +71,9 @@
                                    Class="min-w-0 flex-1">
                                 <p class="cda-eyebrow">Workspace root</p>
                                 <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
-                                   data-testid="database-dialog-workspace-root">@DatabaseSelection.WorkspaceRoot</p>
+                                   data-testid="database-dialog-workspace-root">@rendered.DatabaseSelection.WorkspaceRoot</p>
                             </Stack>
-                            <CopyButton Value="@DatabaseSelection.WorkspaceRoot"
+                            <CopyButton Value="@rendered.DatabaseSelection.WorkspaceRoot"
                                         DisplayMode="CopyButtonDisplayMode.IconButton"
                                         Size="CopyButtonSize.Small"
                                         AriaLabel="Copy active database workspace root"
@@ -84,58 +81,49 @@
                         </Split>
                     </Stack>
 
-                    <p class="mt-3 text-xs text-slate-500">Selection source: @DescribeResolutionSource(DatabaseSelection.ResolutionSource)</p>
+                    <p class="mt-3 text-xs text-slate-500">Selection source: @rendered.DatabaseSelection.Resolution</p>
                 </div>
             }
 
-            @if (!string.IsNullOrWhiteSpace(DatabaseProfileMessage))
-            {
-                <div class="@DatabaseMessageClass"
+            @if (rendered.Message is not null) {
+                <div class="@MessageClass(rendered.Message.Tone)"
                      data-testid="database-dialog-message">
-                    @DatabaseProfileMessage
+                    @rendered.Message.Text
                 </div>
             }
 
-            @if (DatabaseSelection?.IsRuntimeLocked == true)
-            {
+            @if (rendered.DatabaseSelection?.IsRuntimeLocked == true) {
                 <div class="rounded-[1.4rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
                      data-testid="database-dialog-locked-message">
                     Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
                 </div>
             }
 
-            @if (DatabaseProfiles.Count == 0)
-            {
+            @if (rendered.DatabaseProfiles.Count == 0) {
                 <EmptyState Eyebrow="No saved profiles"
                             Title="Create the first PostgreSQL profile"
                             Description="Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab." />
-            }
-            else
-            {
+            } else {
                 <Stack GapScale="LayoutGap.Medium" data-testid="database-dialog-profile-list">
-                    @foreach (var profile in DatabaseProfiles)
-                    {
+                    @foreach (var profile in rendered.DatabaseProfiles) {
                         <SelectionListItem Title="@profile.DisplayName"
-                                           Eyebrow="@DescribeDatabaseProvider(profile.ProviderKind)"
-                                           Meta="@DescribeDatabaseSource(profile.SourceKind)"
+                                           Eyebrow="@profile.Provider"
+                                           Meta="@profile.Source"
                                            Summary="@profile.Descriptor"
                                            DataTestId="@($"database-dialog-profile-row-{profile.Id:N}")"
-                                           IsSelected="@(SelectedDatabaseProfileId == profile.Id)"
-                                           OnSelect="@(() => SelectDatabaseProfile.InvokeAsync(profile.Id))">
+                                           IsSelected="@(rendered.SelectedDatabaseProfileId == profile.Id)"
+                                           OnSelect="@(() => SelectDatabaseProfile.InvokeAsync(new(openingId, profile.Id)))">
                             <Status>
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                    @if (profile.IsActive)
-                                    {
+                                    @if (profile.IsActive) {
                                         <StatusBadge Tone="success" Text="Running now" />
                                     }
 
-                                    @if (profile.IsPendingRestartActivation)
-                                    {
+                                    @if (profile.IsPendingRestartActivation) {
                                         <StatusBadge Tone="warning" Text="Pending restart" />
                                     }
 
-                                    @if (profile.IsRuntimeLocked)
-                                    {
+                                    @if (profile.IsRuntimeLocked) {
                                         <StatusBadge Tone="warning" Text="Locked" />
                                     }
                                 </Cluster>
@@ -160,34 +148,31 @@
                JustifyContent="JustifyContent.SpaceBetween"
                Wrap="FlexWrap.Wrap">
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                @if (IsStartupMode)
-                {
+                @if (rendered.IsStartupMode) {
                     <Button Text="Continue"
                             ButtonStyle="ButtonStyle.Light"
-                            Disabled="@DatabaseDialogBusy"
-                            Click="ContinueWithCurrentDatabase"
+                            Disabled="@rendered.DatabaseDialogBusy"
+                            Click="@(() => ContinueWithCurrentDatabase.InvokeAsync(openingId))"
                             data-testid="database-startup-continue" />
-                }
-                else
-                {
+                } else {
                     <Button Text="Close"
                             ButtonStyle="ButtonStyle.Light"
-                            Disabled="@DatabaseDialogBusy"
-                            Click="CloseDatabaseDialog" />
+                            Disabled="@rendered.DatabaseDialogBusy"
+                            Click="@(() => CloseDatabaseDialog.InvokeAsync(openingId))" />
                 }
 
                 <Button Text="Open Data Sources"
                         ButtonStyle="ButtonStyle.Light"
-                        Disabled="@DatabaseDialogBusy"
-                        Click="OpenDatabaseSettings"
+                        Disabled="@rendered.DatabaseDialogBusy"
+                        Click="@(() => OpenDatabaseSettings.InvokeAsync(openingId))"
                         data-testid="database-startup-open-settings" />
             </Cluster>
 
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <Button Text="@ResolveSwitchButtonText()"
+                <Button Text="@ResolveSwitchButtonText(rendered)"
                         ButtonStyle="ButtonStyle.Warning"
-                        Disabled="@(DatabaseDialogBusy || !CanSwitchSelectedProfile)"
-                        Click="SwitchDatabaseProfile"
+                        Disabled="@(rendered.DatabaseDialogBusy || !rendered.CanSwitchSelectedProfile)"
+                        Click="@(() => ActivateAsync(openingId, selectedProfileId))"
                         data-testid="database-startup-switch" />
             </Cluster>
         </Split>
@@ -195,73 +180,36 @@
 </Dialog>
 
 @code {
-    [Parameter]
-    public bool IsOpen { get; set; }
-
-    [Parameter]
-    public bool IsStartupMode { get; set; }
-
-    [Parameter]
-    public DatabaseSelectionStateModel? DatabaseSelection { get; set; }
-
-    [Parameter]
-    public string? DatabaseProfileMessage { get; set; }
-
     [Parameter, EditorRequired]
-    public string DatabaseMessageClass { get; set; } = string.Empty;
+    public DatabaseProfileDialogPresentation View { get; set; } = default!;
 
     [Parameter]
-    public IReadOnlyList<DatabaseProfileSummary> DatabaseProfiles { get; set; } = [];
+    public EventCallback<DatabaseProfileIntent> SelectDatabaseProfile { get; set; }
 
     [Parameter]
-    public Guid? SelectedDatabaseProfileId { get; set; }
+    public EventCallback<Guid> ContinueWithCurrentDatabase { get; set; }
 
     [Parameter]
-    public bool DatabaseDialogBusy { get; set; }
+    public EventCallback<Guid> CloseDatabaseDialog { get; set; }
 
     [Parameter]
-    public bool CanManageDatabases { get; set; }
+    public EventCallback<Guid> OpenDatabaseSettings { get; set; }
 
     [Parameter]
-    public bool SelectedDialogProfileIsActive { get; set; }
+    public EventCallback<DatabaseProfileIntent> SwitchDatabaseProfile { get; set; }
 
-    [Parameter]
-    public bool SelectedDialogProfileIsPendingRestart { get; set; }
+    private Task ActivateAsync(Guid openingId, Guid? profileId) => profileId is { } id
+        ? SwitchDatabaseProfile.InvokeAsync(new(openingId, id))
+        : Task.CompletedTask;
 
-    [Parameter]
-    public bool CanSwitchSelectedProfile { get; set; }
+    private static string ResolveSwitchButtonText(DatabaseProfileDialogPresentation view) => view.SelectedDialogProfileIsActive
+        ? "Running now"
+        : view.SelectedDialogProfileIsPendingRestart ? "Pending restart" : "Activate for restart";
 
-    [Parameter, EditorRequired]
-    public Func<DatabaseProviderKind, string> DescribeDatabaseProvider { get; set; } = static kind => kind.ToString();
-
-    [Parameter, EditorRequired]
-    public Func<DatabaseProfileSourceKind, string> DescribeDatabaseSource { get; set; } = static kind => kind.ToString();
-
-    [Parameter, EditorRequired]
-    public Func<DatabaseProfileResolutionSource, string> DescribeResolutionSource { get; set; } = static source => source.ToString();
-
-    [Parameter]
-    public EventCallback<Guid> SelectDatabaseProfile { get; set; }
-
-    [Parameter]
-    public EventCallback ContinueWithCurrentDatabase { get; set; }
-
-    [Parameter]
-    public EventCallback CloseDatabaseDialog { get; set; }
-
-    [Parameter]
-    public EventCallback OpenDatabaseSettings { get; set; }
-
-    [Parameter]
-    public EventCallback SwitchDatabaseProfile { get; set; }
-
-    private string ResolveSwitchButtonText()
-    {
-        if (SelectedDialogProfileIsActive)
-        {
-            return "Running now";
-        }
-
-        return SelectedDialogProfileIsPendingRestart ? "Pending restart" : "Activate for restart";
-    }
+    private static string MessageClass(DatabaseProfileMessageTone tone) =>
+        "rounded-[1.35rem] border px-4 py-3 text-sm leading-6 " + (tone switch {
+            DatabaseProfileMessageTone.Error => "border-rose-200 bg-rose-50 text-rose-950",
+            DatabaseProfileMessageTone.RestartRequired => "border-amber-300 bg-amber-50 text-amber-950",
+            _ => throw new ArgumentOutOfRangeException(nameof(tone), tone, null)
+        });
 }

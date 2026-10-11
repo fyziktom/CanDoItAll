@@ -35,16 +35,29 @@ public sealed class ApplicationBoundaryTests {
     [Fact]
     public void Public_contracts_are_presentation_values_without_service_authority() {
         foreach (var type in typeof(DashboardSurface).Assembly.GetExportedTypes()) {
-            Assert.Empty(type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(property => property.GetCustomAttribute<InjectAttribute>() is not null));
-            var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                .Select(property => property.PropertyType);
-            var signatures = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                .SelectMany(method => method.GetParameters().Select(parameter => parameter.ParameterType).Append(method.ReturnType))
-                .Concat(type.GetConstructors().SelectMany(constructor => constructor.GetParameters().Select(parameter => parameter.ParameterType)));
-            foreach (var exposed in properties.Concat(signatures).SelectMany(Expand)) {
-                Assert.True(Allowed(exposed.Assembly.GetName().Name!), $"{type.Name}: {exposed}");
-                Assert.False(typeof(IServiceProvider).IsAssignableFrom(exposed), $"Service provider exposed by {type.Name}");
+            Assert.DoesNotContain(type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
+                property => property.GetCustomAttribute<InjectAttribute>() is not null);
+            RequirePresentationContract(type);
+        }
+    }
+
+    internal static void RequirePresentationContract(Type type) {
+        var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .Select(property => property.PropertyType);
+        var signatures = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .SelectMany(method => method.GetParameters().Select(parameter => parameter.ParameterType).Append(method.ReturnType))
+            .Concat(type.GetConstructors().SelectMany(constructor => constructor.GetParameters().Select(parameter => parameter.ParameterType)));
+        foreach (var exposed in properties.Concat(signatures).SelectMany(Expand)) {
+            if (!Allowed(exposed.Assembly.GetName().Name!) || typeof(IServiceProvider).IsAssignableFrom(exposed)) {
+                throw new InvalidOperationException($"Non-presentation contract on {type.Name}: {exposed}");
+            }
+        }
+    }
+
+    internal static void RequirePresentationDescendants(IEnumerable<Type> components) {
+        foreach (var component in components) {
+            if (!Allowed(component.Assembly.GetName().Name!)) {
+                throw new InvalidOperationException($"Non-presentation visual descendant: {component}");
             }
         }
     }

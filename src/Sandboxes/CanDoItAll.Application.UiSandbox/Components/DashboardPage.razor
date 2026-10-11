@@ -2,6 +2,7 @@
 @page "/dashboard"
 
 <PageTitle>Application dashboard scenarios</PageTitle>
+<ScenarioNavigation />
 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="p-3">
     @foreach (var scenario in Enum.GetValues<DashboardScenario>()) {
         <Button Text="@scenario.ToString()" Click="@(() => SetScenario(scenario))" />
