@@ -27666,7 +27666,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationHeader.razor.css",
-      "sha256_lf": "01082643562525ab2e84fc31d04d809675e250e60e198ff9b56defc5afdeb2eb",
+      "sha256_lf": "9f9edf349a0d6ad0e7331a14f50d97cf7fd60b1703d0c933333cc091b73c177f",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -27681,7 +27681,7 @@
       "assets": "CanDoItAll.Conversations.Components",
       "scenario": "CanDoItAll.Conversations.Components",
       "evidence": "CanDoItAll.Conversations.Components",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "Conversation header title and wrapping status rows retain all badges in a normal floating window. Styling ownership and presentation contracts are unchanged; verify through the native chat surface."
     },
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationIdentityFields.razor",

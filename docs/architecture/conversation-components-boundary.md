@@ -25,6 +25,8 @@ Agent and ordinary-chat surfaces reuse participant, transcript, composer, catalo
 
 The project renders typed state and emits typed user intent. Product and Agent Framework owners adapt their domain/runtime state into these contracts. Opaque keys are never interpreted inside the presentation boundary.
 
+Conversation headers place the title above wrapping status badges so narrow floating windows retain every supplied status, including approval policy. Header actions remain available alongside or below the identity area as width permits.
+
 The Agent Framework host reconciles the first live execution into the selected thread so the accepted user message and Runtime details refer to the same run. A run detail supplies its matching transcript when workspace reads straddle completion. Older activity cannot replace the current execution. Active tool work presents as Working; approval controls appear only after the operation has suspended for a decision.
 
 Approval continuation retains the saved checkpoint and exact pending decisions while adopting the committed run-level auto-approval choice. The presentation layer does not suppress runtime approval or governance checks.
