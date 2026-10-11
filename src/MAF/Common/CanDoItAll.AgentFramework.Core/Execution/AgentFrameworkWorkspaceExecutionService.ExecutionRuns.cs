@@ -631,7 +631,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(
-                prepared.OriginalRun,
+                prepared.OriginalRun with { AutoApprovePendingToolCalls = run.AutoApprovePendingToolCalls },
                 agent.Id,
                 session);
             var runtimeExecutionOptions = CreateRuntimeExecutionOptionsCore(
