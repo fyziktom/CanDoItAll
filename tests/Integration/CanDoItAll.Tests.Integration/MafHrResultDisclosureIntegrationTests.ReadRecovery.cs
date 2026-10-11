@@ -25,8 +25,10 @@ public sealed partial class MafHrResultDisclosureIntegrationTests {
     private const string FailedReadCallId = "original-wrong-kind-read";
     private const string InterruptedQueryMessage = "Injected interruption after the CRM owner returned a missing record.";
 
-    [Fact]
-    public async Task Core_recovers_the_original_HR_run_after_activation_and_wrong_kind_read_without_repeating_the_mutation() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Core_recovers_the_original_HR_run_after_activation_and_wrong_kind_read_without_repeating_the_mutation(bool approveRemaining) {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
@@ -80,12 +82,14 @@ public sealed partial class MafHrResultDisclosureIntegrationTests {
         Assert.Equal(AgentLifecycleStatus.Draft, (await workspace.ListAgentsAsync()).Single(item => item.Id == target.AgentId).Status);
         using (var approved = new HrCoreRecoveryExecution(fixture, services, new ActivationThenReadClient(activation, wrongKind), tools)) {
             await Assert.ThrowsAnyAsync<Exception>(() => approved.Service.ContinueExecutionRunAsync(pending.ExecutionRunId,
-                AgentExecutionOperationId.New(), [new(approval.ApprovalId, true) { ToolAdmission = approval.ToolAdmission }]));
+                AgentExecutionOperationId.New(), [new(approval.ApprovalId, true) { ToolAdmission = approval.ToolAdmission }],
+                autoApprovePendingToolCalls: approveRemaining));
         }
         Assert.True(owner.Interrupted);
         Assert.Equal(1, owner.Calls);
         var original = (await fixture.NewStore().GetExecutionRunDetailAsync(pending.ExecutionRunId))!;
         Assert.Equal(ExecutionState.Failed, original.Run.State);
+        Assert.Equal(approveRemaining, original.Run.AutoApprovePendingToolCalls);
         Assert.Empty(original.Run.PendingApprovals);
         Assert.True(original.Run.ToolAdmission!.HasUnresolvedEffects);
         var originalProposals = original.Run.ToolAdmission.Batches.SelectMany(batch => batch.Proposals).ToArray();

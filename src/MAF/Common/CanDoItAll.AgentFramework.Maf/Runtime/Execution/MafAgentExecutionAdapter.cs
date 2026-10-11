@@ -109,6 +109,10 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         using var admissionLeaseScope = admissionLease?.Bind();
         var supportsToolRecovery = admissionLease is not null &&
             runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable;
+        if (supportsToolRecovery && MafToolRunContext.RequiresApprovalContinuationContract(
+                await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken))) {
+            suppressApprovalRequirements = false;
+        }
         var preparedInput = await inputAttachmentPreparer.PrepareAsync(
             agent,
             provider,
