@@ -21,6 +21,14 @@ preconditions. Set `scheduleChange` to null and supply:
 }
 ```
 
+Task updates must echo the stored node's `progressPercent` from a fresh canonical
+read, not the percentage projected by Gantt. Gantt and plan summaries use the
+recorded execution state: NotStarted displays 0%, Completed displays 100%, and
+Cancelled displays untracked progress. Updating a stored progress hint alone does
+not change that execution state. A Started task displays the stored percentage
+and requires an authorized actual start timestamp; tools must not invent one to
+make the chart match a requested percentage.
+
 All five inner members must be present. Echo the current nullable dates and duration
 from the node; the example's null duration is correct only when the read returned null.
 The current start and end must both be null and the proposed end must follow its start.
