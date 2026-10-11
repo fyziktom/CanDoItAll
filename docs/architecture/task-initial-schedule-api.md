@@ -37,6 +37,12 @@ interval. Sending both modes, an inverted interval or a snapshot of an already
 scheduled task is HTTP 400. A schedule changed after the read is HTTP 409 `StaleTask`.
 Missing/wrong project lifetime admission retains its existing HTTP 409 behavior.
 
+The internal `project_structure_read` compact response includes the canonical node's
+nullable `startUtc`, `endUtc` and `durationSeconds`. Scheduled timestamps retain their
+exact precision and offset so the agent can echo the previous interval into
+`scheduleChange`; explicit null dates distinguish an unscheduled task. The response
+projection must not omit dates or substitute display values from the chart.
+
 The existing task application transaction owns assignment, pricing, execution and
 date persistence. A small schedule value/policy validates the new request and compares
 the persisted snapshot; Workbench's Gantt mutation owner checks the same dependency
@@ -51,6 +57,8 @@ rejections without partial title changes. Existing task-update tests cover compa
 
 Build Workbench and Web, then discover and run `ProjectStructureInitialTaskScheduleTests`,
 `ProjectStructureTaskUpdateAgentInputTests` and `ProjectStructureTaskUpdateRawJsonTests`.
+`ProjectStructureReadScheduleContractTests` verifies the serialized compact response
+for scheduled and unscheduled nodes and its round trip into a task-date request.
 Follow [Testing](../testing.md) for the isolated PostgreSQL host and portability gate.
 Both OpenAPI document routes must expose the five required initial-schedule members
 and their source-owned `Description` attributes.
