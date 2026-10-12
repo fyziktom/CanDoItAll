@@ -86,13 +86,20 @@ Private/local provider defaults are estimates for comparative planning. They can
 
 | Profile | Default |
 | --- | --- |
-| OpenAI default | Responses with `gpt-5.4-mini` |
-| OpenAI chat completions | Chat Completions with `gpt-5.4-mini` |
+| OpenAI default | Responses with `gpt-6-luna` |
+| OpenAI chat completions | Chat Completions with `gpt-6-luna` |
 | OpenAI image generation | `gpt-image-2` |
 | Local ComfyUI Flux | `flux1-dev.safetensors`, `http://127.0.0.1:8188` |
 | Local Ollama | `llama3.1`, `http://127.0.0.1:11434` |
 
 OpenAI uses `OPENAI_API_KEY` or the runtime secret store. Managed local profiles may be seeded even when their external service or model is not installed; health checks make that state explicit.
+
+Managed OpenAI chat suggestions include GPT-5.6 and newer families. Older models retain
+compatibility and pricing support for saved configurations and historical records, but
+are not suggested defaults. Managed seed repair preserves customized agent assignments.
+When a workflow component changes its model, its own implicitly bound, unedited Gallery
+prompt can publish updated model compatibility through the Gallery owner. Explicit
+Gallery selections still require declared compatibility; old prompt versions stay intact.
 
 ## Shared provider and history evidence
 
@@ -178,8 +185,8 @@ snapshots are immutable; historical usage is never repriced.
 GPT-6 Sol/Luna allow None through Max reasoning; Chat Completions function tools
 require explicit None and record that adjustment. GPT-6.1 Sol allows Low through Max
 and is exposed through Responses in this application's reasoning registry, where
-tool calling is supported. The managed default model remains GPT-5.4 Mini. Its
-0.75 / 0.075 / 4.50 rates and the existing GPT-5.6 rates remain current.
+tool calling is supported. The managed default model is GPT-6 Luna. Historical GPT-5.4
+Mini pricing and the existing GPT-5.6 rates remain available for saved configurations.
 
 Every suggested managed OpenAI chat model now has a price row. Normal startup seeds
 the standard provider profiles and refreshes their owned price catalog. Deployments

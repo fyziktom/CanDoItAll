@@ -58,20 +58,15 @@ public static class ManagedSeedProviderFallbacks
         OpenAiModelIds.Gpt6Astra,
         OpenAiModelIds.Gpt61Sol,
         OpenAiModelIds.Gpt6Sol,
-        OpenAiModelIds.Gpt6Luna,
         OpenAiModelIds.Gpt56Luna,
         OpenAiModelIds.Gpt56Terra,
-        OpenAiModelIds.Gpt56Sol,
-        "gpt-5.4",
-        "gpt-5-mini",
-        "gpt-4.1-mini",
-        "gpt-4.1"
+        OpenAiModelIds.Gpt56Sol
     ];
 
     public const string OpenAiDefaultProviderName = "OpenAI default";
     public const string OpenAiChatCompletionsProviderName = "OpenAI chat completions";
     public const string OpenAiBaseUrl = "https://api.openai.com/v1";
-    public const string OpenAiDefaultModel = "gpt-5.4-mini";
+    public const string OpenAiDefaultModel = OpenAiModelIds.Gpt6Luna;
     public const int OpenAiDefaultTimeoutSeconds = 120;
     public const string DefaultReasoningEffort = "medium";
     public const string FallbackProviderName = "Remote Ollama";

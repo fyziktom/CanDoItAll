@@ -2307,6 +2307,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
         CancelRuntimePreviewWait();
+        CancelWorkflowStatusObservation();
         CloseProcessStartDialog();
         CloseProcessLinkDialog();
         foreach (var authority in imageAuthorities.Keys) {

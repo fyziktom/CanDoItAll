@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-11T13:31:59.729998+00:00",
+  "generated_utc": "2026-10-12T14:52:53.995909+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15384,
+  "allowance_count": 15386,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -44182,7 +44182,19 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
       "category": "case-policy",
+      "source_fingerprint": "12353ce1cee1886c6afdc0cd22808b16254d65e9964ef39eb378c5a3e262464b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "category": "case-policy",
       "source_fingerprint": "12f03bc39dfbf97e7e25323dab066ba90694477169658e159f7e0f0cb319c17b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "category": "case-policy",
+      "source_fingerprint": "903969876a31d3fb4677267eae13d1ea76abba66fd1d00e4bcdd47f500569aa5",
       "count": 1
     },
     {

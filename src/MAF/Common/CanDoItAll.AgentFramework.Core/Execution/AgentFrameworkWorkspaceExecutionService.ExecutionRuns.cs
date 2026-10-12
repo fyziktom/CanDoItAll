@@ -2331,6 +2331,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IAgentExecutionCancellationRegistration? executionCancellation,
         CancellationToken callerCancellationToken)
     {
+        while (exception is AgentRuntimeUsageException { InnerException: { } cause }) {
+            exception = cause;
+        }
         if (exception is not OperationCanceledException)
         {
             return ExecutionCancellationKind.None;

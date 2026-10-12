@@ -259,6 +259,42 @@ public sealed class WorkflowLlmLightweightPathTests
     }
 
     [Fact]
+    public async Task InvokerReportsExhaustedOutputBudgetAndRetainsUsageWithoutRetrying() {
+        var requests = 0;
+        var port = new RecordingLlmInvocationPort((request, cancellationToken) => {
+            requests++;
+            return Task.FromResult(new LlmInvocationResult(request.Model, "{\"markdown\":\"partial", new LlmUsage(40, 1400)));
+        });
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
+        var component = CreateComponent();
+        component = component with { ModelSettings = component.ModelSettings with { MaxOutputTokens = 1400 } };
+        var node = CreateNode(component.Id);
+
+        var failure = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() =>
+            invoker.ExecuteAsync(CreateDefinition(node), node, component, new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("configured output limit of 1400 tokens", failure.Message, StringComparison.Ordinal);
+        Assert.Equal(1400, Assert.Single(failure.Observations).OutputTokens);
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
+    public async Task InvokerAcceptsValidOutputAtTheTokenLimit() {
+        var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
+            Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(40, 1400))));
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService(), new AcceptingWorkflowProviderInputAdmission());
+        var component = CreateComponent();
+        component = component with { ModelSettings = component.ModelSettings with { MaxOutputTokens = 1400 } };
+        var node = CreateNode(component.Id);
+
+        var result = await invoker.ExecuteAsync(CreateDefinition(node), node, component, new WorkflowNodeInput("{}"));
+
+        Assert.Equal("{\"ok\":true}", result.PayloadJson);
+    }
+
+    [Fact]
     public async Task InvokerRequestNeverCarriesWorkspaceAuthorityEvenWithProjectIdPayload()
     {
         var projectId = Guid.NewGuid();

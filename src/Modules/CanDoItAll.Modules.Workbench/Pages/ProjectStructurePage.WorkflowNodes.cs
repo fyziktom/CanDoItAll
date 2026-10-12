@@ -317,6 +317,9 @@ public partial class ProjectStructurePage
             MutationOwner = mutationOwner
         };
 
+        if (status is { RunId: not null, State: WorkflowRunState.Running or WorkflowRunState.NotStarted or WorkflowRunState.Idle }) {
+            StartWorkflowStatusObservation(opening.Context, node.Id, selectionRevision, status.IntentId, opening.Id);
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -349,6 +352,7 @@ public partial class ProjectStructurePage
         };
         await InvokeAsync(StateHasChanged);
 
+        StartWorkflowStatusObservation(opening.Context, dialog.NodeId, selectionRevision, dialog.IntentId, opening.Id);
         try
         {
             var started = opening.RequiresObservation
@@ -379,6 +383,9 @@ public partial class ProjectStructurePage
             opening.RequiresObservation = true;
             RecordAuthoringOutcome(opening, outcome, IsCurrent());
             if (IsCurrent()) {
+                if (started.Status.State is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled or WorkflowRunState.WaitingForInput) {
+                    CancelWorkflowStatusObservation();
+                }
                 selectedWorkflowStatus = started.Status;
                 workflowStartDialog = dialog with { Status = started.Status, IsBusy = false, RequiresObservation = true, AcceptedStart = started,
                     Error = string.Join(" ", started.Warnings) };
@@ -397,6 +404,9 @@ public partial class ProjectStructurePage
             }
         } finally {
             opening.IsBusy = false;
+            if (!opening.RequiresObservation && workflowStartOpening?.Id == opening.Id) {
+                CancelWorkflowStatusObservation();
+            }
             await RenderAuthoringOutcomeAsync();
         }
     }
@@ -431,13 +441,20 @@ public partial class ProjectStructurePage
 
     private async Task RefreshSelectedWorkflowStatusAsync(string? nodeId)
     {
+        CancelWorkflowStatusObservation();
         if (ResolveNode(nodeId) is not { ObjectType: ProjectObjectType.WorkflowDefinition })
         {
             selectedWorkflowStatus = null;
             return;
         }
 
-        await TryRefreshWorkflowStatusAsync(nodeId, reloadSurface: true);
+        var context = CaptureActionContext();
+        var selectionRevision = insightsSelectionRevision;
+        var status = await TryRefreshWorkflowStatusAsync(nodeId, reloadSurface: true);
+        if (IsCurrentAction(context) && selectionRevision == insightsSelectionRevision &&
+            status is { RunId: not null, State: WorkflowRunState.Running or WorkflowRunState.NotStarted or WorkflowRunState.Idle }) {
+            StartWorkflowStatusObservation(context, nodeId!, selectionRevision);
+        }
     }
 
     private async Task<ProjectStructureWorkflowRunStatus?> TryRefreshWorkflowStatusAsync(
@@ -648,4 +665,70 @@ public partial class ProjectStructurePage
 
     private static string FormatWorkflowUiException(Exception exception)
         => WorkflowFailureDisplayFormatter.ToUserMessage(exception.GetBaseException().Message);
+    private CancellationTokenSource? workflowStatusObservation;
+
+    private void StartWorkflowStatusObservation(ProjectStructureActionContext context, string nodeId,
+        long selectionRevision, Guid? intentId = null, Guid? openingId = null) {
+        CancelWorkflowStatusObservation();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(deferredCompletionCts.Token);
+        workflowStatusObservation = cancellation;
+        _ = TrackAuthoringOperationAsync(ObserveWorkflowStatusAsync(context, nodeId, selectionRevision, intentId, openingId, cancellation));
+    }
+
+    private void CancelWorkflowStatusObservation() {
+        var cancellation = workflowStatusObservation;
+        workflowStatusObservation = null;
+        cancellation?.Cancel();
+    }
+
+    private async Task ObserveWorkflowStatusAsync(ProjectStructureActionContext context, string nodeId,
+        long selectionRevision, Guid? intentId, Guid? openingId, CancellationTokenSource cancellation) {
+        bool IsCurrent() => ReferenceEquals(workflowStatusObservation, cancellation) &&
+            !cancellation.IsCancellationRequested && IsCurrentAction(context) && HasOriginalContentAuthority(context) &&
+            selectionRevision == insightsSelectionRevision &&
+            (selectedNodeIds.Contains(nodeId, StringComparer.Ordinal) || workflowStartOpening?.Id == openingId && openingId.HasValue);
+
+        try {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (IsCurrent() && await timer.WaitForNextTickAsync(cancellation.Token)) {
+                await InsightsAdmissions.RequireCurrentAsync(context.Admission, cancellation.Token);
+                var status = await WorkflowNodeService.GetStatusAsync(context.Surface.ProjectId, nodeId, cancellation.Token);
+                await InsightsAdmissions.RequireCurrentAsync(context.Admission, cancellation.Token);
+                if (!IsCurrent()) {
+                    return;
+                }
+                if (intentId.HasValue && status.IntentId != intentId) {
+                    continue;
+                }
+                if (selectedNodeIds.Contains(nodeId, StringComparer.Ordinal)) {
+                    selectedWorkflowStatus = status;
+                }
+                if (openingId.HasValue && workflowStartOpening?.Id == openingId && workflowStartDialog is { } dialog) {
+                    workflowStartDialog = dialog with { Status = status };
+                }
+                await InvokeAsync(StateHasChanged);
+                if (status.State is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled or WorkflowRunState.WaitingForInput ||
+                    status.RunId is null && !intentId.HasValue) {
+                    return;
+                }
+            }
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Workflow status observation failed. ProjectId={ProjectId} NodeId={NodeId} IntentId={IntentId}",
+                context.Surface.ProjectId, nodeId, intentId);
+            if (IsCurrent()) {
+                workflowFeedback = "Workflow status could not be refreshed. Reopen the workflow to observe its recorded run.";
+                workflowFeedbackTone = "warn";
+                if (openingId.HasValue && workflowStartOpening?.Id == openingId && workflowStartDialog is { } dialog) {
+                    workflowStartDialog = dialog with { Error = workflowFeedback };
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        } finally {
+            if (ReferenceEquals(workflowStatusObservation, cancellation)) {
+                workflowStatusObservation = null;
+            }
+            cancellation.Dispose();
+        }
+    }
 }

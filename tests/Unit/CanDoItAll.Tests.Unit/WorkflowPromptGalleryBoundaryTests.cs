@@ -17,6 +17,42 @@ public sealed class WorkflowPromptGalleryBoundaryTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Component_model_upgrade_updates_only_its_implicitly_owned_prompt(bool explicitBinding) {
+        var factory = CreateWorkflowFactory(nameof(Component_model_upgrade_updates_only_its_implicitly_owned_prompt));
+        var gallery = PromptGalleryTestSupport.CreateService(factory.Prompts);
+        var provider = CreateProvider();
+        provider = provider with {
+            SuggestedModels = [provider.DefaultModel, OpenAiModelIds.Gpt6Luna],
+            ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(provider.Kind, OpenAiModelIds.Gpt6Luna, provider.ModelPrices)
+        };
+        var catalog = new PersistentWorkflowCatalogService(factory, new WorkflowDefinitionValidator(), gallery, gallery,
+            new TestProviderProfileRegistry(provider), new ProviderProfileService());
+        var legacy = CreateLegacyComponent();
+        var request = new LlmCallComponentSaveRequest(null, legacy.Name, provider.Id, provider.DefaultModel,
+            legacy.Modality, legacy.ModelSettings, legacy.Instructions, legacy.InputShape, legacy.ResultShape, legacy.Permissions);
+        var original = await catalog.SaveComponentAsync(request);
+        var upgrade = request with { Id = original.Id, Model = OpenAiModelIds.Gpt6Luna,
+            PromptArtifactId = explicitBinding ? original.PromptArtifactId : null };
+
+        if (explicitBinding) {
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => catalog.SaveComponentAsync(upgrade));
+            Assert.Contains("not declared as supported", failure.Message, StringComparison.Ordinal);
+            Assert.Equal(original.Model, (await catalog.GetComponentAsync(original.Id))!.Model);
+        } else {
+            var updated = await catalog.SaveComponentAsync(upgrade);
+            Assert.Equal(OpenAiModelIds.Gpt6Luna, updated.Model);
+            Assert.Equal(original.PromptArtifactId, updated.PromptArtifactId);
+            Assert.NotEqual(original.PromptVersionId, updated.PromptVersionId);
+            Assert.Equal(original.Instructions, (await gallery.GetVersionSnapshotAsync(original.PromptVersionId!.Value)).Value!.Content);
+            var item = (await gallery.GetItemAsync(updated.PromptArtifactId!.Value)).Value!;
+            Assert.Contains(item.SupportedModels, model => model.Model == original.Model);
+            Assert.Contains(item.SupportedModels, model => model.Model == updated.Model && model.IsPreferred);
+        }
+    }
+
     [Fact]
     public async Task PersistentComponentSaveRejectsIncompatibleGalleryBindingBeforePersisting()
     {

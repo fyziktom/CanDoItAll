@@ -647,11 +647,30 @@ public sealed class PersistentWorkflowCatalogService(
 
         var existingPromptArtifactId = request.PromptArtifactId ?? currentComponent?.PromptArtifactId;
         PromptGalleryItemDetails? promptItem = null;
+        var updateOwnedPromptModel = false;
         if (existingPromptArtifactId.HasValue)
         {
             promptItem = RequirePromptValue(
                 await promptGallery.GetItemAsync(existingPromptArtifactId.Value, cancellationToken),
                 "Prompt Gallery item");
+            updateOwnedPromptModel = currentComponent is not null &&
+                request.PromptArtifactId is null && request.PromptVersionId is null &&
+                providerResolution.Provider is not null &&
+                promptItem.Source.Provenance is PromptArtifactProvenance.WorkflowCreated or PromptArtifactProvenance.WorkflowMigration &&
+                promptItem.Source.Catalog == WorkflowPromptSourceCatalog &&
+                promptItem.Source.Key == $"workflow-component:{currentComponent.Id.Value:D}" &&
+                string.Equals(promptItem.DraftContent.Trim(), currentComponent.Instructions.Trim(), StringComparison.Ordinal) &&
+                promptItem.SupportedModels.Count > 0 &&
+                !promptItem.SupportedModels.Any(model =>
+                    string.Equals(model.Provider, providerResolution.Provider.Kind.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(model.Model, componentCandidate.Model, StringComparison.OrdinalIgnoreCase)) &&
+                (currentComponent.ProviderProfileId != componentCandidate.ProviderProfileId || currentComponent.Model != componentCandidate.Model);
+            if (updateOwnedPromptModel) {
+                promptItem = promptItem with { SupportedModels = [
+                    .. promptItem.SupportedModels.Select(model => model with { IsPreferred = false }),
+                    new PromptProviderModel(providerResolution.Provider!.Kind.ToString(), componentCandidate.Model, IsPreferred: true)
+                ] };
+            }
             EnsurePromptCompatibility(
                 promptItem,
                 componentCandidate,
@@ -665,6 +684,7 @@ public sealed class PersistentWorkflowCatalogService(
             componentCandidate.Id,
             promptItem,
             providerResolution.Provider,
+            updateOwnedPromptModel,
             cancellationToken);
         var executionItem = promptItem?.Id == promptSnapshot.PromptArtifactId
             ? promptItem with
@@ -737,6 +757,7 @@ public sealed class PersistentWorkflowCatalogService(
         WorkflowComponentId componentId,
         PromptGalleryItemDetails? loadedItem,
         ProviderProfile? provider,
+        bool updateOwnedPromptModel,
         CancellationToken cancellationToken)
     {
         if (request.PromptVersionId is { } requestedVersionId)
@@ -763,7 +784,7 @@ public sealed class PersistentWorkflowCatalogService(
             return await CreateWorkflowPromptAsync(request, componentId, provider, provenance, cancellationToken);
         }
 
-        if (currentComponent?.PromptArtifactId == promptArtifactId &&
+        if (!updateOwnedPromptModel && currentComponent?.PromptArtifactId == promptArtifactId &&
             currentComponent.PromptVersionId is { } currentVersionId &&
             string.Equals(currentComponent.Instructions.Trim(), request.Instructions.Trim(), StringComparison.Ordinal))
         {

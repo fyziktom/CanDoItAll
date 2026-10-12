@@ -1,14 +1,14 @@
 packKey: candoitall-workflow-template-pack
 name: CanDoItAll default workflow template pack
-version: 2026-07-workflow-llm-instruction-snapshot-v2
+version: 2026-10-workflow-output-budget-v3
 seedMarker: Managed workflow example seed
-seedVersion: 2026-07-workflow-llm-instruction-snapshot-v2
+seedVersion: 2026-10-workflow-output-budget-v3
 definitionNamePrefix: "Example: "
 componentNamePrefix: "Example LLM: "
 component:
   modelSettings:
     temperature: 0.1
-    maxOutputTokens: 1400
+    maxOutputTokens: 8192
     requireJsonOutput: true
     responseFormatJsonSchema: |-
       {

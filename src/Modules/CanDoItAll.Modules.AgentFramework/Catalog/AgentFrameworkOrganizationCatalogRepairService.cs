@@ -200,6 +200,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                 "service-managed"),
             SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels
                 .Concat(openAiProvider.SuggestedModels)
+                .Where(OpenAiModelSuggestions.IsMainModel)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             ModelPrices = ProviderPricingDefaults.MergeAuthoritativeKnownDefaultPrices(
@@ -227,6 +228,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                    StringComparison.Ordinal) ||
                ManagedSeedProviderFallbacks.OpenAiSuggestedModels.Any(model =>
                    !provider.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase)) ||
+               provider.SuggestedModels.Any(model => !OpenAiModelSuggestions.IsMainModel(model)) ||
                OpenAiModelIds.Gpt56Models.Any(model => !HasCurrentManagedOpenAiPrice(provider, model));
     }
 
@@ -246,7 +248,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         ProviderProfile provider,
         DateTimeOffset updatedAtUtc)
     {
-        var model = ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, agent.Model, out _)
+        var model = OpenAiModelSuggestions.IsMainModel(agent.Model) &&
+            ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, agent.Model, out _)
             ? agent.Model
             : provider.DefaultModel;
         var configurationJson = ManagedSeedProviderFallbacks.EnsureDefaultReasoningConfigurationJson(agent.ConfigurationJson);

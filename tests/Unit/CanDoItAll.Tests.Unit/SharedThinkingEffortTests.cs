@@ -163,7 +163,9 @@ public sealed class SharedThinkingEffortTests {
     [Fact]
     public void Main_model_suggestions_exclude_snapshots_and_obsolete_models() {
         Assert.True(OpenAiModelSuggestions.IsMainModel("gpt-5.6-sol"));
-        Assert.True(OpenAiModelSuggestions.IsMainModel("gpt-5.4-mini"));
+        Assert.True(OpenAiModelSuggestions.IsMainModel(OpenAiModelIds.Gpt6Luna));
+        Assert.False(OpenAiModelSuggestions.IsMainModel("gpt-5.4-mini"));
+        Assert.False(OpenAiModelSuggestions.IsMainModel("gpt-4.1"));
         Assert.False(OpenAiModelSuggestions.IsMainModel("gpt-3.5-turbo"));
         Assert.False(OpenAiModelSuggestions.IsMainModel("gpt-5.4-2026-03-05"));
         Assert.False(OpenAiModelSuggestions.IsMainModel("e2e-secondary-model"));

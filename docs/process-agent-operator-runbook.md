@@ -108,6 +108,18 @@ A retired or recreated project, mismatched preparation, or historical run withou
 
 ## Dispatch
 
+The Blazor delivery implementation step owns product changes, build/test checks, startup
+proof, and publishable output when required. It records its current-run handoff after
+those checks pass. Browser interactions, screenshots, console inspection, visual analysis,
+and offline/cache proof belong to the downstream validation step. That validation remains
+required before delivery can complete.
+
+The per-step deadline remains a safety boundary. Cancellation wrapped in runtime usage
+exceptions is recorded as cancellation, preserving usage and closing undispatched tool
+proposals through the existing journal transition. A timed-out historical run is not
+automatically changed to successful or replayed: inspect its original effects before
+recovery, and retain blocks for unresolved effects.
+
 Use manual dispatch only after confirming that the run has ready work and the background worker is not already progressing it. The queue prevents concurrent local dispatch of the same run and delays retry after unexpected dispatch failure. Repeated manual calls are not a substitute for repairing a provider, capability, database, or worker fault.
 
 After dispatch, read current detail, summary, and history again. Projection readback is the evidence that the operation completed.

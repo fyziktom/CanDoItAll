@@ -54,9 +54,6 @@ public static class OpenAiModelPricingPolicy
 
 public static class OpenAiModelSuggestions {
     private static readonly HashSet<string> MainModels = new(StringComparer.OrdinalIgnoreCase) {
-        "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
-        "gpt-5.3-codex", "gpt-5.4", OpenAiModelIds.Gpt54Mini, "gpt-5.4-nano", "gpt-5.4-pro",
-        "gpt-5.5", "gpt-5.5-pro",
         OpenAiModelIds.Gpt56, OpenAiModelIds.Gpt56Luna, OpenAiModelIds.Gpt56Terra, OpenAiModelIds.Gpt56Sol,
         OpenAiModelIds.Gpt6Astra, OpenAiModelIds.Gpt61Sol, OpenAiModelIds.Gpt6Sol, OpenAiModelIds.Gpt6Luna
     };
