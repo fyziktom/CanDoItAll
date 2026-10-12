@@ -23,12 +23,14 @@ public sealed class DataSourcesOwnerTests {
         var a = await profiles.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(environment.CreatePostgreSqlProfile("source"), "A"));
         Assert.True(a.IsSuccess);
         var target = environment.CreatePostgreSqlProfile("target");
-        var b = await profiles.SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(target, "B"));
+        const string password = "data-source-password-only-sentinel";
+        var targetEditor = TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(target, "B");
+        targetEditor.PostgresPassword = password;
+        var b = await profiles.SaveAsync(targetEditor);
         Assert.True(b.IsSuccess);
         await using var scope = services.CreateAsyncScope();
         var owner = Owner(scope.ServiceProvider);
         var editor = await owner.ReadEditorAsync(b.Value, CancellationToken.None);
-        var password = new NpgsqlConnectionStringBuilder(target.ConnectionString).Password!;
         Assert.True(editor.HasPassword);
         Assert.False(editor.ToString().Contains(password, StringComparison.Ordinal));
         using var intent = new ProfilePasswordIntent(string.Empty);

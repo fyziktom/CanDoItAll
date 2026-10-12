@@ -73,9 +73,9 @@ public sealed class SharedProviderLocalConcurrencyTests {
         var child = cut.FindComponent<SharedProviderImportedProfileContent>().Instance;
         var context = child.Draft.Context;
         if (editA == LocalEdit.Alias) {
-            cut.Find("[data-testid='shared-provider-import-alias']").Input("Draft A");
+            await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-import-alias']").InputAsync(new() { Value = "Draft A" }));
         } else {
-            cut.Find("[data-testid='shared-provider-import-enabled']").Change(false);
+            await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-import-enabled']").ChangeAsync(new() { Value = false }));
         }
         Assert.True(child.Draft.IsDirty);
         await using var otherScope = harness.Context.Services.CreateAsyncScope();
@@ -85,13 +85,17 @@ public sealed class SharedProviderLocalConcurrencyTests {
             editB == LocalEdit.Alias ? "Saved B" : before.LocalAlias, editB != LocalEdit.Enabled,
             before.ImportConcurrencyToken, before.ProviderConcurrencyToken))).Import!;
 
-        await cut.Find("[data-testid='providers-refresh']").ClickAsync();
-        cut.WaitForAssertion(() => Assert.Equal(changed.ImportConcurrencyToken, child.Draft.Latest.ImportToken));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='providers-refresh']").ClickAsync(new()));
+        cut.WaitForAssertion(() => {
+            Assert.Equal(changed.ImportConcurrencyToken, child.Draft.Latest.ImportToken);
+            Assert.True(child.Draft.HasConflict);
+            Assert.False(child.IsBusy);
+            Assert.NotNull(cut.Find("[data-testid='shared-provider-import-conflict']"));
+        });
         Assert.Same(child, cut.FindComponent<SharedProviderImportedProfileContent>().Instance);
         Assert.Same(context, child.Draft.Context);
-        Assert.NotNull(cut.Find("[data-testid='shared-provider-import-conflict']"));
         Assert.Equal(before.ImportConcurrencyToken, child.Draft.Baseline.ImportToken);
-        await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-import-save']").ClickAsync(new()));
         await cut.InvokeAsync(() => child.Save.InvokeAsync(child.Draft.Capture()));
         Assert.Empty(proxy!.Updates);
         var unchanged = (await otherOwner.GetProfileSharingAsync(seed.ProviderId)).Import!;
@@ -99,9 +103,9 @@ public sealed class SharedProviderLocalConcurrencyTests {
         Assert.Equal(changed.IsEnabled, unchanged.IsEnabled);
         Assert.Equal(changed.ImportConcurrencyToken, unchanged.ImportConcurrencyToken);
 
-        await cut.Find(keepEdits ? "[data-testid='shared-provider-import-keep-edits']" :
-            "[data-testid='shared-provider-import-use-saved']").ClickAsync();
-        await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
+        await cut.InvokeAsync(() => cut.Find(keepEdits ? "[data-testid='shared-provider-import-keep-edits']" :
+            "[data-testid='shared-provider-import-use-saved']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shared-provider-import-save']").ClickAsync(new()));
         var saved = (await otherOwner.GetProfileSharingAsync(seed.ProviderId)).Import!;
         Assert.Equal(keepEdits && editA == LocalEdit.Alias ? "Draft A" : changed.LocalAlias, saved.LocalAlias);
         Assert.Equal(keepEdits && editA == LocalEdit.Enabled ? false : changed.IsEnabled, saved.IsEnabled);
@@ -219,9 +223,9 @@ public sealed class SharedProviderLocalConcurrencyTests {
     private static async Task<IRenderedComponent<AgentProviderProfilesPanel>> OpenSharingAsync(ComponentTestHarness harness, Guid providerId) {
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-name-input']");
-        await cut.FindAll("[data-testid='providers-tree-provider']").First(node => node.TextContent.Contains("Team model", StringComparison.Ordinal)).ClickAsync();
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='providers-tree-provider']").First(node => node.TextContent.Contains("Team model", StringComparison.Ordinal)).ClickAsync(new()));
         Assert.Equal(providerId, cut.Instance.Editor.Model.Id);
-        await cut.FindAll("[role='tab']")[ProviderEditorSections.IndexOf(ProviderEditorSection.Sharing)].ClickAsync();
+        await cut.InvokeAsync(() => cut.FindAll("[role='tab']")[ProviderEditorSections.IndexOf(ProviderEditorSection.Sharing)].ClickAsync(new()));
         cut.WaitForElement("[data-testid='shared-provider-import-alias']");
         return cut;
     }

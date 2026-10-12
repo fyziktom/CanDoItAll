@@ -60,6 +60,7 @@ public sealed partial class AppSmokeTests
                 }
             });
 
+        var explicitCommand = OperatingSystem.IsWindows() ? "Write-Output approval-test" : "printf approval-test";
         var explicitScriptNodeId = await CreateRuntimeNodeAsync(
             context,
             projectId,
@@ -73,7 +74,7 @@ public sealed partial class AppSmokeTests
                 Script = new ProjectScriptMetadata
                 {
                     ScriptKind = OperatingSystem.IsWindows() ? ProjectScriptKind.PowerShell : ProjectScriptKind.PosixShell,
-                    Command = OperatingSystem.IsWindows() ? "Write-Output approval-test" : "printf approval-test",
+                    Command = explicitCommand,
                     WorkingDirectory = fixture.StorageWorkspaceRoot!
                 }
             });
@@ -177,10 +178,10 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("project-structure-quick-action-runtime-open").ClickAsync();
         var approvalDialog = page.GetByTestId("project-structure-runtime-launch-approval-dialog");
         await approvalDialog.WaitForAsync();
-        Assert.DoesNotContain(
-            fixture.StorageWorkspaceRoot!,
-            await approvalDialog.TextContentAsync() ?? string.Empty,
-            StringComparison.Ordinal);
+        var review = await approvalDialog.TextContentAsync() ?? string.Empty;
+        Assert.Contains($"{ProjectStructureRuntimeLaunchMode.Direct}:", review, StringComparison.Ordinal);
+        Assert.Contains(explicitCommand, review, StringComparison.Ordinal);
+        Assert.Contains($"Working directory: {fixture.StorageWorkspaceRoot}", review, StringComparison.Ordinal);
         await page.GetByTestId("project-structure-runtime-launch-approval-cancel").ClickAsync();
         await approvalDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
 

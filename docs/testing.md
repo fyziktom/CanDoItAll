@@ -179,6 +179,19 @@ event together inside `cut.InvokeAsync`. A render between `Find` and `Click` can
 the event handler and make bUnit report `UnknownEventHandlerIdException`. Re-querying the
 element outside the dispatcher does not close that race.
 
+Wait for the resulting DOM as well as controller state when an owner refreshes a child
+editor. A new concurrency token can be observable before the conflict controls render;
+assert the conflict notice and its ready state inside `WaitForAssertion` before acting.
+
+Credential-disclosure tests use a distinct synthetic password sentinel when the saved
+profile is inspected but not connected. CI may give its database role the same username
+and password; searching for that password in an otherwise safe username or descriptor
+would be a false positive. Keep the sentinel-absence and native credential-retention
+assertions, and use the fixture connection separately for physical-database checks.
+
+Runtime launch approval tests verify the operator's frozen command, launch mode and
+working directory. Agent projections retain separate path and command redaction tests.
+
 Workflow canvas preview tests must wait until the supplied definition name appears in
 `workflow-canvas-name` before starting the preview. The toolbar renders while
 `OnInitializedAsync` is still loading secrets; button existence alone does not prove

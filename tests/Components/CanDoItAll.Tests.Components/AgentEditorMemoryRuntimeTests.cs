@@ -35,14 +35,14 @@ public sealed class AgentEditorMemoryRuntimeTests : AgentMemorySettingsPanelTest
         var cut = harness.Context.Render<AgentDetailsDialog>(p => p.Add(x => x.AgentId, id)
             .Add(x => x.InitialProviders, Array.Empty<ProviderProfile>()).Add(x => x.Section, AgentEditorSection.Memory));
         cut.WaitForElement("[data-testid='agents-catalog-memory-new-provider'] option[value='editor.runtime-memory']");
-        cut.Find("[data-testid='agents-catalog-memory-mode']").Change(nameof(AgentMemoryInvocationMode.Automatic));
-        cut.Find("[data-testid='agents-catalog-memory-required']").Change(true);
-        cut.Find("[data-testid='agents-catalog-crm-source-read']").Change(true);
-        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Input("review");
-        cut.Find("[data-testid='agents-catalog-memory-new-provider']").Change(profile.InstanceId.Value);
-        cut.Find("[data-testid='agents-catalog-memory-new-requirement']").Change(nameof(AgentMemoryProviderRequirement.Required));
-        await cut.Find("[data-testid='agents-catalog-memory-add-binding']").ClickAsync();
-        await cut.Find("form").SubmitAsync();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-mode']").ChangeAsync(new() { Value = nameof(AgentMemoryInvocationMode.Automatic) }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-required']").ChangeAsync(new() { Value = true }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-crm-source-read']").ChangeAsync(new() { Value = true }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-new-alias']").InputAsync(new() { Value = "review" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-new-provider']").ChangeAsync(new() { Value = profile.InstanceId.Value }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-new-requirement']").ChangeAsync(new() { Value = nameof(AgentMemoryProviderRequirement.Required) }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-memory-add-binding']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
         var saved = await workspace.GetAgentEditorAsync(id);
         Assert.Equal("review", Assert.Single(saved.MemoryAccess.ProviderBindings).Alias.Value);
         Assert.Contains(MemorySourceScope.Crm, saved.MemoryAccess.AllowedSourceScopes);

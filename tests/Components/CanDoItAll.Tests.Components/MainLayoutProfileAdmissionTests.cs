@@ -131,10 +131,11 @@ public sealed class MainLayoutProfileAdmissionTests {
     [Fact]
     public async Task Credential_bearing_native_editor_never_crosses_the_render_or_copy_contract() {
         await using var harness = await CreateHarnessAsync(new ActivationGate());
-        var targetId = await SaveProfileAsync(harness, "Safe target");
+        const string password = "shell-profile-password-only-sentinel";
+        var targetId = await SaveProfileAsync(harness, "Safe target", password);
         var cut = await OpenAsync(harness, targetId);
         var editor = await harness.Context.Services.GetRequiredService<IDatabaseProfileService>().GetEditorAsync(targetId);
-        Assert.False(string.IsNullOrWhiteSpace(editor.PostgresPassword));
+        Assert.Equal(password, editor.PostgresPassword);
         Assert.DoesNotContain(editor.PostgresPassword, cut.Markup, StringComparison.Ordinal);
         Assert.All(cut.FindComponents<CanDoItAll.Components.BaseLib.CopyButton>(), copy =>
             Assert.DoesNotContain(editor.PostgresPassword, copy.Instance.Value ?? string.Empty, StringComparison.Ordinal));
@@ -157,10 +158,14 @@ public sealed class MainLayoutProfileAdmissionTests {
         return harness;
     }
 
-    private static async Task<Guid> SaveProfileAsync(ComponentTestHarness harness, string name) {
+    private static async Task<Guid> SaveProfileAsync(ComponentTestHarness harness, string name, string? password = null) {
         var profile = harness.TestEnvironment.CreatePostgreSqlProfile(Guid.NewGuid().ToString("N"));
+        var editor = TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(profile, name);
+        if (password is not null) {
+            editor.PostgresPassword = password;
+        }
         var saved = await harness.Context.Services.GetRequiredService<IDatabaseProfileService>()
-            .SaveAsync(TestDatabaseProfileEditorFactory.CreatePostgreSqlEditor(profile, name));
+            .SaveAsync(editor);
         Assert.True(saved.IsSuccess);
         return saved.Value;
     }
