@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -20,6 +22,171 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    [Theory]
+    [InlineData(4, false)]
+    [InlineData(96, false)]
+    [InlineData(4, true)]
+    [InlineData(96, true)]
+    public async Task BeginChatBackedRunAsync_PrecreatedSession_DoesNotReadHistoricalPayloads(
+        int historicalRunCount,
+        bool editSession) {
+        await using var scenario = await CreateScenarioAsync(historicalRunCount, includeExistingSession: false);
+        var session = await scenario.Store.CreateChatSessionAsync(CreateEmptySession(scenario));
+        if (editSession) {
+            session = await scenario.Store.UpdateChatSessionAsync(session with {
+                Title = "Renamed before sending",
+                UpdatedAtUtc = session.UpdatedAtUtc.AddSeconds(1)
+            });
+        }
+
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        scenario.ReadRecorder.Clear();
+        var stopwatch = Stopwatch.StartNew();
+        var result = await scenario.Store.BeginChatBackedRunAsync(
+            new ChatBackedRunStartRequest(scenario.Agent.Id, scenario.Agent.ProviderProfileId!.Value,
+                scenario.CatalogRevision, session.Id),
+            context => CreateAdmissionMutation(context, "first floating-chat message"));
+        stopwatch.Stop();
+
+        var started = Assert.IsType<ChatBackedRunStarted>(result);
+        Assert.Equal(session.Id, started.Detail.ChatSession!.Id);
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        AssertReadBudget(scenario, expectedPhysicalReadCount: 15, "precreated-session");
+        output.WriteLine($"admission-duration historical-runs={historicalRunCount} edited={editSession} elapsed-ms={stopwatch.Elapsed.TotalMilliseconds:F1}");
+        await AssertUsageAfterAdmissionAsync(scenario);
+    }
+
+    [Theory]
+    [InlineData(InvalidUsageProjection.Missing)]
+    [InlineData(InvalidUsageProjection.StaleRevision)]
+    [InlineData(InvalidUsageProjection.DifferentVersion)]
+    public async Task CreateChatSessionAsync_InvalidUsageProjection_RemainsStaleUntilCanonicalRebuild(
+        InvalidUsageProjection invalidProjection) {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var json = new FileSandboxWorkspaceJsonStore();
+        var invalid = scenario.InitialUsageProjection with {
+            Revision = invalidProjection == InvalidUsageProjection.StaleRevision
+                ? scenario.InitialUsageProjection.Revision - 1
+                : scenario.InitialUsageProjection.Revision,
+            Version = invalidProjection == InvalidUsageProjection.DifferentVersion
+                ? "incompatible-test-version"
+                : scenario.InitialUsageProjection.Version,
+            Agents = [],
+            Providers = [],
+            Models = []
+        };
+        if (invalidProjection == InvalidUsageProjection.Missing) {
+            File.Delete(scenario.Layout.ExecutionUsageIndexPath);
+        } else {
+            await json.WriteJsonAtomicallyAsync(scenario.Layout.ExecutionUsageIndexPath, invalid, default);
+        }
+
+        await scenario.Store.CreateChatSessionAsync(CreateEmptySession(scenario));
+
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        var saved = await json.ReadJsonAsync<AgentUsageProjection>(scenario.Layout.ExecutionUsageIndexPath, default);
+        if (invalidProjection == InvalidUsageProjection.Missing) {
+            Assert.Null(saved);
+        } else {
+            Assert.Equal(JsonSerializer.Serialize(invalid), JsonSerializer.Serialize(saved));
+        }
+
+        var rebuilt = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, rebuilt.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.Version, rebuilt.Version);
+        Assert.Equal(scenario.InitialUsageProjection.Agents, rebuilt.Agents);
+        Assert.Equal(scenario.InitialUsageProjection.Providers, rebuilt.Providers);
+        Assert.Equal(scenario.InitialUsageProjection.Models, rebuilt.Models);
+        Assert.Equal(scenario.HistoricalRunCount, GetHistoricalRunHeaderReads(scenario).Count);
+        Assert.Equal(scenario.HistoricalRunCount, GetHistoricalUsageReads(scenario).Count);
+    }
+
+    [Fact]
+    public async Task CreateChatSessionAsync_InterruptedBeforeUsageAdvance_RebuildsOnNextRead() {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var json = new FileSandboxWorkspaceJsonStore();
+        var failureInjected = false;
+        var diagnostics = new FileSandboxWorkspaceJsonReadDiagnostics(read => {
+            if (read.PayloadType != typeof(AgentUsageProjection)) {
+                return;
+            }
+
+            var index = JsonSerializer.Deserialize<ExecutionStorageIndex>(
+                File.ReadAllText(scenario.Layout.ExecutionIndexPath), json.SerializerOptions)!;
+            if (index.Revision > scenario.InitialUsageProjection.Revision) {
+                failureInjected = true;
+                throw new InjectedSessionProjectionFailureException();
+            }
+        });
+        var failingStore = new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope,
+            chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: null,
+            jsonReadDiagnostics: diagnostics);
+        var session = CreateEmptySession(scenario);
+
+        await Assert.ThrowsAsync<InjectedSessionProjectionFailureException>(
+            () => failingStore.CreateChatSessionAsync(session));
+
+        Assert.True(failureInjected);
+        Assert.True(File.Exists(scenario.Layout.SessionPath(session.Id)));
+        var stale = await json.ReadJsonAsync<AgentUsageProjection>(scenario.Layout.ExecutionUsageIndexPath, default);
+        Assert.Equal(scenario.InitialUsageProjection.Revision, stale!.Revision);
+        var recovered = await new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope)
+            .LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, recovered.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.Agents, recovered.Agents);
+        Assert.Equal(scenario.InitialUsageProjection.Providers, recovered.Providers);
+        Assert.Equal(scenario.InitialUsageProjection.Models, recovered.Models);
+    }
+
+    [Fact]
+    public async Task CreateChatSessionAsync_ConcurrentAdmissionThroughAnotherStore_PreservesUsage() {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var otherStore = new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope);
+        var createSession = otherStore.CreateChatSessionAsync(CreateEmptySession(scenario));
+        var admission = scenario.Store.BeginChatBackedRunAsync(scenario.CreateRequest(),
+            context => CreateAdmissionMutation(context, "concurrent admission"));
+
+        await Task.WhenAll(createSession, admission);
+
+        Assert.IsType<ChatBackedRunStarted>(await admission);
+        var projection = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 2, projection.Revision);
+        await AssertUsageAfterAdmissionAsync(scenario);
+    }
+
+    private static ChatSessionRecord CreateEmptySession(AdmissionScenario scenario) {
+        var now = DateTimeOffset.UtcNow;
+        return new ChatSessionRecord(Guid.NewGuid(), scenario.Agent.Id, "Empty floating chat", now, now, []);
+    }
+
+    private static async Task AssertUsageAfterAdmissionAsync(AdmissionScenario scenario) {
+        var incremental = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.UsageObservationCount + 1, incremental.UsageObservationCount);
+        Assert.Equal(scenario.InitialUsageProjection.TotalTokens + AdmissionInputTokens + AdmissionOutputTokens,
+            incremental.TotalTokens);
+        Assert.Equal(scenario.InitialUsageProjection.KnownCostUsd + AdmissionCostUsd, incremental.KnownCostUsd);
+        File.Delete(scenario.Layout.ExecutionUsageIndexPath);
+        var rebuilt = await new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope)
+            .LoadUsageProjectionAsync();
+        Assert.Equal(incremental.Version, rebuilt.Version);
+        Assert.Equal(incremental.Revision, rebuilt.Revision);
+        Assert.Equal(incremental.UpdatedAtUtc, rebuilt.UpdatedAtUtc);
+        Assert.Equal(incremental.Agents, rebuilt.Agents);
+        Assert.Equal(incremental.Providers, rebuilt.Providers);
+        Assert.Equal(incremental.Models, rebuilt.Models);
+    }
+
+    public enum InvalidUsageProjection {
+        Missing,
+        StaleRevision,
+        DifferentVersion
+    }
+
+    private sealed class InjectedSessionProjectionFailureException : Exception;
 
     [Theory]
     [InlineData(4)]

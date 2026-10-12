@@ -1711,6 +1711,12 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
 
         await chatProjectionStore.SaveSessionAsync(previousSession, normalizedSession, nextIndex, cancellationToken);
+        if (changed) {
+            await executionSliceStore.AdvanceUsageProjectionForSessionChangeAsync(
+                currentIndex,
+                nextIndex,
+                cancellationToken);
+        }
         return normalizedSession;
     }
 

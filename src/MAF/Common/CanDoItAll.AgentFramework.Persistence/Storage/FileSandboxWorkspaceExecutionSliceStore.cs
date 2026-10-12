@@ -53,6 +53,28 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return LoadOrBuildUsageProjectionAsync(cancellationToken);
     }
 
+    public async Task AdvanceUsageProjectionForSessionChangeAsync(
+        ExecutionStorageIndex previousIndex,
+        ExecutionStorageIndex nextIndex,
+        CancellationToken cancellationToken) {
+        var projection = await jsonStore.ReadJsonAsync<AgentUsageProjection>(
+            layout.ExecutionUsageIndexPath,
+            cancellationToken);
+        if (projection is null ||
+            projection.Revision != previousIndex.Revision ||
+            !string.Equals(projection.Version, previousIndex.Version, StringComparison.Ordinal)) {
+            return;
+        }
+
+        await jsonStore.WriteJsonAtomicallyAsync(
+            layout.ExecutionUsageIndexPath,
+            projection with {
+                Revision = nextIndex.Revision,
+                UpdatedAtUtc = nextIndex.UpdatedAtUtc
+            },
+            cancellationToken);
+    }
+
     public async Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
         CancellationToken cancellationToken)
     {
