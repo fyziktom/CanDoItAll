@@ -167,6 +167,12 @@ Do not run an unfiltered test project or the stable aggregate merely because a b
 phase completed. The bundle proof must record the production projects built, the exact
 filter, expected and actual discovery counts, and the filtered result.
 
+Provider-batch request timeouts include time spent in the queue. An expired request can
+finish without invoking the batch executor, so timeout tests assert the caller's outcome
+without first requiring an executor-start signal. Cover queue windows shorter and longer
+than the request deadline. Apply the test's bounded wait to the assertion task itself;
+otherwise a timeout from the test harness could satisfy the expected request exception.
+
 Component tests that dispose rendered components while reusing a `BunitContext` must use
 `DisposeRenderedComponentsAsync()` from `BunitContextLifecycleExtensions`. In bUnit 2.7.2,
 calling `DisposeComponentsAsync()` outside a busy renderer dispatcher can clear the root
