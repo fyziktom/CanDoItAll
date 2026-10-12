@@ -1,7 +1,7 @@
 # Workspace API Access UI boundary
 
-Status: complete. This record
-executes the sealed [assignment](../../codex/bundles/CanDoItAll_Workspace_API_Access_UI_Decoupling/prompt.md).
+Status: complete. This record covers the historical Workspace API Access UI
+Decoupling assignment.
 The package remains historical input. Only WSC-R1 and API Access are in scope. Data Sources
 and Storage retain their production hosts; no other Workspace slice was started.
 

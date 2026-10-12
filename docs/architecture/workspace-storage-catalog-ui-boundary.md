@@ -14,7 +14,7 @@ historical evidence; they are not rerun claims for the selection work.
 
 Entry: `components-decoupling`, `73053bd4fe723d56043df410c322c0651f6cea4c`, clean.
 The only drift from the reviewed `56f615a19f5d7eb22042584230ceebcc611bf549` is the sealed
-[assignment](../../codex/bundles/CanDoItAll_Workspace_Storage_Catalog_UI_Decoupling/prompt.md).
+Storage Catalog UI Decoupling assignment, now retained only in Git history.
 Its review, matrices and unchanged shared foundation are inputs, not fresh runtime proof.
 SDK: 10.0.303, Windows, sibling source mode. Read-only sibling revisions:
 Components `f258ab6a959a97fa16c01d0858e7dc122728a11a`, FileTools

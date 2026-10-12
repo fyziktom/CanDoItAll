@@ -2,7 +2,7 @@
 
 Status: complete for local development on the verified source pair below. PP1, PP2, A2 and
 PP3 remain completed slices. Remote Components delivery is still a separate qualification.
-The sealed execution package remains under `codex/bundles/CanDoItAll_Agent_Authoring_CA1`.
+The historical Agent Authoring CA1 execution package is retained in Git history.
 
 ## Source and delivery
 

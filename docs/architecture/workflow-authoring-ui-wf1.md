@@ -1,8 +1,8 @@
 # Workflow authoring WF1
 
-Execution of `codex/bundles/CanDoItAll_Workflow_Authoring_WF1/prompt.md` on the
-existing `components-decoupling` branch. The sealed package and historical bundles
-are unchanged. The full selected rendering family and native Workflow consumers
+Execution of the historical Workflow Authoring WF1 package on the
+`components-decoupling` branch. The sealed package and historical bundles
+are retained in Git history. The full selected rendering family and native Workflow consumers
 are implemented and proved, including final History and browser navigation. All
 27 frozen Stable assemblies and their qualified accounting are complete. Signed
 checkpoints and final validation are recorded in the external evidence. Earlier stage notes below retain the

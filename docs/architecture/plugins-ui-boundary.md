@@ -4,7 +4,7 @@
 
 The complete Plugins workspace now uses an independent rendering library and the
 same host-owned presentation policy in production and a standalone sandbox. This
-record closes the [Plugins package](../../codex/bundles/CanDoItAll_Plugins_UI_Decoupling/prompt.md),
+record closes the historical Plugins UI Decoupling package,
 including its shared foundation, source review, validation matrix and development
 loop obligations. It does not start another module.
 

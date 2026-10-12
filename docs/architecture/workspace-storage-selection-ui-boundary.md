@@ -1,7 +1,7 @@
 # Workspace Storage selection UI boundary
 
 Execution record for the compatible external Behavioral
-[Storage selection bundle](../../codex/bundles/CanDoItAll_Workspace_Storage_Selection_UI_Decoupling/prompt.md).
+Storage Selection UI Decoupling bundle, now retained only in Git history.
 Entry: `8bbb9e29e32887de98d567eddb68277627cb67c7` on `components-decoupling`, clean.
 Its only difference from reviewed implementation `cbb135c7c8d76ff50a624c142f12faf8c9b55f91`
 is the 40-file input bundle. Historical packages and shared foundation remain sealed input.

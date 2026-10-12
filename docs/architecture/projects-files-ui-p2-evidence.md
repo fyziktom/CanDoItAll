@@ -1,7 +1,7 @@
 # Projects Files P2 execution evidence
 
 This records the bounded execution of
-`codex/bundles/CanDoItAll_Projects_Files_UI_Decoupling/prompt.md` on 2026-10-01.
+the historical Projects Files UI Decoupling package on 2026-10-01.
 The [architecture record](projects-files-ui-decoupling.md) describes the final owners
 and renderer census. This is feature evidence, not application release certification.
 

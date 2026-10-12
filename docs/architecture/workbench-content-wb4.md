@@ -4,8 +4,8 @@ WB4 Content and Files is complete on the verified local source pair. Its indepen
 native journeys pass; the original broad Stable run retains the two qualified failures below.
 WB1–WB3 remain preserved. This is a bounded extraction; the whole Workbench is not complete.
 
-The sealed [WB4 package](../../codex/bundles/CanDoItAll_Workbench_Content_WB4/prompt.md)
-is unchanged. Its G00–G35 contract governs closure. Private source fingerprints, binaries,
+The historical WB4 package's G00–G35 contract governed closure. The package was
+removed from the current checkout after completion. Private source fingerprints, binaries,
 commands, discovery, original failures, native receipts and screenshots are retained under
 `artifacts/workbench-content-wb4`; the evidence checker validates structure, not authenticity.
 

@@ -4,8 +4,8 @@ WB2 is complete for the bounded Insights and Selection family, including the
 rendering boundary, native consumer campaign and reviewed regression closure.
 The original broad run retains four failures: three have passing focused repairs;
 one is the unchanged historical synthetic secret-scan control. This is not a
-passing full-suite claim or release readiness. The sealed package is
-`codex/bundles/CanDoItAll_Workbench_Insights_WB2`; original attempt logs and manifests
+passing full-suite claim or release readiness. The historical Workbench Insights WB2
+package is retained in Git history; original attempt logs and manifests
 are retained under ignored `artifacts/workbench-insights-wb2`.
 
 ## Entry and boundary decision
