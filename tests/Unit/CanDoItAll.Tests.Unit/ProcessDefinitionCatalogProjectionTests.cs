@@ -1758,6 +1758,54 @@ public sealed class ProcessDefinitionCatalogProjectionTests
         Assert.False(ToolContractCatalog.IsRepresentativeBrowserInteractionToolName(ToolContractCatalog.BrowserClose));
     }
 
+    [Theory]
+    [InlineData("record-blazor-results", "validate-blazor-runtime", "quality-accepted")]
+    [InlineData("record-blazor-results-after-repair", "revalidate-blazor-repair", "quality-accepted")]
+    [InlineData("record-blazor-no-go-results", "revalidate-blazor-repair", "repair-escalation")]
+    public void Blazor_delivery_finalizes_every_qa_route_with_runtime_writeback(
+        string stepKey, string sourceStepKey, string branchKey) {
+        var processRoot = Path.Combine(FindRepositoryRoot(), "Templates", "Processes");
+        var definition = new ProcessTemplatePackLoader(processRoot).LoadDefinition("blazor-app-delivery");
+        var step = Assert.Single(definition.Steps, candidate => candidate.Key == stepKey);
+
+        Assert.Equal("End", step.StepKind);
+        Assert.False(step.AllowsManualSkip);
+        Assert.Equal(branchKey == "repair-escalation", step.AllowsCompletedOutcomeWithOpenIssues);
+        Assert.Contains(step.Dependencies, dependency => dependency.DependsOnStepKey == sourceStepKey &&
+            dependency.DependsOnBranchOutcomeKey == branchKey);
+        var branch = ProcessRuntimeBranchGateResolver.Resolve(step);
+        Assert.True(branch.IsSupported, branch.Error);
+        Assert.Equal(sourceStepKey, branch.BranchGate?.SourceStepKey);
+        Assert.Equal(branchKey, branch.BranchGate?.RequiredOutcomeKey);
+        Assert.Contains(step.ArtifactInputs, input => input.SourceStepKey == sourceStepKey);
+        Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, step.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, step.AllowedOperations);
+        Assert.DoesNotContain(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
+        Assert.Equal(ProcessOperationContractNames.ExternalActionControlled, step.OperationTargetScope);
+        Assert.Contains(step.CapabilityScope.RequiredReceipts, receipt =>
+            receipt.ToolName == "project_structure_read" &&
+            receipt.Activation == ProcessRequiredToolReceiptActivation.Always);
+        Assert.DoesNotContain(step.CapabilityScope.RequiredReceipts, receipt =>
+            receipt.ToolName == "project_structure_node_create");
+        Assert.Contains("missing, duplicate or non-launchable runtime node is invalid",
+            Assert.Single(step.ArtifactExpectations, artifact => artifact.Key.Contains("project-structure-result-writeback", StringComparison.Ordinal))
+                .ValidationRequirementSummary, StringComparison.Ordinal);
+
+        Assert.NotEmpty(step.ResolvedExecutionGuidance);
+        var guidance = string.Join(Environment.NewLine, step.ResolvedExecutionGuidance.Select(document => document.Content));
+        Assert.Contains("Preserve user-edited launch settings", guidance, StringComparison.Ordinal);
+        Assert.Contains("original current-read mutation expectations", guidance, StringComparison.Ordinal);
+        Assert.Contains("Read back both the final Note and runtime node", guidance, StringComparison.Ordinal);
+        if (branchKey == "repair-escalation") {
+            Assert.Contains(step.Dependencies, dependency => dependency.DependsOnStepKey == "escalate-blazor-unresolved-repair");
+            Assert.Contains(step.ArtifactInputs, input => input.SourceStepKey == "escalate-blazor-unresolved-repair" &&
+                input.ArtifactExpectationKey == "blazor-repair-escalation-record");
+            Assert.Contains("Not accepted", guidance, StringComparison.Ordinal);
+            Assert.Contains("local inspection only; delivery not accepted", guidance, StringComparison.Ordinal);
+            Assert.Contains("does not mean QA passed", guidance, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public void Blazor_delivery_distinguishes_fresh_validation_from_required_deployment_caching() {
         var processRoot = Path.Combine(FindRepositoryRoot(), "Templates", "Processes");

@@ -1,0 +1,11 @@
+# Record Blazor no-go results and register inspection runtime
+
+Run after the unresolved-repair decision on the `repair-escalation` route. Apply the accompanying repaired-result writeback instructions for the exact launch-selected parent, plain Note, typed Environment runtime, current-read mutation expectations, reuse, preservation of user edits and final launchability readback. This step owns project-structure writeback; it does not change the product or the QA verdict.
+
+Use the current repair change set, revalidation evidence and escalation record together. The app must be the exact existing runnable project established by the repair and startup receipts. A failed visual or behavioral acceptance criterion does not by itself make that app unavailable for local inspection. A missing app, invalid launch target or failed writeback does block this step; report the exact tool receipt instead of fabricating a runtime node.
+
+Create or reuse exactly one current-run result Note. Its title must start with **Not accepted**. Retain the current run id, no-go decision, failed criteria, unverified proof, accountable owner, next repair scope and links to the evidence. Never replace this verdict with a successful-delivery summary. Attach screenshots separately when applicable.
+
+Create or reuse one persistent `Environment` / `dotnet-runtime` node under the same selected parent. For a new node, set status `Needs review` and state **local inspection only; delivery not accepted** in its notes. Preserve an existing matching runtime node's user-edited settings and record the current verdict in the current-run Note. Do not overwrite another app target, duplicate a runtime or copy a temporary QA port into launch settings.
+
+Read back the Note and the runtime's exact project path, direct parent, typed metadata and direct-launch capability. Include the actual receipts and create-or-reuse dispositions in both required output artifacts. Do not start or leave a host running. Completing this final step means the no-go decision and usable local launch control were saved; it does not mean QA passed. Do not rebuild, repair, repeat validation, narrow acceptance or mark failed criteria Passed here.

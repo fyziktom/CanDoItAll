@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-13T13:37:39.919523+00:00",
+  "generated_utc": "2026-10-13T17:38:37.300433+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15412,
+  "allowance_count": 15417,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -1420,6 +1420,12 @@
     {
       "path": "Templates/Processes/processes/blazor-app-delivery/definition.json",
       "category": "process-domain",
+      "source_fingerprint": "6257a9a08ba2288de38ced223a53786e95b4c3ff19cfb9b244235c31811d9cff",
+      "count": 1
+    },
+    {
+      "path": "Templates/Processes/processes/blazor-app-delivery/definition.json",
+      "category": "process-domain",
       "source_fingerprint": "71b690408c3d98ba7822ae22147784a63462c501c1d66c59a071882ad7d0c945",
       "count": 1
     },
@@ -1427,13 +1433,13 @@
       "path": "Templates/Processes/processes/blazor-app-delivery/definition.json",
       "category": "process-domain",
       "source_fingerprint": "8e419e3e33e83d9c3f1fda3444a78526b1c2e2822194aba6bfe4b03545be11d0",
-      "count": 1
+      "count": 2
     },
     {
       "path": "Templates/Processes/processes/blazor-app-delivery/definition.json",
       "category": "process-domain",
       "source_fingerprint": "a2a8527f3e1651f83de93b25462ee0504ddbd26f13a5d6ba6292e41b4887f4d5",
-      "count": 1
+      "count": 2
     },
     {
       "path": "Templates/Processes/processes/blazor-app-delivery/definition.json",
@@ -1481,6 +1487,18 @@
       "path": "Templates/Processes/processes/blazor-app-delivery/steps/escalate-blazor-unresolved-repair.md",
       "category": "process-domain",
       "source_fingerprint": "be83606ccc81b3dad5b4960a2d1cf442dad6b07008ccb518dc8748011b0972d8",
+      "count": 1
+    },
+    {
+      "path": "Templates/Processes/processes/blazor-app-delivery/steps/record-blazor-no-go-results.md",
+      "category": "process-domain",
+      "source_fingerprint": "b920afa207e37ffa0389f9777ce11a2aac18c058da3aa20ef934ef78601ddc4a",
+      "count": 1
+    },
+    {
+      "path": "Templates/Processes/processes/blazor-app-delivery/steps/record-blazor-no-go-results.md",
+      "category": "process-domain",
+      "source_fingerprint": "e733d117a8785f607dc8b2c5824cb737ebc99de5ac6029055043cc05254ddcaa",
       "count": 1
     },
     {

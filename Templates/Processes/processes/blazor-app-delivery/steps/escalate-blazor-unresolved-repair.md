@@ -21,3 +21,5 @@ Record a no-go or replan decision when the repair pass does not resolve Blazor p
 
 ## Governance
 Do not record successful delivery while quality remains unresolved. This step exists to keep unresolved repair outcomes explicit instead of silently stopping or marking the process complete.
+
+Hand the decision and the repair's exact runnable app target to `record-blazor-no-go-results`. That required final step writes a **Not accepted** result and a local inspection runtime to project structure. Registering a launch control does not accept delivery or clear any failed criterion.

@@ -166,7 +166,7 @@ public sealed class BlazorDeliveryLiveTests(ITestOutputHelper output) {
         Assert.NotNull(state);
         output.WriteLine($"Run={launched.RunId}; Status={state.Status}; Elapsed={elapsed.Elapsed}");
         Assert.Equal(ProcessRuntimeStatus.Completed, state.Status);
-        Assert.Equal(8, state.Steps.Count);
+        Assert.Equal(9, state.Steps.Count);
         var escalation = launched.LaunchPlan.Steps.Single(step => step.StepKey == "escalate-blazor-unresolved-repair");
         Assert.Equal(0, state.Steps.Single(step => step.StepInstanceId == escalation.StepInstanceId).AttemptNumber);
         var executions = await workspace.ListExecutionRunsAsync(new ExecutionRunQuery(ProcessRunId: launched.RunId.Value.ToString()));
