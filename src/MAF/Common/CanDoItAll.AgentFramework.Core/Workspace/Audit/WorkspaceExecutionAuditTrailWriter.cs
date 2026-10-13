@@ -89,20 +89,28 @@ public static class WorkspaceExecutionAuditTrailWriter
                 Summary: artifact.Summary,
                 CreatedAtUtc: receipt.CompletedAtUtc);
 
-            using (var artifactActivity = AgentFrameworkTelemetry.ActivitySource.StartActivity("artifact.register", ActivityKind.Internal))
-            {
-                AgentFrameworkTelemetry.ApplyCurrentAuditScope(artifactActivity);
-                artifactActivity?.SetTag("agentframework.artifact_id", artifactRecord.Id.ToString("N"));
-                artifactActivity?.SetTag("agentframework.artifact_kind", artifactRecord.ArtifactKind);
-                artifactActivity?.SetTag("agentframework.relative_path", artifactRecord.RelativePath);
-                AgentFrameworkTelemetry.RecordArtifactRegistration(artifactRecord.ArtifactKind, artifactRecord.ContentType);
-            }
-
-            PersistRecord(
-                workspaceRoot,
-                Path.Combine(GetRunAuditRoot(workspaceRoot, executionWorkspaceScope, executionRunId), "artifacts", $"{artifactRecord.Id:N}.json"),
-                artifactRecord);
+            PersistArtifact(workspaceRoot, executionWorkspaceScope, artifactRecord);
         }
+    }
+
+    public static void PersistArtifact(string workspaceRoot, WorkspaceScopeDescriptor workspaceScope,
+        ExecutionArtifactRecord artifactRecord) {
+        if (WorkspaceExecutionAuditContext.Current?.ExecutionRunId != artifactRecord.ExecutionRunId) {
+            throw new InvalidOperationException("The artifact does not belong to the active execution.");
+        }
+        using (var artifactActivity = AgentFrameworkTelemetry.ActivitySource.StartActivity("artifact.register", ActivityKind.Internal))
+        {
+            AgentFrameworkTelemetry.ApplyCurrentAuditScope(artifactActivity);
+            artifactActivity?.SetTag("agentframework.artifact_id", artifactRecord.Id.ToString("N"));
+            artifactActivity?.SetTag("agentframework.artifact_kind", artifactRecord.ArtifactKind);
+            artifactActivity?.SetTag("agentframework.relative_path", artifactRecord.RelativePath);
+            AgentFrameworkTelemetry.RecordArtifactRegistration(artifactRecord.ArtifactKind, artifactRecord.ContentType);
+        }
+
+        PersistRecord(
+            workspaceRoot,
+            Path.Combine(GetRunAuditRoot(workspaceRoot, workspaceScope, artifactRecord.ExecutionRunId), "artifacts", $"{artifactRecord.Id:N}.json"),
+            artifactRecord);
     }
 
     public static string GetRunAuditRoot(string workspaceRoot, WorkspaceScopeDescriptor workspaceScope, Guid executionRunId)

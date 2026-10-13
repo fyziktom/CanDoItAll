@@ -586,7 +586,8 @@ internal static class ProcessesApi
                 new ProcessLiveProcessesQuery(
                     DateTimeOffset.UtcNow,
                     TimeSpan.FromMinutes(Math.Clamp(windowMinutes ?? 240, 1, 60 * 24 * 30)),
-                    Math.Clamp(take ?? 50, 1, 500)),
+                      Math.Clamp(take ?? 50, 1, 500),
+                      new ProcessLiveProcessesLoadOptions { IncludeOperatorActions = false }),
                 cancellationToken)
             .ConfigureAwait(false);
 

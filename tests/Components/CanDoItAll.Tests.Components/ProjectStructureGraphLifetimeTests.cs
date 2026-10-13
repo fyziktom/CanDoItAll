@@ -129,7 +129,9 @@ public sealed class ProjectStructureGraphLifetimeTests {
         var page = Render(harness, project);
         await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnContextAction(root.Id, "move-descendants-to-subproject", root.X, root.Y));
         await workbench.ReclassifyObjectAsync(project, root.Id,
-            new(ProjectObjectType.ProjectBlock, "decision", "Changed root", "", root.Notes));
+            new(ProjectObjectType.ProjectBlock, "decision", "Changed root", "", root.Notes) {
+                ExpectedNode = root, ExpectedProjectAdmission = (await workbench.GetStructureAsync(project)).ExpectedProjectAdmission
+            });
         await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteSubprojectTransfer.InvokeAsync());
         var outcome = Assert.Single(page.Instance.AuthoringOutcomes);
         Assert.Equal(ProjectStructureAuthoringResultKind.Compensated, outcome.Kind);
@@ -156,7 +158,10 @@ public sealed class ProjectStructureGraphLifetimeTests {
         var page = Render(harness, project);
         await ClipboardAsync(page, action, [root.Id]);
         await workbench.ReclassifyObjectAsync(project, changeDestination ? destination.Id : root.Id,
-            new(ProjectObjectType.ProjectBlock, "decision", "Reclassified", "", changeDestination ? destination.Notes : root.Notes));
+            new(ProjectObjectType.ProjectBlock, "decision", "Reclassified", "", changeDestination ? destination.Notes : root.Notes) {
+                ExpectedNode = changeDestination ? destination : root,
+                ExpectedProjectAdmission = (await workbench.GetStructureAsync(project)).ExpectedProjectAdmission
+            });
         await ClipboardAsync(page, CanvasWorkbenchClipboardAction.Paste, [destination.Id]);
         var persisted = await workbench.GetStructureAsync(project);
         Assert.Equal(root.ParentId, Assert.Single(persisted.Nodes, node => node.Id == root.Id).ParentId);
@@ -267,7 +272,7 @@ public sealed class ProjectStructureGraphLifetimeTests {
         await workbench.LinkObjectsAsync(project, first.Id, second.Id, ProjectObjectLinkKind.DependsOn);
         var page = Render(harness, project);
         var original = Assert.Single((await workbench.GetStructureAsync(project)).Links, link => link.Kind == ProjectObjectLinkKind.DependsOn);
-        Assert.True(await workbench.UnlinkObjectsAsync(project, first.Id, second.Id, ProjectObjectLinkKind.DependsOn));
+        Assert.True(await workbench.UnlinkObjectsAsync(project, first.Id, second.Id, ProjectObjectLinkKind.DependsOn, expectedLink: original));
         await workbench.LinkObjectsAsync(project, first.Id, second.Id, ProjectObjectLinkKind.DependsOn);
         var replacement = Assert.Single((await workbench.GetStructureAsync(project)).Links, link => link.Kind == ProjectObjectLinkKind.DependsOn);
         Assert.NotEqual(original.RecordId, replacement.RecordId);

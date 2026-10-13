@@ -31,6 +31,7 @@
             <Canvas>
                 <CanvasWorkbench @key="view.ContextId" Surface="view.Canvas"
                                  @ref="canvas"
+                                 RequiresComposerAcknowledgement="true"
                                  SelectionChanged="@(value => Dispatch.InvokeAsync(new StructureSelectionIntent(view.ContextId, value)))"
                                  NodesMoved="@(value => Dispatch.InvokeAsync(new StructureNodesMovedIntent(view.ContextId, value)))"
                                  ContextActionRequested="@(value => Dispatch.InvokeAsync(new StructureContextIntent(view.ContextId, value)))"
@@ -143,6 +144,10 @@
 
     public Task OpenCreateDialogAsync(CanvasWorkbenchAction action, CanvasWorkbenchCreateActionRequest request)
         => (canvas ?? throw new InvalidOperationException("The Structure canvas is not mounted.")).OpenCreateDialogAsync(action, request);
+
+    public Task AcknowledgeComposerAsync(Guid contextId, CanvasWorkbenchComposerResult result)
+        => Presentation.ContextId == contextId && canvas is not null
+            ? canvas.AcknowledgeComposerAsync(result) : Task.CompletedTask;
 
     public Task SelectNodesAsync(IReadOnlyList<string> nodeIds, string? primaryNodeId = null)
         => canvas?.SelectNodesAsync(nodeIds, primaryNodeId) ?? Task.CompletedTask;

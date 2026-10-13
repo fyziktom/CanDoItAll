@@ -414,6 +414,18 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
     }
 
+    public async Task<ExecutionRunAdmissionSnapshot?> GetExecutionRunAdmissionSnapshotAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        await gate.WaitAsync(cancellationToken);
+        try {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+            return await executionSliceStore.LoadRunAdmissionSnapshotAsync(executionRunId, cancellationToken);
+        } finally {
+            gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default)
     {
@@ -426,6 +438,32 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
         finally
         {
+            gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunCandidatesAsync(
+        ExecutionRunQuery query, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(query);
+        await gate.WaitAsync(cancellationToken);
+        try {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureSplitFilesCoreAsync(cancellationToken);
+            if (query.ExecutionRunId is { } runId) {
+                var run = await executionSliceStore.LoadRunAsync(runId, cancellationToken);
+                return run is null ? [] : [run];
+            }
+            if (string.IsNullOrWhiteSpace(query.ProcessRunId) && query.ProcessRunIds.Count == 0) {
+                return await executionSliceStore.ListRunsAsync(cancellationToken);
+            }
+            var candidates = await chatProjectionStore.FindProcessRunCandidateIdsAsync(query, cancellationToken);
+            var runs = await jsonStore.ReadJsonBatchAsync<ExecutionRunRecord>(
+                candidates.Select(layout.RunPath).ToArray(), cancellationToken);
+            if (runs.Any(run => run is null)) {
+                throw new InvalidDataException("The execution index references a missing run record.");
+            }
+            return runs.Select(run => run!).ToArray();
+        } finally {
             gate.Release();
         }
     }
@@ -997,6 +1035,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         ExecutionRunDetail detail,
         CancellationToken cancellationToken)
     {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.save");
         return await SaveExecutionRunDetailCoreAsync(
             previousDetail,
             detail,
@@ -1095,6 +1134,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         ExistingRunDetailCommitJournal journal,
         ExistingRunDetailCommitOrigin origin,
         CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.commit");
         ValidateExistingRunDetailCommitJournal(journal);
 
         var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
@@ -1117,13 +1157,6 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.SessionPersisted);
 
-        await executionSliceStore.PersistExistingRunRecordAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.RunPersisted);
-
         await executionSliceStore.PersistExistingRunApprovalRecordsAsync(
             journal.PersistencePlan,
             cancellationToken);
@@ -1136,36 +1169,28 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.RemainingRecordsPersisted);
 
-        await executionSliceStore.PersistExistingRunExecutionIndexAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.ExecutionIndexPersisted);
-
-        await executionSliceStore.PersistExistingRunUsageIndexAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.UsageIndexPersisted);
-
-        await SaveWorkspaceIndexCoreAsync(
-            journal.TargetWorkspaceIndex,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.WorkspaceIndexPersisted);
-
-        await chatProjectionStore.PersistExistingRunUpdateAsync(
-            journal.PersistencePlan,
-            journal.ChatProjectionPlan,
-            origin,
-            cancellationToken);
+        await Task.WhenAll(
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunRecordAsync(
+                journal.PersistencePlan, origin, cancellationToken), ExistingRunDetailCommitStage.RunPersisted),
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunExecutionIndexAsync(
+                journal.PersistencePlan, origin, cancellationToken), ExistingRunDetailCommitStage.ExecutionIndexPersisted),
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunUsageIndexAsync(
+                journal.PersistencePlan, origin, cancellationToken), ExistingRunDetailCommitStage.UsageIndexPersisted),
+            PersistStageAsync(() => SaveWorkspaceIndexCoreAsync(journal.TargetWorkspaceIndex, cancellationToken),
+                ExistingRunDetailCommitStage.WorkspaceIndexPersisted),
+            chatProjectionStore.PersistExistingRunUpdateAsync(
+                journal.PersistencePlan, journal.ChatProjectionPlan, origin, cancellationToken));
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ChatIndexPersisted);
 
         await jsonStore.DeleteFileAsync(PendingExistingRunDetailCommitJournalPath, cancellationToken);
         return journal.PersistencePlan.TargetDetail;
+
+        async Task PersistStageAsync(Func<Task> persist, ExistingRunDetailCommitStage stage) {
+            await persist();
+            NotifyExistingRunDetailCommitBoundary(stage);
+        }
+
     }
 
     private async Task RecoverPendingExistingRunDetailCommitAsync(

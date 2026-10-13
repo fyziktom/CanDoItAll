@@ -221,11 +221,17 @@ public sealed class ProjectStructureBatchDeletionCoordinator
                 if (deletion.DeletedNodeCount > 0)
                 {
                     replaylessDeletedNodeCount += deletion.DeletedNodeCount;
+                    if (mutationOwner?.ExpectedGraph is { } originalGraph) {
+                        mutationOwner = mutationOwner with { ExpectedGraph = ProjectStructureGraphStateGuard.AfterOwnDeletion(originalGraph, nodeId) };
+                    }
                 }
             }
             catch (ProjectStructureDeletionPartialCommitException exception)
             {
                 recoveries.Add(exception.Recovery);
+                if (mutationOwner?.ExpectedGraph is { } originalGraph) {
+                    mutationOwner = mutationOwner with { ExpectedGraph = ProjectStructureGraphStateGuard.AfterOwnDeletion(originalGraph, nodeId) };
+                }
             }
             catch (ProjectStructureDeletionDispositionMismatchException exception)
             {

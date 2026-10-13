@@ -1,0 +1,75 @@
+# Process tool storage, browser evidence and concurrent edits
+
+Execution-state reuse belongs to the file store. It does not change authority, mutation ownership or the Microsoft Agent Framework checkpoint compatibility policy.
+
+## Execution persistence
+
+`FileSandboxWorkspaceStore` reuses immutable run and chat-session snapshots only after reading the current file and verifying its full SHA-256 digest under the existing coordination boundary. The cache is instance-scoped, bounded by entry count and estimated memory, and keyed by canonical path and record type. It is not a TTL cache and cannot make a stale file authoritative. Large records, changed files and failed reads do not enter the cache.
+
+Tool admission reads the bounded admission projection when it does not need a complete run detail. Authorization, project/profile identity, cancellation and unresolved commit recovery remain fresh checks. Historical tool-result replay still requires the original invocation identity and current disclosure authority; a new invocation never receives a previous invocation's cached answer.
+
+The existing durable journal is written before any target file. Independent run and index files may then be written concurrently. All started writes settle before releasing the owner lock or reporting failure. Session/approval ordering, atomic file replacement and replay of either the previous or target revision remain unchanged. There is no write-behind queue or storage migration.
+
+The measured 8/72/256-tool synthetic file-store loops improved by 31.8%/56.8%/43.5% respectively on the validation machine. These are comparative medians, not a latency guarantee: the proposed universal 50% target was not achieved. Large complete-record rewrites remain a limit. A storage-format redesign needs separate recovery and migration work.
+
+Directory record hydration uses the same bounded batch reader as usage reads. One batch shares path-policy construction, checks every path again and reads current bytes, with at most four readers. Results retain ordinal filename order and all readers settle before cancellation or failure returns. This avoids repeating the filesystem case-sensitivity probe for every history record. Conflict validation and recovery still perform their fresh reads; the optimization does not cache mutable authority or reporting records.
+
+The HTTP live-process list requests only enrichment represented by its response. Operator-action enrichment remains enabled for UI consumers that render those actions; the HTTP list omits that unused work while retaining activity reconciliation, current steps, child waits and diagnostics.
+
+Process observation reads request candidates through the existing execution-store contract. File persistence selects exact run IDs or Process IDs from the durable chat index, under the same workspace coordination and after prepared-commit recovery. It validates the index version, revision and record counts, includes legacy summaries with unknown lineage, and hydrates the selected canonical run records. Core still applies every query filter, ordering and limit. Implementations without an index may return the full candidate set. The index does not supply authorization or replace canonical records; missing selected records and corrupt data fail explicitly. On a retained 350-run workspace, the four-run process query fell from 2.8 seconds warm to 42–45 ms warm, with identical complete selected payloads.
+
+The Blazor app-delivery contract resolves its result parent before implementation. It accepts the exact launch-selected WorkItem or delivery ProjectBlock, preserving current-read, duplicate reconciliation and final writeback verification. Unsupported or absent selection blocks early. Implementation and repair own source/build/test/startup; the dedicated validation steps own browser proof. This removes duplicate browser work without removing QA requirements.
+
+Blazor QA exercises declared controls through native click/key actions and records the resulting visible state. JavaScript evaluation may observe state or perform explicit isolated setup, but direct clicks, event dispatch or state edits cannot substitute for interaction proof. A seeded storage value proves reload behavior, while separate evidence must establish the application's save behavior.
+
+The scaffold command owner rejects a solution template with a target framework before resolving or creating directories or launching a process. MAF's existing retry correlation requires the exact scaffold parent, name and template. A later committed correction resolves only a proven no-effect rejection for that identity; unknown effects and other targets remain unresolved. Completion and authority gates are unchanged.
+
+## Process asset approval
+
+Process-native asset tools explicitly declare `GovernedProcessAuthority` approval policy. The runtime honors that policy only when approval suppression was requested for an admitted, recoverable background Process session without interactive governance. Both prepared admission and current owner authorization callbacks are required. Interactive/default tools retain their approval wrappers. Toolset fingerprints include the effective wrapper, so the change cannot silently reinterpret a retained approval checkpoint.
+
+The exact asset proposal still enters the durable journal, and its owner rechecks original source authority, current dispatch, project lifetime and parent binding before materialization and commit. `Persisting` with no terminal outcome remains a live execution state while saving the SDK session or approval checkpoint. Claim expiry, replacement and revocation continue to deny that operation.
+
+## Project-structure write preconditions
+
+The caller retains the state returned by its original read. General node edits, metadata/type changes, presentation edits and moves carry `ExpectedState` (or the corresponding typed native `ExpectedNode`) and the original project admission. Batch operations carry the exact set of `ExpectedStates`. Missing, duplicate, cross-project or changed participants are rejected before any write.
+
+Reads intended for graph mutation request `IncludeMutationGraph`. The returned `ExpectedGraph` binds authored nodes, relationships and their identities. Destructive, copy, reparent, recomposition and transfer operations check the affected closure and incident links in the owner's transaction. New children/links cannot be silently deleted by a stale plan; unrelated branches may still change. Link deletion retains the original link record identity.
+
+The HTTP boundary returns 409 for a stale edit. Agents and UI hosts must expose the conflict, read current state and reconcile the user's intended change. Re-reading immediately before a write and substituting that value for the caller's expectation defeats the protection and is forbidden. After a successful mutation, only its authoritative result may advance that operation's retained expectation.
+
+The Structure host owns writes and outcome decisions. CanvasLib owns the composer draft. Its optional `RequiresComposerAcknowledgement` contract carries opening and submission identities through the existing Structure renderer. The host acknowledges committed, rejected, unconfirmed or handed-off outcomes. A commit closes only the matching, unchanged submitted draft. Rejected saves and typing after submission remain visible. Each opening admits one submission; retained text can be copied before reopening against current state. Unknown transport outcomes cannot silently resubmit a possibly committed write. Navigation and replacement openings fence late acknowledgements.
+
+## Browser tools and evidence
+
+The Processes owner contributes neutral typed input constraints through the existing Core tool-policy seam. MAF applies those constraints to the model's tool schema and binds the effective schema into prepared-tool identity. Processes enforces the same constraints at dispatch. Snapshot depth is required and at most 4, or at most 2 with boxes; governed screenshots cannot use full-page capture. Arguments are never silently rewritten.
+
+The browser adapter retains the canonical MCP result, including `isError` and image content, in the durable invocation checkpoint. Model context receives bounded text and verified artifact references. It does not repeatedly receive screenshot bytes. Restoring the completed invocation restores its evidence without capturing the page again.
+
+Every browser tool exposed by the built-in Playwright capability must also have a governed tool-policy entry. Browser close and hover require `CaptureRuntimeProof`, just like the other browser operations. Close has no browser-proof role and cannot satisfy navigation, interaction or evidence requirements. With the configured isolated Playwright session, close releases its browser context before a fresh navigation; agents must still verify current-host and clean-state evidence.
+
+A requested filename is not proof of a successful capture. Import requires a successful structured MCP reply and new, changed, bounded bytes in an allowed workspace path. Traversal, foreign scoped paths and reparse points are rejected. Verified bytes are copied to a unique immutable path beneath the execution's process artifact root, then registered through the existing execution audit writer. Failed or unchanged captures do not claim a saved artifact. This is cooperative local-tool provenance, not cryptographic attribution against another hostile process on the same machine.
+
+For a current process run, model text exposes the logical `artifacts/process-runs/<run-id>/...` reference. Audit records retain the scoped storage path. The existing workspace path policy resolves the logical reference into the execution scope only for that current run; project tools still reject explicit foreign scoped paths. This lets subsequent image tools read the verified copy without broader project access.
+
+Managed development hosts and published static hosts share the existing startup/cleanup lifecycle. Static serving emits the same native lifecycle facts. Browser validation selects the latest successful compatible managed start and requires its own startup receipt, loopback authority, current execution and browser observations within that host's lifetime. A later uncorrelated host cannot reuse earlier proof. Required tool-receipt rules remain enforced separately.
+
+The managed static host deliberately revalidates every response to prove the current build. Its `no-cache` policy does not prevent service-worker offline caching and does not itself fail a delivery requirement. Blazor delivery checks a specific production cache lifetime only when project source or a named deployment target requires it. Contract resolution and QA must not turn a recommended production optimization into an extra mandatory criterion or replace the managed proof host solely to obtain that optimization. Explicit deployment requirements remain required and block when the available host cannot prove them.
+
+## SDK decision
+
+MAF remains on the coherent 1.22 dependency set. Testing 1.24 found that a second approval can repeat after a session is serialized and restored with local compaction enabled. A standalone Microsoft-SDK-only reproducer fails on 1.24 and passes on 1.22. Disabling compaction or weakening the compatibility gate would conceal the problem. Genuine 1.20 and 1.22 session fixtures, with capture source and hashes, are retained under `tests/Support/Fixtures`.
+
+The local changes are independent of an SDK upgrade. Reconsider 1.24 or a successor only when consecutive-approval, dynamic-tool, workflow and genuine retained-session tests pass with their original safety checks. The [1.24 release](https://github.com/microsoft/agent-framework/releases/tag/dotnet-1.24.0) and [local compaction change](https://github.com/microsoft/agent-framework/pull/8845) provide upstream context; the precise upstream fix has not been established.
+
+## Focused validation
+
+Blazor app delivery records a persistent typed `Environment` / `dotnet-runtime` node beside the result Note under the launch-selected parent. Implementation identifies the exact runnable app project and its launch settings; writeback validates and registers that target through existing Workbench tools. Matching nodes are reused, current mutation expectations fence concurrent edits, and user-edited settings are preserved. The runtime node is a local Start/Stop control owned by Workbench, separate from disposable QA hosting and published-output proof. Missing or non-launchable runtime-node readback blocks writeback in both the normal and repaired branches.
+
+The relevant suites cover digest reuse, external writers, prepared commit recovery, stale HTTP/UI/agent edits, graph phantom participants, native MCP status, artifact scope/freshness, journal restart, retained SDK approvals and browser editor races. The real browser test uses two independent sessions at 1920×1080 and delays the public acknowledgement to exercise typing after a committed write.
+
+`ProcessBrowserQaLiveTests` is explicitly opt-in through `CANDOITALL_RUN_LIVE_PROVIDER_TESTS=1`, `OPENAI_API_KEY`, `CANDOITALL_TESTS_POSTGRES_CONNECTION` and `CANDOITALL_LIVE_PROOF_DIRECTORY`. It creates an isolated two-step delivery/QA process: a real provider writes an interactive page, serves it through the owned runtime, uses the native browser tools and retains a 1920×1080 screenshot. It asserts completion without escalation and verifies the actual artifact bytes. Recoverable model mistakes remain in the receipts. This bounded proof does not claim to replay or repair a user's historical process run.
+
+Follow [Testing](../testing.md) for serialized standard builds, test discovery, isolation, portability enforcement and cleanup. The full repository test suite is not part of this focused proof.
+
+`BlazorDeliveryLiveTests` uses the same opt-in environment variables and the shipped eight-step `blazor-app-delivery` template, seeded role agents and real model calls. In an isolated project and database it builds a standalone Blazor app with automated tests, hands published output to browser QA, verifies cleanup and requires accepted-result writeback to project structure. It records native execution evidence, screenshots and diagnostic activity timings. The counter case launches from a WorkItem; the falling-block PWA case launches from a delivery ProjectBlock without a WorkItem and includes offline/reload, persistent best score and gameplay requirements. Both use production project-scoped launch preparation. These are full process regressions, not controlled timing-equivalent replays of an arbitrary user application.

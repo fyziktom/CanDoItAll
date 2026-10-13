@@ -80,15 +80,18 @@ public sealed class ProjectWorkbenchCanvasPerformanceTests
                 220,
                 180));
 
+        var originalSurface = await workbenchService.GetStructureAsync(projectId);
         projectionProbe.Reset();
 
         var canonicalMove = await workbenchService.MoveObjectsAsync(
             projectId,
-            [new ProjectNodeMoveRequest(canonical.Id, 540, 320)]);
+            [new ProjectNodeMoveRequest(canonical.Id, 540, 320)],
+            expectedProjectAdmission: originalSurface.ExpectedProjectAdmission, expectedNodes: [canonical]);
 
         Assert.Equal(0, projectionProbe.InvocationCount);
         Assert.Equal(canonical.Id, Assert.Single(canonicalMove));
 
+        var mixedOriginal = await workbenchService.GetStructureAsync(projectId);
         projectionProbe.Reset();
 
         var mixedMove = await workbenchService.MoveObjectsAsync(
@@ -96,7 +99,8 @@ public sealed class ProjectWorkbenchCanvasPerformanceTests
             [
                 new ProjectNodeMoveRequest(canonical.Id, 620, 360),
                 new ProjectNodeMoveRequest(ProjectionContributorProbe.ProjectionNodeKey, 880, 420)
-            ]);
+            ], expectedProjectAdmission: mixedOriginal.ExpectedProjectAdmission,
+            expectedNodes: mixedOriginal.Nodes.Where(node => node.Id == canonical.Id || node.Id == ProjectionContributorProbe.ProjectionNodeKey).ToArray());
 
         Assert.Equal(1, projectionProbe.InvocationCount);
         Assert.Contains(canonical.Id, mixedMove);

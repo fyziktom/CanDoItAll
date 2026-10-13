@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
@@ -11,7 +12,8 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal enum FileSandboxWorkspaceJsonReadKind
 {
     Deserialization,
-    RawText
+    RawText,
+    SnapshotValidation
 }
 
 internal readonly record struct FileSandboxWorkspacePhysicalJsonRead(
@@ -49,6 +51,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
     private readonly DurableFileWriter durableFileWriter;
     private readonly string? managedRoot;
     private readonly FileProviderHistoryJournal? historyJournal;
+    private readonly FileSandboxWorkspaceSnapshotCache snapshots = new();
     internal FileProviderUsageIndex? UsageIndex { get; set; }
 
     public FileSandboxWorkspaceJsonStore(
@@ -82,9 +85,32 @@ internal sealed class FileSandboxWorkspaceJsonStore
         WriteIndented = true
     };
 
-    public bool RequiresSave<T>(T current, T normalized)
-    {
-        return JsonSerializer.Serialize(current, SerializerOptions) != JsonSerializer.Serialize(normalized, SerializerOptions);
+    public bool RequiresSave<T>(T current, T normalized) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.compare");
+        if (ReferenceEquals(current, normalized)) {
+            return false;
+        }
+        if (current is ExecutionRunRecord previousRun && normalized is ExecutionRunRecord nextRun &&
+            previousRun.Revision != nextRun.Revision) {
+            return true;
+        }
+        if (current is ExecutionRunDetail previous && normalized is ExecutionRunDetail next) {
+            if (previous.Run.Revision != next.Run.Revision) {
+                return true;
+            }
+            if (previous with {
+                    ExecutionLog = next.ExecutionLog, Metrics = next.Metrics, Approvals = next.Approvals,
+                    Artifacts = next.Artifacts, Checkpoints = next.Checkpoints, ToolReceipts = next.ToolReceipts,
+                    UsageObservations = next.UsageObservations
+                } == next &&
+                previous.ExecutionLog.SequenceEqual(next.ExecutionLog) && previous.Metrics.SequenceEqual(next.Metrics) &&
+                previous.Approvals.SequenceEqual(next.Approvals) && previous.Artifacts.SequenceEqual(next.Artifacts) &&
+                previous.Checkpoints.SequenceEqual(next.Checkpoints) && previous.ToolReceipts.SequenceEqual(next.ToolReceipts) &&
+                previous.UsageObservations.SequenceEqual(next.UsageObservations)) {
+                return false;
+            }
+        }
+        return Serialize(current) != Serialize(normalized);
     }
 
     public string NormalizeFileName(string value)
@@ -114,6 +140,8 @@ internal sealed class FileSandboxWorkspaceJsonStore
     private async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken,
         IPhysicalFileSystemPathPolicy? readPolicy)
     {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.read");
+        activity?.SetTag("payload.type", typeof(T).Name);
         if (string.IsNullOrWhiteSpace(fullPath))
         {
             throw new ArgumentException("Workspace JSON path must be provided.", nameof(fullPath));
@@ -128,17 +156,23 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 var stream = TryOpenSharedReadStream(fullPath, readPolicy);
                 if (stream is null)
                 {
+                    snapshots.Remove<T>(fullPath);
                     return default;
                 }
 
                 await using (stream)
                 {
+                    activity?.SetTag("payload.bytes", stream.Length);
+                    if (FileSandboxWorkspaceSnapshotCache.Supports<T>(stream.Length)) {
+                        return await ReadSnapshotAsync<T>(fullPath, stream, cancellationToken);
+                    }
                     readDiagnostics?.Record(
                         new FileSandboxWorkspacePhysicalJsonRead(
                             fullPath,
                             typeof(T),
                             FileSandboxWorkspaceJsonReadKind.Deserialization,
                             stream.Length));
+                    using var deserialization = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.deserialize");
                     return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
                 }
             }
@@ -157,6 +191,33 @@ internal sealed class FileSandboxWorkspaceJsonStore
         }
 
         throw CreateWorkspaceJsonReadException<T>(fullPath, null);
+    }
+
+    private async Task<T?> ReadSnapshotAsync<T>(string fullPath, Stream stream, CancellationToken cancellationToken) {
+        var length = stream.Length;
+        if (length > FileSandboxWorkspaceSnapshotCache.MaximumPayloadBytes) {
+            throw new IOException("The execution snapshot changed size while it was being read.");
+        }
+        var bytes = new byte[checked((int)length)];
+        await stream.ReadExactlyAsync(bytes, cancellationToken);
+        if (stream.ReadByte() != -1) {
+            throw new IOException("The execution snapshot changed size while it was being read.");
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (snapshots.TryRead<T>(fullPath, bytes, out var cached)) {
+            readDiagnostics?.Record(new(fullPath, typeof(T), FileSandboxWorkspaceJsonReadKind.SnapshotValidation, bytes.Length));
+            using var hit = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.snapshot.hit");
+            return cached;
+        }
+        readDiagnostics?.Record(new(fullPath, typeof(T), FileSandboxWorkspaceJsonReadKind.Deserialization, bytes.Length));
+        using var deserialization = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.deserialize");
+        ReadOnlySpan<byte> json = bytes;
+        if (json.StartsWith(Encoding.UTF8.Preamble)) {
+            json = json[Encoding.UTF8.Preamble.Length..];
+        }
+        var value = JsonSerializer.Deserialize<T>(json, SerializerOptions);
+        cancellationToken.ThrowIfCancellationRequested();
+        return value is null ? default : snapshots.Remember(fullPath, bytes, value);
     }
 
     public async Task<string> ReadTextAsync(string fullPath, CancellationToken cancellationToken)
@@ -191,19 +252,12 @@ internal sealed class FileSandboxWorkspaceJsonStore
         }
 
         EnsureSafeDirectory(directoryPath);
-        var records = new List<T>();
-        foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*.json")
-                     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
-                     .ThenBy(path => path, StringComparer.Ordinal))
-        {
-            var record = await ReadJsonAsync<T>(filePath, cancellationToken);
-            if (record is not null)
-            {
-                records.Add(record);
-            }
-        }
-
-        return records;
+        var paths = Directory.EnumerateFiles(directoryPath, "*.json")
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+        var records = await ReadJsonBatchAsync<T>(paths, cancellationToken);
+        return records.Where(record => record is not null).Select(record => record!).ToArray();
     }
 
     public async Task<bool> PersistRecordDirectoryAsync<T>(
@@ -309,7 +363,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     public async Task<bool> WriteJsonIfChangedAsync<T>(string fullPath, T payload, CancellationToken cancellationToken)
     {
-        var serialized = JsonSerializer.Serialize(payload, SerializerOptions);
+        var serialized = Serialize(payload);
         if (File.Exists(fullPath))
         {
             var existing = await ReadTextAsync(fullPath, cancellationToken);
@@ -328,7 +382,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
         await WriteObservedJsonAsync(
             fullPath,
             payload,
-            JsonSerializer.Serialize(payload, SerializerOptions),
+            Serialize(payload),
             cancellationToken);
     }
 
@@ -346,6 +400,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     private FileStream? TryOpenSharedReadStream(string fullPath, IPhysicalFileSystemPathPolicy? readPolicy = null)
     {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.open");
         if (readPolicy is null) {
             EnsureSafeFilePath(fullPath, allowMissingLeaf: true);
         } else {
@@ -394,6 +449,8 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     private async Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)
     {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.write");
+        activity?.SetTag("payload.bytes", Encoding.UTF8.GetByteCount(serialized));
         string directory = Path.GetDirectoryName(fullPath)
             ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
         await durableFileWriter.WriteTextAsync(
@@ -401,6 +458,12 @@ internal sealed class FileSandboxWorkspaceJsonStore
             fullPath,
             serialized,
             cancellationToken: cancellationToken);
+    }
+
+    private string Serialize<T>(T payload) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.serialize");
+        activity?.SetTag("payload.type", typeof(T).Name);
+        return JsonSerializer.Serialize(payload, SerializerOptions);
     }
 
     private static FileStream OpenSharedReadStream(string fullPath)

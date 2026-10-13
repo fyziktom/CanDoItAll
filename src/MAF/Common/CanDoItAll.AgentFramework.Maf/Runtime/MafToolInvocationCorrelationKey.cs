@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -48,13 +49,22 @@ internal static class MafToolInvocationCorrelationKey
             ["output_workbook_path"] = "outputWorkbookPath"
         };
 
+    private static readonly IReadOnlyDictionary<string, string> ScaffoldIdentityNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            ["parentDirectory"] = "parentDirectory",
+            ["name"] = "name",
+            ["template"] = "template"
+        };
+
     public static string Create(
         string toolName,
         IEnumerable<KeyValuePair<string, object?>> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var identityNames = toolName.StartsWith(WorkspaceToolNamePrefix, StringComparison.OrdinalIgnoreCase)
+        var isScaffold = string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetNew, StringComparison.OrdinalIgnoreCase);
+        var identityNames = isScaffold ? ScaffoldIdentityNames
+            : toolName.StartsWith(WorkspaceToolNamePrefix, StringComparison.OrdinalIgnoreCase)
             ? WorkspaceIdentityNames
             : IdentityNames;
         var identities = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -65,6 +75,10 @@ internal static class MafToolInvocationCorrelationKey
             {
                 ReadNestedRequestIdentities(argument.Value, identities, identityNames);
             }
+        }
+
+        if (isScaffold && identities.Count != ScaffoldIdentityNames.Count) {
+            return string.Empty;
         }
 
         if (toolName.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase) &&

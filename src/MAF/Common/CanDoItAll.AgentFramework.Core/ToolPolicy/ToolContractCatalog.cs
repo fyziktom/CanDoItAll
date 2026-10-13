@@ -55,6 +55,8 @@ public static class ToolContractCatalog
 
     public const string BrowserNavigate = "browser_navigate";
     public const string BrowserResize = "browser_resize";
+    public const string BrowserClose = "browser_close";
+    public const string BrowserHover = "browser_hover";
     public const string BrowserConsoleMessages = "browser_console_messages";
     public const string BrowserEvaluate = "browser_evaluate";
     public const string BrowserNetworkRequests = "browser_network_requests";
@@ -122,6 +124,8 @@ public static class ToolContractCatalog
     [
         BrowserNavigate,
         BrowserResize,
+        BrowserClose,
+        BrowserHover,
         BrowserConsoleMessages,
         BrowserEvaluate,
         BrowserNetworkRequests,

@@ -61,7 +61,9 @@ public partial class ProjectStructurePage {
         var opening = captured.Ownership;
         var context = opening.Context;
         var target = opening.Node;
-        var submissionId = Guid.NewGuid();
+        var submissionId = create?.ComposerSubmissionId ?? edit?.ComposerSubmissionId ?? Guid.NewGuid();
+        var rendererContextId = StructureContextId;
+        var handedOff = false;
         var operation = edit is not null || captured.Create?.PlacementKind == "edit"
             ? ProjectStructureAuthoringOperation.EditNode : ProjectStructureAuthoringOperation.CreateNode;
         var outcome = new ProjectStructureAuthoringOutcome(opening.Id, submissionId, context.Admission,
@@ -91,11 +93,13 @@ public partial class ProjectStructurePage {
                 } else if (ProjectStructureCanvasCatalog.TryResolveCreateDefinition(original.ActionId, out definition)) {
                     if (IsGeneratedImageAssetCreateAction(original.ActionId)) {
                         await TryCreateGeneratedImageAssetAsync(definition, submitted, context);
+                        handedOff = true;
                         return;
                     }
                     if (IsTaskCreateAction(original.ActionId) || IsSecretReferenceCreateAction(original.ActionId) ||
                         ProjectStructureCanvasCatalog.IsTextAssetAuthoringDefinition(definition)) {
                         await HandleCreateActionAsync(submitted with { ComposerOpeningId = null });
+                        handedOff = true;
                         return;
                     }
                     invoked = true;
@@ -127,25 +131,36 @@ public partial class ProjectStructurePage {
                 try {
                     await ApplySurfaceNodeUpdatesAsync([result]);
                 } catch (Exception failure) {
-                    RecordAuthoringOutcome(opening, outcome with { Failure = failure,
-                        Message = $"{outcome.Message} Readback failed. Reload the original project; do not repeat the write." });
+                    outcome = outcome with { Failure = failure,
+                        Message = $"{outcome.Message} Readback failed. Reload the original project; do not repeat the write." };
+                    RecordAuthoringOutcome(opening, outcome);
                 }
             }
         } catch (Exception failure) {
             opening.RequiresObservation = invoked && failure is not (ArgumentException or InvalidDataException or
                 ProjectStructureEditConflictException or ProjectWriteAdmissionRejectedException);
-            RecordAuthoringOutcome(opening, outcome with {
+            outcome = outcome with {
                 Kind = outcome.Node is not null ? ProjectStructureAuthoringResultKind.PartialCommit :
                     opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
                 Failure = failure,
                 Message = outcome.Node is not null ? $"{outcome.Message} Follow-up failed. Observe the original node before continuing." :
                     opening.RequiresObservation ? "The original write is unconfirmed. Observe the original project before trying again." : failure.Message
-            });
+            };
+            RecordAuthoringOutcome(opening, outcome);
         } finally {
             if (!opening.RequiresObservation && ReferenceEquals(composerOpening, captured)) {
                 composerOpening = null;
             }
             await RenderAuthoringOutcomeAsync();
+            if (workbenchRef is not null && !deferredCompletionCts.IsCancellationRequested) {
+                var kind = handedOff ? CanvasWorkbenchComposerResultKind.HandedOff : outcome.Kind switch {
+                    ProjectStructureAuthoringResultKind.Committed => CanvasWorkbenchComposerResultKind.Committed,
+                    ProjectStructureAuthoringResultKind.Rejected => CanvasWorkbenchComposerResultKind.Rejected,
+                    _ => CanvasWorkbenchComposerResultKind.Unconfirmed
+                };
+                await workbenchRef.AcknowledgeComposerAsync(rendererContextId, new(opening.Id, submissionId, kind,
+                    handedOff ? "The request was passed to its detail editor." : outcome.Message));
+            }
         }
     }
 }

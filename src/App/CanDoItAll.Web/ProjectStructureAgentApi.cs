@@ -1650,7 +1650,7 @@ public static class ProjectStructureAgentApi
             request,
             (agent, cancellationToken) => agentService.UpdateNodeStatusesAsync(
                 projectId,
-                new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
+                new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                 agent,
                 cancellationToken),
             cancellationToken);
@@ -1766,7 +1766,7 @@ public static class ProjectStructureAgentApi
                     [nodeId],
                     request.ProgressMode,
                     request.ProgressPercent,
-                    request.LeaseToken),
+                    request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                 agent,
                 cancellationToken),
             cancellationToken);
@@ -1991,7 +1991,7 @@ public static class ProjectStructureAgentApi
             request,
             (agent, cancellationToken) => agentService.UpdateNodePriorityAsync(
                 projectId,
-                new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
+                new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                 agent,
                 cancellationToken),
             cancellationToken);
@@ -2167,7 +2167,7 @@ public static class ProjectStructureAgentApi
             request,
             (agent, cancellationToken) => agentService.ReparentNodeAsync(
                 projectId,
-                new ProjectStructureNodeReparentInput(nodeId, request.ParentNodeKey, request.LeaseToken),
+                new ProjectStructureNodeReparentInput(nodeId, request.ParentNodeKey, request.LeaseToken) { ExpectedGraph = request.ExpectedGraph },
                 agent,
                 cancellationToken),
             cancellationToken);

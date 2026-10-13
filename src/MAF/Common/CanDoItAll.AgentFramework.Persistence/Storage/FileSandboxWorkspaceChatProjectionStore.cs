@@ -68,6 +68,22 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         CancellationToken cancellationToken)
         => LoadOrBuildReportingChatIndexAsync(cancellationToken);
 
+    internal async Task<IReadOnlyList<Guid>> FindProcessRunCandidateIdsAsync(
+        ExecutionRunQuery query, CancellationToken cancellationToken) {
+        var executionIndex = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(layout.ExecutionIndexPath, cancellationToken)
+            ?? throw new InvalidDataException("The canonical execution index is missing.");
+        var index = await LoadCurrentIndexAsync(executionIndex, cancellationToken);
+        var requested = (query.ProcessRunIds.Count > 0 ? query.ProcessRunIds : [query.ProcessRunId ?? string.Empty])
+            .Select(value => value.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return index.RunSummaries
+            .Where(summary => summary.ReportingProjectionVersion != WorkspaceChatProjectionBuilder.CurrentReportingProjectionVersion ||
+                requested.Contains(summary.ProcessRunId))
+            .Select(summary => summary.ExecutionRunId)
+            .Distinct()
+            .OrderBy(id => id.ToString("N"), StringComparer.Ordinal)
+            .ToArray();
+    }
+
     public async Task<ExecutionChatIndex> LoadCurrentIndexAsync(
         ExecutionStorageIndex executionIndex,
         CancellationToken cancellationToken)
@@ -75,7 +91,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         ArgumentNullException.ThrowIfNull(executionIndex);
 
         var current = await LoadOrBuildChatIndexAsync(cancellationToken);
-        if (current.Revision == executionIndex.Revision &&
+        if (current.Version == executionIndex.Version && current.Revision == executionIndex.Revision &&
             current.SessionSummaries.Count == executionIndex.SessionCount &&
             current.RunSummaries.Count == executionIndex.RunCount)
         {
@@ -87,7 +103,7 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
             rebuilt.RunSummaries.Count != executionIndex.RunCount)
         {
             throw new InvalidDataException(
-                "The execution chat index cannot be reconciled with the canonical execution index before agent deletion.");
+                "The execution chat index cannot be reconciled with the canonical execution index.");
         }
 
         rebuilt = rebuilt with

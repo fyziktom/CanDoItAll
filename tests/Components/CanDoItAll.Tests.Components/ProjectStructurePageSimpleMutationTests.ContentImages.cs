@@ -208,7 +208,10 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
                 await providers.SaveProviderAsync(editor);
                 return;
             case ImageTargetLoss.ContentRevision:
-                await workbench.UpdateObjectMetadataAsync(request.ProjectId, request.NodeId, original.Placeholder.MetadataJson, notes: "New legitimate content revision");
+                var competingView = await workbench.GetStructureAsync(request.ProjectId);
+                var competingNode = Assert.Single(competingView.Nodes, node => node.Id == request.NodeId);
+                await workbench.UpdateObjectMetadataAsync(request.ProjectId, request.NodeId, competingNode.MetadataJson, notes: "New legitimate content revision",
+                    expectedState: ProjectStructureNodeStateGuard.Capture(competingNode, competingView.ExpectedProjectAdmission));
                 return;
             case ImageTargetLoss.ProjectLifetime:
                 var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -216,7 +219,11 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
                 Assert.True((await projects.CreateAsync(request.ProjectId, new() { Name = "Replacement project with same public ID" })).IsSuccess);
                 break;
             case ImageTargetLoss.PlaceholderOccurrence:
-                Assert.Equal(1, await workbench.DeleteObjectAsync(request.ProjectId, request.NodeId));
+                var deleteOrigin = await workbench.GetStructureAsync(request.ProjectId);
+                Assert.Equal(1, await workbench.DeleteObjectAsync(request.ProjectId, request.NodeId, mutationOwner:
+                    new ProjectStructureAgentContext("test", "Test", "", "", "", "") {
+                        ExpectedProjectAdmission = original.Authority.Project, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(deleteOrigin)
+                    }));
                 break;
         }
         await using var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();

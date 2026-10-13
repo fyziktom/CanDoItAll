@@ -1,0 +1,54 @@
+#:package Microsoft.Agents.AI@1.24.0
+#:package Microsoft.Extensions.AI@10.10.0
+#:property PublishAot=false
+using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Compaction;
+using Microsoft.Extensions.AI;
+using System.Runtime.CompilerServices;
+#pragma warning disable MAAI001
+var effects = new List<string>();
+ChatClientAgent Create() => new(new SequenceClient(), new ChatClientAgentOptions {
+    ChatOptions = new() { Tools = [new ApprovalRequiredAIFunction(AIFunctionFactory.Create((string path) => {
+        effects.Add(path);
+        return "written";
+    }, "write_artifact"))] },
+    DisableApprovalResponseBinding = false,
+    DisableApprovalNotRequiredFunctionBypassing = true,
+    AIContextProviders = [new CompactionProvider(new PipelineCompactionStrategy(
+        new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
+        new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
+        new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000))))],
+    ChatHistoryProvider = new InMemoryChatHistoryProvider(),
+    RequirePerServiceCallChatHistoryPersistence = true
+});
+var agent = Create();
+var session = await agent.CreateSessionAsync();
+var result = await agent.RunAsync([new ChatMessage(ChatRole.User, "Request the governed write.")],session);
+for (var stage=0; stage<2; stage++) {
+    var request=result.Messages.SelectMany(m=>m.Contents).OfType<ToolApprovalRequestContent>().Single();
+    Console.WriteLine($"APPROVAL: {((FunctionCallContent)request.ToolCall).CallId}");
+    var state=await agent.SerializeSessionAsync(session);
+    agent=Create();
+    session=await agent.DeserializeSessionAsync(state);
+    result=await agent.RunAsync([new ChatMessage(ChatRole.User,[request.CreateResponse(true)])],session);
+    Console.WriteLine($"RESULT: {result.Text}; effects={string.Join(',',effects)}");
+}
+if (result.Text != "completed" || effects.Count!=2) {
+    throw new InvalidOperationException("Consecutive native approval continuation failed.");
+}
+sealed class SequenceClient : IChatClient {
+    public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages,ChatOptions? options=null,CancellationToken cancellationToken=default) {
+        var results=messages.SelectMany(m=>m.Contents).OfType<FunctionResultContent>().Select(r=>r.CallId).ToArray();
+        Console.WriteLine($"PROVIDER RESULTS: {string.Join(',',results)}");
+        AIContent response=results.Contains("second") ? new TextContent("completed") : new FunctionCallContent(
+            results.Contains("first") ? "second" : "first", "write_artifact",new Dictionary<string,object?> { ["path"]=results.Contains("first") ? "second.txt" : "first.txt" });
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant,[response])));
+    }
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,ChatOptions? options=null,[EnumeratorCancellation]CancellationToken cancellationToken=default) {
+        foreach(var update in (await GetResponseAsync(messages,options,cancellationToken)).ToChatResponseUpdates()) {
+            yield return update;
+        }
+    }
+    public object? GetService(Type serviceType,object? serviceKey=null) => serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
+    public void Dispose() { }
+}

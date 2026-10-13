@@ -13196,7 +13196,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasTaskDialogCoordinator.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCanvasTaskDialogCoordinator.cs",
-      "sha256_lf": "03c92a14bee6f04b66e515328c3824bce878937dc68e75a4d5f305682708f578",
+      "sha256_lf": "3e9bd2d5bd9f3d772928db7689574d3201365e78b39e2e10e7c7b3ad8ef11764",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureCanvasTaskDialogContext, CanDoItAll.Modules.Workbench.Pages.ProjectStructureCanvasTaskDialogCoordinator",
@@ -13612,7 +13612,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Clipboard.cs",
-      "sha256_lf": "eb0dd7494b10ad57aecb5195aa5bc1d9ab2eb1c7aaa08a65c34c24dff4cdac01",
+      "sha256_lf": "b705a1f4c118f2fd7b0bf5bbd21af69b7150830fb3fee9976b4a14b6992eecd9",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureClipboardState",
@@ -13652,7 +13652,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
-      "sha256_lf": "64146a6744c46b28f799791f3fd4d74827c99ecd75323d56d4d80349e7d78ed6",
+      "sha256_lf": "65f407c272442400ef8715a48e31cc9a1fb8e4dacb6f51623433703798058807",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureComposerOpening",
@@ -13732,7 +13732,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
-      "sha256_lf": "b8578b21440abdc78d69d5c856363e5e25dac26fdd65298664f79c08c902a2e7",
+      "sha256_lf": "94909b3121e5a70b54d19b3bf071ed5c83c6c52ff789517e911c4ef7b2eb551b",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.InsightsContext, CanDoItAll.Modules.Workbench.Pages.InsightsEffect",
@@ -13792,7 +13792,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
-      "sha256_lf": "0e9003c8607f69101fd81c5fd88f8be755bf6da3c489c38ba17a264913e25a3d",
+      "sha256_lf": "898ff0c27781cbd2b8582f836bab37b04f9d1d391815e57c5111cf419b60bde8",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -13932,7 +13932,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Recomposition.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Recomposition.cs",
-      "sha256_lf": "93d09d717d43d1f8942df9ae53117b83fcc1b47a0911e70012dc2c4e34113f8d",
+      "sha256_lf": "260c0f254f6899efd94349171e94111a15d105318f316c4a8a306a434526448b",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14112,7 +14112,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.WorkflowNodes.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.WorkflowNodes.cs",
-      "sha256_lf": "53f4ccbe6f7ca0a78b2b23e9506dab7ef82f17b1960a6d384795f081ad1da78c",
+      "sha256_lf": "0387154f8dfc0c7137e33b98bc69d694d2ddf127696b07863493c500386f9df7",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14132,7 +14132,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
-      "sha256_lf": "c9cd21e54c1a07b9f3b3b10464d1398d7fd20fd95e5de13e881fda052cb2a144",
+      "sha256_lf": "18cc105b551ec14ac61e3f03f74956ef451fd60388ac46cca3bc5e6e6fc2cc80",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.RetainedDeletionOutcome",
@@ -14152,7 +14152,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "5ff16479d588c90f916d8920b85bf94a88cf829ba584248f7115da349ae5c41f",
+      "sha256_lf": "aff9345fb6588c077d40d37025af8320f4cad4bd19f87c34aa7aca6323d4f33b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -33870,7 +33870,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
-      "sha256_lf": "16801492b16c760f7e10ba6990c0a68b606bd3fcfb804c0442f276edf76f60e8",
+      "sha256_lf": "430aa089de8f6eb4897ad81dad79c1fe13d75c69abcc63b0d489a1c82edaf6a5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Structure.UI.StructureWorkspace",

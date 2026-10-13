@@ -566,6 +566,13 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new targetFramework must be a supported value such as 'net8.0'.");
         }
 
+        var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
+        if (isSolutionTemplate && normalizedTargetFramework.Length > 0) {
+            throw WorkspaceCommandInputException.Create(
+                "The solution template does not accept a target framework.",
+                "Omit targetFramework for template 'sln'. Set it only when creating an application or test project.");
+        }
+
         string trimmedName = name?.Trim() ?? string.Empty;
         if (trimmedName.Length == 0 || !PortablePhysicalFileNamePolicy.IsPortable(trimmedName))
         {
@@ -582,7 +589,6 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new parentDirectory must identify a directory. Pass the containing directory and project name separately.");
         }
 
-        var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
         if (InspectTopLevelProjectFiles(
                 workingDirectoryResolution.FullPath,
                 workingDirectoryRelative,

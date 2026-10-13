@@ -329,6 +329,8 @@ public sealed record ProjectObjectEditRequest(
     [JsonIgnore]
     public ProjectStructureNode? ExpectedNode { get; init; }
 
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+
 
     [JsonIgnore]
     public ProjectProcessMutationAdmission? ProcessMutationAdmission { get; init; }
@@ -348,6 +350,10 @@ public sealed record ProjectObjectReclassificationRequest(
     DateTimeOffset? EndUtc = null,
     int? DurationSeconds = null,
     bool UpdateTiming = false) {
+    [JsonIgnore]
+    public ProjectStructureNode? ExpectedNode { get; init; }
+
+    public ProjectStructureNodeState? ExpectedState { get; init; }
     [JsonIgnore]
     public ProjectObjectType? ExpectedObjectType { get; init; }
 
@@ -1322,37 +1328,6 @@ public sealed partial class ProjectWorkbenchService(
         return await relationService.RecomposeSubtreeAsync(projectId, rootNodeKey, cancellationToken, mutationOwner, expectedNodes);
     }
 
-    public async Task<ProjectStructureNode?> UpdateObjectAsync(
-        Guid projectId,
-        string nodeKey,
-        string title,
-        string subtitle,
-        string notes,
-        CancellationToken cancellationToken = default)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
-        var node = await dbContext.Set<ProjectObjectRecord>()
-            .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey, cancellationToken);
-        if (node is null)
-        {
-            return null;
-        }
-        await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
-
-        node.Title = string.IsNullOrWhiteSpace(title) ? node.Title : title.Trim();
-        node.Subtitle = subtitle?.Trim() ?? string.Empty;
-        node.Notes = notes?.Trim() ?? string.Empty;
-        node.MetadataJson = runtimeMetadataBoundary.ValidateAndCanonicalize(
-            node.ObjectType,
-            node.ObjectSubtype,
-            node.Notes,
-            node.MetadataJson);
-        node.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return ProjectWorkbenchNodeMapper.MapStructureNode(node);
-    }
-
     public Task<ProjectStructureNode?> UpdateObjectAsync(
         Guid projectId,
         string nodeKey,
@@ -1390,6 +1365,14 @@ public sealed partial class ProjectWorkbenchService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.ExpectedState is { } originalState) {
+            request = request with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+                originalState, projectId, nodeKey, request.ExpectedProjectAdmission) };
+        }
+        if (request.ExpectedProjectAdmission is null || (request.ExpectedNode is null && request.ExpectedState is null)) {
+            throw new ProjectStructureEditConflictException();
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -1401,7 +1384,7 @@ public sealed partial class ProjectWorkbenchService(
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
         {
-            return null;
+            throw new ProjectStructureEditConflictException();
         }
         var resourceParentNodeKey =
             ProjectStructureTaskResourceGraphPolicy.IsResourceChildType(
@@ -1409,6 +1392,7 @@ public sealed partial class ProjectWorkbenchService(
                 ? node.ParentNodeKey
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        ProjectStructureNodeStateGuard.EnsureCurrent(request.ExpectedState, node);
         if (request.ExpectedNode is { } expectedNode &&
             (expectedNode.RecordId != node.Id || expectedNode.ObjectType != node.ObjectType || expectedNode.ParentId != node.ParentNodeKey ||
              !string.Equals(expectedNode.ObjectSubtype, node.ObjectSubtype, StringComparison.Ordinal) ||
@@ -1511,8 +1495,11 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => UpdateObjectMetadataCoreAsync(
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        ProjectStructureNodeState? expectedState = null)
+    {
+        ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, expectedProjectAdmission);
+        return UpdateObjectMetadataCoreAsync(
             projectId,
             nodeKey,
             metadataJson: metadataJson,
@@ -1521,31 +1508,10 @@ public sealed partial class ProjectWorkbenchService(
             status: status,
             nodeReferences: nodeReferences,
             cancellationToken: cancellationToken,
-            expectedProjectAdmission: expectedProjectAdmission, processMutationAdmission: processMutationAdmission, agentMutationAdmission: agentMutationAdmission);
-
-    public Task<ProjectStructureNode?> MutateObjectMetadataAsync(
-        Guid projectId,
-        string nodeKey,
-        Action<ProjectObjectMetadataEnvelope> metadataMutation,
-        CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null,
-        ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-    {
-        ArgumentNullException.ThrowIfNull(metadataMutation);
-        return UpdateObjectMetadataCoreAsync(
-            projectId,
-            nodeKey,
-            metadataJson: null,
-            metadataMutation: metadataMutation,
-            notes: null,
-            status: null,
-            nodeReferences: null,
-            cancellationToken: cancellationToken,
-            expectedProjectAdmission: expectedProjectAdmission, processMutationAdmission: processMutationAdmission, agentMutationAdmission: agentMutationAdmission);
+            expectedProjectAdmission: expectedProjectAdmission, processMutationAdmission: processMutationAdmission, agentMutationAdmission: agentMutationAdmission, expectedState: expectedState);
     }
 
-    public Task<ProjectStructureNode?> MutateObjectMetadataSerializableAsync(
+    internal Task<ProjectStructureNode?> MutateObjectMetadataSerializableAsync(
         Guid projectId,
         string nodeKey,
         Action<ProjectObjectMetadataEnvelope> metadataMutation,
@@ -1579,8 +1545,12 @@ public sealed partial class ProjectWorkbenchService(
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
-        ProjectStructureNode? expectedContent = null)
+        ProjectStructureNode? expectedContent = null,
+        ProjectStructureNodeState? expectedState = null)
     {
+        if (expectedState is not null) {
+            expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, expectedProjectAdmission);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -1591,7 +1561,7 @@ public sealed partial class ProjectWorkbenchService(
         var node = await dbContext.Set<ProjectObjectRecord>()
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null) {
-            if (expectedContent is not null) {
+            if (expectedContent is not null || expectedState is not null) {
                 throw new ProjectStructureEditConflictException();
             }
             return null;
@@ -1602,6 +1572,7 @@ public sealed partial class ProjectWorkbenchService(
                 ? node.ParentNodeKey
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        ProjectStructureNodeStateGuard.EnsureCurrent(expectedState, node);
         ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node);
 
         if (notes is not null)
@@ -1667,8 +1638,15 @@ public sealed partial class ProjectWorkbenchService(
         string? metadataJson = null,
         string? notes = null,
         string? status = null,
-        CancellationToken cancellationToken = default)
-        => ReplaceObjectMediaCoreAsync(projectId, nodeKey, media, metadataJson, notes, status, cancellationToken);
+        CancellationToken cancellationToken = default,
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+        ProjectStructureNode? expectedNode = null) {
+        if (expectedProjectAdmission is null || expectedNode is null || expectedNode.Id != nodeKey) {
+            throw new ProjectStructureEditConflictException();
+        }
+        return ReplaceObjectMediaCoreAsync(projectId, nodeKey, media, metadataJson, notes, status, cancellationToken,
+            expectedProjectAdmission, expectedNode);
+    }
 
     private async Task<ProjectStructureNode?> ReplaceObjectMediaCoreAsync(
         Guid projectId,
@@ -1755,8 +1733,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => UpdateObjectStatusesCoreAsync(projectId, nodeKeys, status, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => UpdateObjectStatusesCoreAsync(projectId, nodeKeys, status, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     private async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectStatusesCoreAsync(
         Guid projectId,
@@ -1766,7 +1745,8 @@ public sealed partial class ProjectWorkbenchService(
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
-        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null)
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
     {
         if (nodeKeys.Count == 0 || string.IsNullOrWhiteSpace(status))
         {
@@ -1781,6 +1761,10 @@ public sealed partial class ProjectWorkbenchService(
             return [];
         }
 
+        if (expectedStates is null && expectedNodes is not null && expectedProjectAdmission is not null) {
+            expectedStates = ProjectStructureNodeStateGuard.CaptureMany(expectedNodes, expectedProjectAdmission);
+        }
+        expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedStates, projectId, normalizedKeys, expectedProjectAdmission);
         await using var mutationScope = await mutationScopes.BeginAsync(dbContext,
             ProjectStructureSerializableMutationScope.ForProject(projectId), cancellationToken,
             expectedProjectAdmission is { } expected ? [expected] : null, processMutationAdmission, agentMutationAdmission);
@@ -1789,6 +1773,7 @@ public sealed partial class ProjectWorkbenchService(
                 !item.IsSystemManaged &&
                 normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        await ProjectStructureNodeStateGuard.EnsureCurrentAsync(dbContext, expectedStates, projectId, normalizedKeys, nodes, cancellationToken);
         ProjectStructureNodeExpectations.EnsureCurrent(expectedNodes, nodes);
         var normalizedStatus = status.Trim();
         var updatedAtUtc = clock.GetUtcNow();
@@ -1815,8 +1800,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await UpdateObjectStatusesDetailedAsync(projectId, nodeKeys, status, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await UpdateObjectStatusesDetailedAsync(projectId, nodeKeys, status, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectProgressDetailedAsync(
         Guid projectId,
@@ -1826,7 +1812,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
     {
         if (nodeKeys.Count == 0)
         {
@@ -1841,12 +1828,14 @@ public sealed partial class ProjectWorkbenchService(
             return [];
         }
 
+        expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedStates, projectId, normalizedKeys, expectedProjectAdmission);
         await using var mutationScope = await mutationScopes.BeginAsync(dbContext,
             ProjectStructureSerializableMutationScope.ForProject(projectId), cancellationToken,
             expectedProjectAdmission is { } expected ? [expected] : null, processMutationAdmission, agentMutationAdmission);
         var nodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        await ProjectStructureNodeStateGuard.EnsureCurrentAsync(dbContext, expectedStates, projectId, normalizedKeys, nodes, cancellationToken);
 
         var normalizedMode = ProjectWorkbenchObjectModeling.NormalizeProgressMode(progressMode);
         var normalizedPercent = Math.Clamp(progressPercent, 0, 100);
@@ -1872,8 +1861,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await UpdateObjectProgressDetailedAsync(projectId, nodeKeys, progressMode, progressPercent, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await UpdateObjectProgressDetailedAsync(projectId, nodeKeys, progressMode, progressPercent, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectMarkerDetailedAsync(
         Guid projectId,
@@ -1884,7 +1874,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
         => await UpdateObjectMarkersDetailedAsync(
             projectId,
             nodeKeys,
@@ -1892,7 +1883,7 @@ public sealed partial class ProjectWorkbenchService(
             markerTone,
             markerLabel,
             ProjectMarkerMutationMode.ReplaceAll,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     public async Task<IReadOnlyList<ProjectStructureNode>> AddObjectMarkerDetailedAsync(
         Guid projectId,
@@ -1903,7 +1894,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
         => await UpdateObjectMarkersDetailedAsync(
             projectId,
             nodeKeys,
@@ -1911,7 +1903,7 @@ public sealed partial class ProjectWorkbenchService(
             markerTone,
             markerLabel,
             ProjectMarkerMutationMode.Add,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     public async Task<IReadOnlyList<ProjectStructureNode>> ToggleObjectMarkerDetailedAsync(
         Guid projectId,
@@ -1922,7 +1914,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
         => await UpdateObjectMarkersDetailedAsync(
             projectId,
             nodeKeys,
@@ -1930,7 +1923,7 @@ public sealed partial class ProjectWorkbenchService(
             markerTone,
             markerLabel,
             ProjectMarkerMutationMode.Toggle,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     public async Task<IReadOnlyList<ProjectStructureNode>> RemoveObjectMarkerDetailedAsync(
         Guid projectId,
@@ -1941,7 +1934,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
         => await UpdateObjectMarkersDetailedAsync(
             projectId,
             nodeKeys,
@@ -1949,7 +1943,7 @@ public sealed partial class ProjectWorkbenchService(
             markerTone,
             markerLabel,
             ProjectMarkerMutationMode.Remove,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     public async Task<IReadOnlyList<ProjectStructureNode>> ClearObjectMarkersDetailedAsync(
         Guid projectId,
@@ -1957,7 +1951,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
         => await UpdateObjectMarkersDetailedAsync(
             projectId,
             nodeKeys,
@@ -1965,7 +1960,7 @@ public sealed partial class ProjectWorkbenchService(
             string.Empty,
             string.Empty,
             ProjectMarkerMutationMode.ClearAll,
-            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission);
+            cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates);
 
     private async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectMarkersDetailedAsync(
         Guid projectId,
@@ -1977,7 +1972,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
     {
         if (nodeKeys.Count == 0)
         {
@@ -1992,12 +1988,14 @@ public sealed partial class ProjectWorkbenchService(
             return [];
         }
 
+        expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedStates, projectId, normalizedKeys, expectedProjectAdmission);
         await using var mutationScope = await mutationScopes.BeginAsync(dbContext,
             ProjectStructureSerializableMutationScope.ForProject(projectId), cancellationToken,
             expectedProjectAdmission is { } expected ? [expected] : null, processMutationAdmission, agentMutationAdmission);
         var nodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        await ProjectStructureNodeStateGuard.EnsureCurrentAsync(dbContext, expectedStates, projectId, normalizedKeys, nodes, cancellationToken);
         var normalizedMarker = ProjectObjectMetadataSerializer.NormalizeMarker(markerIcon, markerTone, markerLabel);
         var updatedAtUtc = clock.GetUtcNow();
 
@@ -2032,8 +2030,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await UpdateObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await UpdateObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<int> AddObjectMarkerAsync(
         Guid projectId,
@@ -2044,8 +2043,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await AddObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await AddObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<int> ToggleObjectMarkerAsync(
         Guid projectId,
@@ -2056,8 +2056,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await ToggleObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await ToggleObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<int> RemoveObjectMarkerAsync(
         Guid projectId,
@@ -2068,8 +2069,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await RemoveObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await RemoveObjectMarkerDetailedAsync(projectId, nodeKeys, markerIcon, markerTone, markerLabel, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<int> ClearObjectMarkersAsync(
         Guid projectId,
@@ -2077,8 +2079,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await ClearObjectMarkersDetailedAsync(projectId, nodeKeys, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await ClearObjectMarkersDetailedAsync(projectId, nodeKeys, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task<IReadOnlyList<ProjectStructureNode>> UpdateObjectPriorityDetailedAsync(
         Guid projectId,
@@ -2087,7 +2090,8 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
     {
         if (nodeKeys.Count == 0)
         {
@@ -2102,12 +2106,14 @@ public sealed partial class ProjectWorkbenchService(
             return [];
         }
 
+        expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedStates, projectId, normalizedKeys, expectedProjectAdmission);
         await using var mutationScope = await mutationScopes.BeginAsync(dbContext,
             ProjectStructureSerializableMutationScope.ForProject(projectId), cancellationToken,
             expectedProjectAdmission is { } expected ? [expected] : null, processMutationAdmission, agentMutationAdmission);
         var nodes = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == projectId && normalizedKeys.Contains(item.NodeKey))
             .ToListAsync(cancellationToken);
+        await ProjectStructureNodeStateGuard.EnsureCurrentAsync(dbContext, expectedStates, projectId, normalizedKeys, nodes, cancellationToken);
 
         var normalizedPriority = Math.Clamp(priority, 0, 6);
         var updatedAtUtc = clock.GetUtcNow();
@@ -2130,8 +2136,9 @@ public sealed partial class ProjectWorkbenchService(
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
-        ProjectAgentMutationAdmission? agentMutationAdmission = null)
-        => (await UpdateObjectPriorityDetailedAsync(projectId, nodeKeys, priority, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission)).Count;
+        ProjectAgentMutationAdmission? agentMutationAdmission = null,
+        IReadOnlyCollection<ProjectStructureNodeState>? expectedStates = null)
+        => (await UpdateObjectPriorityDetailedAsync(projectId, nodeKeys, priority, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, expectedStates: expectedStates)).Count;
 
     public async Task SaveCalendarViewStateAsync(ProjectWriteAdmission admission, string stateJson, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(admission);

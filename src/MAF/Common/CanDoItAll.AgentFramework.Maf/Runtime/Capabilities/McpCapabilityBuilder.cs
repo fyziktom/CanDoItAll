@@ -7,7 +7,6 @@ using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CapabilityOperationClassification = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityOperationClassification;
@@ -36,12 +35,11 @@ internal sealed class McpCapabilityBuilder(
     Func<McpCapabilityConfiguration, McpApprovalMode> resolveMcpApprovalMode,
     Func<McpCapabilityConfiguration, TimeSpan> resolveMcpTimeout,
     Func<CapabilityCatalogItem, RuntimeToolName?, IReadOnlySet<CapabilityOperationClassification>, IReadOnlySet<CapabilityTag>> resolveCatalogTags,
-    Func<string?, CapabilityCatalogItem, McpStdioMessageFraming> resolveMcpMessageFraming)
+    Func<string?, CapabilityCatalogItem, McpStdioMessageFraming> resolveMcpMessageFraming,
+    IReadOnlyList<IToolInvocationPolicyContextContributor> policyContributors)
 {
         private static readonly ProviderProfileService ProviderFeatureService = new();
         private const string SecretReferencePrefix = "secret:";
-        private const int MaxBrowserMcpToolResultCharacters = 12000;
-        private const int MaxScreenshotResultCharacters = 2000;
         private static readonly JsonElement DefaultMcpToolInputSchema = JsonDocument
             .Parse("""{"type":"object","additionalProperties":true}""")
             .RootElement
@@ -115,7 +113,13 @@ internal sealed class McpCapabilityBuilder(
                          allowedTools is null ||
                          McpToolName.TryCreate(tool.Name, out var toolName) && allowedTools.Contains(toolName)))
             {
-                var boundedTool = CreateModelContextBoundedMcpTool(tool);
+                var nativeTool = IsBrowserMcpToolName(tool.Name)
+                    ? new LocalMcpRuntimeAIFunction(AIFunctionFactory.Create(
+                        async (AIFunctionArguments arguments, CancellationToken token) =>
+                            await mcpClient.CallToolAsync(tool.Name, arguments, cancellationToken: token),
+                        new AIFunctionFactoryOptions { Name = tool.Name, Description = tool.Description }), tool.JsonSchema)
+                    : (AIFunction)tool;
+                var boundedTool = CreateModelContextBoundedMcpTool(nativeTool);
                 state.Tools.Add(wrappedToolApprovalRequired ? new ApprovalRequiredAIFunction(boundedTool) : boundedTool);
             }
 
@@ -157,7 +161,7 @@ internal sealed class McpCapabilityBuilder(
         private AIFunction CreateModelContextBoundedMcpTool(AIFunction tool)
         {
             return IsBrowserMcpToolName(tool.Name)
-                ? new BrowserMcpModelContextBoundedAIFunction(tool, workspaceRoot, workspaceScope)
+                ? new BrowserMcpFunction(tool, workspaceRoot, workspaceScope, policyContributors)
                 : tool;
         }
 
@@ -214,249 +218,6 @@ internal sealed class McpCapabilityBuilder(
         private static bool IsBrowserMcpToolName(string? toolName)
             => !string.IsNullOrWhiteSpace(toolName) &&
                toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
-
-        private static object? CompactBrowserMcpToolResultForModelContext(
-            string toolName,
-            AIFunctionArguments arguments,
-            object? result,
-            IReadOnlyList<string>? importedArtifactPaths = null)
-        {
-            if (!IsBrowserMcpToolName(toolName))
-            {
-                return result;
-            }
-
-            var fileName = TryGetStringArgument(arguments, "filename");
-            var maxCharacters = string.Equals(toolName, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase)
-                ? MaxScreenshotResultCharacters
-                : MaxBrowserMcpToolResultCharacters;
-            var text = ExtractCompactText(result, maxCharacters);
-            var summary = new StringBuilder();
-            summary.Append("Browser MCP tool ");
-            summary.Append(toolName);
-            summary.Append(" completed.");
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                summary.Append(" Saved artifact: ");
-                summary.Append(fileName.Trim());
-                summary.Append('.');
-            }
-
-            if (importedArtifactPaths is { Count: > 0 })
-            {
-                summary.Append(" Managed artifact");
-                summary.Append(importedArtifactPaths.Count == 1 ? ": " : "s: ");
-                summary.Append(string.Join(", ", importedArtifactPaths));
-                summary.Append('.');
-            }
-
-            if (string.Equals(toolName, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase))
-            {
-                summary.Append(" Screenshot image content was omitted from model context.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                summary.AppendLine();
-                summary.Append(text);
-            }
-
-            return summary.ToString();
-        }
-
-        private static string? TryGetStringArgument(
-            AIFunctionArguments arguments,
-            string key)
-        {
-            if (!arguments.TryGetValue(key, out var value) || value is null)
-            {
-                return null;
-            }
-
-            return value switch
-            {
-                string text => text,
-                JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
-                _ => value.ToString()
-            };
-        }
-
-        private static string ExtractCompactText(
-            object? value,
-            int maxCharacters)
-        {
-            var builder = new StringBuilder(Math.Min(maxCharacters, 4096));
-            AppendCompactText(value, builder, maxCharacters);
-            return builder.ToString().Trim();
-        }
-
-        private static void AppendCompactText(
-            object? value,
-            StringBuilder builder,
-            int maxCharacters)
-        {
-            if (value is null || builder.Length >= maxCharacters)
-            {
-                return;
-            }
-
-            switch (value)
-            {
-                case string text:
-                    AppendBoundedText(builder, text, maxCharacters);
-                    return;
-                case JsonElement element:
-                    AppendJsonElementText(element, builder, maxCharacters);
-                    return;
-                case System.Collections.IEnumerable enumerable when value is not string:
-                    foreach (var item in enumerable)
-                    {
-                        AppendCompactText(item, builder, maxCharacters);
-                        if (builder.Length >= maxCharacters)
-                        {
-                            break;
-                        }
-                    }
-
-                    return;
-            }
-
-            var type = value.GetType();
-            if (TryAppendStringProperty(value, type, "Text", builder, maxCharacters))
-            {
-                return;
-            }
-
-            TryAppendStringProperty(value, type, "Message", builder, maxCharacters);
-            TryAppendStringProperty(value, type, "Error", builder, maxCharacters);
-
-            var isError = type.GetProperty("IsError")?.GetValue(value);
-            if (isError is bool isErrorValue && isErrorValue)
-            {
-                AppendBoundedLine(builder, "isError=true", maxCharacters);
-            }
-
-            var content = type.GetProperty("Content")?.GetValue(value);
-            if (content is not null && !ReferenceEquals(content, value))
-            {
-                AppendCompactText(content, builder, maxCharacters);
-            }
-        }
-
-        private static bool TryAppendStringProperty(
-            object value,
-            Type type,
-            string propertyName,
-            StringBuilder builder,
-            int maxCharacters)
-        {
-            if (type.GetProperty(propertyName)?.GetValue(value) is not string text ||
-                string.IsNullOrWhiteSpace(text))
-            {
-                return false;
-            }
-
-            AppendBoundedLine(builder, text, maxCharacters);
-            return true;
-        }
-
-        private static void AppendJsonElementText(
-            JsonElement element,
-            StringBuilder builder,
-            int maxCharacters)
-        {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    AppendBoundedLine(builder, element.GetString() ?? string.Empty, maxCharacters);
-                    return;
-                case JsonValueKind.Array:
-                    foreach (var item in element.EnumerateArray())
-                    {
-                        AppendJsonElementText(item, builder, maxCharacters);
-                        if (builder.Length >= maxCharacters)
-                        {
-                            break;
-                        }
-                    }
-
-                    return;
-                case JsonValueKind.Object:
-                    if (element.TryGetProperty("text", out var textElement))
-                    {
-                        AppendJsonElementText(textElement, builder, maxCharacters);
-                    }
-
-                    if (element.TryGetProperty("message", out var messageElement))
-                    {
-                        AppendJsonElementText(messageElement, builder, maxCharacters);
-                    }
-
-                    if (element.TryGetProperty("error", out var errorElement))
-                    {
-                        AppendJsonElementText(errorElement, builder, maxCharacters);
-                    }
-
-                    if (element.TryGetProperty("isError", out var isErrorElement) &&
-                        isErrorElement.ValueKind == JsonValueKind.True)
-                    {
-                        AppendBoundedLine(builder, "isError=true", maxCharacters);
-                    }
-
-                    if (element.TryGetProperty("content", out var contentElement))
-                    {
-                        AppendJsonElementText(contentElement, builder, maxCharacters);
-                    }
-
-                    return;
-                default:
-                    return;
-            }
-        }
-
-        private static void AppendBoundedLine(
-            StringBuilder builder,
-            string text,
-            int maxCharacters)
-        {
-            if (string.IsNullOrWhiteSpace(text) || builder.Length >= maxCharacters)
-            {
-                return;
-            }
-
-            if (builder.Length > 0)
-            {
-                builder.AppendLine();
-            }
-
-            AppendBoundedText(builder, text, maxCharacters);
-        }
-
-        private static void AppendBoundedText(
-            StringBuilder builder,
-            string text,
-            int maxCharacters)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return;
-            }
-
-            var remaining = maxCharacters - builder.Length;
-            if (remaining <= 0)
-            {
-                return;
-            }
-
-            if (text.Length <= remaining)
-            {
-                builder.Append(text);
-                return;
-            }
-
-            builder.Append(text.AsSpan(0, Math.Max(0, remaining - 25)));
-            builder.Append("... [truncated]");
-        }
 
         private async Task<HostedMcpServerTool> CreateHostedMcpToolAsync(
             CapabilityCatalogItem capability,
@@ -1060,34 +821,6 @@ internal sealed class McpCapabilityBuilder(
             }
 
             return targets;
-        }
-
-        private sealed class BrowserMcpModelContextBoundedAIFunction(
-            AIFunction innerFunction,
-            string workspaceRoot,
-            WorkspaceScopeDescriptor workspaceScope) : DelegatingAIFunction(innerFunction)
-        {
-            protected override async ValueTask<object?> InvokeCoreAsync(
-                AIFunctionArguments arguments,
-                CancellationToken cancellationToken)
-            {
-                var fileName = TryGetStringArgument(arguments, "filename");
-                var artifactScope = BrowserMcpArtifactPathService.ResolveArtifactScope(workspaceScope);
-                BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(workspaceRoot, artifactScope, fileName);
-
-                var result = await base.InvokeCoreAsync(arguments, cancellationToken).ConfigureAwait(false);
-                var importResult = BrowserMcpArtifactPathService.TryImportAfterInvocation(
-                    workspaceRoot,
-                    artifactScope,
-                    fileName,
-                    WorkspaceExecutionAuditContext.Current?.ProcessRunId);
-
-                return CompactBrowserMcpToolResultForModelContext(
-                    Name,
-                    arguments,
-                    result,
-                    importResult.ImportedRelativePaths);
-            }
         }
 
         private sealed class LocalMcpRuntimeAIFunction(

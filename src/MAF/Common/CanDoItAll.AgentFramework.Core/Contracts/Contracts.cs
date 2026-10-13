@@ -45,6 +45,11 @@ public interface ISandboxWorkspaceExecutionRunStore
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default);
 
+    // Candidate reads may return a superset; the workspace query applies every filter and the limit.
+    Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunCandidatesAsync(
+        ExecutionRunQuery query, CancellationToken cancellationToken = default)
+        => ListExecutionRunsAsync(cancellationToken);
+
     Task<ExecutionRunRecord?> GetExecutionRunAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);
@@ -52,6 +57,12 @@ public interface ISandboxWorkspaceExecutionRunStore
     Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);
+
+    async Task<ExecutionRunAdmissionSnapshot?> GetExecutionRunAdmissionSnapshotAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        var detail = await GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+        return detail is null ? null : new(detail.Run, detail.ChatSession);
+    }
 
     Task<ExecutionRunDetail> SaveExecutionRunDetailAsync(
         ExecutionRunDetail detail,

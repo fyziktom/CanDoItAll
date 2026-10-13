@@ -115,7 +115,11 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
 
         if (createdNodeIds.Count > 1)
         {
-            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken, mutationOwner);
+            var layoutOrigin = await projectWorkbenchService.GetStructureAsync(request.ProjectId, cancellationToken);
+            var layoutOwner = (mutationOwner ?? new ProjectStructureAgentContext("import", "Import", "", "", "", "")) with {
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(layoutOrigin)
+            };
+            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken, layoutOwner);
             if (recompositionResult is null)
             {
                 warnings.Add("Imported nodes were created, but the initial layout could not be recomposed automatically.");

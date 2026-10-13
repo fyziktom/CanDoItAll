@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
@@ -9,6 +10,59 @@ namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class BrowserRuntimeLifecycleCompletionGateContributionTests
 {
+    public enum StaticProofFault { None, MissingStartup, DifferentCleanup, DifferentBrowserHost }
+
+    [Theory]
+    [InlineData(StaticProofFault.None)]
+    [InlineData(StaticProofFault.MissingStartup)]
+    [InlineData(StaticProofFault.DifferentCleanup)]
+    [InlineData(StaticProofFault.DifferentBrowserHost)]
+    public void Validate_uses_latest_managed_static_host_and_requires_its_own_correlated_proof(StaticProofFault fault) {
+        var context = CreateContext(Guid.NewGuid(), "http://127.0.0.1:5173", "http://127.0.0.1:5173");
+        var receipts = context.ToolReceipts!.Select(receipt => receipt with {
+            ToolName = receipt.ToolName switch {
+                "workspace_sample_run" => ToolContractCatalog.WorkspaceDotNetRun,
+                "workspace_sample_stop" => ToolContractCatalog.WorkspaceDotNetStop,
+                _ => receipt.ToolName
+            }
+        }).ToArray();
+        var start = receipts.Max(receipt => receipt.CompletedAtUtc).AddSeconds(1);
+        const string startup = "startupReceipt=artifacts/process-runs/test/tool-runs/static/startup.json";
+        const string host = "hostUrl=http://127.0.0.1:5174";
+        var issue = new BrowserRuntimeLifecycleCompletionGateContribution().Validate(context with {
+            Assignment = context.Assignment with {
+                LaunchVariables = new Dictionary<string, string> {
+                    [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] = JsonSerializer.Serialize(new[] {
+                        ToolContractCatalog.WorkspaceDotNetRun, ToolContractCatalog.WorkspaceDotNetStop, "browser_navigate"
+                    })
+                }
+            },
+            ToolReceipts = [.. receipts,
+                receipts[0] with { ToolName = ToolContractCatalog.WorkspaceStaticServe,
+                    RequestSummary = fault == StaticProofFault.MissingStartup ? host : $"{startup}; {host}",
+                    StartedAtUtc = start, CompletedAtUtc = start.AddSeconds(1) },
+                receipts[1] with { RequestSummary = fault == StaticProofFault.DifferentBrowserHost ? "url=http://127.0.0.1:5173" : host,
+                    StartedAtUtc = start.AddSeconds(2), CompletedAtUtc = start.AddSeconds(3) },
+                receipts[3] with { RequestSummary = fault == StaticProofFault.DifferentCleanup ? receipts[3].RequestSummary : startup,
+                    StartedAtUtc = start.AddSeconds(4), CompletedAtUtc = start.AddSeconds(5) }
+            ]
+        });
+
+        if (fault == StaticProofFault.None) {
+            Assert.Null(issue);
+        } else {
+            Assert.NotNull(issue);
+            Assert.Equal("process.adapter.runtime_lifecycle_correlation_missing", issue.Code);
+        }
+    }
+
+    [Fact]
+    public void Static_host_requirement_enables_lifecycle_validation() {
+        Assert.True(BrowserRuntimeLifecycleCompletionGateContribution.TryResolveBrowserRuntimeLifecycleToolNames(
+            new HashSet<string> { ToolContractCatalog.WorkspaceStaticServe, ToolContractCatalog.WorkspaceDotNetStop, "browser_navigate" }, out var names));
+        Assert.Equal(ToolContractCatalog.WorkspaceStaticServe, names.RunToolName);
+    }
+
     [Fact]
     public void Validate_accepts_current_execution_browser_proof_for_the_started_host()
     {

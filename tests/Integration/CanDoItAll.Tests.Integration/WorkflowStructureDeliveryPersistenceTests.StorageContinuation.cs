@@ -38,7 +38,14 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
             preparedBytes = await RetainedWorkflowCommandAsync(fixture.Services, plan);
             if (nativeCommitted) {
                 var receipt = (await fixture.Owner.FindWorkflowContributionAsync(plan.Identity))!;
-                await fixture.Owner.UpdateObjectAsync(fixture.ProjectId, receipt.Node.Id, "Human edit", "Human subtitle", "Human notes");
+                var humanView = await fixture.Owner.GetStructureAsync(fixture.ProjectId);
+                var original = Assert.Single(humanView.Nodes, node => node.Id == receipt.Node.Id);
+                await fixture.Owner.UpdateObjectAsync(fixture.ProjectId, original.Id,
+                new ProjectObjectEditRequest("Human edit", "Human subtitle", "Human notes", original.StartUtc, original.EndUtc,
+                    original.MetadataJson, original.DurationSeconds) {
+                    ExpectedNode = original,
+                    ExpectedProjectAdmission = humanView.ExpectedProjectAdmission
+                });
             }
         }
         await using var restarted = await TestApplication.CreateAsync(options);

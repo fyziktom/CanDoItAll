@@ -115,6 +115,7 @@ public partial class ProjectStructurePage
             wasBlockTypeChange ? node.Subtitle : string.Empty,
             wasBlockTypeChange ? node.Notes : notes) {
                 ExpectedProjectAdmission = opening.Context.Admission,
+                ExpectedNode = node,
                 ExpectedObjectType = node.ObjectType,
                 ExpectedObjectSubtype = node.ObjectSubtype
             };
@@ -127,6 +128,8 @@ public partial class ProjectStructurePage
                 ? outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = "The original node is unavailable or can no longer be changed to the requested type." }
                 : outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = updated,
                     Message = $"{updated.Title} was {(wasBlockTypeChange ? "changed" : "converted")} to {ProjectStructureCanvasCatalog.ResolveNodeLabel(updated).ToLowerInvariant()}." };
+        } catch (ProjectStructureEditConflictException exception) {
+            outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
         } catch (ProjectWriteAdmissionRejectedException exception) {
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Rejected, Message = exception.Message, Failure = exception };
         } catch (Exception exception) {
@@ -232,7 +235,8 @@ public partial class ProjectStructurePage
             editor.Status = sourceProject.Status;
             var owner = CreateProjectStructureUiAgentContext(source.Surface.ProjectId) with {
                 ExpectedProjectAdmission = source.Admission,
-                ExpectedTransferRoots = [sourceNode]
+                ExpectedTransferRoots = [sourceNode],
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(source.Surface)
             };
             var result = await SubprojectTransferCoordinator.MoveDescendantsToNewSubprojectAsync(
                 source.Surface.ProjectId, reservation, editor, sourceNode.Id, mutationOwner: owner);

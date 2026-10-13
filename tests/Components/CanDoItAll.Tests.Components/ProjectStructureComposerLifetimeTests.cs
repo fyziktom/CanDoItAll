@@ -19,6 +19,7 @@ public sealed class ProjectStructureComposerLifetimeTests {
     public async Task Accepted_edit_keeps_original_outcome_after_close_or_replacement(bool loseReply, bool replace) {
         var gate = new ProjectStructureHierarchyLifetimeTests.OwnerWriteGate { LoseCommitReply = loseReply };
         await using var harness = await ProjectStructureHierarchyLifetimeTests.CreateHarnessAsync(gate);
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var project = (await projects.SaveAsync(new() { Name = "Delayed composer owner" })).Value;
@@ -28,7 +29,10 @@ public sealed class ProjectStructureComposerLifetimeTests {
         page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
         var canvas = page.FindComponent<CanvasWorkbench>();
         var id = Guid.NewGuid();
-        var request = new CanvasWorkbenchNodeEditRequest(note.Id, "Accepted", "Accepted original body") { ComposerOpeningId = id };
+        var submissionId = Guid.NewGuid();
+        var request = new CanvasWorkbenchNodeEditRequest(note.Id, "Accepted", "Accepted original body") {
+            ComposerOpeningId = id, ComposerSubmissionId = submissionId
+        };
         await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(id, null, request))));
         gate.ArmNode(project, note.Id);
         var pending = page.InvokeAsync(() => canvas.Instance.OnNodeEdited(JsonSerializer.Serialize(request)));
@@ -50,6 +54,12 @@ public sealed class ProjectStructureComposerLifetimeTests {
         Assert.Equal(loseReply ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Committed, outcome.Kind);
         Assert.Equal(id, outcome.OpeningId);
         Assert.Equal(note.Id, outcome.SourceNodeId);
+        var acknowledgement = Assert.IsType<CanvasWorkbenchComposerResult>(Assert.Single(
+            harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.acknowledgeComposer"]).Arguments[1]);
+        Assert.Equal(id, acknowledgement.OpeningId);
+        Assert.Equal(submissionId, acknowledgement.SubmissionId);
+        Assert.Equal(loseReply ? CanvasWorkbenchComposerResultKind.Unconfirmed : CanvasWorkbenchComposerResultKind.Committed,
+            acknowledgement.Kind);
         var stored = await workbench.GetStructureAsync(project);
         Assert.Equal(request.Notes, Assert.Single(stored.Nodes, node => node.Id == note.Id).Notes);
         Assert.Equal(neighbor.Notes, Assert.Single(stored.Nodes, node => node.Id == neighbor.Id).Notes);
@@ -121,7 +131,9 @@ public sealed class ProjectStructureComposerLifetimeTests {
         var openingId = Guid.NewGuid();
         await page.InvokeAsync(() => canvas.Instance.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(openingId, original, null))));
         await workbench.ReclassifyObjectAsync(project, note.Id,
-            new(ProjectObjectType.ProjectBlock, "decision", "External change", "", "Retained notes"));
+            new(ProjectObjectType.ProjectBlock, "decision", "External change", "", "Retained notes") {
+                ExpectedNode = note, ExpectedProjectAdmission = (await workbench.GetStructureAsync(project)).ExpectedProjectAdmission
+            });
         await page.InvokeAsync(() => canvas.Instance.OnCreateAction(JsonSerializer.Serialize(original with { Title = "Stale edit", ComposerOpeningId = openingId })));
         var stored = Assert.Single((await workbench.GetStructureAsync(project)).Nodes, node => node.Id == note.Id);
         Assert.Equal("External change", stored.Title);

@@ -2447,6 +2447,29 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("sln", "net10.0")]
+    [InlineData("SLN", " net10.0 ")]
+    public async Task DotnetNew_rejects_solution_framework_before_any_directory_or_process_effect(string template, string framework) {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
+        try {
+            using var capture = AgentToolInvocationEffectScope.Begin();
+            var result = await service.DotnetNew(template, "Solution", "missing", targetFramework: framework);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("Omit targetFramework", result.Message, StringComparison.Ordinal);
+            Assert.True(capture.RejectedBeforeEffect);
+            Assert.False(capture.ProhibitedBeforeEffect);
+            Assert.Null(processHost.LastRequest);
+            Assert.False(Directory.Exists(Path.Combine(workspaceRoot, "missing")));
+        } finally {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
     [Fact]
     public async Task DotnetNew_rejects_target_framework_argument_without_a_valid_value()
     {

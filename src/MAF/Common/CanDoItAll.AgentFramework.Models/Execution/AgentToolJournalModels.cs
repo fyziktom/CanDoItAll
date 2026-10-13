@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -169,6 +170,7 @@ public sealed record AgentToolJournalRecord(
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
     public const int MaximumUtf8Bytes = 24 * 1024 * 1024;
+    private static readonly ConditionalWeakTable<AgentToolJournalRecord, object> ValidatedSnapshots = new();
 
     [JsonIgnore]
     public string? RecoveryInputContent => OriginalInput?.Content ?? BackgroundInput?.Content;
@@ -180,7 +182,12 @@ public sealed record AgentToolJournalRecord(
     public bool HasUnresolvedProviderDispatch => !ProviderDispatches.IsDefault &&
         ProviderDispatches.Any(dispatch => dispatch.State != AgentToolProviderDispatchState.ResponseAdmitted);
 
-    public void Validate() {
+    public void Validate() => ValidatedSnapshots.GetValue(this, static journal => {
+        journal.ValidateCore();
+        return new object();
+    });
+
+    private void ValidateCore() {
         if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion) || Revision < 1 || !Enum.IsDefined(Support) ||
             Batches.IsDefault || Segments.IsDefault || Batches.Length > MaximumBatches || Segments.Length > MaximumSegments ||
             Support != AgentToolAdmissionSupport.Recoverable && (Batches.Length != 0 || Segments.Length != 0) || Batches.Length != 0 && Segments.Length == 0) {

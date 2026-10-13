@@ -34,7 +34,9 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         var json = JsonNode.Parse(target.Node.MetadataJson)!.AsObject();
         json["unowned"] = new JsonObject { ["keep"] = 73 };
         json["transcript"]!["futureField"] = "preserved";
-        var original = await Workbench(harness).UpdateObjectMetadataAsync(target.ProjectId, target.Node.Id, json.ToJsonString());
+        var originalAdmission = (await Workbench(harness).GetStructureAsync(target.ProjectId)).ExpectedProjectAdmission;
+        var original = await Workbench(harness).UpdateObjectMetadataAsync(target.ProjectId, target.Node.Id, json.ToJsonString(),
+            expectedState: ProjectStructureNodeStateGuard.Capture(target.Node, originalAdmission));
         Assert.NotNull(original);
         var cut = Render(harness, target.ProjectId);
         await ContextActionAsync(cut, target.Node.Id, action);
@@ -72,8 +74,10 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         try {
             var json = JsonNode.Parse(target.Node.MetadataJson)!.AsObject();
             json["transcript"]!["transcriptText"] = "Legitimate concurrent content";
+            var competingOrigin = await Workbench(harness).GetStructureAsync(target.ProjectId);
             changed = await Workbench(harness).UpdateObjectMetadataAsync(target.ProjectId, target.Node.Id,
-                notesOnly ? target.Node.MetadataJson : json.ToJsonString(), notes: notesOnly ? "Legitimate concurrent notes" : null);
+                notesOnly ? target.Node.MetadataJson : json.ToJsonString(), notes: notesOnly ? "Legitimate concurrent notes" : null,
+                expectedState: ProjectStructureNodeStateGuard.Capture(target.Node, competingOrigin.ExpectedProjectAdmission));
         } finally {
             provider.Release.TrySetResult();
         }
@@ -222,7 +226,9 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         await SelectAsync(cut, legacy.Id);
         Assert.True(cut.FindComponent<ProjectStructureSelectionPanel>().Instance.State.SelectedNode!.HasMermaidViewer);
         await InvokeSelectionAsync(cut, new InsightsSelectionCommand.Open(InsightsNativeView.Mermaid));
-        await Workbench(harness).UpdateObjectMetadataAsync(target.ProjectId, legacy.Id, legacy.MetadataJson, notes: "flowchart LR\n Current --> Content");
+        var competingOrigin = await Workbench(harness).GetStructureAsync(target.ProjectId);
+        await Workbench(harness).UpdateObjectMetadataAsync(target.ProjectId, legacy.Id, legacy.MetadataJson, notes: "flowchart LR\n Current --> Content",
+            expectedState: ProjectStructureNodeStateGuard.Capture(legacy, competingOrigin.ExpectedProjectAdmission));
         await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSupportDialogs>().Instance.EditMermaidNode.InvokeAsync(legacy));
         Assert.NotNull(cut.FindComponent<ContentLegacyMermaidDialog>());
         Assert.Contains("original Mermaid content changed", cut.Markup, StringComparison.Ordinal);

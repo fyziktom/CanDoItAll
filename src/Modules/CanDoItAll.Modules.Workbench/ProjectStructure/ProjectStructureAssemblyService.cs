@@ -253,7 +253,8 @@ public sealed class ProjectStructureAssemblyService(
         WorkbenchDbContext dbContext,
         Guid projectId,
         IReadOnlyCollection<ProjectNodeMoveRequest> positions,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyCollection<ProjectStructureNode>? expectedProjectionNodes = null)
     {
         ArgumentNullException.ThrowIfNull(positions);
 
@@ -282,14 +283,27 @@ public sealed class ProjectStructureAssemblyService(
         var projectionNodeKeys = nodeKeys
             .Where(nodeKey => !canonicalNodes.ContainsKey(nodeKey))
             .ToList();
-        var validProjectionNodeKeys = projectionNodeKeys.Count == 0
-            ? []
-            : await LoadProjectionNodeKeysAsync(dbContext, projectId, cancellationToken);
         var existingLayouts = projectionNodeKeys.Count == 0
             ? new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal)
             : await dbContext.Set<ProjectStructureProjectionLayoutRecord>()
                 .Where(item => item.ProjectId == projectId && projectionNodeKeys.Contains(item.NodeKey))
                 .ToDictionaryAsync(item => item.NodeKey, StringComparer.Ordinal, cancellationToken);
+
+        var projectionNodes = projectionNodeKeys.Count == 0
+            ? []
+            : await LoadProjectionNodesAsync(dbContext, projectId, existingLayouts, cancellationToken);
+        var validProjectionNodeKeys = projectionNodes.Select(node => node.NodeKey).ToHashSet(StringComparer.Ordinal);
+        if (expectedProjectionNodes is not null) {
+            if (!projectionNodeKeys.ToHashSet(StringComparer.Ordinal).SetEquals(expectedProjectionNodes.Select(node => node.Id))) {
+                throw new ProjectStructureEditConflictException();
+            }
+            foreach (var expected in expectedProjectionNodes) {
+                var current = projectionNodes.FirstOrDefault(node => node.NodeKey == expected.Id);
+                if (current is null || current.PositionX != expected.X || current.PositionY != expected.Y) {
+                    throw new ProjectStructureEditConflictException();
+                }
+            }
+        }
 
         var updatedNodeIds = new List<string>(requestedPositions.Count);
         var updatedAtUtc = clock.GetUtcNow();
@@ -357,9 +371,10 @@ public sealed class ProjectStructureAssemblyService(
         CancellationToken cancellationToken)
         => dbContext.SaveChangesAsync(cancellationToken);
 
-    private async Task<HashSet<string>> LoadProjectionNodeKeysAsync(
+    private async Task<IReadOnlyList<ProjectObjectRecord>> LoadProjectionNodesAsync(
         WorkbenchDbContext dbContext,
         Guid projectId,
+        IReadOnlyDictionary<string, ProjectStructureProjectionLayoutRecord> layouts,
         CancellationToken cancellationToken)
     {
         using var coordinatedRead = dbContext.Database.IsRelational() && dbContext.Database.CurrentTransaction is not null
@@ -368,7 +383,7 @@ public sealed class ProjectStructureAssemblyService(
         var context = new ProjectStructureProjectionContext(
             projectId,
             clock.GetUtcNow(),
-            new Dictionary<string, ProjectStructureProjectionLayoutRecord>(StringComparer.Ordinal),
+            layouts,
             canonicalLinks: await dbContext.Set<ProjectObjectLinkRecord>().AsNoTracking()
                 .Where(link => link.ProjectId == projectId && !link.IsSystemManaged).ToListAsync(cancellationToken)) {
             RequiresCoordinatedOwnerReads = coordinatedRead is not null
@@ -379,9 +394,7 @@ public sealed class ProjectStructureAssemblyService(
             await contributor.ContributeAsync(context, cancellationToken);
         }
 
-        return context.Nodes
-            .Select(item => item.NodeKey)
-            .ToHashSet(StringComparer.Ordinal);
+        return context.Nodes.ToArray();
     }
 
     private static IReadOnlyList<ProjectObjectLinkRecord> FilterLegacyCanonicalHierarchyLinks(

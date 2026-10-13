@@ -506,7 +506,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             RuntimeCapabilityDescriptorCatalog.ResolveMcpApprovalMode,
             RuntimeCapabilityDescriptorCatalog.ResolveMcpTimeout,
             RuntimeCapabilityDescriptorCatalog.ResolveCatalogTags,
-            RuntimeCapabilityDescriptorCatalog.ResolveMcpMessageFraming);
+            RuntimeCapabilityDescriptorCatalog.ResolveMcpMessageFraming,
+            capabilityDependencies.WorkspacePathContributors);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(
             capabilityDependencies.RegisteredCapabilityServices,

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
@@ -43,7 +44,15 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
             : observedToolReceipts
                 .Where(receipt => receipt.ExecutionRunId == context.CurrentExecutionRunId.Value)
                 .ToArray();
-        var runReceipt = FindSuccessfulReceipt(currentReceipts, lifecycleToolNames.RunToolName);
+        var compatibleStartNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { lifecycleToolNames.RunToolName };
+        if (string.Equals(lifecycleToolNames.StopToolName, ToolContractCatalog.WorkspaceDotNetStop, StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(lifecycleToolNames.RunToolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(lifecycleToolNames.RunToolName, ToolContractCatalog.WorkspaceStaticServe, StringComparison.OrdinalIgnoreCase))) {
+            compatibleStartNames.Add(ToolContractCatalog.WorkspaceDotNetRun);
+            compatibleStartNames.Add(ToolContractCatalog.WorkspaceStaticServe);
+        }
+        var runReceipt = compatibleStartNames.SelectMany(name => FindSuccessfulReceipts(currentReceipts, name))
+            .OrderByDescending(receipt => receipt.CompletedAtUtc).FirstOrDefault();
         var stopReceipts = FindSuccessfulReceipts(currentReceipts, lifecycleToolNames.StopToolName);
         var browserReceipts = currentReceipts
             .Where(receipt => IsBrowserToolName(receipt.ToolName) && IsSuccessfulReceipt(receipt.ExitSummary))
@@ -59,6 +68,7 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
                 observedToolReceipts);
         }
 
+        var runToolName = runReceipt.ToolName;
         var runFacts = BrowserRuntimeLifecycleReceipt.From(runReceipt);
         var stopReceipt = stopReceipts.FirstOrDefault(receipt =>
             receipt.StartedAtUtc >= runReceipt.CompletedAtUtc &&
@@ -68,7 +78,7 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         if (stopReceipt is null) {
             return CreateIssue(
                 context,
-                $"{lifecycleToolNames.RunToolName} and {lifecycleToolNames.StopToolName} receipts are not correlated by the same startup.json receipt. Retry QA using the startup.json path returned by the current {lifecycleToolNames.RunToolName} call when invoking {lifecycleToolNames.StopToolName}.",
+                $"{runToolName} and {lifecycleToolNames.StopToolName} receipts are not correlated by the same startup.json receipt. Retry QA using the startup.json path returned by the current {runToolName} call when invoking {lifecycleToolNames.StopToolName}.",
                 observedToolReceipts);
         }
 
@@ -86,7 +96,7 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
         {
             return CreateIssue(
                 context,
-                $"Browser proof is not correlated to the host URL reported by {lifecycleToolNames.RunToolName}. Retry QA by navigating the browser to the current run's loopback host URL before collecting screenshots, snapshots, and console proof.",
+                $"Browser proof is not correlated to the host URL reported by {runToolName}. Retry QA by navigating the browser to the current run's loopback host URL before collecting screenshots, snapshots, and console proof.",
                 observedToolReceipts);
         }
 
@@ -118,7 +128,8 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
     }
 
     private static bool IsWorkspaceRunToolName(string toolName)
-        => toolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) &&
+        => string.Equals(toolName, ToolContractCatalog.WorkspaceStaticServe, StringComparison.OrdinalIgnoreCase) ||
+           toolName.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase) &&
            toolName.EndsWith("_run", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsWorkspaceStopToolName(string toolName)
@@ -127,11 +138,6 @@ internal sealed class BrowserRuntimeLifecycleCompletionGateContribution : IProce
 
     private static bool IsBrowserToolName(string toolName)
         => toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase);
-
-    private static ToolExecutionReceiptRecord? FindSuccessfulReceipt(
-        IReadOnlyList<ToolExecutionReceiptRecord> receipts,
-        string toolName)
-        => FindSuccessfulReceipts(receipts, toolName).FirstOrDefault();
 
     private static IReadOnlyList<ToolExecutionReceiptRecord> FindSuccessfulReceipts(
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,

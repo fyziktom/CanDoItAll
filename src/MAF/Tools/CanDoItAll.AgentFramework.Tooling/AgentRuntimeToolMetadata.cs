@@ -9,6 +9,11 @@ public enum AgentRuntimeToolRecoveryPolicy {
     ReconcileBeforeRetry
 }
 
+public enum AgentRuntimeToolApprovalPolicy {
+    Default,
+    GovernedProcessAuthority
+}
+
 public sealed record AgentRuntimeToolMetadata
 {
     public AgentRuntimeToolMetadata(
@@ -43,6 +48,12 @@ public sealed record AgentRuntimeToolMetadata
     public AgentRuntimeToolOperationKind OperationKind { get; }
 
     public bool RequiresApprovalByDefault { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public AgentRuntimeToolApprovalPolicy ApprovalPolicy {
+        get;
+        init => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value));
+    }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AgentRuntimeToolRecoveryPolicy RecoveryPolicy {

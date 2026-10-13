@@ -306,6 +306,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.True(unspecifiedException.CanRetryWithCorrectedInput);
         Assert.All(retainedPaths, path => Assert.True(File.Exists(path)));
 
+        var retainedOrigin = ProjectStructureGraphStateGuard.Capture(await workbench.GetStructureAsync(projectId));
         var retainedResult = await InvokeAsync<OperationCount>(
             batchDelete,
             new AIFunctionArguments
@@ -313,7 +314,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 ["projectId"] = projectId,
                 ["request"] = new ProjectStructureNodeDeleteBatchInput(
                     [retainedOne.Id, retainedTwo.Id],
-                    ProjectStructureManagedStorageDisposition.RetainManagedFiles)
+                    ProjectStructureManagedStorageDisposition.RetainManagedFiles) { ExpectedGraph = retainedOrigin }
             });
 
         Assert.Equal(2, retainedResult.Count);
@@ -325,6 +326,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             deletedAsset.MediaRelativePath!.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(deletedPath));
 
+        var deletedOrigin = ProjectStructureGraphStateGuard.Capture(await workbench.GetStructureAsync(projectId));
         var deletedResult = await InvokeAsync<OperationCount>(
             singleDelete,
             new AIFunctionArguments
@@ -332,7 +334,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                 ["projectId"] = projectId,
                 ["nodeId"] = deletedAsset.Id,
                 ["request"] = new ProjectStructureNodeDeleteInput(
-                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) { ExpectedGraph = deletedOrigin }
             });
 
         Assert.Equal(1, deletedResult.Count);
@@ -892,7 +894,7 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
                         "Validated against the selected architecture subtree.",
                         ProjectObjectType.ProjectBlock,
                         "architecture",
-                        LeaseToken: lease.LeaseToken)
+                        LeaseToken: lease.LeaseToken) { ExpectedState = createdNode.ExpectedState }
                 });
 
             Assert.Equal(createdNode.Id, updatedNode.Id);

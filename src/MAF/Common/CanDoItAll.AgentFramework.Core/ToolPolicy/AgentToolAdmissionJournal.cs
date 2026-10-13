@@ -43,7 +43,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             ?? throw Failure("The new run has no persisted execution authority.");
         var session = new AgentToolSessionAdmission(new(run.Id, chat.Id, governance.AuthorityId), run.AgentId,
             AgentRuntimeContextPurpose.InteractiveChat, profile);
-        RequireCurrent(session, new(run, chat, [], []));
+        RequireCurrent(session, new(run, chat));
         if (originalInput is not null && !chat.Messages.Any(message => message.Id == originalInput.MessageId &&
                 message.Role == ChatMessageRole.User && message.Content == originalInput.Content)) {
             throw Failure("The admitted input does not match the new run's persisted user message.");
@@ -82,14 +82,14 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
 
     private async Task<AgentToolJournalRecord> ReadVerifiedAsync(AgentToolRunLease lease, bool reconciliationOnly,
         CancellationToken cancellationToken)
-        => RequireJournal(await ReadVerifiedDetailAsync(lease, reconciliationOnly, cancellationToken));
+        => RequireJournal((await ReadVerifiedSnapshotAsync(lease, reconciliationOnly, cancellationToken)).Run);
 
-    private async Task<ExecutionRunDetail> ReadVerifiedDetailAsync(AgentToolRunLease lease, bool reconciliationOnly,
+    private async Task<ExecutionRunAdmissionSnapshot> ReadVerifiedSnapshotAsync(AgentToolRunLease lease, bool reconciliationOnly,
         CancellationToken cancellationToken) {
         lease.RequireOwner(this);
         RequireLeaseMode(lease, reconciliationOnly);
-        var detail = await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken);
-        var journal = RequireJournal(detail);
+        var detail = await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken);
+        var journal = RequireJournal(detail.Run);
         RequireCurrent(journal.Session, detail, reconciliationOnly);
         if (!reconciliationOnly) {
             await RequireBackgroundSourceAsync(detail.Run, readOnly: true, cancellationToken);
@@ -132,12 +132,12 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         lease.RequireOwner(this);
         IReadOnlyList<PendingToolApprovalRecord>? bound = null;
         if (lease.Session.BackgroundSource is not null) {
-            await RequireBackgroundSourceAsync((await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
+            await RequireBackgroundSourceAsync((await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
                 readOnly: false, cancellationToken);
         }
         await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, detail => {
-            var journal = RequireJournal(detail);
-            RequireCurrent(journal.Session, detail);
+            var journal = RequireJournal(detail.Run);
+            RequireCurrent(journal.Session, new(detail.Run, detail.ChatSession));
             RequireLease(lease, journal);
             var segment = journal.Segments.Single(item => item.Id == segmentId);
             if (segment.Ordinal != journal.Segments.Length - 1 || approvals.Count == 0) {
@@ -291,8 +291,8 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         if (lease.Session != reference) {
             throw Failure("The requested session does not match the active admitted runtime.");
         }
-        var detail = await ReadVerifiedDetailAsync(lease, reconciliationOnly: false, cancellationToken);
-        return new(RequireJournal(detail).Session,
+        var detail = await ReadVerifiedSnapshotAsync(lease, reconciliationOnly: false, cancellationToken);
+        return new(RequireJournal(detail.Run).Session,
             AgentTurnContextMetadata.TryReadTurnContextReference(detail.Run.MetadataJson),
             AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(detail.Run.MetadataJson));
     }
@@ -319,15 +319,16 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     private async Task<AgentToolJournalRecord> MutateAsync(AgentToolRunLease lease, bool requireClaim,
         Func<AgentToolJournalRecord, AgentToolJournalRecord> update, CancellationToken cancellationToken,
         bool reconciliationOnly = false, BackgroundCheck backgroundCheck = BackgroundCheck.Dispatch) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.mutate");
         lease.RequireOwner(this);
         RequireLeaseMode(lease, reconciliationOnly);
         if (lease.Session.BackgroundSource is not null && backgroundCheck != BackgroundCheck.RecordOutcome) {
-            await RequireBackgroundSourceAsync((await RequireDetailAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
+            await RequireBackgroundSourceAsync((await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
                 reconciliationOnly || backgroundCheck == BackgroundCheck.Read, cancellationToken);
         }
         var detail = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
-            var journal = RequireJournal(current);
-            RequireCurrent(journal.Session, current, reconciliationOnly);
+            var journal = RequireJournal(current.Run);
+            RequireCurrent(journal.Session, new(current.Run, current.ChatSession), reconciliationOnly);
             if (requireClaim) {
                 RequireLease(lease, journal);
             }
@@ -338,10 +339,10 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
                 ToolAdmission = changed, Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = clock.GetUtcNow()
             } };
         }, cancellationToken);
-        return RequireJournal(detail);
+        return RequireJournal(detail.Run);
     }
 
-    private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunDetail detail, bool reconciliationOnly = false) {
+    private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunAdmissionSnapshot detail, bool reconciliationOnly = false) {
         var run = detail.Run;
         if (session.Reference.BackgroundSource is { } background) {
             RequireBackgroundIdentity(session, run, background);
@@ -394,7 +395,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         claim.RequireOwner(this);
         var journal = await ReadVerifiedAsync(claim.Lease, reconciliationOnly: true, cancellationToken);
         if (journal.Session.Reference.BackgroundSource is not null &&
-                !await CanReadBackgroundResultAsync((await RequireDetailAsync(claim.Lease.Session.ExecutionRunId, cancellationToken)).Run, cancellationToken)) {
+                !await CanReadBackgroundResultAsync((await RequireSnapshotAsync(claim.Lease.Session.ExecutionRunId, cancellationToken)).Run, cancellationToken)) {
             throw new AgentToolReceiptAccessDeniedException();
         }
         var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
@@ -525,12 +526,15 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         }
     }
 
-    private async Task<ExecutionRunDetail> RequireDetailAsync(Guid runId, CancellationToken cancellationToken)
-        => await reader.GetExecutionRunDetailAsync(runId, cancellationToken)
+    private async Task<ExecutionRunAdmissionSnapshot> RequireSnapshotAsync(Guid runId, CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.read");
+        return await reader.GetExecutionRunAdmissionSnapshotAsync(runId, cancellationToken)
             ?? throw Failure("The admitted execution run was not found.");
+    }
 
-    private static AgentToolJournalRecord RequireJournal(ExecutionRunDetail detail) {
-        var journal = detail.Run.ToolAdmission ?? throw Failure("This legacy run has no durable tool admission journal.");
+    private static AgentToolJournalRecord RequireJournal(ExecutionRunRecord run) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.validate");
+        var journal = run.ToolAdmission ?? throw Failure("This legacy run has no durable tool admission journal.");
         journal.Validate();
         return journal;
     }

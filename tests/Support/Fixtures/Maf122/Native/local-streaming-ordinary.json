@@ -1,0 +1,30 @@
+{
+  "mafVersion": "1.22.0.0",
+  "state": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "approvals": []
+}

@@ -16,6 +16,7 @@ using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions
 using AccessCapabilityOperationClassification = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityOperationClassification;
 using EffectiveCapabilitySet = CanDoItAll.AgentFramework.Capabilities.Abstractions.EffectiveCapabilitySet;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
@@ -34,6 +35,70 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafAgentRuntimeToolProviderCompositionTests
 {
+    public enum GovernedApprovalCase {
+        Authorized, DefaultPolicy, Interactive, Ungoverned, NoSession, InteractiveSession,
+        RequestScoped, ApprovalsRequired, MissingPreparation, MissingAuthorization
+    }
+
+    [Theory]
+    [InlineData(GovernedApprovalCase.Authorized)]
+    [InlineData(GovernedApprovalCase.DefaultPolicy)]
+    [InlineData(GovernedApprovalCase.Interactive)]
+    [InlineData(GovernedApprovalCase.Ungoverned)]
+    [InlineData(GovernedApprovalCase.NoSession)]
+    [InlineData(GovernedApprovalCase.InteractiveSession)]
+    [InlineData(GovernedApprovalCase.RequestScoped)]
+    [InlineData(GovernedApprovalCase.ApprovalsRequired)]
+    [InlineData(GovernedApprovalCase.MissingPreparation)]
+    [InlineData(GovernedApprovalCase.MissingAuthorization)]
+    public async Task Prepared_tools_use_Process_approval_only_with_explicit_owner_policy_and_admitted_background_context(GovernedApprovalCase scenario) {
+        const string key = "tests.governed-approval";
+        const string name = ProjectStructureToolPolicy.ProjectStructureAssetCreate;
+        var metadata = new AgentRuntimeToolMetadata(key, name, AgentRuntimeToolOperationKind.Mutation, true) {
+            ApprovalPolicy = scenario == GovernedApprovalCase.DefaultPolicy
+                ? AgentRuntimeToolApprovalPolicy.Default : AgentRuntimeToolApprovalPolicy.GovernedProcessAuthority,
+            PrepareAdmission = scenario == GovernedApprovalCase.MissingPreparation ? null : arguments => new(name, 1,
+                AgentToolProtocolEnvelope.ComputeDigest(arguments.GetRawText()), arguments.GetRawText(),
+                AgentToolProposalEffect.Mutation, AgentToolProposalRecovery.OwnerReceipt),
+            AuthorizeAdmissionAsync = scenario == GovernedApprovalCase.MissingAuthorization ? null
+                : (_, _) => throw new InvalidOperationException("Composition must not execute the owner authorization callback.")
+        };
+        var provider = new TestRuntimeToolProvider(0, new(key, key, key,
+            supportedPurposes: Enum.GetValues<AgentRuntimeToolProviderPurpose>()), [name], [metadata]);
+        var digest = AgentToolProtocolEnvelope.ComputeDigest(key);
+        var session = scenario switch {
+            GovernedApprovalCase.NoSession => null,
+            GovernedApprovalCase.InteractiveSession => new AgentToolSessionReference(Guid.NewGuid(), Guid.NewGuid(), new(Guid.NewGuid())),
+            _ => new AgentToolSessionReference(Guid.NewGuid(), Guid.Empty, default, new("process-step", "record-result", digest, digest))
+        };
+        var purpose = scenario switch {
+            GovernedApprovalCase.Interactive => AgentRuntimeToolProviderPurpose.InteractiveChat,
+            GovernedApprovalCase.Ungoverned => AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
+            _ => AgentRuntimeToolProviderPurpose.GovernedProcessAutomation
+        };
+        var context = new AgentRuntimeToolProviderContext(CreateToolEnabledAgent(), CreateProviderProfile(), [], true,
+            purpose, key, AgentRuntimeContextIntent.Empty, new Dictionary<string, string>()) {
+            AdmittedToolSession = session,
+            ToolAdmissionSupport = scenario == GovernedApprovalCase.RequestScoped
+                ? AgentToolAdmissionSupport.RequestScopedInput : AgentToolAdmissionSupport.Recoverable
+        };
+        var composer = new RuntimeToolProviderComposer(new RuntimeToolProviderAccessFilter(ProductToolPolicies), ProductToolPolicies);
+        var access = new RuntimeCapabilityAccessPlan(new EffectiveCapabilitySet([], []), [], [], new CapabilityAccessPolicyEvaluator(),
+            [], [], new Dictionary<Access.CapabilityIdentity, CapabilityCatalogItem>(),
+            new Dictionary<string, CapabilityExposureDescriptor>(), key);
+        var state = new RuntimeCapabilityState();
+        var request = new RuntimeToolProviderAttachmentRequest(state, access, composer.ComposeRegistrations([provider]),
+            context, scenario != GovernedApprovalCase.ApprovalsRequired);
+        if (scenario is GovernedApprovalCase.MissingPreparation or GovernedApprovalCase.MissingAuthorization) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => composer.AttachAsync(request, default));
+            Assert.Empty(state.Tools);
+            return;
+        }
+        await composer.AttachAsync(request, default);
+        Assert.Equal(scenario != GovernedApprovalCase.Authorized, Assert.Single(state.Tools) is ApprovalRequiredAIFunction);
+        Assert.Same(metadata.AuthorizeAdmissionAsync, Assert.Single(state.RuntimeToolMetadata).AuthorizeAdmissionAsync);
+    }
+
     [Fact]
     public async Task MafAgentRuntimePublishedOutput_tools_use_the_current_workspace_service() {
         var directory = Directory.CreateTempSubdirectory("cdia-provider-publish-");

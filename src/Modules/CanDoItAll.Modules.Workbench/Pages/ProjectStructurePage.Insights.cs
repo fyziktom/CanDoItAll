@@ -116,15 +116,15 @@ public partial class ProjectStructurePage {
                     _ => throw new ArgumentOutOfRangeException(nameof(intent))
                 };
                 await ApplyInsightsNodesAsync(context, "Status", ids, () => ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(
-                    admission.ProjectId, ids, value, expectedProjectAdmission: admission));
+                    admission.ProjectId, ids, value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
                 break;
             case InsightsSelectionCommand.Progress progress:
                 await ApplyInsightsNodesAsync(context, "Progress", ids, () => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
-                    admission.ProjectId, ids, "progress", progress.Percent, expectedProjectAdmission: admission));
+                    admission.ProjectId, ids, "progress", progress.Percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
                 break;
             case InsightsSelectionCommand.Priority priority:
                 await ApplyInsightsNodesAsync(context, "Priority", ids, () => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
-                    admission.ProjectId, ids, priority.Value, expectedProjectAdmission: admission));
+                    admission.ProjectId, ids, priority.Value, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
                 break;
             case InsightsSelectionCommand.Marker marker:
                 await ApplyInsightsMarkerAsync(context, ids, marker.Value, toggle: false);
@@ -187,10 +187,10 @@ public partial class ProjectStructurePage {
             await ApplyInsightsMarkerAsync(context, ids, new(icon, tone, label), toggle: true);
         } else if (actionCatalog.TryResolveProgressAction(intent.ActionId, out var mode, out var percent)) {
             await ApplyInsightsNodesAsync(context, "Progress", ids, () => ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(
-                admission.ProjectId, ids, mode, percent, expectedProjectAdmission: admission));
+                admission.ProjectId, ids, mode, percent, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
         } else if (actionCatalog.TryResolvePriorityAction(intent.ActionId, out var priority)) {
             await ApplyInsightsNodesAsync(context, "Priority", ids, () => ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(
-                admission.ProjectId, ids, priority, expectedProjectAdmission: admission));
+                admission.ProjectId, ids, priority, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
         }
     }
 
@@ -198,9 +198,9 @@ public partial class ProjectStructurePage {
         var admission = context.Native.Admission;
         var remove = toggle && context.Nodes.All(node => node.Markers.Any(value => value.Icon.Equals(marker.Badge, StringComparison.OrdinalIgnoreCase)));
         return ApplyInsightsNodesAsync(context, "Marker", ids, () => string.IsNullOrWhiteSpace(marker.Badge)
-            ? ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(admission.ProjectId, ids, expectedProjectAdmission: admission)
-            : remove ? ProjectWorkbenchService.RemoveObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission)
-            : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission));
+            ? ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(admission.ProjectId, ids, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission))
+            : remove ? ProjectWorkbenchService.RemoveObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission))
+            : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission)));
     }
 
     private async Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {

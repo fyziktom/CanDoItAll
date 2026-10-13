@@ -1335,19 +1335,19 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         if (actionCatalog.TryResolveProgressAction(actionId, out var progressMode, out var progressPercent))
         {
-            await ApplyProgressAsync(ResolveActionTargetNodeIds(nodeId), progressMode, progressPercent);
+            await ApplyProgressAsync(ResolveActionTargetNodeIds(nodeId), progressMode, progressPercent, actionContext);
             return;
         }
 
         if (actionCatalog.TryResolveMarkerAction(actionId, out var markerIcon, out var markerTone, out var markerLabel))
         {
-            await ApplyMarkerAsync(ResolveActionTargetNodeIds(nodeId), markerIcon, markerTone, markerLabel);
+            await ApplyMarkerAsync(ResolveActionTargetNodeIds(nodeId), markerIcon, markerTone, markerLabel, actionContext);
             return;
         }
 
         if (actionCatalog.TryResolvePriorityAction(actionId, out var priority))
         {
-            await ApplyPriorityAsync(ResolveActionTargetNodeIds(nodeId), priority);
+            await ApplyPriorityAsync(ResolveActionTargetNodeIds(nodeId), priority, actionContext);
             return;
         }
 
@@ -1629,7 +1629,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             await ProjectWorkbenchService.MoveObjectsAsync(
                 mutationProjectId,
                 placementPlan.FollowUpMoves,
-                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission);
+                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
+                expectedNodes: mutationSurface!.Nodes.Where(node => placementPlan.FollowUpMoves.Any(move => move.NodeId == node.Id)).ToArray());
         }
 
         if (actionNavigationRevision == mutationNavigationRevision && ProjectId == mutationProjectId && surface?.ExpectedProjectAdmission == createRequest.ExpectedProjectAdmission && canPublish?.Invoke() != false) {
@@ -1835,55 +1836,51 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private IReadOnlyList<ProjectStructureInspectorCreateGroup> BuildInspectorCreateGroups(ProjectObjectType? sourceType)
         => HydrateCreateGroups(actionCatalog.BuildInspectorCreateGroups(sourceType));
 
-    private async Task ApplySelectionStatusAsync(string status)
-    {
-        var mutableNodeIds = selectedNodes
-            .Where(ProjectStructureNodeHelpers.IsCanvasStatusMutable)
-            .Select(node => node.Id)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (mutableNodeIds.Count == 0)
-        {
-            return;
-        }
-
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync(ProjectId, mutableNodeIds, status);
-        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-    }
-
-    private async Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent)
+    private async Task ApplyProgressAsync(IReadOnlyCollection<string> nodeIds, string progressMode, int progressPercent, ProjectStructureActionContext? originalContext = null)
     {
         if (nodeIds.Count == 0)
         {
             return;
         }
 
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(ProjectId, nodeIds, progressMode, progressPercent);
-        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+        var context = originalContext ?? CaptureActionContext();
+        var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectProgressDetailedAsync(context.Surface.ProjectId, nodeIds, progressMode, progressPercent, expectedProjectAdmission: context.Admission, expectedStates: expected);
+        if (IsCurrentAction(context)) {
+            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+        }
     }
 
-    private async Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel)
+    private async Task ApplyMarkerAsync(IReadOnlyCollection<string> nodeIds, string markerIcon, string markerTone, string markerLabel, ProjectStructureActionContext? originalContext = null)
     {
         if (nodeIds.Count == 0)
         {
             return;
         }
 
+        var context = originalContext ?? CaptureActionContext();
+        var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
         var updatedNodes = string.IsNullOrWhiteSpace(markerIcon)
-            ? await ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(ProjectId, nodeIds)
-            : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(ProjectId, nodeIds, markerIcon, markerTone, markerLabel);
-        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+            ? await ProjectWorkbenchService.ClearObjectMarkersDetailedAsync(context.Surface.ProjectId, nodeIds, expectedProjectAdmission: context.Admission, expectedStates: expected)
+            : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(context.Surface.ProjectId, nodeIds, markerIcon, markerTone, markerLabel, expectedProjectAdmission: context.Admission, expectedStates: expected);
+        if (IsCurrentAction(context)) {
+            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+        }
     }
 
-    private async Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority)
+    private async Task ApplyPriorityAsync(IReadOnlyCollection<string> nodeIds, int priority, ProjectStructureActionContext? originalContext = null)
     {
         if (nodeIds.Count == 0)
         {
             return;
         }
 
-        var updatedNodes = await ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(ProjectId, nodeIds, priority);
-        await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+        var context = originalContext ?? CaptureActionContext();
+        var expected = ProjectStructureNodeStateGuard.CaptureMany(context.Surface.Nodes.Where(node => nodeIds.Contains(node.Id)), context.Admission);
+        var updatedNodes = await ProjectWorkbenchService.UpdateObjectPriorityDetailedAsync(context.Surface.ProjectId, nodeIds, priority, expectedProjectAdmission: context.Admission, expectedStates: expected);
+        if (IsCurrentAction(context)) {
+            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
+        }
     }
 
     private async Task CreateSelectionBorderAsync()

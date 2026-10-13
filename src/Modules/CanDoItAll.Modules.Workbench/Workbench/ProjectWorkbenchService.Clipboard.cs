@@ -17,6 +17,7 @@ public sealed partial class ProjectWorkbenchService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -30,6 +31,7 @@ public sealed partial class ProjectWorkbenchService
             projectId,
             targetParentNodeKey);
         var assembly = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
+        ProjectStructureGraphStateGuard.EnsureCurrent(mutationOwner, projectId, sourceRootNodeKeys, [targetParentNodeKey], true, assembly.Nodes, assembly.Links);
         ProjectStructureNodeExpectations.EnsureCurrent(expectedNodes, assembly.Nodes);
         ProjectStructureEditableForestResolver.ValidateTarget(
             projectId,

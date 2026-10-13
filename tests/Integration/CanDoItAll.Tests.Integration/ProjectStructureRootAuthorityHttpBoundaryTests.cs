@@ -173,9 +173,11 @@ public sealed class ProjectStructureRootAuthorityHttpBoundaryTests
                 "Validate graph-derived root authority",
                 15));
 
+        var originalRead = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest { IncludeMutationGraph = true });
         var reparentResponse = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/nodes/{child.Id}/reparent",
-            new ProjectStructureNodeParentInput(externalOwner.Id, lease.LeaseToken));
+            new ProjectStructureNodeParentInput(externalOwner.Id, lease.LeaseToken) { ExpectedGraph = originalRead.ExpectedGraph });
         var linkResponse = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/links",
             new ProjectStructureLinkInput(

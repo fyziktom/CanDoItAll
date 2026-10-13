@@ -286,6 +286,9 @@ internal static class ProjectStructureInvocationSnapshotReadDispatcher
         ProjectStructureReadRequest request)
     {
         var unsupportedFields = new List<string>();
+        if (request.IncludeMutationGraph) {
+            unsupportedFields.Add("mutation graph");
+        }
         if (request.IncludeNotes)
         {
             unsupportedFields.Add("notes");

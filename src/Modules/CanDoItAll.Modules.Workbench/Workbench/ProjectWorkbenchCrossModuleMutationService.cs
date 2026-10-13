@@ -279,6 +279,9 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         CancellationToken cancellationToken,
         ProjectStructureAgentContext? mutationOwner = null)
     {
+        if (reconcileDetachedTaskResource) {
+            mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
+        }
         ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
@@ -343,6 +346,9 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             return new ProjectStructureDeletionResult(hiddenCount, []);
         }
 
+        if (reconcileDetachedTaskResource) {
+            await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner!, projectId, [nodeKey], null, true, records, cancellationToken);
+        }
         var keysToDelete = CollectEditableDescendantKeys(records, root.NodeKey);
         var linksToDelete = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item =>
@@ -591,6 +597,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             return null;
         }
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, sourceProjectId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -605,6 +612,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
             .ToListAsync(cancellationToken);
+        await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner, sourceProjectId, [sourceNodeKey], null, true, sourceRecords, cancellationToken);
         if (sourceRecords.Count == 0)
         {
             return null;
@@ -649,6 +657,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             return null;
         }
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, sourceProjectId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -663,6 +672,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
             .ToListAsync(cancellationToken);
+        await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner, sourceProjectId, normalizedSourceNodeKeys, null, includeDescendants, sourceRecords, cancellationToken);
         if (sourceRecords.Count == 0)
         {
             return null;

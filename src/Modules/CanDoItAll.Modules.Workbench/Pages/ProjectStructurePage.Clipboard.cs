@@ -243,7 +243,7 @@ public partial class ProjectStructurePage
             SourceNodeId = opening.Node.Id
         };
         try {
-            var owner = CreateProjectStructureUiAgentContext(capturedState.ProjectId) with { ExpectedProjectAdmission = opening.Context.Admission };
+            var owner = CreateProjectStructureUiAgentContext(capturedState.ProjectId) with { ExpectedProjectAdmission = opening.Context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(capturedState.Opening.Context.Surface) };
             var expected = capturedState.Roots.Append(destinationNode).ToArray();
             if (capturedState.Operation == CanvasWorkbenchClipboardAction.Copy) {
                 var copied = await ProjectWorkbenchService.CopySubtreesAsync(capturedState.ProjectId, capturedState.RootNodeIds, destinationNodeId,

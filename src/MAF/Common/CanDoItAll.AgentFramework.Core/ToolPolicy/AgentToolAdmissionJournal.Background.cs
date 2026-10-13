@@ -77,6 +77,7 @@ public sealed partial class AgentToolAdmissionJournal {
         => RequireBackgroundSourceAsync(run, readOnly: false, cancellationToken);
 
     private async Task RequireBackgroundSourceAsync(ExecutionRunRecord run, bool readOnly, CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.source-authority");
         if (run.ToolAdmission?.Session.Reference.BackgroundSource is not { } source) {
             return;
         }

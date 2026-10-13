@@ -174,7 +174,7 @@ public partial class ProjectStructurePage
         try {
             if (remove) {
                 var removed = await ProjectWorkbenchService.UnlinkObjectsAsync(context.Surface.ProjectId, requested.SourceId, requested.TargetId, requested.Kind,
-                    mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission }, expectedLink: requested);
+                    mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(context.Surface) }, expectedLink: requested);
                 if (!removed) {
                     RecordAuthoringOutcome(opening, outcome);
                     return;
@@ -337,7 +337,7 @@ public partial class ProjectStructurePage
                 context.Surface.ProjectId,
                 targetNodes.Select(node => node.Id).ToArray(),
                 managedStorageDisposition,
-                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission });
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(context.Surface) });
             RetainDeletionOutcome(new(context, Result: deletion));
             deletionWarnings.AddRange(deletion.DeletionWarnings);
             deletedAny = deletion.DeletedNodeCount > 0;
@@ -687,7 +687,7 @@ public partial class ProjectStructurePage
         };
         try {
             var accepted = await ProjectWorkbenchService.ReparentObjectAsync(context.Surface.ProjectId, opening.Node.Id, target?.Id,
-                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission },
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(context.Surface) },
                 expectedNodes: target is null ? [opening.Node] : [opening.Node, target]);
             if (accepted is not null) {
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = accepted,

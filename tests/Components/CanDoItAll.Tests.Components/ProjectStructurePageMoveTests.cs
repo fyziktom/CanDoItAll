@@ -83,6 +83,7 @@ public sealed class ProjectStructurePageMoveTests
                 340,
                 260));
 
+        var originalSurface = await workbenchService.GetStructureAsync(projectId);
         saveCounter.Reset();
 
         var updatedNodeIds = await workbenchService.MoveObjectsAsync(
@@ -90,7 +91,7 @@ public sealed class ProjectStructurePageMoveTests
             [
                 new ProjectNodeMoveRequest(firstNode.Id, 720, 280),
                 new ProjectNodeMoveRequest(secondNode.Id, 860, 360)
-            ]);
+            ], expectedProjectAdmission: originalSurface.ExpectedProjectAdmission, expectedNodes: [firstNode, secondNode]);
 
         Assert.Equal(1, saveCounter.SaveChangesCount);
         Assert.Equal(2, updatedNodeIds.Count);

@@ -1017,6 +1017,8 @@ public sealed record ExecutionRunQuery(
         new Dictionary<string, string>(StringComparer.Ordinal);
 }
 
+public sealed record ExecutionRunAdmissionSnapshot(ExecutionRunRecord Run, ChatSessionRecord? ChatSession);
+
 public sealed record ExecutionRunDetail(
     ExecutionRunRecord Run,
     ChatSessionRecord? ChatSession,

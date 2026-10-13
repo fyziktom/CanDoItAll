@@ -9,6 +9,8 @@ public sealed class Maf122RetainedStatePolicyTests {
     [InlineData("1.20.0", true)]
     [InlineData("1.20.0+recorded-build", true)]
     [InlineData("1.22.0", true)]
+    [InlineData("1.24.0", false)]
+    [InlineData("1.17.0", false)]
     [InlineData("1.21.0", false)]
     [InlineData("1.23.0", false)]
     [InlineData("", false)]

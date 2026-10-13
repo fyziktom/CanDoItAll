@@ -275,7 +275,15 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                 update = ProjectStructureCanvasTaskCommitPolicy.ApplyEdit(commit.CurrentTask, update,
                     commit.ProposedExecution, commit.Pricing, commit.ProposedCostBasis) with {
                     ExpectedProjectAdmission = context.MutationOwner.ExpectedProjectAdmission,
-                    ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission
+                    ProcessMutationAdmission = context.MutationOwner.ProcessMutationAdmission,
+                    ExpectedNode = commit.CurrentTask with {
+                        Title = openedTask.Title,
+                        Subtitle = openedTask.Subtitle,
+                        Notes = openedTask.Notes,
+                        StartUtc = openedTask.StartUtc,
+                        EndUtc = openedTask.EndUtc,
+                        DurationSeconds = openedTask.DurationSeconds
+                    }
                 };
                 return await projectWorkbenchService.UpdateObjectIfMetadataAsync(context.ProjectId, commit.CurrentTask.Id, update,
                     metadata => ProjectStructureCanvasTaskCommitPolicy.ValidateCurrentMetadata(metadata, commit.CurrentState), token)

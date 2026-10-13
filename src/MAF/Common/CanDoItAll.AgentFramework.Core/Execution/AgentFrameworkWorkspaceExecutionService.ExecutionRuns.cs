@@ -1090,7 +1090,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var runs = executionState is not null
             ? executionState.ExecutionRuns.AsEnumerable()
             : TryGetExecutionRunStore() is { } executionRunStore
-                ? (await executionRunStore.ListExecutionRunsAsync(cancellationToken)).AsEnumerable()
+                ? (await executionRunStore.ListExecutionRunCandidatesAsync(query, cancellationToken)).AsEnumerable()
                 : (await store.LoadExecutionAsync(cancellationToken)).ExecutionRuns.AsEnumerable();
 
         if (query.ExecutionRunId.HasValue)

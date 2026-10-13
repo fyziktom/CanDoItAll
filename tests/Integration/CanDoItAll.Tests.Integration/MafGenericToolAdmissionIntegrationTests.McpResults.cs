@@ -9,6 +9,56 @@ using ModelContextProtocol.Protocol;
 namespace CanDoItAll.Tests.Integration.Runtime;
 
 public sealed partial class MafGenericToolAdmissionIntegrationTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Browser_MCP_status_and_canonical_evidence_survive_checkpoint_without_repeating_capture(bool isError) {
+        await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();
+        var effects = new List<string>();
+        using var client = new ScriptClient(complete: true);
+        var runtime = CreateRuntime(client, effects, unsupportedResult: true);
+        var native = AIFunctionFactory.Create(() => {
+            effects.Add("capture");
+            return new CallToolResult { IsError = isError, Content = [new TextContentBlock { Text = "native evidence" }] };
+        }, ToolContractCatalog.BrowserSnapshot);
+        var function = new BrowserMcpFunction(native, fixture.WorkspaceRoot, fixture.StorageScope, []);
+        runtime.Capabilities.Tools.Clear();
+        runtime.Capabilities.Tools.Add(function);
+        runtime.Capabilities.RuntimeToolMetadata.Add(new("browser-fixture", function.Name, AgentRuntimeToolOperationKind.Read, false) {
+            AuthorizeResultDisclosureAsync = (_, _) => ValueTask.FromResult<IAsyncDisposable?>(null)
+        });
+        var call = new FunctionCallContent("snapshot", function.Name, new Dictionary<string, object?>());
+        var request = AgentToolProtocolEnvelope.ComputeDigest("browser-status-checkpoint");
+        var journal = fixture.NewJournal();
+        await using (var lease = await journal.AcquireRunAsync(fixture.Session, default)) {
+            using var bound = lease.Bind();
+            var opened = await OpenAsync(fixture, journal, lease, runtime);
+            using var active = opened.Context.Bind();
+            await opened.Context.AdmitResponseAsync(request, AgentToolAdmissionJournalFixture.Envelope(), [call], default);
+            using var effectScope = AgentToolInvocationEffectScope.Begin();
+            var returned = await opened.Context.InvokeAsync(call, token => function.InvokeAsync(new(), token), effectScope, default);
+            AssertResult(returned);
+        }
+        var restarted = fixture.NewJournal(fixture.NewStore());
+        await using var replayLease = await restarted.AcquireRunAsync(fixture.Session, default);
+        using var replayBound = replayLease.Bind();
+        var replay = await OpenAsync(fixture, restarted, replayLease, runtime);
+        using var replayActive = replay.Context.Bind();
+        Assert.NotNull(await replay.Context.ReplayResponseAsync(request, default));
+        using var replayEffect = AgentToolInvocationEffectScope.Begin();
+        AssertResult(await replay.Context.InvokeAsync(call, _ => throw new InvalidOperationException("Capture must not repeat."), replayEffect, default));
+        Assert.Equal(["capture"], effects);
+
+        void AssertResult(object? returned) {
+            var result = Assert.IsType<BrowserMcpToolResult>(returned);
+            Assert.Equal(!isError, result.Succeeded);
+            Assert.Equal(isError, result.CanonicalResult.GetProperty("isError").GetBoolean());
+            Assert.Contains("native evidence", result.CanonicalResult.GetRawText());
+            Assert.Equal(!isError, MafRuntimeToolInvocationResultClassifier.Assess(function.Name,
+                ToolInvocationClassification.Read, result).Succeeded);
+        }
+    }
+
     [Fact]
     public async Task Native_MCP_result_survives_journal_restart_without_repeating_the_effect() {
         await using var fixture = await AgentToolAdmissionJournalFixture.CreateAsync();

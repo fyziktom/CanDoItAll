@@ -27,7 +27,7 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
         WriteReadCounts(scenario);
         foreach (var kind in Enum.GetValues<PayloadKind>()) {
             var reads = scenario.ReadsFor(kind);
-            Assert.Single(reads, read => read.Kind == FileSandboxWorkspaceJsonReadKind.Deserialization);
+            Assert.Single(reads, read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation);
             Assert.Empty(reads.Where(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText));
         }
 
@@ -172,7 +172,7 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
         foreach (var kind in Enum.GetValues<PayloadKind>()) {
             var reads = scenario.ReadsFor(kind);
             output.WriteLine(
-                $"{kind}: validation={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.Deserialization)}, comparison={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText)}");
+                $"{kind}: validation={reads.Count(read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation)}, comparison={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText)}");
         }
     }
 

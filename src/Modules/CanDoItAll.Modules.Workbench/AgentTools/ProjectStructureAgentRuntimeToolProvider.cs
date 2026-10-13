@@ -184,6 +184,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 }
                 metadata.Add(new(Descriptor.ProviderKey, toolName, AgentRuntimeToolOperationKind.Mutation,
                     requiresApprovalByDefault: true, ["project-structure", "assets"]) {
+                    ApprovalPolicy = AgentRuntimeToolApprovalPolicy.GovernedProcessAuthority,
                     PrepareAdmission = arguments => assetCodec.Prepare(toolName, arguments),
                     AuthorizeAdmissionAsync = (payload, token) => assets.AuthorizeProposalAsync(context, payload, token),
                     AuthorizeResultDisclosureAsync = (disclosure, token) => assets.AuthorizeResultDisclosureAsync(context, disclosure, token)
@@ -346,7 +347,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure. The response includes exact nodeCount and linkCount values; use them instead of manually counting arrays. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated direct execution (runtime:open), optional terminal presentation (runtime:terminal), explicit elevation (runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). An available action proves only that its typed launch capability resolved on the current host; runtime output or process evidence is still required to prove that the application started."),
+                    "Reads a filtered project structure. For editing, read CanonicalCurrent and retain each node expectedState unchanged. For delete, copy, reparent, recompose, or transfer also set includeMutationGraph true and pass the returned expectedGraph unchanged with the operation. The response includes exact nodeCount and linkCount values; use them instead of manually counting arrays. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated direct execution (runtime:open), optional terminal presentation (runtime:terminal), explicit elevation (runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). An available action proves only that its typed launch capability resolved on the current host; runtime output or process evidence is still required to prove that the application started."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",
@@ -374,11 +375,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing non-task project-structure node, including optional title, descriptive notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Asset content cannot be changed through notes or this generic update path; use project_structure_asset_create_revision to store changed File, ImageAsset, VideoAsset, or Mermaid content. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, or available launch capability as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker."),
+                    "Pass the unchanged expectedState returned by project_structure_read for this node; a stale or missing state rejects the edit without changes. Updates an existing non-task project-structure node, including optional title, descriptive notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Asset content cannot be changed through notes or this generic update path; use project_structure_asset_create_revision to store changed File, ImageAsset, VideoAsset, or Mermaid content. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, or available launch capability as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
-                    "Updates only the objectType/objectSubtype classification for an existing non-task project-structure node while preserving its title, notes, timing, metadata, and duration. Canonical WorkItem/task nodes and reclassification into or out of that type must use the typed task path."),
+                    "Pass the unchanged expectedState returned by project_structure_read for this node; a stale or missing state rejects the edit without changes. Updates only the objectType/objectSubtype classification for an existing non-task project-structure node while preserving its title, notes, timing, metadata, and duration. Canonical WorkItem/task nodes and reclassification into or out of that type must use the typed task path."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeMetadataInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeMetadataUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_metadata_update",
@@ -1523,7 +1524,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeStatusesAsync(
                         projectId,
-                        new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken),
+                        new ProjectStructureStatusBatchInput([nodeId], request.Status, request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                         BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);
@@ -1582,7 +1583,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodeProgressAsync(
                         projectId,
-                        new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken),
+                        new ProjectStructureProgressBatchInput([nodeId], request.ProgressMode, request.ProgressPercent, request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                         BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);
@@ -1696,7 +1697,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     await EnsureTaskFreeTargetsAsync(accessState, projectId, [nodeId], includeDescendants: false, cancellationToken);
                     var count = await agentService.UpdateNodePriorityAsync(
                         projectId,
-                        new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken),
+                        new ProjectStructurePriorityBatchInput([nodeId], request.Priority, request.LeaseToken) { ExpectedStates = request.ExpectedState is null ? null : [request.ExpectedState] },
                         BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                         cancellationToken);
                     return new OperationCount(count);

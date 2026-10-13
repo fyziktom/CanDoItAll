@@ -413,13 +413,10 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return jsonStore.ReadJsonAsync<SandboxWorkspaceExecutionState>(layout.LegacyExecutionPath, cancellationToken);
     }
 
-    public async Task<ExecutionRunDetail?> LoadRunDetailAsync(
-        Guid executionRunId,
-        CancellationToken cancellationToken)
-    {
+    public async Task<ExecutionRunAdmissionSnapshot?> LoadRunAdmissionSnapshotAsync(
+        Guid executionRunId, CancellationToken cancellationToken) {
         var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(layout.RunPath(executionRunId), cancellationToken);
-        if (run is null)
-        {
+        if (run is null) {
             return null;
         }
 
@@ -427,9 +424,19 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ? await jsonStore.ReadJsonAsync<ChatSessionRecord>(layout.SessionPath(run.ChatSessionId.Value), cancellationToken)
             : null;
 
+        return new(run, session);
+    }
+
+    public async Task<ExecutionRunDetail?> LoadRunDetailAsync(
+        Guid executionRunId, CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.load");
+        var snapshot = await LoadRunAdmissionSnapshotAsync(executionRunId, cancellationToken);
+        if (snapshot is null) {
+            return null;
+        }
         return new ExecutionRunDetail(
-            Run: run,
-            ChatSession: session,
+            Run: snapshot.Run,
+            ChatSession: snapshot.ChatSession,
             ExecutionLog: (await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionLogEntry>(layout.RunLogsRoot(executionRunId), cancellationToken))
                 .OrderByDescending(item => item.CreatedAtUtc)
                 .ToList(),
@@ -1027,6 +1034,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         ExecutionRunDetail targetDetail,
         CancellationToken cancellationToken)
     {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.prepare");
         ArgumentNullException.ThrowIfNull(previousDetail);
         ArgumentNullException.ThrowIfNull(targetDetail);
 

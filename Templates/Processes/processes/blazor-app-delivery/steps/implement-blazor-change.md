@@ -21,3 +21,5 @@ For static WebAssembly/PWA delivery, produce publishable static output and use t
 ## Evidence
 
 Once required implementation checks pass, write the current-run implementation artifacts and return the structured handoff promptly. Include changed files, commands and results, startup receipt and URL, publish output when required, assumptions, and acceptance-criteria mapping. Mark browser validation as assigned to the downstream validation step; do not claim it passed or block the implementation handoff because that later proof is pending.
+
+Include the exact runnable app `.csproj`, its directory, and the current `Properties/launchSettings.json` Project profile and loopback URL (when present) in the implementation handoff. The result-writing step will register a persistent typed Environment runtime node for this app under the launch-selected parent. Keep this launch target distinct from test projects, solution files and disposable published-output QA hosts; do not create the runtime node in implementation.

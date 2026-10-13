@@ -106,6 +106,55 @@ public sealed class AgentToolFailureEffectEvidenceTests
     }
 
     [Fact]
+    public void Scaffold_correction_requires_the_same_complete_target_and_template_identity() {
+        static AIFunctionArguments Arguments(string parent = "apps", string name = "Game", string template = "sln")
+            => new() { ["parentDirectory"] = parent, ["name"] = name, ["template"] = template };
+        static string Key(AIFunctionArguments args) => MafToolInvocationCorrelationKey.Create(ToolContractCatalog.WorkspaceDotNetNew, args);
+        var rejected = Arguments();
+        rejected["targetFramework"] = "net10.0";
+        var correctedKey = Key(Arguments());
+
+        Assert.NotEmpty(correctedKey);
+        Assert.Equal(Key(rejected), correctedKey);
+        Assert.NotEqual(Key(Arguments(parent: "other")), correctedKey);
+        Assert.NotEqual(Key(Arguments(name: "Other")), correctedKey);
+        Assert.NotEqual(Key(Arguments(template: "blazorwasm")), correctedKey);
+        Assert.NotEqual(Key(Arguments(parent: "Apps")), correctedKey);
+        foreach (var identity in new[] { "parentDirectory", "name", "template" }) {
+            var missing = Arguments();
+            missing.Remove(identity);
+            Assert.Empty(Key(missing));
+        }
+    }
+
+    [Theory]
+    [InlineData(AgentToolEffectState.None, true, true)]
+    [InlineData(AgentToolEffectState.NotCommitted, true, true)]
+    [InlineData(AgentToolEffectState.Unknown, true, false)]
+    [InlineData(AgentToolEffectState.Committed, true, false)]
+    [InlineData(AgentToolEffectState.None, false, false)]
+    [InlineData(AgentToolEffectState.NotCommitted, false, false)]
+    public void Scaffold_retry_resolves_only_proven_no_effect_for_the_same_target(
+        AgentToolEffectState effect, bool sameTarget, bool completed) {
+        static string Key(string name, string? framework) => MafToolInvocationCorrelationKey.Create(
+            ToolContractCatalog.WorkspaceDotNetNew,
+            new AIFunctionArguments { ["parentDirectory"] = "apps", ["name"] = name, ["template"] = "sln", ["targetFramework"] = framework });
+        var now = DateTimeOffset.UtcNow;
+        var failed = new AgentToolInvocationTrace(ToolContractCatalog.WorkspaceDotNetNew, ToolInvocationClassification.Mutation,
+            1, now, now, false, "Invalid framework") {
+            Outcome = AgentToolInvocationOutcome.Failed, EffectState = effect, OperationCorrelationKey = Key("Game", "net10.0")
+        };
+        var corrected = failed with {
+            Sequence = 2, Succeeded = true, Outcome = AgentToolInvocationOutcome.Succeeded, EffectState = AgentToolEffectState.Committed,
+            OperationCorrelationKey = Key(sameTarget ? "Game" : "Other", null), FailureMessage = string.Empty
+        };
+
+        var assessment = AgentToolCompletionAssessment.Create([failed, corrected], 0, portableOutputValid: true);
+
+        Assert.Equal(completed ? ExecutionState.Completed : ExecutionState.Failed, assessment.State);
+    }
+
+    [Fact]
     public void Workspace_file_tools_correlate_by_their_target_paths()
     {
         var firstWrite = new AIFunctionArguments { ["path"] = "notes/summary.md", ["content"] = "draft" };

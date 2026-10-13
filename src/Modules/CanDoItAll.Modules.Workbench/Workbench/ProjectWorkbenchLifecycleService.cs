@@ -18,6 +18,14 @@ public sealed class ProjectWorkbenchLifecycleService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.ExpectedState is { } originalState) {
+            request = request with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+                originalState, projectId, nodeKey, request.ExpectedProjectAdmission) };
+        }
+        if (request.ExpectedProjectAdmission is null || (request.ExpectedState is null && request.ExpectedNode is null)) {
+            throw new ProjectStructureEditConflictException();
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -29,7 +37,7 @@ public sealed class ProjectWorkbenchLifecycleService(
             .FirstOrDefaultAsync(item => item.ProjectId == projectId && item.NodeKey == nodeKey && !item.IsSystemManaged, cancellationToken);
         if (node is null)
         {
-            return null;
+            throw new ProjectStructureEditConflictException();
         }
         if (request.ExpectedObjectType is { } expectedType &&
             (node.ObjectType != expectedType || !string.Equals(node.ObjectSubtype, request.ExpectedObjectSubtype, StringComparison.Ordinal))) {
@@ -37,6 +45,12 @@ public sealed class ProjectWorkbenchLifecycleService(
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
+        ProjectStructureNodeStateGuard.EnsureCurrent(request.ExpectedState, node);
+        if (request.ExpectedNode is { } expectedNode &&
+            ProjectStructureNodeStateGuard.Fingerprint(expectedNode) !=
+            ProjectStructureNodeStateGuard.Fingerprint(ProjectWorkbenchNodeMapper.MapStructureNode(node))) {
+            throw new ProjectStructureEditConflictException();
+        }
 
         var sourceDescriptor = ProjectNodeKindRegistry.ResolveDescriptor(node.ObjectType, node.ObjectSubtype);
         var targetDescriptor = ProjectNodeKindRegistry.ResolveDescriptor(request.TargetObjectType, request.TargetObjectSubtype);

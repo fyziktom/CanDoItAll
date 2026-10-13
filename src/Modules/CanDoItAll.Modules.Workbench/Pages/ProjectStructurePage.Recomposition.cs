@@ -31,7 +31,7 @@ public partial class ProjectStructurePage {
         };
         try {
             var result = await ProjectWorkbenchService.RecomposeSubtreeAsync(context.Surface.ProjectId, opening.Node.Id,
-                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission },
+                mutationOwner: CreateProjectStructureUiAgentContext(context.Surface.ProjectId) with { ExpectedProjectAdmission = context.Admission, ExpectedGraph = ProjectStructureGraphStateGuard.Capture(context.Surface) },
                 expectedNodes: [opening.Node]);
             if (result is not null) {
                 outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Recomposition = result,

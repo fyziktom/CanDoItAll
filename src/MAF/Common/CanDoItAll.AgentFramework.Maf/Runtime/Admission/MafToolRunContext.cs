@@ -168,6 +168,10 @@ internal sealed class MafToolRunContext {
             : AgentToolProposalRecovery.ReconcileBeforeRetry;
         var original = new AgentToolPreparedPayload(name, 1, MafToolProtocolCodec.Digest(new { Name = name, Arguments = element }), json, effect,
             recovery);
+        if (tools.TryGetValue(name, out var declared) && declared is AIFunction function &&
+            name.StartsWith("browser_", StringComparison.OrdinalIgnoreCase)) {
+            original = MafToolInputSchema.Bind(original, function.JsonSchema);
+        }
         var preparation = contextToolRegistrations.SingleOrDefault(registration =>
             registration.ToolNames.Contains(name, StringComparer.Ordinal))?.SourcePreparation;
         if (preparation is null && persistedSource is not null) {
@@ -546,6 +550,7 @@ internal sealed class MafToolRunContext {
             string when failure is not null => ResultKind.PreDispatchDeniedText,
             AgentToolFailureResult when failure is not null => ResultKind.PreDispatchDeniedJson,
             AgentToolFailureResult => ResultKind.TypedFailureJson,
+            BrowserMcpToolResult => ResultKind.BrowserMcp,
             null => ResultKind.Null,
             string => ResultKind.Text,
             AIContent => ResultKind.Content,
@@ -553,6 +558,8 @@ internal sealed class MafToolRunContext {
             _ => ResultKind.Json
         };
         var element = kind switch {
+            ResultKind.BrowserMcp => JsonSerializer.SerializeToElement(new BrowserMcpCheckpoint(
+                (BrowserMcpToolResult)value!, ((BrowserMcpToolResult)value!).CanonicalResult), MafToolProtocolCodec.SerializationOptions),
             ResultKind.Content => JsonSerializer.SerializeToElement((AIContent)value!, MafToolProtocolCodec.SerializationOptions),
             ResultKind.Contents => JsonSerializer.SerializeToElement(((IEnumerable<AIContent>)value!).ToArray(), MafToolProtocolCodec.SerializationOptions),
             _ => JsonSerializer.SerializeToElement(value, MafToolProtocolCodec.SerializationOptions)
@@ -597,6 +604,7 @@ internal sealed class MafToolRunContext {
             AgentToolInvocationEffectScope.RecordPreDispatchFailure(failure);
         }
         object? value = result.Kind switch {
+            ResultKind.BrowserMcp => RestoreBrowserMcp(result.Value),
             ResultKind.Null => null,
             ResultKind.Text or ResultKind.PreDispatchDeniedText => result.Value.GetString(),
             ResultKind.Content => result.Value.Deserialize<AIContent>(MafToolProtocolCodec.SerializationOptions),
@@ -612,6 +620,14 @@ internal sealed class MafToolRunContext {
         return value;
     }
 
+    private static BrowserMcpToolResult RestoreBrowserMcp(JsonElement value) {
+        var saved = value.Deserialize<BrowserMcpCheckpoint>(MafToolProtocolCodec.SerializationOptions)
+            ?? throw Denied("The saved browser MCP evidence is empty.");
+        return saved.Projection with { CanonicalResult = saved.CanonicalResult };
+    }
+
+    private sealed record BrowserMcpCheckpoint(BrowserMcpToolResult Projection, JsonElement CanonicalResult);
+
     private static void RequireHostFailure(AgentToolFailureResult hostFailure, AgentToolPreDispatchFailure captured) {
         if (hostFailure.Succeeded || hostFailure.EffectState != AgentToolEffectState.NotCommitted ||
                 hostFailure.ErrorCode != captured.FailureCode || hostFailure.Message != captured.SafeMessage ||
@@ -621,7 +637,7 @@ internal sealed class MafToolRunContext {
     }
 
     private static AgentToolAdmissionException Denied(string message) => new("tool-admission.runtime-denied", message);
-    private enum ResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson, CommittedOwnerResult }
+    private enum ResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson, CommittedOwnerResult, BrowserMcp }
     private sealed record ResultCheckpoint(ResultKind Kind, JsonElement Value) {
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public AgentToolPreDispatchFailure? PreDispatchFailure { get; init; }

@@ -38,8 +38,9 @@ internal sealed class DotNetWorkspaceCommandReceiptLifecycleFactExtractor : IWor
     }
 
     private static bool IsRuntimeLifecycleTool(string toolName)
-        => string.Equals(toolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase) ||
-           string.Equals(toolName, "workspace_dotnet_stop", StringComparison.OrdinalIgnoreCase);
+        => string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, ToolContractCatalog.WorkspaceStaticServe, StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(toolName, ToolContractCatalog.WorkspaceDotNetStop, StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<string> ExtractLoopbackUrls(string text)
     {

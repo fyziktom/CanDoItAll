@@ -1,0 +1,12 @@
+{
+  "mafVersion": "1.22.0.0",
+  "state": {
+    "conversationId": "fixture-provider-conversation",
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": []
+      }
+    }
+  },
+  "approvals": []
+}

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -1705,7 +1706,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                     expectation => expectation.Key.Contains("project-structure-result-writeback", StringComparison.Ordinal));
 
                 Assert.Contains("use that WorkItem as the direct parent", guidance, StringComparison.Ordinal);
-                Assert.Contains("never fall back to the project root", guidance, StringComparison.Ordinal);
+                Assert.Contains("never fall back to the project root", guidance, StringComparison.OrdinalIgnoreCase);
                 Assert.Contains("look for a result Note for the current process run", guidance, StringComparison.Ordinal);
                 Assert.Contains("project_structure_node_reparent", guidance, StringComparison.Ordinal);
                 Assert.Contains("project_structure_node_update", guidance, StringComparison.Ordinal);
@@ -1714,7 +1715,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 Assert.Contains("metadataJson `{}`", guidance, StringComparison.Ordinal);
                 Assert.Contains("Read back the final Note", guidance, StringComparison.Ordinal);
 
-                Assert.Contains("exactly one plain Note directly under the target WorkItem", step.Notes, StringComparison.Ordinal);
+                var parentContract = definitionKey == "blazor-app-delivery" ? "launch-selected WorkItem or delivery ProjectBlock" : "target WorkItem";
+                Assert.Contains($"exactly one plain Note directly under the {parentContract}", step.Notes, StringComparison.Ordinal);
                 Assert.Contains("never fall back to the project root", step.Notes, StringComparison.Ordinal);
                 Assert.Contains("Before creation, use project_structure_read", step.Notes, StringComparison.Ordinal);
                 Assert.Contains("never create a duplicate", step.Notes, StringComparison.Ordinal);
@@ -1723,11 +1725,73 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 Assert.Contains("exactly one", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
                 Assert.Contains("plain Note with no subtype", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
                 Assert.Contains("metadata {}", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
-                Assert.Contains("target WorkItem as its direct parent", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains($"{parentContract} as its direct parent", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
                 Assert.Contains("project_structure_node_reparent", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
                 Assert.Contains("project_structure_node_update", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
                 Assert.Contains("Project-root fallback and duplicate current-run Notes are invalid", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                if (definitionKey == "blazor-app-delivery") {
+                    Assert.Contains("objectType `Environment`", guidance, StringComparison.Ordinal);
+                    Assert.Contains("objectSubtype `dotnet-runtime`", guidance, StringComparison.Ordinal);
+                    Assert.Contains("Preserve user-edited launch settings", guidance, StringComparison.Ordinal);
+                    Assert.Contains("original current-read mutation expectations", guidance, StringComparison.Ordinal);
+                    Assert.Contains("direct-launch capability", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                    Assert.Contains("missing, duplicate or non-launchable runtime node is invalid", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                }
             }
+        }
+    }
+
+    [Fact]
+    public void Blazor_seeded_browser_tools_have_governed_runtime_classifications() {
+        using var catalog = JsonDocument.Parse(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Templates", "Capabilities", "mcps.json")));
+        var browser = Assert.Single(catalog.RootElement.GetProperty("capabilities").EnumerateArray(),
+            capability => capability.GetProperty("key").GetString() == "playwright-local-mcp");
+        foreach (var tool in browser.GetProperty("mcpTransport").GetProperty("allowedTools").EnumerateArray()) {
+            var name = tool.GetString();
+            Assert.True(ToolCapabilityRegistry.TryResolve(name, out var capability), $"Seeded browser tool '{name}' lacks a governed classification.");
+            Assert.Equal(ToolInvocationClassification.Validation, capability.Classification);
+            Assert.Contains(capability.OperationRequirements, requirement => requirement.AnyOf.Contains(ProcessOperationContractNames.CaptureRuntimeProof));
+        }
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserClose, out var close));
+        Assert.Equal(ToolCapabilityBrowserProofRole.None, close.BrowserProofRole);
+        Assert.False(ToolContractCatalog.IsBrowserEvidenceToolName(ToolContractCatalog.BrowserClose));
+        Assert.False(ToolContractCatalog.IsRepresentativeBrowserInteractionToolName(ToolContractCatalog.BrowserClose));
+    }
+
+    [Fact]
+    public void Blazor_delivery_distinguishes_fresh_validation_from_required_deployment_caching() {
+        var processRoot = Path.Combine(FindRepositoryRoot(), "Templates", "Processes");
+        var definition = new ProcessTemplatePackLoader(processRoot).LoadDefinition("blazor-app-delivery");
+        foreach (var key in new[] { "resolve-blazor-contract", "validate-blazor-runtime", "revalidate-blazor-repair", "repair-blazor-findings" }) {
+            var step = Assert.Single(definition.Steps, item => item.Key == key);
+            var document = File.ReadAllText(Path.Combine(processRoot, "processes", definition.Key, "steps", $"{key}.md"));
+            foreach (var guidance in new[] { step.Notes, document }) {
+                Assert.Contains("not by itself a product defect", guidance, StringComparison.Ordinal);
+                Assert.Contains("only when explicitly required by the project source", guidance, StringComparison.Ordinal);
+                Assert.Contains("Do not promote a recommended production caching optimization", guidance, StringComparison.Ordinal);
+                Assert.Contains("required offline/update behavior and cleanup", guidance, StringComparison.Ordinal);
+                Assert.Contains("Blocked without claiming that deployment requirement passed", guidance, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
+    public void Blazor_delivery_keeps_browser_proof_with_the_validation_owner() {
+        var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
+        var definition = loader.LoadDefinition("blazor-app-delivery");
+        foreach (var key in new[] { "implement-blazor-change", "repair-blazor-findings" }) {
+            var step = Assert.Single(definition.Steps, item => item.Key == key);
+            Assert.DoesNotContain(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
+            Assert.Contains(ProcessOperationContractNames.RunValidation, step.AllowedOperations);
+            Assert.Contains(ProcessOperationContractNames.LaunchRuntime, step.AllowedOperations);
+        }
+        foreach (var key in new[] { "validate-blazor-runtime", "revalidate-blazor-repair" }) {
+            var step = Assert.Single(definition.Steps, item => item.Key == key);
+            Assert.Contains(ProcessOperationContractNames.CaptureRuntimeProof, step.AllowedOperations);
+            Assert.DoesNotContain(ProcessOperationContractNames.MutateProductTarget, step.AllowedOperations);
+            var guidance = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Templates", "Processes", "processes", "blazor-app-delivery", "steps", $"{key}.md"));
+            Assert.Contains("native `browser_click` and `browser_press_key`", guidance, StringComparison.Ordinal);
+            Assert.Contains("Do not replace interaction proof", guidance, StringComparison.Ordinal);
         }
     }
 
