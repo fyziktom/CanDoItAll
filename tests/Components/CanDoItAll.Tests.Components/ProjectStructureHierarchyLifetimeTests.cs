@@ -116,8 +116,12 @@ public sealed class ProjectStructureHierarchyLifetimeTests {
         var neighbor = await CreateNoteAsync(workbench, project, "Neighbor");
         var page = Render(harness, project);
         await ContextActionAsync(page, first.Id, "note:convert-to-block");
+        var competingOrigin = await workbench.GetStructureAsync(project);
         var changed = await workbench.ReclassifyObjectAsync(project, first.Id,
-            new(ProjectObjectType.ProjectBlock, "decision", "External change", "", "Externally retained notes"));
+            new(ProjectObjectType.ProjectBlock, "decision", "External change", "", "Externally retained notes") {
+                ExpectedState = ProjectStructureNodeStateGuard.Capture(
+                    Assert.Single(competingOrigin.Nodes, node => node.Id == first.Id), competingOrigin.ExpectedProjectAdmission!)
+            });
         Assert.NotNull(changed);
         await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.ExecuteBlockMutation.InvokeAsync());
         var stored = await workbench.GetStructureAsync(project);

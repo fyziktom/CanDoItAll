@@ -152,6 +152,7 @@ public sealed class CrmHrLiveAgentToolUiSmokeTests {
             var executionStream = chat.GetByTestId("chat-execution-stream");
             await executionStream.WaitForAsync(new() { Timeout = 60_000 });
             var invocationText = $"Invoking tool '{CrmPlanningToolPolicy.Search}'";
+            await Assertions.Expect(chat.GetByTestId("chat-send-button")).ToBeEnabledAsync(new() { Timeout = 60_000 });
             var expand = chat.GetByTestId("chat-execution-summary").Or(chat.GetByTestId("chat-execution-history"));
             await Assertions.Expect(expand).ToHaveCountAsync(1, new() { Timeout = 30_000 });
             await expand.ClickAsync();

@@ -74,7 +74,11 @@ public sealed class ProjectStructureTransferLifetimeTests {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
             Assert.NotNull(creation);
             if (completion == Completion.Compensated) {
-                Assert.Equal(1, await workbench.DeleteObjectAsync(source, child.Id));
+                var deleteOrigin = await workbench.GetStructureAsync(source);
+                Assert.Equal(1, await workbench.DeleteObjectAsync(source, child.Id, mutationOwner:
+                    new ProjectStructureAgentContext("test", "Test", "", "", "", "") {
+                        ExpectedGraph = ProjectStructureGraphStateGuard.Capture(deleteOrigin)
+                    }));
             }
             await page.InvokeAsync(() => page.FindComponent<StructureStructuralDialogs>().Instance.CloseSubprojectTransfer.InvokeAsync());
             await OpenAsync(page, next.Id);

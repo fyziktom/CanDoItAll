@@ -990,7 +990,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(initialSurface.Nodes, node => string.Equals(node.Id, definitionNodeId, StringComparison.Ordinal));
         Assert.Contains(initialSurface.Nodes, node => string.Equals(node.Id, runNodeId, StringComparison.Ordinal));
 
-        var deletedCount = await workbench.DeleteObjectAsync(projectId, definitionNodeId);
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, definitionNodeId,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(1, deletedCount);
         var refreshedSurface = await workbench.GetStructureAsync(projectId);
@@ -2769,7 +2770,8 @@ public sealed class ProjectStructureAgentIntegrationTests
                 null,
                 "task"));
 
-        await workbench.UpdateObjectPriorityAsync(projectId, [child.Id], 1);
+        await workbench.UpdateObjectPriorityAsync(projectId, [child.Id], 1,
+            expectedStates: [await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, child.Id)]);
 
         var checklist = await checklistService.GetChecklistAsync(projectId, new ProjectStructureChecklistRequest(IncludePaused: true));
         var grandparentItem = Assert.Single(checklist.Items, item => item.NodeId == grandparent.Id);
@@ -2782,7 +2784,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(childItem.Prerequisites, prerequisite => prerequisite.NodeId == parent.Id && prerequisite.Reason == "parent");
         Assert.Contains(childItem.Prerequisites, prerequisite => prerequisite.NodeId == grandparent.Id && prerequisite.Reason == "parent");
 
-        await workbench.UpdateObjectMarkerAsync(projectId, [parent.Id], "pause", "warn", "Paused");
+        await workbench.UpdateObjectMarkerAsync(projectId, [parent.Id], "pause", "warn", "Paused",
+            expectedStates: [await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, parent.Id)]);
 
         var pausedChecklist = await checklistService.GetChecklistAsync(projectId, new ProjectStructureChecklistRequest(IncludePaused: true));
         var pausedGrandparent = Assert.Single(pausedChecklist.Items, item => item.NodeId == grandparent.Id);
@@ -2847,7 +2850,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal(new DateTimeOffset(2026, 4, 3, 10, 0, 0, TimeSpan.Zero), taskItem.EndUtc);
         Assert.Contains(taskItem.Prerequisites, prerequisite => prerequisite.NodeId == note.Id && prerequisite.Reason == "depends-on" && !prerequisite.IsFinished);
 
-        await workbench.UpdateObjectProgressAsync(projectId, [note.Id], "complete", 100);
+        await workbench.UpdateObjectProgressAsync(projectId, [note.Id], "complete", 100,
+            expectedStates: [await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, note.Id)]);
 
         var afterCompletion = await agentService.GetDependenciesAsync(
             projectId,
@@ -2925,7 +2929,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             new ProjectStructureNodesToSubprojectInput(
                 "Extracted endpoint work",
                 [prerequisiteTask.Id, dependentTask.Id],
-                IncludeDescendants: true),
+                IncludeDescendants: true) { ExpectedGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId) },
             DefaultAgent);
 
         Assert.Equal("Extracted endpoint work", result.TargetProjectName);
@@ -2988,13 +2992,14 @@ public sealed class ProjectStructureAgentIntegrationTests
             });
         Assert.True(initialTargetCreate.IsSuccess);
 
+        var originalGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId);
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             agentService.MoveNodesToNewSubprojectAsync(
                 sourceProjectId,
                 reservedTargetProjectId,
                 new ProjectStructureNodesToSubprojectInput(
                     "Rejected duplicate child",
-                    [sourceNote.Id]),
+                    [sourceNote.Id]) { ExpectedGraph = originalGraph },
                 DefaultAgent));
 
         Assert.Equal(400, exception.StatusCode);
@@ -3067,7 +3072,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             new ProjectStructureNodesToSubprojectInput(
                 "Task only subproject",
                 [selectedTask.Id],
-                IncludeDescendants: false),
+                IncludeDescendants: false) { ExpectedGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId) },
             DefaultAgent);
 
         Assert.Equal(1, result.MovedNodeCount);
@@ -3163,7 +3168,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             new ProjectStructureNodesToSubprojectInput(
                 "Extracted planning assets",
                 [group.Id],
-                IncludeDescendants: true),
+                IncludeDescendants: true) { ExpectedGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId) },
             DefaultAgent);
         var expectedMovedNodeIds = assets
             .Select(asset => asset.Node.Id)
@@ -3259,7 +3264,8 @@ public sealed class ProjectStructureAgentIntegrationTests
             sourceProjectId,
             [sourceGroup.Id],
             targetProjectId,
-            includeDescendants: true);
+            includeDescendants: true,
+            mutationOwner: await ProjectStructureTestOrigin.ReadTransferOwnerAsync(workbench, sourceProjectId, targetProjectId));
         var transfer = Assert.IsType<ProjectStructureSubprojectTransferResult>(result);
         var expectedNodeIds = new[] { sourceGroup.Id, sourceChild.Id }
             .OrderBy(nodeId => nodeId, StringComparer.Ordinal)
@@ -3395,7 +3401,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         var result = await agentService.MoveDescendantsToProjectAsync(
             sourceProjectId,
             transferScope.Id,
-            new ProjectStructureSubtreeTransferInput(targetProjectId),
+            new ProjectStructureSubtreeTransferInput(targetProjectId) {
+                ExpectedGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId)
+            },
             DefaultAgent);
 
         Assert.Equal(targetProjectId, result.TargetProjectId);
@@ -3456,13 +3464,14 @@ public sealed class ProjectStructureAgentIntegrationTests
             node.Title == "Projected phase");
         var reservedTargetProjectId = Guid.NewGuid();
 
+        var originalGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId);
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             agentService.MoveNodesToNewSubprojectAsync(
                 sourceProjectId,
                 reservedTargetProjectId,
                 new ProjectStructureNodesToSubprojectInput(
                     "Must be compensated",
-                    [projectedPhaseNode.Id]),
+                    [projectedPhaseNode.Id]) { ExpectedGraph = originalGraph },
                 DefaultAgent));
 
         Assert.Equal("SelectedNodesNotFound", exception.ErrorCode);
@@ -3522,6 +3531,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 string.Empty,
                 sourceGroup.Id));
 
+        var originalGraph = await ProjectStructureTestOrigin.ReadGraphAsync(workbench, sourceProjectId);
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             agentService.MoveNodesToNewSubprojectAsync(
                 sourceProjectId,
@@ -3529,7 +3539,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 new ProjectStructureNodesToSubprojectInput(
                     "Retained partial-commit child",
                     [sourceGroup.Id],
-                    IncludeDescendants: true),
+                    IncludeDescendants: true) { ExpectedGraph = originalGraph },
                 DefaultAgent));
 
         Assert.Equal(409, exception.StatusCode);
@@ -3601,7 +3611,9 @@ public sealed class ProjectStructureAgentIntegrationTests
                 "Promoted into a typed feature block.",
                 ObjectType: ProjectObjectType.ProjectBlock,
                 ObjectSubtype: "feature",
-                LeaseToken: lease.LeaseToken),
+                LeaseToken: lease.LeaseToken) {
+                ExpectedState = await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, placeholder.Id)
+            },
             DefaultAgent);
 
         var surface = await workbench.GetStructureAsync(projectId);
@@ -3648,7 +3660,9 @@ public sealed class ProjectStructureAgentIntegrationTests
 
         await agentService.MoveNodeAsync(
             projectId,
-            new ProjectStructureNodeMoveInput(node.Id, 980, 540, lease.LeaseToken),
+            new ProjectStructureNodeMoveInput(node.Id, 980, 540, lease.LeaseToken) {
+                ExpectedState = await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, node.Id)
+            },
             DefaultAgent);
 
         var surface = await workbench.GetStructureAsync(projectId);
@@ -4274,7 +4288,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             agentService.UpdateNodeMetadataAsync(
                 projectId,
                 created.Id,
-                new ProjectStructureNodeMetadataInput(CreateDotNetRuntimeMetadata(invalidSolutionRoot)),
+                new ProjectStructureNodeMetadataInput(CreateDotNetRuntimeMetadata(invalidSolutionRoot)) { ExpectedState = created.ExpectedState },
                 DefaultAgent));
 
         Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
@@ -4317,7 +4331,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             agentService.UpdateNodeTypeAsync(
                 projectId,
                 created.Id,
-                new ProjectStructureNodeTypeInput(ProjectObjectType.Script, "powershell"),
+                new ProjectStructureNodeTypeInput(ProjectObjectType.Script, "powershell") { ExpectedState = created.ExpectedState },
                 DefaultAgent));
 
         Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
@@ -4673,7 +4687,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 new ProjectStructureNodeMetadataInput(
                     CreateScriptRuntimeMetadata(
                         "dotnet watch",
-                        "--project C:\\unverified\\calculator-e2e-test run")),
+                        "--project C:\\unverified\\calculator-e2e-test run")) { ExpectedState = created.ExpectedState },
                 DefaultAgent));
 
         Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
@@ -4729,7 +4743,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 "dotnet-watch",
                 StartUtc: startUtc,
                 MetadataJson: CreateDotNetRuntimeMetadata(projectPath),
-                DurationSeconds: 90),
+                DurationSeconds: 90) { ExpectedState = created.ExpectedState },
             DefaultAgent);
 
         Assert.Equal(ProjectObjectType.Environment, updated.ObjectType);
@@ -4798,6 +4812,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 ObjectSubtype: "powershell",
                 MetadataJson: originalMetadata));
 
+        var originalState = await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, created.Id);
         var exception = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
             workbench.UpdateObjectAsync(
                 projectId,
@@ -4810,7 +4825,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                     created.EndUtc,
                     CreateScriptRuntimeMetadata(
                         "pwsh",
-                        "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\""))));
+                        "-NoProfile -Command \"dotnet watch --project Calculator.csproj run\"")) { ExpectedState = originalState }));
 
         Assert.Equal("InvalidRuntimeMetadata", exception.ErrorCode);
         Assert.Contains("typed Environment node", exception.Message, StringComparison.Ordinal);
@@ -4875,7 +4890,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                     created.ObjectSubtype,
                     created.StartUtc,
                     created.EndUtc,
-                    externalMetadata),
+                    externalMetadata) { ExpectedState = created.ExpectedState },
                 DefaultAgent));
         Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, updateException.ErrorCode);
 
@@ -4883,7 +4898,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             agentService.UpdateNodeMetadataAsync(
                 projectId,
                 created.Id,
-                new ProjectStructureNodeMetadataInput(externalMetadata),
+                new ProjectStructureNodeMetadataInput(externalMetadata) { ExpectedState = created.ExpectedState },
                 DefaultAgent));
         Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, metadataException.ErrorCode);
 

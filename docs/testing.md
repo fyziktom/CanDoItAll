@@ -34,8 +34,11 @@ CI records `server_version_num` before its database lanes.
 For local runs reuse a suitable explicitly isolated PostgreSQL 18 test server, or provision
 one temporary fixture for the development session if none exists. Reuse it across related
 lanes through the existing database leases. Set the connection variable privately for the
-test process. The role needs database-creation
-privileges. Record `show server_version_num` and the sanitized endpoint in the test report.
+test process. The role needs database-creation privileges and permission to terminate
+connections during lease cleanup. On an isolated PostgreSQL 18 fixture, grant
+`pg_signal_backend` and `pg_signal_autovacuum_worker` to a non-superuser test role so
+`DROP DATABASE ... WITH (FORCE)` can also stop background workers. Record
+`show server_version_num` and the sanitized endpoint in the test report.
 Do not print the password-bearing connection string. An ignored `.env` can still override
 a new Compose image default; follow the [migration runbook](../tools/dev/Migrate-PostgreSql16To18.md)
 before changing any retained cluster.
@@ -605,6 +608,25 @@ triggered one final broad Stable run. Its custom configurations are historical p
 New runs reuse Debug/Release outputs and serialize conflicting builds under the current
 development policy; preserve the exact Stable project set.
 Independent rendering tests do not replace that scope decision or portability enforcement.
+
+## Native Windows file actions
+
+`ProjectStructureNativeLocalActionsTests` requires interactive Windows and the isolated
+PostgreSQL fixture. Compile the reviewed
+[native file-open probe](../tests/Integration/CanDoItAll.Tests.Integration/Fixtures/NativeFileOpenProbe.cs.fixture)
+as a standalone .NET 10 `WinExe` with implicit usings enabled, using the standard
+`Release` output. Record ownership of its temporary project and outputs before creation.
+Set `CANDOITALL_FILE_OPEN_PROBE` to the built executable and
+`CANDOITALL_FILE_OPEN_PROBE_RECEIPT` to a new, absolute receipt path in the owned proof
+directory, in the calling test process only. The test sets the probe's permitted input
+root to its private application directory.
+
+The probe reads the one governed file and records its path, byte count, SHA-256 and
+process ID. The test verifies fresh download leases, exact-file native launch and denial
+after storage capability loss. Discover and run the exact
+`FullyQualifiedName~ProjectStructureNativeLocalActionsTests` filter. Inspect any existing
+receipt before another launch; after the probe exits, retain the small receipts and clean
+up its owned project and build outputs.
 
 ## PostgreSQL 18 migration and installer proof
 
@@ -1358,6 +1380,46 @@ partial snapshot, run the resumable command without rebuild/migration flags unle
 independently required, and verify canonical execution/observation payloads are unchanged.
 Then compare real Agent and SimpleChat aggregate totals with all three native dialogs,
 retaining the accepted workload and UTC interval and the independent dialog lifetimes.
+
+The shared-provider consumer fixture exposes `initialize-usage-index --role client-a`
+through its role-bound orchestrator. The AC1 Runtime/Usage browser case runs this explicit
+maintenance step after creating its canonical usage records and before opening Overview.
+It uses the active profile's workspace root and organization scope, resumes incomplete
+indexing, and requests neither migration nor rebuild. The native dialog assertions remain
+required; an empty or partial view is not accepted as successful usage proof.
+
+`WorkflowStructureDeliveryPersistenceTests.Automatic_asset_delivery_does_not_take_dispatch_from_an_active_workflow`
+pauses native asset preparation after its transaction commits and before storage dispatch.
+Automatic delivery must leave uncommitted outputs with a running workflow, while completed
+and failed runs remain recoverable. An existing native receipt can still be acknowledged.
+Run this regression with the native `SchedulerDeliveryBrowserTests` journey; a storage
+receipt or a test-only replay does not prove that the scheduled workflow itself completed.
+
+Browser fixtures that seed persisted providers must set their typed connector key as well
+as their provider kind. Incomplete provider records poison subsequent runtime-snapshot
+initialization in a reused fixture. Evidence tests must capture their own screenshots and
+use valid file payloads; historical screenshots are not prerequisites for an independent run.
+After choosing New, wait for the replacement editor before filling it. Storage upload
+evidence must verify the saved catalog's host binding and health through
+`IStorageConnectionTestService`, then refresh the catalog and reselect the saved target. The wizard tests its draft;
+that unbound filesystem input correctly reports Unavailable and must not acquire a host
+binding implicitly.
+
+Native PDF preview evidence uses the full Chromium channel (`Channel = "chromium"`)
+with headless operation. Install Chromium without `--only-shell`. Assert the PDF surface
+is visible and the browser fallback is absent before capture; the outer file interaction's
+loaded state alone does not prove that the browser rendered its PDF. The storage artifact
+test waits for the fixture PDF's colored marker within the viewer's bounds in an uncropped
+page screenshot. Cropped element captures can omit the native plugin's painted surface.
+This checks painted content without depending on JavaScript access to plugin frames. See the
+[Playwright headless migration guidance](https://github.com/microsoft/playwright/issues/33566).
+
+The live chat activity stream can report completion before its host reloads the saved
+workspace. Before opening the execution log after a completed turn, wait for the chat's
+Send control to become enabled; the reload advances the selection generation and cancels
+dialogs from the previous generation. Approval journeys likewise wait for the activity's
+`Approval required` phase and then the host's approval controls, each within its bounded
+deadline. A runtime event alone does not prove that the interactive workspace has settled.
 
 ## Workbench Content UI WB4
 

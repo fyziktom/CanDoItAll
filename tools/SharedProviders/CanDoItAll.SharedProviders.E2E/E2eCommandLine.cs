@@ -6,6 +6,7 @@ internal enum E2eCommand
     SeedClientA,
     SeedClientB,
     Snapshot,
+    InitializeUsageIndex,
     UnpublishText,
     RepublishText,
     SyncClientA,
@@ -93,6 +94,7 @@ internal static class E2eCommandLine
             ["seed-client-a"] = E2eCommand.SeedClientA,
             ["seed-client-b"] = E2eCommand.SeedClientB,
             ["snapshot"] = E2eCommand.Snapshot,
+            ["initialize-usage-index"] = E2eCommand.InitializeUsageIndex,
             ["unpublish-text"] = E2eCommand.UnpublishText,
             ["republish-text"] = E2eCommand.RepublishText,
             ["sync-client-a"] = E2eCommand.SyncClientA,
@@ -213,7 +215,7 @@ internal static class E2eCommandLine
 
     private static E2eRole ResolveRole(E2eCommand command, string? roleValue)
     {
-        if (command == E2eCommand.Snapshot)
+        if (command is E2eCommand.Snapshot or E2eCommand.InitializeUsageIndex)
         {
             return roleValue switch
             {
@@ -221,13 +223,13 @@ internal static class E2eCommandLine
                 "client-a" => E2eRole.ClientA,
                 "client-b" => E2eRole.ClientB,
                 _ => throw new E2eSafeException(
-                    "The snapshot command requires --role central, client-a, or client-b.")
+                    "This command requires --role central, client-a, or client-b.")
             };
         }
 
         if (roleValue is not null)
         {
-            throw new E2eSafeException("The --role option is valid only for snapshot.");
+            throw new E2eSafeException("The --role option is valid only for snapshot or initialize-usage-index.");
         }
 
         return command switch

@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
@@ -40,6 +41,7 @@ internal sealed class E2eOrchestrator(
             E2eCommand.SeedClientA => SeedClientAAsync(cancellationToken),
             E2eCommand.SeedClientB => SeedClientBAsync(cancellationToken),
             E2eCommand.Snapshot => WriteSnapshotAsync(role, cancellationToken),
+            E2eCommand.InitializeUsageIndex => InitializeUsageIndexAsync(cancellationToken),
             E2eCommand.UnpublishText => SetTextPublicationAsync(
                 SharedProviderPublicationAction.Unpublish,
                 cancellationToken),
@@ -66,6 +68,15 @@ internal sealed class E2eOrchestrator(
             E2eCommand.RestoreClientASource => RestoreClientASourceAsync(cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, null)
         });
+    }
+
+    private async Task InitializeUsageIndexAsync(CancellationToken cancellationToken) {
+        var maintenance = new FileProviderUsageIndexMaintenance(
+            workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
+        FileUsageIndexProgress progress;
+        do {
+            progress = await maintenance.ProcessAsync(cancellationToken: cancellationToken);
+        } while (!progress.Complete);
     }
 
     private async Task SeedCentralAsync(CancellationToken cancellationToken)

@@ -214,12 +214,13 @@ public sealed record ProjectStructureNode(
     public Guid? RecordId { get; init; }
 }
 
+[System.ComponentModel.Description("Directed relationship between project structure nodes, including its persisted occurrence when available.")]
 public sealed record ProjectStructureLink(
-    string SourceId,
-    string TargetId,
-    ProjectObjectLinkKind Kind,
-    bool IsUserAuthored,
-    Guid? RecordId = null);
+    [property: System.ComponentModel.Description("Source node key of the relationship.")] string SourceId,
+    [property: System.ComponentModel.Description("Target node key of the relationship.")] string TargetId,
+    [property: System.ComponentModel.Description(ProjectStructureMutationStateDescriptions.LinkKind)] ProjectObjectLinkKind Kind,
+    [property: System.ComponentModel.Description("True for a caller-created link; false for a relationship maintained by its owner.")] bool IsUserAuthored,
+    [property: System.ComponentModel.Description("Link occurrence identity when available. Projected relationships can have transient identities; only persisted user-authored links provide mutation state.")] Guid? RecordId = null);
 
 public sealed record ProjectStructureSurface(
     Guid ProjectId,

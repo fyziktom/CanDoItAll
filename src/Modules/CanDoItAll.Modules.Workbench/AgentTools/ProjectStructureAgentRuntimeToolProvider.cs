@@ -1106,7 +1106,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         nodes.Select(ProjectStructureAgentToolResponseProjection.MapCompactNode).ToList(),
                         response.Links,
                         warnings,
-                        dispatch.Source);
+                        dispatch.Source) {
+                        ExpectedGraph = response.ExpectedGraph,
+                        ExpectedProjectAdmission = response.ExpectedProjectAdmission
+                    };
 
                     async Task<ProjectStructureReadResponse> ReadCanonicalAsync(
                         ProjectStructureReadRequest canonicalRequest,

@@ -41,7 +41,7 @@ public sealed class ProviderModelSelectorTests
             ["gpt-3.5-turbo", "gpt-5.6-sol", "gpt-5.4-mini", "gpt-4.1", "gpt-5.4-2026-03-05"]);
         var cut = context.Render<ProviderModelSelector>(parameters => parameters
             .Add(component => component.Provider, provider));
-        Assert.Equal(["Provider default (gpt-5.4-mini)", "gpt-4.1", "gpt-5.6-sol"],
+        Assert.Equal(["Provider default (gpt-5.4-mini)", "gpt-5.6-sol"],
             cut.FindAll("option").Select(option => option.TextContent));
 
         cut.Render(parameters => parameters.Add(component => component.Value, "gpt-3.5-turbo"));

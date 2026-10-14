@@ -60,7 +60,10 @@ public sealed class ProjectProjectionRepairAdmissionIntegrationTests {
         var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         var factory = services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var rows = await SeedRowsAsync(factory, projectId, timeout.Token);
+        var rows = await SeedRowsAsync(factory, projectId, timeout.Token, hideProjection: false);
+        var editOrigin = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId, timeout.Token);
+        var expectedNodes = editOrigin.Nodes.Where(node => node.Id == rows.HumanNode.NodeKey || node.Id == rows.ValidLayout.NodeKey).ToArray();
+        Assert.Equal(2, expectedNodes.Length);
         var gate = new PausingContributor();
         var contributors = services.GetServices<IProjectStructureProjectionContributor>().Append(gate).ToArray();
         var maintenance = ActivatorUtilities.CreateInstance<ProjectStructureProjectionMaintenanceService>(services, (object)contributors);
@@ -83,7 +86,7 @@ public sealed class ProjectProjectionRepairAdmissionIntegrationTests {
             }
             edit = editorScope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().MoveObjectsAsync(
                 projectId, [new(rows.HumanNode.NodeKey, 1111, 1222), new(rows.ValidLayout.NodeKey, 1333, 1444)],
-                timeout.Token, expectedProjectAdmission: admission);
+                timeout.Token, expectedProjectAdmission: admission, expectedNodes: expectedNodes);
         } finally {
             gate.Resume.TrySetResult();
             repairFailure = await Record.ExceptionAsync(async () => {
@@ -135,7 +138,7 @@ public sealed class ProjectProjectionRepairAdmissionIntegrationTests {
     }
 
     private static async Task<SeededRows> SeedRowsAsync(IDbContextFactory<WorkbenchDbContext> factory, Guid projectId,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, bool hideProjection = true) {
         var createdAt = new DateTimeOffset(2026, 4, 5, 13, 45, 0, TimeSpan.Zero);
         var rootKey = $"project:{projectId}";
         var human = new ProjectObjectRecord {
@@ -158,7 +161,7 @@ public sealed class ProjectProjectionRepairAdmissionIntegrationTests {
         };
         var validLayout = new ProjectStructureProjectionLayoutRecord {
             ProjectId = projectId, NodeKey = rootKey, PositionX = 320, PositionY = 420,
-            IsHidden = true, UpdatedAtUtc = createdAt
+            IsHidden = hideProjection, UpdatedAtUtc = createdAt
         };
         var orphan = new ProjectStructureProjectionLayoutRecord {
             ProjectId = projectId, NodeKey = "projection:orphan-repair", PositionX = 520, PositionY = 620, UpdatedAtUtc = createdAt

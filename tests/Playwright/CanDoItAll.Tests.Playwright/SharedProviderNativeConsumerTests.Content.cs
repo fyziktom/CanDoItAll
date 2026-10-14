@@ -153,7 +153,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         metadata["transcript"]!["transcriptText"] = "Synthetic exact transcript " + marker;
         metadata["futureContent"] = "Preserved unknown metadata";
         await fixture.PostAsync<ProjectStructureNodeSummary>($"api/project-structure/projects/{projectId:D}/nodes/{Uri.EscapeDataString(scaffold.Id)}/metadata",
-            new ProjectStructureNodeMetadataInput(metadata.ToJsonString()));
+            new ProjectStructureNodeMetadataInput(metadata.ToJsonString()) { ExpectedState = scaffold.ExpectedState });
         await fixture.EvidenceAsync("wb4-transcript-scaffold", new { projectId, recording.Id, TranscriptId = scaffold.Id, ExternalCalls = 0 });
         foreach (var (button, field, action) in new[] {
             ("Summarize", "summaryText", ProjectLlmActionKind.Summarize),

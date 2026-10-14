@@ -102,7 +102,7 @@ public sealed class ProjectStructureTaskCreationService(
             {
                 throw await CompensateCancellationAsync(
                     projectId,
-                    task.Id,
+                    task,
                     ProjectStructureTaskCreationFailureStage.ResourceAttachment,
                     agent, failure, attachment);
             }
@@ -110,7 +110,7 @@ public sealed class ProjectStructureTaskCreationService(
             {
                 throw await CompensateAsync(
                     projectId,
-                    task.Id,
+                    task,
                     ProjectStructureTaskCreationFailureStage.ResourceAttachment,
                     failure,
                     agent);
@@ -129,7 +129,7 @@ public sealed class ProjectStructureTaskCreationService(
         {
             throw await CompensateCancellationAsync(
                 projectId,
-                task.Id,
+                task,
                 ProjectStructureTaskCreationFailureStage.RowOrdering,
                 agent, failure, attachment);
         }
@@ -137,7 +137,7 @@ public sealed class ProjectStructureTaskCreationService(
         {
             throw await CompensateAsync(
                 projectId,
-                task.Id,
+                task,
                 ProjectStructureTaskCreationFailureStage.RowOrdering,
                 failure,
                 agent, attachment);
@@ -186,17 +186,18 @@ public sealed class ProjectStructureTaskCreationService(
 
     private async Task<ProjectStructureTaskCreationException> CompensateAsync(
         Guid projectId,
-        string taskNodeId,
+        ProjectStructureNodeSummary createdTask,
         ProjectStructureTaskCreationFailureStage stage,
         Exception failure,
         ProjectStructureAgentContext agent,
         ProjectStructureTaskResourceAttachment? attachment = null)
     {
+        var taskNodeId = createdTask.Id;
         logger.LogWarning(
             "Gantt task creation failed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage} FailureType={FailureType}",
             Mask(projectId.ToString("N")), Mask(taskNodeId), stage, failure.GetType().Name);
 
-        var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, taskNodeId, agent);
+        var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, createdTask, agent);
         LogCompensationFailure(projectId, taskNodeId, stage, compensationFailure);
 
         return new ProjectStructureTaskCreationException(
@@ -212,19 +213,20 @@ public sealed class ProjectStructureTaskCreationService(
 
     private async Task<OperationCanceledException> CompensateCancellationAsync(
         Guid projectId,
-        string taskNodeId,
+        ProjectStructureNodeSummary createdTask,
         ProjectStructureTaskCreationFailureStage stage,
         ProjectStructureAgentContext agent,
         OperationCanceledException failure,
         ProjectStructureTaskResourceAttachment? attachment)
     {
+        var taskNodeId = createdTask.Id;
         logger.LogInformation(
             "Gantt task creation was canceled. Removing the partially created task. ProjectId={ProjectId} TaskNodeId={TaskNodeId} Stage={Stage}",
             projectId,
             taskNodeId,
             stage);
 
-        var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, taskNodeId, agent);
+        var compensationFailure = await TryRemoveCreatedTaskAsync(projectId, createdTask, agent);
         LogCompensationFailure(projectId, taskNodeId, stage, compensationFailure);
         var outcome = new ProjectStructureTaskCreationException(stage, taskNodeId, compensationFailure is null, failure, compensationFailure) {
             ResourceNodeId = attachment?.CreatedNodeId,
@@ -235,13 +237,16 @@ public sealed class ProjectStructureTaskCreationService(
 
     private async Task<Exception?> TryRemoveCreatedTaskAsync(
         Guid projectId,
-        string taskNodeId,
+        ProjectStructureNodeSummary createdTask,
         ProjectStructureAgentContext agent)
     {
+        var taskNodeId = createdTask.Id;
         try
         {
+            var origin = ProjectStructureGraphStateGuard.CaptureForCreatedNodeCleanup(
+                await projectWorkbenchService.GetStructureAsync(projectId, CancellationToken.None), createdTask.ExpectedState);
             var deletedCount = await projectWorkbenchService.DeleteObjectAsync(
-                projectId, taskNodeId, CancellationToken.None, agent);
+                projectId, taskNodeId, CancellationToken.None, agent with { ExpectedGraph = origin });
             if (deletedCount == 0)
             {
                 return new InvalidOperationException(

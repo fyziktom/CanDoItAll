@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Integration.ProjectStructure;
 using System.Data.Common;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -234,7 +235,8 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var authority = ProcessPreparedLaunchFixture.Local(project.DatabaseProfileId, project);
         var saved = await Store(services).PrepareAsync(ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()), target));
         var container = await workbench.CreateObjectAsync(project.ProjectId, new(ProjectObjectType.ProjectBlock, "New parent", "", "", root));
-        Assert.NotNull(await services.GetRequiredService<ProjectWorkbenchRelationService>().ReparentObjectAsync(project.ProjectId, source.Id, container.Id));
+        Assert.NotNull(await services.GetRequiredService<ProjectWorkbenchRelationService>().ReparentObjectAsync(project.ProjectId, source.Id, container.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, project.ProjectId)));
         var coordinator = Coordinator(services);
         var policy = new AuthorityPolicy { Validating = (binding, ct) => Targets(services, coordinator).RequireForMutationAsync(binding!, ct) };
         await using var context = new ProcessPersistenceDbContext(ProcessOptions(services));
@@ -306,7 +308,9 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             await current.GetRequiredService<ProjectsService>().DeleteAsync(target.ProjectId);
         } else {
             Assert.True(await current.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(
-                target.ProjectId, target.SourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses));
+                target.ProjectId, target.SourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses,
+                expectedLink: await ProjectStructureTestOrigin.ReadLinkAsync(current.GetRequiredService<ProjectWorkbenchService>(),
+                    target.ProjectId, target.SourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses)));
         }
         var service = Delivery(current, Coordinator(current));
         var status = await service.GetStatusAsync(saved.Preparation.AdmissionId);

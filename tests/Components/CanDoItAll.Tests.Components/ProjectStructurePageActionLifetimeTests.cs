@@ -65,7 +65,7 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         } else {
             gate.Arm(original.ProjectId, ProjectObjectType.File);
         }
-        var pending = Button(cut, gantt ? "Export Gantt" : "Export XLSX").ClickAsync(new MouseEventArgs());
+        var pending = cut.InvokeAsync(() => Button(cut, gantt ? "Export Gantt" : "Export XLSX").ClickAsync(new MouseEventArgs()));
         try {
             await (gantt ? generator.Entered.Task : gate.Entered.Task).WaitAsync(TimeSpan.FromSeconds(20));
             Navigate(harness, cut, next.ProjectId);

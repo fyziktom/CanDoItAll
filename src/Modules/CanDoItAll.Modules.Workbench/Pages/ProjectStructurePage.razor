@@ -1090,7 +1090,13 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         pendingClientSelectionId = null;
         selectedNodeIds = uiState.SelectedNodeIds.ToList();
         currentViewStateJson = normalizedStateJson;
+        var previousSurface = surface;
         surface = surface with { ViewStateJson = currentViewStateJson };
+        if (insightsContext is { } currentInsights &&
+            ReferenceEquals(currentInsights.Native.Surface, previousSurface) && IsCurrentInsights(currentInsights)) {
+            // A client viewport update preserves the original node snapshot and its admitted actions.
+            insightsContext = currentInsights with { Native = currentInsights.Native with { Surface = surface } };
+        }
         if (canvasSurface is not null)
         {
             canvasSurface.UiState = uiState;

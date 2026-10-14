@@ -347,7 +347,10 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var oldTarget = (await projects.CreateWithReceiptAsync(targetId, new() { Name = "Old target" })).Value!.Project;
         var source = await CreationOwnerAsync(fixture, services, allowAll: true);
         var nodes = await SeedOrdinaryGraphAsync(services, fixture.Project.ProjectId);
-        var owner = source with { ExpectedProjectAdmissions = [source.ExpectedProjectAdmission!, oldTarget] };
+        var owner = source with {
+            ExpectedProjectAdmissions = [source.ExpectedProjectAdmission!, oldTarget],
+            ExpectedGraph = ProjectStructureGraphStateGuard.Capture(nodes.Origin)
+        };
         await projects.DeleteAsync(targetId);
         Assert.True((await projects.CreateAsync(targetId, new() { Name = "Recreated target" })).IsSuccess);
         await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => services.GetRequiredService<ProjectWorkbenchService>()

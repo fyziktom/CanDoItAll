@@ -122,10 +122,18 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
         var opening = OpenAsync(page, project, "Stale child", parent.Id);
         dialogs.WaitForElement("[data-testid='project-structure-text-asset-content']");
         await dialogs.InvokeAsync(() => dialogs.Find("[data-testid='project-structure-text-asset-content']").Input("Must not be saved"));
+        var competingOrigin = await workbench.GetStructureAsync(project);
         if (change == NodeChange.Kind) {
-            await workbench.ReclassifyObjectAsync(project, parent.Id, new(ProjectObjectType.ProjectBlock, "decision", "Changed kind", "", "Original"));
+            await workbench.ReclassifyObjectAsync(project, parent.Id,
+                new(ProjectObjectType.ProjectBlock, "decision", "Changed kind", "", "Original") {
+                    ExpectedState = ProjectStructureNodeStateGuard.Capture(
+                        Assert.Single(competingOrigin.Nodes, node => node.Id == parent.Id), competingOrigin.ExpectedProjectAdmission!)
+                });
         } else if (change == NodeChange.Parent) {
-            await workbench.ReparentObjectAsync(project, parent.Id, neighbor.Id);
+            await workbench.ReparentObjectAsync(project, parent.Id, neighbor.Id, mutationOwner:
+                new ProjectStructureAgentContext("test", "Test", "", "", "", "") {
+                    ExpectedGraph = ProjectStructureGraphStateGuard.Capture(competingOrigin)
+                });
         } else {
             await using var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
             var record = await db.Set<ProjectObjectRecord>().SingleAsync(node => node.ProjectId == project && node.NodeKey == parent.Id);

@@ -119,7 +119,11 @@ public sealed class ProjectCalendarPageTests
 
         cut.WaitForAssertion(() => AssertCalendarContext(registry, projectId, secondEvent));
 
-        Assert.Equal(1, await workbenchService.DeleteObjectAsync(projectId, secondEvent.NodeKey));
+        var deleteOrigin = await workbenchService.GetStructureAsync(projectId);
+        Assert.Equal(1, await workbenchService.DeleteObjectAsync(projectId, secondEvent.NodeKey, mutationOwner:
+            new ProjectStructureAgentContext("test", "Test", "", "", "", "") {
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(deleteOrigin)
+            }));
         var selectedSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
         await notificationHub.PublishAsync(new AgentChatExecutionCompleted(
             selectedSnapshot.Scope.Id,

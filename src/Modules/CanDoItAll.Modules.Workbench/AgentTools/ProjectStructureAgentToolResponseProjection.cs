@@ -48,6 +48,8 @@ internal static class ProjectStructureAgentToolResponseProjection
             node.DurationSeconds,
             node.ActionCapabilities,
             node.StartUtc,
-            node.EndUtc);
+            node.EndUtc) {
+            ExpectedState = node.ExpectedState
+        };
     }
 }

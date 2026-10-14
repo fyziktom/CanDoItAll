@@ -118,6 +118,7 @@ public sealed class ProjectFilesAgentUiTests {
                 .GetStructureAsync(fixture.SiblingId, new(IncludeAssets: true)));
             Assert.DoesNotContain(sibling.Nodes, item => item.Title == title);
             Assert.Equal(fixture.SiblingContent, await ReadFileContentAsync(host, fixture.SiblingId, fixture.SiblingAssetId));
+            await Assertions.Expect(chat.GetByTestId("chat-send-button")).ToBeEnabledAsync(new() { Timeout = 60_000 });
             var expand = chat.GetByTestId("chat-execution-summary").Or(chat.GetByTestId("chat-execution-history"));
             await expand.ClickAsync();
             await Assertions.Expect(page.GetByTestId("agent-execution-log-dialog-body"))

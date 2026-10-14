@@ -136,7 +136,9 @@ public sealed class ProjectStructureClipboardIntegrationTests
                 sourceChild.EndUtc,
                 ProjectObjectMetadataSerializer.Serialize(sourceChildMetadata),
                 sourceChild.DurationSeconds,
-                sourceReferences));
+                sourceReferences) {
+                ExpectedState = await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, sourceChild.Id)
+            });
         await workbench.LinkObjectsAsync(
             projectId,
             sourceRoot.Id,
@@ -152,7 +154,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         var result = await workbench.CopySubtreesAsync(
             projectId,
             [sourceRoot.Id],
-            target.Id);
+            target.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(1, saveCounter.SaveChangesCount);
         Assert.Equal(new[] { result.NodeIdMap[sourceRoot.Id] }, result.RootNodeIds);
@@ -310,7 +312,8 @@ public sealed class ProjectStructureClipboardIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        var result = await workbench.CopySubtreesAsync(projectId, [source.Id, selectedInputNode.Id], target.Id);
+        var result = await workbench.CopySubtreesAsync(projectId, [source.Id, selectedInputNode.Id], target.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
         var copiedRecord = await verificationContext.Set<ProjectObjectRecord>()
@@ -409,7 +412,8 @@ public sealed class ProjectStructureClipboardIntegrationTests
         }
 
         saveCounter.Reset();
-        var completedCopy = await workbench.CopySubtreesAsync(projectId, [completed.Id], target.Id);
+        var completedCopy = await workbench.CopySubtreesAsync(projectId, [completed.Id], target.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
         Assert.Equal(1, saveCounter.SaveChangesCount);
 
         await using (var verificationContext = await dbContextFactory.CreateDbContextAsync())
@@ -437,7 +441,8 @@ public sealed class ProjectStructureClipboardIntegrationTests
         {
             saveCounter.Reset();
             var exception = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
-                await workbench.CopySubtreesAsync(projectId, [incompleteNode.Id], target.Id));
+                await workbench.CopySubtreesAsync(projectId, [incompleteNode.Id], target.Id,
+                    mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
             Assert.Contains("before completion", exception.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
         }
@@ -461,7 +466,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         var result = await workbench.CopySubtreesAsync(
             projectId,
             [firstChild.Id, firstRoot.Id, secondRoot.Id],
-            projectRootNodeKey);
+            projectRootNodeKey, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(
             new[] { result.NodeIdMap[firstRoot.Id], result.NodeIdMap[secondRoot.Id] },
@@ -513,13 +518,15 @@ public sealed class ProjectStructureClipboardIntegrationTests
         {
             saveCounter.Reset();
             var copyException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
-                await workbench.CopySubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey));
+                await workbench.CopySubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey,
+                    mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
             Assert.Contains("projected project node", copyException.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
 
             saveCounter.Reset();
             var cutException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
-                await workbench.ReparentSubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey));
+                await workbench.ReparentSubtreesAsync(projectId, [source.Id], rejectedTargetNodeKey,
+                    mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
             Assert.Contains("projected project node", cutException.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(0, saveCounter.SaveChangesCount);
         }
@@ -571,7 +578,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
         var movedRoots = await workbench.ReparentSubtreesAsync(
             projectId,
             [firstRoot.Id, firstChild.Id, secondRoot.Id],
-            targetParent.Id);
+            targetParent.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(2, saveCounter.SaveChangesCount);
         Assert.Equal(new[] { firstRoot.Id, secondRoot.Id }, movedRoots.Select(node => node.Id));
@@ -617,7 +624,7 @@ public sealed class ProjectStructureClipboardIntegrationTests
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, secondRoot.Id],
-                firstGrandchild.Id));
+                firstGrandchild.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.Contains("cycle", cycleException.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(ProjectStructureInvariantViolation.HierarchyCycle, cycleException.Violation);
         Assert.Equal(0, saveCounter.SaveChangesCount);
@@ -627,17 +634,16 @@ public sealed class ProjectStructureClipboardIntegrationTests
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, secondRoot.Id],
-                "custom:missing-target"));
+                "custom:missing-target", mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.Contains("not found", missingTargetException.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, saveCounter.SaveChangesCount);
 
         saveCounter.Reset();
-        var staleSourceException = await Assert.ThrowsAsync<ProjectStructureClipboardMutationInputException>(async () =>
+        await Assert.ThrowsAsync<ProjectStructureEditConflictException>(async () =>
             await workbench.ReparentSubtreesAsync(
                 projectId,
                 [firstRoot.Id, "custom:stale-source", secondRoot.Id],
-                targetParent.Id));
-        Assert.Contains("not a persisted editable node", staleSourceException.Message, StringComparison.OrdinalIgnoreCase);
+                targetParent.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.Equal(0, saveCounter.SaveChangesCount);
 
         var persistedAfterRejectedMoves = await LoadNodeSnapshotsAsync(

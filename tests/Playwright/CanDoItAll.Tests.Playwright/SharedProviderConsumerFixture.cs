@@ -144,6 +144,12 @@ internal sealed class SharedProviderConsumerFixture : IAsyncDisposable {
     public Task<JsonElement> ReadAgentAsync(Guid agentId, bool planning = false) => RunOracleAsync("e2e-" + clientRole,
         ["read-consumer-agent", agentId.ToString("D"), "--role", clientRole, .. planning ? new[] { "--planning" } : []]);
 
+    public async Task InitializeUsageIndexAsync() {
+        var result = await RunOracleAsync("e2e-" + clientRole, ["initialize-usage-index", "--role", clientRole]);
+        Assert.Equal("succeeded", result.GetProperty("Status").GetString());
+        await EvidenceAsync("consumer-usage-index-" + traceId, result);
+    }
+
     public Task<JsonElement> ReadOperatorsAsync(Guid projectId, Guid? agentId = null) => RunOracleAsync("e2e-" + clientRole,
         ["read-wb5-operators", projectId.ToString("D"), "--role", clientRole, .. agentId is { } id ? new[] { "--agent", id.ToString("D") } : []]);
 

@@ -112,17 +112,20 @@ public sealed partial class ProjectDeletionIntegrationTests
         var copied = await workbench.CopySubtreesAsync(
             projectId,
             [asset.Id],
-            BuildProjectRootNodeKey(projectId));
+            BuildProjectRootNodeKey(projectId),
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
         var copiedNodeId = copied.NodeIdMap[asset.Id];
         var physicalPath = Path.Combine(
             workspacePathResolver.ResolveWorkspaceRoot(),
             asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(physicalPath));
 
-        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, asset.Id));
+        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, asset.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.True(File.Exists(physicalPath));
 
-        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, copiedNodeId));
+        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, copiedNodeId,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.False(File.Exists(physicalPath));
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -212,16 +215,18 @@ public sealed partial class ProjectDeletionIntegrationTests
                 await dbContext.SaveChangesAsync();
             }
 
-            await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
-                workbench.DeleteObjectDetailedAsync(
+            await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(async () =>
+                await workbench.DeleteObjectDetailedAsync(
                     projectId,
                     asset.Id,
-                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles));
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+                    mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
 
             var retained = await workbench.DeleteObjectDetailedAsync(
                 projectId,
                 asset.Id,
-                ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+                ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
             Assert.Equal(1, retained.DeletedNodeCount);
             Assert.True(File.Exists(physicalPath));
@@ -283,7 +288,8 @@ public sealed partial class ProjectDeletionIntegrationTests
         var result = await coordinator.DeleteNodesAsync(
             projectId,
             [NonHideablePhaseProjectionContributor.NodeKey],
-            ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+            ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(1, result.DeletedNodeCount);
         Assert.DoesNotContain(
@@ -481,8 +487,9 @@ public sealed partial class ProjectDeletionIntegrationTests
             workspacePathResolver.ResolveWorkspaceRoot(),
             asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
 
-        var failure = await Assert.ThrowsAsync<ProjectStructureDeletionPartialCommitException>(() =>
-            workbench.DeleteObjectAsync(projectId, asset.Id));
+        var failure = await Assert.ThrowsAsync<ProjectStructureDeletionPartialCommitException>(async () =>
+            await workbench.DeleteObjectAsync(projectId, asset.Id,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
 
         Assert.Equal(projectId, failure.Recovery.ProjectId);
         Assert.Equal(asset.Id, failure.Recovery.RootNodeId);

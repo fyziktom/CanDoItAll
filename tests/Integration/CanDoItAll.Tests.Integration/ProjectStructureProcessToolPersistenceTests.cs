@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Integration.ProjectStructure;
 using System.Data.Common;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -199,7 +200,9 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
                 Assert.Empty(deletion.Warnings);
             } else {
                 Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(input.ProjectId,
-                    input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(first.RunId!.Value), ProjectObjectLinkKind.Uses));
+                    input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(first.RunId!.Value), ProjectObjectLinkKind.Uses,
+                    expectedLink: await ProjectStructureTestOrigin.ReadLinkAsync(scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>(),
+                        input.ProjectId, input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(first.RunId.Value), ProjectObjectLinkKind.Uses)));
                 await using var context = new WorkbenchDbContext(OwnerOptions<WorkbenchDbContext>(scope.ServiceProvider));
                 var original = await context.Set<ProjectObjectRecord>().SingleAsync(row => row.NodeKey == input.NodeId);
                 original.Title = "Human edited after Process acceptance";

@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Integration.ProjectStructure;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -176,7 +177,9 @@ public sealed partial class ProjectStructureProcessToolPersistenceTests {
             Assert.Empty(deleted.Warnings);
         } else {
             Assert.True(await scope.ServiceProvider.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(fixture.Input.ProjectId,
-                fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value), ProjectObjectLinkKind.Uses));
+                fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId!.Value), ProjectObjectLinkKind.Uses,
+                expectedLink: await ProjectStructureTestOrigin.ReadLinkAsync(scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>(),
+                    fixture.Input.ProjectId, fixture.Input.NodeId, ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId.Value), ProjectObjectLinkKind.Uses)));
         }
         await using var context = new ProcessPersistenceDbContext(Options(scope.ServiceProvider));
         var beforeDisclosure = await ReadDisclosureStateAsync();

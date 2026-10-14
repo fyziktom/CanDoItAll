@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
@@ -44,7 +45,10 @@ public sealed record ProjectStructureCompactNode(
     int? DurationSeconds = null,
     ProjectStructureNodeActionCapabilities? ActionCapabilities = null,
     DateTimeOffset? StartUtc = null,
-    DateTimeOffset? EndUtc = null);
+    DateTimeOffset? EndUtc = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 public sealed record ProjectStructureReadToolData(
     Guid ProjectId,
@@ -54,6 +58,11 @@ public sealed record ProjectStructureReadToolData(
     IReadOnlyList<string> Warnings,
     ProjectStructureReadSource Source = ProjectStructureReadSource.CanonicalCurrent)
 {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+
+    public CanDoItAll.Modules.Projects.ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
     [JsonPropertyOrder(-100)]
     public int NodeCount => Nodes.Count;
 

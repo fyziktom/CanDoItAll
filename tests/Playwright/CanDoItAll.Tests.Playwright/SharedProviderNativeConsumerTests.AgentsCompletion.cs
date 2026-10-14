@@ -207,6 +207,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.ScriptAsync(alternate.DisplayName, marker,
             ToolsStep(Call(ToolContractCatalog.WorkspaceWriteFile, new { path = targetPath, content = "Must remain uncommitted", overwrite = false })));
         await SendAsync(chat, "Propose a new file and wait for approval.");
+        await Assertions.Expect(chat.GetByTestId("agent-execution-activity-phase")).ToHaveTextAsync("Approval required", new() { Timeout = 60_000 });
         await Assertions.Expect(chat.Locator("[data-testid^='chat-approval-approve-']")).ToHaveCountAsync(1, new() { Timeout = 60_000 });
         var pending = await fixture.ReadAgentAsync(agentId);
         Assert.All(pending.GetProperty("proposals").EnumerateArray(), item => Assert.Equal((int)ExecutionApprovalStatus.Pending, item.GetProperty("approvalStatus").GetInt32()));
@@ -217,6 +218,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.NavigateAsync($"/agents?tab=chat&agentId={agentId:D}");
         await page.GetByRole(AriaRole.Button, new() { Name = "Open thread " + originalSession.GetProperty("title").GetString(), Exact = true }).ClickAsync();
         await Assertions.Expect(chat).ToContainTextAsync(answer);
+        await fixture.InitializeUsageIndexAsync();
         await fixture.NavigateAsync("/agents?tab=overview&usageScope=both");
         await Assertions.Expect(page.GetByTestId("agents-overview-window")).ToContainTextAsync("≤ usage <");
         var window = await page.GetByTestId("agents-overview-window").InnerTextAsync();

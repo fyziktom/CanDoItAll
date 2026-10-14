@@ -52,12 +52,14 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var projectId = fixture.Project.ProjectId;
         var node = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.ProjectBlock, "Original", "", "", $"project:{projectId}"));
+        var original = await workbench.GetStructureAsync(projectId);
+        var originalState = ProjectStructureNodeStateGuard.Capture(Assert.Single(original.Nodes, item => item.Id == node.Id), original.ExpectedProjectAdmission!);
         await using (var context = fixture.Context()) {
             var step = await context.RuntimeSteps.SingleAsync(item => item.RunId == admission.Dispatch.Evidence.RunId.Value);
             step.ActiveClaimToken = Guid.NewGuid();
             await context.SaveChangesAsync();
         }
-        await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => NativeChangeAsync(workbench, admission, node.Id, change));
+        await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => NativeChangeAsync(workbench, admission, node.Id, change, originalState));
         await using var read = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         var stored = Assert.Single(await read.Set<ProjectObjectRecord>().AsNoTracking().Where(item => item.ProjectId == projectId).ToArrayAsync());
         Assert.Equal("Original", stored.Title);
@@ -302,7 +304,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     }
 
     private static async Task NativeChangeAsync(ProjectWorkbenchService workbench, ProjectProcessMutationAdmission admission,
-        string nodeId, ProcessNativeChange change) {
+        string nodeId, ProcessNativeChange change, ProjectStructureNodeState? originalState = null) {
         var projectId = admission.ProjectAdmission.ProjectId;
         switch (change) {
             case ProcessNativeChange.Create:
@@ -312,28 +314,28 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 break;
             case ProcessNativeChange.Edit:
                 await workbench.UpdateObjectAsync(projectId, nodeId, new("Late edit", "", "", null, null, "{}") {
-                    ExpectedProjectAdmission = admission.ProjectAdmission, ProcessMutationAdmission = admission
+                    ExpectedProjectAdmission = admission.ProjectAdmission, ProcessMutationAdmission = admission, ExpectedState = originalState
                 });
                 break;
             case ProcessNativeChange.Reclassify:
                 await workbench.ReclassifyObjectAsync(projectId, nodeId, new(ProjectObjectType.ProjectBlock, "feature", "Late type", "", "") {
-                    ExpectedProjectAdmission = admission.ProjectAdmission, ProcessMutationAdmission = admission
+                    ExpectedProjectAdmission = admission.ProjectAdmission, ProcessMutationAdmission = admission, ExpectedState = originalState
                 });
                 break;
             case ProcessNativeChange.Metadata:
-                await workbench.UpdateObjectMetadataAsync(projectId, nodeId, "{\"late\":true}", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission);
+                await workbench.UpdateObjectMetadataAsync(projectId, nodeId, "{\"late\":true}", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission, expectedState: originalState);
                 break;
             case ProcessNativeChange.Status:
-                await workbench.UpdateObjectStatusesAsync(projectId, [nodeId], "Published", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission);
+                await workbench.UpdateObjectStatusesAsync(projectId, [nodeId], "Published", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission, expectedStates: [originalState!]);
                 break;
             case ProcessNativeChange.Progress:
-                await workbench.UpdateObjectProgressAsync(projectId, [nodeId], "manual", 72, expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission);
+                await workbench.UpdateObjectProgressAsync(projectId, [nodeId], "manual", 72, expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission, expectedStates: [originalState!]);
                 break;
             case ProcessNativeChange.Marker:
-                await workbench.UpdateObjectMarkerAsync(projectId, [nodeId], "flag", "danger", "Late", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission);
+                await workbench.UpdateObjectMarkerAsync(projectId, [nodeId], "flag", "danger", "Late", expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission, expectedStates: [originalState!]);
                 break;
             case ProcessNativeChange.Priority:
-                await workbench.UpdateObjectPriorityAsync(projectId, [nodeId], 9, expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission);
+                await workbench.UpdateObjectPriorityAsync(projectId, [nodeId], 9, expectedProjectAdmission: admission.ProjectAdmission, processMutationAdmission: admission, expectedStates: [originalState!]);
                 break;
         }
     }

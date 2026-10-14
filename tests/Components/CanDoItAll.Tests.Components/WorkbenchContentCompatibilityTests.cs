@@ -15,12 +15,14 @@ public sealed class WorkbenchContentCompatibilityTests {
     }
 
     [Fact]
-    public void Original_native_media_and_status_callers_keep_their_signatures() {
+    public void Native_media_and_status_contracts_expose_original_state_parameters() {
         var owner = typeof(ProjectWorkbenchService);
         Assert.NotNull(owner.GetMethod(nameof(ProjectWorkbenchService.ReplaceObjectMediaAsync),
-            [typeof(Guid), typeof(string), typeof(ProjectObjectMediaPayload), typeof(string), typeof(string), typeof(string), typeof(CancellationToken)]));
+            [typeof(Guid), typeof(string), typeof(ProjectObjectMediaPayload), typeof(string), typeof(string), typeof(string), typeof(CancellationToken),
+                typeof(CanDoItAll.Modules.Projects.ProjectWriteAdmission), typeof(ProjectStructureNode)]));
         Assert.NotNull(owner.GetMethod(nameof(ProjectWorkbenchService.UpdateObjectStatusesDetailedAsync),
             [typeof(Guid), typeof(IReadOnlyCollection<string>), typeof(string), typeof(CancellationToken),
-                typeof(CanDoItAll.Modules.Projects.ProjectWriteAdmission), typeof(ProjectProcessMutationAdmission), typeof(ProjectAgentMutationAdmission)]));
+                typeof(CanDoItAll.Modules.Projects.ProjectWriteAdmission), typeof(ProjectProcessMutationAdmission), typeof(ProjectAgentMutationAdmission),
+                typeof(IReadOnlyCollection<ProjectStructureNodeState>)]));
     }
 }

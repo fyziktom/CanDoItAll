@@ -3,12 +3,69 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskApplicationServiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Canceled_assignment_only_compensates_the_created_occurrence(bool replaceTask) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var owner = CreateMutationOwner(admission);
+        var person = await CreateRatedPartyAsync(services.GetRequiredService<PartyDirectoryService>(),
+            services.GetRequiredService<HrService>(), "Canceled assignee", PartyType.Person, 10m);
+        var application = services.GetRequiredService<ProjectStructureTaskApplicationService>();
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        using var cancellation = new CancellationTokenSource();
+        ProjectStructureNode? originalTask = null;
+        Guid? replacementRecordId = null;
+        var failure = await Assert.ThrowsAsync<ProjectStructureTaskApplicationException>(() => application.CreateAsync(
+            new(projectId, new(4m, ProjectWorkItemEffortUnit.Hours, null, string.Empty),
+                new(ProjectStructureTaskResourceKind.Person, person), "application-service-tests", owner),
+            async (pricing, token) => {
+                originalTask = Assert.IsType<ProjectStructureNode>(await CreateTaskAsync(workbench, projectId,
+                    "Canceled task", pricing, owner, token));
+                if (replaceTask) {
+                    await using var context = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync(token);
+                    var original = await context.Set<ProjectObjectRecord>().SingleAsync(node => node.Id == originalTask.RecordId, token);
+                    context.Remove(original);
+                    await context.SaveChangesAsync(token);
+                    var replacement = new ProjectObjectRecord {
+                        ProjectId = projectId, NodeKey = original.NodeKey, ParentNodeKey = original.ParentNodeKey,
+                        ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = "task", Title = "Replacement occurrence",
+                        CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
+                    };
+                    replacementRecordId = replacement.Id;
+                    context.Add(replacement);
+                    await context.SaveChangesAsync(token);
+                }
+                cancellation.Cancel();
+                return originalTask;
+            }, cancellation.Token));
+        var created = Assert.IsType<ProjectStructureNode>(originalTask);
+        Assert.Equal(replaceTask ? ProjectStructureTaskApplicationErrorCode.CompensationFailed
+            : ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict, failure.Code);
+        Assert.Equal(new(created.Id, IsCreate: true, Succeeded: !replaceTask), failure.Compensation);
+        var surface = await workbench.GetStructureAsync(projectId);
+        if (replaceTask) {
+            var replacement = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+            Assert.Equal(replacementRecordId, replacement.RecordId);
+            Assert.Equal("Replacement occurrence", replacement.Title);
+            Assert.Contains(Assert.IsType<AggregateException>(failure.InnerException).InnerExceptions,
+                exception => exception is ProjectStructureEditConflictException);
+        } else {
+            Assert.DoesNotContain(surface.Nodes, node => node.Id == created.Id);
+            Assert.IsAssignableFrom<OperationCanceledException>(failure.InnerException);
+        }
+    }
+
     [Fact]
     public async Task Lost_acknowledgement_after_task_commit_preserves_the_committed_assignment_and_price() {
         await using var harness = await ComponentTestHarness.CreateAsync();

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -36,6 +37,7 @@ public sealed record ProjectStructureAgentContext(
     public IReadOnlyCollection<ProjectStructureNode>? ExpectedTransferRoots { get; init; }
 
     [JsonIgnore]
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 
     [JsonIgnore]
@@ -403,6 +405,7 @@ public sealed record ProjectStructureReadRequest(
     bool IncludeAssets = false,
     int? Take = null,
     ProjectStructureReadSource Source = ProjectStructureReadSource.ContextDefault) {
+    [Description("Include the complete original graph required by copy, reparent, transfer, recomposition and deletion. Use a canonical current read and return expectedGraph unchanged with the mutation.")]
     public bool IncludeMutationGraph { get; init; }
 }
 
@@ -630,6 +633,7 @@ public sealed record ProjectStructureNodeSummary(
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
 
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -652,6 +656,7 @@ public sealed record ProjectStructureLinkSummary(
     string TargetId,
     ProjectObjectLinkKind Kind,
     bool IsUserAuthored) {
+    [Description(ProjectStructureMutationStateDescriptions.Link)]
     public ProjectStructureLinkState? ExpectedState { get; init; }
 }
 
@@ -674,6 +679,7 @@ public sealed record ProjectStructureReadResponse(
     IReadOnlyList<ProjectStructureNodeSummary> Nodes,
     IReadOnlyList<ProjectStructureLinkSummary> Links,
     IReadOnlyList<string> Warnings) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission for the project lifetime that was read. Send it back unchanged as
@@ -851,6 +857,7 @@ public sealed record ProjectStructureNodeEditInput(
     string? MetadataJson = null,
     string? LeaseToken = null,
     int? DurationSeconds = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -883,6 +890,7 @@ public sealed record ProjectStructureNodeMetadataInput(
     string? Notes = null,
     string? Status = null,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -908,6 +916,7 @@ public sealed record ProjectStructureStatusBatchInput(
     IReadOnlyList<string> NodeIds,
     string Status,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
     public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
 }
 
@@ -926,6 +935,7 @@ public sealed record ProjectStructureStatusBatchInput(
 public sealed record ProjectStructureStatusInput(
     string Status,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -951,6 +961,7 @@ public sealed record ProjectStructureProgressBatchInput(
     string ProgressMode,
     int ProgressPercent,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
     public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
 }
 
@@ -971,6 +982,7 @@ public sealed record ProjectStructureProgressInput(
     string ProgressMode,
     int ProgressPercent,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -1000,6 +1012,7 @@ public sealed record ProjectStructureMarkerBatchInput(
     string MarkerTone,
     string MarkerLabel,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
     public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
 }
 
@@ -1045,6 +1058,7 @@ public sealed record ProjectStructureMarkerInput(
     string MarkerTone = "",
     string MarkerLabel = "",
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -1067,6 +1081,7 @@ public sealed record ProjectStructurePriorityBatchInput(
     IReadOnlyList<string> NodeIds,
     int Priority,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
     public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
 }
 
@@ -1084,6 +1099,7 @@ public sealed record ProjectStructurePriorityBatchInput(
 public sealed record ProjectStructurePriorityInput(
     int Priority,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -1112,6 +1128,7 @@ public sealed record ProjectStructureNodeTypeInput(
     ProjectObjectType ObjectType,
     string? ObjectSubtype = null,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -1134,6 +1151,7 @@ public sealed record ProjectStructureNodeMoveInput(
     double X,
     double Y,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
     public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
@@ -1152,6 +1170,7 @@ public sealed record ProjectStructureNodeMoveInput(
 public sealed record ProjectStructureNodeRecomposeInput(
     string RootNodeId,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 
@@ -1172,6 +1191,7 @@ public sealed record ProjectStructureNodeReparentInput(
     string NodeId,
     string? ParentNodeKey,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 
@@ -1199,6 +1219,7 @@ public sealed record ProjectStructureNodesCopyInput(
     IReadOnlyList<string> SourceNodeIds,
     string DestinationParentNodeId,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 
@@ -1248,6 +1269,7 @@ public sealed record ProjectStructureNodesCopyResult(
 public sealed record ProjectStructureNodeParentInput(
     string? ParentNodeKey,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 
@@ -1277,6 +1299,7 @@ public sealed record ProjectStructureNodeDeleteInput(
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null,
     Guid? DurableMutationId = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
@@ -1312,6 +1335,7 @@ public sealed record ProjectStructureNodeDeleteBatchInput(
     IReadOnlyList<string> NodeIds,
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
@@ -1349,6 +1373,7 @@ public sealed record ProjectStructureLinkInput(
     string TargetNodeId,
     ProjectObjectLinkKind Kind = ProjectObjectLinkKind.DependsOn,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Link)]
     public ProjectStructureLinkState? ExpectedState { get; init; }
 }
 
@@ -1844,6 +1869,7 @@ public sealed record ProjectStructureSubtreeTransferInput(
     Guid TargetProjectId,
     string? LeaseToken = null,
     string? TargetLeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 
@@ -1884,6 +1910,7 @@ public sealed record ProjectStructureNodesToSubprojectInput(
     ProjectStatus Status = ProjectStatus.Active,
     bool IncludeDescendants = true,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
     public ProjectStructureGraphState? ExpectedGraph { get; init; }
 }
 

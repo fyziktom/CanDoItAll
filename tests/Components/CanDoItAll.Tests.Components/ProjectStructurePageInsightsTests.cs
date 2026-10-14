@@ -8,6 +8,33 @@ using CanDoItAll.Workbench.Insights.UI;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed partial class ProjectStructurePageActionLifetimeTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Insights_canvas_viewport_updates_preserve_actions_only_for_the_original_selection(bool selectNeighbor) {
+        await using var harness = await CreateHarnessAsync();
+        var original = await CreateTargetAsync(harness, "Viewport selection");
+        var neighbor = await Workbench(harness).CreateObjectAsync(original.ProjectId,
+            new(ProjectObjectType.Note, "Viewport neighbor", "", "", $"project:{original.ProjectId}"));
+        var cut = Render(harness, original.ProjectId);
+        await SelectAsync(cut, original.Node.Id);
+        var renderer = cut.FindComponent<ProjectStructureSelectionPanel>().Instance;
+        var receiver = renderer.Dispatch;
+        var queued = new InsightsSelectionIntent(renderer.Origin, [original.Node.Id], new InsightsSelectionCommand.Progress(100));
+        var canvas = cut.FindComponent<CanvasWorkbench>().Instance;
+        var state = CanvasWorkbenchUiState.Parse(canvas.Surface.UiState.ToJson());
+        Assert.Equal(original.Node.Id, Assert.Single(renderer.State.SelectedNodes).Id);
+        state.SelectedNodeIds = [selectNeighbor ? neighbor.Id : original.Node.Id];
+        state.PanX += 20;
+        state.Zoom = 1.2;
+        await cut.InvokeAsync(() => canvas.OnStateChanged(state.ToJson()));
+        await cut.InvokeAsync(() => receiver.InvokeAsync(queued));
+        var accepted = await Workbench(harness).GetStructureAsync(original.ProjectId);
+        Assert.Equal(selectNeighbor ? original.Node.ProgressPercent : 100,
+            accepted.Nodes.Single(node => node.Id == original.Node.Id).ProgressPercent);
+        Assert.Equal(neighbor.ProgressPercent, accepted.Nodes.Single(node => node.Id == neighbor.Id).ProgressPercent);
+    }
+
     [Fact]
     public async Task Insights_signals_persist_additive_toggle_progress_and_priority_without_changing_neighbors() {
         await using var harness = await CreateHarnessAsync();

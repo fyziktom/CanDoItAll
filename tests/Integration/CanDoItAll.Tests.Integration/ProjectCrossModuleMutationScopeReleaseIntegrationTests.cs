@@ -28,7 +28,8 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var node = await CreateAssignableWorkItemAsync(workbench, projectId, "Delete with CRM");
         await SeedAssignmentAsync(partyIntegration, admission, node.Id);
 
-        var deletedCount = await workbench.DeleteObjectAsync(projectId, node.Id)
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, node.Id,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId))
             .WaitAsync(CompletionTimeout);
 
         Assert.Equal(1, deletedCount);
@@ -126,7 +127,7 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var result = await workbench.MoveNodesToProjectAsync(
                 sourceProjectId,
                 [node.Id],
-                targetProjectId)
+                targetProjectId, mutationOwner: await ProjectStructureTestOrigin.ReadTransferOwnerAsync(workbench, sourceProjectId, targetProjectId))
             .WaitAsync(CompletionTimeout);
 
         Assert.NotNull(result);

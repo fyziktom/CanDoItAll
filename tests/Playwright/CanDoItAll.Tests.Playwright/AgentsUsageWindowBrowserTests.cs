@@ -71,7 +71,7 @@ public sealed class AgentsUsageWindowBrowserTests(ITestOutputHelper output) : IA
             await page.GetByTestId("agents-overview-open-provider-usage").ClickAsync();
             await Assertions.Expect(page.GetByTestId("provider-usage-dialog")).ToContainTextAsync("Usage browser fixture");
             await CaptureAsync("provider-dialog");
-            await page.GetByTestId("provider-usage-dialog").GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
+            await page.GetByTestId("provider-usage-dialog-shell").GetByTestId("usage-detail-close").ClickAsync();
             Assert.Equal(accepted, await page.GetByTestId("agents-overview-window").InnerTextAsync());
             await page.GetByTestId("agents-overview-period-7d").ClickAsync();
             await UsageAsync("1");

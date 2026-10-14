@@ -17,7 +17,7 @@ public sealed class AgentProviderPresentationMapperTests
         Assert.Equal(provider.Name, presentation.Name);
         Assert.Equal(provider.IsEnabled, presentation.IsEnabled);
         Assert.Equal(provider.DefaultModel, presentation.DefaultModel);
-        Assert.Equal(["gpt-5.4"], presentation.SuggestedModels);
+        Assert.Equal([OpenAiModelIds.Gpt61Sol], presentation.SuggestedModels);
         Assert.Equal("gpt-5-mini", presentation.ModelDisplayNames["gpt-5-mini"]);
         Assert.Equal(provider.Id, AgentProviderPresentationMapper.ToProviderId(presentation.Key));
         Assert.Null(AgentProviderPresentationMapper.ToProviderId(null));
@@ -52,5 +52,5 @@ public sealed class AgentProviderPresentationMapperTests
             Notes: string.Empty,
             HealthStatus: "Not checked",
             LastCheckedAtUtc: null,
-            SuggestedModels: ["gpt-5-mini", "gpt-5.4"]);
+            SuggestedModels: ["gpt-5-mini", "gpt-5.4", OpenAiModelIds.Gpt61Sol]);
 }

@@ -130,8 +130,8 @@ public sealed class ProjectStructureTaskApplicationService(
         {
             await CompensateCreateAsync(
                 request.ProjectId,
-                createdTask.Id,
-                failure, request.MutationOwner);
+                createdTask,
+                failure, request.MutationOwner!);
             throw new ProjectStructureTaskApplicationException(ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict,
                 "The task was created, but its assignment did not complete. The created task was removed.", failure) {
                 Compensation = new(createdTask.Id, IsCreate: true, Succeeded: true)
@@ -322,15 +322,19 @@ public sealed class ProjectStructureTaskApplicationService(
 
     private async Task CompensateCreateAsync(
         Guid projectId,
-        string taskNodeId,
-        Exception creationFailure, ProjectStructureAgentContext? mutationOwner)
+        ProjectStructureNode createdTask,
+        Exception creationFailure, ProjectStructureAgentContext mutationOwner)
     {
+        var taskNodeId = createdTask.Id;
         try
         {
+            var createdState = ProjectStructureNodeStateGuard.Capture(createdTask, mutationOwner.ExpectedProjectAdmission);
+            var origin = ProjectStructureGraphStateGuard.CaptureForCreatedNodeCleanup(
+                await projectWorkbenchService.GetStructureAsync(projectId, CancellationToken.None), createdState);
             var deletedCount = await projectWorkbenchService.DeleteObjectAsync(
                 projectId,
                 taskNodeId,
-                CancellationToken.None, mutationOwner);
+                CancellationToken.None, mutationOwner with { ExpectedGraph = origin });
             if (deletedCount == 0)
             {
                 throw new InvalidOperationException(

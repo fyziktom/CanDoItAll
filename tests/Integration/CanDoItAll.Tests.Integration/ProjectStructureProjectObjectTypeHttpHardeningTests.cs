@@ -141,7 +141,8 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                    {
                        objectType = "projectblock",
                        objectSubtype = "feature",
-                       leaseToken = fixture.LeaseToken
+                       leaseToken = fixture.LeaseToken,
+                       expectedState = await ReadNodeStateAsync(host.Client, fixture, target.Id)
                    })))
         {
             var summary = await ReadNodeSummaryAsync(symbolicTypeResponse);
@@ -156,7 +157,8 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                    {
                        objectType = (int)ProjectObjectType.ProjectBlock,
                        objectSubtype = "feature",
-                       leaseToken = fixture.LeaseToken
+                       leaseToken = fixture.LeaseToken,
+                       expectedState = await ReadNodeStateAsync(host.Client, fixture, target.Id)
                    })))
         {
             var summary = await ReadNodeSummaryAsync(numericTypeResponse);
@@ -338,7 +340,8 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                 notes = "An explicit null preserves the current classification.",
                 objectType = (string?)null,
                 objectSubtype = target.ObjectSubtype,
-                leaseToken = fixture.LeaseToken
+                leaseToken = fixture.LeaseToken,
+                expectedState = await ReadNodeStateAsync(host.Client, fixture, target.Id)
             }));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -486,7 +489,8 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                        subtitle = "Edited",
                        notes = "Edited",
                        objectType = "FeatureBlock",
-                       leaseToken = fixture.LeaseToken
+                       leaseToken = fixture.LeaseToken,
+                       expectedState = await ReadNodeStateAsync(host.Client, fixture, node.Id)
                    })))
         {
             await AssertCanonicalObjectTypesAsync(edit);
@@ -499,7 +503,8 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                    {
                        objectType = "ProjectBlock",
                        objectSubtype = "feature",
-                       leaseToken = fixture.LeaseToken
+                       leaseToken = fixture.LeaseToken,
+                       expectedState = await ReadNodeStateAsync(host.Client, fixture, node.Id)
                    })))
         {
             await AssertCanonicalObjectTypesAsync(type);
@@ -662,9 +667,18 @@ public sealed class ProjectStructureProjectObjectTypeHttpHardeningTests
                 notes = "Explicit subtype normalization coverage.",
                 objectType,
                 objectSubtype,
-                leaseToken = fixture.LeaseToken
+                leaseToken = fixture.LeaseToken,
+                expectedState = await ReadNodeStateAsync(client, fixture, nodeId)
             }));
         return await ReadNodeSummaryAsync(response);
+    }
+
+    private static async Task<ProjectStructureNodeState> ReadNodeStateAsync(HttpClient client, Fixture fixture, string nodeId) {
+        using var response = await client.PostAsJsonAsync(StructureReadPath(fixture),
+            new ProjectStructureReadRequest(NodeIds: [nodeId], Source: ProjectStructureReadSource.CanonicalCurrent));
+        response.EnsureSuccessStatusCode();
+        var read = await response.Content.ReadFromJsonAsync<ProjectStructureReadResponse>(ProjectStructureHttpContractTestJson.SerializerOptions);
+        return Assert.IsType<ProjectStructureNodeState>(Assert.Single(read!.Nodes).ExpectedState);
     }
 
     private static async Task<ProjectStructureNodeSummary> ReadNodeSummaryAsync(

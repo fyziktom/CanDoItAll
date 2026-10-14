@@ -59,7 +59,7 @@ public sealed class AgentCapabilitySetupFlowPlaywrightTests
         await page.GetByTestId("agents-capability-setup-tool-process-allowed-executables").FillAsync("dotnet");
         await page.GetByTestId("agents-capability-setup-tool-test-input").FillAsync("{not-json");
         await page.GetByTestId("agents-capability-setup-test").ClickAsync();
-        var setupDiagnostics = page.GetByTestId("agents-capability-setup-diagnostics");
+        var setupDiagnostics = page.GetByTestId("agents-capability-setup-setup-diagnostics");
         await setupDiagnostics.WaitForAsync();
         await setupDiagnostics.EvaluateAsync("element => element.scrollIntoView({ block: 'center', inline: 'nearest' })");
         await ExpectTextContainsAsync(setupDiagnostics, "JsonParse");

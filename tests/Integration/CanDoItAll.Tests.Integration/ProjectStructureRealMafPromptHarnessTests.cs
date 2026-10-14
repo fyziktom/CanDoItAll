@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.AgentFramework;
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -310,9 +311,10 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             ?? throw new InvalidOperationException("The execution endpoint returned no result.");
         Assert.Equal(ExecutionState.Completed, executionResult.State);
         Assert.Equal("Deterministic Project Structure tool loop completed.", executionResult.ResponseText);
-        Assert.Equal(3, scriptedClient.InvocationCount);
+        Assert.Equal(4, scriptedClient.InvocationCount);
         Assert.Equal(
             [
+                ScriptedProjectStructureChatClient.StructureReadToolName,
                 ScriptedProjectStructureChatClient.NodesCopyToolName,
                 ScriptedProjectStructureChatClient.StructureReadToolName
             ],
@@ -353,6 +355,12 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             .ToArray();
         Assert.Equal(project.Id, canonicalToolReadback.ProjectId);
         Assert.Equal(ProjectStructureReadSource.CanonicalCurrent, canonicalToolReadback.Source);
+        Assert.NotNull(canonicalToolReadback.ExpectedProjectAdmission);
+        Assert.All(canonicalToolReadback.Nodes, node => {
+            var state = Assert.IsType<ProjectStructureNodeState>(node.ExpectedState);
+            Assert.Equal(node.Id, state.NodeId);
+            Assert.Equal(canonicalToolReadback.ExpectedProjectAdmission, state.Project);
+        });
         Assert.Equal(
             copiedNodeIds,
             canonicalToolReadback.Nodes
@@ -373,7 +381,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         var projectStructureReceipts = receipts
             .Where(receipt => requiredToolNameSet.Contains(receipt.ToolName))
             .ToArray();
-        Assert.Equal(requiredToolNameSet.Count, projectStructureReceipts.Length);
+        Assert.Equal(requiredToolNames.Length, projectStructureReceipts.Length);
         Assert.All(projectStructureReceipts, receipt =>
         {
             Assert.NotEqual(Guid.Empty, receipt.Id);
@@ -484,9 +492,12 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             },
             RealMafExecutionRequestTimeout);
         var project = await CreateProjectAsync(host.Client);
-        await CreateParentNodeAsync(host.Client, project.Id);
+        var parent = await CreateParentNodeAsync(host.Client, project.Id);
         var graphBefore = await ReadCanonicalGraphAsync(host.App.Services, project.Id);
-        var graphHashBefore = ComputeCanonicalGraphHash(graphBefore);
+        Assert.NotNull(Assert.Single(graphBefore.Nodes, node => node.Id == parent.Id).ExpectedState);
+        Assert.Null(Assert.Single(graphBefore.Nodes, node => node.Id == $"project:{project.Id:D}").ExpectedState);
+        Assert.All(graphBefore.Links.Where(link => !link.IsUserAuthored), link => Assert.Null(link.ExpectedState));
+        var graphJsonBefore = SerializeCanonicalGraph(graphBefore);
         Assert.DoesNotContain(
             graphBefore.Nodes,
             node => string.Equals(node.Title, UnauthorizedSentinelAssetTitle, StringComparison.Ordinal));
@@ -573,8 +584,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 StringComparer.Ordinal));
 
         var graphAfter = await ReadCanonicalGraphAsync(host.App.Services, project.Id);
-        var graphHashAfter = ComputeCanonicalGraphHash(graphAfter);
-        Assert.Equal(graphHashBefore, graphHashAfter);
+        var graphJsonAfter = SerializeCanonicalGraph(graphAfter);
+        Assert.Equal(graphJsonBefore, graphJsonAfter);
         Assert.DoesNotContain(
             graphAfter.Nodes,
             node => string.Equals(node.Title, UnauthorizedSentinelAssetTitle, StringComparison.Ordinal));
@@ -708,10 +719,15 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         return await capture.CaptureAsync(projectId);
     }
 
-    private static string ComputeCanonicalGraphHash(ProjectStructureReadResponse graph)
+    private static string SerializeCanonicalGraph(ProjectStructureReadResponse graph)
     {
         var normalized = graph with
         {
+            ExpectedGraph = graph.ExpectedGraph is { } origin ? origin with {
+                Nodes = origin.Nodes.OrderBy(node => node.State.NodeId, StringComparer.Ordinal).ToImmutableArray(),
+                Links = origin.Links.OrderBy(link => link.SourceId, StringComparer.Ordinal)
+                    .ThenBy(link => link.TargetId, StringComparer.Ordinal).ThenBy(link => link.Kind).ToImmutableArray()
+            } : null,
             Nodes = graph.Nodes
                 .OrderBy(node => node.Id, StringComparer.Ordinal)
                 .ToArray(),
@@ -725,8 +741,7 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 .Order(StringComparer.Ordinal)
                 .ToArray()
         };
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(normalized, ApiJsonOptions);
-        return Convert.ToHexString(SHA256.HashData(bytes));
+        return JsonSerializer.Serialize(normalized, ApiJsonOptions);
     }
 
     private static ProjectStructureCanonicalNodeSnapshot ToAcceptanceNodeSnapshot(

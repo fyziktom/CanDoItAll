@@ -8,7 +8,7 @@ public sealed partial class AppSmokeTests
 {
     [Fact]
     [Trait("Category", "Quarantined")]
-    public async Task Startup_modal_shell_switcher_and_settings_data_sources_flow_render_cleanly()
+    public async Task Persisted_profile_shell_switcher_and_settings_data_sources_flow_render_cleanly()
     {
         await using var host = await DatabaseSwitchPlaywrightHost.CreateAsync();
         var initialProfile = await host.GetCurrentProfileAsync();
@@ -33,13 +33,10 @@ public sealed partial class AppSmokeTests
         Assert.True(response!.Ok, $"Expected / to return 2xx, got {(int)response.Status}.");
 
         var startupDialog = page.GetByTestId("database-startup-modal");
-        await startupDialog.WaitForAsync();
-        await page.GetByTestId("database-dialog-current-selection").WaitForAsync();
-        Assert.Contains(initialProfile.DisplayName, await startupDialog.TextContentAsync() ?? string.Empty, StringComparison.Ordinal);
-        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-startup-modal-desktop.png");
-
-        await page.GetByTestId("database-startup-continue").ClickAsync();
-        await startupDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await page.GetByTestId("database-shell-action").HoverAsync();
+        await Assertions.Expect(page.GetByTestId("database-shell-flyout-card")).ToContainTextAsync(initialProfile.DisplayName);
+        await Assertions.Expect(startupDialog).ToHaveCountAsync(0);
+        await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-persisted-profile-desktop.png");
 
         await page.GetByTestId("database-shell-action").ClickAsync();
         var switcherDialog = page.GetByTestId("database-switcher-dialog");
@@ -47,20 +44,28 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId($"database-dialog-profile-row-{secondProfile.Id:N}").ClickAsync();
         await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-shell-switcher-desktop.png");
 
-        await Task.WhenAll(
-            page.WaitForURLAsync("**/projects", new() { Timeout = 20_000 }),
-            page.GetByTestId("database-startup-switch").ClickAsync());
-        await page.GetByTestId("database-switch-alert").WaitForAsync();
+        var currentUrl = page.Url;
+        await page.GetByTestId("database-startup-switch").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("database-dialog-message")).ToContainTextAsync("Restart");
+        var runtimeProfile = await host.GetCurrentProfileAsync();
+        Assert.Equal(initialProfile.Id, runtimeProfile.Id);
+        Assert.Equal(initialProfile.Id, runtimeProfile.RuntimeProfileId);
+        Assert.Equal(secondProfile.Id, runtimeProfile.PendingRestartProfileId);
+        Assert.True(runtimeProfile.HasPendingRestartActivation);
+        Assert.Equal(currentUrl, page.Url);
+        await switcherDialog.Locator("footer").GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
 
         await page.GetByTestId("database-shell-action").HoverAsync();
         var activeDatabaseText = await page.GetByTestId("database-shell-flyout-card").TextContentAsync();
-        Assert.Contains(secondProfile.DisplayName, activeDatabaseText ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(initialProfile.DisplayName, activeDatabaseText ?? string.Empty, StringComparison.Ordinal);
 
         response = await page.GotoAsync($"{host.BaseUrl}/settings?tab=data-sources");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected /settings?tab=data-sources to return 2xx, got {(int)response.Status}.");
         await page.GetByTestId("database-data-sources-summary").WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("database-profile-controls")).ToHaveAttributeAsync("data-interactive", "true");
         await page.GetByTestId("database-profile-new-postgres").ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "New data source", Exact = true })).ToBeVisibleAsync();
         await page.GetByTestId("database-profile-postgres-host").WaitForAsync();
 
         await page.GetByTestId("database-profile-name").FillAsync("Browser PostgreSQL");
@@ -68,15 +73,38 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("database-profile-postgres-host").FillAsync("db.internal");
         await page.GetByTestId("database-profile-postgres-port").FillAsync("5432");
         await page.GetByTestId("database-profile-postgres-database").FillAsync("candoitall_browser");
+        await page.GetByTestId("database-profile-postgres-admin-database").FillAsync("postgres");
         await page.GetByTestId("database-profile-postgres-user").FillAsync("postgres");
         await page.GetByTestId("database-profile-postgres-password").FillAsync("browser-secret");
-        await page.GetByTestId("database-profile-save").ClickAsync();
+        await SubmitValidFormAsync(page.GetByTestId("database-profile-save"),
+            page.GetByTestId("database-profile-operation-message"), "Data source saved");
 
         await page.GetByTestId("database-profile-test-connection").WaitForAsync();
         await page.GetByTestId("database-profile-create-empty").WaitForAsync();
         Assert.Contains("Browser PostgreSQL", await page.TextContentAsync("body") ?? string.Empty, StringComparison.Ordinal);
         await SaveDatabaseEvidenceAsync(page, host.RepoRoot, "db-switch-settings-data-sources-desktop.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    private static async Task SubmitValidFormAsync(ILocator submit, ILocator receipt, string expected) {
+        await Assertions.Expect(submit).ToHaveAttributeAsync("type", "submit");
+        var validation = await submit.EvaluateAsync<string[]>(@"button => {
+            const form = button.form;
+            if (!form) {
+                return ['Submit button has no associated form.'];
+            }
+            return Array.from(form.elements)
+                .filter(element => element.validity && !element.validity.valid)
+                .map(element => `${element.getAttribute('data-testid') || element.name}: ${element.validationMessage}`);
+        }");
+        Assert.Empty(validation);
+        await submit.ClickAsync();
+        try {
+            await Assertions.Expect(receipt).ToContainTextAsync(expected);
+        } catch (PlaywrightException exception) {
+            var messages = await submit.Page.Locator(".validation-errors, .validation-message, [role=alert]").AllTextContentsAsync();
+            throw new InvalidOperationException($"Save was not acknowledged. Validation: {string.Join(Environment.NewLine, messages)}", exception);
+        }
     }
 
     [Fact]

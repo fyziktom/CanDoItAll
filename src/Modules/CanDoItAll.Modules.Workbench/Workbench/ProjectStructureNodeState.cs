@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Modules.Projects;
@@ -6,6 +7,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
+[Description("Opaque SHA-256 fingerprint identifying the node content observed by a canonical read.")]
 public readonly record struct ProjectStructureContentFingerprint {
     [JsonConstructor]
     public ProjectStructureContentFingerprint(string value) {
@@ -16,14 +18,32 @@ public readonly record struct ProjectStructureContentFingerprint {
         Value = value.ToLowerInvariant();
     }
 
+    [Description("SHA-256 fingerprint of the original node content. Return the value from a canonical read unchanged; do not calculate it on the client.")]
     public string Value { get; }
 }
 
-public sealed record ProjectStructureNodeState(ProjectWriteAdmission Project, Guid RecordId, string NodeId,
-    ProjectStructureContentFingerprint Content);
+[Description("Original project lifetime, persisted node occurrence and content required to admit a node mutation.")]
+public sealed record ProjectStructureNodeState(
+    [property: Description("Project lifetime that owned the node when it was read.")] ProjectWriteAdmission Project,
+    [property: Description("Identity of the persisted node occurrence, distinct from its public node key.")] Guid RecordId,
+    [property: Description("Public node key from the canonical read, such as custom:<id>.")] string NodeId,
+    [property: Description("Fingerprint of the exact node content observed by the original read.")] ProjectStructureContentFingerprint Content);
 
-public sealed record ProjectStructureLinkState(ProjectWriteAdmission Project, Guid RecordId,
-    string SourceId, string TargetId, ProjectObjectLinkKind Kind);
+[Description("Original project lifetime and persisted link occurrence required to admit unlinking.")]
+public sealed record ProjectStructureLinkState(
+    [property: Description("Project lifetime that owned the link when it was read.")] ProjectWriteAdmission Project,
+    [property: Description("Identity of the persisted link occurrence.")] Guid RecordId,
+    [property: Description("Original source node key.")] string SourceId,
+    [property: Description("Original target node key.")] string TargetId,
+    [property: Description(ProjectStructureMutationStateDescriptions.LinkKind)] ProjectObjectLinkKind Kind);
+
+internal static class ProjectStructureMutationStateDescriptions {
+    internal const string LinkKind = "Original relationship kind. Values: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks, 6 DerivedFrom, 7 BelongsTo. Return the value from the canonical read unchanged.";
+    internal const string Node = "Original node state from a canonical read. Return it unchanged with a mutation; missing or stale state is rejected with HTTP 409.";
+    internal const string Nodes = "Original states for exactly the nodes being changed, from a canonical read. Return each state unchanged; missing or stale state is rejected with HTTP 409.";
+    internal const string Link = "Original link state from a canonical read. Return it unchanged when removing the link; missing or stale state is rejected with HTTP 409.";
+    internal const string Graph = "Original mutation graph from a canonical structure read with includeMutationGraph=true. Return it unchanged for graph mutations; missing or stale state is rejected with HTTP 409.";
+}
 
 internal static class ProjectStructureNodeStateGuard {
     internal static IReadOnlyList<ProjectStructureNodeState> CaptureMany(IEnumerable<ProjectStructureNode> nodes, ProjectWriteAdmission project) =>

@@ -1,13 +1,20 @@
 using System.Collections.Immutable;
+using System.ComponentModel;
 using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed record ProjectStructureGraphNodeState(string? ParentId, ProjectStructureNodeState State);
+[Description("An editable node's original occurrence, content and parent relationship within a mutation graph.")]
+public sealed record ProjectStructureGraphNodeState(
+    [property: Description("Original parent node key, or null for an unparented node.")] string? ParentId,
+    [property: Description("Original persisted node occurrence and content fingerprint.")] ProjectStructureNodeState State);
 
-public sealed record ProjectStructureGraphState(ProjectWriteAdmission Project,
-    ImmutableArray<ProjectStructureGraphNodeState> Nodes, ImmutableArray<ProjectStructureLink> Links);
+[Description("Complete editable graph from a canonical read, used to reject stale graph mutations.")]
+public sealed record ProjectStructureGraphState(
+    [property: Description("Project lifetime that owned the graph when it was read.")] ProjectWriteAdmission Project,
+    [property: Description("Original editable nodes and their parent relationships. Return the complete collection unchanged.")] ImmutableArray<ProjectStructureGraphNodeState> Nodes,
+    [property: Description("Original user-authored links. Return the complete collection unchanged.")] ImmutableArray<ProjectStructureLink> Links);
 
 internal static class ProjectStructureGraphStateGuard {
     internal static ProjectStructureGraphState Capture(ProjectStructureSurface surface) {
@@ -17,6 +24,15 @@ internal static class ProjectStructureGraphStateGuard {
                 .Select(node => new ProjectStructureGraphNodeState(node.ParentId,
                     ProjectStructureNodeStateGuard.Capture(node, admission) ?? throw new ProjectStructureEditConflictException())).ToImmutableArray(),
             surface.Links.Where(link => link.IsUserAuthored).ToImmutableArray());
+    }
+
+    internal static ProjectStructureGraphState CaptureForCreatedNodeCleanup(ProjectStructureSurface surface, ProjectStructureNodeState? createdState) {
+        var graph = Capture(surface);
+        if (createdState is null || createdState.Project != graph.Project ||
+            !graph.Nodes.Any(node => node.State.NodeId == createdState.NodeId && node.State.RecordId == createdState.RecordId)) {
+            throw new ProjectStructureEditConflictException();
+        }
+        return graph;
     }
 
     internal static ProjectStructureAgentContext Require(ProjectStructureAgentContext? owner, Guid projectId) {

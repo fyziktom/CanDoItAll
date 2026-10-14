@@ -589,6 +589,7 @@ public sealed class RuntimeHostPlatformCapabilityTests
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalHostPlatform.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessOwnership.cs",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/BrowserMcpArtifactPathService.cs",
             "src/MAF/Tools/CanDoItAll.Tools.Documents/Spreadsheets/ClosedXmlSpreadsheetDocumentService.cs",
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/WorkflowSourceFileResolver.cs",
             "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs",

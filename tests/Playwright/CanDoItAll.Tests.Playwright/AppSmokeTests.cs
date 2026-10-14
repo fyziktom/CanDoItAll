@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using Microsoft.Playwright;
 using Microsoft.EntityFrameworkCore;
@@ -163,8 +164,12 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("providers-new").WaitForAsync();
         await page.GetByTestId("providers-new").ClickAsync();
         await Assertions.Expect(page.GetByTestId("agents-provider-profiles-panel")).ToContainTextAsync("Draft provider profile.");
+        await page.GetByTestId("providers-base-url-input").FillAsync("https://previous-provider.invalid/");
+        await page.GetByTestId("providers-model-input").FillAsync("previous-model");
         await page.GetByTestId("providers-kind-select").SelectOptionAsync("Ollama");
-        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("Connection, models, prices and provider metadata were cleared.");
+        await Assertions.Expect(page.GetByTestId("providers-base-url-input")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("providers-model-input")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("providers-config-json")).ToHaveValueAsync("{}");
         await page.GetByTestId("providers-name-input").FillAsync("Playwright Ollama");
         await page.GetByTestId("providers-base-url-input").FillAsync("http://127.0.0.1:11434");
         await page.GetByTestId("providers-model-input").FillAsync("llama3.1");
@@ -1378,22 +1383,24 @@ public sealed partial class AppSmokeTests
     [Trait("Category", "Quarantined")]
     public async Task Project_structure_export_image_capture_generates_i18_artifacts()
     {
+        var exportFixture = new PlaywrightAppFixture {
+            RuntimeConfiguration = new Dictionary<string, string?> {
+                ["Api:Authorization:Enabled"] = "true",
+                ["Api:Authorization:SigningKey"] = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            }
+        };
+        try {
+            await exportFixture.InitializeAsync();
+            await new AppSmokeTests(exportFixture).CaptureExportedImageEvidenceAsync();
+        } finally {
+            await exportFixture.DisposeAsync();
+        }
+    }
+
+    private async Task CaptureExportedImageEvidenceAsync() {
         var repoRoot = GetRepoRoot();
         var i18Root = Path.Combine(repoRoot, "artifacts", "screenshots", "i18");
         ResetDirectory(i18Root);
-
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-freeze-before-fix.png"),
-            Path.Combine(i18Root, "01-primary-state.png"),
-            overwrite: true);
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-after-fix.png"),
-            Path.Combine(i18Root, "02-secondary-state.png"),
-            overwrite: true);
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-after-fix.png"),
-            Path.Combine(i18Root, "03-interaction-result.png"),
-            overwrite: true);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -1406,10 +1413,12 @@ public sealed partial class AppSmokeTests
         });
 
         var page = await context.NewPageAsync();
-        await CreateProjectAsync(page, "Playwright Export Image", "Validation");
+        var projectId = await CreateProjectAsync(page, "Playwright Export Image", "Validation");
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "01-primary-state.png"));
         await FocusCanvasRootAsync(page);
         var rootSelectionWindow = page.GetByTestId("project-structure-selection-window");
         await rootSelectionWindow.WaitForAsync();
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "02-secondary-state.png"));
         await rootSelectionWindow.GetByRole(AriaRole.Button, new() { Name = "Export image", Exact = true }).ClickAsync();
 
         var exportedTitle = "Playwright Export Image mindmap image";
@@ -1434,6 +1443,7 @@ public sealed partial class AppSmokeTests
         Assert.DoesNotContain("could not be captured", exportImageFeedback ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         var exportedImageNodeId = await FindNodeIdByTitleAsync(page, exportedTitle);
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "03-interaction-result.png"));
         Assert.False(string.IsNullOrWhiteSpace(fixture.DatabaseConnectionString), "Expected the Playwright fixture to expose the database connection string.");
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
@@ -1443,9 +1453,9 @@ public sealed partial class AppSmokeTests
         ]);
 
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(fixture.DatabaseConnectionString)
-            .Options;
-        await using var dbContext = new AppDbContext(dbOptions);
+            .UseNpgsql(fixture.DatabaseConnectionString);
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(dbOptions);
+        await using var dbContext = new AppDbContext(dbOptions.Options);
         var exportedRecord = await dbContext.Set<ProjectObjectRecord>()
             .SingleAsync(item => item.NodeKey == exportedImageNodeId);
         var exportedBinding = await dbContext.Set<ProjectNodeBindingRecord>()
@@ -1453,11 +1463,24 @@ public sealed partial class AppSmokeTests
 
         if (!string.IsNullOrWhiteSpace(exportedBinding.Route))
         {
-            var exportedImageResponse = await context.APIRequest.GetAsync($"{fixture.BaseUrl}{exportedBinding.Route}");
+            var imageUrl = $"{fixture.BaseUrl}/api/project-structure/projects/{projectId:D}/assets/{Uri.EscapeDataString(exportedImageNodeId)}/content";
+            var anonymousResponse = await context.APIRequest.GetAsync(imageUrl);
+            Assert.Equal(401, anonymousResponse.Status);
+            var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, fixture.BaseUrl, shared: false,
+                additionalScopes: [ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjectStructure]);
+            var exportedImageResponse = await context.APIRequest.GetAsync(imageUrl, new() {
+                Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer " + token }
+            });
             Assert.True(exportedImageResponse.Ok, $"Expected the exported mindmap image route to return 2xx, got {exportedImageResponse.Status}.");
+            var content = JsonSerializer.Deserialize<ProjectStructureAssetContentDescriptor>(await exportedImageResponse.TextAsync(),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } });
+            Assert.NotNull(content);
+            Assert.False(content.Base64DataOmitted);
+            var bytes = Convert.FromBase64String(content.Base64Data);
+            Assert.Equal(content.ContentLength, bytes.LongLength);
             await File.WriteAllBytesAsync(
                 Path.Combine(i18Root, "04-exported-mindmap-image.png"),
-                await exportedImageResponse.BodyAsync());
+                bytes);
         }
         else
         {
@@ -1553,10 +1576,10 @@ public sealed partial class AppSmokeTests
         ]);
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString)
-            .Options;
+            .UseNpgsql(connectionString);
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(options);
 
-        await using var dbContext = new AppDbContext(options);
+        await using var dbContext = new AppDbContext(options.Options);
 
         if (!await dbContext.Set<ProviderProfile>().AnyAsync(profile => profile.Name == "OpenAI API"))
         {
@@ -1564,6 +1587,7 @@ public sealed partial class AppSmokeTests
             {
                 Name = "OpenAI API",
                 ProviderKind = ProviderKind.OpenAi,
+                ConnectorPluginKey = ProviderConnectorKeys.OpenAi,
                 BaseUrl = "https://api.openai.com/v1",
                 DefaultModel = ProviderConnectorDefaults.OpenAiModel,
                 TimeoutSeconds = 45,
@@ -1582,6 +1606,7 @@ public sealed partial class AppSmokeTests
             {
                 Name = "Local Ollama",
                 ProviderKind = ProviderKind.OllamaLocal,
+                ConnectorPluginKey = ProviderConnectorKeys.Ollama,
                 BaseUrl = "http://127.0.0.1:11434",
                 DefaultModel = "llama3.1",
                 TimeoutSeconds = 45,
@@ -3178,7 +3203,8 @@ public sealed partial class AppSmokeTests
                         nodeCount: nodes.length,
                         titles: nodes.map(node => node?.title || '').filter(title => !!title),
                         selectedNodeIds: Array.from(state?.selectedIds || []),
-                        errorUiVisible: !!document.querySelector('#blazor-error-ui[style*=""display: block""]')
+                        errorUiVisible: !!document.querySelector('#blazor-error-ui[style*=""display: block""]'),
+                        feedback: document.querySelector('.project-structure-inline-feedback')?.textContent || ''
                     };
                 }");
             throw new InvalidOperationException(
@@ -3186,7 +3212,7 @@ public sealed partial class AppSmokeTests
                 $"NodeCount={failureSnapshot?.NodeCount ?? 0}, " +
                 $"Selected={string.Join(", ", failureSnapshot?.SelectedNodeIds ?? [])}, " +
                 $"Titles={string.Join(" | ", failureSnapshot?.Titles ?? [])}, " +
-                $"BlazorErrorUiVisible={failureSnapshot?.ErrorUiVisible ?? false}.");
+                $"BlazorErrorUiVisible={failureSnapshot?.ErrorUiVisible ?? false}, Feedback={failureSnapshot?.Feedback}.");
         }
         var createdNodeId = await FindNodeIdByTitleAsync(page, title);
         try
@@ -5101,6 +5127,8 @@ public sealed partial class AppSmokeTests
         public string[] SelectedNodeIds { get; set; } = [];
 
         public bool ErrorUiVisible { get; set; }
+
+        public string Feedback { get; set; } = string.Empty;
     }
 
     private sealed class SelectionFailureSnapshot

@@ -242,7 +242,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             projectId,
             workItem.Id,
             "{}",
-            status: "In progress");
+            status: "In progress", expectedState: await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, workItem.Id));
 
         var refreshedDetails = await detailsBridge.GetAsync(
             projectId,

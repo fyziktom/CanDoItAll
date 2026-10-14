@@ -12,7 +12,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
     public void Every_installed_metadata_field_matches_the_independent_pre_cut_catalog() {
         var expected = Rows(ExpectedMetadata);
         var actual = ProductToolPolicies.Capabilities.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(217, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -22,7 +22,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             .Select(policy => RuntimeToolCapabilityDescriptorFactory.CreateRuntimeToolCapabilityDescriptor(
                 policy.Name, policy.Name, "Descriptor parity", [], toolPolicies: ProductToolPolicies))
             .Select(Describe).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(217, actual.Length);
         Assert.Equal(Rows(ExpectedDescriptors), actual);
     }
 
@@ -40,7 +40,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             values[2] = "maf.tool." + values[1];
             return string.Join('|', values);
         }).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(217, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -124,10 +124,12 @@ public sealed class ToolCapabilityOperationEffectsTests {
     private const string ExpectedMetadata = """
 agent_package_export|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 browser_click|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
+browser_close|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|None|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_console_messages|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_drag|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_evaluate|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_fill_form|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
+browser_hover|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess
 browser_navigate|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Navigation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_network_requests|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_press_key|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
@@ -342,10 +344,12 @@ workspace_zip_path|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||Exte
     private const string ExpectedDescriptors = """
 agent_package_export|agent-package-export|maf.agent_package_export|Read|WorkspaceRead|false|false
 browser_click|browser-click|maf.browser_click|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
+browser_close|browser-close|maf.browser_close|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_console_messages|browser-console-messages|maf.browser_console_messages|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_drag|browser-drag|maf.browser_drag|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_evaluate|browser-evaluate|maf.browser_evaluate|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_fill_form|browser-fill-form|maf.browser_fill_form|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
+browser_hover|browser-hover|maf.browser_hover|BrowserAccess,Validation|RuntimeProofCapture|false|false
 browser_navigate|browser-navigate|maf.browser_navigate|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_network_requests|browser-network-requests|maf.browser_network_requests|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_press_key|browser-press-key|maf.browser_press_key|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false

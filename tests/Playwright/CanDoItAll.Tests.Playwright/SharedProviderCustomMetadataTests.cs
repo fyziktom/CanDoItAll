@@ -46,7 +46,7 @@ public sealed class SharedProviderCustomMetadataTests {
         await central.GetByTestId("providers-suggested-models").PressAsync("Tab");
         await central.GetByTestId("providers-save").ClickAsync();
         await central.GetByText("Provider saved", new() { Exact = true }).WaitForAsync();
-        string[] models = [CustomDefault, UnknownModel, DatedModel, "gpt-4.1", OpenAiModelIds.Gpt54Mini];
+        string[] models = [CustomDefault, UnknownModel, DatedModel, OpenAiModelIds.Gpt6Sol, OpenAiModelIds.Gpt6Luna];
         await SharedProviderMetadataUiChecks.ConfigureAsync(central, fixture.Settings.Central, ProviderName,
             CustomDefault, false, 0.00012345m, models[1..]);
         await SharedProviderMetadataUiChecks.OpenProviderAsync(central, fixture.Settings.Central, ProviderName);
@@ -75,7 +75,7 @@ public sealed class SharedProviderCustomMetadataTests {
         Assert.Equal(CustomDefault, source.DefaultModel);
         Assert.Equal(AgentReasoningEffortLevel.None, AgentThinkingEffortPolicy.ResolveProviderDefault(source, CustomDefault));
         Assert.Equal(AgentThinkingEffortSupportStatus.Unknown, AgentThinkingEffortPolicy.ResolveCapability(source, UnknownModel).Status);
-        Assert.Equal(AgentThinkingEffortCapabilitySource.Defined, AgentThinkingEffortPolicy.ResolveCapability(source, OpenAiModelIds.Gpt54Mini).Source);
+        Assert.Equal(AgentThinkingEffortCapabilitySource.Defined, AgentThinkingEffortPolicy.ResolveCapability(source, OpenAiModelIds.Gpt6Luna).Source);
         var catalog = SharedProviderProtocolJson.DeserializeCatalog(await sourceApi.GetStringAsync(SharedProviderRoutes.Catalog));
         var publication = Assert.Single(catalog.Providers, item => item.DisplayName == ProviderName);
         Assert.Equal(models.Order(StringComparer.Ordinal), publication.Models.Select(model => model.DisplayName).Order(StringComparer.Ordinal));
@@ -96,7 +96,7 @@ public sealed class SharedProviderCustomMetadataTests {
             Assert.Equal(publication.DefaultModelId.Value, imported.DefaultModel);
             Assert.NotNull(imported.ModelSelectionConstraint);
             Assert.Equal(imported.ModelCatalog.Select(model => model.Id).Order(), imported.ModelSelectionConstraint.AllowedModels.Order());
-            Assert.Equal(new[] { "gpt-4.1", OpenAiModelIds.Gpt54Mini }.Order(), imported.SuggestedModels.Select(imported.GetModelDisplayName).Order());
+            Assert.Equal(new[] { OpenAiModelIds.Gpt6Sol, OpenAiModelIds.Gpt6Luna }.Order(), imported.SuggestedModels.Select(imported.GetModelDisplayName).Order());
             Assert.Equal(publication.Models.Where(model => model.IsSuggested).Select(model => model.DisplayName).Order(),
                 imported.SuggestedModels.Select(imported.GetModelDisplayName).Order());
             Assert.Equal(AgentReasoningEffortLevel.None, AgentThinkingEffortPolicy.ResolveProviderDefault(imported, imported.DefaultModel));

@@ -192,7 +192,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         using var ownership = AgentRuntimeToolOwnershipContext.BeginScope(new(provider.Descriptor.ProviderKey, provider.Descriptor.DisplayName, tool.Name));
         var result = ReadRegisteredToolResult<ProjectStructureNodesToSubprojectResult>(tool, await tool.InvokeAsync(new AIFunctionArguments {
             ["projectId"] = fixture.Project.ProjectId,
-            ["request"] = new ProjectStructureNodesToSubprojectInput("Process reserved child", [node.Id])
+            ["request"] = new ProjectStructureNodesToSubprojectInput("Process reserved child", [node.Id]) {
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(await workbench.GetStructureAsync(fixture.Project.ProjectId))
+            }
         }));
         Assert.Contains(node.Id, result.MovedNodeIds);
         await using var native = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();

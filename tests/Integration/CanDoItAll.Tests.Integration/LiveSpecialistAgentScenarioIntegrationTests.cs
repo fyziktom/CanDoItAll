@@ -142,10 +142,18 @@ public sealed class LiveSpecialistAgentScenarioIntegrationTests
         IReadOnlyList<string> requiredMarkers,
         CancellationToken cancellationToken)
     {
+        var request = $"""
+            {prompt}
+
+            The handoff consumer requires every exact marker below. Keep each marker verbatim on its own line
+            and put concise content below it. Do not replace these markers with Markdown headings or synonyms.
+            Other requested sections may follow, but none of these required markers may be omitted:
+            {string.Join("\n", requiredMarkers)}
+            """;
         var result = await workspaceService.SendMessageAsync(
             agentId,
             null,
-            prompt,
+            request,
             new AgentChatRunOptions(AgentExecutionOperationId.New()),
             cancellationToken);
         var content = result.AssistantMessage.Content;

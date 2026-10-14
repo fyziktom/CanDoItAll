@@ -265,7 +265,7 @@ public sealed partial class ProjectStructureAgentService(
             ? surface.Links
                 .Where(link => selectedIds.Contains(link.SourceId) && selectedIds.Contains(link.TargetId))
                 .Select(link => new ProjectStructureLinkSummary(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored) {
-                    ExpectedState = link.RecordId is { } recordId && surface.ExpectedProjectAdmission is { } project
+                    ExpectedState = link.IsUserAuthored && link.RecordId is { } recordId && surface.ExpectedProjectAdmission is { } project
                         ? new(project, recordId, link.SourceId, link.TargetId, link.Kind) : null
                 })
                 .ToList()
@@ -2567,7 +2567,7 @@ public sealed partial class ProjectStructureAgentService(
                 localFileOpener,
                 ProjectStructureRuntimePathAuthorityMode.AgentExecution,
                 runtimeAdmission is null ? null : new(runtimeAdmission, node.RecordId))) {
-            ExpectedState = ProjectStructureNodeStateGuard.Capture(node, runtimeAdmission)
+            ExpectedState = node.IsSystemManaged ? null : ProjectStructureNodeStateGuard.Capture(node, runtimeAdmission)
         };
     }
 

@@ -83,7 +83,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-cost")).ToHaveValueAsync("320");
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-currency")).ToHaveValueAsync("USD");
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "02-create-task-person-1600.png") });
-            await SubmitTaskDialogAsync(page, createDialog, $"{keptTitle} was added with its selected assignee.");
+            await SubmitTaskDialogAsync(page, createDialog);
             await CloseToolboxAsync(page);
 
             var kept = await ReadTaskAsync(services, seed.ProjectId, keptTitle);
@@ -112,7 +112,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-resource-cost-status")).ToContainTextAsync(AgentQuote);
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-cost")).ToHaveValueAsync(string.Empty);
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "03-create-task-agent-1600.png") });
-            await SubmitTaskDialogAsync(page, createDialog, $"{agentTitle} was added with its selected assignee.");
+            await SubmitTaskDialogAsync(page, createDialog);
             await CloseToolboxAsync(page);
 
             var agentTask = await ReadTaskAsync(services, seed.ProjectId, agentTitle);
@@ -131,7 +131,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await pickerSearch.FillAsync(seed.PersonOneName);
             await PersonOption(page, seed.PersonOneId).ClickAsync();
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-cost")).ToHaveValueAsync("320");
-            await SubmitTaskDialogAsync(page, createDialog, $"{lifecycleTitle} was added with its selected assignee.");
+            await SubmitTaskDialogAsync(page, createDialog);
             await CloseToolboxAsync(page);
             var lifecycle = await ReadTaskAsync(services, seed.ProjectId, lifecycleTitle);
             var firstLifecycleFact = Assert.Single(lifecycle.WorkFacts);
@@ -160,7 +160,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await page.SetViewportSizeAsync(1600, 1000);
             await page.WaitForTimeoutAsync(300);
 
-            await SubmitTaskDialogAsync(page, editDialog, $"{lifecycleTitle} was updated.");
+            await SubmitTaskDialogAsync(page, editDialog);
             await CloseObjectIndexAsync(page);
             lifecycle = await ReadTaskAsync(services, seed.ProjectId, lifecycleTitle);
             var replacedFact = Assert.Single(lifecycle.WorkFacts);
@@ -178,7 +178,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await Assertions.Expect(PersonOption(page, seed.PersonTwoId)).ToHaveAttributeAsync("aria-pressed", "false");
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-resource-cost")).ToHaveCountAsync(0);
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "05-edit-task-cleared-1600.png") });
-            await SubmitTaskDialogAsync(page, editDialog, $"{lifecycleTitle} was updated.");
+            await SubmitTaskDialogAsync(page, editDialog);
             await CloseObjectIndexAsync(page);
             lifecycle = await ReadTaskAsync(services, seed.ProjectId, lifecycleTitle);
             Assert.Empty(lifecycle.WorkFacts);
@@ -349,11 +349,10 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
         return dialog;
     }
 
-    // The dialog closes before the page commits the task and its assignee. The completion notice names the task and
-    // is raised after the authoritative reload, so the owner is read only once the whole save has finished. A notice
-    // of an earlier save of the same task must be gone before the next save starts.
-    private static async Task SubmitTaskDialogAsync(IPage page, ILocator dialog, string completion)
+    // Read the owner after the committed save is acknowledged; an earlier acknowledgement must have expired.
+    private static async Task SubmitTaskDialogAsync(IPage page, ILocator dialog)
     {
+        const string completion = "Task saved.";
         var notices = page.Locator(".rz-notification");
         await Assertions.Expect(notices).Not.ToContainTextAsync(completion, new() { Timeout = 15_000 });
         await page.GetByTestId("project-structure-task-create-submit").ClickAsync();
