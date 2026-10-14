@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-14T05:35:20.371688+00:00",
+  "generated_utc": "2026-10-14T19:23:24.623350+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15418,
+  "allowance_count": 15417,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -81287,12 +81287,6 @@
       "path": "tools/Validation/Test-CorePortabilityHeadless.ps1",
       "category": "absolute-path-field",
       "source_fingerprint": "1e4052b3cc3397f4af3139b87d893fda47e487086697f91e6c3510880d949aa1",
-      "count": 1
-    },
-    {
-      "path": "tools/Validation/Test-CorePortabilityHeadless.ps1",
-      "category": "absolute-path-field",
-      "source_fingerprint": "210284b8ced99d39a9855f9ab16a45476ca21ac12e738b2924243464d2513d3a",
       "count": 1
     },
     {

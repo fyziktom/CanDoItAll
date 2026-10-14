@@ -1055,6 +1055,26 @@ minutes of tests per Linux shard and about 27 per Windows host-platform shard, e
 for the full scope. These are projections: compare the first CI run's step durations with them and
 record the result here before changing a shard count or budget.
 
+## Runtime Portability Gate
+
+The stable Unit/Memory filter excludes `UnixRuntimePortability`. CI runs those cases
+separately through the reviewed [runtime catalog](../tools/Validation/RuntimePortabilityCatalog.json).
+After changing a selected test or its theory data, review the resulting case and class
+selection, update the catalog version and any changed counts, and run all three scopes.
+Keep the exact-count checks; a passing test run can still reveal unintended scope drift.
+
+Build the Unit, Integration and Playwright projects in standard `Release` first, then run:
+
+```powershell
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -ResultsDirectory ./.artifacts/runtime-portability -UseLocalCanDoItAllLibraries $true
+```
+
+The runner records the source, dependency and assembly identities before checking the
+Unit, Integration and Browser results against the catalog. `-SkipBuild` requires its
+matching build stamp. A catalog repair must reach the later scopes that the earlier
+failure prevented CI from running. The subsequent headless-host gate publishes outside
+the checkout for isolation while using the standard `Release` build outputs.
+
 ## Documentation
 
 ```powershell

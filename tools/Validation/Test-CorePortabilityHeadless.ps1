@@ -67,7 +67,6 @@ if ($IsWindows) {
 }
 
 $publishRoot = Join-Path $workRootPath $(if ($IsWindows) { 'p' } else { 'publish' })
-$buildArtifactsRoot = Join-Path $workRootPath $(if ($IsWindows) { 'b' } else { 'build-artifacts' })
 $runtimeRoot = Join-Path $workRootPath $(if ($IsWindows) { 'r' } else { 'runtime' })
 $publishLogPath = Join-Path $outputRootPath 'publish.log'
 $webProjectPath = Join-Path $repositoryRoot 'src\App\CanDoItAll.Web\CanDoItAll.Web.csproj'
@@ -88,7 +87,6 @@ $publishArguments = @(
     '--configuration', 'Release',
     '--runtime', $RuntimeIdentifier,
     '--self-contained', 'false',
-    '--artifacts-path', $buildArtifactsRoot,
     '--output', $publishRoot,
     "-p:UseLocalCanDoItAllLibraries=$useLocalLibraries",
     '/m:1',
@@ -369,7 +367,7 @@ $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $outpu
 
 if (!$RetainRuntimeFiles) {
     $cleanupPaths = if ($workRootPath.Equals($outputRootPath, $pathComparison)) {
-        @($buildArtifactsRoot, $publishRoot, $runtimeRoot)
+        @($publishRoot, $runtimeRoot)
     }
     else {
         @($workRootPath)
