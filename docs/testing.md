@@ -1085,9 +1085,17 @@ $portabilityScan = Join-Path ([System.IO.Path]::GetTempPath()) (
 
 python ./tools/Validation/Portability/test_enforce_portability_baseline.py
 python ./tools/Validation/Portability/test_scan_artifacts_for_secrets.py
+python -m unittest discover -s ./tools/Validation/Rendering -p "test_*.py"
+python ./tools/Validation/Rendering/check_rendering_register.py --repo .
 python ./tools/Validation/Portability/scan_portability.py --repo-root . --output $portabilityScan --tracked-only
 python ./tools/Validation/Portability/enforce_portability_baseline.py --scan $portabilityScan --baseline ./tools/Validation/Portability/portability-risk-baseline.json
 ```
+
+The rendering register is a separate part of the CI job. Review changed rendering
+inputs against [UI component seams](architecture/ui-component-seams.md), update only
+their entries in [the rendering register](architecture/components-decoupling-register.json),
+and rerun its check after the final source edit. A passing portability baseline does
+not replace this review or the affected runtime tests.
 
 The scan must cover the complete proposed source and must not be truncated. Check
 `git status --short`: if new protected files are untracked, repeat the scan without

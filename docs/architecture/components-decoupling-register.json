@@ -14152,7 +14152,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "aff9345fb6588c077d40d37025af8320f4cad4bd19f87c34aa7aca6323d4f33b",
+      "sha256_lf": "4b4c8dd20441c587bc83c513617a3cc53a4f0a08f5e8244e830e0eecc9889b95",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14186,7 +14186,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. Viewport changes preserve an admitted Insights context only for the same current surface and node snapshot; read/write and state ownership remain native.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectStructurePage",

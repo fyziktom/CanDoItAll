@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Fixtures/storage-preview.pdf" LogicalName="CanDoItAll.Tests.Playwright.Fixtures.storage-preview.pdf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../../src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
     <ProjectReference Include="../../Support/CanDoItAll.McpTestHost/CanDoItAll.McpTestHost.csproj" />

@@ -325,16 +325,17 @@ public sealed partial class AppSmokeTests
         await page.WaitForFunctionAsync("() => !document.querySelector('.cw-canvas-composer.is-dialog')");
     }
 
-    private static FilePayload BuildValidPreviewPdf(string fileName)
-    {
-        const string previewPdfBase64 =
-            "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9Db3VudCAxIC9LaWRzIFszIDAgUl0gPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCAzMDAgMTQ0XSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMTIgPj4Kc3RyZWFtCnEgMC4wNjY2NjY2NjcgMC43OTYwNzg0MzEgMC4yMzkyMTU2ODYgcmcgMzYgNDAgMjE2IDE4IHJlIGYgUQpCVCAvRjEgMTggVGYgMzYgOTIgVGQgKFBERiB2YWxpZGF0aW9uIGFzc2V0KSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyNDEgMDAwMDAgbiAKMDAwMDAwMDQwMyAwMDAwMCBuIAp0cmFpbGVyCjw8IC9Sb290IDEgMCBSIC9TaXplIDYgPj4Kc3RhcnR4cmVmCjQ3MwolJUVPRgo=";
+    private static FilePayload BuildValidPreviewPdf(string fileName) {
+        const string previewResourceName = "CanDoItAll.Tests.Playwright.Fixtures.storage-preview.pdf";
+        using var resource = typeof(AppSmokeTests).Assembly.GetManifestResourceStream(previewResourceName)
+            ?? throw new InvalidOperationException($"Embedded PDF fixture '{previewResourceName}' is missing.");
+        using var buffer = new MemoryStream();
+        resource.CopyTo(buffer);
 
-        return new FilePayload
-        {
+        return new FilePayload {
             Name = fileName,
             MimeType = "application/pdf",
-            Buffer = Convert.FromBase64String(previewPdfBase64)
+            Buffer = buffer.ToArray()
         };
     }
 
