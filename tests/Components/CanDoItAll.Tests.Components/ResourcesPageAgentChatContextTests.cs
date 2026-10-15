@@ -16,7 +16,8 @@ public sealed class ResourcesPageAgentChatContextTests
         var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var missingProjectId = Guid.NewGuid();
-        navigation.NavigateTo(navigation.GetUriWithQueryParameter("projectId", missingProjectId));
+        // The page applies its URL state only at its own route.
+        navigation.NavigateTo($"/resources?projectId={missingProjectId:D}");
 
         var cut = harness.Context.Render<ResourcesPage>();
 

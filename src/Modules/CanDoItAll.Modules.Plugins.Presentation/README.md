@@ -14,6 +14,16 @@ Upload owns the bounded browser stream until disposal. The visible input remains
 mounted while reading; a second selection or close is refused. Retiring the page
 cancels owned reads and suppresses stale effects without undoing admitted writes.
 
+`PluginsUrlCodec` owns the `/plugins` URL: `pluginId`, `section` (`executors`, `settings`,
+`connections`, `logs`, `grants`; `main` omitted), `logs=all` on the Logs section and the
+route-driven `dialog=packages` overlay. The first-load default plugin is replaced into the URL;
+selection, section and log-scope intents push; the packages dialog opens with a parent marker
+and closes through Back when it was opened here. An explicit unknown `pluginId` stays selected
+as unavailable. The one-shot OAuth return keys `oauth`, `connectionId` and `reason` (and the
+legacy `tab=connections`) are read once, reported as a notice and removed by canonicalization;
+sign-in started from the page returns to `?pluginId=<id>&section=connections`. The sandbox and
+tests may omit `IPluginsWorkspaceRoute`.
+
 ```powershell
 dotnet build src/Modules/CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj --configuration Release /m:1
 ```

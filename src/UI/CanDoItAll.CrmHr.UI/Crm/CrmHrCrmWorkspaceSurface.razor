@@ -44,6 +44,8 @@
                                         InitialScope="PartyRecordScope.Organizations"
                                         SelectedPartyId="View.SelectedAccount?.AccountPartyId"
                                         SelectionChanged="View.SelectAccountAsync"
+                                        Query="@View.CatalogQuery"
+                                        QueryChanged="View.HandleCatalogQueryChangedAsync"
                                         LoadFailed="View.HandleAccountBrowserLoadFailedAsync"
                                         PageSize="12"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"

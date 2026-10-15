@@ -179,6 +179,7 @@ public sealed class MemoryProviderUiSurfacePageTests
         configureServices?.Invoke(context.Services);
         context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
         using var scope = context.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
         var profileStore = scope.ServiceProvider.GetRequiredService<IMemoryProviderProfileStore>();

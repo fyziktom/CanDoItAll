@@ -34,12 +34,49 @@ public sealed class ProviderHistorySearchState(IProviderRequestHistory history, 
     public bool HasEarlierPages { get; private set; }
     public bool CanPrevious => !IsLoading && Page is not null && previousCursors.Count > 0;
     public bool CanNext => !IsLoading && Page?.NextCursor is not null;
+    public string? CurrentCursor => currentCursor;
+    public string? PreviousCursor => previousCursors.Count > 0 ? previousCursors[^1] : null;
+    public string? NextCursor => Page?.NextCursor;
 
     public Task SearchAsync(ProviderRequestHistoryQuery query) {
         ObjectDisposedException.ThrowIf(disposed, this);
         ResetCore();
         AppliedQuery = query with { Cursor = null };
         return ReadAsync(AppliedQuery);
+    }
+
+    public Task ShowAsync(ProviderRequestHistoryQuery query, string? cursor, int pageNumber) {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageNumber, 1);
+        var applied = query with { Cursor = null };
+        if (AppliedQuery == applied && pageNumber == PageNumber && cursor == currentCursor && (Page is not null || IsLoading)) {
+            return Task.CompletedTask;
+        }
+        if (AppliedQuery == applied && Page is not null && pageNumber == PageNumber + 1 && cursor is not null) {
+            return ReadAsync(applied with { Cursor = cursor }, () => {
+                if (previousCursors.Count == MaximumPreviousPages) {
+                    previousCursors.RemoveAt(0);
+                    HasEarlierPages = true;
+                }
+                previousCursors.Add(currentCursor);
+                currentCursor = cursor;
+                PageNumber = pageNumber;
+            });
+        }
+        if (AppliedQuery == applied && Page is not null && pageNumber == PageNumber - 1 && previousCursors.Count > 0) {
+            return ReadAsync(applied with { Cursor = cursor }, () => {
+                previousCursors.RemoveAt(previousCursors.Count - 1);
+                currentCursor = cursor;
+                PageNumber = pageNumber;
+            });
+        }
+        ResetCore();
+        AppliedQuery = applied;
+        currentCursor = cursor;
+        PageNumber = pageNumber;
+        HasEarlierPages = pageNumber > 1;
+        return ReadAsync(applied with { Cursor = cursor });
     }
 
     public Task NextAsync() {

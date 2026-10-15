@@ -33,6 +33,7 @@ public sealed class ProjectsPortfolioBrowserTests {
             var card = page.GetByTestId("project-card");
             await Assertions.Expect(card).ToHaveCountAsync(1);
             await card.GetByTestId("project-card-files-button").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex($@"/projects\?q=[^&]+&filesId={projectId:D}$"));
             var files = page.GetByTestId("project-files-dialog");
             await ProjectsFilesBrowserProof.DownloadAsync(host, page, files, "portfolio-proof.md", Encoding.UTF8.GetBytes(content), "projects-dialog");
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" }).PressAsync("Enter");
@@ -42,7 +43,9 @@ public sealed class ProjectsPortfolioBrowserTests {
             await page.ScreenshotAsync(new() { Path = host.Artifact("projects-native-files-dialog.png") });
             await files.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
             await Assertions.Expect(files).ToHaveCountAsync(0);
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/projects\?q=[^&]+$"));
             await page.GetByTestId("projects-portfolio-tabs").GetByRole(AriaRole.Tab, new() { NameRegex = new Regex("^Files") }).ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/projects\?q=[^&]+&view=files$"));
             var pane = page.GetByTestId("project-files-portfolio-pane");
             await ProjectsFilesBrowserProof.DownloadAsync(host, page, pane, "portfolio-proof.md", Encoding.UTF8.GetBytes(content), "projects-portfolio");
             await pane.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" }).PressAsync("Enter");
@@ -54,6 +57,13 @@ public sealed class ProjectsPortfolioBrowserTests {
             await page.GetByTestId("projects-search-input").FillAsync(name);
             await Assertions.Expect(pane.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" })).ToBeVisibleAsync();
             await page.ScreenshotAsync(new() { Path = host.Artifact("projects-native-files-portfolio.png") });
+            // Back returns to the cards with the same search; Forward restores the Files view.
+            await page.GoBackAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/projects\?q=[^&]+$"));
+            await Assertions.Expect(pane).ToBeHiddenAsync();
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/projects\?q=[^&]+&view=files$"));
+            await Assertions.Expect(pane.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" })).ToBeVisibleAsync();
 
             await host.AcknowledgeNavigationAsync(page, () => page.GetByTestId("shell-settings-action").ClickAsync());
             await Assertions.Expect(page.GetByTestId("defaults-name")).ToBeVisibleAsync();
@@ -77,6 +87,7 @@ public sealed class ProjectsPortfolioBrowserTests {
             await Assertions.Expect(page.GetByTestId("projects-workspace")).ToHaveAttributeAsync("data-interactive", "true");
             var overview = page.GetByTestId("projects-detail-modal");
             await overview.GetByRole(AriaRole.Button, new() { Name = "Edit project", Exact = true }).ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync($"{host.BaseUrl}/projects?projectId={projectId:D}&mode=editor");
             await host.AcknowledgeNavigationAsync(page, () => page.GetByTestId("project-save-open-button").ClickAsync());
             await ProjectFilesUiJourney.ReadyFileCanvasAsync(page);
             await oracle.AssertCleanAsync();

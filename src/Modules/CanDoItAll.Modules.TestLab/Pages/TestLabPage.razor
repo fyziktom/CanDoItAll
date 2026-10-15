@@ -1,24 +1,49 @@
 @page "/test-lab"
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.TestLab.UI
 @using CanDoItAll.Components.BaseLib
 @using Microsoft.Extensions.Logging
 @implements IDisposable
 @inject ITestLabWorkspaceOwner Owner
 @inject NotificationService Notifications
+@inject NavigationManager Navigation
 @inject ILogger<TestLabWorkspaceSession> Logger
 
 <PageTitle>Test Lab</PageTitle>
 <TestLabWorkspaceSurface View="session" Interactive="interactive" />
 
 @code {
-    [SupplyParameterFromQuery(Name = "planId")] public Guid? PlanIdQuery { get; set; }
-    [SupplyParameterFromQuery(Name = "projectId")] public Guid? ProjectIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.PlanKey)] public string? PlanQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.SectionKey)] public string? SectionQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.ProjectKey)] public string? ProjectQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.SearchKey)] public string? SearchQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.ProjectFilterKey)] public string? ProjectFilterQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.PhaseKey)] public string? PhaseQuery { get; set; }
+    [SupplyParameterFromQuery(Name = TestLabUrlCodec.ResultKey)] public string? ResultQuery { get; set; }
+    private UrlStateBinding<TestLabUrlState> url = default!;
     private TestLabWorkspaceSession session = default!;
     private bool disposed;
     private bool interactive;
 
-    protected override void OnInitialized() => session = new(Owner, Changed, Notify, Logger);
-    protected override Task OnParametersSetAsync() => session.ApplyRouteAsync(PlanIdQuery, ProjectIdQuery);
+    protected override void OnInitialized() {
+        url = new(Navigation, TestLabUrlCodec.Instance, null, typeof(TestLabPage));
+        session = new(Owner, Changed, Notify, Logger, Navigate);
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (change.IsChanged) {
+            await session.ApplyRouteAsync(change.Current);
+        }
+    }
+
+    // The session reports the address of a user intent; the binding keeps the history rule it was given.
+    private void Navigate(TestLabUrlState next, UrlHistoryMode mode) {
+        if (!disposed) {
+            url.Navigate(next, mode);
+        }
+    }
+
     protected override void OnAfterRender(bool firstRender) {
         if (firstRender) {
             interactive = true;

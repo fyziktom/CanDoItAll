@@ -3,6 +3,10 @@ using CanDoItAll.Modules.Workspace.StorageCatalog.Contracts;
 
 namespace CanDoItAll.Workspace.StorageCatalog.UI;
 
+public enum CatalogSelectionCause { Operator, Owner }
+
+public readonly record struct CatalogSelection(Guid? StorageId, CatalogSelectionCause Cause);
+
 public sealed class CatalogSession : IDisposable {
     private readonly IStorageCatalogOwner owner;
     private bool disposed;
@@ -32,6 +36,7 @@ public sealed class CatalogSession : IDisposable {
     public string Notice { get; private set; } = string.Empty;
     public bool CanMutate => IsCurrent && Draft is { IsSystemDefault: false, Deleted: false } && !Ledger.Blocks(Context);
     public event Action? Changed;
+    public event Action<CatalogSelection>? SelectionChanged;
     public IEnumerable<CatalogRow> Filtered => Catalog.Value.Where(row => string.IsNullOrWhiteSpace(Search) ||
         row.Name.Contains(Search, StringComparison.OrdinalIgnoreCase) || row.EndpointOrRoot.Contains(Search, StringComparison.OrdinalIgnoreCase) ||
         ProviderLabel(row.ProviderKind).Contains(Search, StringComparison.OrdinalIgnoreCase)).OrderBy(row => row.DisplayOrder).ThenBy(row => row.Name);
@@ -53,7 +58,7 @@ public sealed class CatalogSession : IDisposable {
             return;
         }
         EditorRead.Invalidate();
-        SelectedId = null;
+        ChangeSelection(null, CatalogSelectionCause.Operator);
         Draft = new(choice.Template);
         Notify();
     }
@@ -65,7 +70,7 @@ public sealed class CatalogSession : IDisposable {
         if (SelectedId == id && Draft is { Deleted: false } acquired && acquired.Id == id) {
             return Task.CompletedTask;
         }
-        SelectedId = id;
+        ChangeSelection(id, CatalogSelectionCause.Operator);
         Draft = null;
         return EditorRead.ReadAsync(token => owner.ReadEditorAsync(id, token), editor => {
             Draft = editor is null || editor.Id != id ? null : new(editor);
@@ -107,7 +112,7 @@ public sealed class CatalogSession : IDisposable {
                     draft.MarkDeleted();
                 } else {
                     draft.AcceptIdentity(id);
-                    SelectedId = id;
+                    ChangeSelection(id, CatalogSelectionCause.Owner);
                 }
             }
             if (result.Health is { } health) {
@@ -160,6 +165,16 @@ public sealed class CatalogSession : IDisposable {
         Ledger.Notify(Context);
     }
 
+    private void ChangeSelection(Guid? id, CatalogSelectionCause cause) {
+        if (SelectedId == id) {
+            return;
+        }
+        SelectedId = id;
+        if (IsCurrent) {
+            SelectionChanged?.Invoke(new(id, cause));
+        }
+    }
+
     private void ReceiptsChanged(CatalogContext context) {
         if (context == Context) {
             Notify();
@@ -183,5 +198,6 @@ public sealed class CatalogSession : IDisposable {
         EditorRead.Dispose();
         Draft = null;
         Changed = null;
+        SelectionChanged = null;
     }
 }

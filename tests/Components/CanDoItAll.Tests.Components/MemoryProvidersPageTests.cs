@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
@@ -9,6 +10,8 @@ using CanDoItAll.Modules.Memory.Pages;
 using CanDoItAll.Modules.Memory.Services;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Web.Composition;
+using CanDoItAll.Memory.UI;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +28,7 @@ public sealed class MemoryProvidersPageTests
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton(new MemoryProvidersPageController(
             new PendingSnapshotMemoryProviderManagementUiService()));
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
         var cut = context.Render<MemoryProvidersPage>();
 
@@ -114,6 +118,58 @@ public sealed class MemoryProvidersPageTests
             Assert.Contains("Business demo memory", cut.Markup);
             Assert.Contains("Programming demo memory", cut.Markup);
         });
+    }
+
+    [Fact]
+    public void MemoryProvidersPage_ReplacesTheOwnerDefaultAndPushesProviderAndTabIntents()
+    {
+        var setup = CreateContext(
+            CreateMockProvider("provider.business", "Business memory", MemoryProviderHealthState.Healthy, MemoryCapabilityIds.ContextQuerySync),
+            CreateMockProvider("provider.programming", "Programming memory", MemoryProviderHealthState.Healthy, MemoryCapabilityIds.ContextQuerySync));
+        using var context = setup.Context;
+        var navigation = Assert.IsType<BunitNavigationManager>(context.Services.GetRequiredService<NavigationManager>());
+        navigation.NavigateTo("http://localhost/memory");
+        var entries = navigation.History.Count;
+
+        var cut = context.Render<MemoryProvidersPage>();
+        cut.WaitForElement("[data-testid='memory-ui-provider-list']");
+        cut.WaitForAssertion(() => Assert.StartsWith("http://localhost/memory?providerId=provider.", navigation.Uri, StringComparison.Ordinal));
+        Assert.Equal(entries, navigation.History.Count);
+        Assert.True(navigation.History.First().Options.ReplaceHistoryEntry);
+        var defaulted = navigation.Uri;
+
+        cut.Find("[data-testid='memory-provider-provider-programming']").Click();
+        cut.WaitForAssertion(() => Assert.Equal("http://localhost/memory?providerId=provider.programming", navigation.Uri));
+        var selected = navigation.History.Count;
+        Assert.Equal(defaulted == navigation.Uri ? entries : entries + 1, selected);
+        cut.Find("[data-testid='memory-ui-tab-query']").Click();
+
+        Assert.Equal("http://localhost/memory?providerId=provider.programming&tab=query", navigation.Uri);
+        Assert.Equal(selected + 1, navigation.History.Count);
+        Assert.False(navigation.History.First().Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public async Task MemoryProvidersPage_DeepLinkSelectsTheExactProviderAndTabAndReportsAMissingProvider()
+    {
+        var setup = CreateContext(
+            CreateMockProvider("provider.business", "Business memory", MemoryProviderHealthState.Healthy, MemoryCapabilityIds.ContextQuerySync),
+            CreateMockProvider("provider.programming", "Programming memory", MemoryProviderHealthState.Degraded, MemoryCapabilityIds.ContextQuerySync));
+        using var context = setup.Context;
+        var navigation = Assert.IsType<BunitNavigationManager>(context.Services.GetRequiredService<NavigationManager>());
+        navigation.NavigateTo("http://localhost/memory?providerId=provider.programming&tab=Query");
+
+        var cut = context.Render<MemoryProvidersPage>();
+        cut.WaitForElement("[data-testid='memory-ui-query-submit']");
+        var controller = cut.FindComponent<MemoryWorkspaceSurface>().Instance.Controller;
+        Assert.Equal("provider.programming", controller.SelectedProviderId);
+        Assert.Equal(4, controller.ActiveTabIndex);
+        Assert.Equal("http://localhost/memory?providerId=provider.programming&tab=query", navigation.Uri);
+
+        await cut.InvokeAsync(() => navigation.NavigateTo("/memory?providerId=provider.missing"));
+        cut.WaitForAssertion(() => Assert.Contains("selected provider is missing", cut.Find("[data-testid='memory-ui-error']").TextContent, StringComparison.Ordinal));
+        Assert.Equal("provider.missing", controller.SelectedProviderId);
+        Assert.Equal(0, controller.ActiveTabIndex);
     }
 
     [Fact]
@@ -232,6 +288,7 @@ public sealed class MemoryProvidersPageTests
         context.Services.AddSingleton<IMemoryProviderProfileStore>(store);
         context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
         return (context, store);
     }

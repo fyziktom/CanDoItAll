@@ -8,6 +8,7 @@
 @inject PartyDirectoryService PartyDirectoryService
 @inject IPartyOrganizationAffiliationService AffiliationService
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrWorkforcePage> Logger
 
@@ -40,14 +41,23 @@
 
     private string? WorkforceHistoryFailureMessage => workforceHistory.FailureMessage;
 
-    [SupplyParameterFromQuery(Name = "partyId")]
-    public Guid? PartyIdQuery { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = WorkforceUrlCodec.PartyKey)]
+    public string? PartyIdQuery { get; set; }
 
-    private const int OverviewTabIndex = 0;
-    private const int SkillsTabIndex = 2;
-    private const int AllocationsTabIndex = 3;
-    private const int HistoryTabIndex = 4;
+    [SupplyParameterFromQuery(Name = WorkforceUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = WorkforceUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = WorkforceUrlCodec.KindKey)]
+    public string? KindQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = WorkforceUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<WorkforceUrlState> url = default!;
     private readonly DeliveryUnitQuickCreateModel deliveryUnitEditor = new();
     private readonly SkillDefinitionEditorModel skillDefinitionEditor = new()
     {
@@ -76,7 +86,6 @@
     private const string SkillDraft = "skill";
     private const string CapacityDraft = "capacity";
     private long deliveryUnitDialogGeneration;
-    private int selectedDetailTabIndex = OverviewTabIndex;
     private int workforceBrowserVersion;
     private bool isCapacityWorkspaceLoading;
     private bool isRecordDialogOpen;
@@ -86,7 +95,7 @@
     private bool isDisposed;
 
     private AgentChatContextSurface AgentChatSurface => selectedWorkspace is { } workspace &&
-                                                         (!PartyIdQuery.HasValue || PartyIdQuery.Value == workspace.PartyId)
+                                                         (url.State.PartyId is not { } routePartyId || routePartyId == workspace.PartyId)
         ? CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface(
             workspace.PartyId,
             workspace.DisplayName,
@@ -97,10 +106,12 @@
         : CrmHrAgentChatSurfaceBuilder.BuildWorkforceSurface();
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [new("partyId", PartyIdQuery?.ToString("D"))]);
+        => CrmHrNavigationFence.Create(Navigation, url);
+
+    // The record section is navigation state: the tab index is only its rendering.
+    private int SelectedDetailTabIndex => (int)url.State.Section;
+
+    private PagedRecordQueryState<WorkforceRecordViewFilter> CatalogQuery => url.State.Catalog.ToQuery();
 
     private WorkforceAvailabilityState? SelectedAvailabilityState
         => capacityWorkspace?.CapacitySummary.AvailabilityState;
@@ -143,6 +154,7 @@
 
     protected override void OnInitialized()
     {
+        url = new UrlStateBinding<WorkforceUrlState>(Navigation, WorkforceUrlCodec.Instance, History, typeof(CrmHrWorkforcePage));
         workforceHistory = new CrmHrActivityHistorySession(
             (query, cancellationToken) => PartyDirectoryService.SearchPartyActivityAsync(query, cancellationToken),
             initialFailureMessage: "Workforce history could not be loaded.",
@@ -150,9 +162,32 @@
             Logger);
     }
 
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // Another record loads it; another section of the same record loads only that section's lazy data; a catalog
+    // query belongs to the catalog, which loads it itself.
     protected override async Task OnParametersSetAsync()
     {
-        var requestedPartyId = PartyIdQuery;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged)
+        {
+            return;
+        }
+
+        if (change.IsInitial || change.Previous.PartyId != change.Current.PartyId)
+        {
+            await OpenRouteRecordAsync(change.Current);
+            return;
+        }
+
+        if (change.Previous.Section != change.Current.Section && isRecordDialogOpen)
+        {
+            await EnsureSectionDataLoadedAsync();
+        }
+    }
+
+    private async Task OpenRouteRecordAsync(WorkforceUrlState route)
+    {
+        var requestedPartyId = route.PartyId;
         if (requestedPartyId != selectedWorkspace?.PartyId)
         {
             isRecordDialogOpen = false;
@@ -174,12 +209,29 @@
         isRecordDialogOpen = outcome == WorkforceLoadOutcome.Ready &&
                              requestedPartyId.HasValue &&
                              selectedWorkspace is not null;
-
-        if (outcome == WorkforceLoadOutcome.Ready && selectedDetailTabIndex == AllocationsTabIndex)
+        if (outcome == WorkforceLoadOutcome.Missing)
         {
-            await EnsureCapacityWorkspaceLoadedAsync();
+            // The requested identity stays in the location and no other record takes its place.
+            NotificationService.Warning(
+                "Workforce record unavailable",
+                "The requested workforce record does not exist or is no longer available.");
+            return;
+        }
+
+        if (isRecordDialogOpen)
+        {
+            await EnsureSectionDataLoadedAsync();
         }
     }
+
+    // The lazy data of the open record's section.
+    private Task EnsureSectionDataLoadedAsync()
+        => url.State.Section switch
+        {
+            WorkforceSection.Allocations => EnsureCapacityWorkspaceLoadedAsync(),
+            WorkforceSection.History => EnsureHistoryLoadedAsync(),
+            _ => Task.CompletedTask
+        };
 
     private WorkforceLoadRequest BeginWorkforceLoad(
         Guid? requestedPartyId,
@@ -190,7 +242,7 @@
         return new WorkforceLoadRequest(
             Interlocked.Increment(ref workforceLoadGeneration),
             requestedPartyId,
-            PartyIdQuery,
+            url.State.PartyId,
             expectedSelectedPartyId,
             binding);
     }
@@ -256,7 +308,6 @@
         var isPartySelectionChanged = selectedWorkspace?.PartyId != snapshot.Workspace.PartyId;
         if (isPartySelectionChanged)
         {
-            selectedDetailTabIndex = OverviewTabIndex;
             InvalidateCapacityWorkspace();
         }
 
@@ -268,7 +319,7 @@
     private bool IsCurrentWorkforceLoad(WorkforceLoadRequest request)
         => !isDisposed &&
            request.Generation == Volatile.Read(ref workforceLoadGeneration) &&
-           PartyIdQuery == request.RoutePartyId &&
+           url.State.PartyId == request.RoutePartyId &&
            (request.Binding == WorkforceLoadBinding.RouteBound ||
             selectedWorkspace?.PartyId == request.ExpectedSelectedPartyId);
 
@@ -366,14 +417,7 @@
         if (outcome == WorkforceLoadOutcome.Ready)
         {
             InvalidateCapacityWorkspace();
-            if (selectedDetailTabIndex == AllocationsTabIndex)
-            {
-                await EnsureCapacityWorkspaceLoadedAsync();
-            }
-            else if (selectedDetailTabIndex == HistoryTabIndex)
-            {
-                await EnsureHistoryLoadedAsync();
-            }
+            await EnsureSectionDataLoadedAsync();
         }
 
         return outcome == WorkforceLoadOutcome.Ready;
@@ -382,7 +426,7 @@
     private WorkforceActionStamp CaptureWorkforceAction()
         => new(
             Volatile.Read(ref workforceLoadGeneration),
-            PartyIdQuery,
+            url.State.PartyId,
             selectedWorkspace?.PartyId);
 
     private bool TryCaptureSelectedWorkforceAction(out WorkforceActionStamp action)
@@ -395,7 +439,7 @@
     private bool IsCurrentWorkforceAction(WorkforceActionStamp action)
         => !isDisposed &&
            action.Generation == Volatile.Read(ref workforceLoadGeneration) &&
-           PartyIdQuery == action.RoutePartyId &&
+           url.State.PartyId == action.RoutePartyId &&
            selectedWorkspace?.PartyId == action.SelectedPartyId;
 
     private void ClearWorkforceSelection()
@@ -404,7 +448,6 @@
         selectedAffiliations = [];
         selectedClassification = WorkforceRecordClassification.ExternalContact;
         isProfileCreationRequested = false;
-        selectedDetailTabIndex = OverviewTabIndex;
         InvalidateCapacityWorkspace();
         InvalidateHistory();
         // Closing the record discards its drafts: the next record, or the same one reopened, starts from the owner.
@@ -414,19 +457,17 @@
         capacityBlockEditor = CreateCapacityBlockEditor(Guid.Empty);
     }
 
+    // A card opens its record over the catalog as a new history entry; Back closes it again.
     private Task SelectPartyAsync(Guid partyId)
     {
-        if (PartyIdQuery == partyId && selectedWorkspace?.PartyId == partyId)
+        if (url.State.PartyId == partyId && selectedWorkspace?.PartyId == partyId)
         {
             isRecordDialogOpen = true;
             return Task.CompletedTask;
         }
 
-        Interlocked.Increment(ref workforceLoadGeneration);
-        isRecordDialogOpen = false;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/workforce?partyId={partyId}");
-        return Task.CompletedTask;
+        url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
+        return OpenRouteRecordAsync(url.State);
     }
 
     private Task CloseRecordDialogAsync()
@@ -440,8 +481,7 @@
         isRecordDialogOpen = false;
         ClearWorkforceSelection();
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        Navigation.NavigateTo("/crm-hr/workforce", replace: true);
-        return Task.CompletedTask;
+        return url.CloseOverlayAsync(url.State.WithoutRecord());
     }
 
     private Task HandleWorkforceBrowserLoadFailedAsync(Exception exception)
@@ -465,17 +505,26 @@
         return Task.CompletedTask;
     }
 
+    // A section of the open record refines its entry; it loads only the data that section shows.
     private async Task HandleDetailTabChangedAsync(int index)
     {
-        selectedDetailTabIndex = index;
-        if (index == AllocationsTabIndex)
+        var section = (WorkforceSection)index;
+        if (!Enum.IsDefined(section))
         {
-            await EnsureCapacityWorkspaceLoadedAsync();
+            throw new ArgumentOutOfRangeException(nameof(index), index, "The workforce record has no such section.");
         }
-        else if (index == HistoryTabIndex)
-        {
-            await EnsureHistoryLoadedAsync();
-        }
+
+        url.Navigate(url.State with { Section = section }, UrlHistoryMode.Replace);
+        await EnsureSectionDataLoadedAsync();
+    }
+
+    // The catalog committed a query and is already loading it: only the location follows.
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<WorkforceRecordViewFilter> change)
+    {
+        url.Navigate(
+            url.State with { Catalog = WorkforceUrlCodec.Catalog.FromQuery(change.Query) },
+            CrmHrCatalogUrlCodec<WorkforceRecordViewFilter>.HistoryMode(change.Kind));
+        return Task.CompletedTask;
     }
 
     private Task RequestProfileCreation()
@@ -486,7 +535,7 @@
         }
 
         isProfileCreationRequested = true;
-        selectedDetailTabIndex = ProfileTabIndex;
+        url.Navigate(url.State with { Section = WorkforceSection.Profile }, UrlHistoryMode.Replace);
         return Task.CompletedTask;
     }
 
@@ -646,13 +695,8 @@
 
     private void OpenDirectory()
     {
-        if (selectedWorkspace is null)
-        {
-            Navigation.NavigateTo("/crm-hr/directory");
-            return;
-        }
-
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId}");
+        var directory = DirectoryUrlCodec.Default with { PartyId = selectedWorkspace?.PartyId };
+        Navigation.NavigateTo(DirectoryUrlCodec.Instance.Href(CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Directory).Route, directory));
     }
 
     private Task OpenProjectAsync(Guid projectId)
@@ -893,6 +937,7 @@
         using var saveCancellation = new CancellationTokenSource();
         deliveryUnitSaveCancellation = saveCancellation;
         isDeliveryUnitSaving = true;
+        Guid? createdPartyId = null;
 
         try
         {
@@ -935,10 +980,8 @@
             isDeliveryUnitDialogOpen = false;
             Interlocked.Increment(ref deliveryUnitDialogGeneration);
 
-            Interlocked.Increment(ref workforceLoadGeneration);
             workforceBrowserVersion++;
-            agentChatContextAccessState = AgentChatContextAccessState.Loading;
-            Navigation.NavigateTo($"/crm-hr/workforce?partyId={saveResult.Value:D}");
+            createdPartyId = saveResult.Value;
             NotificationService.Success("Delivery unit created", "Delivery unit created.");
         }
         catch (OperationCanceledException) when (saveCancellation.IsCancellationRequested)
@@ -952,6 +995,13 @@
                 deliveryUnitSaveCancellation = null;
                 isDeliveryUnitSaving = false;
             }
+        }
+
+        // The created unit opens over the catalog as a new history entry, like a card the operator chose.
+        if (createdPartyId is { } partyId)
+        {
+            url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
+            await OpenRouteRecordAsync(url.State);
         }
     }
 

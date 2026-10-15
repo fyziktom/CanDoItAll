@@ -441,6 +441,9 @@
     public EventCallback<Guid> OpenGantt { get; set; }
 
     [Parameter]
+    public ProjectsAgentChatView PortfolioView { get; set; } = ProjectsAgentChatView.Cards;
+
+    [Parameter]
     public EventCallback<ProjectsAgentChatView> PortfolioViewChanged { get; set; }
 
     [Parameter]
@@ -477,6 +480,7 @@
     private Guid? selectedTreeProjectId;
     private bool isProjectPackageDialogOpen;
     private int selectedPortfolioTabIndex;
+    private ProjectsAgentChatView appliedPortfolioView = ProjectsAgentChatView.Cards;
 
     private IReadOnlyList<ProjectSummary> FilteredProjectSummaries => ProjectProjection.Projects;
 
@@ -509,6 +513,16 @@
     protected override void OnParametersSet()
     {
         selectedTreeProjectId = HierarchyFilterProjectId;
+        if (PortfolioView != appliedPortfolioView)
+        {
+            appliedPortfolioView = PortfolioView;
+            selectedPortfolioTabIndex = PortfolioView switch
+            {
+                ProjectsAgentChatView.Cards => 0,
+                ProjectsAgentChatView.Files => 1,
+                _ => throw new ArgumentOutOfRangeException(nameof(PortfolioView), PortfolioView, "The Projects portfolio view is undefined.")
+            };
+        }
     }
 
     private async Task HandleProjectTreeSelectAsync(string nodeId)

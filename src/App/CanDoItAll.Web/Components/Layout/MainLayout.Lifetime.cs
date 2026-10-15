@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -97,15 +98,16 @@ public partial class MainLayout {
         }
     }
 
-    private sealed record NavigationRead(Uri Uri, long Generation, CancellationTokenSource Cancellation);
+    private sealed record NavigationRead(Uri Uri, long Generation, CancellationTokenSource Cancellation, bool ExplicitTab);
 
     private Task RetryLayoutInitializationAsync()
         => RunLayoutWorkAsync(nameof(InitializeLayoutAsync), InitializeLayoutAsync);
 
-    private NavigationRead BeginNavigationRead() {
+    private NavigationRead BeginNavigationRead(string? historyEntryState) {
         navigationCancellation?.Cancel();
         navigationCancellation = CancellationTokenSource.CreateLinkedTokenSource(layoutLifetime.Token);
-        return new(CurrentUri, ++navigationGeneration, navigationCancellation);
+        return new(CurrentUri, ++navigationGeneration, navigationCancellation,
+            string.Equals(historyEntryState, WorkbenchNavigation.OpenTabHistoryState, StringComparison.Ordinal));
     }
 
     private bool IsCurrent(NavigationRead read) => IsLayoutCurrent && !read.Cancellation.IsCancellationRequested &&

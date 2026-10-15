@@ -6,18 +6,18 @@
 @if (profileRetired) {
     <Alert AlertStyle="AlertStyle.Warning">The database or caller changed. Reopen Settings to acquire a new defaults and Secrets lifetime. Local file preferences are unchanged.</Alert>
 }
-<WorkspaceSettingsSurface Section="section" SectionChanged="SelectSectionAsync" Defaults="defaults" Secrets="secrets" Files="files" ApiStatusLabel="@apiStatusLabel">
+<WorkspaceSettingsSurface Section="url.State.Tab" SectionChanged="SelectSectionAsync" Defaults="defaults" Secrets="secrets" Files="files" ApiStatusLabel="@apiStatusLabel">
     <History><ProviderHistoryPolicyPanel /></History>
     <DeferredSection Context="activeSection">
         @switch (activeSection) {
             case WorkspaceSection.DataSources:
-                <DatabaseSourcesSettingsPanel />
+                <DatabaseSourcesSettingsPanel ProfileId="url.State.ProfileId" ProfileIdChanged="ProfileSelectionChanged" />
                 break;
             case WorkspaceSection.Storage:
-                <StorageSettingsPanel />
+                <StorageSettingsPanel StorageId="url.State.StorageId" StorageIdChanged="StorageSelectionChanged" />
                 break;
             case WorkspaceSection.ApiAccess:
-                <WorkspaceApiAccessHost StatusChanged="ApiStatusChanged" />
+                <WorkspaceApiAccessHost StatusChanged="ApiStatusChanged" AccountQuery="AccountQuery" AccountQueryChanged="AccountQueryChanged" />
                 break;
         }
     </DeferredSection>

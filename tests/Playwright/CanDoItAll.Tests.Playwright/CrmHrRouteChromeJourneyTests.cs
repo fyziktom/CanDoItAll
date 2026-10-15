@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,8 +7,9 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright.Smoke;
 
 // Route and chrome of the CRM / HR module through the real Web host and PostgreSQL: every area route with its
-// document title, header and active area tab; area changes through the real secondary tabs; browser Back; supported
-// deep links of seeded records with reload and close; and unknown identities that must never open another record.
+// document title, header and active area tab; area changes through the real secondary tabs; browser Back and Forward
+// over a record opened from the catalog; supported deep links of seeded records with reload and close; and unknown
+// identities that must never open another record.
 [Collection(PlaywrightCollection.Name)]
 public sealed class CrmHrRouteChromeJourneyTests
 {
@@ -59,30 +61,35 @@ public sealed class CrmHrRouteChromeJourneyTests
             foreach (var area in new[] { DirectoryArea, CrmArea, WorkforceArea, RecruitingArea, AgentsArea, AssignmentsArea, HomeArea })
             {
                 await CrmHrDirectoryJourneySupport.AreaTab(page, area.TabLabel).ClickAsync();
-                await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(area.Route), new() { Timeout = 30_000 });
+                await Assertions.Expect(page).ToHaveURLAsync(AreaUrl(area), new() { Timeout = 30_000 });
                 await AssertAreaAsync(page, area);
             }
 
             // Browser Back walks the areas in reverse.
             await page.GoBackAsync();
-            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(AssignmentsArea.Route), new() { Timeout = 30_000 });
+            await Assertions.Expect(page).ToHaveURLAsync(AreaUrl(AssignmentsArea), new() { Timeout = 30_000 });
             await AssertAreaAsync(page, AssignmentsArea);
             await page.GoBackAsync();
             await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(AgentsArea.Route), new() { Timeout = 30_000 });
             await AssertAreaAsync(page, AgentsArea);
 
-            // A record opened from the catalog and closed again leaves the area on its base route, and Back then
-            // returns to the previous area instead of reopening the record.
+            // A record opened from the catalog is its own history entry over the catalog entry, and that entry keeps
+            // the catalog search: closing the record goes back to the catalog, Forward reopens the record, and Back
+            // from the catalog returns to the previous area instead of reopening the record.
             await CrmHrDirectoryJourneySupport.AreaTab(page, DirectoryArea.TabLabel).ClickAsync();
             await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(DirectoryArea.Route), new() { Timeout = 30_000 });
             await AssertAreaAsync(page, DirectoryArea);
             var personCard = await CrmHrDirectoryJourneySupport.SearchCatalogForAsync(page, "crmhr-directory", "crmhr-directory-item", seed.PersonName);
+            var catalogQuery = $"q={Uri.EscapeDataString(seed.PersonName)}";
+            var catalogUrl = CrmHrDirectoryJourneySupport.RouteUrl(DirectoryArea.Route, catalogQuery);
+            var recordUrl = CrmHrDirectoryJourneySupport.RouteUrl(DirectoryArea.Route, $"partyId={seed.PersonId:D}&{catalogQuery}");
+            await Assertions.Expect(page).ToHaveURLAsync(catalogUrl, new() { Timeout = 30_000 });
             await personCard.ClickAsync();
             var directoryDialog = page.GetByTestId("crmhr-directory-record-dialog");
             await Assertions.Expect(directoryDialog).ToBeVisibleAsync(new() { Timeout = 30_000 });
             await Assertions.Expect(directoryDialog.Locator(".cda-dialog__title")).ToHaveTextAsync(seed.PersonName);
             await Assertions.Expect(page.GetByTestId("crmhr-party-display-name")).ToHaveValueAsync(seed.PersonName);
-            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(DirectoryArea.Route, $"partyId={seed.PersonId:D}"));
+            await Assertions.Expect(page).ToHaveURLAsync(recordUrl);
             await evidence.ScreenshotAsync(page, "02-directory-record-from-catalog-1600.png");
             await CrmHrDirectoryJourneySupport.AssertConstrainedLayoutAsync(
                 page,
@@ -93,7 +100,15 @@ public sealed class CrmHrRouteChromeJourneyTests
                 page.GetByTestId("crmhr-directory-record-close"));
             await page.GetByTestId("crmhr-directory-record-close").ClickAsync();
             await Assertions.Expect(directoryDialog).ToHaveCountAsync(0, new() { Timeout = 30_000 });
-            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(DirectoryArea.Route));
+            await Assertions.Expect(page).ToHaveURLAsync(catalogUrl, new() { Timeout = 30_000 });
+            await Assertions.Expect(page.GetByTestId("crmhr-directory-search")).ToHaveValueAsync(seed.PersonName);
+            await page.GoForwardAsync();
+            await Assertions.Expect(directoryDialog).ToBeVisibleAsync(new() { Timeout = 30_000 });
+            await Assertions.Expect(page.GetByTestId("crmhr-party-display-name")).ToHaveValueAsync(seed.PersonName, new() { Timeout = 30_000 });
+            await Assertions.Expect(page).ToHaveURLAsync(recordUrl);
+            await page.GoBackAsync();
+            await Assertions.Expect(directoryDialog).ToHaveCountAsync(0, new() { Timeout = 30_000 });
+            await Assertions.Expect(page).ToHaveURLAsync(catalogUrl, new() { Timeout = 30_000 });
             await page.GoBackAsync();
             await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(AgentsArea.Route), new() { Timeout = 30_000 });
             await AssertAreaAsync(page, AgentsArea);
@@ -246,6 +261,13 @@ public sealed class CrmHrRouteChromeJourneyTests
             await evidence.StopTraceAsync(context);
         }
     }
+
+    // The location of an area's own entry. Assignments shows the first project when the location names none and
+    // writes that project into its entry, so the entry may already name it.
+    private static Regex AreaUrl(AreaRoute area)
+        => ReferenceEquals(area, AssignmentsArea)
+            ? new("^https?://[^/]+" + Regex.Escape(area.Route) + @"(\?projectId=[0-9a-fA-F-]{36})?$", RegexOptions.IgnoreCase)
+            : CrmHrDirectoryJourneySupport.RouteUrl(area.Route);
 
     // The chrome of one area: the document title, the page header, exactly the routed area tab active, and the
     // area's own readiness signal (interactive Home, or an enabled catalog search with an accepted first page).

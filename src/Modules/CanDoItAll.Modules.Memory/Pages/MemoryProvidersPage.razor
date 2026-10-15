@@ -1,13 +1,42 @@
 @page "/memory"
 @namespace CanDoItAll.Modules.Memory.Pages
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Memory.UI
 @implements IDisposable
 @inject MemoryProvidersPageController Controller
+@inject NavigationManager Navigation
 
 <PageTitle>Memory</PageTitle>
 <MemoryWorkspaceSurface Controller="Controller" />
 
 @code {
-    protected override Task OnInitializedAsync() => Controller.RefreshAsync();
-    public void Dispose() => Controller.Dispose();
+    [SupplyParameterFromQuery(Name = MemoryUrlCodec.ProviderKey)] public string? ProviderQuery { get; set; }
+    [SupplyParameterFromQuery(Name = MemoryUrlCodec.TabKey)] public string? TabQuery { get; set; }
+    private UrlStateBinding<MemoryUrlState> url = default!;
+    private bool disposed;
+
+    protected override void OnInitialized() {
+        url = new(Navigation, MemoryUrlCodec.Instance, null, typeof(MemoryProvidersPage));
+        Controller.RouteChanged += RouteChanged;
+    }
+
+    protected override Task OnParametersSetAsync() {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (change.IsInitial) {
+            return Controller.OpenAsync(change.Current);
+        }
+        return change.IsChanged ? Controller.ApplyRouteAsync(change.Current) : Task.CompletedTask;
+    }
+
+    private void RouteChanged(MemoryUrlState route, UrlHistoryMode mode) => _ = InvokeAsync(() => {
+        if (!disposed) {
+            url.Navigate(route, mode);
+        }
+    });
+
+    public void Dispose() {
+        disposed = true;
+        Controller.RouteChanged -= RouteChanged;
+        Controller.Dispose();
+    }
 }

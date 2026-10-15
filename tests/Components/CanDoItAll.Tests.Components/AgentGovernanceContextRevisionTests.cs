@@ -90,19 +90,17 @@ public sealed class AgentGovernanceContextRevisionTests {
     [Fact]
     public async Task Accepted_new_route_target_resolves_parent_loading_access() {
         await using var fixture = new GovernancePanelFixture();
-        var workspace = new AgentsWorkspaceState().ApplyRoute(AgentWorkspaceRouteState.Parse(
-            AgentWorkspaceTabs.Governance, GovernancePanelFixture.A, null, null, null, null, null));
+        Guid? selectedAgentId = GovernancePanelFixture.A;
+        var access = AgentChatContextAccessState.Loading;
         var cut = fixture.Context.Render<AgentGovernancePanel>(parameters => parameters
             .Add(component => component.PreferredAgentId, GovernancePanelFixture.A)
-            .Add(component => component.SelectedAgentChanged, (AgentDefinition? agent) => workspace = workspace with { AgentId = agent?.Id })
-            .Add(component => component.ContextAccessStateChanged, (AgentChatContextAccessState access) => workspace = workspace with { SelectionAccess = access }));
-        Assert.Equal(AgentChatContextAccessState.Ready, workspace.SelectionAccess);
-        workspace = workspace.ApplyRoute(AgentWorkspaceRouteState.Parse(
-            AgentWorkspaceTabs.Governance, GovernancePanelFixture.B, null, null, null, null, null));
-        Assert.Equal(AgentChatContextAccessState.Loading, workspace.SelectionAccess);
+            .Add(component => component.SelectedAgentChanged, (AgentDefinition? agent) => selectedAgentId = agent?.Id)
+            .Add(component => component.ContextAccessStateChanged, (AgentChatContextAccessState state) => access = state));
+        Assert.Equal(AgentChatContextAccessState.Ready, access);
+        access = AgentChatContextAccessState.Loading;
         cut.Render(parameters => parameters.Add(component => component.PreferredAgentId, GovernancePanelFixture.B));
-        Assert.Equal(GovernancePanelFixture.B, workspace.AgentId);
-        Assert.Equal(AgentChatContextAccessState.Ready, workspace.SelectionAccess);
+        Assert.Equal(GovernancePanelFixture.B, selectedAgentId);
+        Assert.Equal(AgentChatContextAccessState.Ready, access);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Protocol.Http;
@@ -161,6 +162,7 @@ public sealed class MemoryBrowserTests(MemoryBrowserFixture memoryFixture) {
         await Assertions.Expect(page.GetByTestId("memory-provider-provider-business-demo")).ToBeVisibleAsync();
         await page.GetByTestId("memory-provider-provider-business-demo").ClickAsync();
         await Assertions.Expect(page.GetByTestId("memory-ui-editor-display-name")).ToHaveValueAsync("Business demo memory");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/memory\\?providerId=provider\\.business-demo$"));
         await page.GetByTestId("memory-ui-editor-display-name").FillAsync("Browser saved memory");
         await page.GetByTestId("memory-ui-save-provider").ClickAsync();
         await Assertions.Expect(page.GetByTestId("memory-ui-submission").Filter(new() { HasText = "Save: provider.business-demo" })).ToContainTextAsync("Observed");
@@ -175,7 +177,15 @@ public sealed class MemoryBrowserTests(MemoryBrowserFixture memoryFixture) {
         await page.GetByTestId("memory-ui-tab-ingestion").ClickAsync();
         await Assertions.Expect(page.GetByTestId("memory-ui-ingestion")).ToContainTextAsync("Ingestion unavailable");
         await Assertions.Expect(page.GetByTestId("memory-ui-ingestion-submit")).ToHaveCountAsync(0);
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/memory\\?providerId=provider\\.business-demo&tab=ingestion$"));
+        await page.GoBackAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/memory\\?providerId=provider\\.business-demo&tab=query$"));
+        await Assertions.Expect(page.GetByTestId("memory-ui-query-submit")).ToBeVisibleAsync();
+        await page.GoForwardAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/memory\\?providerId=provider\\.business-demo&tab=ingestion$"));
+        await Assertions.Expect(page.GetByTestId("memory-ui-ingestion")).ToContainTextAsync("Ingestion unavailable");
         await page.GetByTestId("memory-ui-tab-providers").ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/memory\\?providerId=provider\\.business-demo$"));
         await page.GetByTestId("memory-provider-provider-browser-http").ClickAsync();
         await page.GetByTestId("memory-ui-tab-query").ClickAsync();
         await page.GetByTestId("memory-ui-query-text").FillAsync("original HTTP input");

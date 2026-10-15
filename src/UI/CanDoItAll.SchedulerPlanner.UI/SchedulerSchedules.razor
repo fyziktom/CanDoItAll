@@ -128,24 +128,25 @@
 </div>
 @code {
     [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
-    [Parameter] public SchedulerScheduleFilters Filters { get; set; } = new();
     private IReadOnlyList<SchedulerPlanSummary> Plans => Workspace.Data?.Plans ?? [];
+    // The workspace owns the filters, so they survive the tab's unmount; every change is one intent.
+    private SchedulerScheduleFilters Filters => Workspace.ScheduleFilters;
     private string scheduleSearchText {
         get => Filters.Search;
-        set => Filters.Search = value;
+        set => Workspace.SetScheduleFilters(Filters with { Search = value ?? string.Empty });
     }
     private SchedulerPlanTargetKind? scheduleTargetKindFilter {
         get => Filters.TargetKind;
-        set => Filters.TargetKind = value;
+        set => Workspace.SetScheduleFilters(Filters with { TargetKind = value });
     }
     private ScheduleStateFilter scheduleStateFilter {
         get => Filters.State;
-        set => Filters.State = value;
+        set => Workspace.SetScheduleFilters(Filters with { State = value });
     }
     private IReadOnlyList<SchedulerPlanSummary> FilteredPlans => Plans.Where(MatchesScheduleSearch).Where(MatchesScheduleTargetKind).Where(MatchesScheduleState)
         .OrderByDescending(item => item.IsEnabled).ThenBy(item => item.NextPlannedFireAtUtc ?? DateTimeOffset.MaxValue)
         .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
-    private bool HasScheduleFilters => scheduleSearchText.Length > 0 || scheduleTargetKindFilter.HasValue || scheduleStateFilter != ScheduleStateFilter.All;
+    private bool HasScheduleFilters => !Filters.IsEmpty;
     private string ScheduleFilterResultText => $"{FilteredPlans.Count} of {Plans.Count} schedule(s)";
     private string FormatScheduleTargetKindFilter() {
         return scheduleTargetKindFilter?.ToString() ?? string.Empty;
@@ -158,11 +159,7 @@
             : null;
     }
 
-    private void ClearScheduleFilters() {
-        scheduleSearchText = string.Empty;
-        scheduleTargetKindFilter = null;
-        scheduleStateFilter = ScheduleStateFilter.All;
-    }
+    private void ClearScheduleFilters() => Workspace.SetScheduleFilters(new());
 
     private bool MatchesScheduleSearch(SchedulerPlanSummary plan) {
         if (string.IsNullOrWhiteSpace(scheduleSearchText)) {

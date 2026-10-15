@@ -101,6 +101,15 @@
                 </div>
             }
 
+            @if (!string.IsNullOrWhiteSpace(Session.UnavailableSelectionText)) {
+                <div class="live-processes-alert"
+                     role="status"
+                     data-testid="live-processes-selection-unavailable">
+                    <Icon Name="search_off" />
+                    <span>@Session.UnavailableSelectionText</span>
+                </div>
+            }
+
             @if (Session.IsLoading && Session.Shell is null) {
                 <LoadingState Eyebrow="Live processes"
                               Title="Loading process projection"
@@ -175,29 +184,35 @@
     </ChildContent>
 </PageScaffold>
 
-@if (Session.RunDetailDialogOpen && Session.RunDetailSnapshot is not null) {
+@if (Session.RunDetailDialogOpen) {
     <Dialog IsOpen="true"
             Eyebrow="Live process"
-            Title="@BuildRunTitle(Session.RunDetailSnapshot)"
-            Subtitle="@BuildRunSubtitle(Session.RunDetailSnapshot)"
+            Title="@(Session.RunDetailSnapshot is { } titledRun ? BuildRunTitle(titledRun) : "Live process")"
+            Subtitle="@(Session.RunDetailSnapshot is { } subtitledRun ? BuildRunSubtitle(subtitledRun) : string.Empty)"
             Size="ModalSize.Full"
             DenseChrome="true"
             TestId="live-processes-run-detail-dialog"
             OnClose="Session.CloseRunDetailDialogAsync">
         <ChildContent>
-            @RenderRunDetailDialog(Session.RunDetailSnapshot)
+            @if (Session.RunDetailSnapshot is { } detailRun) {
+                @RenderRunDetailDialog(detailRun)
+            } else {
+                @RenderOverlayUnavailable("live-processes-run-detail-unavailable", "The requested process run is not available in the live projection.")
+            }
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                @if (!Session.IsMockProjection) {
-                    @CancellationContent
+                @if (Session.RunDetailSnapshot is { } footerRun) {
+                    @if (!Session.IsMockProjection) {
+                        @CancellationContent
+                    }
+                    <Button Icon="folder"
+                            Text="Files"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            data-testid="live-processes-run-files"
+                            Click="@(() => Session.OpenRunFilesAsync(footerRun.RunId.Value))" />
                 }
-                <Button Icon="folder"
-                        Text="Files"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        data-testid="live-processes-run-files"
-                        Click="@(() => Session.OpenRunFilesAsync(Session.RunDetailSnapshot.RunId.Value))" />
                 <Button Text="Close"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
@@ -208,25 +223,31 @@
 }
 
 
-@if (Session.AgentDetailDialogOpen && Session.AgentDetailAgent is not null) {
+@if (Session.AgentDetailDialogOpen) {
     <Dialog IsOpen="true"
             Eyebrow="Active agent"
-            Title="@ResolveAgentDisplayName(Session.AgentDetailAgent)"
-            Subtitle="@BuildAgentDetailSubtitle(Session.AgentDetailAgent)"
+            Title="@(Session.AgentDetailAgent is { } titledAgent ? ResolveAgentDisplayName(titledAgent) : "Active agent")"
+            Subtitle="@(Session.AgentDetailAgent is { } subtitledAgent ? BuildAgentDetailSubtitle(subtitledAgent) : string.Empty)"
             Size="ModalSize.Wide"
             DenseChrome="true"
             TestId="live-processes-agent-detail-dialog"
             OnClose="Session.CloseAgentDetailDialogAsync">
         <ChildContent>
-            @RenderAgentDetailDialog(Session.AgentDetailAgent)
+            @if (Session.AgentDetailAgent is { } detailAgent) {
+                @RenderAgentDetailDialog(detailAgent)
+            } else {
+                @RenderOverlayUnavailable("live-processes-agent-detail-unavailable", "The requested agent step is not active in the live projection.")
+            }
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                <Button Icon="open_in_new"
-                        Text="Process"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="@(() => Session.OpenProcessControlAsync(Session.AgentDetailAgent.RunId))" />
+                @if (Session.AgentDetailAgent is { } footerAgent) {
+                    <Button Icon="open_in_new"
+                            Text="Process"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="@(() => Session.OpenProcessControlAsync(footerAgent.RunId))" />
+                }
                 <Button Text="Close"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
@@ -290,6 +311,19 @@
         LegendPosition = CdaChartLegendPosition.Bottom,
         Palette = ["#f59e0b"]
     };
+
+
+    private RenderFragment RenderOverlayUnavailable(string testId, string description) => @<div data-testid="@testId">
+        @if (Session.Shell is null || Session.IsLoading) {
+            <LoadingState Eyebrow="Loading"
+                          Title="Loading the requested record"
+                          Description="The live process projection is loading." />
+        } else {
+            <EmptyState Eyebrow="Unavailable"
+                        Title="This record is not available"
+                        Description="@description" />
+        }
+    </div>;
 
 
     private RenderFragment RenderActivityTab() => @<Stack GapScale="LayoutGap.Medium"

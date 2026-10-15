@@ -394,7 +394,7 @@ public sealed class SharedProviderRealCatalogUiTests {
         await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.GetByText("Shared providers imported", new() { Exact = true }).WaitForAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
     }
 
     private static ILocator Field(IPage page, string label) => page.Locator("label.cda-field-label")

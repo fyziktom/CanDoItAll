@@ -61,6 +61,8 @@ public sealed class ProjectsCrmHrIntegrationTests
         Assert.Contains("Delivery Guild", summary.RelatedPartySearchText);
         Assert.Contains("Jordan Owner", summary.RelatedPartySearchText);
 
+        // The page applies and writes its URL state only at its own route.
+        harness.Context.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/projects");
         var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>

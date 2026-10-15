@@ -30,3 +30,15 @@ The neutral `ResourceCardPicker` and `SelectedReferenceTable` families also live
 Their namespaces and public types are unchanged; AppComponents forwards the old assembly
 types. StorageSelection and the Agent editor reuse these actual controls without acquiring
 AppComponents' runtime dependencies. Their scoped styles travel with this Razor library.
+
+## Controlled query
+
+`PagedRecordBrowser` keeps its own search, tags, filter and page unless the owner passes `Query`
+(a `PagedRecordQueryState`, for example the page URL's catalog state). Then the browser applies
+that query when it starts and whenever the owner supplies a different one, such as after Back or
+Forward, and reports each committed change once through `QueryChanged` with its kind: `Search`
+after the debounce, `Tags`, `Filter`, `Reset`, `Page`, and `Correction` when a requested page lies
+beyond the last one and the browser loads the last page instead. What the operator is still typing
+is never reported, and the owner handing back the browser's own commit loads nothing.
+`MaximumSearchLength` bounds the search box like the source does. Without `Query` the browser
+behaves as before and never corrects a page.

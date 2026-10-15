@@ -117,7 +117,9 @@ public interface ISchedulerWorkspace {
     string Error { get; }
     SchedulerTab Tab { get; set; }
     long ViewGeneration { get; }
+    // The history search draft; SearchHistoryAsync commits it.
     SchedulerHistoryQuery HistoryQuery { get; }
+    SchedulerScheduleFilters ScheduleFilters { get; }
     SchedulerDraft NewDraft { get; }
     SchedulerDraft? EditDraft { get; }
     SchedulerDraft? PickerDraft { get; }
@@ -131,6 +133,8 @@ public interface ISchedulerWorkspace {
     bool IsPlanReviewing(Guid id);
     string DescribeCron(SchedulerDraftValues values);
     Task RefreshAsync();
+    Task SearchHistoryAsync();
+    void SetScheduleFilters(SchedulerScheduleFilters filters);
     Task ResetAsync();
     Task EditAsync(Guid id);
     void ResumeDraft(SchedulerDraft draft);

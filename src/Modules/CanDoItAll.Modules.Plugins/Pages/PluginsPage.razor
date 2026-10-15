@@ -1,47 +1,7 @@
 @page "/plugins"
 @using CanDoItAll.Plugins.UI
-@using CanDoItAll.Modules.Plugins.Presentation
-@using Microsoft.JSInterop
 @implements IDisposable
-@inject PluginWorkspaceSession Session
-@inject NavigationManager Navigation
-@inject IJSRuntime JsRuntime
 
 @if (workspace is not null) {
     <PluginsWorkspaceSurface Workspace="@workspace" />
-}
-
-@code {
-    private PluginsWorkspace? workspace;
-    private bool disposed;
-
-    protected override async Task OnInitializedAsync() {
-        workspace = Session.CreateWorkspace(new Uri(Navigation.BaseUri),
-            url => JsRuntime.InvokeVoidAsync("open", url, "_blank", "noopener,noreferrer").AsTask());
-        workspace.Changed += OnChanged;
-        await workspace.RefreshAsync();
-    }
-
-    private void OnChanged() => _ = RenderAsync();
-
-    private async Task RenderAsync() {
-        try {
-            await InvokeAsync(() => {
-                if (!disposed) {
-                    StateHasChanged();
-                }
-            });
-        } catch (ObjectDisposedException) when (disposed) {
-        } catch (Exception exception) {
-            Session.ReportFailure("page rendering", exception);
-        }
-    }
-
-    public void Dispose() {
-        disposed = true;
-        if (workspace is not null) {
-            workspace.Changed -= OnChanged;
-            workspace.Dispose();
-        }
-    }
 }

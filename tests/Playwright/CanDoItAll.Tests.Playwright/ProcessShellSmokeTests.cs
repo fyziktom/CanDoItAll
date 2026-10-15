@@ -140,9 +140,14 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-definition-tree").WaitForAsync();
         await page.GetByTestId("processes-definition-search").FillAsync("architecture");
         await page.GetByTestId("processes-definition-search-submit").ClickAsync();
+        // A search clears the selection, and the page publishes the first match once the filtered catalog has loaded.
+        // Clicking earlier would hit the previous list while it is being replaced.
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("^(?=.*[?&]q=architecture(&|$))(?=.*[?&]definitionKey=[^&]+)"));
         await page.GetByTestId("processes-definition-architecture-decision-governance").WaitForAsync();
         await page.GetByTestId("processes-definition-architecture-decision-governance").ClickAsync();
         await page.GetByTestId("processes-definition-editor").WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]definitionKey=architecture-decision-governance(&|$)"));
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]q=architecture(&|$)"));
         await Assertions.Expect(page.GetByTestId("processes-definition-editor-name"))
             .ToHaveValueAsync(new ProcessTemplatePackLoader().LoadDefinition("architecture-decision-governance").DisplayName);
         await page.GetByTestId("processes-definition-editor-name").FillAsync("Architecture decision governance regression");
@@ -154,6 +159,7 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await ExpectTextContainsAsync(page.GetByTestId("processes-definition-editor-receipt"), "published");
         await page.GetByTestId("processes-detail-tab-steps").ClickAsync();
         await page.GetByTestId("processes-detail-panel-steps").WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]tab=steps(&|$)"));
         await page.GetByTestId("processes-definition-canvas").WaitForAsync();
         await page.Locator(".cw-workbench").WaitForAsync();
         await page.Locator(".cw-workbench__canvas--nodes").WaitForAsync();
@@ -225,6 +231,17 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-process-graphs-tab").WaitForAsync();
         await page.GetByTestId("processes-detail-tab-manager-chat").ClickAsync();
         await page.GetByTestId("processes-manager-chat-tab").WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]tab=manager-chat(&|$)"));
+        // Back and Forward move between the pushed tabs; a refresh reproduces the definition, search and tab.
+        await page.GoBackAsync();
+        await page.GetByTestId("processes-process-graphs-tab").WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]tab=graphs(&|$)"));
+        await page.GoForwardAsync();
+        await page.GetByTestId("processes-manager-chat-tab").WaitForAsync();
+        await page.ReloadAsync();
+        await page.GetByTestId("processes-manager-chat-tab").WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]definitionKey=architecture-decision-governance(&|$)"));
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]q=architecture(&|$)"));
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(artifactDirectory, "processes-global-definition-catalog.png"),

@@ -11,6 +11,7 @@
 
 @code {
     private PromptGallerySearchSession session = default!;
+    private PromptGallerySearchRequest? appliedRequest;
 
     [Parameter]
     public PromptGalleryConsumer? Consumer { get; set; }
@@ -39,6 +40,13 @@
     [Parameter]
     public string SelectText { get; set; } = "Select";
 
+    // Filters and page the owner asks for; only a changed request is applied, never an echo of a commit.
+    [Parameter]
+    public PromptGallerySearchRequest? Request { get; set; }
+
+    [Parameter]
+    public EventCallback<PromptGallerySearchCommit> Committed { get; set; }
+
     [Parameter]
     public EventCallback<PromptGallerySearchItem> Selected { get; set; }
 
@@ -56,21 +64,38 @@
             {
                 PromptGalleryNotices.Show(Notifications, notice);
                 return Task.CompletedTask;
-            }
+            },
+            Committed = HandleCommittedAsync
         };
     }
 
     protected override Task OnParametersSetAsync()
-        => session.ConfigureAsync(new PromptGallerySearchContext(
+    {
+        var context = new PromptGallerySearchContext(
             Consumer,
             Provider,
             Model,
             ShowActualChatModelFilter,
             Compact,
-            PageSize));
+            PageSize);
+        var request = Request;
+        if (request is null || appliedRequest is not null && appliedRequest.SameAs(request))
+        {
+            return session.ConfigureAsync(context);
+        }
+
+        appliedRequest = request;
+        return session.ConfigureAsync(context, request);
+    }
 
     // Reloads the current page and clamps to the last page when the list shrank; filters and paging survive.
     public Task RefreshAsync() => session.RefreshAsync();
+
+    private Task HandleCommittedAsync(PromptGallerySearchCommit commit)
+    {
+        appliedRequest = new PromptGallerySearchRequest(commit.Filters, commit.PageIndex);
+        return Committed.InvokeAsync(commit);
+    }
 
     private Task HandleIntentAsync(PromptGallerySearchIntent intent) => intent switch
     {

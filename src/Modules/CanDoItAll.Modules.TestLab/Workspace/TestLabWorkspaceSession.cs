@@ -1,13 +1,18 @@
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Modules.TestLab.Pages;
 using CanDoItAll.TestLab.UI;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.TestLab;
 
+// The routed page applies its address through ApplyRouteAsync; user intents report the address they produce
+// through navigate, with the history rule of the intent.
 public sealed class TestLabWorkspaceSession(
     ITestLabWorkspaceOwner owner,
     Action changed,
     Action<TestLabReceipt> notify,
-    ILogger<TestLabWorkspaceSession> logger) : ITestLabWorkspaceView, IDisposable {
+    ILogger<TestLabWorkspaceSession> logger,
+    Action<TestLabUrlState, UrlHistoryMode>? navigate = null) : ITestLabWorkspaceView, IDisposable {
     private readonly ReadLane planReads = new();
     private readonly ReadLane listReads = new();
     private readonly ReadLane projectReads = new();
@@ -18,21 +23,31 @@ public sealed class TestLabWorkspaceSession(
     private bool disposed;
     public TestLabWorkspaceState State { get; } = new();
 
-    public async Task ApplyRouteAsync(Guid? planId, Guid? projectId) {
-        if (disposed || route == (planId, projectId)) {
+    public TestLabUrlState Route => TestLabUrlState.From(State.Draft?.Model.Id ?? requestedPlan, State.Section, route?.ProjectId, State.Filter);
+
+    // The section and filters apply without a read; a different plan or project selects again.
+    public async Task ApplyRouteAsync(TestLabUrlState address) {
+        if (disposed) {
             return;
         }
-        route = (planId, projectId);
+        State.Filter = address.Filter;
+        if (route == (address.PlanId, address.ProjectId)) {
+            State.Section = address.Section;
+            Changed();
+            return;
+        }
+        route = (address.PlanId, address.ProjectId);
         var version = ++routeVersion;
         RetireEditor();
+        State.Section = address.Section;
         await Task.WhenAll(LoadProjectsAsync(), LoadListAsync());
         if (disposed || routeVersion != version) {
             return;
         }
-        if (planId is { } id) {
-            await SelectAsync(id);
+        if (address.PlanId is { } id) {
+            await SelectCoreAsync(id, address.Section);
         } else {
-            await NewAsync();
+            await NewCoreAsync(address.Section);
         }
     }
 
@@ -40,8 +55,16 @@ public sealed class TestLabWorkspaceSession(
         if (disposed) {
             return Task.CompletedTask;
         }
+        route = (null, route?.ProjectId);
+        var loading = NewCoreAsync(TestLabSection.Overview);
+        Publish(UrlHistoryMode.Push);
+        return loading;
+    }
+
+    private Task NewCoreAsync(TestLabSection section) {
         routeVersion++;
         RetireEditor();
+        State.Section = section;
         requestedPlan = null;
         var projectId = route?.ProjectId;
         State.Draft = new(new() {
@@ -53,12 +76,40 @@ public sealed class TestLabWorkspaceSession(
         return LoadPartiesAsync(State.Draft);
     }
 
-    public async Task SelectAsync(Guid id) {
+    public Task SelectAsync(Guid id) {
         if (disposed) {
+            return Task.CompletedTask;
+        }
+        route = (id, route?.ProjectId);
+        var loading = SelectCoreAsync(id, TestLabSection.Overview);
+        Publish(UrlHistoryMode.Push);
+        return loading;
+    }
+
+    public void SelectSection(TestLabSection section) {
+        if (disposed || State.Section == section) {
             return;
         }
+        State.Section = section;
+        Changed();
+        Publish(UrlHistoryMode.Push);
+    }
+
+    // Filters apply instantly over the loaded plans, so their address replaces the current entry.
+    public void ApplyFilter(TestLabPlanFilter filter) {
+        ArgumentNullException.ThrowIfNull(filter);
+        if (disposed || State.Filter == filter) {
+            return;
+        }
+        State.Filter = filter;
+        Changed();
+        Publish(UrlHistoryMode.Replace);
+    }
+
+    private async Task SelectCoreAsync(Guid id, TestLabSection section) {
         routeVersion++;
         RetireEditor();
+        State.Section = section;
         requestedPlan = id;
         using var read = planReads.Begin();
         State.EditorRead = TestLabReadState.Loading;
@@ -136,6 +187,12 @@ public sealed class TestLabWorkspaceSession(
         if (current) {
             submission.RetainIdentities(origin, id);
             origin.LastCommitted = submission;
+            if (route?.PlanId != id) {
+                // The new plan has an identity now; the address had no selection, so it is replaced.
+                requestedPlan = id;
+                route = (id, route?.ProjectId);
+                Publish(UrlHistoryMode.Replace);
+            }
         }
         var statusAfterSave = TestLabSaveState.SavedWithWarning;
         if (result.Outcome == TestLabWriteOutcome.Committed && current) {
@@ -166,7 +223,8 @@ public sealed class TestLabWorkspaceSession(
             return;
         }
         if (draft is null && requestedPlan is { } id) {
-            await SelectAsync(id);
+            // A retry reads the same selection again; it is not a navigation.
+            await SelectCoreAsync(id, State.Section);
         } else if (draft is not null) {
             if (submission is not null && draft.Pending is null && await RefreshCommittedAsync(draft, submission, refreshList: false) && submission.BelongsTo(State.Draft)) {
                 draft.SaveState = TestLabSaveState.Saved;
@@ -310,6 +368,12 @@ public sealed class TestLabWorkspaceSession(
     private void Changed() {
         if (!disposed) {
             changed();
+        }
+    }
+
+    private void Publish(UrlHistoryMode mode) {
+        if (!disposed) {
+            navigate?.Invoke(Route, mode);
         }
     }
 

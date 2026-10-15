@@ -62,6 +62,7 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
             await Shot(page, "production-defaults");
 
             await Tab(page, "Secrets");
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=secrets$"));
             await page.GetByTestId("secret-name").FillAsync(secretName);
             await page.GetByTestId("settings-secret-value").FillAsync(value);
             await page.GetByTestId("secret-metadatajson").FillAsync("{\"synthetic\":true}");
@@ -70,6 +71,8 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
             var metadata = Assert.Single(await secrets.ListForPickerAsync(), item => item.Name == secretName);
             Assert.True((await secrets.GetAsync(metadata.Id))!.SecretValue == value);
             await page.Locator(".cda-selection-list-item__button").Filter(new() { HasText = secretName }).ClickAsync();
+            var secretLocation = new Regex($"/settings\\?tab=secrets&secretId={metadata.Id:D}$");
+            await Assertions.Expect(page).ToHaveURLAsync(secretLocation);
             await Assertions.Expect(page.GetByTestId("settings-secret-value")).ToHaveAttributeAsync("type", "password");
             var copyValue = page.Locator(".cda-secret-field").GetByRole(AriaRole.Button, new() { Name = "Copy value", Exact = true });
             await copyValue.ClickAsync();
@@ -78,12 +81,21 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
             await page.Locator(".cda-secret-field__reveal").ClickAsync();
             await Assertions.Expect(page.GetByTestId("settings-secret-value")).ToHaveAttributeAsync("type", "text");
             await Tab(page, "Files");
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=files$"));
             await Tab(page, "Secrets");
+            await Assertions.Expect(page).ToHaveURLAsync(secretLocation);
             await Assertions.Expect(page.GetByTestId("settings-secret-value")).ToHaveAttributeAsync("type", "password");
             await Shot(page, "production-secret-masked");
+            await page.GoBackAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=files$"));
+            await Assertions.Expect(page.GetByTestId("file-application-extension")).ToBeVisibleAsync();
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(secretLocation);
+            await Assertions.Expect(page.GetByTestId("secret-name")).ToHaveValueAsync(secretName);
             await page.GetByTestId("secret-delete").ClickAsync();
             await Assertions.Expect(page.GetByTestId("settings-operation")).ToHaveCountAsync(2);
             await Assertions.Expect(page.GetByTestId("settings-operation").First).ToContainTextAsync("Committed");
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=secrets$"));
             Assert.Null(await secrets.GetAsync(metadata.Id));
 
             await Tab(page, "Files");
@@ -122,27 +134,39 @@ public sealed class WorkspaceSettingsBrowserTests(PlaywrightAppFixture fixture) 
             await Tab(page, "Data Sources");
             await Assertions.Expect(page.GetByText("Workspace defaults", new() { Exact = true })).ToHaveCountAsync(0);
             await Assertions.Expect(page.GetByTestId("database-data-sources-summary")).ToBeVisibleAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=data-sources(&profileId=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$"));
             await Shot(page, "production-data-sources");
             await Tab(page, "Storage");
             await Assertions.Expect(page.GetByText("Storage catalog", new() { Exact = true }).First).ToBeVisibleAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=storage$"));
             await Shot(page, "production-storage");
             await Tab(page, "API Access");
             await Assertions.Expect(page.GetByText("Bearer tokens are not required.", new() { Exact = true })).ToBeVisibleAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=api-access$"));
             await Shot(page, "production-api-access");
+            await page.GoBackAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=storage$"));
+            await Assertions.Expect(page.GetByText("Storage catalog", new() { Exact = true }).First).ToBeVisibleAsync();
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=api-access$"));
+            await Assertions.Expect(page.GetByText("Bearer tokens are not required.", new() { Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync(fixture.BaseUrl + "/settings?tab=invalid");
             await ShellReady(page);
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings$"));
             await Assertions.Expect(page.GetByTestId("defaults-name")).ToHaveValueAsync("Browser saved workspace");
             await page.GotoAsync(fixture.BaseUrl + "/settings?tab=files");
             await ShellReady(page);
             await Assertions.Expect(page.GetByTestId("file-application-extension")).ToBeVisibleAsync();
             await page.GoBackAsync();
             await ShellReady(page);
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings$"));
             await Assertions.Expect(page.GetByTestId("defaults-name")).ToHaveValueAsync("Browser saved workspace");
             await page.GoForwardAsync();
             await ShellReady(page);
             await Assertions.Expect(page.GetByTestId("file-application-extension")).ToBeVisibleAsync();
             await Tab(page, "Providers");
-            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/agents\\?tab=providers$"));
+            // The providers panel publishes the provider it selects by default with Replace.
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/agents\\?tab=providers(?:&providerId=[0-9a-fA-F-]{36})?$"));
             Assert.Empty(errors);
         } finally {
             File.Delete(executable);

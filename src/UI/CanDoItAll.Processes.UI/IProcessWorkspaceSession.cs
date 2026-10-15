@@ -8,6 +8,7 @@ public interface IProcessWorkspaceSession {
     bool CanRetryOriginalAuthoring => false;
     Task RecoverAuthoringAsync() => Task.CompletedTask;
     Task RetryOriginalAuthoringAsync() => Task.CompletedTask;
+    string? UnavailableSelectionText => null;
     bool AgentContextDisabled { get; }
     string AgentContextTooltip { get; }
     Task ApplyDefinitionSearchAsync();

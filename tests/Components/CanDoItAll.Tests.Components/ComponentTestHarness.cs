@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Web.Infrastructure;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Tests.Support;
 
@@ -78,6 +79,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
                 context.Services,
                 options?.SchemaModules ?? TestSchemaBootstrapModules.Default);
 
+            context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
             return new ComponentTestHarness(testEnvironment, ownsTestEnvironment, activeProfile, context);
         } catch (Exception failure) {
             await TestFixtureCleanup.DisposeAfterFailureAsync(

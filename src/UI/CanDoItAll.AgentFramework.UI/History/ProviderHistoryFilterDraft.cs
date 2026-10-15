@@ -62,39 +62,8 @@ public sealed class ProviderHistoryFilterDraft(DateTimeOffset now) : IValidatabl
         }
     }
 
-    public ProviderRequestHistoryQuery ToQuery(HistoryProviderScope fixedScope, DateTimeOffset requestedAtUtc) {
-        Validator.ValidateObject(this, new(this), validateAllProperties: true);
-        var to = Range == ProviderHistoryRange.Custom ? AsUtc(ToUtc) : requestedAtUtc.ToUniversalTime();
-        var from = Range switch {
-            ProviderHistoryRange.Last24Hours => to.AddDays(-1),
-            ProviderHistoryRange.Last7Days => to.AddDays(-7),
-            ProviderHistoryRange.Custom => AsUtc(FromUtc),
-            _ => throw new ValidationException("Choose a supported time range.")
-        };
-        var scope = fixedScope is HistoryProviderScope.AllAuthorized && ParseId(ProviderId) is { } provider
-            ? new HistoryProviderScope.SingleProvider(new(provider)) : fixedScope;
-        return new(scope, from, to) {
-            Model = Optional(Model) is { } model ? new ProviderModelIdentity(model) : null,
-            Workload = Workload, Operation = Operation, Outcome = Outcome, PriceState = PriceState,
-            CredentialId = ParseId(CredentialId) is { } credential ? new ManagedCredentialId(credential) : null,
-            Subject = Optional(Subject), Issuer = Optional(Issuer),
-            RequestId = ParseId(RequestId) is { } request ? new ProviderRequestId(request) : null,
-            AttemptId = ParseId(AttemptId) is { } attempt ? new ProviderAttemptId(attempt) : null,
-            CorrelationId = Optional(CorrelationId),
-            ExternalReference = CreateExternalReference(),
-            PageSize = PageSize
-        };
-    }
+    public ProviderRequestHistoryQuery ToQuery(HistoryProviderScope fixedScope, DateTimeOffset requestedAtUtc)
+        => ProviderHistoryAppliedFilter.Capture(this, requestedAtUtc).ToQuery(fixedScope);
 
-    private HistoryExternalReference? CreateExternalReference() {
-        var value = Optional(ExternalReferenceValue);
-        if (value is null) {
-            return null;
-        }
-        return new(value, Optional(ExternalReferenceType));
-    }
-
-    private static DateTimeOffset AsUtc(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
     private static string? Optional(string value) => string.IsNullOrEmpty(value) ? null : value;
-    private static Guid? ParseId(string value) => string.IsNullOrEmpty(value) ? null : Guid.Parse(value);
 }

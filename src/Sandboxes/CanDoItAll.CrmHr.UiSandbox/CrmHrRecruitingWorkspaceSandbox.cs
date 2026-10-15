@@ -110,6 +110,9 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
 
     public int SelectedRecruitingTabIndex { get; private set; }
 
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<RecruitmentApplicationScope>? CatalogQuery => null;
+
     public string RecruitmentDialogTitle => selected?.CandidateName ?? "New candidate";
 
     public void RequestRender() => RenderRequested?.Invoke();
@@ -152,6 +155,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         Log($"Select application: {application.CandidateName}");
         return Task.CompletedTask;
     }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change) => Task.CompletedTask;
 
     public Task HandleApplicationPageLoadFailed(Exception exception)
     {

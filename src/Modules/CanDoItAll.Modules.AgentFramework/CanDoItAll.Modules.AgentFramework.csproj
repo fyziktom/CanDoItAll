@@ -26,6 +26,7 @@
     <ProjectReference Include="../../UI/CanDoItAll.AgentFramework.SharedProviders.UI/CanDoItAll.AgentFramework.SharedProviders.UI.csproj" />
     <ProjectReference Include="../../UI/CanDoItAll.Workspace.StorageSelection.UI/CanDoItAll.Workspace.StorageSelection.UI.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents.Navigation\CanDoItAll.AppComponents.Navigation.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />

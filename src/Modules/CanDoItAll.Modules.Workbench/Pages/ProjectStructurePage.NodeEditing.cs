@@ -1,6 +1,7 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -444,7 +445,11 @@ public partial class ProjectStructurePage
     {
         if (ResolveNodeAuthoringRoute(node) is { } route)
         {
-            Navigation.NavigateTo(route);
+            // A project node opens its dashboard as a dedicated Workbench tab, like the Projects dashboard command.
+            Navigation.NavigateTo(route, new NavigationOptions
+            {
+                HistoryEntryState = node.ProjectRole != ProjectStructureProjectRole.None ? WorkbenchNavigation.OpenTabHistoryState : null
+            });
             return;
         }
 
@@ -462,7 +467,7 @@ public partial class ProjectStructurePage
             var projectId = node.RelatedProjectId ?? ProjectId;
             return projectId == Guid.Empty
                 ? null
-                : $"/projects?projectId={projectId:D}";
+                : CanDoItAll.Modules.Projects.Pages.ProjectsUrlCodec.Dashboard(projectId);
         }
 
         if (string.IsNullOrWhiteSpace(node.Route))

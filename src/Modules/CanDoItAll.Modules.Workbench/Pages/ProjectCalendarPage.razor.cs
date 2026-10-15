@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.Workbench.Planning.UI;
@@ -10,12 +11,19 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectCalendarPage : IDisposable {
+    private const string MissingEventMessage = "The requested calendar event is unavailable in this project. Select another event.";
+
     [Inject] private ProjectWorkbenchService Workbench { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IAgentChatContextRegistry ContextRegistry { get; set; } = default!;
+    [Inject] private TimeProvider TimeProvider { get; set; } = default!;
     [Inject] private ILogger<ProjectCalendarPage> Logger { get; set; } = default!;
     [Parameter] public Guid ProjectId { get; set; }
+    [SupplyParameterFromQuery(Name = ProjectCalendarUrlCodec.ViewKey)] public string? ViewQuery { get; set; }
+    [SupplyParameterFromQuery(Name = ProjectCalendarUrlCodec.DateKey)] public string? DateQuery { get; set; }
+    [SupplyParameterFromQuery(Name = ProjectCalendarUrlCodec.EventKey)] public string? EventQuery { get; set; }
 
+    private UrlStateBinding<ProjectCalendarUrlState> url = default!;
     private CalendarPresentation presentation = new(Guid.NewGuid());
     private ProjectCalendarSurface? surface;
     private ProjectCalendarViewState viewState = ProjectCalendarViewState.Empty;
@@ -24,6 +32,7 @@ public partial class ProjectCalendarPage : IDisposable {
     private Guid? requestedProjectId;
     private CancellationTokenSource? readCancellation;
     private Task viewWriteTail = Task.CompletedTask;
+    private bool selectionStatePending;
     private bool disposed;
 
     private ProjectCalendarEvent? SelectedEvent => surface?.Events.FirstOrDefault(item => item.Id == selectedEventId);
@@ -34,12 +43,22 @@ public partial class ProjectCalendarPage : IDisposable {
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(Navigation.BaseUri, Navigation.Uri);
 
+    protected override void OnInitialized()
+        => url = new(Navigation, ProjectCalendarUrlCodec.Instance, null, typeof(ProjectCalendarPage));
+
     protected override Task OnParametersSetAsync() {
-        if (disposed || requestedProjectId == ProjectId) {
+        if (disposed) {
             return Task.CompletedTask;
         }
-        requestedProjectId = ProjectId;
-        return LoadAsync(preserveAccepted: false);
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (requestedProjectId != ProjectId) {
+            requestedProjectId = ProjectId;
+            return LoadAsync(preserveAccepted: false);
+        }
+        if (change.IsChanged) {
+            ApplyRouteToAcceptedCalendar();
+        }
+        return Task.CompletedTask;
     }
 
     private async Task LoadAsync(bool preserveAccepted) {
@@ -52,6 +71,7 @@ public partial class ProjectCalendarPage : IDisposable {
         var preferredSelection = preserveAccepted ? selectedEventId : null;
         var origin = Guid.NewGuid();
         presentation = new(origin);
+        selectionStatePending = false;
         surface = retained;
         if (!preserveAccepted) {
             selectedEventId = null;
@@ -77,15 +97,24 @@ public partial class ProjectCalendarPage : IDisposable {
             if (retained?.ExpectedProjectAdmission != accepted.ExpectedProjectAdmission) {
                 preferredSelection = null;
             }
-            var state = ProjectCalendarStateParser.Parse(accepted.ViewStateJson);
-            var selection = ResolveSelection(accepted, preferredSelection, state.SelectedEventId);
-            state = state with { SelectedEventId = selection };
-            var next = ProjectCalendarPresentationAdapter.Build(accepted, state, origin);
+            var persisted = ProjectCalendarStateParser.Parse(accepted.ViewStateJson);
+            var route = url.State;
+            var missing = route.EventId is { } requested && accepted.Events.All(item => item.Id != requested);
+            if (missing && preserveAccepted) {
+                // The addressed event disappeared while it was open: the location drops it and the default selection applies.
+                url.Navigate(route with { EventId = null }, UrlHistoryMode.Replace);
+                route = url.State;
+                missing = false;
+            }
+            var selection = missing ? null : ResolveSelection(accepted, route.EventId ?? preferredSelection, persisted.SelectedEventId);
+            var state = ResolveViewState(persisted, route) with { SelectedEventId = selection };
+            var next = ProjectCalendarPresentationAdapter.Build(accepted, state, origin) with { Error = missing ? MissingEventMessage : null };
             surface = accepted;
             viewState = state;
             selectedEventId = selection;
             presentation = next;
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            PublishResolvedView(state);
         } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
         } catch (Exception exception) {
             Logger.LogWarning("Calendar read failed for project {ProjectId}; failure type {FailureType}.", projectId, exception.GetType().Name);
@@ -103,20 +132,68 @@ public partial class ProjectCalendarPage : IDisposable {
         }
     }
 
+    // Back, Forward or a pasted location re-creates the native calendar from the addressed view, date and event.
+    private void ApplyRouteToAcceptedCalendar() {
+        if (surface is not { } accepted || presentation.State != PlanningReadState.Ready) {
+            return;
+        }
+        var route = url.State;
+        var persisted = ProjectCalendarStateParser.Parse(accepted.ViewStateJson);
+        var missing = route.EventId is { } requested && accepted.Events.All(item => item.Id != requested);
+        var selection = missing ? null : ResolveSelection(accepted, route.EventId, persisted.SelectedEventId);
+        var state = ResolveViewState(persisted, route) with { SelectedEventId = selection };
+        viewState = state;
+        selectedEventId = selection;
+        selectionStatePending = false;
+        presentation = ProjectCalendarPresentationAdapter.Build(accepted, state, Guid.NewGuid()) with { Error = missing ? MissingEventMessage : null };
+        PublishResolvedView(state);
+    }
+
+    // URL first, then the persisted preference, then the product default; an unknown date starts on today's UTC date like the native calendar.
+    private ProjectCalendarViewState ResolveViewState(ProjectCalendarViewState persisted, ProjectCalendarUrlState route) {
+        var date = route.Date ?? ProjectCalendarUrlCodec.ParseDate(persisted.SelectedDate) ?? DateOnly.FromDateTime(TimeProvider.GetUtcNow().UtcDateTime);
+        return persisted with {
+            View = route.View is { } view ? ProjectCalendarUrlCodec.Views.Format(view) : persisted.View,
+            SelectedDate = ProjectCalendarUrlCodec.FormatDate(date)
+        };
+    }
+
+    // The resolved view and date become explicit with Replace, so Back and Forward return to the exact calendar range.
+    // While prerendering the binding keeps this in its state and writes nothing.
+    private void PublishResolvedView(ProjectCalendarViewState state) {
+        var next = url.State with {
+            View = ProjectCalendarUrlCodec.ParseView(state.View) ?? url.State.View,
+            Date = ProjectCalendarUrlCodec.ParseDate(state.SelectedDate) ?? url.State.Date
+        };
+        if (next != url.State) {
+            url.Navigate(next, UrlHistoryMode.Replace);
+        }
+    }
+
     private Task HandleSelectionAsync(CalendarSelectionIntent intent) {
         if (!CanAccept(intent.Origin) || surface is null ||
             intent.EventId is { } id && !surface.Events.Any(item => item.Id == id)) {
             return Task.CompletedTask;
         }
+        var replacesShownSelection = selectedEventId != intent.EventId;
         selectedEventId = intent.EventId;
         viewState = viewState with { SelectedEventId = selectedEventId };
         presentation = ProjectCalendarPresentationAdapter.Build(surface, viewState, intent.Origin) with {
             PersistenceWarning = presentation.PersistenceWarning
         };
+        if (url.State.EventId != intent.EventId) {
+            // Selecting another event adds one entry; clearing it or making the shown default explicit does not.
+            // The calendar announces the date that follows the selected event right after it, and that date joins this entry.
+            selectionStatePending = true;
+            url.Navigate(url.State with { EventId = intent.EventId },
+                intent.EventId is not null && replacesShownSelection ? UrlHistoryMode.Push : UrlHistoryMode.Replace);
+        }
         return Task.CompletedTask;
     }
 
     private async Task HandleStateAsync(CalendarStateIntent intent) {
+        var followsSelection = selectionStatePending;
+        selectionStatePending = false;
         if (!CanAccept(intent.Origin) || surface is not { ExpectedProjectAdmission: { } admission } accepted) {
             return;
         }
@@ -138,9 +215,17 @@ public partial class ProjectCalendarPage : IDisposable {
             presentation = presentation with { PersistenceWarning = "The calendar supplied invalid view state. The saved view was not changed." };
             return;
         }
+        var rangeChanged = !string.Equals(next.View, viewState.View, StringComparison.Ordinal) ||
+            !string.Equals(next.SelectedDate, viewState.SelectedDate, StringComparison.Ordinal);
         viewState = next;
         selectedEventId = next.SelectedEventId;
         presentation = ProjectCalendarPresentationAdapter.Build(accepted, next, intent.Origin);
+        if (rangeChanged) {
+            url.Navigate(url.State with {
+                View = ProjectCalendarUrlCodec.ParseView(next.View) ?? url.State.View,
+                Date = ProjectCalendarUrlCodec.ParseDate(next.SelectedDate) ?? url.State.Date
+            }, followsSelection ? UrlHistoryMode.Replace : UrlHistoryMode.Push);
+        }
         var predecessor = viewWriteTail;
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         viewWriteTail = completion.Task;

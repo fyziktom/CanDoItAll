@@ -68,5 +68,5 @@ public sealed class MemoryBoundaryTests {
     }
 
     private static bool Framework(string name) => name is "mscorlib" or "netstandard" or "Microsoft.AspNetCore" || name.StartsWith("System", StringComparison.Ordinal) || name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) || name == "Microsoft.JSInterop";
-    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.Memory.UI" or "CanDoItAll.Memory.UiSandbox" or "CanDoItAll.Modules.Memory.Contracts" or "CanDoItAll.Modules.Memory.Presentation" or "CanDoItAll.Memory.Abstractions" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Components.OverlayLib";
+    private static bool Allowed(string name) => Framework(name) || name is "CanDoItAll.Memory.UI" or "CanDoItAll.Memory.UiSandbox" or "CanDoItAll.Modules.Memory.Contracts" or "CanDoItAll.Modules.Memory.Presentation" or "CanDoItAll.AppComponents.Navigation" or "CanDoItAll.Memory.Abstractions" or "CanDoItAll.Components.BaseLib" or "CanDoItAll.Components.Common" or "CanDoItAll.Components.OverlayLib";
 }

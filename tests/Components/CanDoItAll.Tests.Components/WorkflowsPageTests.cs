@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using Bunit;
 using AngleSharp.Dom;
+using System.Globalization;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -222,6 +223,7 @@ public sealed class WorkflowsPageTests
             Assert.Equal(expectedModel, component.Model);
         }
 
+        WaitForCatalogCount(cut, 1);
         var workflowsTab = cut.Find("[data-testid='workflows-tab-workflows']");
         Assert.Contains("Workflows", workflowsTab.TextContent);
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
@@ -263,6 +265,7 @@ public sealed class WorkflowsPageTests
         {
             Assert.Contains(notificationService.Messages, message => message.Summary == "Workflow created");
         });
+        WaitForCatalogCount(cut, 1);
 
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForElement("[data-testid='workflows-publish']").Click();
@@ -277,6 +280,36 @@ public sealed class WorkflowsPageTests
         var published = Assert.Single(await catalogService.ListDefinitionsAsync());
         Assert.Equal(WorkflowLifecycleStatus.Active, published.Status);
     }
+
+    [Fact]
+    public async Task A_tab_opened_while_a_created_workflow_is_loading_gets_that_workflow_ready()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterRacingWorkflowCatalog);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var racingCatalog = harness.Context.Services.GetRequiredService<RacingWorkflowCatalogService>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(cut.Find("[data-testid='workflows-create-starter']").HasAttribute("disabled"));
+        });
+
+        racingCatalog.DelayNextList();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-create-starter']").Click());
+        await racingCatalog.WaitForListAsync();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
+        racingCatalog.CompleteList();
+
+        cut.WaitForElement("[data-testid='workflows-publish']");
+        Assert.Contains("tab=workflows", navigation.Uri, StringComparison.Ordinal);
+    }
+
+    private static void WaitForCatalogCount(IRenderedComponent<WorkflowsPage> cut, int count)
+        => cut.WaitForAssertion(() => Assert.Contains(
+            count.ToString(CultureInfo.InvariantCulture),
+            cut.Find("[data-testid='workflows-tab-workflows']").TextContent,
+            StringComparison.Ordinal));
 
     [Fact]
     public async Task Workflows_page_defers_component_library_until_component_sections_need_it()
@@ -2854,6 +2887,7 @@ public sealed class WorkflowsPageTests
         PersistentWorkflowCatalogService inner) : IWorkflowCatalogService
     {
         private readonly Dictionary<WorkflowId, PendingDefinitionRequest> pendingRequests = [];
+        private PendingDefinitionRequest? pendingList;
 
         public void Delay(params WorkflowId[] definitionIds)
         {
@@ -2873,9 +2907,26 @@ public sealed class WorkflowsPageTests
             => GetPendingRequest(definitionId).Completion.TrySetResult(
                 new InvalidOperationException($"Delayed workflow '{definitionId}' failed."));
 
-        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+        // Holds the next catalog list until Complete is called; later lists pass through.
+        public void DelayNextList()
+            => pendingList = new PendingDefinitionRequest();
+
+        public Task WaitForListAsync()
+            => (pendingList ?? throw new InvalidOperationException("No workflow list is delayed.")).Started.Task;
+
+        public void CompleteList()
+            => (pendingList ?? throw new InvalidOperationException("No workflow list is delayed.")).Completion.TrySetResult(null);
+
+        public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
             CancellationToken cancellationToken = default)
-            => inner.ListDefinitionsAsync(cancellationToken);
+        {
+            if (pendingList is { } pending && pending.Started.TrySetResult())
+            {
+                await pending.Completion.Task.WaitAsync(cancellationToken);
+            }
+
+            return await inner.ListDefinitionsAsync(cancellationToken);
+        }
 
         public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
             WorkflowId workflowId,

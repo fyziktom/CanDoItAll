@@ -96,7 +96,7 @@ public sealed class SharedProviderFinalUiTests {
         await source.GetByTestId("shared-provider-source-toggle").ClickAsync();
         await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToHaveTextAsync("Enable");
         await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToBeEnabledAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
         var disabled = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
         Assert.False(disabled.IsEnabled);
@@ -115,7 +115,7 @@ public sealed class SharedProviderFinalUiTests {
         await Assertions.Expect(source.GetByTestId("shared-provider-source-toggle")).ToBeEnabledAsync();
         await source.GetByTestId("shared-provider-source-sync").ClickAsync();
         await page.GetByText("Source synchronized", new() { Exact = true }).WaitForAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         await OpenSharingAsync(page, fixture.Settings.Clients[0], profile.Name);
         await page.GetByTestId("shared-provider-import-retire").ClickAsync();
         await page.GetByTestId("shared-provider-confirmation-dialog").WaitForAsync();
@@ -132,7 +132,7 @@ public sealed class SharedProviderFinalUiTests {
         await selection.CheckAsync();
         await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
         await catalog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         var restored = Assert.Single(await SharedProviderNativeDefaultsUiTests.ProfilesAsync(fixture.Api), item => item.Id == profile.Id);
         Assert.True(restored.IsEnabled);
         Assert.Equal(profile.DefaultModel, restored.DefaultModel);

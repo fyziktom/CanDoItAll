@@ -71,9 +71,16 @@
         }
     }
 
-    // The CRM route with both identifiers; the existing CRM page reads accountId and opportunityId from the query.
+    // The CRM location of the opportunity, open over its account, written by the CRM page's own codec.
     public static string BuildOpportunityRoute(Guid accountPartyId, Guid opportunityId)
-        => $"{CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Crm).Route}?accountId={accountPartyId:D}&opportunityId={opportunityId:D}";
+        => CrmUrlCodec.Instance.Href(
+            CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Crm).Route,
+            CrmUrlCodec.Default with
+            {
+                AccountId = accountPartyId,
+                OpportunityId = opportunityId,
+                Section = CrmSection.Opportunities
+            });
 
     private static CrmHrWorkspaceArea ToArea(CrmHrHomeDestination destination)
         => destination switch

@@ -18,6 +18,37 @@ public sealed record PromptGallerySearchContext(
            ShowActualChatModelFilter == other.ShowActualChatModelFilter;
 }
 
+public enum PromptGallerySearchCommitKind
+{
+    // A debounced text filter took effect.
+    Live,
+    // An explicit filter, clear or paging action.
+    Explicit,
+    // The session moved off a page that no longer exists.
+    Correction
+}
+
+// Filters and page a routed owner asks the list to show, for example from its URL.
+public sealed record PromptGallerySearchRequest(PromptGalleryFilterValues Filters, int PageIndex)
+{
+    public bool Matches(PromptGalleryFilterValues filters, int pageIndex)
+        => PageIndex == pageIndex &&
+           string.Equals(Filters.Text, filters.Text, StringComparison.Ordinal) &&
+           Filters.Tags.SequenceEqual(filters.Tags, StringComparer.Ordinal) &&
+           Filters.Kind == filters.Kind &&
+           Filters.Status == filters.Status &&
+           string.Equals(Filters.ProviderFilter, filters.ProviderFilter, StringComparison.Ordinal) &&
+           string.Equals(Filters.ModelFilter, filters.ModelFilter, StringComparison.Ordinal) &&
+           Filters.FavoritesOnly == filters.FavoritesOnly &&
+           Filters.IncludeArchived == filters.IncludeArchived &&
+           Filters.ActualChatModelOnly == filters.ActualChatModelOnly;
+
+    public bool SameAs(PromptGallerySearchRequest other)
+        => Matches(other.Filters, other.PageIndex);
+}
+
+public sealed record PromptGallerySearchCommit(PromptGalleryFilterValues Filters, int PageIndex, PromptGallerySearchCommitKind Kind);
+
 // Owns one search list instance: committed filters, the current page, request generations, debounce and favorite writes.
 public sealed class PromptGallerySearchSession : IAsyncDisposable
 {
@@ -34,6 +65,7 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
     private bool configured;
     private PromptGalleryFilterValues filters = PromptGalleryFilterValues.Initial;
     private PromptGalleryPage<PromptGallerySearchItem> page = new([], 0, 25, 0);
+    private int requestedPageIndex;
     private IReadOnlyList<string> availableTags = [];
     private string? loadError;
     private Guid? favoriteBusyItemId;
@@ -53,7 +85,10 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
 
     public Func<PromptGalleryNotice, Task>? NoticeRaised { get; set; }
 
-    public Task ConfigureAsync(PromptGallerySearchContext next)
+    // Raised when a user intent or a page correction changes the committed filters or page.
+    public Func<PromptGallerySearchCommit, Task>? Committed { get; set; }
+
+    public Task ConfigureAsync(PromptGallerySearchContext next, PromptGallerySearchRequest? request = null)
     {
         ArgumentNullException.ThrowIfNull(next);
         if (disposed)
@@ -64,15 +99,21 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         var previous = context;
         var pinnedContextChanged = !configured || !previous.SharesPinnedContextWith(next);
         context = next;
-        if (!pinnedContextChanged)
+        if (pinnedContextChanged)
+        {
+            configured = true;
+            filters = request?.Filters ?? filters with { ActualChatModelOnly = true };
+            return LoadRequestedAsync(request?.PageIndex ?? 0);
+        }
+
+        if (request is null || request.Matches(filters, requestedPageIndex))
         {
             // Compact/page-size echoes and unrelated rerenders never issue a new request.
             return Task.CompletedTask;
         }
 
-        configured = true;
-        filters = filters with { ActualChatModelOnly = true };
-        return LoadAsync(0);
+        filters = request.Filters;
+        return LoadRequestedAsync(request.PageIndex);
     }
 
     public Task ApplyAsync(PromptGallerySearchIntent intent)
@@ -87,8 +128,8 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         {
             PromptGallerySearchIntent.ChangeFilters change => ChangeFiltersAsync(change.Filters, change.Debounce),
             PromptGallerySearchIntent.ClearFilters => ChangeFiltersAsync(PromptGalleryFilterValues.Cleared, debounce: false),
-            PromptGallerySearchIntent.LoadPage load => LoadAsync(Math.Max(0, load.PageIndex)),
-            PromptGallerySearchIntent.Retry => LoadAsync(page.PageIndex),
+            PromptGallerySearchIntent.LoadPage load => LoadAsync(Math.Max(0, load.PageIndex), commit: PromptGallerySearchCommitKind.Explicit),
+            PromptGallerySearchIntent.Retry => LoadAsync(requestedPageIndex),
             PromptGallerySearchIntent.ToggleFavorite favorite => ToggleFavoriteAsync(favorite.Item),
             _ => throw new NotSupportedException($"The search session does not own the {intent.GetType().Name} intent.")
         };
@@ -97,11 +138,8 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
     public async Task RefreshAsync()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        var generation = await LoadAsync(page.PageIndex);
-        if (IsCurrent(generation) && page.TotalPages > 0 && page.PageIndex >= page.TotalPages)
-        {
-            await LoadAsync(page.TotalPages - 1);
-        }
+        var generation = await LoadAsync(requestedPageIndex);
+        await CorrectPageAsync(generation);
     }
 
     public ValueTask DisposeAsync()
@@ -121,10 +159,37 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
     private async Task ChangeFiltersAsync(PromptGalleryFilterValues next, bool debounce)
     {
         filters = next;
-        await LoadAsync(0, debounce);
+        await LoadAsync(0, debounce, commit: debounce ? PromptGallerySearchCommitKind.Live : PromptGallerySearchCommitKind.Explicit);
     }
 
-    private async Task<long> LoadAsync(int pageIndex, bool debounce = false, string failureSummary = SearchFailureSummary)
+    private async Task LoadRequestedAsync(int pageIndex)
+    {
+        var generation = await LoadAsync(pageIndex);
+        await CorrectPageAsync(generation);
+    }
+
+    // A page beyond the last one (a stale link or a list that shrank) moves to the last existing page.
+    private async Task CorrectPageAsync(long generation)
+    {
+        if (!IsCurrent(generation) || loadError is not null)
+        {
+            return;
+        }
+
+        var lastPageIndex = Math.Max(0, page.TotalPages - 1);
+        if (requestedPageIndex <= lastPageIndex)
+        {
+            return;
+        }
+
+        await LoadAsync(lastPageIndex, commit: PromptGallerySearchCommitKind.Correction);
+    }
+
+    private async Task<long> LoadAsync(
+        int pageIndex,
+        bool debounce = false,
+        string failureSummary = SearchFailureSummary,
+        PromptGallerySearchCommitKind? commit = null)
     {
         if (disposed)
         {
@@ -132,6 +197,7 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
         }
 
         var (current, generation) = ReplaceOperation();
+        requestedPageIndex = pageIndex;
         if (debounce)
         {
             // The typed text is already committed; only the request waits, and a newer request replaces this one.
@@ -145,6 +211,15 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
                 return generation;
             }
 
+            if (!IsCurrent(generation))
+            {
+                return generation;
+            }
+        }
+
+        if (commit is { } kind)
+        {
+            await CommitAsync(kind);
             if (!IsCurrent(generation))
             {
                 return generation;
@@ -224,7 +299,7 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
             }
 
             // The write is committed; a failed reload is reported as a refresh problem, never as a favorite failure.
-            await LoadAsync(page.PageIndex, failureSummary: "Favorite saved, but the gallery could not be refreshed");
+            await LoadAsync(requestedPageIndex, failureSummary: "Favorite saved, but the gallery could not be refreshed");
         }
         catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
         {
@@ -290,6 +365,13 @@ public sealed class PromptGallerySearchSession : IAsyncDisposable
             context.Model,
             context.ShowActualChatModelFilter,
             favoriteBusyItemId);
+
+    // A filter the list does not offer is reported at its default, so it never reaches the owner's location.
+    private Task CommitAsync(PromptGallerySearchCommitKind kind)
+    {
+        var reported = BuildPresentation().OffersActualChatModelFilter ? filters : filters with { ActualChatModelOnly = true };
+        return Committed?.Invoke(new PromptGallerySearchCommit(reported, requestedPageIndex, kind)) ?? Task.CompletedTask;
+    }
 
     private Task PublishAsync()
     {

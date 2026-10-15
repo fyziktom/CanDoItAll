@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents;
 using CanDoItAll.CrmHr.UI.Activity;
 using CanDoItAll.CrmHr.UI.Parties;
 using CanDoItAll.Modules.CrmHr;
@@ -79,6 +80,9 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
     public bool IsProjectAssignmentsLoading { get; private set; }
 
     public long DirectoryBrowserVersion { get; private set; }
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<PartyRecordScope>? CatalogQuery => null;
 
     public int SelectedEditorTabIndex { get; private set; }
 
@@ -176,6 +180,8 @@ public sealed class CrmHrDirectorySandboxView(CrmHrSandboxPartyStore partyStore)
         Log($"Select party: {Editor.DisplayName}");
         return Task.CompletedTask;
     }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => Task.CompletedTask;
 
     public Task CreateNewAsync()
     {

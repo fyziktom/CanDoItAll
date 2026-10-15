@@ -17,16 +17,13 @@ public sealed partial class ProcessWorkspaceShellTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Retired_new_intent_cleanup_cannot_launch_or_clear_successor_busy_state(bool fail) {
-        using var context = CreateContext(out var client);
+        var authority = new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()));
+        var store = new RetainedLaunchStore(null);
+        using var context = CreateContext(out var client, services: LaunchServices(authority, store, new LaunchStateStore(null)));
         client.ShellResultTransform = (_, projection) => projection with {
             Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
                 ? command with { IsEnabled = true, DisabledReason = null } : command).ToArray()
         };
-        var authority = new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()));
-        var store = new RetainedLaunchStore(null);
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(authority);
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(null)));
         context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(Guid.NewGuid().ToString("D"));
         var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -81,15 +78,13 @@ public sealed partial class ProcessWorkspaceShellTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Retired_launch_observation_cannot_clear_the_successor_read_busy_state(bool fail) {
-        using var context = CreateContext(out var client);
+        var store = new RetainedLaunchStore(null);
+        using var context = CreateContext(out var client, services: LaunchServices(
+            new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid())), store, new LaunchStateStore(null)));
         client.ShellResultTransform = (_, projection) => projection with {
             Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
                 ? command with { IsEnabled = true, DisabledReason = null } : command).ToArray()
         };
-        var store = new RetainedLaunchStore(null);
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid())));
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(null)));
         var storage = context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true);
         var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -110,13 +105,10 @@ public sealed partial class ProcessWorkspaceShellTests {
 
     [Fact]
     public async Task Launch_missing_browser_preparation_remains_explicit_without_creating_a_replacement() {
-        using var context = CreateLaunchContext();
         var intent = Guid.NewGuid();
         var authority = new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()));
         var store = new RetainedLaunchStore(null);
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(authority);
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(null)));
+        using var context = CreateLaunchContext(LaunchServices(authority, store, new LaunchStateStore(null)));
         context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(intent.ToString("D"));
         var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -134,7 +126,6 @@ public sealed partial class ProcessWorkspaceShellTests {
     [InlineData(ProcessLaunchContinuationState.Accepted, false)]
     public async Task Launch_restores_the_accepted_browser_intent_without_recapturing_a_new_project_lifetime(
         ProcessLaunchContinuationState continuation, bool acknowledged) {
-        using var context = CreateLaunchContext();
         var profile = Guid.NewGuid();
         var project = Guid.NewGuid();
         var originalAuthority = ProcessPreparedLaunchFixture.Local(profile, new(profile, project, Guid.NewGuid()));
@@ -146,9 +137,7 @@ public sealed partial class ProcessWorkspaceShellTests {
             ProcessLaunchLinkDeliveryState.NotRequested, null, null);
         var store = new RetainedLaunchStore(retained);
         var authorities = new LaunchOperatorSource(originalAuthority with { ProjectAdmission = null });
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(authorities);
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(preparation.InitialCommit.Mutation.State)));
+        using var context = CreateLaunchContext(LaunchServices(authorities, store, new LaunchStateStore(preparation.InitialCommit.Mutation.State)));
         context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(preparation.CallerIntentId!.Value.Value.ToString("D"));
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.ProjectId, project));
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -162,8 +151,8 @@ public sealed partial class ProcessWorkspaceShellTests {
         Assert.Equal(acknowledged, context.JSInterop.Invocations.Any(invocation => invocation.Identifier == "sessionStorage.removeItem"));
     }
 
-    private static BunitContext CreateLaunchContext() {
-        var context = CreateContext(out var client);
+    private static BunitContext CreateLaunchContext(Action<IServiceCollection> services) {
+        var context = CreateContext(out var client, services: services);
         client.ShellResultTransform = (_, projection) => projection with {
             Authorization = projection.Authorization with { CanLaunchRuns = true },
             Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
@@ -171,6 +160,15 @@ public sealed partial class ProcessWorkspaceShellTests {
         };
         return context;
     }
+
+    // The launch collaborators are registered before the renderer is built.
+    private static Action<IServiceCollection> LaunchServices(IProcessLaunchOperatorAuthoritySource authority,
+        IProcessPreparedLaunchStore store, IProcessRuntimeStateStore states)
+        => services => {
+            services.AddSingleton(authority);
+            services.AddSingleton(store);
+            services.AddSingleton(ObservationOnlyLaunchService(store, states));
+        };
 
     private static Task InvokeLaunchAsync(IRenderedComponent<ProcessWorkspaceShell> cut)
         => cut.Find("[data-testid='processes-command-launchrun']").ClickAsync(new MouseEventArgs());

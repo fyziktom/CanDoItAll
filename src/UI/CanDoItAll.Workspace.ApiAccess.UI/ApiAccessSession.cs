@@ -14,6 +14,8 @@ public sealed class ApiAccessSession(
     private long observationRevision;
 
     public event Action? Changed;
+    public event Action<ApiPageQueryAcceptance>? AccountQueryAccepted;
+    public ApiPageQuery AccountQuery { get; private set; } = new();
     public ApiAccessConfiguration? Configuration { get; private set; }
     public bool StatusLoading { get; private set; }
     public bool ManagementLoading { get; private set; }
@@ -56,8 +58,9 @@ public sealed class ApiAccessSession(
             Accounts = new(accounts, configuration, authority, ledger);
             Issuance.Changed += Notify;
             Accounts.Changed += Notify;
+            Accounts.Page.QueryAccepted += AccountAccepted;
             Notify();
-            await Accounts.Page.RefreshAsync();
+            await Accounts.Page.OpenAsync(AccountQuery);
         }
 
         async Task ReadConfigurationAsync() {
@@ -124,6 +127,23 @@ public sealed class ApiAccessSession(
         Notify();
     }
 
+    public Task OpenAccountsAsync(ApiPageQuery query) {
+        ArgumentNullException.ThrowIfNull(query);
+        if (!life.IsActive) {
+            return Task.CompletedTask;
+        }
+        AccountQuery = query;
+        return Accounts is { } accounts ? accounts.Page.OpenAsync(query) : Task.CompletedTask;
+    }
+
+    private void AccountAccepted(ApiPageQueryAcceptance acceptance) {
+        if (!life.IsActive) {
+            return;
+        }
+        AccountQuery = acceptance.Query;
+        AccountQueryAccepted?.Invoke(acceptance);
+    }
+
     private bool Current(long origin) => life.IsActive && origin == revision;
     private void AccessRetired() {
         ManagementFailure = ApiFailure.Denied;
@@ -157,5 +177,6 @@ public sealed class ApiAccessSession(
         StatusLoading = false;
         ManagementLoading = false;
         Changed = null;
+        AccountQueryAccepted = null;
     }
 }

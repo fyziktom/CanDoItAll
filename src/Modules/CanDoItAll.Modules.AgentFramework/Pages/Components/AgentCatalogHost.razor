@@ -25,6 +25,21 @@
     public Guid? RequestedTeamId { get; set; }
 
     [Parameter]
+    public AgentEditorSection RequestedAgentSection { get; set; } = AgentEditorSection.Identity;
+
+    [Parameter]
+    public EventCallback<Guid> AgentOpenRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<AgentEditorSection> AgentSectionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback AgentCloseRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> TeamSelectionRequested { get; set; }
+
+    [Parameter]
     public IReadOnlyList<AgentDefinition>? InitialAgents { get; set; }
 
     [Parameter]
@@ -101,6 +116,9 @@
     private Guid? contextRequestedAgentId;
     private Guid? contextRequestedTeamId;
     private bool contextRequestApplied;
+    private RouteDialog? routeDialog;
+
+    private bool IsRouteControlled => AgentOpenRequested.HasDelegate;
 
     private AgentTeamDefinition? SelectedTeam => teams.FirstOrDefault(team => team.Id == selectedTeamId);
 
@@ -122,6 +140,10 @@
             InvalidateTeamDialog();
         }
         selectedTeamId = teamId;
+        if (TeamSelectionRequested.HasDelegate) {
+            appliedRequestedTeamId = teamId;
+            await TeamSelectionRequested.InvokeAsync(teamId);
+        }
         await SelectedTeamChanged.InvokeAsync(SelectedTeam);
     }
 
@@ -151,6 +173,11 @@
             contextRequestedAgentId = RequestedAgentId;
             contextRequestedTeamId = RequestedTeamId;
             publishedAccessState = null;
+            if (agentRequestChanged && IsRouteControlled) {
+                // A route-controlled editor follows the location, so a newly requested agent always opens, even when a
+                // click or a save already marked that agent as handled.
+                openedRequestedAgentId = null;
+            }
         }
         var generation = requestGeneration;
         if (requestChanged) {
@@ -265,6 +292,10 @@
     }
 
     private async Task OpenRequestedAgentDialogIfNeededAsync() {
+        if (routeDialog is { } open && open.AgentId != RequestedAgentId) {
+            routeDialog = null;
+            open.Lifetime.Cancel();
+        }
         if (!RequestedAgentId.HasValue ||
             openedRequestedAgentId == RequestedAgentId.Value ||
             !agents.Any(item => item.Id == RequestedAgentId.Value)) {
@@ -277,7 +308,7 @@
         var generation = requestGeneration;
         await SelectedAgentChanged.InvokeAsync(agents.First(item => item.Id == agentId));
         if (IsCurrentRequest(generation) && RequestedAgentId == agentId) {
-            _ = OpenAgentDetailsDialogAsync(agentId);
+            _ = OpenAgentDetailsDialogAsync(agentId, routeOwned: true);
         }
     }
 
@@ -339,9 +370,14 @@
         return Task.CompletedTask;
     }
 
-    private Task QueueAgentDetailsDialogAsync(Guid? agentId) {
+    private async Task QueueAgentDetailsDialogAsync(Guid? agentId) {
+        if (agentId is { } requested && IsRouteControlled) {
+            selectedAgentId = requested;
+            await SelectedAgentChanged.InvokeAsync(agents.FirstOrDefault(item => item.Id == requested));
+            await AgentOpenRequested.InvokeAsync(requested);
+            return;
+        }
         _ = OpenAgentDetailsDialogAsync(agentId);
-        return Task.CompletedTask;
     }
 
     private Task QueueTeamDetailsDialogAsync(Guid? teamId) {
@@ -349,7 +385,7 @@
         return Task.CompletedTask;
     }
 
-    private async Task OpenAgentDetailsDialogAsync(Guid? agentId) {
+    private async Task OpenAgentDetailsDialogAsync(Guid? agentId, bool routeOwned = false) {
         if (isDisposed) {
             return;
         }
@@ -357,6 +393,11 @@
         if (isDisposed) {
             return;
         }
+        var owner = routeOwned && agentId is { } routedId ? new RouteDialog(routedId, request) : null;
+        if (owner is not null) {
+            routeDialog = owner;
+        }
+        var closed = false;
         var presentationId = Guid.NewGuid();
         if (agentId.HasValue) {
             openedRequestedAgentId = agentId.Value;
@@ -378,6 +419,10 @@
                 new Dictionary<string, object?> {
                     [nameof(AgentDetailsDialog.AgentId)] = agentId,
                     [nameof(AgentDetailsDialog.InitialProviders)] = InitialProviders,
+                    [nameof(AgentDetailsDialog.Section)] = owner is not null ? RequestedAgentSection : AgentEditorSection.Identity,
+                    [nameof(AgentDetailsDialog.SectionChanged)] = owner is not null && IsRouteControlled
+                        ? EventCallback.Factory.Create<AgentEditorSection>(this, section => ReportSectionAsync(owner, section))
+                        : default(EventCallback<AgentEditorSection>),
                     [nameof(AgentDetailsDialog.TargetChanged)] =
                         EventCallback.Factory.Create<AgentEditorTarget>(this, target => {
                             if (editorTargets.ContainsKey(presentationId)) {
@@ -397,19 +442,33 @@
                     TestId = "agents-details-dialog"
                 }, request.Token);
 
+            closed = true;
             if (result is AgentDetailsDialogResult dialogResult) {
                 await HandleAgentDialogSavedAsync(presentationId, dialogResult);
             }
         } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
         } catch (Exception) {
+            // A failed editor is gone as well, so the location must stop claiming it is open.
+            closed = true;
             if (isDisposed) {
                 return;
             }
             NotificationService.Error("Agent dialog failed", "The agent editor could not be completed. Reload the catalog before continuing.");
         } finally {
             editorTargets.Remove(presentationId);
+            if (owner is not null && ReferenceEquals(routeDialog, owner)) {
+                routeDialog = null;
+                if (closed && !isDisposed && IsRouteControlled) {
+                    await AgentCloseRequested.InvokeAsync();
+                }
+            }
         }
     }
+
+    private Task ReportSectionAsync(RouteDialog owner, AgentEditorSection section)
+        => !isDisposed && ReferenceEquals(routeDialog, owner) ? AgentSectionChanged.InvokeAsync(section) : Task.CompletedTask;
+
+    private sealed record RouteDialog(Guid AgentId, CancellationTokenSource Lifetime);
 
     private bool IsCurrentEditorResult(Guid presentationId, AgentDetailsDialogResult result)
         => !isDisposed && result.AgentId is { } agentId && editorTargets.TryGetValue(presentationId, out var target) && target.AgentId == agentId;

@@ -1,4 +1,6 @@
 using Bunit;
+using Bunit.TestDoubles;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Prompts.Components;
@@ -105,7 +107,7 @@ public sealed class PromptGalleryPageTests
     }
 
     [Fact]
-    public void PromptId_request_reopens_after_null_and_after_a_missing_item_but_not_on_an_echo()
+    public void PromptId_location_owns_the_editor_and_closing_a_deep_link_replaces_it_with_the_list()
     {
         var gallery = new ScriptedPromptGalleryService();
         var knownId = Guid.NewGuid();
@@ -113,27 +115,35 @@ public sealed class PromptGalleryPageTests
         gallery.GetItem = id => Task.FromResult(id == knownId
             ? Result<PromptGalleryItemDetails>.Success(ScriptedPromptGalleryService.Details(id))
             : Result<PromptGalleryItemDetails>.Failure(Error.Failure("Prompt Gallery item was not found.", "prompts.gallery.not-found")));
-        using var context = CreateContext(gallery, new UnavailableCuratorLauncher());
-        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var back = new ScriptedBack();
+        using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), back);
+        var navigation = Navigation(context);
         navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}");
 
         var cut = context.Render<PromptGalleryPage>();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
         Assert.Equal([knownId], gallery.GetItemCalls);
+        var entries = navigation.History.Count;
 
         cut.Find("[data-testid='prompt-gallery-editor-cancel']").Click();
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
 
-        // An echo of the same request on rerender does not reopen the closed editor.
+        // A deep link has no parent entry: closing replaces the location instead of leaving the page through Back.
+        Assert.Equal("/prompt-gallery", Location(navigation));
+        Assert.Equal(entries, navigation.History.Count);
+        Assert.Equal(0, back.Calls);
+
+        // An echo of the same location on rerender does not reopen the closed editor.
         cut.Render();
         Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']"));
-
-        navigation.NavigateTo("/prompt-gallery");
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
 
         navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}");
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
         Assert.Equal([knownId, knownId], gallery.GetItemCalls);
+
+        // Back to the list location closes the addressed editor.
+        navigation.NavigateTo("/prompt-gallery");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
 
         // A missing item is a failed target with its own retry, never a new empty draft.
         navigation.NavigateTo($"/prompt-gallery?promptId={missingId:D}");
@@ -147,12 +157,109 @@ public sealed class PromptGalleryPageTests
     }
 
     [Fact]
+    public void Editing_from_the_list_pushes_the_prompt_and_close_returns_through_history()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var back = new ScriptedBack();
+        using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), back);
+        var navigation = Navigation(context);
+        navigation.NavigateTo("/prompt-gallery?kind=part");
+        var cut = context.Render<PromptGalleryPage>();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-edit']")));
+        var itemId = Assert.Single(cut.FindComponent<PromptGallerySearchHost>().Instance.Presentation.Items).Id;
+        var entries = navigation.History.Count;
+
+        cut.Find("[data-testid='prompt-gallery-edit']").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
+        Assert.Equal($"/prompt-gallery?promptId={itemId:D}&kind=part", Location(navigation));
+        Assert.Equal(entries + 1, navigation.History.Count);
+
+        cut.Find("[data-testid='prompt-gallery-editor-cancel']").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']")));
+        Assert.Equal(1, back.Calls);
+        Assert.Equal("/prompt-gallery?kind=part", Location(navigation));
+        Assert.Single(gallery.Queries);
+    }
+
+    [Fact]
+    public async Task First_save_of_a_new_item_addresses_its_editor_without_a_new_entry()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var savedId = Guid.NewGuid();
+        gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, DateTimeOffset.UnixEpoch)));
+        using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), new ScriptedBack());
+        var navigation = Navigation(context);
+        navigation.NavigateTo("/prompt-gallery");
+        var cut = context.Render<PromptGalleryPage>();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
+        var entries = navigation.History.Count;
+
+        cut.Find("button[aria-label='New item']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
+        Assert.Equal("/prompt-gallery", Location(navigation));
+        cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Addressed draft");
+        cut.Find("[data-testid='prompt-gallery-editor-content']").Change("Body");
+        await cut.Find("form").SubmitAsync();
+
+        cut.WaitForAssertion(() => Assert.Equal($"/prompt-gallery?promptId={savedId:D}", Location(navigation)));
+        Assert.Equal(entries, navigation.History.Count);
+        Assert.Equal(savedId, cut.FindComponent<PromptGalleryItemEditorHost>().Instance.CurrentTarget);
+    }
+
+    [Fact]
+    public void Explicit_filters_push_typed_search_replaces_and_a_location_restores_filters_and_page()
+    {
+        var gallery = new ScriptedPromptGalleryService
+        {
+            Search = (query, _) => Task.FromResult(ScriptedPromptGalleryService.Page(query, [ScriptedPromptGalleryService.Item()], 100))
+        };
+        using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), new ScriptedBack());
+        var navigation = Navigation(context);
+        navigation.NavigateTo("/prompt-gallery");
+        var cut = context.Render<PromptGalleryPage>();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
+        var entries = navigation.History.Count;
+
+        cut.Find("[data-testid='prompt-gallery-kind-filter']").Change("Part");
+
+        cut.WaitForAssertion(() => Assert.Equal("/prompt-gallery?kind=part", Location(navigation)));
+        Assert.Equal(entries + 1, navigation.History.Count);
+
+        cut.Find("[data-testid='prompt-gallery-search']").Input("brief");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("/prompt-gallery?q=brief&kind=part", Location(navigation));
+            Assert.Equal("brief", gallery.Queries[^1].Text);
+        }, TimeSpan.FromSeconds(5));
+        Assert.Equal(entries + 1, navigation.History.Count);
+        var queries = gallery.Queries.Count;
+
+        navigation.NavigateTo("/prompt-gallery?status=final&page=3");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(queries + 1, gallery.Queries.Count);
+            var query = gallery.Queries[^1];
+            Assert.Equal(PromptArtifactStatus.Final, query.Status);
+            Assert.Null(query.Kind);
+            Assert.Equal(string.Empty, query.Text ?? string.Empty);
+            Assert.Equal(2, query.PageIndex);
+        });
+        Assert.Equal(2, cut.FindComponent<PromptGallerySearchHost>().Instance.Presentation.PageIndex);
+    }
+
+    [Fact]
     public async Task Editor_commit_refreshes_the_list_in_place_and_preserves_filters()
     {
         var gallery = new ScriptedPromptGalleryService();
         var savedId = Guid.NewGuid();
         gallery.SaveDraft = _ => Task.FromResult(Result<PromptDraftSaveReceipt>.Success(new PromptDraftSaveReceipt(savedId, DateTimeOffset.UnixEpoch)));
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher());
+        // The committed filters live in the URL, which the page writes only at its own route.
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/prompt-gallery");
         var cut = context.Render<PromptGalleryPage>();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         var searchHost = cut.FindComponent<PromptGallerySearchHost>().Instance;
@@ -317,14 +424,40 @@ public sealed class PromptGalleryPageTests
         Assert.Equal(0, launcher.ContextLease.DisposeCount);
     }
 
-    private static BunitContext CreateContext(ScriptedPromptGalleryService gallery, IPromptGalleryCuratorLauncher launcher)
+    private static BunitContext CreateContext(ScriptedPromptGalleryService gallery, IPromptGalleryCuratorLauncher launcher, ScriptedBack? back = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
         context.Services.AddSingleton(launcher);
+        var history = back ?? new ScriptedBack();
+        history.Context = context;
+        context.Services.AddSingleton<IAppNavigationHistory>(history);
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
+    }
+
+    private static BunitNavigationManager Navigation(BunitContext context)
+        => Assert.IsType<BunitNavigationManager>(context.Services.GetRequiredService<NavigationManager>());
+
+    private static string Location(NavigationManager navigation) => "/" + navigation.ToBaseRelativePath(navigation.Uri);
+
+    // Browser Back: the previous entry becomes the location again, with the entry state it was created with.
+    private sealed class ScriptedBack : IAppNavigationHistory
+    {
+        public BunitContext? Context { get; set; }
+
+        public int Calls { get; private set; }
+
+        public ValueTask BackAsync(CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            var navigation = Navigation(Context ?? throw new InvalidOperationException("The test context is not attached."));
+            var previous = navigation.History.Skip(1).FirstOrDefault();
+            navigation.NavigateTo(previous?.Uri ?? navigation.BaseUri, new NavigationOptions { HistoryEntryState = previous?.Options.HistoryEntryState });
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class UnavailableCuratorLauncher : IPromptGalleryCuratorLauncher

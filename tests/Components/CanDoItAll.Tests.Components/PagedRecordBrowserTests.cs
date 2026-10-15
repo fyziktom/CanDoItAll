@@ -501,6 +501,241 @@ public sealed class PagedRecordBrowserTests : BunitContext
         Assert.Equal(1, closeCount);
     }
 
+    [Fact]
+    public void Controlled_query_is_requested_as_supplied_and_is_not_reported_back()
+    {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var cut = RenderControlledBrowser(
+            new PagedRecordQueryState<RecordScope>("alpha", ["priority"], RecordScope.People, 1),
+            RecordingLoader(requests, totalCount: 5),
+            changes.Add);
+
+        cut.WaitForAssertion(() =>
+        {
+            var request = Assert.Single(requests);
+            Assert.Equal("alpha", request.SearchText);
+            Assert.Equal(["priority"], request.Tags);
+            Assert.Equal(RecordScope.People, request.Filter);
+            Assert.Equal(1, request.PageIndex);
+            Assert.Contains("Page 2 of 3", cut.Markup);
+        });
+        Assert.Equal("alpha", cut.Find("[data-testid='records-search']").GetAttribute("value"));
+        Assert.Equal("true", cut.Find("[data-testid='scope-people']").GetAttribute("aria-pressed"));
+        Assert.Empty(changes);
+    }
+
+    [Fact]
+    public void Controlled_changes_are_committed_once_with_their_kind_and_their_echo_loads_nothing()
+    {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var cut = RenderControlledBrowser(
+            new PagedRecordQueryState<RecordScope>(string.Empty, [], RecordScope.All, 0),
+            RecordingLoader(requests, totalCount: 5),
+            changes.Add);
+        WaitForLoads(cut, requests, 1);
+
+        // The owner writes each committed query back, as a page does through its location.
+        void EchoLatestCommit() => cut.Render(parameters => parameters.Add(component => component.Query, changes[^1].Query));
+
+        cut.Find("[data-testid='records-search']").Input("  alpha  ");
+        WaitForLoads(cut, requests, 2);
+        EchoLatestCommit();
+        cut.Find("[data-testid='records-next']").Click();
+        WaitForLoads(cut, requests, 3);
+        EchoLatestCommit();
+        cut.Find("[data-testid='records-tag-filter-input']").Input(" priority,");
+        WaitForLoads(cut, requests, 4);
+        EchoLatestCommit();
+        cut.Find("[data-testid='scope-people']").Click();
+        WaitForLoads(cut, requests, 5);
+        EchoLatestCommit();
+        cut.Find("[data-testid='scope-people']").Click();
+        cut.Find("[data-testid='records-reset']").Click();
+        WaitForLoads(cut, requests, 6);
+        EchoLatestCommit();
+
+        Assert.Equal(6, requests.Count);
+        Assert.Collection(
+            changes,
+            change => Assert.Equal(
+                new PagedRecordQueryChange<RecordScope>(new("alpha", [], RecordScope.All, 0), PagedRecordQueryChangeKind.Search),
+                change),
+            change => Assert.Equal(
+                new PagedRecordQueryChange<RecordScope>(new("alpha", [], RecordScope.All, 1), PagedRecordQueryChangeKind.Page),
+                change),
+            change => Assert.Equal(
+                new PagedRecordQueryChange<RecordScope>(new("alpha", ["priority"], RecordScope.All, 0), PagedRecordQueryChangeKind.Tags),
+                change),
+            change => Assert.Equal(
+                new PagedRecordQueryChange<RecordScope>(new("alpha", ["priority"], RecordScope.People, 0), PagedRecordQueryChangeKind.Filter),
+                change),
+            change => Assert.Equal(
+                new PagedRecordQueryChange<RecordScope>(new(string.Empty, [], RecordScope.All, 0), PagedRecordQueryChangeKind.Reset),
+                change));
+        Assert.Equal(string.Empty, requests[^1].SearchText);
+        Assert.Empty(requests[^1].Tags);
+        Assert.Equal(RecordScope.All, requests[^1].Filter);
+        Assert.Equal(0, requests[^1].PageIndex);
+    }
+
+    [Fact]
+    public async Task Owner_query_change_replaces_the_typed_search_and_loads_without_committing_it()
+    {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var cut = RenderControlledBrowser(
+            new PagedRecordQueryState<RecordScope>(string.Empty, [], RecordScope.All, 0),
+            RecordingLoader(requests, totalCount: 7),
+            changes.Add);
+        WaitForLoads(cut, requests, 1);
+
+        // The operator is still typing when the owner moves to another query, for example by Back.
+        cut.Find("[data-testid='records-search']").Input("typed");
+        cut.Render(parameters => parameters.Add(
+            component => component.Query,
+            new PagedRecordQueryState<RecordScope>("beta", [], RecordScope.Organizations, 2)));
+
+        WaitForLoads(cut, requests, 2);
+        Assert.Equal("beta", requests[^1].SearchText);
+        Assert.Empty(requests[^1].Tags);
+        Assert.Equal(RecordScope.Organizations, requests[^1].Filter);
+        Assert.Equal(2, requests[^1].PageIndex);
+        Assert.Equal("beta", cut.Find("[data-testid='records-search']").GetAttribute("value"));
+        Assert.Equal("true", cut.Find("[data-testid='scope-organizations']").GetAttribute("aria-pressed"));
+        Assert.Contains("Page 3 of 4", cut.Markup);
+
+        // The superseded debounce never commits the typed text.
+        await Task.Delay(TimeSpan.FromMilliseconds(400));
+        Assert.Empty(changes);
+        Assert.Equal(2, requests.Count);
+    }
+
+    [Fact]
+    public void Owner_supplying_its_unchanged_query_again_keeps_the_browser_commit()
+    {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var initial = new PagedRecordQueryState<RecordScope>(string.Empty, [], RecordScope.All, 0);
+        var cut = RenderControlledBrowser(initial, RecordingLoader(requests, totalCount: 5), changes.Add);
+        WaitForLoads(cut, requests, 1);
+        cut.Find("[data-testid='scope-people']").Click();
+        WaitForLoads(cut, requests, 2);
+
+        // The owner renders the browser again before it wrote the commit back.
+        cut.Render(parameters => parameters.Add(component => component.Query, initial with { }));
+
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(RecordScope.People, requests[^1].Filter);
+        Assert.Equal("true", cut.Find("[data-testid='scope-people']").GetAttribute("aria-pressed"));
+        Assert.Equal(PagedRecordQueryChangeKind.Filter, Assert.Single(changes).Kind);
+    }
+
+    [Fact]
+    public void Controlled_page_beyond_the_last_one_is_corrected_to_the_last_page()
+    {
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var changes = new List<PagedRecordQueryChange<RecordScope>>();
+        var cut = RenderControlledBrowser(
+            new PagedRecordQueryState<RecordScope>("alpha", [], RecordScope.All, 5),
+            RecordingLoader(requests, totalCount: 3),
+            changes.Add);
+
+        WaitForLoads(cut, requests, 2);
+        Assert.Equal([5, 1], requests.Select(request => request.PageIndex));
+        var correction = Assert.Single(changes);
+        Assert.Equal(
+            new PagedRecordQueryChange<RecordScope>(new("alpha", [], RecordScope.All, 1), PagedRecordQueryChangeKind.Correction),
+            correction);
+        Assert.Contains("Page 2 of 2", cut.Markup);
+    }
+
+    [Fact]
+    public void Uncontrolled_browser_never_corrects_a_page_beyond_the_last_one()
+    {
+        var totalCount = 5;
+        var requests = new List<PagedRecordRequest<RecordScope>>();
+        var cut = RenderBrowser((request, _) =>
+        {
+            requests.Add(request);
+            return Task.FromResult(new PagedRecordPage<Guid>([], request.PageIndex, request.PageSize, totalCount));
+        });
+        WaitForLoads(cut, requests, 1);
+        cut.Find("[data-testid='records-next']").Click();
+        WaitForLoads(cut, requests, 2);
+        cut.Find("[data-testid='records-next']").Click();
+        WaitForLoads(cut, requests, 3);
+
+        totalCount = 2;
+        cut.Find("[data-testid='records-previous']").Click();
+
+        // The records shrank under the operator: without an owner the requested page stays as loaded.
+        WaitForLoads(cut, requests, 4);
+        Assert.Equal([0, 1, 2, 1], requests.Select(request => request.PageIndex));
+    }
+
+    [Fact]
+    public void Search_box_enforces_the_maximum_search_length_only_when_one_is_set()
+    {
+        var bounded = Render<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.MaximumSearchLength, 200)
+            .Add(component => component.DataTestId, "records"));
+        var unbounded = RenderBrowser(LoaderWith(Option(AlphaId, "Alpha")));
+
+        Assert.Equal("200", bounded.Find("[data-testid='records-search']").GetAttribute("maxlength"));
+        Assert.False(unbounded.Find("[data-testid='records-search']").HasAttribute("maxlength"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Render<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.Loader, LoaderWith(Option(AlphaId, "Alpha")))
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.MaximumSearchLength, 0)));
+    }
+
+    private IRenderedComponent<PagedRecordBrowser<Guid, RecordScope>> RenderControlledBrowser(
+        PagedRecordQueryState<RecordScope> query,
+        PagedRecordLoader<Guid, RecordScope> loader,
+        Action<PagedRecordQueryChange<RecordScope>> queryChanged)
+    {
+        return Render<PagedRecordBrowser<Guid, RecordScope>>(parameters => parameters
+            .Add(component => component.Loader, loader)
+            .Add(component => component.InitialFilter, RecordScope.All)
+            .Add(component => component.FilterOptions, ScopeOptions())
+            .Add(component => component.TagSuggestions, ["priority", "partner"])
+            .Add(component => component.PageSize, 2)
+            .Add(component => component.DataTestId, "records")
+            .Add(component => component.Query, query)
+            .Add(component => component.QueryChanged, queryChanged));
+    }
+
+    private static PagedRecordLoader<Guid, RecordScope> RecordingLoader(
+        List<PagedRecordRequest<RecordScope>> requests,
+        int totalCount)
+    {
+        return (request, _) =>
+        {
+            requests.Add(request);
+            return Task.FromResult(new PagedRecordPage<Guid>(
+                [Option(AlphaId, "Alpha")],
+                request.PageIndex,
+                request.PageSize,
+                totalCount));
+        };
+    }
+
+    private static void WaitForLoads(
+        IRenderedComponent<PagedRecordBrowser<Guid, RecordScope>> cut,
+        List<PagedRecordRequest<RecordScope>> requests,
+        int expectedCount)
+    {
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(expectedCount, requests.Count);
+            Assert.Empty(cut.FindAll("[data-testid='records-loading']"));
+        });
+    }
+
     private IRenderedComponent<PagedRecordBrowser<Guid, RecordScope>> RenderBrowser(
         PagedRecordLoader<Guid, RecordScope> loader,
         Action<Guid>? selectionChanged = null,

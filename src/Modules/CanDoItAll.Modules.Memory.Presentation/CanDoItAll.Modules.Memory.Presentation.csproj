@@ -5,6 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../UI/CanDoItAll.Memory.UI/CanDoItAll.Memory.UI.csproj" />
-
+    <ProjectReference Include="../../UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.TestLab.Pages;
 using CanDoItAll.TestLab.UI;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,8 @@ public sealed class TestLabNotificationTests : BunitContext {
         Services.AddCanDoItAllBaseLib();
         Services.AddSingleton<ITestLabWorkspaceOwner>(owner);
         JSInterop.Mode = JSRuntimeMode.Loose;
+        // The page reads RendererInfo; setting it builds the renderer, so it follows every registration.
+        SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var cut = Render<TestLabPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("form")));
         var view = cut.FindComponent<TestLabWorkspaceSurface>().Instance.View;

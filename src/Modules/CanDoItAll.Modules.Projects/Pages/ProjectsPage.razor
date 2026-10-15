@@ -11,6 +11,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Modules.Projects
 @using CanDoItAll.Modules.Projects.Pages.Components
@@ -23,6 +24,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 @inject IProjectPackageService ProjectPackageService
 @inject IDatabaseProfileService DatabaseProfileService
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 
 <PageTitle>Projects</PageTitle>
 
@@ -52,17 +54,17 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        HierarchyLinks="hierarchyLinks"
                        ProjectSearch="@projectSearch"
                        ProjectSearchChanged="HandleProjectSearchChanged"
-                       StatusFilter="@statusFilter"
+                       StatusFilter="@url.State.Status"
                        StatusFilterChanged="HandleStatusFilterChanged"
-                       RelatedPartyCategoryFilter="@relatedPartyCategoryFilter"
+                       RelatedPartyCategoryFilter="@url.State.PartyCategory"
                        RelatedPartyCategoryFilterChanged="HandleRelatedPartyCategoryFilterChanged"
-                       RelatedPartyValueFilter="@relatedPartyValueFilter"
+                       RelatedPartyValueFilter="@(url.State.Party ?? string.Empty)"
                        RelatedPartyValueFilterChanged="HandleRelatedPartyValueFilterChanged"
-                       HierarchyFilterProjectId="@hierarchyFilterProjectId"
+                       HierarchyFilterProjectId="@url.State.ParentId"
                        HierarchyFilterProjectIdChanged="HandleHierarchyFilterProjectChanged"
-                       HierarchyFilterMode="@hierarchyFilterMode"
+                       HierarchyFilterMode="@url.State.Scope"
                        HierarchyFilterModeChanged="HandleHierarchyFilterModeChanged"
-                       IncludeSubprojects="@includeSubprojects"
+                       IncludeSubprojects="@url.State.IncludeSubprojects"
                        IncludeSubprojectsChanged="HandleIncludeSubprojectsChanged"
                        HierarchyFilterHelper="@HierarchyFilterHelper"
                        LatestUpdatedProjectLabel="@LatestUpdatedProjectLabel"
@@ -78,6 +80,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                        OpenStructure="OpenStructure"
                        OpenGantt="OpenGantt"
                        OpenCalendar="OpenCalendar"
+                       PortfolioView="@BoardPortfolioView"
                        PortfolioViewChanged="HandlePortfolioViewChanged"
                        ProjectPackagePath="@projectPackagePath"
                        ProjectPackagePathChanged="@(value => { projectPackagePath = value; })"
@@ -104,7 +107,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                                   RefreshRequested="HandleAgentChatRefreshRequestedAsync" />
 
 <ProjectModalHost @key="draft" IsOpen="showProjectModal"
-                  IsEditorMode="@(modalMode == ProjectModalMode.Editor)"
+                  IsEditorMode="@(modalMode == ProjectsModalMode.Editor)"
                   Draft="draft"
                   StarterObjectKinds="starterObjectKinds"
                   ProjectSummaries="projectSummaries"
@@ -132,15 +135,15 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                   OpenCalendar="OpenCalendar" />
 
 <ProjectHierarchyModal State="hierarchyDialog"
-                       Close="CloseHierarchyModal"
-                       OpenProjectPreview="OpenProjectPreviewFromHierarchyAsync"
+                       Close="CloseHierarchyModalAsync"
+                       OpenProjectPreview="OpenProjectPreviewAsync"
                        OpenStructure="OpenStructure"
                        OpenHierarchy="OpenHierarchyModalAsync" />
 
 <ProjectFilesDialog IsOpen="@(projectFilesDialogProject is not null)"
                     ProjectId="@(projectFilesDialogProject?.Id ?? Guid.Empty)"
                     ProjectName="@(projectFilesDialogProject?.Name ?? string.Empty)"
-                    Closed="CloseProjectFiles" />
+                    Closed="CloseProjectFilesAsync" />
 
 @code {
     private static readonly string[] wizardSteps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
@@ -154,9 +157,58 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         ProjectObjectType.Link
     ];
 
-    [SupplyParameterFromQuery(Name = "projectId")]
-    public Guid? ProjectIdQuery { get; set; }
+    private static readonly ProjectsEditorStep[] editorSteps =
+    [
+        ProjectsEditorStep.Identity,
+        ProjectsEditorStep.Dates,
+        ProjectsEditorStep.Stack,
+        ProjectsEditorStep.Links,
+        ProjectsEditorStep.Review
+    ];
 
+    private static readonly TimeSpan SearchCommitDelay = TimeSpan.FromMilliseconds(300);
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.ProjectKey)]
+    public string? ProjectIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.ModeKey)]
+    public string? ModeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.StepKey)]
+    public string? StepQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.StatusKey)]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.PartyCategoryKey)]
+    public string? PartyCategoryQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.PartyKey)]
+    public string? PartyQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.ParentKey)]
+    public string? ParentQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.ScopeKey)]
+    public string? ScopeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.SubprojectsKey)]
+    public string? SubprojectsQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.ViewKey)]
+    public string? ViewQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.HierarchyKey)]
+    public string? HierarchyQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProjectsUrlCodec.FilesKey)]
+    public string? FilesQuery { get; set; }
+
+    private UrlStateBinding<ProjectsUrlState> url = default!;
+    private CancellationTokenSource? searchCommit;
     private IReadOnlyList<ProjectSummary> projectSummaries = [];
     private IReadOnlyList<ProjectHierarchyLinkSummary> hierarchyLinks = [];
     private ProjectFileFilterProjection projectFileProjection = ProjectFileFilterProjection.Create(
@@ -182,8 +234,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private long editorIntent;
     private bool disposed;
     private bool interactive;
-    private bool routeAcquired;
-    private Guid? observedRoute;
     private Guid? failedEditorId;
     private string? portfolioError;
     private string? editorError;
@@ -194,13 +244,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private int wizardStep;
     private bool showProjectModal;
     private string projectSearch = string.Empty;
-    private ProjectStatus? statusFilter;
-    private ProjectPartyPortfolioCategory? relatedPartyCategoryFilter;
-    private string relatedPartyValueFilter = string.Empty;
-    private ProjectHierarchyFilterMode hierarchyFilterMode = ProjectHierarchyFilterMode.Descendants;
-    private Guid? hierarchyFilterProjectId;
-    private bool includeSubprojects = true;
-    private ProjectModalMode modalMode = ProjectModalMode.Overview;
+    private ProjectsModalMode modalMode = ProjectsModalMode.Overview;
     private bool modalOpenedFromRoute;
     private ProjectHierarchyDialogState? hierarchyDialog;
     private ProjectSummary? projectFilesDialogProject;
@@ -211,20 +255,36 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool projectPackageMessageIsError;
     private bool projectPackageBusy;
     private bool projectPackageOutcomeUnknown;
-    private ProjectsAgentChatView agentChatPortfolioView = ProjectsAgentChatView.Cards;
     private AgentChatContextAccessState agentChatPositionAccessState = AgentChatContextAccessState.Ready;
     private AgentChatContextAccessState portfolioAccessState = AgentChatContextAccessState.Loading;
     private readonly ProjectsPageLoadGeneration projectLoads = new();
 
+    private Guid? RouteProjectId => url.State.ProjectId;
+
+    // The agent-chat position is matched with the shell's identity of the arrived location, so it never follows an intent in flight.
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(
             Navigation.BaseUri,
             Navigation.Uri,
-            [new("projectId", ProjectIdQuery?.ToString("D"))]);
+            [new(ProjectsUrlCodec.ProjectKey, ProjectsUrlCodec.Instance.Read(Navigation.Uri).ProjectId?.ToString("D"))]);
+
+    private ProjectsAgentChatView BoardPortfolioView => url.State.View switch
+    {
+        ProjectsPortfolioView.Cards => ProjectsAgentChatView.Cards,
+        ProjectsPortfolioView.Files => ProjectsAgentChatView.Files,
+        _ => throw new ArgumentOutOfRangeException(nameof(url.State.View), url.State.View, "The Projects portfolio view is undefined.")
+    };
 
     private Task HandlePortfolioViewChanged(ProjectsAgentChatView view)
     {
-        agentChatPortfolioView = view;
+        var next = view switch
+        {
+            ProjectsAgentChatView.Cards => ProjectsPortfolioView.Cards,
+            ProjectsAgentChatView.Files => ProjectsPortfolioView.Files,
+            _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Projects portfolio view is undefined.")
+        };
+        CommitPendingSearch();
+        url.Navigate(url.State with { View = next }, UrlHistoryMode.Push);
         return Task.CompletedTask;
     }
 
@@ -247,26 +307,26 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 return editor.Id;
             }
 
-            return hierarchyFilterProjectId;
+            return url.State.ParentId;
         }
     }
 
     private string HierarchyFilterHelper
-        => !hierarchyFilterProjectId.HasValue
+        => url.State.ParentId is not { } parentId
             ? "Showing main projects. Choose a project to show it with its subprojects or narrow by direct links."
-            : hierarchyFilterMode switch
+            : url.State.Scope switch
             {
-                ProjectHierarchyFilterMode.Descendants when includeSubprojects
-                    => $"Showing {ResolveProjectName(hierarchyFilterProjectId.Value)} and its subprojects.",
+                ProjectHierarchyFilterMode.Descendants when url.State.IncludeSubprojects
+                    => $"Showing {ResolveProjectName(parentId)} and its subprojects.",
                 ProjectHierarchyFilterMode.Descendants
-                    => $"Showing only {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                    => $"Showing only {ResolveProjectName(parentId)}.",
                 ProjectHierarchyFilterMode.Children
-                    => $"Showing direct subprojects of {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                    => $"Showing direct subprojects of {ResolveProjectName(parentId)}.",
                 ProjectHierarchyFilterMode.Parents
-                    => $"Showing direct parents of {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
+                    => $"Showing direct parents of {ResolveProjectName(parentId)}.",
                 ProjectHierarchyFilterMode.Related
-                    => $"Showing the direct relationship neighborhood around {ResolveProjectName(hierarchyFilterProjectId.Value)}.",
-                _ => throw new ArgumentOutOfRangeException(nameof(hierarchyFilterMode))
+                    => $"Showing the direct relationship neighborhood around {ResolveProjectName(parentId)}.",
+                _ => throw new ArgumentOutOfRangeException(nameof(url.State.Scope))
             };
 
     private IReadOnlyList<ProjectOptionEditorModel> MeaningfulOptions => editor.Options
@@ -289,27 +349,80 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             ? "Save the first project to populate the workspace."
             : projectSummaries.OrderByDescending(project => project.UpdatedAtUtc).First().Name;
 
+    protected override void OnInitialized()
+        => url = new(Navigation, ProjectsUrlCodec.Instance, History, typeof(ProjectsPage));
+
     protected override Task OnParametersSetAsync() {
-        bool changed = !routeAcquired || observedRoute != ProjectIdQuery;
-        if (changed) {
-            filesLoads.Invalidate();
-            hierarchyLoads.Invalidate();
-            projectFilesDialogProject = null;
-            hierarchyDialog = null;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged) {
+            return Task.CompletedTask;
         }
-        observedRoute = ProjectIdQuery;
-        routeAcquired = true;
-        Task acquisition = Task.CompletedTask;
-        if (ProjectIdQuery is { } id && (changed || !showProjectModal || editor.Id != id)) {
-            acquisition = AcquireEditorAsync(id, fromRoute: true);
-        } else if (changed && modalOpenedFromRoute) {
-            RetireEditor();
+        CancelSearchCommit();
+        projectSearch = change.Current.Search ?? string.Empty;
+        RebuildProjectFileProjection();
+        var overlays = ApplyOverlaysAsync(change.Previous, change.Current, change.IsInitial);
+        return change.IsInitial
+            ? Task.WhenAll(overlays, RefreshPortfolioAsync(), RefreshPackageTargetsAsync())
+            : overlays;
+    }
+
+    private Task ApplyOverlaysAsync(ProjectsUrlState previous, ProjectsUrlState current, bool initial) {
+        var reads = new List<Task>(3);
+        if (initial || previous.ProjectId != current.ProjectId) {
+            if (current.ProjectId is { } id) {
+                reads.Add(AcquireEditorAsync(id, fromRoute: true));
+            } else if (modalOpenedFromRoute) {
+                RetireEditor();
+            }
+        } else if (current.ProjectId is not null && modalOpenedFromRoute && showProjectModal) {
+            ApplyModalSection(current);
         }
-        return Task.WhenAll(acquisition, RefreshPortfolioAsync(), RefreshPackageTargetsAsync());
+        if (initial || previous.HierarchyId != current.HierarchyId) {
+            if (current.HierarchyId is { } hierarchyId) {
+                reads.Add(LoadHierarchyAsync(hierarchyId));
+            } else {
+                hierarchyLoads.Invalidate();
+                hierarchyDialog = null;
+            }
+        }
+        if (initial || previous.FilesId != current.FilesId) {
+            if (current.FilesId is { } filesId) {
+                reads.Add(LoadProjectFilesAsync(filesId));
+            } else {
+                filesLoads.Invalidate();
+                projectFilesDialogProject = null;
+            }
+        }
+        return Task.WhenAll(reads);
+    }
+
+    private void ApplyModalSection(ProjectsUrlState state) {
+        modalMode = state.Mode;
+        if (state.Mode == ProjectsModalMode.Editor) {
+            wizardStep = Array.IndexOf(editorSteps, state.Step);
+        }
+    }
+
+    private void PublishModalSection() {
+        if (!modalOpenedFromRoute || editor.Id is not { } id || url.State.ProjectId != id) {
+            return;
+        }
+        url.Navigate(url.State with { Mode = modalMode, Step = editorSteps[wizardStep] }, UrlHistoryMode.Replace);
+    }
+
+    // Selecting another overlay while one is open replaces it, so Close and Back still return to the board.
+    private void NavigateOverlay(ProjectsUrlState next) {
+        CommitPendingSearch();
+        next = next with { Search = url.State.Search };
+        if (url.State.HasOverlay) {
+            url.Navigate(next, UrlHistoryMode.Replace);
+        } else {
+            url.OpenOverlay(next);
+        }
     }
 
     private Task RetryReadsAsync() => Task.WhenAll(RefreshPortfolioAsync(), RefreshPackageTargetsAsync(),
-        failedEditorId is { } id ? AcquireEditorAsync(id, ProjectIdQuery == id) : Task.CompletedTask);
+        failedEditorId is { } id ? AcquireEditorAsync(id, RouteProjectId == id) : Task.CompletedTask);
 
     private async Task RefreshPortfolioAsync() {
         var stamp = portfolioLoads.Begin(new(ProjectsPageLoadKind.CompletionRefresh, null));
@@ -317,7 +430,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         try {
             var state = await LoadPortfolioStateAsync();
             if (!disposed) {
-                portfolioLoads.TryCommit(stamp, ProjectIdQuery, () => {
+                portfolioLoads.TryCommit(stamp, RouteProjectId, () => {
                     ApplyPortfolioState(state);
                     unconfirmedCleanupTargets.Clear();
                     portfolioError = null;
@@ -328,7 +441,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         } catch (Exception exception) {
             Logger.LogError(exception, "Projects portfolio read failed; acquired drafts and acknowledged mutations are retained.");
             if (!disposed) {
-                portfolioLoads.TryCommit(stamp, ProjectIdQuery, () => {
+                portfolioLoads.TryCommit(stamp, RouteProjectId, () => {
                     portfolioError = "Unable to refresh the portfolio. Acquired edits and completed operations are retained.";
                     portfolioAccessState = AgentChatContextAccessState.Failed;
                 });
@@ -341,12 +454,12 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         try {
             var profiles = await LoadProjectPackageTargetProfilesAsync();
             if (!disposed) {
-                packageLoads.TryCommit(stamp, ProjectIdQuery, () => ApplyProjectPackageTargetProfiles(profiles));
+                packageLoads.TryCommit(stamp, RouteProjectId, () => ApplyProjectPackageTargetProfiles(profiles));
             }
         } catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
         } catch (Exception exception) {
             Logger.LogError(exception, "Project package target read failed.");
-            packageLoads.TryCommit(stamp, ProjectIdQuery, () => {
+            packageLoads.TryCommit(stamp, RouteProjectId, () => {
                 projectPackageTargetProfiles = [];
                 projectPackageMessage = "Unable to read package targets. Retry project reads to refresh the available targets.";
                 projectPackageMessageIsError = true;
@@ -354,63 +467,103 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
+    // The board filters per keystroke; the URL takes the committed text once typing pauses.
     private Task HandleProjectSearchChanged(string value)
     {
-        projectSearch = value;
+        projectSearch = value.Length > ProjectFileFilter.MaximumTextLength ? value[..ProjectFileFilter.MaximumTextLength] : value;
         RebuildProjectFileProjection();
+        ScheduleSearchCommit();
         return Task.CompletedTask;
+    }
+
+    private void ScheduleSearchCommit() {
+        CancelSearchCommit();
+        var pending = new CancellationTokenSource();
+        searchCommit = pending;
+        _ = CommitSearchAsync(pending);
+    }
+
+    private async Task CommitSearchAsync(CancellationTokenSource pending) {
+        try {
+            await Task.Delay(SearchCommitDelay, pending.Token);
+        } catch (OperationCanceledException) {
+            return;
+        }
+        await InvokeAsync(() => {
+            if (disposed || !ReferenceEquals(searchCommit, pending)) {
+                return;
+            }
+            searchCommit = null;
+            url.Navigate(url.State with { Search = projectSearch }, UrlHistoryMode.Replace);
+        });
+    }
+
+    // A pushed entry and its parent marker must carry the text the operator already typed.
+    private void CommitPendingSearch() {
+        if (searchCommit is null) {
+            return;
+        }
+        CancelSearchCommit();
+        url.Navigate(url.State with { Search = projectSearch }, UrlHistoryMode.Replace);
+    }
+
+    private void CancelSearchCommit() {
+        var pending = searchCommit;
+        searchCommit = null;
+        pending?.Cancel();
+    }
+
+    private void ApplyFilter(ProjectsUrlState next) {
+        CancelSearchCommit();
+        url.Navigate(next with { Search = projectSearch }, UrlHistoryMode.Replace);
+        RebuildProjectFileProjection();
     }
 
     private Task HandleStatusFilterChanged(ProjectStatus? value)
     {
-        statusFilter = value;
-        RebuildProjectFileProjection();
+        ApplyFilter(url.State with { Status = value });
         return Task.CompletedTask;
     }
 
     private Task HandleRelatedPartyCategoryFilterChanged(ProjectPartyPortfolioCategory? value)
     {
-        relatedPartyCategoryFilter = value;
-        if (!string.IsNullOrWhiteSpace(relatedPartyValueFilter) &&
+        var next = url.State with { PartyCategory = value };
+        if (!string.IsNullOrWhiteSpace(next.Party) &&
             !ProjectFileFilterProjection.Create(
                 projectSummaries,
                 hierarchyLinks,
-                CreateProjectFileFilter()).AvailableRelatedPartyValues.Contains(
-                    relatedPartyValueFilter,
+                CreateProjectFileFilter(next)).AvailableRelatedPartyValues.Contains(
+                    next.Party,
                     StringComparer.OrdinalIgnoreCase))
         {
-            relatedPartyValueFilter = string.Empty;
+            next = next with { Party = null };
         }
 
-        RebuildProjectFileProjection();
+        ApplyFilter(next);
         return Task.CompletedTask;
     }
 
     private Task HandleRelatedPartyValueFilterChanged(string value)
     {
-        relatedPartyValueFilter = value;
-        RebuildProjectFileProjection();
+        ApplyFilter(url.State with { Party = value });
         return Task.CompletedTask;
     }
 
     private Task HandleHierarchyFilterProjectChanged(Guid? value)
     {
-        hierarchyFilterProjectId = value;
-        RebuildProjectFileProjection();
+        ApplyFilter(url.State with { ParentId = value });
         return Task.CompletedTask;
     }
 
     private Task HandleHierarchyFilterModeChanged(ProjectHierarchyFilterMode value)
     {
-        hierarchyFilterMode = value;
-        RebuildProjectFileProjection();
+        ApplyFilter(url.State with { Scope = value });
         return Task.CompletedTask;
     }
 
     private Task HandleIncludeSubprojectsChanged(bool value)
     {
-        includeSubprojects = value;
-        RebuildProjectFileProjection();
+        ApplyFilter(url.State with { IncludeSubprojects = value });
         return Task.CompletedTask;
     }
 
@@ -482,9 +635,21 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private Task HandleAgentChatRefreshRequestedAsync(AgentChatExecutionCompleted notification)
         => RefreshPortfolioAsync();
 
-    private Task OpenNewProjectAsync() => AcquireEditorAsync(null, fromRoute: false);
+    // A new project is a draft and stays out of the URL until its first save.
+    private async Task OpenNewProjectAsync() {
+        if (url.State.HasOverlay) {
+            var previous = url.State;
+            url.Navigate(previous.WithoutOverlay(), UrlHistoryMode.Replace);
+            await ApplyOverlaysAsync(previous, url.State, initial: false);
+        }
+        await AcquireEditorAsync(null, fromRoute: false);
+    }
 
-    private Task OpenProjectPreviewAsync(Guid id) => AcquireEditorAsync(id, fromRoute: false);
+    private Task OpenProjectPreviewAsync(Guid id) {
+        var previous = url.State;
+        NavigateOverlay(previous.WithoutOverlay() with { ProjectId = id });
+        return ApplyOverlaysAsync(previous, url.State, initial: false);
+    }
 
     private async Task AcquireEditorAsync(Guid? id, bool fromRoute) {
         if (id.HasValue && showProjectModal && editor.Id == id && failedEditorId is null) {
@@ -508,7 +673,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             TryCompleteProjectLoad(stamp, () => {
                 draft = new(loaded);
                 wizardStep = 0;
-                modalMode = id.HasValue ? ProjectModalMode.Overview : ProjectModalMode.Editor;
+                modalMode = id.HasValue ? ProjectsModalMode.Overview : ProjectsModalMode.Editor;
+                if (fromRoute) {
+                    ApplyModalSection(url.State);
+                }
                 showProjectModal = true;
                 modalOpenedFromRoute = fromRoute;
                 failedEditorId = null;
@@ -546,7 +714,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private bool TryCompleteProjectLoad(ProjectsPageLoadStamp stamp, Action commit)
     {
-        return projectLoads.TryCommit(stamp, ProjectIdQuery, () =>
+        return projectLoads.TryCommit(stamp, RouteProjectId, () =>
         {
             commit();
             agentChatPositionAccessState = AgentChatContextAccessState.Ready;
@@ -557,7 +725,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         return projectLoads.TryCommit(
             stamp,
-            ProjectIdQuery,
+            RouteProjectId,
             () => agentChatPositionAccessState = AgentChatContextAccessState.Failed);
     }
 
@@ -648,8 +816,12 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
     }
 
+    // The dashboard is a dedicated Workbench artifact tab; only this explicit command carries the open-tab marker.
     private void OpenProjectDashboard(Guid id)
-        => Navigation.NavigateTo($"/projects?projectId={id}");
+        => Navigation.NavigateTo(ProjectsUrlCodec.Dashboard(id), new NavigationOptions
+        {
+            HistoryEntryState = WorkbenchNavigation.OpenTabHistoryState
+        });
 
     private void OpenProjectDashboardAsync()
     {
@@ -677,30 +849,34 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private Task HandleWizardTabChanged(string key)
     {
-        if (int.TryParse(key, out var parsed))
+        if (int.TryParse(key, out var parsed) && parsed >= 0 && parsed < wizardSteps.Length)
         {
             wizardStep = parsed;
+            PublishModalSection();
         }
 
         return Task.CompletedTask;
     }
 
     private void SwitchToOverview()
-        => modalMode = ProjectModalMode.Overview;
+    {
+        modalMode = ProjectsModalMode.Overview;
+        PublishModalSection();
+    }
 
     private void SwitchToEditor()
     {
-        modalMode = ProjectModalMode.Editor;
+        modalMode = ProjectsModalMode.Editor;
         message = null;
+        PublishModalSection();
     }
 
-    private Task CloseProjectModalAsync() {
-        bool navigate = modalOpenedFromRoute;
+    private async Task CloseProjectModalAsync() {
+        bool routed = modalOpenedFromRoute;
         RetireEditor();
-        if (navigate) {
-            Navigation.NavigateTo("/projects", replace: true);
+        if (routed && url.State.ProjectId is not null) {
+            await url.CloseOverlayAsync(url.State.WithoutOverlay());
         }
-        return Task.CompletedTask;
     }
 
     private Task AddPhaseAsync()
@@ -728,20 +904,31 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
 
     private void NextStep()
-        => wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
+    {
+        wizardStep = Math.Min(wizardSteps.Length - 1, wizardStep + 1);
+        PublishModalSection();
+    }
 
     private void PreviousStep()
-        => wizardStep = Math.Max(0, wizardStep - 1);
+    {
+        wizardStep = Math.Max(0, wizardStep - 1);
+        PublishModalSection();
+    }
 
     private void ResetFilters()
     {
+        CancelSearchCommit();
         projectSearch = string.Empty;
-        statusFilter = null;
-        relatedPartyCategoryFilter = null;
-        relatedPartyValueFilter = string.Empty;
-        hierarchyFilterMode = ProjectHierarchyFilterMode.Descendants;
-        hierarchyFilterProjectId = null;
-        includeSubprojects = true;
+        url.Navigate(url.State with
+        {
+            Search = null,
+            Status = null,
+            PartyCategory = null,
+            Party = null,
+            ParentId = null,
+            Scope = ProjectHierarchyFilterMode.Descendants,
+            IncludeSubprojects = true
+        }, UrlHistoryMode.Push);
         RebuildProjectFileProjection();
     }
 
@@ -768,6 +955,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             target.Acknowledge(submitted, result.Value!);
             projectCommitted = true;
             mutationTargets[result.Value!.Project.ProjectId] = target;
+            if (submitted.Model.Id is null && IsActiveEditor(target, intent)) {
+                PublishCreatedProject(result.Value.Project.ProjectId);
+            }
             target.Message = "Project saved.";
             target.IsError = false;
             if (submitted.Seeds.Count > 0) {
@@ -832,6 +1022,17 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private bool IsActiveEditor(ProjectEditorDraft target, long intent)
         => !disposed && showProjectModal && ReferenceEquals(draft, target) && editorIntent == intent;
 
+    // The first save gives the draft its identity; the editor becomes addressable without a new history entry.
+    private void PublishCreatedProject(Guid projectId) {
+        modalOpenedFromRoute = true;
+        url.Navigate(url.State.WithoutOverlay() with
+        {
+            ProjectId = projectId,
+            Mode = ProjectsModalMode.Editor,
+            Step = editorSteps[wizardStep]
+        }, UrlHistoryMode.Replace);
+    }
+
     private async Task SaveAndOpenStructureAsync(ProjectEditorSubmission submitted)
     {
         var savedProjectId = await SaveCoreAsync(submitted);
@@ -887,14 +1088,18 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         target.Mutation = ProjectEditorMutationState.Deleted;
         projectSummaries = projectSummaries.Where(project => project.Id != id).ToArray();
         hierarchyLinks = hierarchyLinks.Where(link => link.ParentProjectId != id && link.ChildProjectId != id).ToArray();
-        RebuildProjectFileProjection();
+        var next = url.State.ParentId == id ? url.State with { ParentId = null } : url.State;
         if (IsActiveEditor(target, intent)) {
-            bool navigate = modalOpenedFromRoute;
+            bool routed = modalOpenedFromRoute;
             RetireEditor();
-            if (navigate) {
-                Navigation.NavigateTo("/projects", replace: true);
+            if (routed && next.ProjectId == id) {
+                next = next.WithoutOverlay();
             }
         }
+        if (next != url.State) {
+            url.Navigate(next, UrlHistoryMode.Replace);
+        }
+        RebuildProjectFileProjection();
     }
 
     private async Task RetryProjectDeletionCleanupAsync(ProjectCleanupTarget target) {
@@ -935,14 +1140,11 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         item.Warnings.Select(warning => $"{warning.RetainedObject.Provider} · storage {warning.RetainedObject.StorageId?.ToString("D") ?? "bootstrap"} · {warning.RetainedObject.LocatorKind} · {warning.RetainedObject.Locator}. {warning.RetainedObject.Reason} {warning.Remediation}").ToArray())).ToArray();
 
     private ProjectFileFilter CreateProjectFileFilter()
-        => new(
-            projectSearch,
-            statusFilter,
-            relatedPartyCategoryFilter,
-            relatedPartyValueFilter,
-            hierarchyFilterProjectId,
-            hierarchyFilterMode,
-            includeSubprojects);
+        => CreateProjectFileFilter(url.State);
+
+    // The search draft filters per keystroke; every other filter is the committed URL state.
+    private ProjectFileFilter CreateProjectFileFilter(ProjectsUrlState state)
+        => (state with { Search = projectSearch }).ToFilter();
 
     private void RebuildProjectFileProjection()
         => projectFileProjection = ProjectFileFilterProjection.Create(
@@ -953,11 +1155,19 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private string ResolveProjectName(Guid projectId)
         => projectSummaries.FirstOrDefault(project => project.Id == projectId)?.Name ?? "Selected project";
 
-    private async Task OpenProjectFiles(Guid projectId)
+    private Task OpenProjectFiles(Guid projectId)
+    {
+        var previous = url.State;
+        NavigateOverlay(previous.WithoutOverlay() with { FilesId = projectId });
+        return ApplyOverlaysAsync(previous, url.State, initial: false);
+    }
+
+    private async Task LoadProjectFilesAsync(Guid projectId)
     {
         var loadStamp = filesLoads.Begin(new ProjectsPageLoadKey(
             ProjectsPageLoadKind.Files,
             projectId));
+        projectFilesDialogProject = null;
         try
         {
             var project = projectSummaries.FirstOrDefault(item => item.Id == projectId)
@@ -968,25 +1178,37 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                 throw new InvalidOperationException($"Project '{projectId:D}' is unavailable.");
             }
 
-            filesLoads.TryCommit(loadStamp, ProjectIdQuery, () =>
+            filesLoads.TryCommit(loadStamp, RouteProjectId, () =>
             {
                 projectFilesDialogProject = project;
             });
         }
+        catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
+        }
         catch (Exception exception) {
             Logger.LogError(exception, "Project Files selection could not be acquired for {ProjectId}.", projectId);
-            filesLoads.TryCommit(loadStamp, ProjectIdQuery, () => portfolioError = "Unable to open the selected project's files. Retry the selection after refreshing the portfolio.");
+            filesLoads.TryCommit(loadStamp, RouteProjectId, () => portfolioError = "Unable to open the selected project's files. Retry the selection after refreshing the portfolio.");
         }
     }
 
-    private Task CloseProjectFiles()
+    private async Task CloseProjectFilesAsync()
     {
         filesLoads.Invalidate();
         projectFilesDialogProject = null;
-        return Task.CompletedTask;
+        if (url.State.FilesId is not null)
+        {
+            await url.CloseOverlayAsync(url.State.WithoutOverlay());
+        }
     }
 
-    private async Task OpenHierarchyModalAsync(Guid projectId)
+    private Task OpenHierarchyModalAsync(Guid projectId)
+    {
+        var previous = url.State;
+        NavigateOverlay(previous.WithoutOverlay() with { HierarchyId = projectId });
+        return ApplyOverlaysAsync(previous, url.State, initial: false);
+    }
+
+    private async Task LoadHierarchyAsync(Guid projectId)
     {
         var loadStamp = hierarchyLoads.Begin(new ProjectsPageLoadKey(
             ProjectsPageLoadKind.Hierarchy,
@@ -1013,7 +1235,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
             var hierarchy = await hierarchyTask;
             var selectedProject = project;
-            hierarchyLoads.TryCommit(loadStamp, ProjectIdQuery, () =>
+            hierarchyLoads.TryCommit(loadStamp, RouteProjectId, () =>
             {
                 hierarchyDialog = new ProjectHierarchyDialogState(
                     selectedProject.Id,
@@ -1022,22 +1244,26 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                     hierarchy.ChildProjects);
             });
         }
+        catch (OperationCanceledException) when (readLifetime.IsCancellationRequested) {
+        }
         catch (Exception exception) {
             Logger.LogError(exception, "Project hierarchy could not be acquired for {ProjectId}.", projectId);
-            hierarchyLoads.TryCommit(loadStamp, ProjectIdQuery, () => portfolioError = "Unable to open the selected project's hierarchy. Retry the selection after refreshing the portfolio.");
+            hierarchyLoads.TryCommit(loadStamp, RouteProjectId, () =>
+            {
+                hierarchyDialog = null;
+                portfolioError = "Unable to open the selected project's hierarchy. Retry the selection after refreshing the portfolio.";
+            });
         }
     }
 
-    private void CloseHierarchyModal()
+    private async Task CloseHierarchyModalAsync()
     {
         hierarchyLoads.Invalidate();
         hierarchyDialog = null;
-    }
-
-    private async Task OpenProjectPreviewFromHierarchyAsync(Guid projectId)
-    {
-        CloseHierarchyModal();
-        await OpenProjectPreviewAsync(projectId);
+        if (url.State.HierarchyId is not null)
+        {
+            await url.CloseOverlayAsync(url.State.WithoutOverlay());
+        }
     }
 
     private void OpenStructure(Guid projectId)
@@ -1069,8 +1295,8 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private ProjectsAgentChatView AgentChatActiveView => hierarchyDialog is not null ? ProjectsAgentChatView.Hierarchy
         : projectFilesDialogProject is not null ? ProjectsAgentChatView.Files
-        : showProjectModal ? modalMode == ProjectModalMode.Editor ? ProjectsAgentChatView.Editor : ProjectsAgentChatView.Overview
-        : agentChatPortfolioView;
+        : showProjectModal ? modalMode == ProjectsModalMode.Editor ? ProjectsAgentChatView.Editor : ProjectsAgentChatView.Overview
+        : BoardPortfolioView;
 
     private AgentChatContextAccessState AgentChatAccessState => (portfolioAccessState, agentChatPositionAccessState) switch {
         (AgentChatContextAccessState.Failed, _) or (_, AgentChatContextAccessState.Failed) => AgentChatContextAccessState.Failed,
@@ -1087,6 +1313,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     public void Dispose() {
         disposed = true;
+        CancelSearchCommit();
         editorIntent++;
         projectLoads.Invalidate();
         portfolioLoads.Invalidate();
@@ -1102,10 +1329,4 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         IReadOnlyList<ProjectHierarchyLinkSummary> HierarchyLinks,
         IReadOnlyList<ProjectDeletionPendingCleanup> PendingDeletionCleanups,
         IReadOnlyList<ProjectDeletionCompletionNotice> DeletionCompletionNotices);
-
-    private enum ProjectModalMode
-    {
-        Overview,
-        Editor
-    }
 }

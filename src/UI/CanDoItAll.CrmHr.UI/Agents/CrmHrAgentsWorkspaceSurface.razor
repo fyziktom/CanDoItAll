@@ -60,7 +60,10 @@
                                     FilterOptions="@CrmHrAgentsWorkspacePresentation.ValidationFilters"
                                     Selection="@View.AgentSelection"
                                     SelectionChanged="@View.SelectPartyAsync"
+                                    Query="@View.CatalogQuery"
+                                    QueryChanged="View.HandleCatalogQueryChangedAsync"
                                     LoadFailed="@View.HandleAgentDirectoryLoadFailed"
+                                    MaximumSearchLength="AiAgentDirectoryQueryLimits.MaximumSearchLength"
                                     PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
                                     ShowTagFilter="false"
                                     ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
@@ -97,6 +100,8 @@
             </section>
 
             <CrmHrAgentRecordDialog IsOpen="@View.IsRecordDialogOpen"
+                                    Section="@View.RecordSection"
+                                    SectionChanged="View.SelectRecordSectionAsync"
                                     IsLoading="@View.IsWorkspaceLoading"
                                     Item="@View.SelectedDirectoryItem"
                                     Workspace="@View.SelectedWorkspace"

@@ -52,6 +52,8 @@
                     <PartyRecordBrowser @key="View.DirectoryBrowserVersion"
                                         SelectedPartyId="@View.Editor.Id"
                                         SelectionChanged="View.SelectPartyAsync"
+                                        Query="@View.CatalogQuery"
+                                        QueryChanged="View.HandleCatalogQueryChangedAsync"
                                         IncludeArchived="true"
                                         PageSize="18"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"

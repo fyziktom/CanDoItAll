@@ -2,11 +2,16 @@ using CanDoItAll.Modules.Workspace.ApiAccess.Contracts;
 
 namespace CanDoItAll.Workspace.ApiAccess.UI;
 
+public enum ApiPageQueryCause { Operator, Owner }
+
+public readonly record struct ApiPageQueryAcceptance(ApiPageQuery Query, ApiPageQueryCause Cause);
+
 public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, Task<ApiPage<T>>> read, ApiViewLifetime authority, Action? accessDenied = null) : IDisposable {
     private CancellationTokenSource? reading;
     private bool disposed;
     private string desiredSearch = string.Empty;
     public event Action? Changed;
+    public event Action<ApiPageQueryAcceptance>? QueryAccepted;
     public long Revision { get; private set; }
     public string DesiredSearch {
         get => desiredSearch;
@@ -27,13 +32,19 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
     public bool CanPrevious => !IsLoading && AcceptedQuery?.Search == DesiredSearch && AcceptedQuery.Offset > 0;
     public bool CanNext => !IsLoading && AcceptedQuery?.Search == DesiredSearch && AcceptedQuery.Offset + ApiPageQuery.PageSize < Page?.TotalCount;
 
-    public Task SearchAsync() => LoadAsync(new(DesiredSearch));
-    public Task RefreshAsync() => LoadAsync(new(DesiredSearch, AcceptedQuery?.Search == DesiredSearch ? AcceptedQuery.Offset : 0));
-    public Task PreviousAsync() => CanPrevious ? LoadAsync(AcceptedQuery! with { Offset = AcceptedQuery.Offset - ApiPageQuery.PageSize }) : Task.CompletedTask;
-    public Task NextAsync() => CanNext ? LoadAsync(AcceptedQuery! with { Offset = AcceptedQuery.Offset + ApiPageQuery.PageSize }) : Task.CompletedTask;
+    public Task SearchAsync() => LoadAsync(new(DesiredSearch), ApiPageQueryCause.Operator);
+    public Task RefreshAsync() => LoadAsync(new(DesiredSearch, AcceptedQuery?.Search == DesiredSearch ? AcceptedQuery.Offset : 0), ApiPageQueryCause.Owner);
+    public Task PreviousAsync() => CanPrevious ? LoadAsync(AcceptedQuery! with { Offset = AcceptedQuery.Offset - ApiPageQuery.PageSize }, ApiPageQueryCause.Operator) : Task.CompletedTask;
+    public Task NextAsync() => CanNext ? LoadAsync(AcceptedQuery! with { Offset = AcceptedQuery.Offset + ApiPageQuery.PageSize }, ApiPageQueryCause.Operator) : Task.CompletedTask;
     public Task RefreshIfCurrentAsync(long revision) => revision == Revision ? RefreshAsync() : Task.CompletedTask;
 
-    private async Task LoadAsync(ApiPageQuery query) {
+    public Task OpenAsync(ApiPageQuery query) {
+        ArgumentNullException.ThrowIfNull(query);
+        desiredSearch = query.Search;
+        return LoadAsync(query, ApiPageQueryCause.Owner);
+    }
+
+    private async Task LoadAsync(ApiPageQuery query, ApiPageQueryCause cause) {
         if (disposed || !authority.IsActive) {
             return;
         }
@@ -44,6 +55,7 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
         IsLoading = true;
         Error = null;
         Notify();
+        var accepted = false;
         try {
             var page = await read(query, cancellation.Token);
             if (!Current(origin)) {
@@ -56,6 +68,7 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
             if (Current(origin)) {
                 Page = page;
                 AcceptedQuery = query;
+                accepted = true;
             }
         } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
         } catch (UnauthorizedAccessException) {
@@ -75,6 +88,9 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
                 Notify();
             }
         }
+        if (accepted && Current(origin)) {
+            QueryAccepted?.Invoke(new(query, cause));
+        }
     }
 
     private bool Current(long origin) => !disposed && authority.IsActive && origin == Revision;
@@ -92,5 +108,6 @@ public sealed class ApiPageController<T>(Func<ApiPageQuery, CancellationToken, T
         disposed = true;
         Invalidate();
         Changed = null;
+        QueryAccepted = null;
     }
 }

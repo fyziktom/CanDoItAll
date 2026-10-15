@@ -2,6 +2,8 @@
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
 @using System.Text.Json
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Processes.Pages
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Configuration
@@ -18,6 +20,7 @@
 @inject ProcessWorkspaceMockProjectionFactory MockProjectionFactory
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory NavigationHistory
 @inject NotificationService Notifications
 @inject TooltipService TooltipService
 @inject IJSRuntime JsRuntime
@@ -37,15 +40,15 @@
 
 <LiveProcessesSurface Session="@this">
     <CancellationContent>
-        @if (runDetailDialogOpen && runDetailSnapshot is not null && !IsMockProjection) {
-            <ProcessRunCancellationAction @key="(runDetailSnapshot.RunId, shell?.ProjectBinding)"
-                                                  RunId="@runDetailSnapshot.RunId" Status="@runDetailSnapshot.Status"
+        @if (RunDetailSnapshot is { } cancellationRun && !IsMockProjection) {
+            <ProcessRunCancellationAction @key="(cancellationRun.RunId, shell?.ProjectBinding)"
+                                                  RunId="@cancellationRun.RunId" Status="@cancellationRun.Status"
                                                   CancellationCommitted="RefreshCancelledRunAsync" />
         }
     </CancellationContent>
 </LiveProcessesSurface>
 
-@if (filesRunId is Guid activeFilesRunId) {
+@if (FilesRunId is Guid activeFilesRunId) {
     <ProcessRunFilesDialog IsOpen="true"
                            RunId="activeFilesRunId"
                            Closed="CloseRunFilesAsync" />
@@ -76,44 +79,49 @@
     public Guid? ProjectId { get; set; }
 
     [Parameter]
-    public Guid? ProcessIdQuery { get; set; }
-
-    [Parameter]
-    public Guid? RunIdQuery { get; set; }
-
-    [Parameter]
-    public Guid? LaunchPlanIdQuery { get; set; }
-
-    [Parameter]
-    public bool LaunchStarted { get; set; }
-
-    [Parameter]
     public string? MockScenarioQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.TabKey)]
+    public string? TabQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.RunKey)]
+    public string? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.StatusKey)]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.WindowKey)]
+    public string? WindowQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.DialogKey)]
+    public string? DialogQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.StepKey)]
+    public string? StepIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.ProcessKey)]
+    public string? ProcessIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.LaunchPlanKey)]
+    public string? LaunchPlanIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = LiveProcessesUrlCodec.ProcessStartedKey)]
+    public string? ProcessStartedQuery { get; set; }
+
+    private UrlStateBinding<LiveProcessesUrlState> url = default!;
+    private string? routePath;
+    private Guid? routeProjectId;
+    private bool routeApplied;
+    private bool launchStarted;
     private ProcessWorkspaceShellProjection? shell;
     private long? acceptedProfileGeneration;
     private bool isLoading;
     private string? errorMessage;
     private long loadGeneration;
-    private int selectedTabIndex;
-    private Guid? selectedRuntimeRunId;
-    private Guid? routeSelectionProjectId;
-    private Guid? routeSelectionProcessId;
-    private Guid? routeSelectionRunId;
-    private Guid? routeSelectionLaunchPlanId;
-    private Guid? requiredRouteProcessId;
-    private Guid? requiredRouteRunId;
-    private Guid? requiredRouteLaunchPlanId;
-    private bool routeSelectionInitialized;
-    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
-    private int runtimeEventPage;
     private const int RuntimeEventPageSize = 25;
-    private ProcessProjectedRunStatus? statusFilter;
-    private bool runDetailDialogOpen;
-    private ProcessLiveProcessSnapshot? runDetailSnapshot;
-    private Guid? filesRunId;
-    private bool agentDetailDialogOpen;
-    private ProcessRuntimeActiveAgentProjection? agentDetailAgent;
     private Guid? busyOperatorActionStepId;
     private long operatorOperation;
     private string? operatorActionMessage;
@@ -128,6 +136,24 @@
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private static readonly TimeSpan LiveRefreshInterval = TimeSpan.FromSeconds(10);
 
+    private LiveProcessesUrlState Route => url.State;
+
+    private Guid? SelectedRuntimeRunId => Route.RunId;
+
+    private bool RunDetailDialogOpen => Route.Dialog is not null && Route.RunId.HasValue;
+
+    private ProcessLiveProcessSnapshot? RunDetailSnapshot
+        => RunDetailDialogOpen && Route.RunId is { } runId
+            ? shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId)
+            : null;
+
+    private Guid? FilesRunId => Route.Dialog == LiveProcessesDialog.Files ? Route.RunId : null;
+
+    private ProcessRuntimeActiveAgentProjection? AgentDetailAgent
+        => Route.StepId is { } stepId
+            ? shell?.Runtime.ActiveAgents.FirstOrDefault(agent => agent.StepInstanceId == stepId)
+            : null;
+
     private ProcessAgentChatContextPublication ResolveAgentChatPublication() {
         var context = new LiveProcessesAgentChatContext(
             Navigation.Uri,
@@ -135,13 +161,13 @@
             AgentChatLiveView,
             HasUnresolvedNonRunRouteSelection
                 ? null
-                : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
-            runtimeHistoryWindow,
-            statusFilter,
+                : Route.RunId ?? shell?.Runtime.SelectedRunId,
+            Route.Window,
+            Route.Status,
             shell,
-            !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
-            HasUnresolvedRouteSelection ? null : filesRunId,
-            !HasUnresolvedRouteSelection && agentDetailDialogOpen ? agentDetailAgent : null,
+            !HasUnresolvedRouteSelection ? RunDetailSnapshot : null,
+            HasUnresolvedRouteSelection ? null : FilesRunId,
+            !HasUnresolvedRouteSelection ? AgentDetailAgent : null,
             AgentChatAccessState,
             shell?.ProjectBinding is { } binding ? new(binding.DatabaseProfileId, binding.ProjectId, binding.LifetimeId) : null);
         agentChatPublication = ProcessInvocationSnapshotMapper.BuildLivePublication(
@@ -172,16 +198,26 @@
         });
 
     private bool HasUnresolvedRouteRunSelection
-        => requiredRouteRunId is { } requestedRunId &&
+        => Route.RunId is { } requestedRunId &&
            shell is not null &&
            shell.Runtime.SelectedRunId != requestedRunId;
 
     private bool HasUnresolvedNonRunRouteSelection
         => shell is not null &&
-           (requiredRouteProcessId.HasValue || requiredRouteLaunchPlanId.HasValue);
+           (Route.ProcessId.HasValue || Route.LaunchPlanId.HasValue);
 
     private bool HasUnresolvedRouteSelection
         => HasUnresolvedRouteRunSelection || HasUnresolvedNonRunRouteSelection;
+
+    // A just-launched run that is not projected yet has its own launch notice instead.
+    private string? UnavailableSelectionText
+        => shell is null || isLoading
+            ? null
+            : HasUnresolvedNonRunRouteSelection
+                ? "The requested process or launch plan cannot be shown on the live dashboard. Select a run instead."
+                : HasUnresolvedRouteRunSelection && !launchStarted
+                    ? "The requested process run is not available in this scope."
+                    : null;
 
     private AgentChatContextAccessState AgentChatAccessState
         => isLoading
@@ -196,24 +232,20 @@
                 ? AgentChatContextAccessState.Loading
                 : AgentChatContextAccessState.Failed;
 
+    // The surface identity describes the applied URL state; foreign keys such as mockScenario come from the location.
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(
             Navigation.BaseUri,
             Navigation.Uri,
-            [
-                new("processId", ProcessIdQuery?.ToString("D")),
-                new("runId", RunIdQuery?.ToString("D")),
-                new("launchPlanId", LaunchPlanIdQuery?.ToString("D")),
-                new("mockScenario", MockScenarioQuery)
-            ]);
+            LiveProcessesUrlCodec.Instance.OwnedValues(Route));
 
     private ProcessAgentChatLiveView AgentChatLiveView
-        => selectedTabIndex switch {
-            0 => ProcessAgentChatLiveView.Activity,
-            1 => ProcessAgentChatLiveView.Agents,
-            2 => ProcessAgentChatLiveView.Graphs,
-            3 => ProcessAgentChatLiveView.ToolHistory,
-            _ => ProcessAgentChatLiveView.Activity
+        => Route.Tab switch {
+            LiveProcessesTab.Activity => ProcessAgentChatLiveView.Activity,
+            LiveProcessesTab.Agents => ProcessAgentChatLiveView.Agents,
+            LiveProcessesTab.Graphs => ProcessAgentChatLiveView.Graphs,
+            LiveProcessesTab.ToolHistory => ProcessAgentChatLiveView.ToolHistory,
+            _ => throw new InvalidOperationException($"Live processes tab {Route.Tab} has no agent chat view.")
         };
 
     private string PageTitleText => ProjectId.HasValue ? "Project live processes" : "Live processes";
@@ -258,38 +290,88 @@
             _ => "neutral"
         };
 
-    protected override async Task OnParametersSetAsync() {
-        SynchronizeRouteSelections();
-        await LoadAsync(forceRefresh: LaunchStarted);
-    }
+    protected override void OnInitialized()
+        => url = new(Navigation, LiveProcessesUrlCodec.Instance, NavigationHistory);
 
-    private void SynchronizeRouteSelections(bool force = false) {
-        if (!force && routeSelectionInitialized &&
-            routeSelectionProjectId == ProjectId &&
-            routeSelectionProcessId == ProcessIdQuery &&
-            routeSelectionRunId == RunIdQuery &&
-            routeSelectionLaunchPlanId == LaunchPlanIdQuery) {
+    protected override async Task OnParametersSetAsync() {
+        var path = UrlLocation.Split(Navigation.Uri).Path;
+        var reload = !routeApplied || routeProjectId != ProjectId;
+        if (!reload && !string.Equals(path, routePath, StringComparison.OrdinalIgnoreCase)) {
+            // Another page's location: the router replaces this page and its state stays untouched.
             return;
         }
 
-        routeSelectionInitialized = true;
-        operatorOperation++;
-        busyOperatorActionStepId = null;
-        routeSelectionProjectId = ProjectId;
-        routeSelectionProcessId = ProcessIdQuery;
-        routeSelectionRunId = RunIdQuery;
-        routeSelectionLaunchPlanId = LaunchPlanIdQuery;
-        requiredRouteProcessId = ProcessIdQuery;
-        requiredRouteRunId = RunIdQuery;
-        requiredRouteLaunchPlanId = LaunchPlanIdQuery;
-        selectedRuntimeRunId = RunIdQuery;
-        runtimeEventPage = 0;
-        runDetailDialogOpen = false;
-        runDetailSnapshot = null;
-        filesRunId = null;
-        agentDetailDialogOpen = false;
-        agentDetailAgent = null;
+        if (reload) {
+            // The launch signal is consumed once: canonicalization removes it from the history entry.
+            launchStarted = UrlQuery.FromUri(Navigation.Uri).GetFlag(LiveProcessesUrlCodec.ProcessStartedKey);
+        }
+
+        // Recorded before Apply: a canonical Replace can re-enter this method when the navigation is local.
+        routeApplied = true;
+        routePath = path;
+        routeProjectId = ProjectId;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!reload && !change.IsChanged) {
+            return;
+        }
+
+        await ApplyRouteAsync(change.Previous, change.Current, reload);
     }
+
+    private async Task ApplyRouteAsync(LiveProcessesUrlState previous, LiveProcessesUrlState current, bool reload) {
+        if (reload || previous.RunId != current.RunId || previous.ProcessId != current.ProcessId || previous.LaunchPlanId != current.LaunchPlanId) {
+            // A different selection supersedes any operator action that is still in flight.
+            operatorOperation++;
+            busyOperatorActionStepId = null;
+        }
+
+        if (!reload && !RequiresRead(previous, current)) {
+            return;
+        }
+
+        await LoadAsync(forceRefresh: reload && launchStarted);
+    }
+
+    // Overlays and the status filter apply to the accepted projection; only the remaining state shapes the read.
+    private static bool RequiresRead(LiveProcessesUrlState previous, LiveProcessesUrlState current)
+        => !LiveProcessesUrlCodec.Instance.SameState(ReadShape(previous), ReadShape(current));
+
+    private static LiveProcessesUrlState ReadShape(LiveProcessesUrlState state)
+        => state with { Status = null, Dialog = null, StepId = null };
+
+    private Task NavigateAsync(LiveProcessesUrlState next, UrlHistoryMode mode) {
+        var previous = Route;
+        url.Navigate(next, mode);
+        return ApplyIntentAsync(previous);
+    }
+
+    private Task OpenOverlayAsync(LiveProcessesUrlState next) {
+        var previous = Route;
+        url.OpenOverlay(next);
+        return ApplyIntentAsync(previous);
+    }
+
+    private async Task CloseOverlayAsync(LiveProcessesUrlState parent) {
+        var previous = Route;
+        await url.CloseOverlayAsync(parent);
+        await ApplyIntentAsync(previous);
+    }
+
+    private Task ApplyIntentAsync(LiveProcessesUrlState previous)
+        => isDisposed || LiveProcessesUrlCodec.Instance.SameState(previous, Route)
+            ? Task.CompletedTask
+            : ApplyRouteAsync(previous, Route, reload: false);
+
+    // A run selection is always explicit: the URL run, a status filter cannot hide it.
+    private LiveProcessesUrlState WithRunSelection(Guid? runId)
+        => Route with {
+            RunId = runId,
+            ProcessId = null,
+            LaunchPlanId = null,
+            Page = runId == Route.RunId ? Route.Page : 1,
+            Dialog = null,
+            StepId = null
+        };
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender) {
@@ -314,7 +396,7 @@
             using var timer = new PeriodicTimer(LiveRefreshInterval, TimeProvider);
             while (await timer.WaitForNextTickAsync(cancellationToken)) {
                 await InvokeAsync(async () => {
-                    if (isDisposed || isLoading || IsMockProjection || runtimeHistoryWindow != ProcessRuntimeHistoryWindow.LiveHour) {
+                    if (isDisposed || isLoading || IsMockProjection || Route.Window != ProcessRuntimeHistoryWindow.LiveHour) {
                         return;
                     }
 
@@ -326,16 +408,12 @@
             }
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
         } catch (Exception exception) {
-            Logger.LogError(exception, "Live process refresh stopped for project {ProjectId} and run {RunId}.", ProjectId, selectedRuntimeRunId);
+            Logger.LogError(exception, "Live process refresh stopped for project {ProjectId} and run {RunId}.", ProjectId, SelectedRuntimeRunId);
         }
     }
 
-    private async Task RefreshCancelledRunAsync(ProcessRunId runId) {
-        await ForceRefreshAsync();
-        if (runDetailDialogOpen && runDetailSnapshot?.RunId == runId) {
-            runDetailSnapshot = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId == runId);
-        }
-    }
+    private Task RefreshCancelledRunAsync(ProcessRunId runId)
+        => ForceRefreshAsync();
 
     private Task OpenDefinitionsAsync() {
         Navigation.NavigateTo(ProjectId.HasValue ? $"/projects/{ProjectId.Value:D}/processes" : "/processes");
@@ -346,72 +424,30 @@
         var generation = Interlocked.Increment(ref loadGeneration);
         var originScope = ResolveScope();
         var originProfileGeneration = DatabaseRuntimeState.GetSnapshot().Generation;
+        var route = Route;
         if (shell is not null && (shell.Scope != originScope || acceptedProfileGeneration != originProfileGeneration)) {
             shell = null;
-            SynchronizeRouteSelections(force: true);
         }
         isLoading = true;
         errorMessage = null;
 
         try {
-            var loadedShell = await LoadShellProjectionAsync(
-                forceRefresh,
-                selectedRuntimeRunId ?? RunIdQuery);
+            var loadedShell = await LoadShellProjectionAsync(forceRefresh, route);
             if (isDisposed || generation != Volatile.Read(ref loadGeneration)) {
                 return;
             }
 
+            var lifetimeChanged = shell is not null && shell.ProjectBinding != loadedShell.ProjectBinding;
             if (shell?.ProjectBinding != loadedShell.ProjectBinding) {
-                SynchronizeRouteSelections(force: true);
+                operatorOperation++;
+                busyOperatorActionStepId = null;
                 mockResolvedOperatorActionStepIds.Clear();
             }
             shell = loadedShell;
             acceptedProfileGeneration = originProfileGeneration;
-            if (requiredRouteRunId is { } requestedRouteRunId &&
-                loadedShell.Runtime.SelectedRunId != requestedRouteRunId) {
-                selectedRuntimeRunId = requestedRouteRunId;
-                runtimeEventPage = 0;
-                return;
-            }
-
-            var requestedRunId = requiredRouteRunId ??
-                loadedShell.Runtime.SelectedRunId ??
-                selectedRuntimeRunId ??
-                RunIdQuery;
-            var resolvedRunId = ResolveRunIdForCurrentStatusFilter(
-                VisibleRuntimeRuns(loadedShell.Runtime.Runs),
-                requestedRunId);
-            if (requiredRouteRunId.HasValue) {
-                resolvedRunId = requiredRouteRunId;
-            }
-
-            if (resolvedRunId != requestedRunId) {
-                selectedRuntimeRunId = resolvedRunId;
-                runtimeEventPage = 0;
-                var filteredShell = await LoadShellProjectionAsync(
-                    forceRefresh: false,
-                    selectedRuntimeRunId);
-                if (isDisposed || generation != Volatile.Read(ref loadGeneration)) {
-                    return;
-                }
-
-                if (shell.ProjectBinding != filteredShell.ProjectBinding) {
-                    SynchronizeRouteSelections(force: true);
-                    mockResolvedOperatorActionStepIds.Clear();
-                }
-                shell = filteredShell;
-            } else {
-                selectedRuntimeRunId = resolvedRunId;
-            }
-
-            if (runDetailDialogOpen && runDetailSnapshot is { } openRun) {
-                runDetailSnapshot = shell.Runtime.Runs.FirstOrDefault(run => run.RunId == openRun.RunId);
-                runDetailDialogOpen = runDetailSnapshot is not null;
-            }
-            if (agentDetailDialogOpen && agentDetailAgent is { } openAgent) {
-                agentDetailAgent = shell.Runtime.ActiveAgents.FirstOrDefault(agent =>
-                    agent.RunId == openAgent.RunId && agent.StepInstanceId == openAgent.StepInstanceId);
-                agentDetailDialogOpen = agentDetailAgent is not null;
+            if (lifetimeChanged && (Route.Dialog is not null || Route.StepId.HasValue) && RendererInfo.IsInteractive) {
+                // The open dialog showed a record of the replaced project lifetime.
+                url.Navigate(Route with { Dialog = null, StepId = null }, UrlHistoryMode.Replace);
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             if (isDisposed || generation != Volatile.Read(ref loadGeneration)) {
@@ -427,9 +463,8 @@
                     : "The process workspace could not be read. Refresh to recheck its current scope and access.";
             if (!retainAccepted) {
                 shell = null;
-                SynchronizeRouteSelections(force: true);
             }
-            Logger.LogError(exception, "Could not load live processes for project {ProjectId} and run {RunId}.", ProjectId, selectedRuntimeRunId);
+            Logger.LogError(exception, "Could not load live processes for project {ProjectId} and run {RunId}.", ProjectId, route.RunId);
         } finally {
             if (!isDisposed && generation == Volatile.Read(ref loadGeneration)) {
                 isLoading = false;
@@ -437,12 +472,13 @@
         }
     }
 
-    private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, Guid? runId) {
-        var runtimeLoadOptions = CreateRuntimeLoadOptions();
+    private async Task<ProcessWorkspaceShellProjection> LoadShellProjectionAsync(bool forceRefresh, LiveProcessesUrlState route) {
+        var runtimeLoadOptions = CreateRuntimeLoadOptions(route.Tab);
         var scope = ResolveScope();
+        var runId = route.RunId;
         var request = new ProcessWorkspaceShellRequest(
             scope,
-            new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+            new ProcessWorkspaceSelectionProjection(route.ProcessId, route.RunId, route.LaunchPlanId),
             new ProcessDefinitionCatalogQueryProjection(
                 SearchText: null,
                 SelectedDefinitionKey: null,
@@ -456,8 +492,8 @@
                 Take: 25),
             forceRefresh,
             new ProcessRuntimeWorkspaceQueryProjection(
-                runtimeHistoryWindow,
-                runtimeEventPage,
+                route.Window,
+                route.Page - 1,
                 RuntimeEventPageSize,
                 runId,
                 AutoSelectRun: runId.HasValue,
@@ -466,7 +502,7 @@
                 PreviouslyLoadedRuns = ResolvePreviouslyLoadedRuns(
                     forceRefresh,
                     scope,
-                    runtimeHistoryWindow)
+                    route.Window)
             },
             ProcessDefinitionWorkspaceLoadOptions.CatalogOnly) { ProjectBinding = shell?.ProjectBinding };
 
@@ -503,23 +539,23 @@
             ? loadedShell.Runtime.ReusableRuns
             : null;
 
-    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions()
-        => selectedTabIndex switch {
-            1 => new ProcessRuntimeWorkspaceLoadOptions {
+    private static ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(LiveProcessesTab tab)
+        => tab switch {
+            LiveProcessesTab.Agents => new ProcessRuntimeWorkspaceLoadOptions {
                 IncludeSelectedRun = false,
                 IncludeHistory = false,
                 IncludeMetricHistory = false,
                 IncludeActiveAgents = true,
                 IncludeUsageTelemetry = false
             },
-            2 => new ProcessRuntimeWorkspaceLoadOptions {
+            LiveProcessesTab.Graphs => new ProcessRuntimeWorkspaceLoadOptions {
                 IncludeSelectedRun = false,
                 IncludeHistory = false,
                 IncludeMetricHistory = true,
                 IncludeActiveAgents = false,
                 IncludeUsageTelemetry = true
             },
-            3 => new ProcessRuntimeWorkspaceLoadOptions {
+            LiveProcessesTab.ToolHistory => new ProcessRuntimeWorkspaceLoadOptions {
                 IncludeSelectedRun = false,
                 IncludeHistory = true,
                 IncludeMetricHistory = true,
@@ -535,32 +571,33 @@
             }
         };
 
-    private async Task HandleTabChangedAsync(int index) {
-        if (selectedTabIndex == index) {
-            return;
+    // The renderer's tab index is a render detail; the URL carries the typed tab.
+    private Task HandleTabChangedAsync(int index) {
+        var tab = (LiveProcessesTab)index;
+        if (!Enum.IsDefined(tab) || tab == Route.Tab) {
+            return Task.CompletedTask;
         }
 
-        selectedTabIndex = index;
-        runtimeEventPage = 0;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(Route with { Tab = tab, Page = 1 }, UrlHistoryMode.Push);
     }
 
+    // The explicitly selected run stays listed even when the status filter or a hidden group would exclude it.
     private IReadOnlyList<ProcessLiveProcessSnapshot> SelectableRuns
         => shell?.Runtime.Runs
             .Where(IsRunGroupVisible)
-            .Where(run => statusFilter is null || run.Status == statusFilter)
+            .Where(run => Route.Status is null || run.Status == Route.Status || run.RunId.Value == Route.RunId)
             .OrderByDescending(run => run.LastEventAtUtc)
             .ThenBy(run => run.RunId.Value)
             .ToArray() ?? [];
 
     private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuns
         => SelectableRuns
-            .Where(run => !selectedRuntimeRunId.HasValue || run.RunId.Value == selectedRuntimeRunId.Value)
+            .Where(run => !SelectedRuntimeRunId.HasValue || run.RunId.Value == SelectedRuntimeRunId.Value)
             .ToArray();
 
     private IReadOnlyList<ProcessRuntimeActiveAgentProjection> VisibleActiveAgents
         => shell?.Runtime.ActiveAgents
-            .Where(agent => !selectedRuntimeRunId.HasValue || agent.RunId == selectedRuntimeRunId.Value)
+            .Where(agent => !SelectedRuntimeRunId.HasValue || agent.RunId == SelectedRuntimeRunId.Value)
             .OrderByDescending(agent => agent.IsWorking)
             .ThenByDescending(agent => string.Equals(agent.Status, "Running", StringComparison.Ordinal))
             .ThenBy(agent => agent.ExecutorDisplayName, StringComparer.OrdinalIgnoreCase)
@@ -596,49 +633,38 @@
         => BuildToolFamilySummaries(shell?.Runtime.ToolUsage ?? []);
 
     private string RuntimeRunSelectValue
-        => selectedRuntimeRunId.HasValue && SelectableRuns.Any(run => run.RunId.Value == selectedRuntimeRunId.Value)
-            ? selectedRuntimeRunId.Value.ToString("D")
+        => SelectedRuntimeRunId.HasValue && SelectableRuns.Any(run => run.RunId.Value == SelectedRuntimeRunId.Value)
+            ? SelectedRuntimeRunId.Value.ToString("D")
             : string.Empty;
 
-    private string StatusFilterValue => statusFilter?.ToString() ?? string.Empty;
+    private string StatusFilterValue => Route.Status?.ToString() ?? string.Empty;
 
-    private async Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args) {
-        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(args.Value?.ToString(), out var parsed)) {
-            runtimeHistoryWindow = parsed;
-            runtimeEventPage = 0;
-            await LoadAsync(forceRefresh: false);
+    private Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args) {
+        if (!Enum.TryParse<ProcessRuntimeHistoryWindow>(args.Value?.ToString(), out var parsed) || !Enum.IsDefined(parsed)) {
+            return Task.CompletedTask;
         }
+
+        return NavigateAsync(Route with { Window = parsed, Page = 1 }, UrlHistoryMode.Push);
     }
 
-    private async Task ChangeStatusFilterAsync(ChangeEventArgs args) {
+    // A selected run that the new status excludes is cleared; the filtered list is never narrowed to another run.
+    private Task ChangeStatusFilterAsync(ChangeEventArgs args) {
         var value = args.Value?.ToString();
-        statusFilter = Enum.TryParse<ProcessProjectedRunStatus>(value, out var parsed)
+        ProcessProjectedRunStatus? status = Enum.TryParse<ProcessProjectedRunStatus>(value, out var parsed) && LiveProcessesUrlCodec.Statuses.Contains(parsed)
             ? parsed
             : null;
-        runtimeEventPage = 0;
-        selectedRuntimeRunId = ResolveRunIdForCurrentStatusFilter(VisibleRuntimeRuns(shell?.Runtime.Runs ?? []), selectedRuntimeRunId);
-        await LoadAsync(forceRefresh: false);
+        var keepsRun = status is null || Route.RunId is not { } runId ||
+            shell?.Runtime.Runs.Any(run => run.RunId.Value == runId && run.Status == status) == true;
+        var next = keepsRun ? Route : WithRunSelection(null);
+        return NavigateAsync(next with { Status = status, Page = 1 }, UrlHistoryMode.Push);
     }
 
-    private async Task SelectRuntimeRunAsync(ChangeEventArgs args) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        selectedRuntimeRunId = Guid.TryParse(args.Value?.ToString(), out var parsed) && parsed != Guid.Empty
-            ? parsed
-            : null;
-        runtimeEventPage = 0;
-        await LoadAsync(forceRefresh: false);
-    }
+    private Task SelectRuntimeRunAsync(ChangeEventArgs args)
+        => NavigateAsync(WithRunSelection(Guid.TryParse(args.Value?.ToString(), out var parsed) && parsed != Guid.Empty ? parsed : null),
+            UrlHistoryMode.Push);
 
-    private async Task SelectRuntimeRunAsync(Guid runId) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
-        runtimeEventPage = 0;
-        await LoadAsync(forceRefresh: false);
-    }
+    private Task SelectRuntimeRunAsync(Guid runId)
+        => NavigateAsync(WithRunSelection(runId == Guid.Empty ? null : runId), UrlHistoryMode.Push);
 
     private async Task HideRunGroupAsync(ProcessLiveProcessSnapshot run) {
         var groupId = ResolveRunGroupId(run);
@@ -651,16 +677,12 @@
         hiddenRunGroups[groupId] = groupLastEventAtUtc > nowUtc ? groupLastEventAtUtc : nowUtc;
         await SaveHiddenRunGroupsAsync();
 
-        if (selectedRuntimeRunId.HasValue &&
+        if (SelectedRuntimeRunId.HasValue &&
             shell?.Runtime.Runs.Any(candidate =>
-                candidate.RunId.Value == selectedRuntimeRunId.Value &&
+                candidate.RunId.Value == SelectedRuntimeRunId.Value &&
                 ResolveRunGroupId(candidate) == groupId) == true) {
-            requiredRouteProcessId = null;
-            requiredRouteLaunchPlanId = null;
-            requiredRouteRunId = null;
-            selectedRuntimeRunId = null;
-            runtimeEventPage = 0;
-            await LoadAsync(forceRefresh: false);
+            // The selected run disappears from the visible dashboard with its hidden group.
+            await NavigateAsync(WithRunSelection(null), UrlHistoryMode.Replace);
         }
     }
 
@@ -734,15 +756,12 @@
         }
     }
 
-    private IReadOnlyList<ProcessLiveProcessSnapshot> VisibleRuntimeRuns(IReadOnlyList<ProcessLiveProcessSnapshot> runs)
-        => runs.Where(IsRunGroupVisible).ToArray();
-
     // A hidden group returns when one of its runs needs attention again after it was hidden, and a run requested
     // by the route stays visible so a direct link never opens an empty dashboard.
     private bool IsRunGroupVisible(ProcessLiveProcessSnapshot run) {
         var groupId = ResolveRunGroupId(run);
         if (!hiddenRunGroups.TryGetValue(groupId, out var hiddenAtUtc) ||
-            run.RunId.Value == requiredRouteRunId) {
+            run.RunId.Value == Route.RunId) {
             return true;
         }
 
@@ -756,109 +775,71 @@
     private static Guid ResolveRunGroupId(ProcessLiveProcessSnapshot run)
         => run.RootRunId.Value == Guid.Empty ? run.RunId.Value : run.RootRunId.Value;
 
-    private Guid? ResolveRunIdForCurrentStatusFilter(IReadOnlyList<ProcessLiveProcessSnapshot> runs, Guid? requestedRunId) {
-        if (statusFilter is null) {
-            return requestedRunId;
+    private Task PreviousRuntimeEventPageAsync() {
+        if (Route.Page <= 1) {
+            return Task.CompletedTask;
         }
 
-        if (!requestedRunId.HasValue) {
-            return null;
-        }
-
-        if (requestedRunId.HasValue && runs.Any(run => run.RunId.Value == requestedRunId.Value && run.Status == statusFilter)) {
-            return requestedRunId;
-        }
-
-        return runs
-            .Where(run => run.Status == statusFilter)
-            .OrderByDescending(run => run.LastEventAtUtc)
-            .Select(run => (Guid?)run.RunId.Value)
-            .FirstOrDefault();
+        return NavigateAsync(Route with { Page = Route.Page - 1 }, UrlHistoryMode.Push);
     }
 
-    private async Task PreviousRuntimeEventPageAsync() {
-        if (runtimeEventPage == 0) {
-            return;
-        }
-
-        runtimeEventPage--;
-        await LoadAsync(forceRefresh: false);
-    }
-
-    private async Task NextRuntimeEventPageAsync() {
+    private Task NextRuntimeEventPageAsync() {
         if (shell?.Runtime.HasMoreEvents != true) {
-            return;
+            return Task.CompletedTask;
         }
 
-        runtimeEventPage++;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(Route with { Page = Route.Page + 1 }, UrlHistoryMode.Push);
     }
 
+    // The run detail dialog shows the selected run, so opening it selects that run.
     private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run) {
         if (shell?.Runtime.Runs.FirstOrDefault(current => current.RunId == run.RunId) is not { } currentRun) {
             return Task.CompletedTask;
         }
-        runDetailSnapshot = currentRun;
-        runDetailDialogOpen = true;
-        return Task.CompletedTask;
+
+        return OpenOverlayAsync(WithRunSelection(currentRun.RunId.Value) with { Dialog = LiveProcessesDialog.Run });
     }
 
+    // The server appends an explicitly selected run outside the window, so a child that is not loaded yet still opens here.
     private Task OpenChildRunAsync(Guid runId) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        selectedRuntimeRunId = runId;
-        runDetailSnapshot = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId);
-        if (runDetailSnapshot is null) {
-            Navigation.NavigateTo(ProjectId.HasValue
-                ? $"/projects/{ProjectId.Value:D}/processes/live?runId={runId:D}"
-                : $"/processes/live?runId={runId:D}");
+        if (runId == Guid.Empty) {
+            throw new ArgumentException("A process run identifier is required.", nameof(runId));
         }
 
-        return Task.CompletedTask;
+        return OpenOverlayAsync(WithRunSelection(runId) with { Dialog = LiveProcessesDialog.Run });
     }
 
-    private Task CloseRunDetailDialogAsync() {
-        runDetailDialogOpen = false;
-        runDetailSnapshot = null;
-        return Task.CompletedTask;
-    }
+    private Task CloseRunDetailDialogAsync()
+        => CloseOverlayAsync(Route with { Dialog = null });
 
     private Task OpenRunFilesAsync(Guid runId) {
         if (runId == Guid.Empty) {
             throw new ArgumentException("A process run identifier is required.", nameof(runId));
         }
 
-        filesRunId = runId;
-        return Task.CompletedTask;
+        var next = runId == Route.RunId ? Route : WithRunSelection(runId);
+        return OpenOverlayAsync(next with { Dialog = LiveProcessesDialog.Files });
     }
 
-    private Task CloseRunFilesAsync() {
-        filesRunId = null;
-        return Task.CompletedTask;
-    }
+    private Task CloseRunFilesAsync()
+        => CloseOverlayAsync(Route with { Dialog = LiveProcessesDialog.Run });
 
     private Task OpenAgentDetailDialogAsync(ProcessRuntimeActiveAgentProjection agent) {
         if (shell?.Runtime.ActiveAgents.FirstOrDefault(current => current.RunId == agent.RunId &&
                 current.StepInstanceId == agent.StepInstanceId) is not { } currentAgent) {
             return Task.CompletedTask;
         }
-        agentDetailAgent = currentAgent;
-        agentDetailDialogOpen = true;
-        return Task.CompletedTask;
+
+        return OpenOverlayAsync(Route with { Dialog = null, StepId = currentAgent.StepInstanceId });
     }
 
-    private Task CloseAgentDetailDialogAsync() {
-        agentDetailDialogOpen = false;
-        agentDetailAgent = null;
-        return Task.CompletedTask;
-    }
+    private Task CloseAgentDetailDialogAsync()
+        => CloseOverlayAsync(Route with { StepId = null });
 
     private Task OpenProcessControlAsync(Guid runId) {
-        var route = ProjectId.HasValue
-            ? $"/projects/{ProjectId.Value:D}/processes?runId={runId:D}"
-            : $"/processes?runId={runId:D}";
-        Navigation.NavigateTo(route);
+        var path = ProjectId.HasValue ? $"/projects/{ProjectId.Value:D}/processes" : "/processes";
+        Navigation.NavigateTo(ProcessWorkspaceUrlCodec.Instance.Href(path,
+            new(RunId: runId, RunView: ProcessWorkspaceRunView.Control)));
         return Task.CompletedTask;
     }
 
@@ -896,21 +877,24 @@
                 $"{action.Label} accepted",
                 $"{action.StepKey} is queued for dispatch.");
             operatorActionNotes.Remove(action.StepInstanceId);
-            requiredRouteProcessId = null;
-            requiredRouteLaunchPlanId = null;
-            requiredRouteRunId = null;
-            selectedRuntimeRunId = action.RunId;
-            runtimeEventPage = 0;
+            // The accepted action focuses its run without a history entry of its own; the selection it supersedes
+            // is not an operation to retire.
+            url.Navigate(Route with {
+                RunId = action.RunId,
+                ProcessId = null,
+                LaunchPlanId = null,
+                Page = 1,
+                Dialog = Route.RunId == action.RunId ? Route.Dialog : null,
+                StepId = Route.RunId == action.RunId ? Route.StepId : null
+            }, UrlHistoryMode.Replace);
             await LoadAsync(forceRefresh: true);
             if (!IsCurrent()) {
                 return;
             }
-            if (runDetailDialogOpen) {
+            if (RunDetailDialogOpen) {
                 var refreshedRun = shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == action.RunId);
                 if (refreshedRun is null || !RequiresOperatorAttention(refreshedRun)) {
                     await CloseRunDetailDialogAsync();
-                } else {
-                    runDetailSnapshot = refreshedRun;
                 }
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
@@ -1197,7 +1181,7 @@
     bool ILiveProcessesSession.IsMockProjection => IsMockProjection;
     bool ILiveProcessesSession.IsOperatorActionBusy(ProcessRuntimeOperatorActionProjection action) => IsOperatorActionBusy(action);
     string ILiveProcessesSession.LastEventText => LastEventText;
-    bool ILiveProcessesSession.LaunchStarted => LaunchStarted;
+    bool ILiveProcessesSession.LaunchStarted => launchStarted;
     Task ILiveProcessesSession.NextRuntimeEventPageAsync() => DispatchViewActionAsync(() => NextRuntimeEventPageAsync());
     Task ILiveProcessesSession.OpenAgentDetailDialogAsync(ProcessRuntimeActiveAgentProjection agent) => DispatchViewActionAsync(() => OpenAgentDetailDialogAsync(agent));
     Task ILiveProcessesSession.OpenChildRunAsync(Guid runId) => DispatchViewActionAsync(() => OpenChildRunAsync(runId));
@@ -1217,7 +1201,7 @@
     string ILiveProcessesSession.ResolveManagerSummary(ProcessLiveProcessSnapshot run) => ResolveManagerSummary(run);
     ProcessRuntimeActiveAgentProjection? ILiveProcessesSession.ResolvePrimaryAgent(IReadOnlyList<ProcessRuntimeActiveAgentProjection> activeAgents) => ResolvePrimaryAgent(activeAgents);
     ProcessRuntimeOperatorActionProjection? ILiveProcessesSession.ResolvePrimaryOperatorAction(ProcessLiveProcessSnapshot run) => ResolvePrimaryOperatorAction(run);
-    Guid? ILiveProcessesSession.RunIdQuery => RunIdQuery;
+    Guid? ILiveProcessesSession.RunIdQuery => Route.RunId;
     CdaChartOptions ILiveProcessesSession.RuntimeCostChartOptions => RuntimeCostChartOptions;
     string ILiveProcessesSession.RuntimeRunSelectValue => RuntimeRunSelectValue;
     Task ILiveProcessesSession.SelectRuntimeRunAsync(ChangeEventArgs args) => DispatchViewActionAsync(() => SelectRuntimeRunAsync(args));
@@ -1229,19 +1213,20 @@
     IReadOnlyList<ToolFamilySummary> ILiveProcessesSession.ToolFamilySummaries => ToolFamilySummaries;
     IReadOnlyList<ProcessRuntimeActiveAgentProjection> ILiveProcessesSession.VisibleActiveAgents => VisibleActiveAgents;
     IReadOnlyList<ProcessLiveProcessSnapshot> ILiveProcessesSession.VisibleRuns => VisibleRuns;
-    ProcessRuntimeActiveAgentProjection? ILiveProcessesSession.AgentDetailAgent => agentDetailAgent;
-    bool ILiveProcessesSession.AgentDetailDialogOpen => agentDetailDialogOpen;
+    ProcessRuntimeActiveAgentProjection? ILiveProcessesSession.AgentDetailAgent => AgentDetailAgent;
+    bool ILiveProcessesSession.AgentDetailDialogOpen => Route.StepId.HasValue;
     string? ILiveProcessesSession.ErrorMessage => errorMessage;
     bool ILiveProcessesSession.IsLoading => isLoading;
     string? ILiveProcessesSession.OperatorActionError => operatorActionError;
     string? ILiveProcessesSession.OperatorActionMessage => operatorActionMessage;
-    bool ILiveProcessesSession.RunDetailDialogOpen => runDetailDialogOpen;
-    ProcessLiveProcessSnapshot? ILiveProcessesSession.RunDetailSnapshot => runDetailSnapshot;
-    int ILiveProcessesSession.RuntimeEventPage => runtimeEventPage;
-    ProcessRuntimeHistoryWindow ILiveProcessesSession.RuntimeHistoryWindow => runtimeHistoryWindow;
-    Guid? ILiveProcessesSession.SelectedRuntimeRunId => selectedRuntimeRunId;
-    int ILiveProcessesSession.SelectedTabIndex => selectedTabIndex;
+    bool ILiveProcessesSession.RunDetailDialogOpen => RunDetailDialogOpen;
+    ProcessLiveProcessSnapshot? ILiveProcessesSession.RunDetailSnapshot => RunDetailSnapshot;
+    int ILiveProcessesSession.RuntimeEventPage => Route.Page - 1;
+    ProcessRuntimeHistoryWindow ILiveProcessesSession.RuntimeHistoryWindow => Route.Window;
+    Guid? ILiveProcessesSession.SelectedRuntimeRunId => SelectedRuntimeRunId;
+    int ILiveProcessesSession.SelectedTabIndex => (int)Route.Tab;
     ProcessWorkspaceShellProjection? ILiveProcessesSession.Shell => shell;
+    string? ILiveProcessesSession.UnavailableSelectionText => UnavailableSelectionText;
 
 
     void IDisposable.Dispose() {

@@ -32,6 +32,8 @@ public partial class CrmHrRecruitingPage : ICrmHrRecruitingWorkspaceView
     Error? ICrmHrRecruitingWorkspaceView.ConversionEligibilityError => ConversionEligibilityError;
     PagedRecordSelection<Guid>? ICrmHrRecruitingWorkspaceView.ApplicationSelection => ApplicationSelection;
     int ICrmHrRecruitingWorkspaceView.SelectedRecruitingTabIndex => SelectedRecruitingTabIndex;
+    PagedRecordQueryState<RecruitmentApplicationScope>? ICrmHrRecruitingWorkspaceView.CatalogQuery => CatalogQuery;
+    Task ICrmHrRecruitingWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change) => HandleCatalogQueryChangedAsync(change);
     string ICrmHrRecruitingWorkspaceView.RecruitmentDialogTitle => RecruitmentDialogTitle;
     Task<PagedRecordPage<Guid>> ICrmHrRecruitingWorkspaceView.LoadApplicationPageAsync(PagedRecordRequest<RecruitmentApplicationScope> request, CancellationToken cancellationToken) => LoadApplicationPageAsync(request, cancellationToken);
     Task ICrmHrRecruitingWorkspaceView.SelectApplicationAsync(Guid applicationId) => SelectApplicationAsync(applicationId);

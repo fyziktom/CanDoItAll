@@ -14,13 +14,13 @@ public sealed class PluginWorkspaceSession(
     private Uri? baseUri;
     private Func<string, Task>? open;
 
-    public PluginsWorkspace CreateWorkspace(Uri requestBaseUri, Func<string, Task> openBrowser) {
+    public PluginsWorkspace CreateWorkspace(Uri requestBaseUri, Func<string, Task> openBrowser, IPluginsWorkspaceRoute? route = null) {
         if (baseUri is not null) {
             throw new InvalidOperationException("A Plugins session belongs to one page lifetime.");
         }
         baseUri = requestBaseUri;
         open = openBrowser;
-        return new(this, new Uri(requestBaseUri, "/api/plugins/oauth/callback").ToString());
+        return new(this, new Uri(requestBaseUri, "/api/plugins/oauth/callback").ToString(), route);
     }
 
     public long MaxPackageBytes => options.MaxPackageBytes;

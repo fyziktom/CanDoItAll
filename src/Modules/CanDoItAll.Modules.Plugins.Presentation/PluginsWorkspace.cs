@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.Plugins.UI;
 using Microsoft.AspNetCore.Components.Forms;
@@ -6,6 +7,7 @@ namespace CanDoItAll.Modules.Plugins.Presentation;
 
 public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
     private readonly IPluginWorkspaceOwner owner;
+    private readonly IPluginsWorkspaceRoute? route;
     private readonly PluginDraftRegistry drafts;
     private readonly PluginWorkspaceReads reads;
     private readonly PluginWorkspaceOperations operations;
@@ -13,8 +15,9 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
     private long dialogGeneration;
     private CancellationTokenSource? upload;
 
-    public PluginsWorkspace(IPluginWorkspaceOwner owner, string callbackUri) {
+    public PluginsWorkspace(IPluginWorkspaceOwner owner, string callbackUri, IPluginsWorkspaceRoute? route = null) {
         this.owner = owner;
+        this.route = route;
         View = new(callbackUri);
         drafts = new(View);
         reads = new(View, owner, drafts, Notify, () => selectionGeneration++);
@@ -24,17 +27,105 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
     public PluginsWorkspaceView View { get; }
     public event Action? Changed;
 
+    public PluginsUrlState UrlState => new(View.SelectedPluginId, View.Section,
+        View.Section == PluginSection.Logs && View.ShowAllLogs ? PluginLogScope.All : PluginLogScope.Selected,
+        View.PackagesOpen ? PluginsDialog.Packages : null);
+
+    public Task OpenAsync(PluginsUrlState state) {
+        ArgumentNullException.ThrowIfNull(state);
+        if (View.IsDisposed) {
+            return Task.CompletedTask;
+        }
+        View.SelectedPluginId = state.PluginId;
+        View.Section = state.Section;
+        View.ShowAllLogs = state.Logs == PluginLogScope.All;
+        if (state.Dialog == PluginsDialog.Packages) {
+            dialogGeneration++;
+            View.PackagesOpen = true;
+        }
+        return RefreshAsync();
+    }
+
+    public Task ApplyRouteAsync(PluginsUrlState state) {
+        ArgumentNullException.ThrowIfNull(state);
+        if (View.IsDisposed) {
+            return Task.CompletedTask;
+        }
+        var work = new List<Task>();
+        var republish = false;
+        var showAll = state.Logs == PluginLogScope.All;
+        var scopeChanged = state.Section == PluginSection.Logs && showAll != View.ShowAllLogs;
+        if (scopeChanged) {
+            View.ShowAllLogs = showAll;
+            reads.ChangeLogScope();
+        }
+        var target = state.PluginId ?? View.Catalog.Value.FirstOrDefault()?.PluginId;
+        if (target != View.SelectedPluginId) {
+            selectionGeneration++;
+            View.SelectedPluginId = target;
+            reads.ChangeSelection();
+            work.Add(reads.SelectedAsync());
+            republish = state.PluginId is null && target is not null;
+        } else if (scopeChanged) {
+            work.Add(reads.LogsAsync());
+        }
+        View.Section = state.Section;
+        var open = state.Dialog == PluginsDialog.Packages;
+        if (open && !View.PackagesOpen) {
+            dialogGeneration++;
+            View.PackagesOpen = true;
+            work.Add(reads.PackagesAsync());
+        } else if (!open && View.PackagesOpen) {
+            if (View.UploadReading) {
+                republish = true;
+            } else {
+                dialogGeneration++;
+                View.PackagesOpen = false;
+                reads.ClosePackages();
+            }
+        }
+        if (republish) {
+            Publish(UrlHistoryMode.Replace);
+        }
+        Notify();
+        return Task.WhenAll(work);
+    }
+
+    public void ReportOAuthReturn(PluginOAuthReturn result) {
+        ArgumentNullException.ThrowIfNull(result);
+        if (View.IsDisposed) {
+            return;
+        }
+        View.Notice = result.Outcome == PluginOAuthOutcome.Connected
+            ? "OAuth sign-in completed. The connection status shown below is read from stored state."
+            : result.Reason is { } reason
+                ? $"OAuth sign-in failed ({reason}). Review the connection and start sign-in again."
+                : "OAuth sign-in failed. Review the connection and start sign-in again.";
+        View.NoticeStatus = result.Outcome == PluginOAuthOutcome.Connected ? PluginMutationStatus.Saved : PluginMutationStatus.Refused;
+        if (result.ConnectionId is { } connection && View.Section != PluginSection.Connections &&
+            View.Settings.Value is { } settings && settings.CatalogItem.PluginId == View.SelectedPluginId &&
+            settings.Connections.Any(item => item.Id == connection)) {
+            View.Section = PluginSection.Connections;
+            Publish(UrlHistoryMode.Replace);
+        }
+        Notify();
+    }
+
     public async Task RefreshAsync() {
         if (View.IsDisposed) {
             return;
         }
         var generation = selectionGeneration;
+        var unselected = View.SelectedPluginId is null;
         var catalog = reads.CatalogAsync();
-        var selection = View.SelectedPluginId is not null ? reads.SelectedAsync() : InitialSelectionAsync();
+        var selection = unselected ? InitialSelectionAsync() : reads.SelectedAsync();
         await Task.WhenAll(catalog, selection, reads.PackagesAsync(), reads.RestartAsync());
 
         async Task InitialSelectionAsync() {
             if (await catalog && generation == selectionGeneration && !View.IsDisposed) {
+                if (View.SelectedPluginId is not null) {
+                    Publish(UrlHistoryMode.Replace);
+                }
                 await reads.SelectedAsync();
             }
         }
@@ -48,12 +139,14 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
         View.SelectedPluginId = plugin.PluginId;
         View.Section = PluginSection.Main;
         reads.ChangeSelection();
+        Publish(UrlHistoryMode.Push);
         Notify();
         await reads.SelectedAsync();
     }
 
     public void SelectSection(PluginSection section) {
         View.Section = section;
+        Publish(UrlHistoryMode.Push);
         Notify();
     }
 
@@ -67,12 +160,16 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
     public Task SetLogScopeAsync(bool showAll) {
         View.ShowAllLogs = showAll;
         reads.ChangeLogScope();
+        Publish(UrlHistoryMode.Push);
         return reads.LogsAsync();
     }
 
     public Task OpenPackagesAsync() {
         dialogGeneration++;
         View.PackagesOpen = true;
+        if (!View.IsDisposed) {
+            route?.OpenOverlay(UrlState);
+        }
         Notify();
         return reads.PackagesAsync();
     }
@@ -81,9 +178,13 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
         if (View.UploadReading) {
             return;
         }
+        var wasOpen = View.PackagesOpen;
         dialogGeneration++;
         View.PackagesOpen = false;
         reads.ClosePackages();
+        if (wasOpen && !View.IsDisposed) {
+            route?.CloseOverlay(UrlState);
+        }
         Notify();
     }
 
@@ -146,7 +247,8 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
             return Task.CompletedTask;
         }
         var generation = selectionGeneration;
-        var request = new PluginOAuthStartRequest(editor.ConnectionKey, connectionId, editor.DisplayName);
+        var request = new PluginOAuthStartRequest(editor.ConnectionKey, connectionId, editor.DisplayName,
+            ReturnPath: PluginsUrlCodec.ConnectionsHref(editor.Origin.Key.PluginId));
         return operations.RunAsync(new PluginOperationTarget.Connection(editor.Origin), async () => {
             var result = await owner.StartOAuthAsync(editor.Origin.Key.PluginId, request);
             if (result.Committed && result.Value is { } response && generation == selectionGeneration && CanUseOAuth(editor, ignoreBusy: true)) {
@@ -268,9 +370,19 @@ public sealed class PluginsWorkspace : IPluginsWorkspace, IDisposable {
     }
 
     private async Task<bool> RefreshPackagesAsync() {
+        var selected = View.SelectedPluginId;
         var catalogRefreshed = await reads.CatalogAsync();
+        if (selected is null && View.SelectedPluginId is not null) {
+            Publish(UrlHistoryMode.Replace);
+        }
         var results = await Task.WhenAll(reads.PackagesAsync(), reads.RestartAsync());
         return catalogRefreshed && results.All(result => result);
+    }
+
+    private void Publish(UrlHistoryMode mode) {
+        if (!View.IsDisposed) {
+            route?.Navigate(UrlState, mode);
+        }
     }
 
     private void Notify() {

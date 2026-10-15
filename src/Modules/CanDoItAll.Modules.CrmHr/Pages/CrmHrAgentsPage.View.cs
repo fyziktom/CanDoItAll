@@ -24,12 +24,16 @@ public partial class CrmHrAgentsPage : ICrmHrAgentsWorkspaceView
     AiAgentWorkspaceModel? ICrmHrAgentsWorkspaceView.SelectedWorkspace => selectedWorkspace;
     bool ICrmHrAgentsWorkspaceView.IsWorkspaceLoading => isWorkspaceLoading;
     bool ICrmHrAgentsWorkspaceView.IsRecordDialogOpen => isRecordDialogOpen;
+    CrmHrAgentRecordSection ICrmHrAgentsWorkspaceView.RecordSection => RecordSection;
     PagedRecordSelection<Guid>? ICrmHrAgentsWorkspaceView.AgentSelection => AgentSelection;
+    PagedRecordQueryState<AiAgentValidationFilter>? ICrmHrAgentsWorkspaceView.CatalogQuery => CatalogQuery;
     bool ICrmHrAgentsWorkspaceView.ShouldShowListLoadingState => ShouldShowListLoadingState;
     Task<PagedRecordPage<Guid>> ICrmHrAgentsWorkspaceView.LoadAgentPageAsync(PagedRecordRequest<AiAgentValidationFilter> request, CancellationToken cancellationToken) => LoadAgentPageAsync(request, cancellationToken);
     void ICrmHrAgentsWorkspaceView.HandleAgentDirectoryLoadFailed(Exception _) => HandleAgentDirectoryLoadFailed(_);
     AiAgentDirectoryItemModel ICrmHrAgentsWorkspaceView.GetCurrentPageItem(Guid partyId) => GetCurrentPageItem(partyId);
     Task ICrmHrAgentsWorkspaceView.SelectPartyAsync(Guid partyId) => SelectPartyAsync(partyId);
+    Task ICrmHrAgentsWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<AiAgentValidationFilter> change) => HandleCatalogQueryChangedAsync(change);
+    Task ICrmHrAgentsWorkspaceView.SelectRecordSectionAsync(CrmHrAgentRecordSection section) => SelectRecordSectionAsync(section);
     Task ICrmHrAgentsWorkspaceView.CloseRecordDialogAsync() => CloseRecordDialogAsync();
     void ICrmHrAgentsWorkspaceView.OpenTechnicalCatalog() => OpenTechnicalCatalog();
     void ICrmHrAgentsWorkspaceView.OpenTechnicalRecord() => OpenTechnicalRecord();

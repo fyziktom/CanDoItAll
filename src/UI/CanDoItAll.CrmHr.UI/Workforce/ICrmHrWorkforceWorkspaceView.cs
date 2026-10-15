@@ -28,6 +28,8 @@ public interface ICrmHrWorkforceWorkspaceView : ICrmHrWorkspaceView
     string CapacityWorkspaceError { get; }
     int SelectedDetailTabIndex { get; }
     int WorkforceBrowserVersion { get; }
+    // The catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<WorkforceRecordViewFilter>? CatalogQuery { get; }
     bool IsCapacityWorkspaceLoading { get; }
     bool IsRecordDialogOpen { get; }
     bool IsProfileCreationRequested { get; }
@@ -44,6 +46,8 @@ public interface ICrmHrWorkforceWorkspaceView : ICrmHrWorkspaceView
     string AllocationBadgeText { get; }
     IReadOnlyList<WorkforceKind> AvailableWorkforceKinds { get; }
     Task SelectPartyAsync(Guid partyId);
+    // A committed catalog change: a debounced search, a kind, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<WorkforceRecordViewFilter> change);
     Task CloseRecordDialogAsync();
     Task HandleWorkforceBrowserLoadFailedAsync(Exception exception);
     Task HandleHomeUnitChangedAsync(Guid? partyId);

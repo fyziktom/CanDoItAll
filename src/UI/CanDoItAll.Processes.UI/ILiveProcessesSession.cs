@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 namespace CanDoItAll.Processes.UI;
 
 public interface ILiveProcessesSession {
+    string? UnavailableSelectionText => null;
     IReadOnlyList<ProcessLiveProcessSnapshot> ActivityCardRuns { get; }
     IReadOnlyList<ProcessLiveProcessSnapshot> AttentionRuns { get; }
     string BuildAttentionSummary(ProcessLiveProcessSnapshot run);

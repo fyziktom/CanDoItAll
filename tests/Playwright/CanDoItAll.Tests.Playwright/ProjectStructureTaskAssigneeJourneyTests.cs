@@ -236,6 +236,17 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             Assert.Contains("320", Digits(await costPill.InnerTextAsync()), StringComparison.Ordinal);
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "07-gantt-1600.png") });
 
+            // The view is addressable: Canvas drops the tab from the URL and Back returns to the same Gantt view.
+            await page.Locator(StructureTabs).Filter(new() { HasTextString = "Canvas" }).ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(structureUrl);
+            await Assertions.Expect(page.GetByTestId("project-structure-canvas-loaded")).ToBeVisibleAsync(new() { Timeout = 60_000 });
+            await page.GoBackAsync();
+            await Assertions.Expect(page).ToHaveURLAsync($"{structureUrl}?tab=gantt");
+            await Assertions.Expect(page.GetByTestId("project-structure-gantt-panel")).ToContainTextAsync(Count(3, "tasks"), new() { Timeout = 60_000 });
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(structureUrl);
+            await Assertions.Expect(page.GetByTestId("project-structure-gantt-panel")).ToHaveCountAsync(0);
+
             // CRM / HR Assignments: the Work-owned assignees are reported under their explicit role with their task,
             // and under no participation role.
             await OpenAsync(page, oracle, $"{fixture.BaseUrl}/crm-hr/assignments?projectId={seed.ProjectId:D}", AssignmentTabs);

@@ -39,7 +39,7 @@ public sealed class TestLabScenarioWorkspace : ITestLabWorkspaceView, IDisposabl
             TestLabScenario.Empty => TestLabReadState.Empty,
             _ => TestLabReadState.Ready
         };
-        State.Search = scenario == TestLabScenario.FilteredEmpty ? "no matching plan" : string.Empty;
+        State.Filter = scenario == TestLabScenario.FilteredEmpty ? new("no matching plan") : new();
         State.EditorRead = scenario == TestLabScenario.MissingPlan ? TestLabReadState.Missing : TestLabReadState.Ready;
         if (scenario != TestLabScenario.MissingPlan) {
             State.Draft = new(State.Plans.FirstOrDefault() is { } first ? Store.Read(first.Id)! : new());

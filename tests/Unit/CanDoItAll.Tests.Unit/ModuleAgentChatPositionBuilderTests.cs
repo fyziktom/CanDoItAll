@@ -46,7 +46,7 @@ public sealed class ModuleAgentChatPositionBuilderTests
             ]);
 
         Assert.Equal("gantt", position.View);
-        Assert.Equal($"/projects/{projectId:D}/structure", position.Route);
+        Assert.Equal($"/projects/{projectId:D}/structure?tab=gantt", position.Route);
         Assert.Equal(["node-a", "node-b"], position.SelectedEntities.Select(entity => entity.Id));
         Assert.Equal(["Alpha", "Beta"], position.SelectedEntities.Select(entity => entity.DisplayName));
     }

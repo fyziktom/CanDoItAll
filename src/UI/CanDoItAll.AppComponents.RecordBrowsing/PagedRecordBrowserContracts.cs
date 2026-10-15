@@ -97,6 +97,43 @@ public sealed record PagedRecordFilterOption<TFilter>(
 public sealed record PagedRecordSelection<TKey>(TKey Key)
     where TKey : notnull;
 
+// The committed query of a browser whose owner keeps it, for example in the page URL: the trimmed search text, the
+// normalized tags, the filter and the zero-based page. Tags compare in order.
+public sealed record PagedRecordQueryState<TFilter>(
+    string SearchText,
+    IReadOnlyList<string> Tags,
+    TFilter Filter,
+    int PageIndex)
+    where TFilter : notnull
+{
+    public bool Equals(PagedRecordQueryState<TFilter>? other)
+        => other is not null &&
+           string.Equals(SearchText, other.SearchText, StringComparison.Ordinal) &&
+           Tags.SequenceEqual(other.Tags, StringComparer.Ordinal) &&
+           EqualityComparer<TFilter>.Default.Equals(Filter, other.Filter) &&
+           PageIndex == other.PageIndex;
+
+    public override int GetHashCode()
+        => HashCode.Combine(SearchText, Tags.Count, Filter, PageIndex);
+}
+
+// What committed a query change. A debounced search commit and a correction of a page that does not exist are
+// refinements of the current view; tag, filter, reset and page changes are explicit operator actions.
+public enum PagedRecordQueryChangeKind
+{
+    Search,
+    Tags,
+    Filter,
+    Reset,
+    Page,
+    Correction
+}
+
+public sealed record PagedRecordQueryChange<TFilter>(
+    PagedRecordQueryState<TFilter> Query,
+    PagedRecordQueryChangeKind Kind)
+    where TFilter : notnull;
+
 /// <param name="IsInteractive">
 /// False while the browser is prerendered or statically rendered; templated select controls must stay disabled until
 /// it is true, otherwise a user's early click is dropped without feedback.

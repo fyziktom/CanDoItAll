@@ -4,6 +4,8 @@
 @inject AiAgentService AiAgentService
 @inject IAiAgentDirectoryQueryService AiAgentDirectoryQueryService
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
+@inject NotificationService NotificationService
 
 <PageTitle>CRM Agents</PageTitle>
 
@@ -21,9 +23,23 @@
 </CrmHrAgentsWorkspaceSurface>
 
 @code {
-    [SupplyParameterFromQuery(Name = "partyId")]
-    public Guid? PartyIdQuery { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = CrmHrAgentsUrlCodec.PartyKey)]
+    public string? PartyIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = CrmHrAgentsUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmHrAgentsUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmHrAgentsUrlCodec.ValidationKey)]
+    public string? ValidationQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmHrAgentsUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<CrmHrAgentsUrlState> url = default!;
     private AiAgentDirectoryPage agentPage = new(
         [],
         0,
@@ -52,19 +68,34 @@
         : CrmHrAgentChatSurfaceBuilder.BuildAgentsSurface();
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [new("partyId", PartyIdQuery?.ToString("D"))]);
+        => CrmHrNavigationFence.Create(Navigation, url);
 
-    private PagedRecordSelection<Guid>? AgentSelection => PartyIdQuery is Guid partyId
+    private PagedRecordSelection<Guid>? AgentSelection => url.State.PartyId is Guid partyId
         ? new PagedRecordSelection<Guid>(partyId)
         : null;
 
+    // The record section is navigation state; the dialog only renders it.
+    private CrmHrAgentRecordSection RecordSection => url.State.Section;
+
+    private PagedRecordQueryState<AiAgentValidationFilter> CatalogQuery => url.State.Catalog.ToQuery();
+
     private bool ShouldShowListLoadingState => isListLoading;
 
+    protected override void OnInitialized()
+        => url = new UrlStateBinding<CrmHrAgentsUrlState>(Navigation, CrmHrAgentsUrlCodec.Instance, History, typeof(CrmHrAgentsPage));
+
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // Only another agent loads; a section and a catalog query load nothing here.
     protected override Task OnParametersSetAsync()
-        => LoadAsync(PartyIdQuery);
+    {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged || (!change.IsInitial && change.Previous.PartyId == change.Current.PartyId))
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadAsync(change.Current.PartyId);
+    }
 
     private async Task LoadAsync(Guid? requestedPartyId)
     {
@@ -129,6 +160,13 @@
             agentChatContextAccessState = isRecordDialogOpen
                 ? AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Failed;
+            if (!isRecordDialogOpen)
+            {
+                // The requested identity stays in the location and no other agent takes its place.
+                NotificationService.Warning(
+                    "Agent record unavailable",
+                    "The requested CRM-HR agent record does not exist or is no longer available.");
+            }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -176,7 +214,7 @@
     private bool IsCurrentLoad(long generation, Guid? expectedQueryPartyId)
         => !isDisposed &&
            generation == Volatile.Read(ref loadGeneration) &&
-           PartyIdQuery == expectedQueryPartyId;
+           url.State.PartyId == expectedQueryPartyId;
 
     private async Task<PagedRecordPage<Guid>> LoadAgentPageAsync(
         PagedRecordRequest<AiAgentValidationFilter> request,
@@ -220,7 +258,7 @@
     private void HandleAgentDirectoryLoadFailed(Exception _)
     {
         isListLoading = false;
-        if (!PartyIdQuery.HasValue)
+        if (!url.State.PartyId.HasValue)
         {
             agentChatContextAccessState = AgentChatContextAccessState.Failed;
         }
@@ -232,29 +270,48 @@
             : throw new InvalidOperationException(
                 $"The rendered CRM-HR agent page does not contain party '{partyId:D}'.");
 
+    // A card of the rendered page opens its record over the catalog as a new history entry; Back closes it again.
     private Task SelectPartyAsync(Guid partyId)
     {
-        selectedDirectoryItem = GetCurrentPageItem(partyId);
-        selectedWorkspace = null;
-        isWorkspaceLoading = true;
-        isRecordDialogOpen = true;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/agents?partyId={partyId:D}");
-        return Task.CompletedTask;
-    }
-
-    private Task CloseRecordDialogAsync()
-    {
-        if (!isRecordDialogOpen)
+        var item = GetCurrentPageItem(partyId);
+        if (url.State.PartyId == item.PartyId && isRecordDialogOpen)
         {
             return Task.CompletedTask;
         }
 
-        isRecordDialogOpen = false;
-        Navigation.NavigateTo("/crm-hr/agents");
+        url.OpenOverlay(url.State.WithoutRecord() with { PartyId = item.PartyId });
+        return LoadAsync(item.PartyId);
+    }
+
+    // A section of the open record refines its entry.
+    private Task SelectRecordSectionAsync(CrmHrAgentRecordSection section)
+    {
+        url.Navigate(url.State with { Section = section }, UrlHistoryMode.Replace);
         return Task.CompletedTask;
     }
 
+    // The catalog committed a query and is already loading it: only the location follows.
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<AiAgentValidationFilter> change)
+    {
+        url.Navigate(
+            url.State with { Catalog = CrmHrAgentsUrlCodec.Catalog.FromQuery(change.Query) },
+            CrmHrCatalogUrlCodec<AiAgentValidationFilter>.HistoryMode(change.Kind));
+        return Task.CompletedTask;
+    }
+
+    // Closing returns to the catalog: Back when the record was opened here, otherwise the location is replaced.
+    private async Task CloseRecordDialogAsync()
+    {
+        if (!isRecordDialogOpen)
+        {
+            return;
+        }
+
+        await LoadAsync(null);
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
+    }
+
+    // The AgentFramework catalog keeps its own location keys; its published routes are used as they are.
     private void OpenTechnicalCatalog()
     {
         Navigation.NavigateTo("/agents?tab=agents");
@@ -273,13 +330,8 @@
 
     private void OpenDirectoryRecord()
     {
-        if (selectedWorkspace is null)
-        {
-            Navigation.NavigateTo("/crm-hr/directory");
-            return;
-        }
-
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedWorkspace.PartyId:D}");
+        var directory = DirectoryUrlCodec.Default with { PartyId = selectedWorkspace?.PartyId };
+        Navigation.NavigateTo(DirectoryUrlCodec.Instance.Href(CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Directory).Route, directory));
     }
 
     private static AiValidationStatus? MapValidationFilter(AiAgentValidationFilter filter)

@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Workspace.DataSources.UI;
 
+public enum DataSourceSelectionCause { Operator, Owner }
+
+public readonly record struct DataSourceSelection(Guid? ProfileId, DataSourceSelectionCause Cause);
+
 public sealed class DataSourcesSession : IDisposable {
     private readonly IDataSourcesOwner owner;
     private readonly DataSourcesContext context;
@@ -22,7 +26,9 @@ public sealed class DataSourcesSession : IDisposable {
     }
 
     public event Action? Changed;
+    public event Action<DataSourceSelection>? SelectionChanged;
     public DataSourceOperationLedger Operations { get; }
+    public Guid? SelectedProfileId { get; private set; }
     public IReadOnlyList<ProfileSummary> Profiles { get; private set; } = [];
     public RuntimeSelection? CurrentSelection { get; private set; }
     public ProfileDraft Draft { get; private set; } = new();
@@ -45,13 +51,22 @@ public sealed class DataSourcesSession : IDisposable {
         || profile.DisplayName.Contains(Search, StringComparison.OrdinalIgnoreCase)
         || profile.Descriptor.Contains(Search, StringComparison.OrdinalIgnoreCase)).OrderBy(profile => profile.DisplayName).ToArray();
 
-    public async Task InitializeAsync() {
+    public async Task InitializeAsync(Guid? profileId = null) {
         var revision = editorRevision;
         await RefreshAsync();
-        if (!disposed && revision == editorRevision && CurrentSelection is { } selection) {
-            await SelectAsync(selection.RuntimeProfileId);
+        if (disposed || revision != editorRevision) {
+            return;
         }
+        if (profileId is { } requested) {
+            await SelectAsync(requested);
+            return;
+        }
+        await SelectDefaultAsync();
     }
+
+    public Task SelectDefaultAsync() => CurrentSelection is { } selection
+        ? SelectCoreAsync(selection.RuntimeProfileId, false, DataSourceSelectionCause.Owner)
+        : Task.CompletedTask;
 
     public Task RefreshAsync() => disposed ? Task.CompletedTask : Task.WhenAll(RefreshListAsync(), RefreshRuntimeAsync());
 
@@ -94,7 +109,9 @@ public sealed class DataSourcesSession : IDisposable {
         }
     }
 
-    public async Task SelectAsync(Guid id, bool reset = false) {
+    public Task SelectAsync(Guid id, bool reset = false) => SelectCoreAsync(id, reset, DataSourceSelectionCause.Operator);
+
+    private async Task SelectCoreAsync(Guid id, bool reset, DataSourceSelectionCause cause) {
         if (disposed || acquired && Draft.Id == id && !reset) {
             return;
         }
@@ -105,6 +122,7 @@ public sealed class DataSourcesSession : IDisposable {
         Password = string.Empty;
         EditorError = null;
         SelectedSchemaHealth = null;
+        ChangeSelection(id, cause);
         Publish();
         try {
             var editor = await owner.ReadEditorAsync(id, read.Token);
@@ -129,7 +147,9 @@ public sealed class DataSourcesSession : IDisposable {
         }
     }
 
-    public void NewProfile() {
+    public void NewProfile() => NewProfile(DataSourceSelectionCause.Operator);
+
+    private void NewProfile(DataSourceSelectionCause cause) {
         if (disposed || CurrentSelection is null || CurrentSelection.IsRuntimeLocked) {
             return;
         }
@@ -142,6 +162,7 @@ public sealed class DataSourcesSession : IDisposable {
         Message = null;
         EditorLoading = false;
         acquired = true;
+        ChangeSelection(null, cause);
         Publish();
     }
 
@@ -173,6 +194,7 @@ public sealed class DataSourcesSession : IDisposable {
         if (revision == editorRevision && ReferenceEquals(draft, Draft)) {
             if (result.Outcome is DataSourceOutcome.Confirmed or DataSourceOutcome.Partial && result.ProfileId != Guid.Empty) {
                 Draft.Id = result.ProfileId;
+                ChangeSelection(result.ProfileId, DataSourceSelectionCause.Owner);
             }
             Message = result.Message;
         }
@@ -195,7 +217,7 @@ public sealed class DataSourcesSession : IDisposable {
         if (revision == editorRevision) {
             Message = result.Message;
             if (action == DataSourceAction.Delete && result.Outcome == DataSourceOutcome.Confirmed) {
-                NewProfile();
+                NewProfile(DataSourceSelectionCause.Owner);
                 Message = result.Message;
             }
         }
@@ -260,6 +282,13 @@ public sealed class DataSourcesSession : IDisposable {
 
     internal static string ReadError(Exception exception) => DataSourceOperationLedger.Describe(
         exception is DataSourcesException failure ? failure.Failure : DataSourceFailure.Unavailable);
+    private void ChangeSelection(Guid? id, DataSourceSelectionCause cause) {
+        if (disposed || SelectedProfileId == id) {
+            return;
+        }
+        SelectedProfileId = id;
+        SelectionChanged?.Invoke(new(id, cause));
+    }
     private void Publish() {
         if (!disposed) {
             Changed?.Invoke();
@@ -267,6 +296,7 @@ public sealed class DataSourcesSession : IDisposable {
     }
     public void Dispose() {
         disposed = true;
+        SelectionChanged = null;
         Operations.Changed -= Publish;
         CloseTransfer();
         Password = string.Empty;

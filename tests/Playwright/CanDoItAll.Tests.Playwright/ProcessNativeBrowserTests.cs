@@ -84,7 +84,10 @@ public sealed class ProcessNativeBrowserTests {
             var filePath = $"artifacts/process-runs/{runId.Value:D}/evidence.md";
             await WriteArtifactAsync("First authorized revision");
             await page.GetByTestId("live-processes-run-open-details").First.ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex($"[?&]runId={runId.Value:D}(&|$)", RegexOptions.IgnoreCase));
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]dialog=run(&|$)"));
             await page.GetByTestId("live-processes-run-files").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]dialog=files(&|$)"));
             var files = page.GetByTestId("process-run-files-dialog");
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasTextString = "evidence.md" }).DblClickAsync();
             await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("First authorized revision");
@@ -95,7 +98,15 @@ public sealed class ProcessNativeBrowserTests {
             await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("Second authorized revision");
             await page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "native-authorized-files.png") });
             await files.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]dialog=run(&|$)"));
             await page.GetByTestId("live-processes-run-detail-dialog").GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
+            await Assertions.Expect(page).Not.ToHaveURLAsync(new Regex("[?&]dialog="));
+            // Close went Back, so Forward reopens the run overlay from history and Back closes it again.
+            await page.GoForwardAsync();
+            await Assertions.Expect(page.GetByTestId("live-processes-run-detail-dialog")).ToBeVisibleAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]dialog=run(&|$)"));
+            await page.GoBackAsync();
+            await Assertions.Expect(page.GetByTestId("live-processes-run-detail-dialog")).ToHaveCountAsync(0);
             await page.GotoAsync($"{host.BaseUrl}{route}?runId={runId.Value:D}&definitionKey={ProcessNativeBrowserHost.CompleteDefinition}");
             await Assertions.Expect(page.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
             await page.GetByTestId("processes-detail-tab-manager-chat").ClickAsync();

@@ -6,6 +6,7 @@ using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Memory.Pages;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -194,6 +195,7 @@ public sealed class MemoryProviderOperationsPageTests
         configureServices?.Invoke(context.Services);
         context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
         using var scope = context.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
         var profileStore = scope.ServiceProvider.GetRequiredService<IMemoryProviderProfileStore>();

@@ -322,7 +322,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         }
         await page.GetByTestId("shared-provider-catalog-apply").ClickAsync();
         await dialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
     }
 
     internal static async Task SyncAsync(IPage page, string address) {
@@ -331,7 +331,7 @@ public sealed class SharedProviderNativeDefaultsUiTests {
         await page.GetByTestId("shared-provider-source-card").Filter(new() { HasTextString = SourceName })
             .GetByTestId("shared-provider-source-sync").ClickAsync();
         await page.GetByText("Source synchronized", new() { Exact = true }).WaitForAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
     }
 
     internal static async Task<string> IssueTokenAsync(IPage page, string address, bool shared, IEnumerable<string>? additionalScopes = null) {

@@ -91,7 +91,7 @@ public partial class ProjectStructurePage
         CloseQuickActionDialog();
         CloseProcessLinkDialog();
         var projectId = ProjectId;
-        var navigation = AgentChatNavigationFence;
+        var navigation = StructureNavigationFence;
         var requestId = Guid.NewGuid();
         processLinkRequestId = requestId;
         var context = processLinkContext = CaptureActionContext();
@@ -155,7 +155,7 @@ public partial class ProjectStructurePage
     }
 
     private bool IsCurrentProcessLinkRequest(Guid requestId, Guid projectId, AgentChatNavigationIdentity navigation)
-        => processLinkRequestId == requestId && ProjectId == projectId && AgentChatNavigationFence == navigation &&
+        => processLinkRequestId == requestId && ProjectId == projectId && StructureNavigationFence == navigation &&
            processLinkContext is { } context && IsCurrentAction(context) && HasOriginalContentAuthority(context);
 
     private bool IsCurrentProcessLink(ProjectStructureProcessLinkDialogState dialog)
@@ -349,7 +349,7 @@ public partial class ProjectStructurePage
             string.Empty) {
             EstimateOnlyMode = estimateOnly,
             Context = CaptureActionContext(),
-            NavigationIdentity = AgentChatNavigationFence
+            NavigationIdentity = StructureNavigationFence
         };
         processStartDialog = dialog;
         try {
@@ -584,7 +584,7 @@ public partial class ProjectStructurePage
     private bool IsCurrentProcessStart(ProjectStructureProcessStartDialogState dialog)
         => processStartDialog?.DialogId == dialog.DialogId &&
            ProjectId == dialog.ProjectId &&
-           AgentChatNavigationFence == dialog.NavigationIdentity && dialog.Context is { } context &&
+           StructureNavigationFence == dialog.NavigationIdentity && dialog.Context is { } context &&
            IsCurrentAction(context) && HasOriginalContentAuthority(context);
 
     private static string AppendProcessStartedQuery(string route)

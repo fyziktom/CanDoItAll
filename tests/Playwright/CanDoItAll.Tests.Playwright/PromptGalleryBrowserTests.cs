@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -141,6 +142,50 @@ public sealed class PromptGalleryBrowserTests
         await page.GetByTestId("prompt-gallery-editor-cancel").ClickAsync();
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
 
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        Assert.Empty(pageErrors);
+    }
+
+    [Fact]
+    public async Task Filters_and_the_editor_are_addressable_and_follow_back_forward_and_reload()
+    {
+        await using var context = await NewContextAsync();
+        var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, message) => pageErrors.Add(message);
+        var title = $"History proof {Guid.NewGuid():N}";
+        await OpenGalleryAsync(page, "/prompt-gallery");
+        var itemId = await CreateDraftAsync(page, title, "Back and Forward close and reopen this editor.");
+
+        await page.GetByTestId("prompt-gallery-status-filter").SelectOptionAsync("Draft");
+        await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/prompt-gallery?status=draft");
+        await page.GetByTestId("prompt-gallery-search").FillAsync(title);
+        var listUrl = ExactUrl($"{fixture.BaseUrl}/prompt-gallery?q={Uri.EscapeDataString(title)}&status=draft");
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
+        await page.GetByTestId("prompt-gallery-grid").GetByText(title, new() { Exact = true }).WaitForAsync();
+        await page.GetByTestId("prompt-gallery-edit").ClickAsync();
+        var editor = page.GetByTestId("prompt-gallery-item-editor");
+        await editor.WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(ExactUrl($"{fixture.BaseUrl}/prompt-gallery?promptId={itemId:D}&q={Uri.EscapeDataString(title)}&status=draft"));
+
+        // Back closes the editor like its Close button; Forward reopens the same item.
+        await page.GoBackAsync();
+        await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
+        await page.GoForwardAsync();
+        await editor.WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-editor-title")).ToHaveValueAsync(title);
+
+        // A reload restores the editor and the committed filters from the URL alone.
+        await page.ReloadAsync();
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await editor.WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-editor-title")).ToHaveValueAsync(title);
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-status-filter")).ToHaveValueAsync("Draft");
+
+        await page.GetByTestId("prompt-gallery-editor-cancel").ClickAsync();
+        await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.Empty(pageErrors);
     }
@@ -289,6 +334,10 @@ public sealed class PromptGalleryBrowserTests
     }
 
     // Creates a draft through the real editor and returns the persisted identity read from the refreshed list.
+    // Playwright normalizes a string URL through System.Uri, which unescapes %20, so an exact URL holding an escaped
+    // value is matched as an anchored pattern instead.
+    private static Regex ExactUrl(string url) => new("^" + Regex.Escape(url) + "$");
+
     private static async Task<Guid> CreateDraftAsync(IPage page, string title, string content, Func<ILocator, Task>? configure = null)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "New item", Exact = true }).ClickAsync();

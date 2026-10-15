@@ -1,4 +1,6 @@
+using CanDoItAll.AppComponents;
 using CanDoItAll.CrmHr.UI.Activity;
+using CanDoItAll.CrmHr.UI.Pickers;
 using CanDoItAll.CrmHr.UI.Workforce;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -82,6 +84,9 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
     public int SelectedDetailTabIndex { get; private set; }
 
     public int WorkforceBrowserVersion { get; private set; }
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<WorkforceRecordViewFilter>? CatalogQuery => null;
 
     public bool IsCapacityWorkspaceLoading { get; private set; }
 
@@ -183,6 +188,8 @@ public sealed class CrmHrWorkforceSandboxView(CrmHrSandboxPartyStore partyStore)
         Log($"Select party: {SelectedWorkspace?.DisplayName}");
         return Task.CompletedTask;
     }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<WorkforceRecordViewFilter> change) => Task.CompletedTask;
 
     public Task CloseRecordDialogAsync()
     {

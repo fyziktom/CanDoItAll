@@ -25,6 +25,7 @@
     <ProjectReference Include="..\CanDoItAll.Modules.Prompts.Contracts\CanDoItAll.Modules.Prompts.Contracts.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.Prompts.UI\CanDoItAll.Prompts.UI.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents.Navigation\CanDoItAll.AppComponents.Navigation.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
   </ItemGroup>

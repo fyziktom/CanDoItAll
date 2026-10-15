@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Collaboration.UI;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Collaboration;
@@ -24,11 +25,12 @@ public sealed class CollaborationReconciliationTests : BunitContext {
     public async Task Real_reply_input_survives_delayed_reconciliation(bool remainingUnread, bool withoutBlur) {
         var owner = new Owner();
         IRenderedComponent<CollaborationWorkspaceSurface>? cut = null;
-        var routes = new List<Guid?>();
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
         using var session = new CollaborationWorkspaceSession(owner, NullLogger<CollaborationWorkspaceSession>.Instance,
-            () => cut?.Render(), routes.Add, _ => { }, (_, _) => { });
-        await session.ApplyRouteAsync(null);
+            () => cut?.Render(), (route, mode) => routes.Add((route, mode)), _ => { }, (_, _) => { });
+        await session.ApplyRouteAsync(new CollaborationUrlState(CollaborationSection.Inbox));
         await session.SetUnreadOnlyAsync(true);
+        var published = routes.Count;
         cut = Render<CollaborationWorkspaceSurface>(parameters => parameters.Add(item => item.View, session));
         await cut.InvokeAsync(() => cut.Find("[data-testid=collaboration-reply-message]").Change("Accepted first reply"));
         var pending = new TaskCompletionSource<CollaborationWorkspaceModel>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -56,11 +58,12 @@ public sealed class CollaborationReconciliationTests : BunitContext {
         Assert.Equal("Unsent successor for A", cut.Find("[data-testid=collaboration-reply-message]").GetAttribute("value"));
         Assert.Single(cut.FindAll("[data-testid=collaboration-reply-retained]"));
         Assert.Equal(Owner.A, Assert.Single(owner.Replies).ThreadId);
-        Assert.Empty(routes);
+        Assert.Equal(published, routes.Count);
         await cut.InvokeAsync(() => session.SetSectionAsync(CollaborationSection.Threads));
         await cut.InvokeAsync(() => session.SelectAsync(Owner.B));
         Assert.Empty(session.Reply.Model.MessageBody);
-        Assert.Equal([Owner.B], routes);
+        Assert.Equal([(new CollaborationUrlState(CollaborationSection.Threads, true, Owner.A), UrlHistoryMode.Push),
+            (new CollaborationUrlState(CollaborationSection.Threads, true, Owner.B), UrlHistoryMode.Push)], routes.Skip(published));
         Assert.Single(owner.Replies);
     }
 
@@ -71,8 +74,8 @@ public sealed class CollaborationReconciliationTests : BunitContext {
         var read = new TaskCompletionSource<CollaborationWorkspaceModel>(TaskCreationOptions.RunContinuationsAsynchronously);
         IRenderedComponent<CollaborationWorkspaceSurface>? cut = null;
         using var session = new CollaborationWorkspaceSession(owner, NullLogger<CollaborationWorkspaceSession>.Instance,
-            () => cut?.Render(), _ => { }, _ => { }, (_, _) => { });
-        await session.ApplyRouteAsync(null);
+            () => cut?.Render(), (_, _) => { }, _ => { }, (_, _) => { });
+        await session.ApplyRouteAsync(new CollaborationUrlState(CollaborationSection.Inbox));
         cut = Render<CollaborationWorkspaceSurface>(parameters => parameters.Add(item => item.View, session));
         Assert.True(session.Workspace!.SelectedThread!.IsUnread);
         owner.Mark = () => write.Task;

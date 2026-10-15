@@ -4,57 +4,73 @@
 <PageTitle>Agents</PageTitle>
 
 <AgentsShellSurface State="ShellPresentation" Intent="HandleShellIntentAsync">
-        @if (string.Equals(selectedTab, AgentWorkspaceTabs.Providers, StringComparison.Ordinal))
+        @if (route.Tab == AgentWorkspaceSection.Providers)
         {
-            <AgentProviderProfilesPanel />
+            <AgentProviderProfilesPanel ProviderId="@route.ProviderId"
+                                        Section="@route.ProviderSection"
+                                        ConnectionsOpen="@route.IsSharedConnectionsOpen"
+                                        HistoryLocation="@historyLocation"
+                                        ProviderRequested="HandleProviderRequestedAsync"
+                                        ProviderPublished="HandleProviderPublishedAsync"
+                                        NewDraftRequested="HandleNewProviderDraftRequestedAsync"
+                                        SectionRequested="HandleProviderSectionRequestedAsync"
+                                        ConnectionsRequested="HandleConnectionsRequestedAsync"
+                                        HistoryLocationChanged="HandleHistoryLocationChangedAsync" />
         }
-        else if (selectedTab == AgentWorkspaceTabs.RequestHistory) {
+        else if (route.Tab == AgentWorkspaceSection.RequestHistory) {
             <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel
-                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.AllAuthorized())" />
+                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.AllAuthorized())"
+                Location="@historyLocation"
+                LocationChanged="HandleHistoryLocationChangedAsync" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Voice, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Voice)
         {
             <AgentVoiceSettingsPanel />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.FloatingChat, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.FloatingChat)
         {
             <FloatingAgentChatSettingsPanel />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Agents)
         {
-            <AgentCatalogHost @key="catalogScopeVersion" RequestedAgentId="@effectiveRequestedAgentId"
+            <AgentCatalogHost @key="catalogScopeVersion" RequestedAgentId="@route.OpenAgentId"
+                               RequestedAgentSection="@route.AgentSection"
                                RequestedTeamId="@effectiveRequestedTeamId"
-                               SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+                               AgentOpenRequested="HandleAgentOpenRequestedAsync"
+                               AgentSectionChanged="HandleAgentSectionChangedAsync"
+                               AgentCloseRequested="HandleAgentCloseRequestedAsync"
+                               TeamSelectionRequested="HandleTeamSelectionRequestedAsync"
+                               SelectedAgentChanged="HandleCatalogAgentChangedAsync"
                                SelectedTeamChanged="HandleSelectedTeamChangedAsync"
                                ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync"
                                SkipCatalogRepair="true" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.SimpleChats, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.SimpleChats)
         {
             <SimpleChatsWorkspace View="@simpleChatRouteState.View"
                                   DefinitionId="@simpleChatRouteState.DefinitionId"
                                   ConversationId="@simpleChatRouteState.ConversationId"
                                   RouteStateChanged="HandleSimpleChatRouteStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Chat, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Chat)
         {
-            <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId"
-                            SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+            <AgentChatPanel PreferredAgentId="@route.AgentId"
+                            SelectedAgentChanged="HandlePanelAgentChangedAsync"
                             ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Capabilities, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Capabilities)
         {
-            <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId"
-                                    SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+            <AgentCapabilitiesPanel PreferredAgentId="@route.AgentId"
+                                    SelectedAgentChanged="HandlePanelAgentChangedAsync"
                                     ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Governance, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Governance)
         {
-            <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId"
-                                  SelectedAgentChanged="HandleSelectedAgentChangedAsync"
+            <AgentGovernancePanel PreferredAgentId="@route.AgentId"
+                                  SelectedAgentChanged="HandlePanelAgentChangedAsync"
                                   ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Diagnostics, StringComparison.Ordinal))
+        else if (route.Tab == AgentWorkspaceSection.Diagnostics)
         {
             <AgentDiagnosticsPanel />
         }

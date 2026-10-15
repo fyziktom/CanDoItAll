@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
@@ -29,9 +30,11 @@ public sealed class DataSourcesBrowserTests {
         await page.Locator("[data-testid=database-profile-controls][data-interactive=true]").WaitForAsync();
         await Assertions.Expect(page.GetByTestId("database-startup-modal")).ToHaveCountAsync(0);
         await Assertions.Expect(page.GetByTestId("database-data-sources-summary")).ToContainTextAsync("Owned workspace A");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"/settings\\?tab=data-sources&profileId={host.ProfileA:D}$"));
         await Assertions.Expect(page.GetByTestId("database-profile-new-postgres")).ToBeEnabledAsync();
         await page.GetByTestId("database-profile-new-postgres").ClickAsync();
         await Assertions.Expect(page.GetByRole(AriaRole.Heading, new() { Name = "New data source", Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("/settings\\?tab=data-sources$"));
         var connection = new NpgsqlConnectionStringBuilder(host.B.ConnectionString);
         await page.GetByTestId("database-profile-name").FillAsync("Owned workspace B");
         await page.GetByTestId("database-profile-workspace-root").FillAsync(host.B.WorkspaceRootPath);
@@ -52,6 +55,7 @@ public sealed class DataSourcesBrowserTests {
         }
         await Assertions.Expect(page.GetByTestId("database-profile-postgres-password")).ToHaveValueAsync(string.Empty);
         var profileB = await host.TargetProfileIdAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"/settings\\?tab=data-sources&profileId={profileB:D}$"));
         Assert.False(await ExistsAsync(host.B.ConnectionString));
         var profiles = host.Services.GetRequiredService<IDatabaseProfileService>();
         var saved = await profiles.GetEditorAsync(profileB);
@@ -133,6 +137,7 @@ public sealed class DataSourcesBrowserTests {
         await Assertions.Expect(page.GetByTestId("projects-tree-workspace").GetByText("Owned source project A", new() { Exact = true }).First).ToBeVisibleAsync();
         await page.GoBackAsync();
         await Assertions.Expect(page.GetByTestId("database-data-sources-summary")).ToContainTextAsync("Owned workspace A");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"/settings\\?tab=data-sources&profileId={host.ProfileA:D}$"));
         await context.CloseAsync();
         await host.RestartAsync();
         var afterRestart = await host.ReadRuntimeAsync();

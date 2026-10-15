@@ -56,7 +56,7 @@ public sealed class CrmHrDirectoryEditJourneyTests
             await CrmHrDirectoryJourneySupport.OpenAsync(oracle, page, $"{fixture.BaseUrl}/crm-hr/directory");
             await CrmHrDirectoryJourneySupport.WaitForCatalogAsync(page, "crmhr-directory");
 
-            // New party: the editor opens as a draft on the base route.
+            // New party: the editor opens as a draft at its own location over the catalog.
             await page.GetByTestId("crmhr-directory-new-button").ClickAsync();
             await Assertions.Expect(dialog).ToBeVisibleAsync(new() { Timeout = 30_000 });
             await Assertions.Expect(dialog.Locator(".cda-dialog__title")).ToHaveTextAsync("New party");
@@ -75,7 +75,7 @@ public sealed class CrmHrDirectoryEditJourneyTests
             await Assertions.Expect(dialog).ToBeVisibleAsync();
             await Assertions.Expect(dialog.Locator(".cda-dialog__title")).ToHaveTextAsync("New party");
             await Assertions.Expect(summaryInput).ToHaveValueAsync(validationMarker);
-            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl("/crm-hr/directory"));
+            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl("/crm-hr/directory", "dialog=new-party"));
             var afterRejectedSave = await CrmHrDirectoryJourneySupport.ListDirectoryAsync(owner);
             Assert.DoesNotContain(afterRejectedSave, item => string.Equals(item.Summary, validationMarker, StringComparison.Ordinal));
             Assert.DoesNotContain(afterRejectedSave, item => string.IsNullOrWhiteSpace(item.DisplayName));
@@ -189,7 +189,10 @@ public sealed class CrmHrDirectoryEditJourneyTests
             await Assertions.Expect(dialog).ToBeVisibleAsync(new() { Timeout = 30_000 });
             await Assertions.Expect(nameInput).ToHaveValueAsync(displayName);
             await Assertions.Expect(summaryInput).ToHaveValueAsync(editedSummary);
-            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl("/crm-hr/directory", $"partyId={partyId:D}"));
+            // The record opens over the catalog entry, which keeps the search that found it.
+            await Assertions.Expect(page).ToHaveURLAsync(CrmHrDirectoryJourneySupport.RouteUrl(
+                "/crm-hr/directory",
+                $"partyId={partyId:D}&q={Uri.EscapeDataString(displayName)}"));
             await evidence.ScreenshotAsync(page, "06-reopened-after-cancel-1600.png");
 
             await evidence.WriteExpectedTeardownAsync(oracle.ExpectedTeardown);

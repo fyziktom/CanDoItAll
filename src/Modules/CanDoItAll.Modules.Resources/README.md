@@ -28,6 +28,17 @@ the existing in-process services and current canonical profile. The standalone s
 uses the same renderer/controllers with deterministic owners. See the
 [Resources UI boundary](../../../docs/architecture/resources-ui-boundary.md).
 
+`ResourcesPage` owns the `/resources` URL through `ResourcesUrlCodec` (see
+[navigation state](../../../docs/architecture/navigation-state.md)): `view=browse`,
+`resourceId` (the selected resource), `projectId` (the project that seeds new drafts),
+the registry filters `q`, `project`, `connector` and `validation`, and the browse `source`.
+`ResourceRegistryController` raises `RouteChanged` and `FiltersChanged`, and
+`ResourceBrowseController` raises `SourceSelected`, so the page writes them: tab, record and
+source selection push, the first save of a new resource and the deletion of the selected
+one replace, instant filters and the debounced search replace, and reset pushes. A
+selection keeps the project seed only while the resource belongs to that project, so the
+URL always stays a valid resource and project binding.
+
 Stable value contracts live in `CanDoItAll.Modules.Resources.Contracts`, retaining
 their public namespaces and serialization. This module still owns business behavior,
 connector validation, source resolution, project admission and file authority.

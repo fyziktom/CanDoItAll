@@ -16,4 +16,10 @@ a missing query operation ID cannot be recovered by a name match. Review observe
 persistence, not proof of the earlier command. Demo review reports which fixed IDs exist;
 subsequent creation skips confirmed IDs. Returned identities survive failed read-back.
 
+`MemoryUrlCodec` owns the `/memory` URL: `providerId` (ordinal, as stored) and `tab`
+(`operations`, `events`, `feedback`, `query`, `ingestion`, `provider-ui`; `providers` omitted).
+The renderer's tab index stays a render detail mapped to `MemoryWorkspaceTab`. The owner default
+provider is replaced into the URL, tab and provider intents push, re-selecting the selected
+provider keeps its drafts, and an unknown `providerId` stays selected as missing.
+
 See [the boundary and proof record](../../../docs/architecture/memory-ui-boundary.md).

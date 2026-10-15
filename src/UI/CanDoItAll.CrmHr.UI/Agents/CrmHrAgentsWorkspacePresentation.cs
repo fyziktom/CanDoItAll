@@ -33,3 +33,12 @@ public enum AiAgentValidationFilter
     Approved,
     Suspended
 }
+
+// The sections of the agent record dialog, in tab order. The routed host keeps the selected one.
+public enum CrmHrAgentRecordSection
+{
+    Overview,
+    CrmProfile,
+    TechnicalProjection,
+    Evidence
+}

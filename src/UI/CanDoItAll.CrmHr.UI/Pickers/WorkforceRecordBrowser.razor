@@ -9,10 +9,13 @@
                     Selection="@Selection"
                     SelectionChanged="@SelectionChanged"
                     LoadFailed="@LoadFailed"
+                    Query="@Query"
+                    QueryChanged="@QueryChanged"
                     PageSize="@PageSize"
                     ResultsScrollMode="@ResultsScrollMode"
                     GridMode="@GridMode"
                     FillHeight="@FillHeight"
+                    MaximumSearchLength="WorkforceRecordQueryLimits.MaximumSearchLength"
                     SearchPlaceholder="@SearchPlaceholder"
                     FilterAriaLabel="Workforce affiliation"
                     LoadingEyebrow="Workforce"
@@ -34,6 +37,13 @@
 
     [Parameter]
     public EventCallback<Exception> LoadFailed { get; set; }
+
+    // The committed catalog query when the host keeps it; null lets the browser keep its own.
+    [Parameter]
+    public PagedRecordQueryState<WorkforceRecordViewFilter>? Query { get; set; }
+
+    [Parameter]
+    public EventCallback<PagedRecordQueryChange<WorkforceRecordViewFilter>> QueryChanged { get; set; }
 
     [Parameter]
     public bool IncludeArchived { get; set; }

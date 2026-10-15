@@ -11,6 +11,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Structure.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
@@ -276,7 +277,10 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
             Assert.True((await projects.CreateAsync(project, new() { Name = "Replacement text owner" })).IsSuccess);
             var replacement = (await projects.GetAsync(project)).ExpectedProjectAdmission;
             Assert.NotEqual(originalAdmission, replacement);
-            await page.InvokeAsync(() => page.Render(parameters => parameters.Add(component => component.ProjectId, project)));
+            // An echo of the same route no longer reloads; the explicit reload observes the replacement project.
+            var workspace = page.FindComponent<StructureWorkspace>().Instance;
+            await page.InvokeAsync(() => workspace.Dispatch.InvokeAsync(
+                new StructureToolbarIntent(workspace.Presentation.ContextId, StructureToolbarCommand.Retry)));
             page.WaitForAssertion(() => Assert.Equal("Replacement text owner", page.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes
                 .Single(node => node.Id == $"project:{project:D}").Title));
         } finally {

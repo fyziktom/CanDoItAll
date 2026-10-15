@@ -14,7 +14,7 @@ using System.Text.Json.Nodes;
 namespace CanDoItAll.Tests.Components.Processes;
 
 [Trait("Category", "HostPlatform")]
-public sealed class SchedulerPlannerPageTests
+public sealed partial class SchedulerPlannerPageTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -710,10 +710,13 @@ public sealed class SchedulerPlannerPageTests
 
         public SchedulerPlanEditorModel? LastSavedEditor { get; private set; }
 
+        public SchedulerHistoryQuery? LastHistoryQuery { get; private set; }
+
         public Task<SchedulerPlannerWorkspace> GetWorkspaceAsync(
             SchedulerHistoryQuery? historyQuery = null,
             CancellationToken cancellationToken = default)
         {
+            LastHistoryQuery = historyQuery;
             return Task.FromResult(workspace);
         }
 

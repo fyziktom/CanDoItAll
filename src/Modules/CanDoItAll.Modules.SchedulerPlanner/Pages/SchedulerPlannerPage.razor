@@ -1,15 +1,19 @@
 @page "/scheduler"
 @implements IDisposable
 @using CanDoItAll.AppComponents
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Modules.SchedulerPlanner.Presentation
 @using CanDoItAll.SchedulerPlanner.UI
+@using Microsoft.JSInterop
 @inject SchedulerWorkspaceSession Session
 @inject IAgentFrameworkWorkspaceService AgentWorkspaceService
 @inject IAgentChatLauncher AgentChatLauncher
 @inject NotificationService Notifications
+@inject NavigationManager Navigation
+@inject IAppNavigationHistory NavigationHistory
 
 <PageTitle>Scheduler</PageTitle>
 <AgentChatContextSurfaceProvider Surface="@AgentSurface" ContextAccessState="@AccessState" />
@@ -24,6 +28,18 @@
 </SchedulerWorkspaceSurface>
 
 @code {
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.TabKey)] public string? TabQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.PlanKey)] public string? PlanQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.ViewKey)] public string? ViewQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.DateKey)] public string? DateQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.SearchKey)] public string? SearchQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.KindKey)] public string? KindQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.StateKey)] public string? StateQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.HistorySearchKey)] public string? HistorySearchQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.HistoryStatusKey)] public string? HistoryStatusQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SchedulerUrlCodec.HistoryKindKey)] public string? HistoryKindQuery { get; set; }
+
+    private UrlStateBinding<SchedulerRoute> url = null!;
     private SchedulerWorkspace workspace = null!;
     private AgentDefinition? agent;
     private bool openingAgent;
@@ -55,10 +71,71 @@
     }, SelectedPlan, SelectedTarget, workspace.DeletePlan is not null ? "delete-schedule" : workspace.EditDraft is not null ? "edit-schedule" : workspace.PickerDraft is not null ? "target-picker" : null);
 
     protected override async Task OnInitializedAsync() {
+        url = new(Navigation, SchedulerUrlCodec.Instance, NavigationHistory, typeof(SchedulerPlannerPage));
         workspace = new(Session);
         workspace.Changed += Changed;
-        await Task.WhenAll(workspace.InitializeAsync(), ResolveAgentAsync());
+        workspace.Navigated += Navigated;
+        // The first location decides what the workspace loads; later locations arrive through OnParametersSet.
+        url.Apply(canonicalize: RendererInfo.IsInteractive);
+        await Task.WhenAll(workspace.InitializeAsync(url.State), ResolveAgentAsync());
     }
+
+    protected override async Task OnParametersSetAsync() {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged || change.IsInitial || disposed) {
+            return;
+        }
+        var applying = workspace.ApplyRouteAsync(change.Current);
+        PublishResolved();
+        await applying;
+    }
+
+    // Replace records what the workspace adopted when it could not show the address as given.
+    private void PublishResolved() {
+        if (RendererInfo.IsInteractive && !SchedulerUrlCodec.Instance.SameState(url.State, workspace.Route)) {
+            url.Navigate(workspace.Route, UrlHistoryMode.Replace);
+        }
+    }
+
+    private void Navigated(SchedulerNavigationKind kind) {
+        if (disposed) {
+            return;
+        }
+        var next = workspace.Route;
+        switch (kind) {
+            case SchedulerNavigationKind.OpenEditor when url.State.PlanId is null:
+                url.OpenOverlay(next);
+                break;
+            case SchedulerNavigationKind.OpenEditor:
+                // Another plan in the open editor replaces the overlay entry, so Back still leaves the editor.
+                url.Navigate(next, UrlHistoryMode.Replace);
+                break;
+            case SchedulerNavigationKind.CloseEditor:
+                _ = CloseEditorAsync(next);
+                break;
+            case SchedulerNavigationKind.EditorRemoved:
+            case SchedulerNavigationKind.ScheduleFilters:
+                url.Navigate(next, UrlHistoryMode.Replace);
+                break;
+            case SchedulerNavigationKind.Tab:
+            case SchedulerNavigationKind.Calendar:
+            case SchedulerNavigationKind.HistorySearch:
+                url.Navigate(next, UrlHistoryMode.Push);
+                break;
+            default:
+                throw new InvalidOperationException($"Scheduler navigation {kind} has no history rule.");
+        }
+    }
+
+    private async Task CloseEditorAsync(SchedulerRoute parent) {
+        try {
+            await url.CloseOverlayAsync(parent);
+        } catch (JSDisconnectedException) {
+        } catch (Exception exception) when (!disposed) {
+            await DispatchExceptionAsync(exception);
+        }
+    }
+
     private async Task ResolveAgentAsync() {
         try {
             var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
@@ -103,6 +180,7 @@
     public void Dispose() {
         disposed = true;
         workspace.Changed -= Changed;
+        workspace.Navigated -= Navigated;
         workspace.Dispose();
     }
 }

@@ -16,25 +16,32 @@ public sealed partial class SharedProviderNativeConsumerTests {
         var second = await AuthorNativeDefinitionAsync(fixture, human: true);
         var page = fixture.Page;
         var firstRoute = $"/agents/workflows?workflowId={first.Id.Value:D}";
+        var firstEditorRoute = $"/agents/workflows?tab=editor&workflowId={first.Id.Value:D}";
         var secondRoute = $"/agents/workflows?workflowId={second.Id.Value:D}";
+        var secondEditorRoute = $"/agents/workflows?tab=editor&workflowId={second.Id.Value:D}";
         await fixture.NavigateAsync(firstRoute);
         await ExpectEditorAsync(first.Name);
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + firstEditorRoute);
         var unsavedName = first.Name + " local draft";
         await page.GetByTestId("workflow-canvas-name").FillAsync(unsavedName);
         foreach (var tab in new[] { "dashboard", "workflows", "history", "analytics" }) {
-            await page.GetByTestId("workflows-tab-" + tab).ClickAsync();
+            await SelectTabAsync(tab);
             await ExpectEditorAsync(unsavedName);
         }
         await fixture.NavigateAsync(secondRoute);
         await ExpectEditorAsync(second.Name);
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + firstRoute,
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + secondEditorRoute);
+        await page.GoBackAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + secondRoute);
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + firstEditorRoute,
             _ => page.GoBackAsync());
-        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + firstRoute);
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + firstEditorRoute);
         await ExpectEditorAsync(first.Name);
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, fixture.Address + secondRoute,
             _ => page.GoForwardAsync());
         await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + secondRoute);
         await ExpectEditorAsync(second.Name);
+        await Assertions.Expect(page).ToHaveURLAsync(fixture.Address + secondEditorRoute);
         Assert.Equal(first.VersionId, (await ReadNativeDefinitionAsync(fixture, first.Id)).VersionId);
         Assert.Equal(second.VersionId, (await ReadNativeDefinitionAsync(fixture, second.Id)).VersionId);
         await fixture.ScreenshotAsync("wf1-native-browser-history-1920");
@@ -44,8 +51,16 @@ public sealed partial class SharedProviderNativeConsumerTests {
             ForwardRestoresNativeDefinition = true, AdditionalVersions = 0
         });
 
+        // The canvas stays mounted behind the other tabs, so its value alone does not prove that a tab change arrived;
+        // the selected tab does, and the tab's history entry is written before it is selected.
+        async Task SelectTabAsync(string tab) {
+            await page.GetByTestId("workflows-tab-" + tab).ClickAsync();
+            await Assertions.Expect(page.GetByTestId("workflows-tab-" + tab)).ToHaveAttributeAsync("aria-selected", "true");
+        }
+
         async Task ExpectEditorAsync(string name) {
-            await page.GetByTestId("workflows-tab-editor").ClickAsync();
+            await SelectTabAsync("editor");
+            await Assertions.Expect(page.GetByTestId("workflow-canvas-name")).ToBeVisibleAsync();
             await Assertions.Expect(page.GetByTestId("workflow-canvas-name")).ToHaveValueAsync(name);
         }
     }

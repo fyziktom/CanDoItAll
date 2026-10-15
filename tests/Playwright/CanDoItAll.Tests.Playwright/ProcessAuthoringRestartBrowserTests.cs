@@ -175,6 +175,9 @@ public sealed class ProcessAuthoringRestartBrowserTests {
             await Assertions.Expect(reopened.GetByTestId("processes-page-scaffold")).ToHaveAttributeAsync("data-interactive", "true");
             await reopened.GetByTestId("processes-detail-tab-runs").ClickAsync();
             await Assertions.Expect(reopened.GetByTestId("processes-runtime-run-card").First).ToContainTextAsync("Completed");
+            // The pasted run stays the explicit selection: the Runs tab is its default, so the address keeps only the identities.
+            await Assertions.Expect(reopened).ToHaveURLAsync(new System.Text.RegularExpressions.Regex(
+                $"/processes\\?definitionKey={host.DefinitionKey}&runId={run.Value:D}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase));
             await reopened.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "restarted-exact-workflow.png") });
             using var recovered = await PostAsync("/api/processes/launch", request with { PreparedAdmissionId = admission });
             Assert.Equal(run.Value, recovered.RootElement.GetProperty("runId").GetGuid());

@@ -28,10 +28,14 @@ public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
     Guid? SelectedPartyId { get; }
     Error? ConversionEligibilityError { get; }
     PagedRecordSelection<Guid>? ApplicationSelection { get; }
+    // The application catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<RecruitmentApplicationScope>? CatalogQuery { get; }
     int SelectedRecruitingTabIndex { get; }
     string RecruitmentDialogTitle { get; }
     Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(PagedRecordRequest<RecruitmentApplicationScope> request, CancellationToken cancellationToken);
     Task SelectApplicationAsync(Guid applicationId);
+    // A committed catalog change: a debounced search, a stage, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change);
     Task HandleApplicationPageLoadFailed(Exception exception);
     Task CreateNewApplicationAsync();
     Task CloseRecruitmentDialogAsync();

@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Collaboration.UI;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Collaboration.Pages;
@@ -16,10 +17,13 @@ public sealed class CollaborationWorkspaceSessionTests {
     [InlineData(true)]
     public async Task Reply_reconciliation_retains_unsent_successor_on_its_original_target(bool remainingUnread) {
         var owner = new Owner();
-        var routes = new List<Guid?>();
-        using var session = Session(owner, routes.Add);
-        await session.ApplyRouteAsync(null);
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        using var session = Session(owner, (route, mode) => routes.Add((route, mode)));
+        await session.ApplyRouteAsync(Inbox);
         await session.SetUnreadOnlyAsync(true);
+        Assert.Equal([(new CollaborationUrlState(CollaborationSection.Inbox, false, A), UrlHistoryMode.Replace),
+            (new CollaborationUrlState(CollaborationSection.Inbox, true, A), UrlHistoryMode.Push)], routes);
+        var published = routes.Count;
         var target = session.Target!;
         session.Reply.Model.MessageBody = "First accepted reply";
         var pending = Completion<CollaborationWorkspaceModel>();
@@ -40,7 +44,7 @@ public sealed class CollaborationWorkspaceSessionTests {
         Assert.Same(context, session.Reply.Context);
         Assert.Equal("Unsent successor for A", session.Reply.Model.MessageBody);
         Assert.Equal(["Unsent validation state"], context.GetValidationMessages());
-        Assert.Empty(routes);
+        Assert.Equal(published, routes.Count);
         var request = Assert.Single(owner.Replies);
         Assert.Equal(A, request.ThreadId);
         Assert.False(request.MarkAsUnread);
@@ -49,7 +53,8 @@ public sealed class CollaborationWorkspaceSessionTests {
         await session.SelectAsync(B);
         Assert.NotSame(successor, session.Reply);
         Assert.Empty(session.Reply.Model.MessageBody);
-        Assert.Equal([B], routes);
+        Assert.Equal([(new CollaborationUrlState(CollaborationSection.Threads, true, A), UrlHistoryMode.Push),
+            (new CollaborationUrlState(CollaborationSection.Threads, true, B), UrlHistoryMode.Push)], routes.Skip(published));
         Assert.Single(owner.Replies);
     }
 
@@ -60,10 +65,11 @@ public sealed class CollaborationWorkspaceSessionTests {
     [InlineData(true, true)]
     public async Task Read_reconciliation_preserves_already_dirty_reply_until_explicit_discard(bool markRead, bool remainingUnread) {
         var owner = new Owner();
-        var routes = new List<Guid?>();
-        using var session = Session(owner, routes.Add);
-        await session.ApplyRouteAsync(null);
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        using var session = Session(owner, (route, mode) => routes.Add((route, mode)));
+        await session.ApplyRouteAsync(Inbox);
         await session.SetUnreadOnlyAsync(true);
+        var published = routes.Count;
         var target = session.Target!;
         var draft = session.Reply;
         draft.Model.MessageBody = "Keep A's unsent text";
@@ -79,7 +85,7 @@ public sealed class CollaborationWorkspaceSessionTests {
         Assert.Same(draft, session.Reply);
         Assert.Equal("Keep A's unsent text", draft.Model.MessageBody);
         Assert.True(draft.Context.IsModified());
-        Assert.Empty(routes);
+        Assert.Equal(published, routes.Count);
         Assert.Empty(owner.Replies);
         Assert.Equal(markRead ? new[] { A } : [], owner.Marked);
 
@@ -102,12 +108,12 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Same_route_refresh_and_section_preserve_both_drafts_and_contexts() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(Inbox);
         var draft = session.Reply;
         var create = session.NewThread;
         draft.Model.MessageBody = "Unsent reply";
         create.Model.Subject = "Unsent create";
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(session.Route);
         Assert.Equal(1, owner.Reads);
         await session.SetSectionAsync(CollaborationSection.Threads);
         await session.RefreshAsync();
@@ -122,7 +128,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Unread_filter_keeps_empty_selection_despite_owner_null_fallback_and_does_not_filter_threads() {
         var owner = new Owner { Read = (id, _) => Task.FromResult(Snapshot(id, unread: false)) };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(Inbox);
         await session.SetUnreadOnlyAsync(true);
         Assert.Null(session.Target);
         Assert.Null(session.Workspace!.SelectedThread);
@@ -136,11 +142,11 @@ public sealed class CollaborationWorkspaceSessionTests {
     [Fact]
     public async Task Explicit_missing_thread_is_distinct_from_successful_empty_workspace() {
         using var missing = Session(new());
-        await missing.ApplyRouteAsync(Guid.NewGuid());
+        await missing.ApplyRouteAsync(Deep(Guid.NewGuid()));
         Assert.True(missing.IsMissing);
         Assert.NotNull(missing.Target);
         using var empty = Session(new Owner { Read = (_, _) => Task.FromResult(new CollaborationWorkspaceModel([], [], [], null, new(0, 0))) });
-        await empty.ApplyRouteAsync(null);
+        await empty.ApplyRouteAsync(Inbox);
         Assert.False(empty.IsMissing);
         Assert.Equal(CollaborationReadState.Ready, empty.ReadState);
     }
@@ -157,9 +163,9 @@ public sealed class CollaborationWorkspaceSessionTests {
             return reads.Dequeue();
         } };
         using var session = Session(owner);
-        var loadA = session.ApplyRouteAsync(A);
-        var loadB = session.ApplyRouteAsync(B);
-        var returnA = session.ApplyRouteAsync(A);
+        var loadA = session.ApplyRouteAsync(Deep(A));
+        var loadB = session.ApplyRouteAsync(Deep(B));
+        var returnA = session.ApplyRouteAsync(Deep(A));
         Assert.True(tokens[0].IsCancellationRequested);
         Assert.True(tokens[1].IsCancellationRequested);
         first.SetResult(Snapshot(A));
@@ -178,8 +184,8 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Disposal_retires_pending_reads_without_rendering_or_accepting_results() {
         var pending = Completion<CollaborationWorkspaceModel>();
         var renders = 0;
-        var session = new CollaborationWorkspaceSession(new Owner { Read = (_, _) => pending.Task }, NullLogger<CollaborationWorkspaceSession>.Instance, () => renders++, _ => { }, _ => { }, (_, _) => { });
-        var load = session.ApplyRouteAsync(A);
+        var session = new CollaborationWorkspaceSession(new Owner { Read = (_, _) => pending.Task }, NullLogger<CollaborationWorkspaceSession>.Instance, () => renders++, (_, _) => { }, _ => { }, (_, _) => { });
+        var load = session.ApplyRouteAsync(Deep(A));
         session.Dispose();
         var before = renders;
         pending.SetResult(Snapshot(A));
@@ -192,13 +198,13 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Failed_refresh_preserves_same_scope_but_failed_new_target_never_shows_old_detail() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var accepted = session.Workspace;
         owner.Read = (_, _) => throw new InvalidOperationException("Unavailable");
         await session.RefreshAsync();
         Assert.Same(accepted, session.Workspace);
         Assert.Equal(CollaborationReadState.Stale, session.ReadState);
-        await session.ApplyRouteAsync(B);
+        await session.ApplyRouteAsync(Deep(B));
         Assert.Null(session.Workspace);
         Assert.Equal(CollaborationReadState.Failed, session.ReadState);
         Assert.Equal(B, session.Target!.ThreadId);
@@ -208,7 +214,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Empty_filter_preserves_the_warning_on_a_stale_snapshot() {
         var owner = new Owner { Read = (id, _) => Task.FromResult(Snapshot(id, unread: false)) };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(Inbox);
         owner.Read = (_, _) => throw new InvalidOperationException("Refresh unavailable");
         await session.RefreshAsync();
         var warning = session.ReadError;
@@ -222,7 +228,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Superseded_reply_reconciliation_cannot_relabel_a_newer_saved_reply() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var firstRead = Completion<CollaborationWorkspaceModel>();
         var secondRead = Completion<CollaborationWorkspaceModel>();
         var reads = new Queue<Task<CollaborationWorkspaceModel>>([firstRead.Task, secondRead.Task]);
@@ -247,7 +253,7 @@ public sealed class CollaborationWorkspaceSessionTests {
         var pending = Completion<Result>();
         var owner = new Owner { Append = _ => pending.Task };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var target = session.Target!;
         var draft = session.Reply;
         draft.Model.MessageBody = "Submitted";
@@ -273,7 +279,7 @@ public sealed class CollaborationWorkspaceSessionTests {
         var writes = new Queue<Task<Result>>([first.Task, second.Task]);
         var owner = new Owner { Append = _ => writes.Dequeue() };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var oldTarget = session.Target!;
         var oldDraft = session.Reply;
         oldDraft.Model.MessageBody = "Old A";
@@ -303,9 +309,9 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Create_completion_preserves_identity_but_does_not_navigate_a_newer_target() {
         var pending = Completion<Result<Guid>>();
         var owner = new Owner { Create = _ => pending.Task };
-        var routes = new List<Guid?>();
-        using var session = Session(owner, routes.Add);
-        await session.ApplyRouteAsync(A);
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        using var session = Session(owner, (route, mode) => routes.Add((route, mode)));
+        await session.ApplyRouteAsync(Deep(A));
         Fill(session.NewThread.Model);
         var origin = session.NewThread;
         var save = session.CreateAsync(origin);
@@ -319,14 +325,15 @@ public sealed class CollaborationWorkspaceSessionTests {
         Assert.Equal(newId, session.NewThread.SavedThreadId);
         Assert.Equal(B, session.Target!.ThreadId);
         Assert.Equal("B remains mine", session.Reply.Model.MessageBody);
-        Assert.Equal([B], routes);
+        Assert.Equal((new CollaborationUrlState(CollaborationSection.Threads, false, B), UrlHistoryMode.Push), routes[^1]);
+        Assert.DoesNotContain(routes, item => item.Route.ThreadId == newId);
     }
 
     [Fact]
     public async Task Committed_create_with_failed_refresh_retains_identity_and_retry_only_reads() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(Inbox);
         Fill(session.NewThread.Model);
         owner.Read = (_, _) => throw new InvalidOperationException("Refresh unavailable");
         await session.CreateAsync(session.NewThread);
@@ -343,7 +350,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Committed_reply_with_failed_refresh_keeps_saved_message_and_does_not_replay() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var draft = session.Reply;
         draft.Model.MessageBody = "Saved reply";
         owner.Read = (_, _) => throw new InvalidOperationException("Refresh unavailable");
@@ -377,7 +384,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Owner_rejection_preserves_draft_context_and_allows_correction() {
         var owner = new Owner { Append = _ => Task.FromResult(Result.Failure(Error.Validation("Reply refused"))) };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var draft = session.Reply;
         draft.Model.MessageBody = "Keep this";
         await session.ReplyAsync(session.Target!, draft);
@@ -390,7 +397,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     [Fact]
     public async Task Clear_preserves_kind_but_target_switch_resets_reply_and_leaves_quick_create_alone() {
         using var session = Session(new());
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var create = session.NewThread;
         create.Model.Subject = "Independent";
         session.Reply.Model.MessageKind = CollaborationMessageKind.Escalation;
@@ -409,7 +416,7 @@ public sealed class CollaborationWorkspaceSessionTests {
         var pending = Completion<Result>();
         var owner = new Owner { Mark = _ => pending.Task };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var target = session.Target!;
         var save = session.MarkReadAsync(target);
         await session.MarkReadAsync(target);
@@ -437,21 +444,51 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Explicit_deep_link_clears_a_previous_unread_filter_without_reloading_route_echoes() {
         var owner = new Owner { Read = (id, _) => Task.FromResult(Snapshot(id, unread: false)) };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(null);
+        await session.ApplyRouteAsync(Inbox);
         await session.SetUnreadOnlyAsync(true);
-        await session.ApplyRouteAsync(B);
+        await session.ApplyRouteAsync(Deep(B));
         Assert.False(session.UnreadOnly);
         Assert.Equal(B, session.Workspace!.SelectedThread!.ThreadId);
         var reads = owner.Reads;
-        await session.ApplyRouteAsync(B);
+        await session.ApplyRouteAsync(session.Route);
         Assert.Equal(reads, owner.Reads);
+    }
+
+    [Fact]
+    public async Task Route_publications_push_user_intents_and_replace_resolved_or_default_state() {
+        var owner = new Owner();
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        using var session = Session(owner, (route, mode) => routes.Add((route, mode)));
+
+        await session.ApplyRouteAsync(new CollaborationUrlState(CollaborationSection.Inbox, true, B));
+        await session.SelectAsync(A);
+        await session.SetSectionAsync(CollaborationSection.Threads);
+
+        Assert.False(session.UnreadOnly);
+        Assert.Equal([
+            (new CollaborationUrlState(CollaborationSection.Inbox, false, B), UrlHistoryMode.Replace),
+            (new CollaborationUrlState(CollaborationSection.Inbox, false, A), UrlHistoryMode.Push),
+            (new CollaborationUrlState(CollaborationSection.Threads, false, A), UrlHistoryMode.Push)], routes);
+        Assert.Equal(new CollaborationUrlState(CollaborationSection.Threads, false, A), session.Route);
+    }
+
+    [Fact]
+    public async Task A_deep_link_without_a_view_publishes_its_resolved_section_once_with_replace() {
+        var owner = new Owner();
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        using var session = Session(owner, (route, mode) => routes.Add((route, mode)));
+
+        await session.ApplyRouteAsync(Deep(B));
+
+        Assert.Equal(CollaborationSection.Threads, session.Section);
+        Assert.Equal([(new CollaborationUrlState(CollaborationSection.Threads, false, B), UrlHistoryMode.Replace)], routes);
     }
 
     [Fact]
     public async Task Section_changed_during_initial_read_is_preserved_and_empty_selection_is_explicit() {
         var pending = Completion<CollaborationWorkspaceModel>();
         using var session = Session(new Owner { Read = (_, _) => pending.Task });
-        var read = session.ApplyRouteAsync(null);
+        var read = session.ApplyRouteAsync(Inbox);
         await session.SetSectionAsync(CollaborationSection.Escalations);
         pending.SetResult(Snapshot(A));
         await read;
@@ -463,8 +500,8 @@ public sealed class CollaborationWorkspaceSessionTests {
     [Fact]
     public async Task Disposal_during_create_suppresses_completion_effects_without_cancelling_the_owner_write() {
         var pending = Completion<Result<Guid>>();
-        var routes = new List<Guid?>();
-        var session = Session(new Owner { Create = _ => pending.Task }, routes.Add);
+        var routes = new List<(CollaborationUrlState Route, UrlHistoryMode Mode)>();
+        var session = Session(new Owner { Create = _ => pending.Task }, (route, mode) => routes.Add((route, mode)));
         Fill(session.NewThread.Model);
         var draft = session.NewThread;
         var save = session.CreateAsync(draft);
@@ -480,7 +517,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Mark_read_admission_remains_held_until_its_reconciliation_finishes() {
         var owner = new Owner();
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var pending = Completion<CollaborationWorkspaceModel>();
         owner.Read = (_, _) => pending.Task;
         var target = session.Target!;
@@ -497,7 +534,7 @@ public sealed class CollaborationWorkspaceSessionTests {
     public async Task Unknown_mark_read_recovery_only_reads_before_enabling_a_new_explicit_action() {
         var owner = new Owner { Mark = _ => throw new InvalidOperationException("Missing acknowledgement") };
         using var session = Session(owner);
-        await session.ApplyRouteAsync(A);
+        await session.ApplyRouteAsync(Deep(A));
         var target = session.Target!;
         await session.MarkReadAsync(target);
         Assert.True(target.OutcomeUnknown);
@@ -508,7 +545,9 @@ public sealed class CollaborationWorkspaceSessionTests {
         Assert.Single(owner.Marked);
     }
 
-    private static CollaborationWorkspaceSession Session(Owner owner, Action<Guid?>? route = null) => new(owner, NullLogger<CollaborationWorkspaceSession>.Instance, () => { }, route ?? (_ => { }), _ => { }, (_, _) => { });
+    private static CollaborationUrlState Inbox { get; } = new(CollaborationSection.Inbox);
+    private static CollaborationUrlState Deep(Guid threadId) => new(null, false, threadId);
+    private static CollaborationWorkspaceSession Session(Owner owner, Action<CollaborationUrlState, UrlHistoryMode>? route = null) => new(owner, NullLogger<CollaborationWorkspaceSession>.Instance, () => { }, route ?? ((_, _) => { }), _ => { }, (_, _) => { });
     private static TaskCompletionSource<T> Completion<T>() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static void Fill(CollaborationThreadEditorModel model) {
         model.Subject = "Subject";

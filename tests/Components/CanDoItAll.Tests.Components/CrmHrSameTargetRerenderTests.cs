@@ -97,13 +97,21 @@ public sealed class CrmHrSameTargetRerenderTests
         Assert.Equal("Typed and not saved", view.ApplicationEditor.DesiredRole);
         Assert.NotNull(cut.Find("[data-testid='crmhr-recruiting-record-dialog']"));
 
-        // Closing the record is the operator's own discard.
+        // Closing the record is the operator's own discard: the record leaves the location and its drafts go with it.
         await cut.InvokeAsync(view.CloseRecruitmentDialogAsync);
 
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='crmhr-recruiting-record-dialog']")));
+        Assert.EndsWith("/crm-hr/recruiting", navigation.Uri, StringComparison.Ordinal);
         Assert.NotSame(applicationDraft, view.ApplicationEditor);
-        Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole);
+        Assert.Null(view.ApplicationEditor.Id);
+        Assert.NotEqual("Typed and not saved", view.ApplicationEditor.DesiredRole);
         var persisted = await recruiting.GetRecruitmentWorkspaceAsync(application.Value, null);
         Assert.Equal("Saved role", persisted.Application.DesiredRole);
+
+        // Opening the record again shows what was saved, not what was typed before the close.
+        navigation.NavigateTo($"/crm-hr/recruiting?applicationId={application.Value:D}");
+        cut.WaitForAssertion(() => Assert.Equal("Saved role", view.ApplicationEditor.DesiredRole));
+        Assert.Equal(application.Value, view.ApplicationEditor.Id);
     }
 
     [Fact]

@@ -20,7 +20,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         Guid id = (await projects.SaveAsync(new() { Name = "Acquired context" })).Value;
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         cut.WaitForElement("[data-testid='project-card']");
         var provider = cut.FindComponent<ProjectsAgentChatContextProvider>();
         Assert.Equal(AgentChatContextAccessState.Ready, provider.Instance.ContextAccessState);
@@ -47,7 +47,7 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls();
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await cut.InvokeAsync(() => cut.FindComponent<ProjectsAgentChatContextProvider>().Instance.RefreshRequested.InvokeAsync());
         Guid id = (await projects.SaveAsync(new() { Name = "Earlier snapshot" })).Value;
         controls.HeldPortfolioReads = hierarchy ? 2 : 1;
@@ -73,7 +73,7 @@ public sealed class ProjectsEditorMutationTests {
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         Guid first = (await projects.SaveAsync(new() { Name = "Acquisition A" })).Value;
         Guid second = (await projects.SaveAsync(new() { Name = "Acquisition B" })).Value;
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         cut.WaitForElement("[data-testid='project-card']");
         controls.HoldNextRead = 1;
         var board = cut.FindComponent<ProjectsBoard>();
@@ -105,7 +105,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var harness = await Harness(controls, participant);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         Guid id = (await projects.SaveAsync(new() { Name = "Deleted A" })).Value;
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         cut.WaitForElement("[data-testid='project-card']");
         await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
         var editor = cut.FindComponent<ProjectModalHost>();
@@ -138,7 +138,7 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls { HoldActivity = true };
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await NewAsync(cut, "Submitted project");
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         await cut.InvokeAsync(() => {
@@ -187,7 +187,7 @@ public sealed class ProjectsEditorMutationTests {
     public async Task Known_project_and_seed_facts_survive_failed_read_or_unknown_seed_acknowledgement(bool unknownSeed) {
         var controls = new Controls { FailReadAfterSeed = !unknownSeed, LoseSeedAcknowledgement = unknownSeed };
         await using var harness = await Harness(controls);
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await NewAsync(cut, "Committed with separate seed");
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "Native batch note" });
@@ -218,7 +218,7 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await NewAsync(cut, "Original seed lifetime");
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "Must not enter successor" });
@@ -274,7 +274,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var harness = await Harness(controls, participant);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         Guid id = (await projects.SaveAsync(new() { Name = "Original delete lifetime" })).Value;
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         cut.WaitForElement("[data-testid='project-card']");
         await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
         var oldEditor = cut.FindComponent<ProjectModalHost>();
@@ -352,7 +352,7 @@ public sealed class ProjectsEditorMutationTests {
     public async Task Retired_save_does_not_navigate_close_or_clear_a_successor_draft_and_its_plan() {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await NewAsync(cut, "Retiring project");
         var oldDraft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         oldDraft.StarterObjects.Add(new() { Title = "Original plan" });
@@ -380,7 +380,7 @@ public sealed class ProjectsEditorMutationTests {
     public async Task Reopened_same_target_cannot_mutate_while_the_original_seed_outcome_is_pending() {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
-        var cut = harness.Context.Render<ProjectsPage>();
+        var cut = RenderProjectsPage(harness);
         await NewAsync(cut, "Pending same target");
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "One seed" });
@@ -418,6 +418,12 @@ public sealed class ProjectsEditorMutationTests {
         services.Add(ServiceDescriptor.Describe(typeof(T), provider => decorate((T)(descriptor.ImplementationInstance
             ?? descriptor.ImplementationFactory?.Invoke(provider)
             ?? ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType!))), descriptor.Lifetime));
+    }
+
+    // The router renders the page only at its own route, and the page applies and writes its URL state only there.
+    private static IRenderedComponent<ProjectsPage> RenderProjectsPage(ComponentTestHarness harness) {
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");
+        return harness.Context.Render<ProjectsPage>();
     }
 
     private static async Task NewAsync(IRenderedComponent<ProjectsPage> cut, string name) {
