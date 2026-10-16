@@ -1,8 +1,11 @@
 # Execution plan
 
-Status: P01a closed; P02a original-state implementation and focused validation recorded;
-P02b durable lifecycle/projection/recovery is next, including the open large-definition
-tail-cost investigation. No production source change is authorized by a phase's
+Status: P01a closed; P02a original-state implementation and focused validation committed
+as `1452352f0`. P02b durable lifecycle, receipts, enlisted search, protected HTTP and
+governed tool paths are implemented in the working tree; native P02c recovery is under
+validation. The transfer snapshot-order repair, complete producer cutover, receipt
+capacity and large-definition tail-cost investigation remain open. No phase closure
+is inferred from these intermediate results. No production source change is authorized by a phase's
 proposed status alone; its entry evidence must be satisfied. The user has authorized
 implementation after design review, tests and incremental commits; no extra approval
 ceremony is required for dependency-ready work within that scope.
@@ -11,10 +14,10 @@ ceremony is required for dependency-ready work within that scope.
 | --- | --- | --- | --- |
 | P00 | Refreshed architecture, complete first-owner perimeter and risk/test plan | Source package/current repository | In progress: independent persistence/runtime/UI reviews; baseline Infrastructure build passed with existing NuGet warnings |
 | P01a | Transaction cleanup always releases acquired process gates | P00 cleanup design review | Pass: six discovered/passed tests, Infrastructure Release build, independent diff review and unchanged portability enforcement; see validation/P01a-cleanup.md |
-| P01b | Commit knowledge, source lock order and lifecycle namespace defined/proven | P00; P01a for lock fault proof | Pending: exact receipt/restore/retention decision and tests before public replay guarantee |
+| P01b | Commit knowledge, source lock order and lifecycle namespace defined/proven | P00; P01a for lock fault proof | Implemented candidate: explicit file/SQL activation, retained epochs and bounded exact receipts; lifecycle and recovery lanes passed. Complete transfer locks and offline command process proof remain open. |
 | P02a | Projects definition handler and original-state contract | P00/P01 applicable guarantees | Conditional-write checkpoint recorded in validation/P02a-validation.md: builds, focused owner/HTTP/tool/UI/browser, migration/import, model/script, rendering/docs and portability pass; performance comparison retained with P02b tail-cost follow-up; no durable-replay or broad Stable closure claim |
-| P02b | Complete Projects callers and durable result/projection | P02a/P01b | Pending: UI/API/tool/read/callers converted or explicitly refused; SQL receipt and enlisted search; import/delete lifecycle |
-| P02c | Draft-preserving conflict and unknown-result recovery | P02a/P02b | Pending: real renderer/host, independent browser sessions, accepted-result versus current-state proof |
+| P02b | Complete Projects callers and durable result/projection | P02a/P01b | In progress: SQL receipt/search and protected Projects HTTP/governed tools implemented. Boundary lane 56/64 passed; eight failures repaired pending rerun. Transfer lane 75/77 passed; table-count and real snapshot-order failures under repair. Legacy producer inventory remains open. See validation/P02b-foundation-progress.md. |
+| P02c | Draft-preserving conflict and unknown-result recovery | P02a/P02b | In progress: strict IndexedDB store, native frozen submission and known/unknown reconciliation implemented. Lightweight sessions 20/20 and capture bound 1/1 passed. Native/browser candidate validation and explicit metadata-only retained-reference disposal remain open. |
 | P03 | Selective narrow edits reduce unnecessary conflicts | Closed P02 | Pending: retain first scalar command, add only measured useful intentions; no automatic collection merge |
 | P04 | One governed task-plan publication with trusted bounded basis | P02; selected Workbench owner witnesses | Pending: source/task writer inventory, owner minimum policy, atomic set witness and publication/approval proof |
 | P05 | Remaining owner waves have complete original-state protection | Closed relevant foundations | Pending: coverage inventory, owner-specific contracts and closure per module; no claim all engine data is protected by P02 |

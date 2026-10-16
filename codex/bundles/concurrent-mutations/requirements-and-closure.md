@@ -2,13 +2,13 @@
 
 | ID | Requirement | Owner / proof destination | Current closure |
 | --- | --- | --- | --- |
-| R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Not solved; present Projects defect verified |
+| R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Partially implemented: P02a original-state Projects writes committed; P02b protected receipts and selected producers under validation. Remaining Projects producers and other engine owners are still open. |
 | R2 | Complete architecture/risk analysis before implementation | Maintained architecture, independent reviews, P00 gates | Architecture direction and P01a passed independent review; later owner/runtime implementation gates remain explicit |
-| R3 | Preserve module ownership and dependency direction | Boundary/pattern map, compiled boundary guards, evaluated project graph | In progress; no production dependency changes |
-| R4 | Identify and address performance bottlenecks | Performance plan, baseline/candidate matched measurements | Not solved; cost constraints defined, measurements pending |
+| R3 | Preserve module ownership and dependency direction | Boundary/pattern map, compiled boundary guards, evaluated project graph | In progress: lifecycle in Infrastructure, owner receipts in Projects, Web/Workbench adapters at existing boundaries; no Infrastructure-to-Projects dependency. Final integrated guards remain open. |
+| R4 | Identify and address performance bottlenecks | Performance plan, baseline/candidate matched measurements | Partial measurements retained: shared guards removed the observed disjoint-writer serialization failures. Large-definition tail/allocation and cleanup capacity remain open; the latest replacement workload stopped at a PostgreSQL EXPLAIN JSON parser defect after its uncontended samples. |
 | R5 | Configurable snapshot/refresh/replan behavior for agents/processes | Policy design, persisted settings, admission/checkpoint/runtime/UI proof; P04/P07 | Not solved; policy design drafted |
-| R6 | Test complete intended behavior and failure modes | Testability plan, exact discovery/results, portability, browser/host/cleanup proof | P01a passed six focused cases and portability; broader owner/runtime proof remains pending |
-| R7 | Incremental commits and current documentation | Execution record, scoped commits and maintained design | Architecture commit ceb10731e; independently validated P01a source commit follows |
+| R6 | Test complete intended behavior and failure modes | Testability plan, exact discovery/results, portability, browser/host/cleanup proof | P01a and P02a focused proof committed; P02b/c owner, HTTP, runtime, transfer and UI lanes in progress. Failures and unrun lanes remain explicit; final static and integrated closure are pending. |
+| R7 | Incremental commits and current documentation | Execution record, scoped commits and maintained design | Architecture `ceb10731e`, cleanup `efbebfc54`, Projects original-state/editor checkpoint `1452352f0`. Next coherent protected-operation checkpoint awaits repair validation. |
 
 ## Architect input coverage
 
