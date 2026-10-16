@@ -1,0 +1,1640 @@
+[
+  {
+    "id": "T001",
+    "phase": "P00",
+    "layer": "audit",
+    "title": "All enabled Projects writers are mapped",
+    "setup_and_interleaving": "Trace every create/update/delete/child/import/bulk path and each adapter at the actual branch.",
+    "required_assertion": "No unresolved writer in the pilot perimeter; paths and symbols recorded.",
+    "invariants": [
+      "INV-01",
+      "INV-18",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T002",
+    "phase": "P00",
+    "layer": "architecture",
+    "title": "Decoupled contract graph",
+    "setup_and_interleaving": "Resolve source/sibling project and public-type graph before change.",
+    "required_assertion": "Renderer/contracts have no persistence or concrete-owner dependency.",
+    "invariants": [
+      "INV-19",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T003",
+    "phase": "P00",
+    "layer": "baseline",
+    "title": "Matched cost baseline",
+    "setup_and_interleaving": "Run selected uncontended/disjoint/hot workloads on isolated DB with source/environment recorded.",
+    "required_assertion": "Measured costs and missing measurements explicit; no fabricated speedup.",
+    "invariants": [
+      "INV-15",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T004",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Original token survives server reload",
+    "setup_and_interleaving": "Read A in client, commit B elsewhere, load current entity inside save then submit original A.",
+    "required_assertion": "B remains; old body cannot use freshly loaded token.",
+    "invariants": [
+      "INV-02",
+      "INV-05"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T005",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Child-only stamp advancement",
+    "setup_and_interleaving": "Read root editor; update only one child through each enabled writer.",
+    "required_assertion": "Root edit stamp advances with child commit and old editor conflicts.",
+    "invariants": [
+      "INV-03",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T006",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Coherent aggregate read",
+    "setup_and_interleaving": "Pause between project and child reads while another transaction changes the aggregate.",
+    "required_assertion": "Returned stamp/data form one valid snapshot, not mixed observations.",
+    "invariants": [
+      "INV-04"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T007",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Conditional failure rolls back children",
+    "setup_and_interleaving": "Apply child changes in transaction then make root expected condition fail.",
+    "required_assertion": "No child/receipt/projection effect commits.",
+    "invariants": [
+      "INV-03",
+      "INV-05",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T008",
+    "phase": "P01",
+    "layer": "fault",
+    "title": "Commit succeeds; observer fails",
+    "setup_and_interleaving": "Commit owner mutation then throw in postcommit observer.",
+    "required_assertion": "Committed identity/stamp preserved; no retry of primary effect.",
+    "invariants": [
+      "INV-11",
+      "INV-17"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T009",
+    "phase": "P01",
+    "layer": "fault",
+    "title": "Commit acknowledgement lost",
+    "setup_and_interleaving": "Interrupt transport/connection at commit acknowledgement using controlled fault boundary.",
+    "required_assertion": "Unconfirmed observation resolves by exact operation; no assumed rollback.",
+    "invariants": [
+      "INV-11",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T010",
+    "phase": "P01",
+    "layer": "fault",
+    "title": "Dispose failure releases gates",
+    "setup_and_interleaving": "Inject transaction disposal failure on owned scope with waiting next operation.",
+    "required_assertion": "Owned process gates release; original/cleanup errors remain distinguishable.",
+    "invariants": [
+      "INV-17"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T011",
+    "phase": "P01",
+    "layer": "fault",
+    "title": "Source lease finalization after commit",
+    "setup_and_interleaving": "Commit then fail source lease disposal/finalization.",
+    "required_assertion": "No relabelling as rejected; cleanup problem visible with committed evidence.",
+    "invariants": [
+      "INV-11",
+      "INV-17"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T012",
+    "phase": "P01",
+    "layer": "concurrency",
+    "title": "Source-first nested ordering",
+    "setup_and_interleaving": "Run opposing source/target operations and nested owner participation under controlled barriers.",
+    "required_assertion": "No cyclic acquisition/self-deadlock; existing authority precedence preserved.",
+    "invariants": [
+      "INV-07",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T013",
+    "phase": "P01",
+    "layer": "concurrency",
+    "title": "Two-process ordinary and governed paths",
+    "setup_and_interleaving": "Run ordinary and source-authorized writes from separate host processes.",
+    "required_assertion": "Same declared invariants without relying on process semaphores.",
+    "invariants": [
+      "INV-05",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T014",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Retired enlisted scope",
+    "setup_and_interleaving": "Use a participant after coordination exits or with foreign physical profile.",
+    "required_assertion": "Deterministic refusal before owner data effect.",
+    "invariants": [
+      "INV-06",
+      "INV-17"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T015",
+    "phase": "P01",
+    "layer": "policy",
+    "title": "Retry taxonomy",
+    "setup_and_interleaving": "Return domain conflict, serialization failure, deadlock and unknown commit separately.",
+    "required_assertion": "Only safe technical transaction retries reuse original operation/basis.",
+    "invariants": [
+      "INV-09",
+      "INV-11"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T016",
+    "phase": "P01",
+    "layer": "postgres",
+    "title": "Bulk update predicate",
+    "setup_and_interleaving": "Exercise each enabled ExecuteUpdate/raw SQL write to protected state.",
+    "required_assertion": "Explicit condition and affected rows; aggregate token participates.",
+    "invariants": [
+      "INV-02",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T017",
+    "phase": "P01",
+    "layer": "concurrency",
+    "title": "Cancellation while acquiring multiple gates",
+    "setup_and_interleaving": "Cancel after first acquisition and before later acquisition succeeds.",
+    "required_assertion": "All acquired resources released, no operation effect.",
+    "invariants": [
+      "INV-15",
+      "INV-17"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T018",
+    "phase": "P01",
+    "layer": "architecture",
+    "title": "No parallel enlisted commands",
+    "setup_and_interleaving": "Exercise/inspect multi-owner participant scheduling on one shared connection.",
+    "required_assertion": "Bounded awaited sequential participation, no Task.WhenAll database commands.",
+    "invariants": [
+      "INV-16",
+      "INV-19"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T019",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Two editors phase versus name",
+    "setup_and_interleaving": "Both load A; first adds phase and commits; second saves old full editor with renamed project.",
+    "required_assertion": "Second conflicts; phase persists; no silent overwrite.",
+    "invariants": [
+      "INV-02",
+      "INV-03"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T020",
+    "phase": "P02",
+    "layer": "tool-roundtrip",
+    "title": "Actual agent versus human update",
+    "setup_and_interleaving": "Governed tool proposal from A waits; human commits B; actual tool dispatch resumes.",
+    "required_assertion": "Owner rejects stale target; tool receives structured conflict.",
+    "invariants": [
+      "INV-02",
+      "INV-07",
+      "INV-09"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T021",
+    "phase": "P02",
+    "layer": "http",
+    "title": "Missing original stamp",
+    "setup_and_interleaving": "Call protected update through each public/API-only route without condition.",
+    "required_assertion": "Known precondition refusal, not null bypass or fresh-stamp refill.",
+    "invariants": [
+      "INV-18",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T022",
+    "phase": "P02",
+    "layer": "http",
+    "title": "Conflicting header and body",
+    "setup_and_interleaving": "Send mismatched If-Match/body stamp through new contract.",
+    "required_assertion": "Deterministic documented rejection; no weaker alternate path.",
+    "invariants": [
+      "INV-02",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T023",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Delete and recreate same public ID",
+    "setup_and_interleaving": "Load old editor; retire project; create new lifetime under same public ID; submit old editor.",
+    "required_assertion": "New project untouched; lifetime-specific failure.",
+    "invariants": [
+      "INV-06"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T024",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Concurrent duplicate creation",
+    "setup_and_interleaving": "Send same scoped operation ID concurrently with valid creation admission.",
+    "required_assertion": "One exact creation/lifetime; both resolve same accepted result.",
+    "invariants": [
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T025",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Duplicate after later edit",
+    "setup_and_interleaving": "Operation A commits; B changes target; repeat A with same ID/body.",
+    "required_assertion": "Return A receipt, not fresh-content conflict and not reapply A.",
+    "invariants": [
+      "INV-11",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T026",
+    "phase": "P02",
+    "layer": "policy",
+    "title": "Same ID different intention",
+    "setup_and_interleaving": "Reuse ID with changed target/body/basis/expected stamp.",
+    "required_assertion": "Semantic identity mismatch; no effect.",
+    "invariants": [
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T027",
+    "phase": "P02",
+    "layer": "fault",
+    "title": "Pending duplicate lookup",
+    "setup_and_interleaving": "Hold first transaction active; second request cannot yet see receipt.",
+    "required_assertion": "No new independent effect; protocol handles pending/not-visible outcome.",
+    "invariants": [
+      "INV-11",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T028",
+    "phase": "P02",
+    "layer": "security",
+    "title": "Receipt disclosure revoked",
+    "setup_and_interleaving": "Commit as authorized actor then revoke access before result lookup.",
+    "required_assertion": "No unauthorized result fields disclosed; effect is not replayed.",
+    "invariants": [
+      "INV-07",
+      "INV-22"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T029",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Root-child-receipt atomic rollback",
+    "setup_and_interleaving": "Fail at each save step before commit.",
+    "required_assertion": "Either all declared records commit or none; no lying success receipt.",
+    "invariants": [
+      "INV-03",
+      "INV-05",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T030",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Conflict keeps draft/EditContext",
+    "setup_and_interleaving": "Return actual owner conflict after user typed multiple fields.",
+    "required_assertion": "Draft and validation preserved; current state displayed separately.",
+    "invariants": [
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T031",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Typing during save",
+    "setup_and_interleaving": "Freeze S; user changes L; accepted normalized C returns.",
+    "required_assertion": "Compare S vs L, retain new typing and adopt accepted untouched fields/stamp.",
+    "invariants": [
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T032",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "A to B to A late callback",
+    "setup_and_interleaving": "Start operation/read for A1, switch B then new A2, finish A1.",
+    "required_assertion": "Old completion cannot alter A2, reopen dialog or reset busy state.",
+    "invariants": [
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T033",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Save button plus Enter",
+    "setup_and_interleaving": "Dispatch both events in same active editor lifetime.",
+    "required_assertion": "One admitted submission; successor editor is not blocked by retired lifetime.",
+    "invariants": [
+      "INV-12",
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T034",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Committed but read-back fails",
+    "setup_and_interleaving": "Owner commit succeeds, accepted result retained, follow-up read throws.",
+    "required_assertion": "Visible saved-with-warning; retry reads only.",
+    "invariants": [
+      "INV-11",
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T035",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Owner-generated child IDs",
+    "setup_and_interleaving": "Create local rows, receive durable IDs, type again and save.",
+    "required_assertion": "Rows retain correct identity; no delete/recreate duplication.",
+    "invariants": [
+      "INV-03",
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T036",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Old projection runs after new save",
+    "setup_and_interleaving": "Control A/B projection order so older work would execute last.",
+    "required_assertion": "Final search reflects current state or correct ordered cursor.",
+    "invariants": [
+      "INV-14"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T037",
+    "phase": "P02",
+    "layer": "fault",
+    "title": "Crash between source and projection work",
+    "setup_and_interleaving": "Terminate after source acceptance at each selected projection protocol boundary.",
+    "required_assertion": "Same-transaction rollback/commit or durable rebuild recovery; no lost required work.",
+    "invariants": [
+      "INV-11",
+      "INV-14"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T038",
+    "phase": "P02",
+    "layer": "postgres",
+    "title": "Delayed projection after recreate",
+    "setup_and_interleaving": "Queue old lifetime index work; delete/recreate; deliver old work.",
+    "required_assertion": "No revival/overwrite of new incarnation.",
+    "invariants": [
+      "INV-06",
+      "INV-14"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T039",
+    "phase": "P02",
+    "layer": "lifecycle",
+    "title": "Import source stamps/history",
+    "setup_and_interleaving": "Import retained v2/v3 project/history into target profile.",
+    "required_assertion": "New local live tokens; imported approvals/receipts/reservations inert.",
+    "invariants": [
+      "INV-06",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T040",
+    "phase": "P02",
+    "layer": "lifecycle",
+    "title": "Destructive restore and future client",
+    "setup_and_interleaving": "Restore older dataset then submit pre-restore-future client operation.",
+    "required_assertion": "Activation namespace/fence rejects invalid old authority/replay.",
+    "invariants": [
+      "INV-06",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T041",
+    "phase": "P02",
+    "layer": "lifecycle",
+    "title": "Ordinary restart preserves receipts",
+    "setup_and_interleaving": "Commit and restart host without destructive data change; retry original operation.",
+    "required_assertion": "Original durable operation remains reconcilable; no gratuitous epoch reset.",
+    "invariants": [
+      "INV-06",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T042",
+    "phase": "P02",
+    "layer": "http",
+    "title": "Explicit missing versus create read",
+    "setup_and_interleaving": "Request edit for missing existing project then deliberate create separately.",
+    "required_assertion": "No accidental rebind to blank create; documented compatibility behavior.",
+    "invariants": [
+      "INV-06",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T043",
+    "phase": "P02",
+    "layer": "browser",
+    "title": "Two real editors end to end",
+    "setup_and_interleaving": "Use actual Web sessions over PG for phase/name race and conflict resolution.",
+    "required_assertion": "UI and persisted data agree; original text retained and final new write conditional.",
+    "invariants": [
+      "INV-02",
+      "INV-13",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T044",
+    "phase": "P02",
+    "layer": "architecture",
+    "title": "Renderer dependency and sandbox",
+    "setup_and_interleaving": "Build actual renderer/sandbox with evaluated graph after token contract change.",
+    "required_assertion": "No owner persistence/MAF/Web implementation imported.",
+    "invariants": [
+      "INV-19",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T045",
+    "phase": "P02",
+    "layer": "positive",
+    "title": "Fresh saves/creates/authorized updates",
+    "setup_and_interleaving": "Run matching preconditions and valid creation/source admissions.",
+    "required_assertion": "Legitimate work succeeds; safety not implemented by rejecting everything.",
+    "invariants": [
+      "INV-01",
+      "INV-05",
+      "INV-07"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T046",
+    "phase": "P03",
+    "layer": "policy",
+    "title": "Independent scalar three-way merge",
+    "setup_and_interleaving": "B/L/C vary independently for allowed fields.",
+    "required_assertion": "Only permitted nonconflicting values merge; resulting invariants validated.",
+    "invariants": [
+      "INV-13",
+      "INV-24"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T047",
+    "phase": "P03",
+    "layer": "concurrency",
+    "title": "Third writer during conflict resolution",
+    "setup_and_interleaving": "Show C, prepare merge, commit D before resolved save.",
+    "required_assertion": "Resolved save conflicts again rather than forcing overwrite.",
+    "invariants": [
+      "INV-02",
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T048",
+    "phase": "P03",
+    "layer": "policy",
+    "title": "Cross-field invalid merge",
+    "setup_and_interleaving": "Individually different fields together break domain invariant.",
+    "required_assertion": "Owner refuses invalid result despite nonoverlapping changed fields.",
+    "invariants": [
+      "INV-05",
+      "INV-24"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T049",
+    "phase": "P03",
+    "layer": "postgres",
+    "title": "Explicit add/remove/reorder",
+    "setup_and_interleaving": "Interleave two narrow collection intentions with original relevant preconditions.",
+    "required_assertion": "Stable identities and declared order; no implicit list deletion.",
+    "invariants": [
+      "INV-02",
+      "INV-03"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T050",
+    "phase": "P03",
+    "layer": "security",
+    "title": "Foreign/duplicate/unknown child ID",
+    "setup_and_interleaving": "Submit mixed IDs including another project's child and duplicate persisted ID.",
+    "required_assertion": "Deterministic safe rejection; no mutation or silent recreation.",
+    "invariants": [
+      "INV-03",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T051",
+    "phase": "P03",
+    "layer": "policy",
+    "title": "Normalization/default rows/no-op",
+    "setup_and_interleaving": "Exercise trim/UTC/blank options/default categories and equal accepted content.",
+    "required_assertion": "Documented stamp/UpdatedAt/activity/receipt behavior; no hidden extra rows.",
+    "invariants": [
+      "INV-03",
+      "INV-24"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T052",
+    "phase": "P03",
+    "layer": "policy",
+    "title": "Value A to B to A",
+    "setup_and_interleaving": "Change relevant value twice before old proposal returns.",
+    "required_assertion": "Generation-sensitive policy detects obsolete observation; value-based exceptions explicit.",
+    "invariants": [
+      "INV-02",
+      "INV-08",
+      "INV-24"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T053",
+    "phase": "P04",
+    "layer": "concurrency",
+    "title": "Objective changes during reasoning",
+    "setup_and_interleaving": "Capture planning basis; modify objective; publish previously prepared task batch.",
+    "required_assertion": "StaleDecisionBasis-style rejection, no task effects.",
+    "invariants": [
+      "INV-08",
+      "INV-09"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T054",
+    "phase": "P04",
+    "layer": "concurrency",
+    "title": "Membership phantom",
+    "setup_and_interleaving": "Read all matching tasks including an empty set; another writer inserts/reassigns matching task.",
+    "required_assertion": "Scope witness invalidates proposal even if original row tokens unchanged.",
+    "invariants": [
+      "INV-05",
+      "INV-08"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T055",
+    "phase": "P04",
+    "layer": "security",
+    "title": "Model omits mandatory input",
+    "setup_and_interleaving": "Try publishing proposal with no required objective/membership basis.",
+    "required_assertion": "Trusted runtime/owner refuses; model cannot choose an empty validation set.",
+    "invariants": [
+      "INV-08",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T056",
+    "phase": "P04",
+    "layer": "security",
+    "title": "Refresh stamp under old approval",
+    "setup_and_interleaving": "Attach current tokens to old proposal/approval without new allowed decision.",
+    "required_assertion": "Binding mismatch or stale basis refusal; no effect.",
+    "invariants": [
+      "INV-09",
+      "INV-10"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T057",
+    "phase": "P04",
+    "layer": "concurrency",
+    "title": "Source edit during publication",
+    "setup_and_interleaving": "Pause after protected source validation; competing source writer attempts change. Also establish a Serializable snapshot before waiting for a source advisory gate, then let its previous owner commit a source update.",
+    "required_assertion": "Declared publication freshness/exclusion holds; no pre-wait historical snapshot is mistaken for the source state after gate acquisition. Fresh locking read, rejection or whole-attempt retry follows the chosen protocol.",
+    "invariants": [
+      "INV-05",
+      "INV-08",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T058",
+    "phase": "P04",
+    "layer": "security",
+    "title": "Revocation before actual effect",
+    "setup_and_interleaving": "Capture valid grant/claim, revoke before owner commit, finish operation.",
+    "required_assertion": "Owner current-authority check rejects exact attempt.",
+    "invariants": [
+      "INV-07"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T059",
+    "phase": "P04",
+    "layer": "concurrency",
+    "title": "Retired worker ignores cancellation",
+    "setup_and_interleaving": "Take over/advance attempt generation, then allow old worker to publish.",
+    "required_assertion": "Old generation rejected at owner despite active task.",
+    "invariants": [
+      "INV-07",
+      "INV-09"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T060",
+    "phase": "P04",
+    "layer": "policy",
+    "title": "Manual edit keeping automation vs pin",
+    "setup_and_interleaving": "Perform each explicit override/takeover policy action.",
+    "required_assertion": "Future automation follows chosen mandate; no unconditional human/agent precedence.",
+    "invariants": [
+      "INV-07",
+      "INV-09"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T061",
+    "phase": "P04",
+    "layer": "policy",
+    "title": "Bounded semantic replans",
+    "setup_and_interleaving": "Continuously invalidate material basis during successive attempts.",
+    "required_assertion": "Escalation after agreed limit; no infinite compute/token loop.",
+    "invariants": [
+      "INV-09",
+      "INV-15"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T062",
+    "phase": "P04",
+    "layer": "policy",
+    "title": "Unrelated updates do not invalidate",
+    "setup_and_interleaving": "Append logs/chat while planning material objective/task facts.",
+    "required_assertion": "Basis remains valid unless those facts are actual declared dependencies.",
+    "invariants": [
+      "INV-03",
+      "INV-08"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T063",
+    "phase": "P04",
+    "layer": "policy",
+    "title": "Oversized basis and truncated input",
+    "setup_and_interleaving": "Submit more required facts than supported, or an unacknowledged truncated query.",
+    "required_assertion": "Explicit bounded rejection/staged contract; never successful incomplete validation.",
+    "invariants": [
+      "INV-08",
+      "INV-15",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T064",
+    "phase": "P04",
+    "layer": "tool-roundtrip",
+    "title": "Actual governed planning positive/negative",
+    "setup_and_interleaving": "Run actual read/propose/approve/owner tool pipeline with valid and stale basis.",
+    "required_assertion": "Fresh proposal succeeds, invalid proposal has no effects and structured recovery.",
+    "invariants": [
+      "INV-07",
+      "INV-08",
+      "INV-10",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T065",
+    "phase": "P05",
+    "layer": "postgres",
+    "title": "Opposing graph moves/cycle",
+    "setup_and_interleaving": "Concurrently reconnect nodes/projects so individually plausible moves would form a cycle.",
+    "required_assertion": "Final graph invariant holds under complete owner guard set.",
+    "invariants": [
+      "INV-05",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T066",
+    "phase": "P05",
+    "layer": "postgres",
+    "title": "Task assignment/cost/execution preservation",
+    "setup_and_interleaving": "Interleave title, assignee and execution/schedule changes through existing owners.",
+    "required_assertion": "Existing expected-state, assignment and pricing semantics not weakened.",
+    "invariants": [
+      "INV-01",
+      "INV-05"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T067",
+    "phase": "P05",
+    "layer": "concurrency",
+    "title": "Multi-owner batch rollback",
+    "setup_and_interleaving": "Fail a selected owner participant after another staged change on shared transaction.",
+    "required_assertion": "Declared same-DB atomic set rolls back; no independent hidden commit.",
+    "invariants": [
+      "INV-05",
+      "INV-19"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T068",
+    "phase": "P05",
+    "layer": "postgres",
+    "title": "Conversation append versus definition edit",
+    "setup_and_interleaving": "Append independent replies and concurrently edit definition where allowed.",
+    "required_assertion": "Append not lost through parent snapshot; own request dedupe/order preserved.",
+    "invariants": [
+      "INV-01",
+      "INV-03",
+      "INV-12"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T069",
+    "phase": "P05",
+    "layer": "security",
+    "title": "CRM conflict privacy",
+    "setup_and_interleaving": "Conflict affects a sensitive CRM field unreadable to caller.",
+    "required_assertion": "Safe conflict detail without rate/personal-data disclosure.",
+    "invariants": [
+      "INV-07",
+      "INV-22"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T070",
+    "phase": "P05",
+    "layer": "architecture",
+    "title": "Owner adoption graph guard",
+    "setup_and_interleaving": "Introduce selected owner data-only contract and actual renderer adapter.",
+    "required_assertion": "No global AppDbContext or foreign owner persistence access.",
+    "invariants": [
+      "INV-01",
+      "INV-19"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T071",
+    "phase": "P05",
+    "layer": "lifecycle",
+    "title": "Maintenance path participation",
+    "setup_and_interleaving": "Run explicit setup/import and ordinary update to same protected data through documented boundaries.",
+    "required_assertion": "Maintenance provenance/conditions explicit; production bypass absent.",
+    "invariants": [
+      "INV-18",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T072",
+    "phase": "P06",
+    "layer": "storage",
+    "title": "External file edit between read/replace",
+    "setup_and_interleaving": "Change file outside app after expected revision capture and before driver replace.",
+    "required_assertion": "Actual driver guarantee observed; unsupported strict CAS is explicit.",
+    "invariants": [
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T073",
+    "phase": "P06",
+    "layer": "external",
+    "title": "Provider accepts then timeout",
+    "setup_and_interleaving": "Provider records effect but response is lost; delivery worker resumes.",
+    "required_assertion": "Provider-specific identity resolves result; no unsafe resend.",
+    "invariants": [
+      "INV-11",
+      "INV-12",
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T074",
+    "phase": "P06",
+    "layer": "external",
+    "title": "Provider without dedupe/lookup",
+    "setup_and_interleaving": "Interrupt uncertain delivery for a provider lacking safe retry protocol.",
+    "required_assertion": "Manual/explicit recovery, no claim of automatic exactly-once effect.",
+    "invariants": [
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T075",
+    "phase": "P06",
+    "layer": "concurrency",
+    "title": "Stale compensation after human change",
+    "setup_and_interleaving": "Create/modify through operation A, then human adds related work; compensate A.",
+    "required_assertion": "Narrow guarded compensation refuses destructive stale undo.",
+    "invariants": [
+      "INV-05",
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T076",
+    "phase": "P06",
+    "layer": "fault",
+    "title": "Outbox duplicate/reorder/poison",
+    "setup_and_interleaving": "Deliver duplicate and reversed jobs; one job fails repeatedly.",
+    "required_assertion": "Latest valid projection preserved; bounded retries and unrelated work progress.",
+    "invariants": [
+      "INV-14",
+      "INV-15"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T077",
+    "phase": "P06",
+    "layer": "security",
+    "title": "Revocation overlapping external dispatch",
+    "setup_and_interleaving": "Revoke during provider delivery at specified fence boundary.",
+    "required_assertion": "Report actual supported ordering/uncertainty, not fictional rollback.",
+    "invariants": [
+      "INV-07",
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T078",
+    "phase": "P06",
+    "layer": "lifecycle",
+    "title": "Receipt retention versus checkpoint replay",
+    "setup_and_interleaving": "Expire full details while supported replay/checkpoint still exists.",
+    "required_assertion": "Compact evidence or expiry refusal prevents duplicate effect.",
+    "invariants": [
+      "INV-12",
+      "INV-22"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T079",
+    "phase": "P06",
+    "layer": "fault",
+    "title": "Partial staged batch",
+    "setup_and_interleaving": "Fail after some externally committed items in explicitly staged operation.",
+    "required_assertion": "Exact per-item outcomes, no atomic-success claim or whole-batch blind replay.",
+    "invariants": [
+      "INV-11",
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T080",
+    "phase": "P07",
+    "layer": "runtime",
+    "title": "Resume pinned definition after live edit",
+    "setup_and_interleaving": "Admit run on immutable definition; edit current definition; resume computation.",
+    "required_assertion": "Pinned execution remains distinct; publication into current target separately checked.",
+    "invariants": [
+      "INV-06",
+      "INV-08"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T081",
+    "phase": "P07",
+    "layer": "runtime",
+    "title": "Legacy checkpoint missing required basis",
+    "setup_and_interleaving": "Load historical saved run/approval without newly required provenance.",
+    "required_assertion": "Readable history or explicit readmission, never fabricated current basis.",
+    "invariants": [
+      "INV-08",
+      "INV-10",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T082",
+    "phase": "P07",
+    "layer": "runtime",
+    "title": "Replay stored denial",
+    "setup_and_interleaving": "Resume checkpoint containing no-effect policy/source denial.",
+    "required_assertion": "No conversion into an executing effect or unauthorized disclosure.",
+    "invariants": [
+      "INV-07",
+      "INV-11",
+      "INV-20"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T083",
+    "phase": "P07",
+    "layer": "runtime",
+    "title": "Process claim transfer late write",
+    "setup_and_interleaving": "Advance current claim and release delayed old attempt into owner write.",
+    "required_assertion": "Old attempt fenced with no effects; new valid attempt succeeds.",
+    "invariants": [
+      "INV-07",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T084",
+    "phase": "P07",
+    "layer": "browser",
+    "title": "Real workflow/process operator journey",
+    "setup_and_interleaving": "Launch small real workflow/process, edit relevant target, resolve blocked publication through UI.",
+    "required_assertion": "Owner effects and operator outcome agree; no approval/retry bypass.",
+    "invariants": [
+      "INV-07",
+      "INV-09",
+      "INV-10",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T085",
+    "phase": "P07",
+    "layer": "lifecycle",
+    "title": "Saved protocol downgrade",
+    "setup_and_interleaving": "Attempt older writer against new saved basis/approval/receipt protocol during planned rehearsal.",
+    "required_assertion": "Admission/version policy prevents unsafe downgrade.",
+    "invariants": [
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T086",
+    "phase": "P08",
+    "layer": "release",
+    "title": "Mixed-version deployment rehearsal",
+    "setup_and_interleaving": "Activate protected owner while a deliberately incompatible caller/worker attempts update.",
+    "required_assertion": "Incompatible writer refused; safe pause/forward repair path.",
+    "invariants": [
+      "INV-18",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T087",
+    "phase": "P08",
+    "layer": "release",
+    "title": "Cross-platform canonical gates",
+    "setup_and_interleaving": "Run current documented required lanes at named closure checkpoint with exact discovery.",
+    "required_assertion": "Actual pass/fail/skip evidence per platform, no inferred green.",
+    "invariants": [
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T088",
+    "phase": "P08",
+    "layer": "load",
+    "title": "Matched final performance comparison",
+    "setup_and_interleaving": "Repeat declared workload register on current final source and baseline conditions.",
+    "required_assertion": "Budgets/exception decisions supported by counts and distributions.",
+    "invariants": [
+      "INV-15",
+      "INV-21"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T089",
+    "phase": "P08",
+    "layer": "observability",
+    "title": "Metrics cardinality and secret redaction",
+    "setup_and_interleaving": "Generate conflicts/receipts/bases containing sensitive values and many IDs.",
+    "required_assertion": "Useful bounded metrics and safe logs; no secret-bearing payloads.",
+    "invariants": [
+      "INV-22"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T090",
+    "phase": "P08",
+    "layer": "architecture",
+    "title": "Complete protected perimeter closure",
+    "setup_and_interleaving": "Reconcile current callers, inventory, migrations, tests and residual risks after final merge drift.",
+    "required_assertion": "Zero undocumented enabled bypasses in advertised coverage.",
+    "invariants": [
+      "INV-01",
+      "INV-18",
+      "INV-21",
+      "INV-25"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T091",
+    "phase": "P02",
+    "layer": "concurrency",
+    "title": "Missed notification cannot admit stale write",
+    "setup_and_interleaving": "Drop every UI/cache invalidation event while another writer changes the target.",
+    "required_assertion": "Original expected condition still rejects stale update.",
+    "invariants": [
+      "INV-02",
+      "INV-23"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T092",
+    "phase": "P02",
+    "layer": "ui-session",
+    "title": "Read-back newer than original commit",
+    "setup_and_interleaving": "A commits; B commits before A client reads current state.",
+    "required_assertion": "Original accepted receipt and later current snapshot are labelled and reconciled separately.",
+    "invariants": [
+      "INV-11",
+      "INV-13"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T093",
+    "phase": "P01",
+    "layer": "concurrency",
+    "title": "Dynamic guard expansion",
+    "setup_and_interleaving": "Discover an additional dependency after taking initial ordered guards.",
+    "required_assertion": "Abort/replan or explicit bounded rejection; no unsafe late lock-order inversion.",
+    "invariants": [
+      "INV-15",
+      "INV-16"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T094",
+    "phase": "P04",
+    "layer": "policy",
+    "title": "Equal target but stale approved basis",
+    "setup_and_interleaving": "Make proposed target values equal current while changing a material source/mandate.",
+    "required_assertion": "No-op shortcut cannot authorize obsolete proposal.",
+    "invariants": [
+      "INV-08",
+      "INV-10",
+      "INV-24"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T095",
+    "phase": "P02",
+    "layer": "http",
+    "title": "Edit stamp versus dashboard ETag",
+    "setup_and_interleaving": "Change dashboard-only derived data while definition is unchanged.",
+    "required_assertion": "Dedicated edit token contract is not falsely advertised as strong validator of full dashboard.",
+    "invariants": [
+      "INV-04",
+      "INV-18"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  },
+  {
+    "id": "T096",
+    "phase": "P02",
+    "layer": "lifecycle",
+    "title": "Operation namespace across profiles",
+    "setup_and_interleaving": "Use same public operation/target IDs in separate allowed dataset namespaces.",
+    "required_assertion": "No false replay or disclosure across profiles/epochs.",
+    "invariants": [
+      "INV-06",
+      "INV-12",
+      "INV-22"
+    ],
+    "status": "proposed-not-executed",
+    "actual_test_symbol": null,
+    "actual_command": null,
+    "expected_discovery_count": null,
+    "actual_result": null
+  }
+]

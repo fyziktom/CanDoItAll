@@ -1,0 +1,339 @@
+[
+  {
+    "id": "P00",
+    "title": "Evidence refresh, writer perimeter and cost baseline",
+    "depends_on": [],
+    "goal": "Turn the sampled architecture map into a complete enabled-writer inventory for the Projects pilot and establish reproducible baseline costs.",
+    "changes": [
+      "Resolve the actual working branch, dirty tree and sibling revisions; remap extracted contracts and hosts.",
+      "Trace Projects create/update/delete, children, raw SQL, imports, transfer, seed/test maintenance and every HTTP/tool/UI caller.",
+      "Read current testing guidance, complete CI policy, governance journals and canonical migration composition.",
+      "Record baseline SQL/rows, lock wait/hold, latency, receipt/projection behavior and UI draft memory with isolated data."
+    ],
+    "excludes": [
+      "No application-wide token migration.",
+      "No source checkout/reset or change to the developer environment.",
+      "No claiming default-branch search results prove the target branch."
+    ],
+    "entry": [
+      "Package is accepted as a review starting point, not an implementation mandate."
+    ],
+    "exit": [
+      "Every enabled Projects writer is assigned a stable inventory ID and exact symbol/caller evidence; unknown pilot writer count is zero.",
+      "Exact owner test discovery is recorded and baseline environment is reproducible.",
+      "Decisions D01–D08 have assigned reviewers and pilot defaults are ratified or replaced."
+    ],
+    "performance": [
+      "PERF-01",
+      "PERF-02",
+      "PERF-03",
+      "PERF-04",
+      "PERF-05"
+    ],
+    "stop": "Read-only discovery is useful independently. Existing write risks remain; no new concurrency guarantee is advertised.",
+    "risks": "Incomplete later-owner mapping remains explicit. Performance baselines may still require a capable local environment, which blocks that gate rather than being labelled passing.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P01",
+    "title": "Minimal foundation proof and prerequisite repairs",
+    "depends_on": [
+      "P00"
+    ],
+    "goal": "Establish correct transaction/outcome/cleanup behavior and choose only the primitives the first vertical slice needs.",
+    "changes": [
+      "Specify exact edit-stamp semantics, original-value binding, coherent read and child-only root advancement.",
+      "Prove source-first lock ordering, nested participation, cancellation/dispose cleanup and commit knowledge on both Projects source paths.",
+      "Separate domain conflict, retryable database failure and commit uncertainty in the owner/adapters without replacing unrelated public contracts.",
+      "Design/reuse the Projects durable operation result and bounded fact-validation ports; instrument existing gates."
+    ],
+    "excludes": [
+      "No blanket removal of local stripes or isolation-level downgrade.",
+      "No generic command bus, global mutation DbContext or reflective field patch engine.",
+      "No new replay truth duplicating existing owner journals."
+    ],
+    "entry": [
+      "P00 complete pilot writer map and measured baseline; actual primitive consumers known."
+    ],
+    "exit": [
+      "Two-process and deterministic primitive tests show declared participation/cleanup/commit semantics.",
+      "Minimal schema/contract choices and canonical mapping strategy reviewed.",
+      "Projection decision D08 and migration/restore identity policy are resolved before P02 implementation starts."
+    ],
+    "performance": [
+      "PERF-03",
+      "PERF-04",
+      "PERF-05",
+      "PERF-06"
+    ],
+    "stop": "Foundational corrections may ship separately when behavior and guards remain compatible. Project content protection is not yet complete.",
+    "risks": "Changing a shared utility can affect many owners; named invalidation triggers may require a broader frozen-checkpoint gate before continuing.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P02",
+    "title": "Projects end-to-end protected edit pilot",
+    "depends_on": [
+      "P01"
+    ],
+    "goal": "Close lost project edits, ambiguous save outcomes and the selected projection consistency gap across every enabled Projects caller.",
+    "changes": [
+      "Add the reviewed content stamp to canonical schema and owner mapping; atomic parent/child/receipt behavior.",
+      "Return a coherent editable snapshot and exact accepted stamp plus child identity mapping.",
+      "Update ordinary UI hosts, API-only contract, agent tool request/binding and internal callers together; missing/stale preconditions reject.",
+      "Implement draft-preserving conflicts, original operation reconciliation and chosen search projection protocol.",
+      "Update transfer/import/maintenance token handling and drain unconverted writers; cover delete/recreate and original creation reservation/compensation."
+    ],
+    "excludes": [
+      "No full rich-text merge, shared cursors or per-keystroke autosave.",
+      "No claim that old planning objectives are now detected by target CAS.",
+      "No unconverted legacy endpoint that fills in a current token."
+    ],
+    "entry": [
+      "P01 choices and proofs complete; deployable caller/migration perimeter approved."
+    ],
+    "exit": [
+      "All enabled pilot write paths enforce original content/lifetime conditions; absent tokens cannot bypass.",
+      "Real two-editor and agent-versus-human tests preserve data and drafts; duplicates/lost responses reconcile by owner result.",
+      "Chosen projection, import and restore rules pass their actual crash/order tests.",
+      "Targeted owner, contracts, UI and browser proofs plus required static gates are recorded on matching source."
+    ],
+    "performance": [
+      "PERF-01",
+      "PERF-02",
+      "PERF-03",
+      "PERF-07",
+      "PERF-08",
+      "PERF-10"
+    ],
+    "stop": "Protected Projects edits and their declared projection/outcome guarantees can ship. Other owners and decision-basis freshness remain explicitly outside coverage.",
+    "risks": "Coarse project revision may cause benign conflicts. Deployment cannot restore old unsafe writers as a performance fallback.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P03",
+    "title": "Narrow intentions and selective editor reconciliation",
+    "depends_on": [
+      "P02"
+    ],
+    "goal": "Reduce avoidable whole-object conflicts and list churn without weakening the pilot safety rules.",
+    "changes": [
+      "Introduce selected typed add/edit/remove/reorder intentions with their own validated preconditions.",
+      "Define duplicate/foreign row-ID rejection, normalization and no-op behavior.",
+      "Enable scalar three-way merge only for owner-approved independent fields; keep collection merge explicit.",
+      "Preserve submitted/live reconciliation and backend-free rendering boundaries during extraction."
+    ],
+    "excludes": [
+      "No universal JSON Patch engine or mandatory field-level revisions.",
+      "No silent LLM-generated merge applied as safe."
+    ],
+    "entry": [
+      "P02 valid baseline and observed conflict/cost data justify the selected refinement."
+    ],
+    "exit": [
+      "Exact intent/collection and third-writer merge races pass.",
+      "UI draft survival and public API/tool schema parity remain proven.",
+      "Comparison reports whether conflict rate or query/allocation cost actually improved."
+    ],
+    "performance": [
+      "PERF-01",
+      "PERF-02",
+      "PERF-08",
+      "PERF-11"
+    ],
+    "stop": "Projects becomes more usable; coarse protected save can remain as explicit replace. Fine-grained collaboration remains out of scope.",
+    "risks": "More commands increase contract surface. Keep only those with a real use case and testable domain meaning.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P04",
+    "title": "One governed decision-basis and approval pilot",
+    "depends_on": [
+      "P03"
+    ],
+    "goal": "Protect a real planning operation against stale inputs and superseded intent, beyond target-row concurrency.",
+    "changes": [
+      "Bind exact proposal, mandatory Projects/Workbench inputs and set-membership witness to the original runtime invocation.",
+      "Validate bounded source basis under actual publication protection using typed owner ports.",
+      "Bind approval to the reviewed proposal/basis/authority and reject material drift.",
+      "Implement explicit takeover/override semantics for the pilot and reject late retired attempts at the owner.",
+      "Bound semantic replans and distinguish them from technical retries/outcome lookup."
+    ],
+    "excludes": [
+      "No claim of proof of model reasoning.",
+      "No collecting every read in every chat as a dependency.",
+      "No platform-wide process/checkpoint migration yet."
+    ],
+    "entry": [
+      "P03 supports the required precise intentions; policy owner defines material inputs and takeover scope."
+    ],
+    "exit": [
+      "Objective change, phantom task insertion, revoked claim and stale approval tests pass with no partial effects.",
+      "Actual governed tool-to-owner roundtrip and a human intervention UI journey are validated.",
+      "Replan budget, basis limits and source protection level are documented and measured."
+    ],
+    "performance": [
+      "PERF-06",
+      "PERF-09",
+      "PERF-11"
+    ],
+    "stop": "The named planning operation gains source/authority guarantees. Do not extend that claim to unrelated tools or all existing runs.",
+    "risks": "Missing mandatory facts or false invalidation can undermine the feature. External facts remain pinned observations unless a stronger provider contract exists.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P05",
+    "title": "Bounded owner adoption waves and structural invariants",
+    "depends_on": [
+      "P02"
+    ],
+    "goal": "Apply proven target/outcome contracts owner by owner, preserving stronger existing semantics and closing graph-level risks separately.",
+    "changes": [
+      "Choose each next owner from refreshed mutation/risk/decoupling inventories; small editors first.",
+      "Wave A candidates: Prompts, Collaboration flags/create/replies, Resource metadata—each requires current code audit before selection.",
+      "Wave B candidates: CRM/HR, Workspace settings, Provider/Agent configuration, Memory/Plugins/Security administration—retain their established contracts and policies.",
+      "Wave C: canonical Workbench tasks, assignments, graph moves/dependencies and bounded multi-owner batches; preserve existing expected state and source ordering.",
+      "Add shared vocabulary only after real repetition demonstrates a useful stable boundary."
+    ],
+    "excludes": [
+      "No mechanical Version-property rollout across every mapped entity.",
+      "No replacement of immutable definitions or append semantics with whole-object saves.",
+      "No new UI/backend coupling while contracts move."
+    ],
+    "entry": [
+      "P02 experience available; each wave has its own complete selected-writer map. P04 is additionally required for a wave adopting decision-basis behavior."
+    ],
+    "exit": [
+      "Each selected owner has independent coverage declaration, tests, compatibility cutover and benchmark comparison.",
+      "Structural wave proves membership/cycle/assignment invariants under opposing concurrent writes.",
+      "Unconverted owners remain listed, not hidden behind an application-wide completion label."
+    ],
+    "performance": [
+      "PERF-03",
+      "PERF-05",
+      "PERF-06",
+      "PERF-08"
+    ],
+    "stop": "Each closed owner wave can ship independently; unreviewed waves are not required merely to finish a documentation phase.",
+    "risks": "P05 is a family of bounded slices, not one giant release. Dependencies on other ongoing refactors must be refreshed at each slice.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P06",
+    "title": "Storage, external delivery and projection integration",
+    "depends_on": [
+      "P04",
+      "P05"
+    ],
+    "goal": "Carry valid intentions and honest outcomes through selected non-SQL boundaries without inventing universal atomicity.",
+    "changes": [
+      "Audit actual storage drivers and existing placement/tool receipts; classify conditional replacement and external-edit support.",
+      "Bind external deliveries to proposal/authority and stable provider request identities where supported.",
+      "Implement guarded narrow compensation and explicit uncertain-outcome recovery.",
+      "Add durable projection/outbox work only for selected proven needs; define ordering, backlog, retention and deletion tombstones."
+    ],
+    "excludes": [
+      "No general distributed transaction or exactly-once guarantee.",
+      "No external network/byte work inside a retriable database transaction."
+    ],
+    "entry": [
+      "P04 semantics and the relevant P05 owner slice complete; other unrelated P05 waves need not block. Provider capabilities verified."
+    ],
+    "exit": [
+      "Driver/provider-specific failure, timeout-after-accept, external-edit and compensation races pass.",
+      "Every selected external boundary declares its real guarantee and recovery path.",
+      "Backlog/receipt retention and operational limits have measured capacity evidence."
+    ],
+    "performance": [
+      "PERF-07",
+      "PERF-09",
+      "PERF-10"
+    ],
+    "stop": "Selected external effects have explicit guarantees. Unsupported external CAS/idempotency remains visible rather than silently emulated.",
+    "risks": "Remote services may not support sufficient dedupe or lookup. Operator recovery can be a required product outcome, not a hidden retry.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P07",
+    "title": "Workflow and Process resume/publication integration",
+    "depends_on": [
+      "P04",
+      "P06"
+    ],
+    "goal": "Integrate proven basis, approval and effect semantics into the largest long-running execution paths without weakening existing governance.",
+    "changes": [
+      "Map definition versions, prepared launches, checkpoints, approvals, claims and owner effect receipts to the new semantic vocabulary.",
+      "Keep immutable execution snapshots valid while revalidating publication into current mutable targets.",
+      "Define legacy checkpoint/basis handling, cancellation/takeover fences, replay denials and compensation behavior.",
+      "Update process/workflow UI, tool schemas and recovery operator paths together."
+    ],
+    "excludes": [
+      "No unrelated rewrite of the process engine or hard worker-isolation project.",
+      "No auto-upgrading old approvals by inventing current input provenance."
+    ],
+    "entry": [
+      "The smaller real governed pilot and relevant external/owner semantics are proven; Process UI extraction boundaries refreshed."
+    ],
+    "exit": [
+      "Resume-after-edit, superseded worker, old denial replay, stale approval and uncertain-effect tests pass through actual runtime boundaries.",
+      "Relevant simple workflows/processes run through shipped UI with recorded effect/read-back evidence.",
+      "Saved-record compatibility and non-downgrade policy reviewed; mandatory specialized lanes run or explicitly block claimed coverage."
+    ],
+    "performance": [
+      "PERF-06",
+      "PERF-09",
+      "PERF-10",
+      "PERF-11"
+    ],
+    "stop": "Named workflow/process paths are covered with explicit legacy restrictions; whole runtime safety is not inferred from a small scenario.",
+    "risks": "Largest integration blast radius; keep changes in reviewed sub-slices and re-run required frozen-checkpoint/platform gates.",
+    "status": "proposed-not-started"
+  },
+  {
+    "id": "P08",
+    "title": "Consolidation, measured optimization and release closure",
+    "depends_on": [
+      "P03",
+      "P05",
+      "P06",
+      "P07"
+    ],
+    "goal": "Publish an accurate coverage contract with lifecycle/runbook/performance evidence, and optimize only demonstrated overhead.",
+    "changes": [
+      "Reconcile all selected writer inventories, source drift, approved decisions, risks and residual unsupported paths.",
+      "Run documented release/merge/frozen-checkpoint canonical suites and named platform/browser/live/provider lanes as required by actual impact.",
+      "Complete migration/backup/restore/retention and mixed-version operational rehearsals.",
+      "Tune query batching/lock lifetime/payload/revision scope only when measurement and concurrency proofs agree.",
+      "Record operator dashboards, alerts, incident recovery and final guarantee scope."
+    ],
+    "excludes": [
+      "No marking skipped or unavailable lanes green.",
+      "No unsafe feature flag disabling target or authority checks to hit a latency budget.",
+      "No claim all unselected modules were migrated."
+    ],
+    "entry": [
+      "Selected adoption scope is frozen; all required predecessor slices and evidence are complete."
+    ],
+    "exit": [
+      "Current source, tests, evaluated graph and performance reports agree.",
+      "Deployment/rollback rehearsal preserves enforced writer boundary and operation evidence.",
+      "Remaining risks are specifically accepted with owner and scope; zero undocumented enabled bypasses in advertised coverage."
+    ],
+    "performance": [
+      "PERF-01",
+      "PERF-02",
+      "PERF-03",
+      "PERF-04",
+      "PERF-05",
+      "PERF-06",
+      "PERF-07",
+      "PERF-08",
+      "PERF-09",
+      "PERF-10",
+      "PERF-11"
+    ],
+    "stop": "Release only the explicit validated coverage. Future additions enter P00-style refresh, not automatic expansion of claims.",
+    "risks": "Branch drift and long replay/retention horizons continue after release; periodic reviews follow change triggers, not assumptions.",
+    "status": "proposed-not-started"
+  }
+]
