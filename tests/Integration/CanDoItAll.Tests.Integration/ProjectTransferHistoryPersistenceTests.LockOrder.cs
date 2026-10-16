@@ -10,11 +10,48 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed partial class ProjectTransferHistoryPersistenceTests {
+    [Fact]
+    public async Task Project_import_waits_before_its_snapshot_and_refuses_newly_committed_definition_receipt() {
+        await using var fixture = await TransferFixture.CreateAsync();
+        var sourceProjectId = await SeedImportProjectAsync(fixture);
+        var activation = fixture.TargetServices.GetRequiredService<DatasetActivationService>();
+        var binding = await activation.ReadActiveBindingAsync(fixture.TargetProfile.Profile.Id);
+        await using var writer = await fixture.TargetContextAsync();
+        await using var transaction = await writer.Database.BeginTransactionAsync();
+        await DatasetLifecycleStore.RequireActiveForMutationAsync(writer, binding);
+        var targetProject = new Project { Name = "Concurrent accepted definition" };
+        var receipt = DatabaseTransferLifecycleTests.Receipt(binding, targetProject);
+        writer.AddRange(targetProject, receipt);
+        await writer.SaveChangesAsync();
+        var probe = new ImportOrderProbe();
+        var transfer = fixture.TransferAsync(probe);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        try {
+            var processId = await probe.LifecycleStarted.Task.WaitAsync(deadline.Token);
+            await using var observer = await fixture.TargetContextAsync();
+            await WaitForRelationWaiterAsync(observer, processId, deadline.Token);
+            await transaction.CommitAsync(deadline.Token);
+            var result = await transfer.WaitAsync(deadline.Token);
+            Assert.False(result.Success);
+            Assert.Equal(0, result.RecordsCopied);
+            Assert.Contains("retained project definition receipts", result.Message, StringComparison.Ordinal);
+            AssertImportCommandOrder(probe);
+            Assert.False(await observer.Set<Project>().AnyAsync(row => row.Id == sourceProjectId, deadline.Token));
+            Assert.True(await observer.Set<Project>().AnyAsync(row => row.Id == targetProject.Id, deadline.Token));
+            Assert.True(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, deadline.Token));
+            await RequireGateAvailableAsync(observer, ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey, deadline.Token);
+        } finally {
+            await transaction.DisposeAsync();
+            await transfer.WaitAsync(deadline.Token);
+        }
+    }
+
     [Fact]
     public async Task Project_import_waits_before_its_snapshot_and_refuses_newly_committed_CRM_residue() {
         await using var fixture = await TransferFixture.CreateAsync();
@@ -63,7 +100,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var probe = new ImportOrderProbe();
         var failure = await Assert.ThrowsAsync<PostgresException>(() => fixture.TransferAsync(probe).WaitAsync(TimeSpan.FromSeconds(20)));
         Assert.Equal(PostgresErrorCodes.LockNotAvailable, failure.SqlState);
-        var exclusion = Assert.Single(probe.Commands, command => command.Sql.StartsWith("LOCK TABLE", StringComparison.Ordinal));
+        var exclusion = Assert.Single(probe.Commands, command => command.Sql.EndsWith("IN ACCESS EXCLUSIVE MODE NOWAIT", StringComparison.Ordinal));
         Assert.EndsWith("IN ACCESS EXCLUSIVE MODE NOWAIT", exclusion.Sql, StringComparison.Ordinal);
         Assert.DoesNotContain(probe.Commands, command => command.Sql.Contains("pg_advisory_xact_lock", StringComparison.Ordinal));
         await using var observer = await fixture.TargetContextAsync();
@@ -82,7 +119,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         await using var database = await HistoryPersistenceTestDatabase.CreateAsync();
         var probe = new ImportOrderProbe();
         await using var maintenance = database.Factory.WithInterceptor(probe).CreateDbContext();
-        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance);
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance, activation: await database.ActivateDatasetAsync());
         var projects = new ProjectsProfileTransferStore(operations);
         var projectId = Guid.NewGuid();
         var objectId = Guid.NewGuid();
@@ -97,7 +134,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             async (session, token) => {
                 await projects.SaveAsync(session, new([new ProjectTransferProject { Id = projectId, Name = "Locked import" }], [], [], [], [], []), token);
                 await using var owner = await operations.CreateOwnerAsync<WorkbenchDbContext>(session, static options => new WorkbenchDbContext(options), token);
-                var exclusion = Assert.Single(probe.Commands, command => command.Sql.StartsWith("LOCK TABLE", StringComparison.Ordinal));
+                var exclusion = Assert.Single(probe.Commands, command => command.Sql.EndsWith("IN ACCESS EXCLUSIVE MODE NOWAIT", StringComparison.Ordinal));
                 Assert.Same(exclusion.Connection, owner.Database.GetDbConnection());
                 var transaction = Assert.IsAssignableFrom<IDbContextTransaction>(owner.Database.CurrentTransaction);
                 Assert.Same(exclusion.Transaction, transaction.GetDbTransaction());
@@ -137,7 +174,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], default);
         var probe = new ImportOrderProbe();
         await using var maintenance = database.Factory.WithInterceptor(probe).CreateDbContext();
-        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance);
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance, activation: await database.ActivateDatasetAsync());
         using var cancelled = new CancellationTokenSource();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var called = false;
@@ -173,7 +210,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var cleanup = new ImportCleanupFailure();
         var probe = new ImportOrderProbe(original, cleanup);
         await using var maintenance = database.Factory.WithInterceptor(probe).CreateDbContext();
-        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance);
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, maintenance, activation: await database.ActivateDatasetAsync());
         var called = false;
         var failure = await Assert.ThrowsAsync<AggregateException>(() => operations.RunExclusiveImportAsync(database.Profile,
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], [typeof(Project)], (session, token) => {
@@ -226,9 +263,14 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
 
     private static void AssertImportCommandOrder(ImportOrderProbe probe) {
         var commands = probe.Commands.ToArray();
-        var exclusionIndex = Array.FindIndex(commands, command => command.Sql.StartsWith("LOCK TABLE", StringComparison.Ordinal));
-        Assert.True(exclusionIndex > 0);
-        Assert.All(commands.Take(exclusionIndex), command => Assert.Null(command.Transaction));
+        var lifecycleIndex = Array.FindIndex(commands, command => command.Sql ==
+            "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE");
+        Assert.True(lifecycleIndex > 0);
+        Assert.All(commands.Take(lifecycleIndex).Where(command => command.Transaction is not null),
+            command => Assert.Equal("SET LOCAL lock_timeout = '5s'", command.Sql));
+        var exclusionIndex = Array.FindIndex(commands, command => command.Sql.EndsWith("IN ACCESS EXCLUSIVE MODE NOWAIT", StringComparison.Ordinal));
+        Assert.True(exclusionIndex > lifecycleIndex);
+        Assert.Equal(lifecycleIndex + 1, exclusionIndex);
         var exclusion = commands[exclusionIndex];
         Assert.NotNull(exclusion.Transaction);
         Assert.EndsWith("IN ACCESS EXCLUSIVE MODE NOWAIT", exclusion.Sql, StringComparison.Ordinal);
@@ -246,6 +288,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
     private sealed class ImportOrderProbe(Exception? exclusionFailure = null, Exception? cleanupFailure = null) : DbCommandInterceptor {
         public ConcurrentQueue<ImportCommand> Commands { get; } = new();
         public TaskCompletionSource<int> AdvisoryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<int> LifecycleStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
@@ -269,6 +312,9 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
             Commands.Enqueue(new(command.CommandText, command.Connection!, command.Transaction));
             if (command.CommandText.Contains("pg_advisory_lock(", StringComparison.Ordinal)) {
                 AdvisoryStarted.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
+            }
+            if (command.CommandText == "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE") {
+                LifecycleStarted.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
         }
     }

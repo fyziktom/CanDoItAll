@@ -4,11 +4,14 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Security;
 
 public interface ISecretDatabaseTransferParticipant {
+    IReadOnlyCollection<Type> TargetEntityTypes { get; }
     Task<DatabaseTransferTable> GetTargetTableAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken = default);
     Task<int> CopySelectedAsync(DatabaseTransferOwnerRequest transfer, IReadOnlyCollection<Guid> secretIds, CancellationToken cancellationToken = default);
 }
 
 public sealed class SecretDatabaseTransferParticipant(DatabaseTransferOwnerSessionRunner sessions) : ISecretDatabaseTransferParticipant {
+    public IReadOnlyCollection<Type> TargetEntityTypes { get; } = [typeof(SecretRecord), typeof(SecretReference)];
+
     public async Task<DatabaseTransferTable> GetTargetTableAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken = default) {
         await using var target = await sessions.CreateTargetAsync<SecurityDbContext>(transfer, static options => new SecurityDbContext(options), cancellationToken);
         return DatabaseTransferTable.From(target.Model.FindEntityType(typeof(SecretRecord))

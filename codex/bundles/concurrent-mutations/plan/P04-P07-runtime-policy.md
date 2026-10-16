@@ -261,7 +261,7 @@ runtime proof. A separate actual host smoke validates real registration/adapters
 
 | New owning test topic / minimum cases | Deterministic cases |
 | --- | --- |
-| `DecisionDataPolicyTests` — 8 unit Facts | `OwnerMandateCannotBeWeakenedByInvocation`; `UnsupportedPauseIsRejected`; `UnknownModeIsRejected`; `NestedBudgetUsesTightestAllowance`; `RunSnapshotUsesOneAdmittedBasis`; `StepSnapshotRefreshesOnlyForNextLogicalStep`; `RetryRetainsOriginalPolicyAndBasis`; `SemanticReplanRequiresNewAttemptAndApproval`. |
+| `DecisionDataPolicyTests` — 8 unit Facts | `DefaultPolicyIsExplicit`; `OverridePrecedenceIsDeterministic`; `OwnerMandateCannotBeWeakenedByInvocation`; `UnsupportedPauseIsRejected`; `UnknownModeIsRejected`; `NestedBudgetUsesTightestAllowance`; `InvalidBudgetIsRejected`; `VersionedPolicySerializationPreservesMeaning`. Actual snapshot capture, retry, replan and approval behavior belongs in E/F/G runtime tests. |
 | `ProjectTaskPlanBasisTests` — 8 database Facts | `ObjectiveChangeRejectsPublication`; `InsertedTaskInvalidatesCompleteSet`; `DeletedTaskInvalidatesCompleteSet`; `MaterialTaskEditInvalidatesBasis`; `UnrelatedPresentationChangeDoesNotInvalidate`; `SameIdRecreationRejectsOldBasis`; `TruncatedMembershipCannotBecomeBasis`; `RevokedSourceIsDeniedBeforePublication`. Extend with one case for each distinct writer family identified in B; eight is a floor, not perimeter closure. |
 | `ProjectTaskPlanPublicationTests` — 6 database Facts | `BatchCommitsAllTasksAndExactReceipt`; `MidBatchFailureLeavesNoEffects`; `LostReplyReplaysExactAcceptedResult`; `SameIntentDifferentBasisConflicts`; `DifferentProjectsDoNotSharePublicationLock`; `UnknownCommitCannotTriggerReplan`. |
 | `AgentDecisionPolicyIntegrationTests` — 6 Facts | `ProviderReceivesPersistedBasis`; `RetryAfterRestartDoesNotRefresh`; `ChangedBasisPersistsReviewWithoutLease`; `MissingCheckpointCannotClaimSessionResume`; `ReplanCreatesNewDigestAndApproval`; `BudgetCannotResetThroughNewRunId`. |
@@ -291,6 +291,36 @@ the bundle's broad stable gate. Every protected-source card runs portability-sta
 reviews added/stale findings, refreshes only intentional baseline deltas, then passes
 enforcement without write-baseline. UI proof uses the supported large desktop viewport,
 normal state plus review/settings overlay, keyboard actions and visible error states.
+
+## Implementation-readiness refinements
+
+The next independent policy slice is card A in existing SharedKernel:
+`Concurrency/DecisionDataPolicy.cs`, `Concurrency/DecisionDataPolicyResolver.cs`
+and the owning Unit test file. Existing Agent Models and Process contract/application
+references already reach SharedKernel; no new project edge, service registry or
+runtime default activation is required. R1b/R1c/R1d/R2 journal and producer work
+still gates pause/replan support for interactive, detached and governed executions.
+
+Process-to-Workflow replan must extend the actual child admission contract.
+`WorkflowProcessStepExecutor` currently finds a child by run plus assignment,
+reuses one child, rejects multiple children, and derives its idempotency key from
+that same pair. A semantic-attempt dimension must be consistent in mapped source,
+child lookup and key; changing only Agent admission would reuse old work or make
+Workflow children ambiguous. Replays retain their original identity.
+
+Prepared-launch compatibility needs explicit version treatment.
+`ProcessPreparedLaunchPersistence` checks both the original payload hash and a
+reserialized initial commit. New nonnullable defaults could change old evidence.
+Preserve omitted nullable legacy fields and introduce an explicit policy version
+and hash domain for newly admitted work. Assignment persistence mapping and its
+immutable-field comparison must both include the new policy. Never backfill a
+resumed launch from current settings.
+
+`ProcessLaunchApplicationService` already stores assignment prompts and launch
+variables at launch. StepSnapshot captures newly declared business facts at actual
+step admission; it does not indiscriminately reconstruct original launch inputs.
+Mutable launch-derived facts must be declared in the material basis. These are
+source-review constraints, not executed runtime proof.
 
 ## Bounded unresolved gates
 

@@ -292,6 +292,9 @@ public sealed record ProjectStructureProjectSaveRequest(
     string? LeaseToken = null) {
     [Description("For an existing project, the unchanged expectation from project_structure_project_definition_get or GET /api/project-structure/projects/{projectId}/definition. Required for updates; must be absent for creation. A lease does not replace this original definition expectation.")]
     public ProjectDefinitionExpectation? ExpectedDefinition { get; init; }
+
+    [Description("Original parent admission for a governed subproject creation proposal. Copy the parent admission from its coherent definition read; recovery preserves this exact lifetime.")]
+    public ProjectWriteAdmission? ExpectedParentAdmission { get; init; }
 }
 
 /// <summary>

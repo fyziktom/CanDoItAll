@@ -11,6 +11,7 @@ internal static class ProjectsApi
     {
         var projects = group.MapGroup("/projects").WithApiSection(ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects)
             .WithTags("Projects");
+        projects.MapDefinitionOperations();
 
         projects.MapGet("/", ListProjectsAsync)
             .WithName("ListProjects")
@@ -28,11 +29,11 @@ internal static class ProjectsApi
             .WithName("GetProjectEditor")
             .Produces<ProjectEditorModel>();
 
-        projects.MapGet("/{projectId:guid}/definition", GetProjectDefinitionAsync)
+        projects.MapGet("/{projectId:guid}/definition", ProjectDefinitionApi.ReadAsync)
             .WithName("GetProjectDefinition")
             .WithSummary("Read a coherent project definition and its original edit expectation.")
             .WithDescription("Returns normalized definition scalars, ordered phases/options and the matching expectation from one database snapshot. Retain that expectation unchanged for a conditional update. A missing project returns 404; this read never returns a creation template. Uses the current Projects read permission when API authorization is enabled.")
-            .Produces<ProjectDefinitionSnapshot>()
+            .Produces<ProjectDefinitionReadApiResponse>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         projects.MapGet("/by-external-key/{externalNamespace}/{externalKey}", ResolveExternalIdentityAsync)

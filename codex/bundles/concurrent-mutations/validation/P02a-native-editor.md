@@ -1,7 +1,10 @@
 # P02a native editor implementation and proof plan
 
-Status: source prepared; no build, test run or browser screenshot is claimed by this record.
-The coordinating agent owns serialized Release validation and the final portability gate.
+Status: historical P02a implementation/proof plan. Parent subsequently completed
+38 lightweight, 51 native and one browser case plus final static gates; see
+`P02a-validation.md` for that candidate's evidence. The source/proposed counts
+below describe the earlier slice, not current P02c closure. Current durable
+recovery integration and proof status are in `P02c-native-editor.md`.
 
 The native Projects editor records a typed conflict with its frozen submitted command and
 retains the live draft, EditContext, child row identities and raw input. Reading the current

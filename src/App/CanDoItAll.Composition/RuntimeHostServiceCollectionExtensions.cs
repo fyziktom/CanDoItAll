@@ -75,6 +75,7 @@ public static class RuntimeHostServiceCollectionExtensions
             IProviderHttpClientSelector,
             SharedProviderRuntimeHttpClientSelector>();
         services.AddProjectsModule();
+        services.Configure<ProjectDefinitionOperationOptions>(configuration.GetSection(ProjectDefinitionOperationOptions.SectionName));
         services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule(configuration);
         services.AddResourcesModule();
@@ -105,6 +106,8 @@ public static class RuntimeHostServiceCollectionExtensions
         services.TryAddSingleton<ProjectStructureProcessProposalCodec>();
         services.TryAddScoped<ProjectStructureProcessToolAdmission>();
         services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectStructureProcessToolAdmission>());
+        services.TryAddScoped<ProjectDefinitionToolAdmission>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider>(provider => provider.GetRequiredService<ProjectDefinitionToolAdmission>());
         services.TryAddScoped<IWorkflowScheduledSourceAuthorityPolicy, ProjectScheduledWorkflowSourceAuthorityPolicy>();
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
@@ -207,6 +210,7 @@ public static class RuntimeHostServiceCollectionExtensions
     public static IServiceCollection AddCanDoItAllRuntimeDatabaseSwitching(this IServiceCollection services)
     {
         services.AddSingleton<IAppDatabaseBootstrapper, AppDatabaseBootstrapper>();
+        services.AddSingleton<DatasetActivationCoordinator>();
         services.AddSingleton<IDatabaseSwitchCoordinator, DatabaseSwitchCoordinator>();
         return services;
     }
@@ -219,6 +223,7 @@ public sealed class AppDatabaseBootstrapper(
     EnvironmentSecretBootstrapService secretBootstrap,
     ProviderDefaultsBootstrapService providerBootstrap,
     WorkspaceDefaultsBootstrapService workspaceBootstrap,
+    DatasetActivationCoordinator datasetActivation,
     IEnumerable<IProviderRuntimeProfileSnapshotInitializer>
         providerRuntimeProfileSnapshotInitializers,
     ILogger<AppDatabaseBootstrapper> logger,
@@ -295,6 +300,7 @@ public sealed class AppDatabaseBootstrapper(
             profile.Profile.Id);
         await ReconcilePostgreSqlMigrationBaselineIfNeededAsync(profile, dbContext, cancellationToken);
         await dbContext.Database.MigrateAsync(cancellationToken);
+        await datasetActivation.EnsureReadyAsync(profile, cancellationToken);
         logger.LogInformation(
             "Ensuring CRM/HR schema for profile {ProfileId}.",
             profile.Profile.Id);

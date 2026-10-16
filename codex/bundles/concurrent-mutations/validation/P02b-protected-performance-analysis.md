@@ -1,5 +1,9 @@
 # Protected Projects: partial baseline and harness repair
 
+Historical partial-run record. The parent subsequently completed both Facts;
+see the [complete pre-optimization baseline](P02bc-protected-performance-baseline.md).
+The measurements below remain unchanged and are not pooled with that run.
+
 Status: reviewed partial measurement; complete concurrent baseline and repaired-harness validation pending. The parent ran the two `ProjectsProtectedMutationPerformanceTests` Facts from standard Release outputs against its isolated PostgreSQL fixture. This analysis launched no workload and changed no production source.
 
 Evidence: `.artifacts/concurrent-mutations/validation/p02b-protected-performance.trx`. Extract only the result name/outcome/duration/error and the structured records' workload, sample, timing, outcome, allocation, GC, command-family, receipt-size, WAL and maintenance fields. Do not publish raw SQL, parameter values, environment credentials or arbitrary TRX content.

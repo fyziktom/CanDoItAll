@@ -44,6 +44,19 @@
                 </HeaderActions>
                 <ChildContent>
                     <section hidden="@(!IsEditorMode)" aria-label="Project editor">
+                        <ProjectPendingRecoverySurface View="PendingRecovery" Action="PendingAction" />
+                        @if (Draft.InspectedDefinition is not null) {
+                            <Alert AlertStyle="AlertStyle.Info" data-testid="project-current-inspection">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock Value="The current saved definition is shown separately. It does not replace the accepted result for the retained save." />
+                                    <Cluster Wrap="FlexWrap.Wrap">
+                                        <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanMutate)"
+                                                Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" />
+                                        <Button Text="Reconcile in a current-based draft" Disabled="@(!Draft.CanMutate)" Click="HandleReconciliationAsync" />
+                                    </Cluster>
+                                </Stack>
+                            </Alert>
+                        }
                         @if (Draft.Conflict is { } conflict) {
                             <Alert AlertStyle="AlertStyle.Warning" data-testid="project-definition-conflict">
                                 <Stack GapScale="LayoutGap.Small">
@@ -76,7 +89,7 @@
                         <Grid Gap="LayoutGap.Large" ColumnsLg="@(Draft.ComparisonModel is null ? 1 : 2)">
                         <Stack GapScale="LayoutGap.Large">
                             @if (Draft.ComparisonModel is not null) {
-                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(Draft.Conflict is null ? "Current-based editor" : "Your preserved draft")" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="Your draft" />
                             }
                             <Split Breakpoint="LayoutBreakpoint.Xl"
                                    Gap="LayoutGap.Large"
@@ -245,6 +258,9 @@
                                                             </InputSelect>
                                                             <InputText data-testid="project-starter-title" @bind-Value="starter.Title" @oninput="@((ChangeEventArgs args) => ChangeText(starter, nameof(starter.Title), value => starter.Title = value, args))" class="cda-input" />
                                                             <InputText @bind-Value="starter.Subtitle" @oninput="@((ChangeEventArgs args) => ChangeText(starter, nameof(starter.Subtitle), value => starter.Subtitle = value, args))" class="cda-input" />
+                                                            @if (starter.WasDispatched && !starter.IsSeeded) {
+                                                                <TextBlock Value="An earlier submitted version was attempted. Inspect Structure; newer changes to this plan will not be sent automatically." />
+                                                            }
                                                             <Button ButtonStyle="ButtonStyle.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
@@ -285,7 +301,7 @@
                         </Stack>
                         @if (Draft.ComparisonModel is not null) {
                             <Stack GapScale="LayoutGap.Large">
-                                @if (Draft.Conflict?.CurrentModel is { } comparison) {
+                                @if ((Draft.Conflict?.CurrentModel ?? Draft.InspectedModel) is { } comparison) {
                                     <FormSection Title="Current saved definition"
                                                  Description="This is the saved snapshot from your comparison read. Reading it does not change your draft or its original expectation.">
                                         <ProjectDefinitionComparison Model="comparison" />
@@ -468,9 +484,9 @@
                                 <Button Type="submit"
                                         Text="Save project"
                                         Click="@(() => openAfterSubmit = false)"
-                                        Disabled="@(!Draft.CanMutate)" data-testid="project-save-button" />
+                                        Disabled="@(!SubmissionReady || !Draft.CanMutate)" data-testid="project-save-button" />
                                 <Button Type="submit" ButtonStyle="ButtonStyle.Info"
-                                        Text="Save and open structure" Disabled="@(!Draft.CanMutate)" data-testid="project-save-open-button"
+                                        Text="Save and open structure" Disabled="@(!SubmissionReady || !Draft.CanMutate)" data-testid="project-save-open-button"
                                         Click="@(() => openAfterSubmit = true)" />
                                 @if (Editor.Id.HasValue) {
                                     <Button ButtonStyle="ButtonStyle.Light"
@@ -581,6 +597,12 @@
     public EventCallback<ProjectEditorSubmission> Save { get; set; }
 
     [Parameter]
+    public Func<ProjectEditorDraft, bool>? ValidateCapture { get; set; }
+
+    [Parameter]
+    public bool SubmissionReady { get; set; } = true;
+
+    [Parameter]
     public EventCallback<ProjectEditorSubmission> SaveAndOpenStructure { get; set; }
 
     [Parameter]
@@ -591,6 +613,12 @@
 
     [Parameter]
     public EventCallback<ProjectEditorDraft> BeginDefinitionReconciliation { get; set; }
+
+    [Parameter]
+    public ProjectPendingEditorView? PendingRecovery { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectPendingEditorIntent> PendingAction { get; set; }
 
     [Parameter]
     public EventCallback Delete { get; set; }
@@ -644,11 +672,14 @@
     private async Task HandleSaveAsync() {
         bool open = openAfterSubmit;
         openAfterSubmit = false;
-        if (validating || retired || !Draft.CanMutate || !Draft.Validate()) {
+        if (validating || retired || !SubmissionReady || !Draft.CanMutate || !Draft.Validate()) {
+            return;
+        }
+        var origin = Draft;
+        if (ValidateCapture?.Invoke(origin) == false) {
             return;
         }
         validating = true;
-        var origin = Draft;
         var submitted = origin.Capture();
         var save = open ? SaveAndOpenStructure : Save;
         try {
@@ -666,7 +697,7 @@
     }
 
     private async Task HandleReconciliationAsync() {
-        if (validating || retired || Draft.Conflict is not { ReadState: ProjectEditorConflictReadState.Ready }) {
+        if (validating || retired || !Draft.HasCurrentDefinition) {
             return;
         }
         const string invalid = "Complete or clear invalid dates before preserving this draft for reconciliation. Discard and reload remains available.";

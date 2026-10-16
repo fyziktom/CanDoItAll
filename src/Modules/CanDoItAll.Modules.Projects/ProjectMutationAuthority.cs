@@ -50,9 +50,10 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
         CancellationToken cancellationToken, ProjectCreationReservation? reservation = null,
-        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null,
+        ProjectDefinitionOperationProtocol? protocol = null, ProjectDefinitionOperationAttempt? attempt = null)
         => BeginCoreAsync(context, keys, purpose, projectId, existingProjectIds, authorization, admissions,
-            transactions, cancellationToken, reservation, null, expectedProjectAdmissions, definitionWrite: true);
+            transactions, cancellationToken, reservation, null, expectedProjectAdmissions, definitionWrite: true, protocol, attempt);
 
     internal static Task<ProjectSourceMutationScope> BeginAsync(ProjectsDbContext context,
         IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
@@ -68,7 +69,8 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
         CancellationToken cancellationToken, ProjectCreationReservation? reservation, Guid? requesterId,
-        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions, bool definitionWrite) {
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions, bool definitionWrite,
+        ProjectDefinitionOperationProtocol? protocol = null, ProjectDefinitionOperationAttempt? attempt = null) {
         IProjectMutationSourceLease? source = null;
         SerializableMutationScope? mutation = null;
         IDbContextTransaction? transaction = null;
@@ -96,15 +98,23 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
             }
             var orderedKeys = keys.Concat(required.Select(project => ProjectMutationScopeKeys.ForProject(project.ProjectId)))
                 .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
-            if (source is not null && context.Database.IsNpgsql()) {
-                transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-                using var coordination = transactions.Enter(context);
-                await source.RequireForMutationAsync(cancellationToken);
+            if ((source is not null || definitionWrite) && context.Database.IsNpgsql()) {
+                transaction = await context.Database.BeginTransactionAsync(source is null ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable, cancellationToken);
+                if (attempt is not null && await protocol!.EnterBeforeOwnerAdmissionAsync(context, attempt, cancellationToken)) {
+                    return new(context, null, transaction, source, [], admissions, transactions);
+                }
+                if (source is not null) {
+                    using var coordination = transactions.Enter(context);
+                    await source.RequireForMutationAsync(cancellationToken);
+                }
                 await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, orderedKeys, cancellationToken);
-            } else if (definitionWrite && context.Database.IsNpgsql()) {
-                transaction = await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
-                await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, orderedKeys, cancellationToken);
+                if (attempt is not null) {
+                    await ProjectOperationEpochService.RequireOpenAsync(context, attempt.Epoch, cancellationToken);
+                }
             } else {
+                if (attempt is not null) {
+                    throw new NotSupportedException("Protected definition operations require PostgreSQL.");
+                }
                 mutation = await SerializableMutationScope.BeginAsync(context, orderedKeys, cancellationToken);
                 if (source is not null) {
                     using var coordination = transactions.Enter(context);

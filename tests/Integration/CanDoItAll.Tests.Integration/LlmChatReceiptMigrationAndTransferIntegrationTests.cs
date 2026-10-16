@@ -1,4 +1,6 @@
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Composition;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
@@ -16,6 +18,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
@@ -105,6 +108,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
 
     [Fact]
     public async Task Transfer_preserves_replay_and_intervening_edits_after_restart_without_resolving_a_provider() {
+        await using var activationEnvironment = CanDoItAllTestEnvironment.Create("llm-receipt-transfer-activation");
         await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-transfer-source");
         await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-transfer-target");
         var created = await CreateAsync(source);
@@ -132,7 +136,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
         await using (var sourceComplete = source.CreateDbContext()) {
             await using var targetComplete = target.CreateDbContext();
             var context = TransferContext(source, target, sourceComplete, targetComplete);
-            var handler = CreateTransferHandler(new(), TimeProvider.System);
+            var handler = await CreateTransferHandlerAsync(activationEnvironment, context.TargetProfile);
             var preview = await handler.PreviewAsync(context);
             Assert.True(preview.IsAvailable);
             Assert.Equal(5, preview.SourceRecordCount);
@@ -157,6 +161,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
 
     [Fact]
     public async Task Transfer_rejects_replacement_of_a_retained_target_receipt_without_changing_either_owner() {
+        await using var activationEnvironment = CanDoItAllTestEnvironment.Create("llm-receipt-transfer-activation");
         await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-protected-source");
         await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-protected-target");
         var incoming = await CreateAsync(source);
@@ -164,7 +169,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
         await using (var sourceComplete = source.CreateDbContext()) {
             await using var targetComplete = target.CreateDbContext();
             var context = TransferContext(source, target, sourceComplete, targetComplete);
-            var handler = CreateTransferHandler(new(), TimeProvider.System);
+            var handler = await CreateTransferHandlerAsync(activationEnvironment, context.TargetProfile);
             var preview = await handler.PreviewAsync(context);
             Assert.False(preview.IsAvailable);
             Assert.Contains("retained creation receipts", preview.Warning, StringComparison.Ordinal);
@@ -184,6 +189,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
     [InlineData(ReceiptCorruption.Fingerprint)]
     [InlineData(ReceiptCorruption.Scope)]
     public async Task Transfer_rejects_invalid_receipt_metadata_before_touching_the_target(ReceiptCorruption corruption) {
+        await using var activationEnvironment = CanDoItAllTestEnvironment.Create("llm-receipt-transfer-activation");
         await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-invalid-source");
         await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-invalid-target");
         _ = await CreateAsync(source);
@@ -199,8 +205,9 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
 
         await using (var sourceComplete = source.CreateDbContext()) {
             await using var targetComplete = target.CreateDbContext();
-            var handler = CreateTransferHandler(new(), TimeProvider.System);
-            await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(TransferContext(source, target, sourceComplete, targetComplete)));
+            var context = TransferContext(source, target, sourceComplete, targetComplete);
+            var handler = await CreateTransferHandlerAsync(activationEnvironment, context.TargetProfile);
+            await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(context));
         }
 
         await using var verification = target.CreateSimpleChatsDbContext();
@@ -268,9 +275,12 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
     }
 
     public enum ReceiptCorruption { Version, Fingerprint, Scope }
-    private static LlmChatsDatabaseTransferHandler CreateTransferHandler(LlmChatTransferOptions options, TimeProvider clock) {
+    private static async Task<LlmChatsDatabaseTransferHandler> CreateTransferHandlerAsync(CanDoItAllTestEnvironment environment,
+        ResolvedDatabaseProfile target) {
+        var activation = DatabaseTransferTestSupport.CreateActivationService(environment);
+        await new DatasetActivationCoordinator(activation, Options.Create(new ProjectDefinitionOperationOptions())).EnsureReadyAsync(target);
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        return new(options, clock, DatabaseTransferTestSupport.Create(sessions), sessions);
+        return new(new(), TimeProvider.System, DatabaseTransferTestSupport.Create(sessions, activation: activation), sessions);
     }
 
 }

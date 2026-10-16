@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-16T15:49:17.202663+00:00",
+  "generated_utc": "2026-10-16T18:29:09.983572+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15423,
+  "allowance_count": 15439,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7322,6 +7322,30 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectDefinitionHttpBody.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0edd422906970928aa9d0754efce4b799153694e371ece8b35a06b12a44b9dcf",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectDefinitionOperationOpenApiSchemas.cs",
+      "category": "windows-path",
+      "source_fingerprint": "0efd0e09d0be675e99d16a13b7610cbba13fa023845dcbc8f11d4fa12eee617f",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectDefinitionOperationOpenApiSchemas.cs",
+      "category": "windows-path",
+      "source_fingerprint": "f15fc3af9088e2856cb77be27f45e63ced58d07755131916732d88f20f0439aa",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectOperationEpochHttpContract.cs",
+      "category": "windows-path",
+      "source_fingerprint": "466ccf721051dd46fda0289a5a5310652fe458dfe15d3b482b8d11f8aa1c601e",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/SharedProviderApiResponseWriter.cs",
       "category": "case-policy",
       "source_fingerprint": "0588cd90bf70d41e16dd52d47457034c9e716fb0351a0b38e55360acae123419",
@@ -7823,6 +7847,12 @@
       "path": "src/App/CanDoItAll.Web/Dockerfile",
       "category": "external-tool",
       "source_fingerprint": "a9e998479a284d28a3623335b4d7e906285ed02b4010fe8697597cbd8aba7812",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5cb59935ab8e780a9062fef96e396e14105a24a6c52045d25069d92ad4aa802b",
       "count": 1
     },
     {
@@ -8411,6 +8441,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Configuration/DatabasePasswordFileConfiguration.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "e603a99c892e45320a947cc3d30e246d249484c78c976583174d3cf40ebb7b38",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlaneFileCoordination.cs",
+      "category": "path-api",
+      "source_fingerprint": "2d977ff3f7e7b59874cb0633381346737146c7dc29569550a963eeccd5bc704a",
       "count": 1
     },
     {
@@ -9431,6 +9467,36 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs",
       "category": "case-policy",
       "source_fingerprint": "c591ee06e2c9b65c26c988611367e9cbe6f40191c924963d539bc8574f7d05c3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "46e1009a448ef0b9e4891ed959d07ff8a07287ca1a50adb3b88ae2e1b3dff769",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a4e0b74bf2495e919720087903a150f81028453622e64cc4dcaa69608678ef9f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "507935e08738d39e497cd582d5c257bfada6b13d0c424afed08c53d801192179",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "path-api",
+      "source_fingerprint": "da25af1dd372d2ef74a395852db1ab571466fcfa7229be5f043c8913043d61b0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "path-api",
+      "source_fingerprint": "de89265bb7117ab7316024abb85ef76a985c40892a7034fe30b7afba158bb690",
       "count": 1
     },
     {
@@ -12887,6 +12953,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016151626_AddProjectDefinitionConcurrency.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "5d09cf2d40b2a6e00b64cfa06be29d712b88fc6a756cefbfd59f10edbb8f0f66",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016163615_AddProjectDefinitionOperationLifecycle.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "485688a7b945aef1c981c62ba98768b5f7dc84650dbbcbbdc1e530c8f6e02877",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016163615_AddProjectDefinitionOperationLifecycle.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "92115baec6c376d089337f3b15ee8af347ccc1bb4270065408d20eec461a97a1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016163615_AddProjectDefinitionOperationLifecycle.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "425ccb190f6b41c7425737a30ed81924f9423adc205ce631d055e27f5e831b8b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016163615_AddProjectDefinitionOperationLifecycle.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5e1ea6ad63dea57270f5715cbeac7d6dcaaa28b0c02d16a67c4262c4c9936b63",
       "count": 1
     },
     {
@@ -60143,6 +60233,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectAssetStorageService.cs",
       "category": "windows-path",
       "source_fingerprint": "f28f3f98aa3291149108f23b4f66f5b0b0bb39c0b3d81731e6217001a9717fc5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectDefinitionGovernedBindings.cs",
+      "category": "mcp",
+      "source_fingerprint": "6194a5b461285b4fc38b6b05942dd342dd125a85fd13a3c74512c3955f562f76",
       "count": 1
     },
     {

@@ -20,6 +20,15 @@ public static class ProjectErrorCodes
     public const string DefinitionTransactionConflict = "projects.definition-transaction-conflict";
     public const string DefinitionChildInvalid = "projects.definition-child-invalid";
     public const string DefinitionLimitExceeded = "projects.definition-limit-exceeded";
+    public const string DefinitionOperationRequired = "projects.definition-operation-required";
+    public const string DefinitionOperationMismatch = "projects.definition-operation-mismatch";
+    public const string DefinitionOperationExpired = "projects.definition-operation-expired";
+    public const string DefinitionOperationClosed = "projects.definition-operation-closed";
+    public const string DefinitionOperationUnknown = "projects.definition-operation-unknown";
+    public const string DefinitionDatasetChanged = "projects.definition-dataset-changed";
+    public const string DefinitionCallerChanged = "projects.definition-caller-changed";
+    public const string DefinitionVersionUnsupported = "projects.definition-version-unsupported";
+    public const string DefinitionReceiptUnavailable = "projects.definition-receipt-unavailable";
 }
 
 /// <summary>

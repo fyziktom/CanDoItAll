@@ -13,7 +13,8 @@ public sealed record DatabaseTransferProfileSession(Guid SessionId, Guid Profile
 public sealed class DatabaseTransferOperationRunner(
     IProfileAppDbContextFactory contexts,
     DatabaseTransferOwnerSessionRunner owners,
-    ProjectTransferTargetInspectionRunner inspections) {
+    ProjectTransferTargetInspectionRunner inspections,
+    DatasetActivationService activation) {
     private readonly AsyncLocal<ProfileFrame?> currentProfile = new();
 
     public Task<TResult> RunIndependentAsync<TResult>(ResolvedDatabaseProfile profile,
@@ -42,20 +43,30 @@ public sealed class DatabaseTransferOperationRunner(
         if (currentProfile.Value is not null) {
             throw new InvalidOperationException("A profile transfer operation is already active on this execution path.");
         }
-        await using var maintenance = await contexts.CreateDbContextForProfileAsync(profile, cancellationToken);
-        if (exclusionTypes is not null) {
-            if (!maintenance.Database.IsNpgsql()) {
-                throw new NotSupportedException("Project import exclusion locks require PostgreSQL.");
+        DatabaseImportCommitKnowledge? importCommit = null;
+        try {
+            await using var maintenance = await contexts.CreateDbContextForProfileAsync(profile, cancellationToken);
+            if (exclusionTypes is not null) {
+                if (!maintenance.Database.IsNpgsql()) {
+                    throw new NotSupportedException("Project import exclusion locks require PostgreSQL.");
+                }
+                CoordinatedDatabaseTransaction.ForProfile(profile).RequireOwnerProfile(maintenance);
+                var binding = await activation.ReadActiveBindingAsync(profile.Profile.Id, cancellationToken);
+                return await DatabaseTransferImportScope.RunAsync(maintenance, binding, scopeKeys!, ResolveTableNames(maintenance, exclusionTypes),
+                    transaction => RunActiveProfileAsync(profile, maintenance, DatabaseTransferProfileMode.Serializable,
+                        operation, async token => {
+                            importCommit = DatabaseImportCommitKnowledge.Unconfirmed;
+                            await transaction.CommitAsync(token);
+                            importCommit = DatabaseImportCommitKnowledge.Acknowledged;
+                        }, cancellationToken), cancellationToken);
             }
-            CoordinatedDatabaseTransaction.ForProfile(profile).RequireOwnerProfile(maintenance);
-            return await DatabaseTransferImportScope.RunAsync(maintenance, scopeKeys!, ResolveTableNames(maintenance, exclusionTypes),
-                transaction => RunActiveProfileAsync(profile, maintenance, DatabaseTransferProfileMode.Serializable,
-                    operation, transaction.CommitAsync, cancellationToken), cancellationToken);
+            await using var mutation = scopeKeys is null ? null : await SerializableMutationScope.BeginAsync(maintenance, scopeKeys, cancellationToken);
+            return await RunActiveProfileAsync(profile, maintenance,
+                scopeKeys is null ? DatabaseTransferProfileMode.Independent : DatabaseTransferProfileMode.Serializable,
+                operation, token => mutation?.CommitAsync(token) ?? Task.CompletedTask, cancellationToken);
+        } catch (Exception exception) when (importCommit is { } knowledge) {
+            throw new DatabaseImportCommitException(profile.Profile.Id, knowledge, exception);
         }
-        await using var mutation = scopeKeys is null ? null : await SerializableMutationScope.BeginAsync(maintenance, scopeKeys, cancellationToken);
-        return await RunActiveProfileAsync(profile, maintenance,
-            scopeKeys is null ? DatabaseTransferProfileMode.Independent : DatabaseTransferProfileMode.Serializable,
-            operation, token => mutation?.CommitAsync(token) ?? Task.CompletedTask, cancellationToken);
     }
 
     private async Task<TResult> RunActiveProfileAsync<TResult>(ResolvedDatabaseProfile profile, DbContext maintenance,
@@ -104,35 +115,53 @@ public sealed class DatabaseTransferOperationRunner(
         }).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
     }
 
-    public async Task<DatabaseTransferItemResult> RunTransferAsync(DatabaseTransferOperation transfer,
+    public async Task<DatabaseTransferItemResult> RunTransferAsync(DatabaseTransferOperation transfer, DatabaseTransferTargetPlan targetPlan,
         Func<DatabaseTransferOwnerRequest, CancellationToken, Task<DatabaseTransferItemResult>> operation,
         bool allowInMemoryTest = false, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(transfer);
+        ArgumentNullException.ThrowIfNull(targetPlan);
         ArgumentNullException.ThrowIfNull(operation);
         if (transfer.SourceProfile.Profile.Id == transfer.TargetProfile.Profile.Id) {
             throw new InvalidOperationException("A transfer requires different source and target database profiles.");
         }
-        await using var source = await contexts.CreateDbContextForProfileAsync(transfer.SourceProfile, cancellationToken);
-        await using var target = await contexts.CreateDbContextForProfileAsync(transfer.TargetProfile, cancellationToken);
-        if (allowInMemoryTest && source.Database.IsInMemory() && target.Database.IsInMemory()) {
-            using var testScope = owners.BeginInMemoryTest(transfer, source, target, out var testRequest);
-            return await operation(testRequest, cancellationToken);
+        DatabaseTransferItemResult? committed = null;
+        try {
+            await using var source = await contexts.CreateDbContextForProfileAsync(transfer.SourceProfile, cancellationToken);
+            await using var target = await contexts.CreateDbContextForProfileAsync(transfer.TargetProfile, cancellationToken);
+            if (allowInMemoryTest && source.Database.IsInMemory() && target.Database.IsInMemory()) {
+                using var testScope = owners.BeginInMemoryTest(transfer, source, target, out var testRequest);
+                return await operation(testRequest, cancellationToken);
+            }
+            if (!source.Database.IsNpgsql() || !target.Database.IsNpgsql()) {
+                throw new InvalidOperationException("Transfer requires two PostgreSQL databases; mixed-provider transfer is unsupported.");
+            }
+            CoordinatedDatabaseTransaction.RequireDistinctPhysicalDatabases(transfer.SourceProfile, transfer.TargetProfile);
+            var binding = await activation.ReadActiveBindingAsync(transfer.TargetProfile.Profile.Id, cancellationToken);
+            var names = ResolveTableNames(target, targetPlan.EntityTypes);
+            var admittedTables = targetPlan.EntityTypes.Select(type => DatabaseTransferTable.From(target.Model.FindEntityType(type)!)).ToHashSet();
+            return await DatabaseTransferSessionGate.RunAsync(target, targetPlan.SessionAdvisoryKeys, async handoff => {
+                await using var sourceTransaction = await source.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+                await using var targetTransaction = await target.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+                await DatabaseTransferLifecycleGuard.AcquireExclusionBeforeSnapshotAsync(target, cancellationToken);
+                var tableLockCommand = $"LOCK TABLE {string.Join(", ", names)} IN SHARE ROW EXCLUSIVE MODE";
+                await target.Database.ExecuteSqlRawAsync(tableLockCommand, cancellationToken);
+                await DatasetLifecycleStore.RequireActiveForMaintenanceAsync(target, binding, cancellationToken);
+                await handoff(cancellationToken);
+                DatabaseTransferItemResult result;
+                using (owners.Begin(transfer, source, target, out var request, admittedTables)) {
+                    result = await operation(request, cancellationToken);
+                }
+                if (result.Success) {
+                    await targetTransaction.CommitAsync(cancellationToken);
+                    committed = result;
+                    await sourceTransaction.CommitAsync(cancellationToken);
+                }
+                return result;
+            }, cancellationToken);
+        } catch (Exception exception) when (committed is not null) {
+            throw new DatabaseTransferCommittedException(transfer.SourceProfile.Profile.Id, transfer.TargetProfile.Profile.Id,
+                committed, exception);
         }
-        if (!source.Database.IsNpgsql() || !target.Database.IsNpgsql()) {
-            throw new InvalidOperationException("Transfer requires two PostgreSQL databases; mixed-provider transfer is unsupported.");
-        }
-        CoordinatedDatabaseTransaction.RequireDistinctPhysicalDatabases(transfer.SourceProfile, transfer.TargetProfile);
-        await using var sourceTransaction = await source.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
-        await using var targetTransaction = await target.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        DatabaseTransferItemResult result;
-        using (owners.Begin(transfer, source, target, out var request)) {
-            result = await operation(request, cancellationToken);
-        }
-        if (result.Success) {
-            await targetTransaction.CommitAsync(cancellationToken);
-            await sourceTransaction.CommitAsync(cancellationToken);
-        }
-        return result;
     }
 
     private ProfileFrame RequireProfile(DatabaseTransferProfileSession request) {

@@ -1,0 +1,82 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+@if (IsOpen) {
+    <Dialog IsOpen="true" Title="Retained save references" Eyebrow="Browser recovery data" Size="ModalSize.Wide"
+            ShowCloseButton="false" OnClose="Close" TestId="project-reference-dialog">
+        <HeaderActions><Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="Close" Disabled="@Busy" /></HeaderActions>
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium">
+                <TextBlock Value="This browser may retain saves from another dataset or caller. Only references are shown here; opening this view never submits a write." />
+                <TextBlock Value="@($"{StoredCount} retained record(s), {StoredBytes:N0} bytes. Stages below are recorded in this browser and are not a fresh server outcome check.")" />
+                @if (Message is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@Message" /></Alert>
+                }
+                <Cluster>
+                    <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="@Busy" />
+                    @if (HasMore) {
+                        <Button Text="Next references" ButtonStyle="ButtonStyle.Light" Click="Next" Disabled="@Busy" />
+                    }
+                </Cluster>
+                @foreach (var item in Items) {
+                    <Stack @key="item.Operation" data-testid="project-reference-row">
+                        <FormSection Title="@item.Operation.Id.ToString("D")"
+                                     Description="@($"Recorded: {item.Stage}; {Binding(item)}; {item.StoredBytes:N0} bytes")">
+                            <ChildContent>
+                                <TextBlock Value="@($"Dataset: {item.Operation.Namespace.Value:D}; epoch: {item.Operation.Epoch.Value}; original caller: {item.Operation.CallerBinding.Value}")" />
+                                <Cluster>
+                                    <CopyButton Text="Copy original reference" Value="@item.Export()" />
+                                    <Button Text="Export original reference" ButtonStyle="ButtonStyle.Light"
+                                            Href="@($"data:application/json;charset=utf-8,{Uri.EscapeDataString(item.Export())}")"
+                                            download="@($"project-save-{item.Operation.Id:D}.json")" data-testid="project-reference-export" />
+                                    <Button Text="Discard local recovery data" ButtonStyle="ButtonStyle.Light" Disabled="@Busy"
+                                            Click="() => Select.InvokeAsync(item)" data-testid="project-reference-select" />
+                                </Cluster>
+                            </ChildContent>
+                        </FormSection>
+                    </Stack>
+                }
+                @if (Selected is { } selected) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="project-reference-confirmation">
+                        <Stack GapScale="LayoutGap.Small">
+                            <TextBlock Value="@($"Discard reference {selected.Operation.Id:D}, browser revision {selected.Revision.Value}?")" />
+                            <TextBlock Value="@Meaning(selected)" />
+                            <TextBlock Value="Copy or export the original reference if you need it later. This removes this browser's frozen command and result, does not cancel server work, and does not authorize a replacement save." />
+                            <Button Text="I understand; discard this local recovery data" ButtonStyle="ButtonStyle.Danger" Disabled="@Busy"
+                                    Click="() => Discard.InvokeAsync(selected)" data-testid="project-reference-confirm" />
+                            <Button Text="Keep recovery data" ButtonStyle="ButtonStyle.Light" Disabled="@Busy" Click="CancelSelection" />
+                        </Stack>
+                    </Alert>
+                }
+            </Stack>
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public long StoredCount { get; set; }
+    [Parameter] public long StoredBytes { get; set; }
+    [Parameter] public IReadOnlyList<ProjectPendingReference> Items { get; set; } = [];
+    [Parameter] public ProjectPendingReference? Selected { get; set; }
+    [Parameter] public ProjectPendingScope? CurrentScope { get; set; }
+    [Parameter] public bool HasMore { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Next { get; set; }
+    [Parameter] public EventCallback<ProjectPendingReference> Select { get; set; }
+    [Parameter] public EventCallback<ProjectPendingReference> Discard { get; set; }
+    [Parameter] public EventCallback CancelSelection { get; set; }
+
+    private string Binding(ProjectPendingReference item) => CurrentScope is null ? "current context unavailable"
+        : CurrentScope.Contains(item.Operation) ? "current binding" : "another dataset or caller";
+
+    private static string Meaning(ProjectPendingReference item) => item.Stage switch {
+        ProjectPendingStage.Accepted => "This browser recorded acceptance. Discarding the receipt does not undo that effect or prove the current definition is unchanged.",
+        ProjectPendingStage.Prepared => "This browser recorded preparation. Normal cancellation checks its exact undispatched revision; this action deliberately destroys the local evidence.",
+        ProjectPendingStage.Rejected or ProjectPendingStage.ClosedAbsent => "This browser recorded a resolved result. Discarding removes its local recovery evidence.",
+        _ => "The save may already have committed or may still finish. Discarding makes its command/result unavailable for browser recovery; the server outcome remains unconfirmed."
+    };
+}

@@ -3,17 +3,21 @@ using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration;
 
 internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanonicalRuntimeDatabase {
     private readonly PostgresTestDatabaseLease lease;
+    private CanDoItAllTestEnvironment? activationEnvironment;
+    private DatasetActivationService? activation;
     private HistoryPersistenceTestDatabase(PostgresTestDatabaseLease lease) {
         this.lease = lease;
         Profile = new(
@@ -98,10 +102,28 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
         new(HistoryUsageState.Complete, 10, 5, 0, 0, 0),
         new(HistoryPriceState.CalculatedAtExecution, 0.01m, "USD", "fixture-hash", "v1"));
 
-    public ValueTask DisposeAsync() {
+    internal async Task<DatasetActivationService> ActivateDatasetAsync() {
+        if (activation is not null) {
+            return activation;
+        }
+        activationEnvironment ??= CanDoItAllTestEnvironment.Create("transfer-dataset-activation");
+        var candidate = DatabaseTransferTestSupport.CreateActivationService(activationEnvironment);
+        await new DatasetActivationCoordinator(candidate, Options.Create(new ProjectDefinitionOperationOptions()))
+            .EnsureReadyAsync(Profile);
+        activation = candidate;
+        return candidate;
+    }
+
+    public async ValueTask DisposeAsync() {
         HostLease.Dispose();
         Reads.Dispose();
-        return lease.DisposeAsync();
+        try {
+            await lease.DisposeAsync();
+        } finally {
+            if (activationEnvironment is not null) {
+                await activationEnvironment.DisposeAsync();
+            }
+        }
     }
 
     internal sealed class TestFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext> {

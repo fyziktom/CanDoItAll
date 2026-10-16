@@ -151,12 +151,12 @@ internal sealed class MafToolRunContext {
         }
 
         var element = JsonSerializer.SerializeToElement(arguments ?? new Dictionary<string, object?>(), MafToolProtocolCodec.SerializationOptions);
-        if (metadata.TryGetValue(name, out var descriptor) && descriptor.PrepareAdmission is { } prepare) {
+        if (metadata.TryGetValue(name, out var descriptor) && descriptor.PrepareAdmission is not null) {
             if (descriptor.AuthorizeAdmissionAsync is null) {
                 throw Denied("An admission-aware provider must supply its current authorization boundary.");
             }
 
-            return prepare(element);
+            return PrepareMetadata(descriptor, element, allowDeferredContextTool, persistedSource);
         }
 
         var classification = toolPolicies.Classify(name);
@@ -184,6 +184,15 @@ internal sealed class MafToolRunContext {
     }
 
     private AgentToolPreparedPayload PrepareInvocation(FunctionCallContent call) {
+        if (recoveryState is { } retained && metadata.TryGetValue(call.Name, out var descriptor) && descriptor.RestoreAdmission is not null &&
+                FindOriginalProposal(retained, Segment, dispatchBatch, call) is { } proposal) {
+            var restored = Prepare(call.Name, call.Arguments, allowDeferredContextTool: true,
+                persistedSource: proposal.Payload.SourcePreparation);
+            if (restored != proposal.Payload) {
+                throw Denied("The replayed owner call differs from its exact original proposal.");
+            }
+            return restored;
+        }
         if (recoveryState is not { } saved || !contextToolRegistrations.Any(registration =>
                 registration.ToolNames.Contains(call.Name, StringComparer.Ordinal))) {
             return Prepare(call.Name, call.Arguments);
@@ -199,7 +208,19 @@ internal sealed class MafToolRunContext {
         return payload;
     }
 
+    internal static AgentToolPreparedPayload PrepareMetadata(AgentRuntimeToolMetadata descriptor, JsonElement arguments,
+        bool restoring, AgentToolProtocolEnvelope? source) {
+        if (restoring && descriptor.RestoreAdmission is { } restore) {
+            return restore(arguments, source ?? throw Denied("The original owner proposal source is unavailable."));
+        }
+        return (descriptor.PrepareAdmission ?? throw Denied("The owner proposal preparer is unavailable."))(arguments);
+    }
+
     internal static AgentToolProposalRecord? FindCompletedContextProposal(AgentToolJournalRecord saved,
+        AgentToolInvocationSegment segment, AgentToolBatchId? batchId, FunctionCallContent call)
+        => FindOriginalProposal(saved, segment, batchId, call) is { State: AgentToolProposalState.Completed } proposal ? proposal : null;
+
+    internal static AgentToolProposalRecord? FindOriginalProposal(AgentToolJournalRecord saved,
         AgentToolInvocationSegment segment, AgentToolBatchId? batchId, FunctionCallContent call) {
         AgentToolProposalRecord? proposal;
         if (batchId is { } activeBatch) {
@@ -211,7 +232,7 @@ internal sealed class MafToolRunContext {
                 item.CallId == call.CallId && item.ToolName == call.Name)?.ToolAdmission;
             proposal = binding is null ? null : AgentToolJournalTransitions.RequireProposal(saved, binding);
         }
-        return proposal?.State == AgentToolProposalState.Completed ? proposal : null;
+        return proposal;
     }
 
     internal async Task<AgentToolProtocolEnvelope?> ReplayResponseAsync(AgentToolSemanticDigest requestDigest,

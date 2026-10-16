@@ -43,6 +43,8 @@
                     <TextBlock Value="@starter.Subtitle" />
                     @if (starter.IsSeeded) {
                         <TextBlock Value="Already created; open Structure to edit the created object." />
+                    } else if (starter.WasDispatched) {
+                        <TextBlock Value="Creation was attempted; inspect Structure before making any replacement plan." />
                     }
                 </Stack>
             }

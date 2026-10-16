@@ -29,7 +29,7 @@ public sealed class WorkspaceDefaultProviderDatabaseTransferHandler(DatabaseTran
     }
 
     public Task<DatabaseTransferItemResult> TransferAsync(DatabaseTransferOperation context, CancellationToken cancellationToken = default)
-        => operations.RunTransferAsync(context, TransferCoreAsync, allowInMemoryTest: true, cancellationToken);
+        => operations.RunTransferAsync(context, new([typeof(WorkspaceSettings)]), TransferCoreAsync, allowInMemoryTest: true, cancellationToken);
 
     private async Task<DatabaseTransferItemResult> TransferCoreAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {
         await using var source = await sessions.CreateSourceAsync<WorkspaceSettingsDbContext>(transfer, static options => new WorkspaceSettingsDbContext(options), cancellationToken);

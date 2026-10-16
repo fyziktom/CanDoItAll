@@ -14,7 +14,9 @@ public enum ProjectEditorMutationState {
     DeleteOutcomeUnknown,
     Deleted,
     AdmissionRefused,
-    Conflict
+    Conflict,
+    PendingRecovery,
+    LocalRecoveryDiscarded
 }
 
 public enum ProjectEditorConflictReadState { NotRequested, Loading, Ready, Failed }
@@ -32,8 +34,9 @@ public sealed class ProjectEditorDraft {
     private readonly Dictionary<FieldIdentifier, long> revisions = [];
     private readonly ValidationMessageStore validation;
 
-    public ProjectEditorDraft(ProjectEditorModel model) {
+    public ProjectEditorDraft(ProjectEditorModel model, ProjectPendingScope? scope = null) {
         Model = model;
+        Scope = scope;
         EditContext = new(model);
         validation = new(EditContext);
         EditContext.OnFieldChanged += (_, args) => {
@@ -43,6 +46,7 @@ public sealed class ProjectEditorDraft {
     }
 
     public ProjectEditorModel Model { get; }
+    public ProjectPendingScope? Scope { get; }
     public EditContext EditContext { get; }
     public List<StarterObjectDraft> StarterObjects { get; } = [];
     public ProjectEditorMutationState Mutation { get; set; }
@@ -50,7 +54,10 @@ public sealed class ProjectEditorDraft {
     public ProjectEditorAcceptedOutcome? AcceptedOutcome { get; private set; }
     public ProjectEditorConflict? Conflict { get; private set; }
     public ProjectEditorDraft? PreviousDraft { get; private set; }
-    public ProjectEditorModel? ComparisonModel => Conflict?.CurrentModel ?? PreviousDraft?.Model;
+    public ProjectDefinitionSnapshot? InspectedDefinition { get; private set; }
+    public ProjectEditorModel? InspectedModel { get; private set; }
+    public bool HasCurrentDefinition => Conflict?.Current is not null || InspectedDefinition is not null;
+    public ProjectEditorModel? ComparisonModel => Conflict?.CurrentModel ?? InspectedModel ?? PreviousDraft?.Model;
     public bool CanMutate => Mutation == ProjectEditorMutationState.Ready;
     public string? Message { get; set; }
     public bool IsError { get; set; }
@@ -72,7 +79,7 @@ public sealed class ProjectEditorDraft {
 
     public ProjectEditorSubmission Capture() => new(
         Clone(Model), Model.Phases.ToArray(), Model.Options.ToArray(),
-        StarterObjects.Where(row => !row.IsSeeded && !string.IsNullOrWhiteSpace(row.Title))
+        StarterObjects.Where(row => !row.IsSeeded && !row.WasDispatched && !string.IsNullOrWhiteSpace(row.Title))
             .Select(row => new ProjectStarterSubmission(row, new(row.ObjectType, row.Title, row.Subtitle, row.Subtitle)))
             .ToArray(), new Dictionary<FieldIdentifier, long>(revisions), EditRevision);
 
@@ -105,15 +112,25 @@ public sealed class ProjectEditorDraft {
     }
 
     public ProjectEditorDraft StartFromCurrent(bool preservePrevious) {
-        if (Conflict is not { ReadState: ProjectEditorConflictReadState.Ready, Current: { } current }) {
+        var current = Conflict?.Current ?? InspectedDefinition;
+        if (current is null) {
             throw new InvalidOperationException("Read the current definition before replacing the editor.");
         }
-        return new(CreateModel(current)) {
+        return new(CreateModel(current), Scope) {
             PreviousDraft = preservePrevious ? this : null,
             Message = preservePrevious
                 ? "Reconcile selected changes in this current-based draft. The previous draft remains beside it for comparison and copying."
                 : "The current saved definition is loaded."
         };
+    }
+
+    public void InspectCurrent(ProjectDefinitionSnapshot current) {
+        var target = Model.Id ?? AcceptedOutcome?.Accepted.Project.ProjectId;
+        if (target != current.Expectation.Project.ProjectId) {
+            throw new InvalidOperationException("The inspected definition belongs to another project.");
+        }
+        InspectedDefinition = current;
+        InspectedModel = CreateModel(current);
     }
 
     public void Acknowledge(ProjectEditorSubmission submitted, ProjectEditorAcknowledgement accepted) {
@@ -194,7 +211,34 @@ public sealed class ProjectEditorDraft {
 
     private long Revision(FieldIdentifier field) => revisions.GetValueOrDefault(field);
 
-    private static ProjectEditorModel CreateModel(ProjectDefinitionSnapshot current) {
+    public void MarkSeedsDispatched(ProjectEditorSubmission submitted) {
+        foreach (var seed in submitted.Seeds) {
+            seed.Row.WasDispatched = true;
+        }
+    }
+
+    public static ProjectEditorDraft Restore(ProjectDefinitionSubmission submitted) {
+        var (expected, scalars, phases, options, external) = submitted switch {
+            ProjectDefinitionSubmission.Create create => ((ProjectDefinitionExpectation?)null, create.Request.Command.Scalars,
+                create.Request.Command.Phases, create.Request.Command.Options, create.Request.Command.ExternalIdentity),
+            ProjectDefinitionSubmission.Replace replace => (replace.Request.Command.Expected, replace.Request.Command.Scalars,
+                replace.Request.Command.Phases, replace.Request.Command.Options, replace.Request.Command.AssignExternalIdentity),
+            _ => throw new InvalidOperationException("A scalar-only save cannot be restored as a complete definition draft.")
+        };
+        return new(new ProjectEditorModel {
+            Id = expected?.Project.ProjectId, ExpectedLifetimeId = expected?.Project.LifetimeId,
+            ExpectedProjectAdmission = expected?.Project, ExpectedDefinition = expected,
+            Name = scalars.Name, Description = scalars.Description, Objective = scalars.Objective, Status = scalars.Status,
+            CurrentPhase = scalars.CurrentPhase, TargetDateUtc = scalars.TargetDateUtc,
+            ExternalNamespace = external?.Namespace, ExternalKey = external?.Key,
+            Phases = phases.Select(row => new ProjectPhaseEditorModel { Id = row.Id, Name = row.Name, Goal = row.Goal,
+                Status = row.Status, StartDateUtc = row.StartDateUtc, EndDateUtc = row.EndDateUtc }).ToList(),
+            Options = options.Select(row => new ProjectOptionEditorModel { Id = row.Id, Category = row.Category,
+                OptionName = row.OptionName, Notes = row.Notes }).ToList()
+        }, new(submitted.Operation.Namespace, submitted.Operation.CallerBinding)) { Mutation = ProjectEditorMutationState.PendingRecovery };
+    }
+
+    public static ProjectEditorModel CreateModel(ProjectDefinitionSnapshot current) {
         var model = new ProjectEditorModel {
             Id = current.Expectation.Project.ProjectId,
             ExpectedLifetimeId = current.Expectation.Project.LifetimeId,

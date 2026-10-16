@@ -14,7 +14,8 @@ public sealed record DatabaseTransferOwnerRequest(Guid SessionId, Guid SourcePro
 public sealed class DatabaseTransferOwnerSessionRunner {
     private readonly AsyncLocal<Frame?> current = new();
 
-    internal IDisposable Begin(DatabaseTransferOperation transfer, DbContext source, DbContext target, out DatabaseTransferOwnerRequest request) {
+    internal IDisposable Begin(DatabaseTransferOperation transfer, DbContext source, DbContext target, out DatabaseTransferOwnerRequest request,
+        IReadOnlySet<DatabaseTransferTable>? admittedTables = null) {
         ArgumentNullException.ThrowIfNull(transfer);
         if (current.Value is not null) {
             throw new InvalidOperationException("A transfer owner session is already active on this execution path.");
@@ -24,7 +25,7 @@ public sealed class DatabaseTransferOwnerSessionRunner {
                 target.Database.CurrentTransaction?.GetDbTransaction().IsolationLevel != IsolationLevel.Serializable) {
             throw new InvalidOperationException("Transfer participants require the actual source snapshot and target Serializable transaction.");
         }
-        return BeginCore(transfer, source, target, DatabaseTransferOwnerMode.PostgreSqlTransaction, out request);
+        return BeginCore(transfer, source, target, DatabaseTransferOwnerMode.PostgreSqlTransaction, out request, admittedTables);
     }
 
     internal IDisposable BeginInMemoryTest(DatabaseTransferOperation transfer, DbContext source, DbContext target, out DatabaseTransferOwnerRequest request) {
@@ -36,17 +37,18 @@ public sealed class DatabaseTransferOwnerSessionRunner {
         return BeginCore(transfer, source, target, DatabaseTransferOwnerMode.InMemoryTest, out request);
     }
 
-    private IDisposable BeginCore(DatabaseTransferOperation transfer, DbContext sourceContext, DbContext targetContext, DatabaseTransferOwnerMode mode, out DatabaseTransferOwnerRequest request) {
+    private IDisposable BeginCore(DatabaseTransferOperation transfer, DbContext sourceContext, DbContext targetContext, DatabaseTransferOwnerMode mode,
+        out DatabaseTransferOwnerRequest request, IReadOnlySet<DatabaseTransferTable>? admittedTables = null) {
         var source = new DatabaseTransferOwnerSession(transfer.SourceProfile, sourceContext);
         DatabaseTransferOwnerSession target;
         try {
-            target = new DatabaseTransferOwnerSession(transfer.TargetProfile, targetContext);
+            target = new DatabaseTransferOwnerSession(transfer.TargetProfile, targetContext, admittedTables);
         } catch {
             source.Dispose();
             throw;
         }
         request = new(Guid.NewGuid(), transfer.SourceProfile.Profile.Id, transfer.TargetProfile.Profile.Id, mode);
-        var frame = new Frame(request, source, target, targetContext);
+        var frame = new Frame(request, source, target, targetContext, admittedTables);
         current.Value = frame;
         return new Scope(this, frame);
     }
@@ -64,6 +66,12 @@ public sealed class DatabaseTransferOwnerSessionRunner {
         ArgumentNullException.ThrowIfNull(tables);
         cancellationToken.ThrowIfCancellationRequested();
         var frame = RequireCurrent(request);
+        if (frame.AdmittedTables is { } admitted) {
+            if (tables.Any(table => !admitted.Contains(table))) {
+                throw new InvalidOperationException("A transfer cannot extend its complete target table plan after admission.");
+            }
+            return;
+        }
         if (request.Mode == DatabaseTransferOwnerMode.InMemoryTest || tables.Count == 0) {
             return;
         }
@@ -107,11 +115,12 @@ public sealed class DatabaseTransferOwnerSessionRunner {
     }
 
     private sealed class Frame(DatabaseTransferOwnerRequest request, DatabaseTransferOwnerSession source, DatabaseTransferOwnerSession target,
-        DbContext targetMaintenance) {
+        DbContext targetMaintenance, IReadOnlySet<DatabaseTransferTable>? admittedTables) {
         public DatabaseTransferOwnerRequest Request { get; } = request;
         public DatabaseTransferOwnerSession Source { get; } = source;
         public DatabaseTransferOwnerSession Target { get; } = target;
         public DbContext TargetMaintenance { get; } = targetMaintenance;
+        public IReadOnlySet<DatabaseTransferTable>? AdmittedTables { get; } = admittedTables;
         public bool Disposed { get; set; }
     }
 }

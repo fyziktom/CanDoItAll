@@ -19,6 +19,10 @@
     </FormSection>
     <ProjectDeletionStatusSurface Message="@cleanupMessage" IsError="@(cleanups.Count > 0)" Pending="cleanups" Completed="completedCleanups"
                                   Retry="RetryCleanup" Review="cleanupReview" ReviewChanged="value => cleanupReview = value" />
+    <ProjectPendingListSurface Items="pendingRows" Open="_ => open = true" />
+    @if (scenario == ProjectsScenario.PendingRecovery) {
+        <Button Text="Manage synthetic retained references" Click="() => referencesOpen = true" />
+    }
     <ProjectsBoard ProjectSummaries="store.Summaries" ProjectProjection="Projection" HierarchyLinks="store.Hierarchy"
                    ProjectSearch="@search" ProjectSearchChanged="value => search = value"
                    StatusFilter="status" StatusFilterChanged="value => status = value"
@@ -47,6 +51,7 @@
     </ProjectsBoard>
 </Stack>
 <ProjectModalHost @key="draft" IsOpen="open" IsEditorMode="editing" Draft="draft"
+                  PendingRecovery="pendingRecovery" PendingAction="HandlePendingScenario"
                   StarterObjectKinds="starterKinds" ProjectSummaries="store.Summaries" WizardStep="step"
                   WizardSteps="steps" WizardTabs="tabs" Message="@draft.Message" IsErrorMessage="draft.IsError"
                   Close="Close" SwitchToOverview="() => editing = false" SwitchToEditor="() => editing = true"
@@ -62,6 +67,12 @@
                   OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")' />
 <ProjectHierarchyModal State="hierarchy" Close="() => hierarchy = null" OpenHierarchy="OpenHierarchy"
                        OpenProjectPreview="OpenFromHierarchyAsync" OpenStructure='id => Handoff(id, "Structure")' />
+<ProjectPendingReferenceSurface IsOpen="referencesOpen" Items="referenceRows" Selected="selectedReference"
+                                StoredCount="referenceRows.Count" StoredBytes="referenceRows.Sum(item => item.StoredBytes)"
+                                CurrentScope="referenceScope" Message="@referenceMessage"
+                                Close="() => referencesOpen = false" Select="item => selectedReference = item"
+                                CancelSelection="() => selectedReference = null" Discard="DiscardReference"
+                                Refresh='() => referenceMessage = "Synthetic metadata only; no browser storage or owner lookup runs."' />
 
 @code {
     private static readonly string[] steps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
@@ -71,6 +82,13 @@
     private ProjectsScenario scenario;
     private ProjectsScenarioStore store = new(ProjectsScenario.Portfolio);
     private ProjectEditorDraft draft = new(new());
+    private ProjectPendingEditorView? pendingRecovery;
+    private IReadOnlyList<ProjectPendingSubmissionMetadata> pendingRows = [];
+    private static readonly ProjectPendingScope referenceScope = new(new(ProjectsScenarioStore.ProfileId), new("pc1:" + new string('a', 64)));
+    private IReadOnlyList<ProjectPendingReference> referenceRows = [];
+    private ProjectPendingReference? selectedReference;
+    private bool referencesOpen;
+    private string? referenceMessage;
     private bool open;
     private bool editing;
     private long acquisition;
@@ -100,6 +118,15 @@
         store.ReleaseRead();
         store = new(scenario);
         Close();
+        referencesOpen = false;
+        selectedReference = null;
+        referenceMessage = "Synthetic metadata only. Discard changes this specimen and performs no browser or server operation.";
+        referenceRows = scenario == ProjectsScenario.PendingRecovery
+            ? new[] { ProjectPendingStage.Prepared, ProjectPendingStage.Unconfirmed, ProjectPendingStage.Accepted }
+                .Select((stage, index) => new ProjectPendingReference(
+                    new(new(index == 1 ? Guid.NewGuid() : ProjectsScenarioStore.ProfileId), new(1), Guid.NewGuid(), new("pc1:" + new string('a', 64))),
+                    new(index + 1), stage, null, stage == ProjectPendingStage.Unconfirmed, true, 512)).ToArray()
+            : [];
         ResetFilters();
         cleanups = [];
         cleanupMessage = null;
@@ -134,6 +161,14 @@
             draft = loaded;
             step = 0;
             editing = !id.HasValue;
+            if (scenario == ProjectsScenario.PendingRecovery) {
+                var operation = new ProjectDefinitionOperation(new(ProjectsScenarioStore.ProfileId), new(1), Guid.NewGuid(), new("pc1:" + new string('a', 64)));
+                pendingRecovery = new(operation, "Synthetic uncertain save: explicitly check before applying a retained result. No storage or owner effects run in this scenario.",
+                    false, true, false, false, false, false, true);
+                pendingRows = [new(operation, new(1), ProjectPendingStage.Unconfirmed, id, true, true)];
+                draft.Mutation = ProjectEditorMutationState.PendingRecovery;
+                editing = true;
+            }
             open = true;
         } catch (InvalidOperationException exception) {
             if (current == acquisition && ReferenceEquals(owner, store)) {
@@ -146,6 +181,33 @@
         acquisition++;
         open = false;
         draft = new(new());
+        pendingRecovery = null;
+        pendingRows = [];
+    }
+
+    private void HandlePendingScenario(ProjectPendingEditorIntent intent) {
+        if (pendingRecovery is not { } current || current.Operation != intent.Operation) {
+            return;
+        }
+        pendingRecovery = intent.Action switch {
+            ProjectPendingEditorAction.Check => current with { Status = "Synthetic historical acceptance is ready for explicit application.", CanRetry = false, CanApply = true },
+            ProjectPendingEditorAction.ApplyAccepted when current.CanApply => current with { Status = "Synthetic acceptance applied; finish this recovery explicitly.", CanApply = false, CanClear = true },
+            ProjectPendingEditorAction.ClearResolved when current.CanClear => null,
+            _ => current with { Status = "Explicit intent observed. This renderer scenario performs no write or automatic retry." }
+        };
+        if (pendingRecovery is null) {
+            pendingRows = [];
+            draft.Mutation = ProjectEditorMutationState.Ready;
+        }
+    }
+
+    private void DiscardReference(ProjectPendingReference reference) {
+        if (selectedReference != reference) {
+            return;
+        }
+        referenceRows = referenceRows.Where(item => item != reference).ToArray();
+        selectedReference = null;
+        referenceMessage = "Synthetic local evidence removed. No server outcome was determined and no replacement save was submitted.";
     }
 
     private Task OpenFromHierarchyAsync(Guid id) {

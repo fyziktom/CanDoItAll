@@ -54,6 +54,7 @@ public static class ApiServiceCollectionExtensions
         services.TryAddScoped<ApiTokenAdministrationService>();
         services.TryAddScoped<MemoryProviderApiService>();
         services.TryAddScoped<WebCurrentPrincipalResolver>();
+        services.TryAddScoped<ProjectDefinitionHttpAccess>();
         services.TryAddScoped<IStoragePlacementRecoveryAccess, WebStoragePlacementRecoveryAccess>();
         services.TryAddScoped<StoragePlacementRecoveryService>();
         services.TryAddScoped<IStoragePlacementRecovery>(provider => provider.GetRequiredService<StoragePlacementRecoveryService>());
@@ -64,6 +65,7 @@ public static class ApiServiceCollectionExtensions
             typeof(ProfileBoundedReplayEventStream<>));
         services.ConfigureAgentApiJson();
         services.ConfigureLlmChatApiJson();
+        services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new ProjectOperationEpochHttpJsonConverter()));
         services.AddOpenApi(options =>
         {
             options.AddOperationTransformer(ApiAccessOpenApiContract.TransformOperationAsync);
@@ -72,6 +74,8 @@ public static class ApiServiceCollectionExtensions
             options.AddSchemaTransformer(new OpenApiNullableTypeDescriptions());
             options.AddSchemaTransformer(OpenApiAttributeDescriptions.TransformAsync);
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProjectOperationEpochHttpContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(ProjectDefinitionOperationOpenApiSchemas.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
@@ -82,6 +86,7 @@ public static class ApiServiceCollectionExtensions
             options.AddOperationTransformer(
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
+            options.AddOperationTransformer(ProjectOperationEpochHttpContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
             options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);

@@ -704,7 +704,7 @@ public sealed partial class ProjectsService(
             return replacement.IsSuccess ? Result<ProjectSaveOutcome>.Success(new(replacement.Value!.Project.ProjectId, null, replacement.Value))
                 : Result<ProjectSaveOutcome>.Failure(replacement.Errors);
         }
-        var created = await definitionWriter.CreateAsync(new(scalars, phases, options, identity),
+        var created = await definitionWriter.CreateAsync(new CreateProjectDefinitionCommand(scalars, phases, options, identity),
             new(newProjectId ?? Guid.NewGuid(), parentProjectId, reservation, authorization), cancellationToken);
         return created.IsSuccess ? Result<ProjectSaveOutcome>.Success(new(created.Value!.Editor.Project.ProjectId, created.Value.Receipt, created.Value.Editor))
             : Result<ProjectSaveOutcome>.Failure(created.Errors);

@@ -149,10 +149,13 @@ public sealed class WorkspaceDataSourcesOwner(DatabaseProfileWorkspaceService wo
                 ItemKeys = groups.Select(key => key.Value).ToList(), ReplaceExisting = request.ReplaceExisting
             });
             var items = result.Items.Select(item => new TransferGroupResult(new(item.Key), item.Label, item.Success,
-                item.Success ? $"Copied {item.RecordsCopied} record(s)." : "This group did not report success. It may be refused or have incomplete progress; no rollback is assumed.",
+                item.Warning == DatabaseTransferWarning.PostCommitCleanupIncomplete
+                    ? $"Committed {item.RecordsCopied} record(s), but connection or transaction cleanup needs operator review. Do not repeat this transfer."
+                    : item.Success ? $"Copied {item.RecordsCopied} record(s)." : "This group did not report success. It may be refused or have incomplete progress; no rollback is assumed.",
                 item.RecordsCopied)).ToArray();
-            return new(request.TargetProfileId, result.IsSuccess ? DataSourceOutcome.Confirmed : DataSourceOutcome.Partial,
-                result.IsSuccess ? $"Transferred {result.RecordsCopied} setting record(s)."
+            return new(request.TargetProfileId, result.IsSuccess && !result.HasWarnings ? DataSourceOutcome.Confirmed : DataSourceOutcome.Partial,
+                result.HasWarnings ? "Committed transfer data is retained, but cleanup needs operator review. Do not repeat the committed groups."
+                    : result.IsSuccess ? $"Transferred {result.RecordsCopied} setting record(s)."
                     : "One or more groups did not report success. Confirmed groups are retained; further operations are held for operator review.", items);
         });
     }

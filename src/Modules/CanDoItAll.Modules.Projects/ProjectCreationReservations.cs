@@ -44,6 +44,32 @@ internal sealed class ProjectCreationReservationRecordConfiguration : IEntityTyp
 }
 
 public sealed partial class ProjectWriteAdmissionService {
+    public async Task<ProjectCreationReservation?> FindCreationReservationAsync(Guid operationId, Guid requesterId,
+        CancellationToken cancellationToken = default) {
+        if (operationId == Guid.Empty || requesterId == Guid.Empty) {
+            throw new ArgumentException("Creation evidence requires nonempty operation and requester identities.");
+        }
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await context.Set<ProjectCreationReservationRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == operationId, cancellationToken);
+        if (record is null) {
+            return null;
+        }
+        RetainedEvidenceImport.RequireNative(record.ImportedHistory);
+        if (record.DatabaseProfileId != DatabaseProfileId || record.RequesterId != requesterId) {
+            throw new InvalidOperationException("The stored creation evidence does not belong to this profile and requester.");
+        }
+        if (record.State == ProjectCreationReservationState.Cancelled) {
+            return null;
+        }
+        if (record.State is not (ProjectCreationReservationState.Reserved or ProjectCreationReservationState.Consumed)) {
+            throw new InvalidOperationException("The stored creation evidence has an unsupported state.");
+        }
+        var reservation = ToReservation(record);
+        ValidateReservation(reservation);
+        return reservation;
+    }
+
     public async Task<ProjectCreationReservation> ReserveCreationAsync(Guid projectId, Guid requesterId, Guid operationId,
         Guid? parentProjectId = null, CancellationToken cancellationToken = default,
         ProjectMutationAuthorization? authorization = null, ProjectWriteAdmission? expectedParentAdmission = null) {

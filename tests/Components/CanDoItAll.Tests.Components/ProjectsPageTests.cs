@@ -47,6 +47,7 @@ public sealed class ProjectsPageTests
         var cut = RenderProjectsPage(harness);
         await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Žluťoučký 東京" }));
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
         Assert.Equal("Žluťoučký 東京", Assert.Single(await projects.ListAsync()).Name);
     }
@@ -452,10 +453,11 @@ public sealed class ProjectsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var cut = RenderProjectsPage(harness);
 
-        cut.Find("[data-testid='projects-new-button']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='project-name-input']");
-        cut.Find("[data-testid='project-name-input']").Change("Wizard Project");
-        cut.Find("[data-testid='project-save-button']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").ChangeAsync(new() { Value = "Wizard Project" }));
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
 
         cut.WaitForAssertion(() =>
         {
@@ -470,10 +472,11 @@ public sealed class ProjectsPageTests
         await using var harness = await ComponentTestHarness.CreateAsync();
         var cut = RenderProjectsPage(harness);
 
-        cut.Find("[data-testid='projects-new-button']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='project-name-input']");
-        cut.Find("[data-testid='project-name-input']").Change("Card Modal Project");
-        cut.Find("[data-testid='project-save-button']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").ChangeAsync(new() { Value = "Card Modal Project" }));
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
 
         cut.WaitForAssertion(() =>
         {
@@ -499,7 +502,8 @@ public sealed class ProjectsPageTests
         cut.Find("[data-testid='project-name-input']").Change("Stale editor attempt");
         await projects.DeleteAsync(projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored current lifetime" })).IsSuccess);
-        cut.Find("[data-testid='project-save-button']").Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
         cut.WaitForAssertion(() => Assert.Contains("Reload it before saving changes.", cut.Markup));
         Assert.Equal("Restored current lifetime", (await projects.GetAsync(projectId)).Name);
     }
@@ -845,6 +849,62 @@ public sealed class ProjectsPageTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Package_import_cleanup_warning_or_unknown_outcome_preserves_evidence_and_blocks_repeat(bool unconfirmed) {
+        var target = CreateDatabaseProfileSummary("Original import target");
+        var otherTarget = CreateDatabaseProfileSummary("Later selected target");
+        var profiles = new StubDatabaseProfileService([target, otherTarget]);
+        var manifest = new ProjectPackageManifest { PackageId = Guid.NewGuid(), TotalRecordCount = 7 };
+        const string unknownMessage = "Import acknowledgement is unconfirmed; inspect the original target and retained files.";
+        var service = new RecordingProjectPackageService {
+            ImportResult = unconfirmed
+                ? Result<ProjectPackageImportResult>.Failure(Error.Failure(unknownMessage, ProjectPackageErrorCodes.ImportOutcomeUnconfirmed))
+                : Result<ProjectPackageImportResult>.Success(new(manifest, 7, 3) { Warning = ProjectPackageImportWarning.CleanupIncomplete })
+        };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.RemoveAll<IDatabaseProfileService>();
+            services.AddSingleton<IDatabaseProfileService>(profiles);
+            services.RemoveAll<IProjectPackageService>();
+            services.AddSingleton<IProjectPackageService>(service);
+        });
+        var cut = RenderProjectsPage(harness);
+        cut.Find("[data-testid='projects-package-dialog-button']").Click();
+        cut.WaitForAssertion(() => Assert.Contains(target.DisplayName,
+            cut.Find("[data-testid='projects-package-target-profile-select']").TextContent));
+        cut.Find("[data-testid='projects-package-target-profile-select']").Change(target.Id.ToString());
+        cut.Find("[data-testid='projects-package-path-input']").Input("portfolio.zip");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='projects-import-package-button']").ClickAsync(new()));
+        cut.WaitForAssertion(() => {
+            var message = cut.Find("[data-testid='projects-package-message']");
+            Assert.Contains("projects-board__package-message--error", message.ClassName);
+            if (unconfirmed) {
+                Assert.Contains(unknownMessage, message.TextContent);
+                Assert.DoesNotContain("Imported 7", message.TextContent);
+            } else {
+                Assert.Contains($"Imported 7 project record(s) from {manifest.PackageId:N} into {target.Id:D}", message.TextContent);
+                Assert.Contains("The import committed, but cleanup needs operator review", message.TextContent);
+                Assert.Contains("Do not repeat this import", message.TextContent);
+            }
+            Assert.True(cut.Find("[data-testid='projects-import-package-button']").HasAttribute("disabled"));
+        });
+        var terminalMessage = cut.Find("[data-testid='projects-package-message']").TextContent;
+        cut.Find("[data-testid='projects-package-target-profile-select']").Change(otherTarget.Id.ToString());
+        cut.Find("[data-testid='projects-package-path-input']").Input("later-package.zip");
+        profiles.FailReads = true;
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(Guid.NewGuid()));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Retry project reads").ClickAsync(new()));
+        cut.WaitForAssertion(() => {
+            Assert.Contains("Unable to read package targets", cut.Find("[data-testid='projects-read-error']").TextContent);
+            Assert.Equal(terminalMessage, cut.Find("[data-testid='projects-package-message']").TextContent);
+            Assert.True(cut.Find("[data-testid='projects-import-package-button']").HasAttribute("disabled"));
+        });
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.ImportProjectsPackage.InvokeAsync());
+        Assert.Equal(1, service.ImportCalls);
+        Assert.Equal(target.Id, service.LastImportRequest!.TargetProfileId);
+    }
+
     // The router renders the page only at its own route, and the page applies and writes its URL state only there.
     private static IRenderedComponent<ProjectsPage> RenderProjectsPage(ComponentTestHarness harness) {
         harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");
@@ -1055,11 +1115,15 @@ public sealed class ProjectsPageTests
     private sealed class StubDatabaseProfileService(
         IReadOnlyList<DatabaseProfileSummary> profiles) : IDatabaseProfileService
     {
+        public bool FailReads { get; set; }
+
         public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Result> DeleteEditorAsync(Guid id, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<DatabaseProfileSummary>> ListAsync(
             CancellationToken cancellationToken = default)
-            => Task.FromResult(profiles);
+            => FailReads
+                ? Task.FromException<IReadOnlyList<DatabaseProfileSummary>>(new IOException("Injected package target read failure."))
+                : Task.FromResult(profiles);
 
         public Task<DatabaseProfileEditorModel> GetEditorAsync(
             Guid? id = null,
@@ -1102,6 +1166,8 @@ public sealed class ProjectsPageTests
     private sealed class RecordingProjectPackageService : IProjectPackageService
     {
         public ProjectPackageImportRequest? LastImportRequest { get; private set; }
+        public Result<ProjectPackageImportResult>? ImportResult { get; init; }
+        public int ImportCalls { get; private set; }
 
         public Task<Result<ProjectPackageExportResult>> ExportAllAsync(
             ProjectPackageExportRequest request,
@@ -1112,8 +1178,9 @@ public sealed class ProjectsPageTests
             ProjectPackageImportRequest request,
             CancellationToken cancellationToken = default)
         {
+            ImportCalls++;
             LastImportRequest = request;
-            return Task.FromResult(Result<ProjectPackageImportResult>.Success(
+            return Task.FromResult(ImportResult ?? Result<ProjectPackageImportResult>.Success(
                 new ProjectPackageImportResult(
                     new ProjectPackageManifest
                     {

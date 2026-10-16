@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.ProviderHistory.Persistence;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
@@ -31,7 +32,13 @@ public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions optio
     }
 
     public Task<DatabaseTransferItemResult> TransferAsync(DatabaseTransferOperation context, CancellationToken cancellationToken = default)
-        => operations.RunTransferAsync(context, (transfer, token) => TransferCoreAsync(context, transfer, token), cancellationToken: cancellationToken);
+        => operations.RunTransferAsync(context, new([
+            typeof(LlmChatDefinitionRow), typeof(LlmChatDefinitionCreateReceiptRow), typeof(LlmChatDefinitionRevisionRow),
+            typeof(LlmChatDefinitionTagRow), typeof(LlmChatConversationRow), typeof(LlmChatTranscriptRow), typeof(LlmChatMessageRow),
+            typeof(LlmChatOperationRow), typeof(LlmChatInvocationRecordRow), typeof(LlmChatOperationEventRow),
+            .. HistoryTransferTargetPlan.EntityTypes
+        ], [HistoryPartitionStore.InitializationLockKey]),
+            (transfer, token) => TransferCoreAsync(context, transfer, token), cancellationToken: cancellationToken);
 
     private async Task<DatabaseTransferItemResult> TransferCoreAsync(DatabaseTransferOperation context,
         DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {

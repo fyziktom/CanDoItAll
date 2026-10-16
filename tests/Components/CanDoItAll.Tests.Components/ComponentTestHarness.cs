@@ -2,6 +2,8 @@ using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,6 +63,9 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.Services.AddAgentFrameworkUi();
             context.Services.AddScoped<TuningCoordinator>();
             context.Services.AddHttpClient<DevelopmentManagerClient>();
+            context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();
+            context.Services.AddSingleton(services => (IProjectPendingReferenceStore)services.GetRequiredService<IProjectPendingSubmissionStore>());
+            context.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
             configureServices?.Invoke(context.Services);
 
             if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&

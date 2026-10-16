@@ -15,6 +15,16 @@ that provider's supported API before enabling a new guarantee.
 
 ## Decision and dependency boundary
 
+The P02b maintenance package-import repair preserves acknowledged counts and
+staged bytes through cleanup failures, and retains bytes when commit is
+unconfirmed. Its native dispatch hold is page-instance state: dialog/target
+changes retain it, but navigation, restart and another tab do not. P06 must own
+durable package intent, exact original target binding and uncertain-dispatch
+resolution before any navigation-safe recovery claim. Empty-target checks alone
+do not establish the outcome of a previous dispatch. See the
+[source review](../reviews/P02b-package-import-commit-review.md); this limitation
+does not justify introducing a second Projects-definition receipt protocol here.
+
 Keep each effect with its existing owner. A database receipt records the local
 owner's accepted decision; it cannot atomically commit an FTP upload, native vault
 write, OAuth refresh, mailbox update or application restart. Do not place any of

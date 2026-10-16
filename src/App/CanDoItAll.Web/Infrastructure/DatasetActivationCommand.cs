@@ -1,0 +1,119 @@
+using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.DependencyInjection;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace CanDoItAll.Web.Infrastructure;
+
+public enum DatasetActivationCommandKind { Bootstrap, Attach, Reactivate, Resume, AttachSupersededBootstrap }
+
+public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind, Guid ProfileId,
+    DatasetNamespaceId? ExpectedNamespace, Guid? MaintenanceId, Guid? ExpectedPlanId) {
+    private const string CommandName = "dataset-activation";
+    private const string ProfileOption = "--profile-id";
+    private const string NamespaceOption = "--expected-namespace";
+    private const string MaintenanceOption = "--maintenance-id";
+    private const string PlanOption = "--expected-plan-id";
+    private const string StoppedOption = "--writers-stopped";
+
+    public static DatasetActivationCommand? Parse(string[] args) {
+        ArgumentNullException.ThrowIfNull(args);
+        if (args.Length == 0 || args[0] != CommandName) {
+            return null;
+        }
+        if (args.Length is < 5 or > 11) {
+            throw new ArgumentException("Dataset activation requires an action, explicit profile and --writers-stopped acknowledgement.");
+        }
+        var kind = args[1] switch {
+            "bootstrap" => DatasetActivationCommandKind.Bootstrap,
+            "attach" => DatasetActivationCommandKind.Attach,
+            "reactivate" => DatasetActivationCommandKind.Reactivate,
+            "resume" => DatasetActivationCommandKind.Resume,
+            "attach-superseded-bootstrap" => DatasetActivationCommandKind.AttachSupersededBootstrap,
+            _ => throw new ArgumentException("Unsupported dataset activation action.")
+        };
+        var values = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        var writersStopped = false;
+        for (var index = 2; index < args.Length; index++) {
+            var option = args[index];
+            if (option == StoppedOption) {
+                if (writersStopped) {
+                    throw new ArgumentException("The writers-stopped acknowledgement cannot be repeated.");
+                }
+                writersStopped = true;
+                continue;
+            }
+            if (option is not (ProfileOption or NamespaceOption or MaintenanceOption or PlanOption) ||
+                    ++index >= args.Length || !Guid.TryParseExact(args[index], "D", out var value) || value == Guid.Empty ||
+                    !values.TryAdd(option, value)) {
+                throw new ArgumentException("Dataset activation options must be distinct supported names with nonempty D-format UUID values.");
+            }
+        }
+        if (!writersStopped || !values.TryGetValue(ProfileOption, out var profileId)) {
+            throw new ArgumentException("Stop every writer host and supply --writers-stopped and an explicit --profile-id before offline activation.");
+        }
+        string[] required = kind switch {
+            DatasetActivationCommandKind.Reactivate => [ProfileOption, NamespaceOption, MaintenanceOption],
+            DatasetActivationCommandKind.AttachSupersededBootstrap => [ProfileOption, NamespaceOption, PlanOption],
+            _ => [ProfileOption]
+        };
+        if (values.Count != required.Length || required.Any(option => !values.ContainsKey(option))) {
+            throw new ArgumentException("The supplied dataset activation options do not match this action.");
+        }
+        return new(kind, profileId, values.TryGetValue(NamespaceOption, out var expected) ? new(expected) : null,
+            values.TryGetValue(MaintenanceOption, out var maintenance) ? maintenance : null,
+            values.TryGetValue(PlanOption, out var plan) ? plan : null);
+    }
+
+    public async Task RunAsync(CancellationToken cancellationToken = default) {
+        var builder = WebApplication.CreateBuilder(Array.Empty<string>());
+        DatabasePasswordFileConfiguration.Apply(builder.Configuration, builder.Environment.ContentRootPath);
+        builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Composition.ModuleAssemblies.All);
+        RemoveUnsupportedOfflineStorageRegistrations(builder.Services);
+        builder.Services.AddOptions<ProjectDefinitionOperationOptions>()
+            .Bind(builder.Configuration.GetSection(ProjectDefinitionOperationOptions.SectionName))
+            .Validate(options => options.IsValid(), "Projects definition operation limits and deadlines must remain within supported bounds.");
+        builder.Services.AddSingleton<DatasetActivationCoordinator>();
+        await using var host = builder.Build();
+        _ = host.Services.GetRequiredService<IOptions<ProjectDefinitionOperationOptions>>().Value;
+        var profile = host.Services.GetRequiredService<DatabaseProfileControlPlaneService>().ResolveProfile(ProfileId);
+        if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+            throw new NotSupportedException("Offline dataset activation requires an explicit PostgreSQL profile.");
+        }
+        if (Kind == DatasetActivationCommandKind.Bootstrap) {
+            await host.Services.GetRequiredService<IDatabaseDriverRegistry>().Resolve(profile.Profile.ProviderKind)
+                .EnsureDatabaseAsync(profile, cancellationToken);
+        }
+        await using (var context = await host.Services.GetRequiredService<IProfileAppDbContextFactory>()
+                .CreateDbContextForProfileAsync(profile, cancellationToken)) {
+            await context.Database.MigrateAsync(cancellationToken);
+        }
+        var coordinator = host.Services.GetRequiredService<DatasetActivationCoordinator>();
+        var binding = Kind switch {
+            DatasetActivationCommandKind.Bootstrap => await coordinator.EnsureReadyAsync(profile, cancellationToken),
+            DatasetActivationCommandKind.Attach => await coordinator.AttachAsync(profile, cancellationToken),
+            DatasetActivationCommandKind.Reactivate => await coordinator.ReactivateAsync(profile, ExpectedNamespace!, MaintenanceId!.Value, cancellationToken),
+            DatasetActivationCommandKind.Resume => await coordinator.ResumeAsync(profile, cancellationToken),
+            DatasetActivationCommandKind.AttachSupersededBootstrap => await coordinator.AttachAfterSupersededBootstrapAsync(profile,
+                ExpectedPlanId!.Value, ExpectedNamespace!, cancellationToken),
+            _ => throw new InvalidOperationException("The dataset activation action is unsupported.")
+        };
+        Console.WriteLine($"Dataset activation complete. Profile={ProfileId:D}; Namespace={binding.Namespace.Value:D}; Maintenance={binding.MaintenanceId:D}.");
+    }
+
+    private static void RemoveUnsupportedOfflineStorageRegistrations(IServiceCollection services) {
+        HashSet<Type> runtimeStorageTypes = [typeof(StorageProfileTransferService), typeof(StorageTransferPipeline),
+            typeof(StorageConnectionTestService), typeof(IpfsStorageDriver), typeof(FtpStorageDriver),
+            typeof(IpfsStorageBrowseDriver), typeof(FtpStorageBrowseDriver)];
+        foreach (var registration in services.Where(registration => registration.ImplementationType is { } implementation &&
+                runtimeStorageTypes.Contains(implementation)).ToArray()) {
+            services.Remove(registration);
+        }
+    }
+}

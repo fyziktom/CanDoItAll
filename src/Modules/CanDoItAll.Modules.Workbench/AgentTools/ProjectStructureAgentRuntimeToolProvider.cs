@@ -42,6 +42,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private readonly ProjectStructureProcessToolAdmission? processToolAdmission;
     private readonly ProjectProcessAssetToolAdmission? processAssetAdmission;
     private readonly ProjectStructureResultDisclosureService? resultDisclosure;
+    private readonly ProjectDefinitionToolAdmission? definitionAdmission;
 
     public ProjectStructureAgentRuntimeToolProvider(
         ProjectStructureAgentService agentService,
@@ -66,8 +67,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectStructureProcessToolAdmission? processToolAdmission = null,
         ProjectProcessExecutionMutationService? processMutations = null,
         ProjectProcessAssetToolAdmission? processAssetAdmission = null,
-        ProjectStructureResultDisclosureService? resultDisclosure = null)
-    {
+        ProjectStructureResultDisclosureService? resultDisclosure = null,
+        ProjectDefinitionToolAdmission? definitionAdmission = null) {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
         ArgumentNullException.ThrowIfNull(analyticsService);
@@ -91,6 +92,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         this.processToolAdmission = processToolAdmission;
         this.processAssetAdmission = processAssetAdmission;
         this.resultDisclosure = resultDisclosure;
+        this.definitionAdmission = definitionAdmission;
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
         toolBuilder = new ProjectStructureToolBuilder(
             agentService,
@@ -116,7 +118,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             processToolAdmission,
             processMutations,
             processAssetAdmission,
-            resultDisclosure);
+            resultDisclosure,
+            definitionAdmission);
     }
 
     public int Order => ProviderOrder;
@@ -144,6 +147,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             if (!ShouldAttachForContext(context.ContextIntent)) {
                 return [];
             }
+            if (ProjectDefinitionToolAdmission.UsesJournal(context)) {
+                await (definitionAdmission ?? throw new InvalidOperationException("Recoverable definition tools require their owner admission adapter."))
+                    .CaptureAsync(context, cancellationToken);
+            }
             var tools = await toolBuilder.CreateToolsAsync(context, cancellationToken);
             toolNames = tools.Select(tool => tool.Name).ToFrozenSet(StringComparer.Ordinal);
             return tools;
@@ -161,6 +168,12 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         var disclosureService = resultDisclosure ?? throw new InvalidOperationException("Recoverable Structure tools require their owner result authorization.");
         var metadata = disclosureService.Metadata(context, Descriptor.ProviderKey)
             .Where(item => toolNames.Contains(item.ToolName)).ToList();
+        if (ProjectDefinitionToolAdmission.UsesJournal(context)) {
+            var definitions = definitionAdmission ?? throw new InvalidOperationException("Recoverable definition tools require their owner admission adapter.");
+            foreach (var name in toolNames.Where(ProjectDefinitionToolProposalCodec.Supports)) {
+                metadata.Add(definitions.Metadata(context, Descriptor.ProviderKey, name));
+            }
+        }
         if (toolNames.Contains(ProjectStructureToolPolicy.ProjectStructureNodeProcessStart) &&
                 ProjectStructureProcessToolAdmission.UsesJournal(context)) {
             var admission = processToolAdmission ?? throw new InvalidOperationException(
@@ -280,8 +293,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectStructureProcessToolAdmission? processToolAdmission,
         ProjectProcessExecutionMutationService? processMutations,
         ProjectProcessAssetToolAdmission? processAssetAdmission,
-        ProjectStructureResultDisclosureService? resultDisclosure)
-    {
+        ProjectStructureResultDisclosureService? resultDisclosure,
+        ProjectDefinitionToolAdmission? definitionAdmission) {
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
         private readonly IProjectStructureAnalyticsService analyticsService = analyticsService;
@@ -553,11 +566,13 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
 
             if (!accessState.CanWrite)
             {
-                tools.RemoveAll(tool => ProjectStructureToolPolicy.IsMutation(tool.Name));
+                tools.RemoveAll(tool => ProjectStructureToolPolicy.IsMutation(tool.Name) &&
+                    !(ProjectDefinitionToolAdmission.UsesJournal(context) && ProjectDefinitionToolProposalCodec.Supports(tool.Name)));
             }
             else if (accessState.RequiresNonTaskWriteGuard)
             {
-                tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name));
+                tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name) &&
+                    !(ProjectDefinitionToolAdmission.UsesJournal(context) && ProjectDefinitionToolProposalCodec.Supports(tool.Name)));
             }
 
             if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation)
@@ -573,20 +588,19 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "Analyzes a project-authorized PNG, JPEG, GIF, or WebP asset by project id and node id without resolving its physical workspace path. Use this for projected process screenshots and managed image assets. SVG is text and must use project_structure_asset_text_get."));
             }
 
-            if (accessState.CanCreateProjects)
-            {
+            if (accessState.CanCreateProjects || ProjectDefinitionToolAdmission.UsesJournal(context)) {
                 tools.Add(AIFunctionFactory.Create(
                     (ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectCreateAsync(agent, accessState, request, estimatedMinutes, cancellationToken),
                     ProjectStructureToolPolicy.ProjectStructureProjectCreate,
                     "Creates a standalone CanDoItAll project. Use project_structure_subproject_create when the new project must be attached below a parent project."));
             }
 
-            if (accessState.CanCreateSubprojects && accessState.AllowsGovernedProjectOperation(ProjectProcessProjectOperation.CreateChild))
-            {
+            if (accessState.CanCreateSubprojects && accessState.AllowsGovernedProjectOperation(ProjectProcessProjectOperation.CreateChild) ||
+                    ProjectDefinitionToolAdmission.UsesJournal(context)) {
                 tools.Add(AIFunctionFactory.Create(
                     (Guid parentProjectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectCreateAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
                     ProjectStructureToolPolicy.ProjectStructureSubprojectCreate,
-                    "Creates a new project and atomically attaches it as a direct subproject of parentProjectId. Use the returned project id for subsequent project_structure_node_create calls that populate the new subproject."));
+                    "Creates a new project and atomically attaches it as a direct subproject of parentProjectId. Governed proposals require request.expectedParentAdmission copied unchanged from the parent's coherent definition read. Use the returned project id for subsequent project_structure_node_create calls that populate the new subproject."));
             }
 
             if (accessState.CanCreateSubprojects && accessState.CanWrite && accessState.AllowsGovernedProjectOperation(ProjectProcessProjectOperation.ChangeHierarchy))
@@ -839,6 +853,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             int? estimatedMinutes,
             CancellationToken cancellationToken)
         {
+            if (accessState.ProviderContext is { } provider && ProjectDefinitionToolAdmission.UsesJournal(provider)) {
+                return (definitionAdmission ?? throw new InvalidOperationException("The definition admission adapter is missing."))
+                    .CreateAsync(provider, null, request, estimatedMinutes, accessState.GrantSessionCreatedProjectAccess, cancellationToken);
+            }
             return ExecuteAsync(
                 agent,
                 "projects.create",
@@ -878,6 +896,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             int? estimatedMinutes,
             CancellationToken cancellationToken)
         {
+            if (accessState.ProviderContext is { } provider && ProjectDefinitionToolAdmission.UsesJournal(provider)) {
+                return (definitionAdmission ?? throw new InvalidOperationException("The definition admission adapter is missing."))
+                    .CreateAsync(provider, parentProjectId, request, estimatedMinutes, accessState.GrantSessionCreatedProjectAccess, cancellationToken);
+            }
             return ExecuteAsync(
                 agent,
                 "projects.subproject-create",
@@ -934,6 +956,10 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             int? estimatedMinutes,
             CancellationToken cancellationToken)
         {
+            if (accessState.ProviderContext is { } provider && ProjectDefinitionToolAdmission.UsesJournal(provider)) {
+                return (definitionAdmission ?? throw new InvalidOperationException("The definition admission adapter is missing."))
+                    .UpdateAsync(provider, projectId, request, estimatedMinutes, BuildAgentContext(agent), cancellationToken);
+            }
             return ExecuteAsync(
                 agent,
                 "projects.update",

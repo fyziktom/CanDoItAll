@@ -24,6 +24,7 @@ internal sealed class ProjectStructureResultDisclosureService(
 
     internal static bool Handles(AgentRuntimeToolProviderContext context, string toolName)
         => toolName != ProjectStructureToolPolicy.ProjectStructureNodeProcessStart &&
+            !(ProjectDefinitionToolAdmission.UsesJournal(context) && ProjectDefinitionToolProposalCodec.Supports(toolName)) &&
             !(context.Purpose == AgentRuntimeToolProviderPurpose.GovernedProcessAutomation &&
                 context.AdmittedToolSession?.BackgroundSource is not null &&
                 toolName is ProjectStructureToolPolicy.ProjectStructureAssetCreate or ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision);

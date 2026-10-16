@@ -611,9 +611,15 @@ Persist Accepted before local merge when possible; storage/merge failures remain
 separate from the confirmed outcome. Clear only the matching operation/record revision.
 Authorize the current binding before displaying stored content after account change.
 
-The pilot uses the existing same-origin browser storage primitives with explicit
-bounded plaintext retention and inspect/discard controls; this creates no isolation
-between people sharing a browser profile. The restart promise does not preserve typing
+The pilot uses a narrow versioned IndexedDB submission store. Per-operation keys alone
+do not protect the same operation restored in two tabs: compare the expected record
+revision and perform each transition or clear in one readwrite transaction. Persist
+Prepared and then Dispatching before the owner call, never downgrade Accepted, and
+report success only after a supported strict-durability transaction completes. No
+localStorage or memory fallback may silently weaken first-dispatch persistence. See
+[the native integration card](../../../codex/bundles/concurrent-mutations/plan/P02c-native-pending-recovery.md).
+Keep bounded same-origin plaintext retention and inspect/discard controls; this creates
+no isolation between people sharing a browser profile. The restart promise does not preserve typing
 performed after dispatch or raw incomplete date fragments. Those remain separate
 unsubmitted state unless a later explicit draft-checkpoint feature is implemented.
 No new editor history/checkpoint feature is required for this slice.

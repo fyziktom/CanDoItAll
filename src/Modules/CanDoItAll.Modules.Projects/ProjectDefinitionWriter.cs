@@ -20,7 +20,139 @@ public sealed class ProjectDefinitionWriter(
     ISearchIndexService search,
     CoordinatedDatabaseTransaction transactions,
     ProjectWriteAdmissionService admissions,
+    ProjectDefinitionOperationProtocol operationProtocol,
     ILogger<ProjectDefinitionWriter> logger) {
+    public Task<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>> ReplaceAsync(
+        ProjectDefinitionRequest<ReplaceProjectDefinitionCommand> request, ProjectDefinitionInvocation invocation,
+        CancellationToken cancellationToken = default)
+        => ExecuteProtectedAsync<ReplaceProjectDefinitionCommand, ProjectEditorAcknowledgement>(request, invocation, cancellationToken);
+
+    public Task<ProjectDefinitionOutcome<ProjectDefinitionScalarsAcknowledgement>> UpdateScalarsAsync(
+        ProjectDefinitionRequest<UpdateProjectDefinitionScalarsCommand> request, ProjectDefinitionInvocation invocation,
+        CancellationToken cancellationToken = default)
+        => ExecuteProtectedAsync<UpdateProjectDefinitionScalarsCommand, ProjectDefinitionScalarsAcknowledgement>(request, invocation, cancellationToken);
+
+    public Task<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>> CreateAsync(
+        ProjectDefinitionRequest<CreateProjectDefinitionCommand> request, ProjectDefinitionInvocation invocation,
+        CancellationToken cancellationToken = default)
+        => ExecuteProtectedAsync<CreateProjectDefinitionCommand, ProjectEditorAcknowledgement>(request, invocation, cancellationToken);
+
+    public Task<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>> CreateAsync(
+        ProjectDefinitionRequest<CreateProjectDefinitionCommand> request, ProjectDefinitionInvocation invocation,
+        ProjectCreationReservation reservation, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(reservation);
+        return ExecuteProtectedAsync<CreateProjectDefinitionCommand, ProjectEditorAcknowledgement>(request, invocation, cancellationToken,
+            new(reservation.ProjectId, reservation.ParentProjectId, reservation, invocation.Authorization));
+    }
+
+    private async Task<ProjectDefinitionOutcome<TAcknowledgement>> ExecuteProtectedAsync<TCommand, TAcknowledgement>(
+        ProjectDefinitionRequest<TCommand> request, ProjectDefinitionInvocation invocation, CancellationToken cancellationToken,
+        ProjectDefinitionCreationContext? reservedCreation = null) where TCommand : class where TAcknowledgement : class {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(invocation);
+        ProjectDefinitionOperationAttempt? attempt = null;
+        try {
+            if (request.Version != ProjectDefinitionRequestVersion.VersionOne) {
+                throw ProjectDefinitionOperationProtocol.Rejected(ProjectErrorCodes.DefinitionVersionUnsupported,
+                    "The original definition request interpretation is not supported.");
+            }
+            var input = DefinitionInput.From(request.Command);
+            ProjectDefinitionInputBounds.Validate(input.Scalars, input.Phases, input.Options, input.ExternalIdentity,
+                ProjectDefinitionLimits.VersionOneMaximum);
+            var creation = input.Kind == ProjectDefinitionCommandKind.Create
+                ? reservedCreation ?? new ProjectDefinitionCreationContext(Guid.NewGuid(), null, null, invocation.Authorization) : null;
+            var prepared = Prepare(input.Expected, input.Scalars, input.Phases, input.Options, input.ExternalIdentity, creation,
+                invocation.Authorization, allowHistoricalProfile: true);
+            if (prepared.IsFailure) {
+                return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, prepared.Errors);
+            }
+            var write = prepared.Value!;
+            var intent = new ProjectDefinitionNormalizedIntent(request.Version, input.Kind, write.Expected, write.Scalars,
+                write.Rows?.Phases, write.Rows?.Options,
+                write.ExternalIdentity is null ? null : new(write.ExternalIdentity.Namespace, write.ExternalIdentity.Key),
+                creation is null ? null : new(reservedCreation?.ProjectId, creation.ParentProjectId, creation.Reservation),
+                invocation.EffectBinding, ProjectDefinitionLimits.VersionOneMaximum);
+            attempt = await operationProtocol.PrepareAsync(request.Operation, invocation, intent, cancellationToken);
+            if (!await operationProtocol.TryReadAcceptedAsync(attempt, cancellationToken)) {
+                if (write.Expected is { } expected && expected.Project.DatabaseProfileId != admissions.DatabaseProfileId) {
+                    return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation,
+                        [Error.Validation("The original definition expectation does not match this database profile.", ProjectErrorCodes.DefinitionExpectationInvalid)]);
+                }
+                var limits = operationProtocol.Limits;
+                ProjectDefinitionInputBounds.Validate(input.Scalars, input.Phases, input.Options, input.ExternalIdentity, limits);
+                if (attempt.CanonicalByteLength > limits.MaxCanonicalCommandBytes) {
+                    throw new ProjectDefinitionLimitException("The canonical definition payload exceeds its byte limit.");
+                }
+                var result = await ExecuteAsync(write with { Attempt = attempt }, cancellationToken);
+                if (attempt.ReplayObserved || result.IsFailure) {
+                    if (await operationProtocol.TryReadAcceptedAsync(attempt, cancellationToken)) {
+                        return AcceptedResult<TAcknowledgement>(attempt);
+                    }
+                }
+                if (result.IsFailure) {
+                    return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, result.Errors);
+                }
+            }
+            return AcceptedResult<TAcknowledgement>(attempt);
+        } catch (ProjectDefinitionProtocolRejectedException exception) {
+            return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, [exception.Error]);
+        } catch (ProjectOperationAdmissionException exception) {
+            if (attempt is not null && await RecoverOutcomeAsync<TAcknowledgement>(attempt) is { } recovered) {
+                return recovered;
+            }
+            var code = exception.Failure switch {
+                ProjectOperationAdmissionFailure.DatasetChanged => ProjectErrorCodes.DefinitionDatasetChanged,
+                ProjectOperationAdmissionFailure.CallerChanged => ProjectErrorCodes.DefinitionCallerChanged,
+                ProjectOperationAdmissionFailure.UnknownEpoch => ProjectErrorCodes.DefinitionOperationUnknown,
+                _ => ProjectErrorCodes.DefinitionOperationClosed
+            };
+            return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, [Error.Failure(exception.Message, code)]);
+        } catch (ProjectDefinitionLimitException exception) {
+            return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation,
+                [Error.Validation(exception.Message, ProjectErrorCodes.DefinitionLimitExceeded)]);
+        } catch (ProjectDefinitionInputException exception) {
+            return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, [Error.Validation(exception.Message)]);
+        } catch (Exception exception) {
+            if (attempt is { Committed: true } or { Replayed: true }) {
+                logger.LogError(exception, "Project operation {OperationId} is accepted but its completion processing failed.", request.Operation.Id);
+                return AcceptedResult<TAcknowledgement>(attempt);
+            }
+            if (attempt is not null && await RecoverOutcomeAsync<TAcknowledgement>(attempt) is { } recovered) {
+                return recovered;
+            }
+            logger.LogError(exception, "Project operation {OperationId} failed; commit was attempted: {CommitAttempted}.",
+                request.Operation.Id, attempt?.CommitAttempted == true);
+            return attempt is null || attempt.CommitAttempted
+                ? new ProjectDefinitionOutcome<TAcknowledgement>.Unconfirmed(request.Operation, ProjectDefinitionRecoveryReason.CommitUnconfirmed)
+                : new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation,
+                    [Error.Failure("The definition attempt failed before commit. Its original operation remains available for outcome recovery.", ProjectErrorCodes.DefinitionTransactionConflict)]);
+        }
+    }
+
+    private async Task<ProjectDefinitionOutcome<T>?> RecoverOutcomeAsync<T>(ProjectDefinitionOperationAttempt attempt) where T : class {
+        using var recoveryDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try {
+            return await operationProtocol.TryReadAcceptedAsync(attempt, recoveryDeadline.Token)
+                ? AcceptedResult<T>(attempt) : null;
+        } catch (ProjectDefinitionProtocolRejectedException exception) {
+            return new ProjectDefinitionOutcome<T>.Rejected(attempt.Operation, [exception.Error]);
+        } catch (Exception exception) {
+            logger.LogError(exception, "Projects operation {OperationId} could not reconcile its original outcome after dispatch failed.", attempt.Operation.Id);
+            return new ProjectDefinitionOutcome<T>.Unconfirmed(attempt.Operation, ProjectDefinitionRecoveryReason.CommitUnconfirmed);
+        }
+    }
+
+    private static ProjectDefinitionOutcome<T> AcceptedResult<T>(ProjectDefinitionOperationAttempt attempt) where T : class {
+        object result = attempt.Accepted switch {
+            ProjectDefinitionDecodedReceipt.Full full => full.Result,
+            ProjectDefinitionDecodedReceipt.Scalars scalar => scalar.Result,
+            _ => throw new InvalidOperationException("The accepted operation has no exact durable result.")
+        };
+        return result is ProjectDefinitionAccepted<T> typed
+            ? new ProjectDefinitionOutcome<T>.Accepted(typed, attempt.Replayed)
+            : throw new InvalidOperationException("The accepted definition result does not match the requested command kind.");
+    }
+
     public async Task<Result<ProjectEditorAcknowledgement>> ReplaceAsync(ReplaceProjectDefinitionCommand command,
         CancellationToken cancellationToken = default, ProjectMutationAuthorization? authorization = null) {
         ArgumentNullException.ThrowIfNull(command);
@@ -65,8 +197,8 @@ public sealed class ProjectDefinitionWriter(
     private Result<DefinitionWrite> Prepare(ProjectDefinitionExpectation? expected, ProjectDefinitionScalars scalars,
         IReadOnlyList<ProjectDefinitionPhaseInput>? phases, IReadOnlyList<ProjectDefinitionOptionInput>? options,
         ProjectDefinitionExternalIdentity? externalIdentity, ProjectDefinitionCreationContext? creation,
-        ProjectMutationAuthorization? authorization) {
-        if (creation is null && (expected is null || expected.Project.DatabaseProfileId != admissions.DatabaseProfileId ||
+        ProjectMutationAuthorization? authorization, bool allowHistoricalProfile = false) {
+        if (creation is null && (expected is null || !allowHistoricalProfile && expected.Project.DatabaseProfileId != admissions.DatabaseProfileId ||
                 expected.Revision == Guid.Empty)) {
             return Result<DefinitionWrite>.Failure(Error.Validation("The original definition expectation does not match this database.",
                 ProjectErrorCodes.DefinitionExpectationInvalid));
@@ -128,14 +260,16 @@ public sealed class ProjectDefinitionWriter(
         ProjectSourceMutationScope? scope = null;
         Exception? primaryFailure = null;
         DefinitionOutcome? accepted = null;
-        SearchDocumentInput? projection = null;
         string? parentName = null;
         try {
             scope = await ProjectSourceMutationScope.BeginDefinitionAsync(context, keys,
                 write.Expected is not null ? ProjectMutationPurpose.ExistingWrite : parentId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
                 targetId, write.Expected is not null ? [targetId] : parentId.HasValue ? [parentId.Value] : [],
                 write.Authorization, admissions, transactions, cancellationToken, write.Creation?.Reservation,
-                write.Expected is null ? null : [write.Expected.Project]);
+                write.Expected is null ? null : [write.Expected.Project], operationProtocol, write.Attempt);
+            if (write.Attempt is { ReplayObserved: true } replay) {
+                return Result<DefinitionOutcome>.Success(FromReplay(replay, write.Creation));
+            }
             var entity = await context.Set<Project>().SingleOrDefaultAsync(project => project.Id == targetId, cancellationToken);
             if (write.Expected is { } expected) {
                 if (entity is null) {
@@ -215,19 +349,32 @@ public sealed class ProjectDefinitionWriter(
                     .OrderBy(option => option.Id).Select(option => new ProjectDefinitionOptionInput(option.Id, option.Category, option.OptionName, option.Notes))
                     .ToArrayAsync(cancellationToken)
                 : options.Select(option => new ProjectDefinitionOptionInput(option.Id, option.Category, option.OptionName, option.Notes)).ToArray();
-            projection = BuildProjection(targetId, write.Scalars, projectionOptions);
+            using (transactions.Enter(context)) {
+                await search.UpsertForMutationAsync(BuildProjection(targetId, write.Scalars, projectionOptions), cancellationToken);
+            }
+            if (write.Attempt is { } operation) {
+                if (write.Rows is null) {
+                    await operationProtocol.RecordAcceptedAsync(context, operation,
+                        new ProjectDefinitionScalarsAcknowledgement(accepted.Definition, accepted.Scalars, accepted.ExternalIdentity), cancellationToken);
+                } else {
+                    await operationProtocol.RecordAcceptedAsync(context, operation, ToEditor(accepted), receipt?.Fingerprint, cancellationToken);
+                }
+                operation.CommitAttempted = true;
+            }
             try {
                 await scope.CommitAsync(cancellationToken);
             } catch (Exception exception) when (scope.IsCommitted) {
                 LogPostCommit(exception, targetId, "source-cleanup");
             }
+            if (write.Attempt is { } committed) {
+                committed.Committed = true;
+            }
         } catch (Exception exception) {
             primaryFailure = exception;
             throw;
         } finally {
-            await DisposeResourcesAsync(context, scope, targetId, primaryFailure);
+            await DisposeResourcesAsync(context, scope, targetId, primaryFailure, write.Attempt?.ReplayObserved == true);
         }
-        await RunPostCommitAsync(targetId, "search-index-upsert", () => ProjectAsync(accepted!.Definition, projection!, cancellationToken));
         await RunPostCommitAsync(targetId, "activity-project-save", () => activity.RecordAsync(new ActivityWriteRequest(
             "projects", write.Creation is null ? "update" : "create", write.Creation is null ? "Updated project" : "Created project",
             accepted!.Scalars.Name, ProjectId: targetId, ArtifactKind: "project", ArtifactId: targetId,
@@ -303,22 +450,8 @@ public sealed class ProjectDefinitionWriter(
             : current.ConcurrencyToken != expected.Revision ? Conflict() : TransactionConflict());
     }
 
-    private async Task ProjectAsync(ProjectDefinitionExpectation definition, SearchDocumentInput projection, CancellationToken cancellationToken) {
-        await using var context = await factory.CreateDbContextAsync(cancellationToken);
-        await using var scope = await SerializableMutationScope.BeginAsync(context, ProjectMutationScopeKeys.ForProject(definition.Project.ProjectId), cancellationToken);
-        await admissions.RequireAsync(context, definition.Project, cancellationToken);
-        var currentRevision = await context.Set<Project>().Where(project => project.Id == definition.Project.ProjectId)
-            .Select(project => project.ConcurrencyToken).SingleAsync(cancellationToken);
-        if (currentRevision != definition.Revision) {
-            return;
-        }
-        using (transactions.Enter(context)) {
-            await search.UpsertForMutationAsync(projection, cancellationToken);
-        }
-        await scope.CommitAsync(cancellationToken);
-    }
-
-    private async Task DisposeResourcesAsync(ProjectsDbContext context, ProjectSourceMutationScope? scope, Guid projectId, Exception? primaryFailure) {
+    private async Task DisposeResourcesAsync(ProjectsDbContext context, ProjectSourceMutationScope? scope, Guid projectId,
+        Exception? primaryFailure, bool acceptedReplay = false) {
         var failures = new List<Exception>();
         if (scope is not null) {
             try {
@@ -332,7 +465,7 @@ public sealed class ProjectDefinitionWriter(
         } catch (Exception exception) {
             failures.Add(exception);
         }
-        if (scope?.IsCommitted == true) {
+        if (scope?.IsCommitted == true || acceptedReplay) {
             foreach (var failure in failures) {
                 LogPostCommit(failure, projectId, "owner-cleanup");
             }
@@ -382,6 +515,19 @@ public sealed class ProjectDefinitionWriter(
             accepted.Phases ?? throw new InvalidOperationException("A replacement result requires accepted phases."),
             accepted.Options ?? throw new InvalidOperationException("A replacement result requires accepted options."), accepted.ExternalIdentity);
 
+    private static DefinitionOutcome FromReplay(ProjectDefinitionOperationAttempt attempt, ProjectDefinitionCreationContext? creation) {
+        if (attempt.Accepted is ProjectDefinitionDecodedReceipt.Scalars scalar) {
+            var value = scalar.Result.Acknowledgement;
+            return new(value.Definition, value.Scalars, value.ExternalIdentity, null, null, null);
+        }
+        var full = (attempt.Accepted as ProjectDefinitionDecodedReceipt.Full)?.Result.Acknowledgement
+            ?? throw new InvalidOperationException("The replayed definition is missing its accepted result.");
+        var receipt = creation is null ? null : new ProjectCreationReceipt(full.Definition.Project, creation.Reservation,
+            attempt.CreationFingerprint ?? throw new InvalidOperationException("The replayed creation is missing its compensation fingerprint."), creation.Authorization);
+        return new(full.Definition, new(full.Name, full.Description, full.Objective, full.Status, full.CurrentPhase, full.TargetDateUtc),
+            full.ExternalIdentity, full.Phases, full.Options, receipt);
+    }
+
     private static Error Conflict() => Error.Failure("The project definition changed. Read its current definition and reconcile the original draft.", ProjectErrorCodes.DefinitionConflict);
     private static Error TransactionConflict() => Error.Failure("The definition transaction was rolled back because of concurrent database work. No automatic retry was performed.", ProjectErrorCodes.DefinitionTransactionConflict);
     private static Error NotFound() => Error.Failure("The project no longer exists.", ProjectErrorCodes.NotFound);
@@ -390,7 +536,18 @@ public sealed class ProjectDefinitionWriter(
 
     private sealed record DefinitionWrite(ProjectDefinitionExpectation? Expected, ProjectDefinitionScalars Scalars,
         ProjectDefinitionRows? Rows, ProjectExternalIdentity? ExternalIdentity, ProjectDefinitionCreationContext? Creation,
-        ProjectMutationAuthorization? Authorization);
+        ProjectMutationAuthorization? Authorization, ProjectDefinitionOperationAttempt? Attempt = null);
+
+    private sealed record DefinitionInput(ProjectDefinitionCommandKind Kind, ProjectDefinitionExpectation? Expected,
+        ProjectDefinitionScalars Scalars, IReadOnlyList<ProjectDefinitionPhaseInput>? Phases,
+        IReadOnlyList<ProjectDefinitionOptionInput>? Options, ProjectDefinitionExternalIdentity? ExternalIdentity) {
+        internal static DefinitionInput From(object command) => command switch {
+            CreateProjectDefinitionCommand create => new(ProjectDefinitionCommandKind.Create, null, create.Scalars, create.Phases, create.Options, create.ExternalIdentity),
+            ReplaceProjectDefinitionCommand replace => new(ProjectDefinitionCommandKind.Replace, replace.Expected, replace.Scalars, replace.Phases, replace.Options, replace.AssignExternalIdentity),
+            UpdateProjectDefinitionScalarsCommand scalar => new(ProjectDefinitionCommandKind.UpdateScalars, scalar.Expected, scalar.Scalars, null, null, null),
+            _ => throw new ArgumentException("The definition command is unsupported.", nameof(command))
+        };
+    }
 
     private sealed record DefinitionOutcome(ProjectDefinitionExpectation Definition, ProjectDefinitionScalars Scalars,
         ProjectDefinitionExternalIdentity? ExternalIdentity, IReadOnlyList<ProjectPhaseAcknowledgement>? Phases,

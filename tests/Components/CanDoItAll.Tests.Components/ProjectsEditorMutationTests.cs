@@ -247,6 +247,7 @@ public sealed class ProjectsEditorMutationTests {
         Assert.NotEqual(original!.LifetimeId, (await projects.GetAsync(id)).ExpectedLifetimeId);
         Assert.Equal(1, controls.SeedCalls);
         Assert.Equal(ProjectEditorMutationState.AdmissionRefused, draft.Mutation);
+        Assert.Empty(((ProjectPendingSubmissionTestStore)harness.Context.Services.GetRequiredService<IProjectPendingSubmissionStore>()).Records);
         Assert.False(draft.CanMutate);
         Assert.Contains("Project saved", draft.Message);
         Assert.Contains("refused", draft.Message);
@@ -376,6 +377,7 @@ public sealed class ProjectsEditorMutationTests {
         Assert.Equal(navigation, harness.Context.Services.GetRequiredService<NavigationManager>().Uri);
         Assert.Single(await ObjectsAsync(harness, oldDraft.Model.Id!.Value));
         Assert.Empty(oldDraft.StarterObjects);
+        Assert.Empty(((ProjectPendingSubmissionTestStore)harness.Context.Services.GetRequiredService<IProjectPendingSubmissionStore>()).Records);
     }
 
     [Fact]

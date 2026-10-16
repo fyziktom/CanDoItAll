@@ -13,5 +13,6 @@
     <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Projects.UiSandbox/CanDoItAll.Projects.UiSandbox.csproj" />
     <Using Include="Xunit" />
     <Compile Include="../CanDoItAll.Tests.Components/BunitContextLifecycleExtensions.cs" Link="BunitContextLifecycleExtensions.cs" />
+    <Compile Include="../CanDoItAll.Tests.Components/ProjectPendingSubmissionTestStore.cs" Link="ProjectPendingSubmissionTestStore.cs" />
   </ItemGroup>
 </Project>

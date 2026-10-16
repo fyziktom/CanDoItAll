@@ -18,6 +18,7 @@ using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Security;
@@ -37,6 +38,11 @@ using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+
+if (DatasetActivationCommand.Parse(args) is { } activationCommand) {
+    await activationCommand.RunAsync();
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
@@ -74,6 +80,10 @@ builder.Services.AddCanDoItAllLlmChatsUi();
 builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();
+builder.Services.AddScoped<BrowserProjectPendingSubmissionStore>();
+builder.Services.AddScoped<IProjectPendingSubmissionStore>(services => services.GetRequiredService<BrowserProjectPendingSubmissionStore>());
+builder.Services.AddScoped<IProjectPendingReferenceStore>(services => services.GetRequiredService<BrowserProjectPendingSubmissionStore>());
+builder.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
 builder.Services.AddScoped<TuningCoordinator>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

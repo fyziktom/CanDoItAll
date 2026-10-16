@@ -7,7 +7,7 @@ using Npgsql;
 namespace CanDoItAll.Infrastructure.ControlPlane;
 
 internal static class DatabaseTransferImportScope {
-    internal static async Task<TResult> RunAsync<TResult>(DbContext context, IReadOnlyCollection<string> scopeKeys,
+    internal static async Task<TResult> RunAsync<TResult>(DbContext context, DatasetActivationBinding binding, IReadOnlyCollection<string> scopeKeys,
         IReadOnlyList<string> tableNames, Func<IDbContextTransaction, Task<TResult>> operation, CancellationToken cancellationToken) {
         if (context.Database.CurrentTransaction is not null) {
             throw new InvalidOperationException("Project import requires a fresh transaction before its exclusion locks.");
@@ -34,8 +34,10 @@ internal static class DatabaseTransferImportScope {
                     $"SELECT pg_advisory_lock(hashtextextended({key}, 0))", cancellationToken);
             }
             transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await DatabaseTransferLifecycleGuard.AcquireExclusionBeforeSnapshotAsync(context, cancellationToken);
             var tableLockCommand = $"LOCK TABLE {string.Join(", ", tableNames)} IN ACCESS EXCLUSIVE MODE NOWAIT";
             await context.Database.ExecuteSqlRawAsync(tableLockCommand, cancellationToken);
+            await DatasetLifecycleStore.RequireActiveForMaintenanceAsync(context, binding, cancellationToken);
             await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, keys, cancellationToken);
             await ReleaseSessionKeysAsync(context, pendingSessionKeys, requireHeld: true);
             return await operation(transaction);

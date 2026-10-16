@@ -6599,7 +6599,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Program.cs",
       "path": "src/App/CanDoItAll.Web/Program.cs",
-      "sha256_lf": "2f20a9379abad811bd54c1d77922435d15fefc063d22ca5d32a7dcca2b01af6b",
+      "sha256_lf": "7accc7d4b57eaf138e5c2ecadb966690de2408c85b2d7fe018c79dcb58f42110",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.PostgreSqlDevDatabaseProfileRequest, CanDoItAll.Web.Program",
@@ -6614,7 +6614,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Native host composes module renderers and registers one scoped Projects browser store behind submission and metadata-reference seams with explicit limits. The offline activation entry point exits before starting the Web host. Definition effects and receipt truth remain Projects-owned; this registration owns no reusable rendering body."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/app.css",
@@ -6675,6 +6675,26 @@
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
       "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+    },
+    {
+      "identity": "src/App/CanDoItAll.Web/wwwroot/js/projectPendingSubmissions.js",
+      "path": "src/App/CanDoItAll.Web/wwwroot/js/projectPendingSubmissions.js",
+      "sha256_lf": "caaec982e24f9008683fe5a2be6ad81da1786a268573bc9d95fb6f5b38fddc96",
+      "kind": "ASSET",
+      "role": "PRODUCT",
+      "type": "Projects pending-submission IndexedDB module",
+      "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "classification": "NON_RENDERING",
+      "caller": [
+        "CanDoItAll.Web.Infrastructure.BrowserProjectPendingSubmissionStore"
+      ],
+      "native_owner": "ProjectsPage owns original binding, dispatch, lookup and reconciliation; Web owns the browser storage adapter.",
+      "visual_owner": "No rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Web",
+      "scenario": "CanDoItAll.Web",
+      "evidence": "CanDoItAll.Web",
+      "rationale": "Bounded browser storage uses strict-durability transaction completion and revision CAS for frozen submissions and exact receipts. Separate global metadata listing and exact-revision evidence disposal return no command/result bodies, preserve usage accounting and never authorize a server effect. Browser race/abort/capacity proof is recorded separately."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/js/tuningInterop.js",
@@ -12436,9 +12456,54 @@
       ]
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Pending.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Pending.cs",
+      "sha256_lf": "d4921e826698e31ab4eab021225dbf78aeefe9c0fd8eed3d8ca1f6baebd8c32d",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
+      "project": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
+      ],
+      "native_owner": "ProjectsPage owns reads, effects, original binding and durable recovery state.",
+      "visual_owner": "ProjectPendingListSurface, ProjectPendingRecoverySurface",
+      "descendants": [
+        "ProjectPendingListSurface",
+        "ProjectPendingRecoverySurface"
+      ],
+      "assets": "CanDoItAll.Modules.Projects",
+      "scenario": "CanDoItAll.Modules.Projects",
+      "evidence": "CanDoItAll.Modules.Projects",
+      "rationale": "Native page partial owns scoped pending listing, exact operation dispatch and result reconciliation; callbacks are fenced against editor retirement. Explicit local evidence disposal is terminal for the matched session, preserves late known acceptance and never permits replacement dispatch. Native definitions and browser store stay outside the renderer."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.References.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.References.cs",
+      "sha256_lf": "a8ef9b248417c25c73d51f0acc90e73206c16e6c7ca2a98eb77c2741d7addedd",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
+      "project": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
+      ],
+      "native_owner": "ProjectsPage owns metadata inventory, exact-revision explicit disposal and retirement of matching native presentation sessions.",
+      "visual_owner": "ProjectPendingReferenceSurface",
+      "descendants": [
+        "ProjectPendingReferenceSurface"
+      ],
+      "assets": "CanDoItAll.Modules.Projects",
+      "scenario": "CanDoItAll.Modules.Projects",
+      "evidence": "CanDoItAll.Modules.Projects",
+      "rationale": "The host uses only the metadata boundary for cross-binding inventory/export/disposal. It never reconstructs invocation authority from a stored caller, exposes frozen bodies, submits a replacement operation or treats local deletion as server rollback. Known acceptance and successor editor state remain separately owned."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "sha256_lf": "958da9b375126e60732d38fb8e2cebca91da863938d8dce4f08f495e457c4ed5",
+      "sha256_lf": "559d765caf7524a003e83da214dbeb07fc4abd9840937770b666c9fe0174efdb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
@@ -12447,8 +12512,8 @@
       "caller": [
         "/projects"
       ],
-      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History",
-      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard",
+      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History; ProjectNativeDefinitionOperations; IProjectPendingSubmissionStore; ProjectPendingStoreLimits; IProjectPendingReferenceStore",
+      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard, ProjectPendingListSurface, ProjectPendingReferenceSurface",
       "descendants": [
         "ProjectDeletionStatusSurface",
         "ProjectFilesDialog",
@@ -12456,17 +12521,19 @@
         "ProjectHierarchyModal",
         "ProjectModalHost",
         "ProjectsAgentChatContextProvider",
-        "ProjectsBoard"
+        "ProjectsBoard",
+        "ProjectPendingListSurface",
+        "ProjectPendingReferenceSurface"
       ],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
       "evidence": "CanDoItAll.Modules.Projects",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host.",
+      "rationale": "Reviewed native host owns scope-bound coherent reads, protected definition dispatch, durable pending sessions and explicit recovery callbacks. It supplies submission readiness from the completed scoped pending index/context; the modal cannot submit during that acquisition. Metadata-only cross-binding inventory/export/disposal remains separate from authorized body recovery and cannot dispatch or re-identify a save. Renderers own no authority or storage. Source proof plan: codex/bundles/concurrent-mutations/plan/P02c-native-pending-recovery.md. Package import maps acknowledged cleanup warnings and unconfirmed outcomes to explicit retained evidence and a dispatch hold through existing renderer parameters. Independent target-read errors do not replace terminal package evidence; the package hold is page-instance scoped.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectsPage",
           "lines": [
-            20
+            21
           ],
           "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
         }
@@ -19274,7 +19341,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
       "path": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
-      "sha256_lf": "e6f37db70929233f5a6ec20216a9698b65c5aae9f1ff2c9c5c7688281071ab0e",
+      "sha256_lf": "6bb32bda1b18db1683ede85d6d6ef19e624a05bfe607e07c37947ff771f897be",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.Projects.UiSandbox.Components.Projects",
@@ -19289,12 +19356,15 @@
         "ProjectDeletionStatusSurface",
         "ProjectHierarchyModal",
         "ProjectModalHost",
-        "ProjectsBoard"
+        "ProjectsBoard",
+        "ProjectPendingListSurface",
+        "ProjectPendingRecoverySurface",
+        "ProjectPendingReferenceSurface"
       ],
       "assets": "CanDoItAll.Projects.UiSandbox",
       "scenario": "CanDoItAll.Projects.UiSandbox",
       "evidence": "CanDoItAll.Projects.UiSandbox",
-      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+      "rationale": "Reviewed independent Projects renderer host includes explicit synthetic PendingRecovery status/actions. It supplies typed metadata and callback state only, does not import browser persistence or owner authority, and clearly labels no-write/no-retry simulation. Production IndexedDB and PostgreSQL proof remain separate. PendingRecovery also renders synthetic retained-reference metadata and explicit evidence-loss confirmation without browser storage or owner calls."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Routes.razor",
@@ -31296,7 +31366,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectDefinitionComparison.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectDefinitionComparison.razor",
-      "sha256_lf": "dfbb6524c89d9c7a5c48ea0a2773ebd8d018f10028ae88c2001fc726864a1456",
+      "sha256_lf": "9ed60d9c88d31c8e58c0e35a9900c507e540f57a1c45e998684b739d7d28263d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectDefinitionComparison",
@@ -31315,7 +31385,7 @@
       "assets": "CanDoItAll.Projects.UI",
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
-      "rationale": "Reviewed read-only conflict comparison for scalars, phases, options and previous local linked-object plans. No injection, owner lookup, write, navigation or expectation adoption; typed model comes from the host-held draft. The DefinitionConflict sandbox scenario uses this renderer. P02a proof plan is recorded in codex/bundles/concurrent-mutations/validation/P02a-native-editor.md."
+      "rationale": "Reviewed read-only conflict comparison for scalars, phases, options and previous local linked-object plans. No injection, owner lookup, write, navigation or expectation adoption; typed model comes from the host-held draft. The DefinitionConflict sandbox scenario uses this renderer. P02a proof plan is recorded in codex/bundles/concurrent-mutations/validation/P02a-native-editor.md. P02c displays original starter-attempt status and independently inspected current definitions without authorizing retries."
     },
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
@@ -31366,7 +31436,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",
-      "sha256_lf": "971bdd28cfbf39679f3cce55bbe9d810acf694b9d20bfe6d7e886758abfed9d2",
+      "sha256_lf": "c4d435a52ef3996b6d9be5c03d734909df521b9ef55a2742bff7327ff4043186",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.UI.ProjectModalHost",
@@ -31381,12 +31451,13 @@
       "visual_owner": "CanDoItAll.Projects.UI",
       "descendants": [
         "Dialog",
-        "ProjectDefinitionComparison"
+        "ProjectDefinitionComparison",
+        "ProjectPendingRecoverySurface"
       ],
       "assets": "CanDoItAll.Projects.UI",
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "rationale": "Reviewed shared editor consumes typed draft, host-owned submission readiness, optional synchronous capture validation and explicit pending recovery intents. Readiness disables both save actions and guards form submission before capture; unaffected hosts retain the default true behavior. Only browser form validity/focus interop and logging are injected. Native host owns durable storage, caller/dataset binding, receipt reads and effects; current comparison never adopts an expectation automatically.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectModalHost",
@@ -31416,6 +31487,91 @@
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
       "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Projects.UI/ProjectPendingListSurface.razor",
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectPendingListSurface.razor",
+      "sha256_lf": "1a23249287508f5c37862e2f1e56877c5504c34c85110cf43809908ece3d8b77",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectPendingListSurface",
+      "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor"
+      ],
+      "native_owner": "ProjectsPage owns reads, effects, original binding and durable recovery state.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "FormSection",
+        "Button",
+        "Stack",
+        "TextBlock",
+        "Alert",
+        "Cluster"
+      ],
+      "assets": "CanDoItAll.Projects.UI",
+      "scenario": "CanDoItAll.Projects.UI",
+      "evidence": "CanDoItAll.Projects.UI",
+      "rationale": "Bounded metadata listing accepts typed items and explicit open/refresh/page intents. No service injection, storage access, authorization or automatic dispatch."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Projects.UI/ProjectPendingRecoverySurface.razor",
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectPendingRecoverySurface.razor",
+      "sha256_lf": "8a4a48eff44f2103a96861e3742ac4053cd9ff1609d1f7dd0cb00ae7ecbd349c",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectPendingRecoverySurface",
+      "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",
+        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor"
+      ],
+      "native_owner": "ProjectsPage owns reads, effects, original binding and durable recovery state.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "Alert",
+        "Stack",
+        "TextBlock",
+        "Cluster",
+        "Button"
+      ],
+      "assets": "CanDoItAll.Projects.UI",
+      "scenario": "CanDoItAll.Projects.UI",
+      "evidence": "CanDoItAll.Projects.UI",
+      "rationale": "Typed pending status/action renderer exposes explicit check, same-operation retry, accepted reconciliation and CAS cancel/finish actions. Enabled state is supplied by host; no mutation, storage, caller construction or receipt lookup occurs here."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Projects.UI/ProjectPendingReferenceSurface.razor",
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectPendingReferenceSurface.razor",
+      "sha256_lf": "7ce058a2f629799c70f6b17d393e6eb9bef710d6b3a8760f5bc4eb4d62b27097",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectPendingReferenceSurface",
+      "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
+        "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor"
+      ],
+      "native_owner": "ProjectsPage owns metadata inventory, exact-revision explicit disposal and matched session retirement.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "Dialog",
+        "Stack",
+        "TextBlock",
+        "Alert",
+        "Cluster",
+        "Button",
+        "FormSection",
+        "CopyButton"
+      ],
+      "assets": "CanDoItAll.Projects.UI",
+      "scenario": "CanDoItAll.Projects.UI",
+      "evidence": "CanDoItAll.Projects.UI",
+      "rationale": "Typed metadata/callback renderer provides reference copy/export and a distinct explicit evidence-loss confirmation. No body, authorization, storage or owner-service dependency is accepted. The independent PendingRecovery sandbox renders synthetic known/unknown/undispatched and foreign-binding references; direct component, native-host and browser proof remain distinct in the P02c validation record."
     },
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectPortfolioCards.razor",

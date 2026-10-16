@@ -2,6 +2,133 @@
 
 This is an interim development record, not closure of P02b or the whole engine rollout.
 
+The import/HTTP/encoding candidate built directly in standard Release through
+Infrastructure (3.40s), Projects (10.14s), Workbench (29.49s) and Web (53.99s),
+with no build errors and existing package advisory warnings. First Integration
+discovery found a missing SharedKernel import in the new package fault fixture;
+after that test-only correction, build-backed discovery confirmed the expected
+62 cases. Execution passed 58 and failed four, none skipped, in 2m18s under
+`p02bc-final-repair`. This set includes
+55 HTTP/body/epoch cases, six import commit cases and one actual MAF restoration
+case. All HTTP and MAF cases and both row-import cases passed. The four package
+cases incorrectly expected one physical artifact: the durable writer also owns
+a persistent coordination lock. The corrected fixture requires the exact
+payload/lock pair and separately proves payload cleanup or retention and valid
+committed provenance. Fresh build-backed discovery and execution then passed all
+four rows, none skipped, in 36 seconds (`p02bc-package-fixed`). The original
+62-case failed result remains recorded. This set does not rerun or
+replace the separate 89-case transfer baseline.
+
+The offline command repair then discovered and passed exactly two LiveProcess
+cases, none skipped, in 49 seconds (`p02bc-offline-repaired`). These are real
+process/SQL/file bootstrap, resume, rollback and reactivation checks with an
+already occupied Web endpoint. No matching activation child or nonadministrative
+database session remained afterward; the shared fixture is retained for the next
+lanes. The complete post-namespace-import portability scan covered 8,343 files
+and 36,257 findings; no-write enforcement passed with 15,439 reviewed allowances.
+The later package test correction requires regeneration before final closure.
+
+All 18 affected production projects now have direct standard Release build
+evidence. Eleven remaining owners passed under `p02bc-direct-*`; the final
+Workbench brace-only correction passed its direct build in 21.35 seconds under
+`p02bc-style-workbench-build`. Existing package advisory warnings remain.
+
+The canonical-byte-length reuse candidate discovered and passed all 25 codec
+cases, none skipped, in 81 ms (`p02bc-canonical-codec`), including exact escaped
+and multibyte byte limits and unchanged canonical hashes. The 55-case HTTP set
+above includes retained replay after a limit reduction and refusal of a new
+oversized operation. The matched performance selection discovered and passed
+both cases, none skipped, in 1m33s (`p02bc-canonical-performance`) with no other
+test or database workload. The comparison report assesses allocation and timing;
+these results do not establish retention-worker capacity.
+
+Native page/editor discovery found the expected 62 cases. The first execution
+passed 24 and failed 38, none skipped, in 3m41s (`p02bc-native`). All 38 failures
+had the same unsupported `data-testid` parameter on the pending list's
+`FormSection`. The repair moves that attribute onto the existing shared `Stack`
+wrapper and updates its rendering review hash. Direct Projects.UI and Projects
+builds passed in 2.07s and 7.42s, and refreshed discovery again found exactly 62.
+The repaired execution passed 61 and failed one, none skipped, in 4m29s
+(`p02bc-native-fixed`). The remaining card test exposed a source-established
+readiness race: the pending inventory loads independently of the editor, but
+the modal enabled save before that inventory was ready. The modal now accepts
+the host's explicit readiness and guards both buttons and direct submission.
+Four existing save tests await that affordance and event completion. Direct
+Projects.UI and Projects builds passed again (2.29s / 8.16s). The extended
+lightweight capture guard discovered and passed one case in 557ms; the exact
+native repair selection discovered and passed five cases in 28s, none skipped
+(`p02bc-readiness-light`, `p02bc-readiness-native`). The original failures remain
+recorded; unchanged successes are not represented as a new 62-case all-pass run.
+
+After that source repair, complete portability enforcement passed without a
+baseline write (`p02bc-list-repair-portability`, 36,266 findings, 15,439 reviewed
+executable-source allowances unchanged). Rendering review passed 1,195 inputs;
+documentation validation passed all 424 maintained Markdown files. Later source
+changes would invalidate these final-candidate checks.
+
+The final browser host build passed directly through Web in 32.60s, with existing
+advisory warnings. Browser discovery/execution is a separate 15-case lane:
+13 store tests, one actual native restart recovery and one two-context conflict.
+One new store case checks strict operation-key termination in the actual browser;
+inspection confirmed the existing JavaScript patterns were already correct, so
+the module was not changed for that case.
+
+## Current repair checkpoint
+
+The combined repaired Unit filter discovered and passed exactly 38 cases, none skipped,
+in one second (`p02bc-repairs-unit`): proposal codec 12, governed binding 10, LLM Chat
+composition four, transfer architecture three and browser pending-store adapter nine.
+This closes the earlier governed read-revocation fixture failure and saved Process-step
+identity codec failures. It does not replace the remaining actual governed MAF/HTTP tests.
+
+Final transfer production edits built directly through Infrastructure, Workspace and Web
+in standard Release (`p02bc-final-transfer-build-*`). Target session gates hand off to
+transaction gates before effects. Acknowledged target results survive later cleanup
+failure with an explicit warning; service preflight resources dispose before dispatch.
+Existing package-advisory warnings remain. Integration discovery then found an incorrect
+EF transaction interceptor signature in a new test; no test execution is claimed for
+that failed discovery. The revised transfer source selection expects 89 cases.
+
+Canonical `has-pending-model-changes` passed with no changes (`p02bc-model-parity`).
+The generated predecessor-to-current idempotent SQL (`p02bc-lifecycle-idempotent.sql`)
+was reviewed: four new tables, their checks/primary keys, one partial unique open-epoch
+index and a migration-history insert, all guarded by migration identity and one outer
+transaction. It contains no existing-table rewrite or destructive DDL. This command
+generated SQL only; it did not apply it to an ordinary profile. EF tooling 10.0.3 reports
+the existing runtime 10.0.4 version warning.
+
+The complete portability scan covered 8,332 files and 36,236 findings. Enforcement found
+one stale allowance from the removed broad offline-command runtime composition and no
+added findings. The reviewed stale entry was removed; final enforcement without
+`--write-baseline` passed with 15,436 accepted findings. Subsequent import and HTTP
+source changes require a fresh complete scan and enforcement before closure.
+Scanner support tests passed 6+4+7 cases, and rendering review passed 1,195 current inputs
+after review of the shared scoped submission/reference store registration in Web.
+
+Corrected build-backed boundary discovery found exactly 16 cases. Execution passed
+15 and failed one, none skipped, in 1m21s (`p02bc-boundary-fixed`). All repaired HTTP,
+Process, governed tool/metadata and fractional EXPLAIN parser cases passed. The actual
+MAF case proved its acceptance and denied source read, then attempted SDK restoration
+with a different read-only toolset. Compatibility correctly refused it. The fixture now
+asserts that refusal and restores its original full policy before historical replay;
+this same one-case correction remains to be rerun. Production checkpoint checks were
+not relaxed. The frozen transfer binary discovered and passed exactly 89 cases,
+none skipped, in 5m19s (`p02bc-transfer`). Package-import repairs discovered during
+review are a later candidate and are not included in that binary.
+
+The repeated offline executable lane discovered exactly two cases and failed both
+before activation preparation (`p02bc-offline-cli`, 17 seconds). Static review found
+seven Infrastructure storage registrations whose Security/Workbench dependencies are
+absent from the deliberately narrow offline graph. Their explicit omission is being
+implemented without disabling service validation or loading the full application.
+The failed child processes and all their database leases were cleaned up.
+
+The complete pre-optimization performance lane discovered and passed exactly two
+cases, none skipped, in 1m27s (`p02bc-protected-performance`). It ran alone on the
+isolated fixture and includes concurrent replacement samples that the earlier parser
+failure prevented. Capacity and allocation findings are reviewed separately; a passing
+harness alone does not establish the retention worker's operational capacity.
+
 The frozen operation contract/identity/normalized-intent/canonical codec slice built
 successfully through the Projects production project in Release. Build-backed Unit
 discovery found exactly 41 expected cases for

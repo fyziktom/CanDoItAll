@@ -271,6 +271,38 @@ public sealed class ProjectEditorSurfaceTests {
         Assert.Empty(cut.FindAll("[data-testid='project-definition-comparison']"));
     }
 
+    [Fact]
+    public async Task Host_capture_validation_runs_before_snapshot_and_can_block_submission() {
+        await using var context = Context();
+        var draft = NewDraft();
+        var cut = Render(context, draft);
+        ProjectEditorSubmission? captured = null;
+        var validations = 0;
+        cut.Render(parameters => parameters.Add(component => component.SubmissionReady, false)
+            .Add(component => component.ValidateCapture, _ => {
+                validations++;
+                return false;
+            })
+            .Add(component => component.Save, submission => captured = submission));
+        Assert.True(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-testid='project-save-open-button']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Null(captured);
+        Assert.Equal(0, validations);
+        cut.Render(parameters => parameters.Add(component => component.SubmissionReady, true));
+        Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+        Assert.False(cut.Find("[data-testid='project-save-open-button']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Null(captured);
+        Assert.Equal(1, validations);
+        cut.Render(parameters => parameters.Add(component => component.ValidateCapture, value => {
+            value.Model.Name = "Validated before snapshot";
+            return true;
+        }));
+        await cut.InvokeAsync(() => cut.Find("form").SubmitAsync());
+        Assert.Equal("Validated before snapshot", captured!.Model.Name);
+    }
+
     private static BunitContext Context() {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;

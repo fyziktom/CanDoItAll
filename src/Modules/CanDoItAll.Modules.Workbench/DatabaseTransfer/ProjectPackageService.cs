@@ -124,6 +124,8 @@ public sealed class ProjectPackageService(
                     "Select an inactive target database profile. Project package import cannot replace the running profile."));
         }
 
+        ProjectPackageImportResult? acknowledged = null;
+        Guid? unconfirmedPackageId = null;
         try {
             var targetProfile = profileAccessor.ResolveProfile(request.TargetProfileId.Value);
             if (IsCurrentProfile(targetProfile)) {
@@ -178,14 +180,16 @@ public sealed class ProjectPackageService(
 
                 return await storageTransfers.WithTargetAsync(targetProfile, async (storagePlan, storageToken) => {
                     var stagedWrites = _storageImporter.CreateStagingJournal();
-                    var committed = false;
+                    var preserveStagedWrites = false;
                     try {
                         var storageFilesImported = await _storageImporter.RewriteStorageBindingsAsync(extractionRoot, manifest, dataSet,
                             storagePreflight, storagePlan, stagedWrites, storageToken);
+                        var imported = new ProjectPackageImportResult(manifest, dataSet.Counts.Total, storageFilesImported);
                         if (IsCurrentProfile(targetProfile)) {
                             throw new InvalidOperationException("The selected target profile became active while the package was being prepared. Import was stopped before project data changed.");
                         }
-                        await targetStateGuard.RunLockedImportAsync(targetProfile, async (database, token) => {
+                        try {
+                            await targetStateGuard.RunLockedImportAsync(targetProfile, async (database, token) => {
                                 if (IsCurrentProfile(targetProfile)) {
                                     throw new InvalidOperationException("The selected target profile became active while the package was being prepared. Import was stopped before project data changed.");
                                 }
@@ -201,13 +205,23 @@ public sealed class ProjectPackageService(
                                 await data.SaveAsync(database, dataSet, token);
                                 return true;
                             }, storageToken);
-                        committed = true;
+                            preserveStagedWrites = true;
+                            acknowledged = imported;
+                        } catch (DatabaseImportCommitException exception) when (exception.TargetProfileId == targetProfile.Profile.Id) {
+                            preserveStagedWrites = true;
+                            if (exception.Knowledge == DatabaseImportCommitKnowledge.Acknowledged) {
+                                acknowledged = imported;
+                            } else {
+                                unconfirmedPackageId = manifest.PackageId;
+                            }
+                            throw;
+                        }
                         logger.LogInformation(
                             "Imported project package {PackageId} into inactive profile {ProfileId}. Records={RecordCount}. MutableStorageFiles={StorageFileCount}.",
                             manifest.PackageId, targetProfile.Profile.Id, dataSet.Counts.Total, storageFilesImported);
-                        return Result<ProjectPackageImportResult>.Success(new ProjectPackageImportResult(manifest, dataSet.Counts.Total, storageFilesImported));
+                        return Result<ProjectPackageImportResult>.Success(imported);
                     } finally {
-                        if (!committed) {
+                        if (!preserveStagedWrites) {
                             await _storageImporter.CleanupStagedWritesAsync(stagedWrites);
                         }
                     }
@@ -215,6 +229,17 @@ public sealed class ProjectPackageService(
             } finally {
                 DeleteDirectoryIfExists(extractionRoot);
             }
+        } catch (Exception exception) when (acknowledged is not null) {
+            logger.LogWarning("Project package {PackageId} committed {RecordCount} records and {StorageFileCount} assets into profile {ProfileId}, but cleanup did not finish. Retain imported assets; do not repeat import. FailureType={FailureType}.",
+                acknowledged.Manifest.PackageId, acknowledged.RecordsImported, acknowledged.StorageFilesImported, request.TargetProfileId.Value,
+                exception.GetType().Name);
+            return Result<ProjectPackageImportResult>.Success(acknowledged with { Warning = ProjectPackageImportWarning.CleanupIncomplete });
+        } catch (Exception exception) when (unconfirmedPackageId is { } packageId) {
+            logger.LogWarning("Project package {PackageId} import into profile {ProfileId} has an unconfirmed commit. Staged assets are retained; inspect the target before further import or cleanup. FailureType={FailureType}.",
+                packageId, request.TargetProfileId.Value, exception.GetType().Name);
+            return Result<ProjectPackageImportResult>.Failure(Error.Failure(
+                $"Import of package {packageId:D} into profile {request.TargetProfileId.Value:D} is unconfirmed; target data may have committed and staged assets were retained. Inspect the target before further action. Do not repeat import or delete retained assets.",
+                ProjectPackageErrorCodes.ImportOutcomeUnconfirmed));
         } catch (InvalidDataException exception) {
             logger.LogWarning(
                 "Project package import validation failed. FailureType={FailureType}.",

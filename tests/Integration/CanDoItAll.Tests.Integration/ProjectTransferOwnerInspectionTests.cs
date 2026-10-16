@@ -90,7 +90,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
         var runner = new ProjectTransferTargetInspectionRunner();
         var participants = CreateParticipants(runner);
         Assert.Equal(12, participants.Length);
-        var operations = DatabaseTransferTestSupport.ForProfile(target.Profile, owner, runner);
+        var operations = DatabaseTransferTestSupport.ForProfile(target.Profile, owner, runner, await target.ActivateDatasetAsync());
         var guard = new ProjectTransferTargetStateGuard(participants, operations);
         Assert.Empty(await operations.RunIndependentAsync(target.Profile, guard.FindPreflightResiduesAsync));
         AssertOwnerModels(probe);
@@ -214,7 +214,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
         await using var owner = database.Factory.WithInterceptor(probe).CreateDbContext();
         var runner = new ProjectTransferTargetInspectionRunner();
         var participants = CreateParticipants(runner);
-        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, owner, runner);
+        var operations = DatabaseTransferTestSupport.ForProfile(database.Profile, owner, runner, await database.ActivateDatasetAsync());
         var guard = new ProjectTransferTargetStateGuard(participants, operations);
         Assert.DoesNotContain(typeof(AiTechnicalProjectionCursor), Assert.Single(participants, item => item.Area == ProjectTransferTargetStateArea.CrmHr).EntityTypesToLock);
         Assert.DoesNotContain("\"CrmHr_AiTechnicalProjectionCursors\"", DatabaseTransferOperationRunner.ResolveTableNames(owner, participants.SelectMany(item => item.EntityTypesToLock).ToArray()));
@@ -317,7 +317,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
             [typeof(SearchDbContext)] = 1, [typeof(StorageDbContext)] = 3,
             [typeof(WorkflowDbContext)] = 17, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
             [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 22,
-            [typeof(ProjectsDbContext)] = 6, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
+            [typeof(ProjectsDbContext)] = 9, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
             [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 15,
             [typeof(WorkspaceConnectorCommandDbContext)] = 2
         };

@@ -48,11 +48,23 @@ caller, epoch, receipt or result type moves there.
 
 Infrastructure owns a small `DatasetLifecycleDbContext` and SQL configuration, a
 `DatasetLifecycleStore` for activation/current-state checks, and a
-`DatasetActivationService` for the file/SQL maintenance state machine. It reuses
+`DatasetActivationService` for durable activation-file plans. Composition orchestrates
+the file/SQL maintenance state machine. It reuses
 profile factories/options and coordinated enlistment. This separate context avoids
 using the canonical all-module context for every ordinary save. A captured immutable
 validated activation binding is an Infrastructure value; it is not cached permission
 to ignore the current SQL namespace.
+
+The concrete store exposes `StageActivationAsync(plan)` using the caller's existing
+coordinated transaction, and shared/exclusive guard overloads accepting the actual
+owner DbContext. No method commits or opens a file lease inside the ordinary owner
+transaction. `DatasetActivationService.Acquire(profileId)` provides exact Prepared/
+Active plan persistence through the existing private-file writer. Attach preserves
+SQL namespace and maintenance identity; Reactivate requires an explicit previous SQL
+binding. The convenience `ReadActiveBindingAsync` uses a bounded 64-profile immutable
+binding cache in the singleton service, populated only after supported Active reads;
+Prepare/MarkActive invalidate that profile. Hot requests avoid filesystem coordination
+and still verify the exact SQL binding. External offline activation requires restart.
 
 Projects owns these cohesive files/responsibilities:
 
@@ -176,9 +188,12 @@ had no effect while its original epoch and preconditions remain admissible.
    Open the definition transaction with the P02a isolation decision unchanged:
    source-null ReadCommitted; source-authorized Serializable pending its separate
    audit. Immediately install transaction-local bounded database timeouts.
+   Before any shared lifecycle guard, read the requested epoch's immutable deadline
+   and PostgreSQL clock; reject expired/unavailable new-effect admission without
+   acquiring a shared guard. This is rejection-only, never authority or absence proof.
 4. Under baseline guard A, take the dataset lifecycle SQL row `FOR SHARE`, compare captured/submitted/current
-   namespace and active state, then take the Projects operation-state row `FOR SHARE`.
-   Read the requested epoch under that state guard. Acquire the complete sorted
+   namespace and active state, then read the requested Projects epoch row `FOR SHARE`.
+   Acquire the complete sorted
    existing project/parent/hierarchy/external-identity **and operation** advisory key
    set. Source project keys remain included exactly as today. No late owner key.
 5. Read the receipt again under the operation lock. Compare digest and return its
@@ -199,16 +214,19 @@ had no effect while its original epoch and preconditions remain admissible.
    Replays do not repeat optional activity or any creation postprocessing.
 
 Dataset and epoch maintenance never acquires execution/source/project keys. Under A it takes
-dataset guard before epoch guard; epoch rotation uses the operation-state row
-`FOR UPDATE`, waiting for every admitted shared holder to finish. Routine writers
+dataset guard before epoch guard; epoch rotation takes the expired current epoch
+`FOR UPDATE SKIP LOCKED`. A held shared epoch makes this attempt skip and retry on a
+later bounded maintenance tick; closure is never published before holders finish. Routine writers
 therefore overlap instead of updating a shared hot counter. Do not use FOR KEY SHARE:
 closure changes non-key fields. Do not merely read state after an advisory wait:
 the retained Serializable source branch could see its old snapshot. Locking reads
 must fail with serialization failure on changed rows, followed by fresh reconciliation,
 never automatic business-command rerun. PostgreSQL documents these locking-snapshot
 rules in [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html).
-Guard A is the correctness baseline, not an assumed high-concurrency winner. The
-comparison below selects A or safe alternative B before the production guard is wired.
+Guard A is selected by the [completed comparison](../validation/projects-guard-diagnostic.md).
+Both safe variants passed; A was faster in the measured sequential-statement shape,
+while its additional MultiXact/WAL work remains an explicit production-load gate.
+No strategy toggle is shipped.
 
 Set the finite whole-transaction deadline through transaction-local PostgreSQL 18
 `transaction_timeout`, with bounded statement/lock waits and a linked caller deadline.
@@ -245,8 +263,8 @@ Unconfirmed is sticky at the operation/client level: a later known-rejected atte
 and fresh NotObserved in an open/draining epoch cannot clear prior uncertainty. The
 lookup contract distinguishes Found, NotObserved(Open/Draining), ClosedAbsent,
 OperationExpired, DatasetChanged, CallerContextChanged and DetailUnavailable.
-ClosedAbsent is issued only from a fresh guarded transaction after closure drained
-all admitted writers and while every receipt is retained; include closure time,
+ClosedAbsent is issued only from one coherent MVCC lookup statement observing committed
+closure after admitted writers drained and while every receipt is retained; include closure time,
 observation time and retained-until bound. Only exact Found or this authoritative
 absence resolves prior ambiguity. Retired or inaccessible history remains unknown;
 neither absence proof nor rejection automatically starts a new intent. A first known
@@ -293,19 +311,40 @@ missed day. An ordinary save never opens a new epoch. Metadata returns unavailab
 readiness cannot establish valid current state; it never silently replaces a dispatched
 operation's epoch.
 
-Retire a contiguous fully eligible closed prefix under the exclusive epoch guard and
-commit the watermark **before** deletion. Purge afterwards in bounded resumable batches:
+Check database time without a shared guard before requesting the exclusive owner
+state lock; skip rotation while the current epoch is open. Retire a contiguous fully
+eligible closed prefix only inside expired-current-epoch rotation, before publishing
+the successor, and commit the watermark **before** deletion. An open-epoch tick only
+purges already-retired evidence, without global lifecycle guards. This prevents valid
+new writers starving an unrelated exclusive retirement pass. Allow up to one extra
+configured admission-epoch cadence in retained-capacity/deletion-lateness estimates,
+plus scheduling and bounded drain/work time; never shorten issued retention.
+Purge afterwards in bounded resumable batches:
 at most 128 receipts and at most 16 MiB of retained payload per batch, using ordered
 indexed key candidates and octet_length metadata rather than loading payloads into
-memory. Bound each maintenance pass to two seconds of work and resume next tick;
-server command limits enforce the bound. These initial batching values limit individual
+memory. Bound each purge pass to two seconds of work and resume next tick; rotation
+separately permits the finite owner-transaction drain budget. Server command limits
+enforce these bounds. These initial batching values limit individual
 work, not WAL amplification or total backlog; measure both. Delete an eligible closed
-epoch row only after its receipt batch is empty. Keep namespace state/watermark.
+epoch row only after its receipt batch is empty. Keep active namespace state/watermark.
+The same bounded receipt pass selects one eligible `(namespace, epoch)` and then
+uses its receipt-key range, rather than sorting the entire receipt table across
+namespaces. Inactive epochs become eligible only after both persisted horizons pass;
+they do not rely on future rotations of the inactive state. Delete empty inactive
+namespace state only after all its epochs and receipts are gone. Every delete repeats
+the exact active dataset binding predicate; no shared lifecycle guard is acquired.
 
-Read/lookup takes the shared epoch guard while copying exact receipt bytes and finishes
-that transaction before any authority operation that could acquire execution locks.
-Retirement cannot remove evidence midway through an admitted lookup. Its result is a
-historical result; a later independent edit or deletion does not mutate the copied bytes.
+Read/lookup uses one coherent MVCC SQL statement joining current dataset lifecycle,
+owner state/watermark, requested epoch and exact caller receipt, without a shared
+lifecycle guard. Copy the bounded result before current disclosure authorization;
+no execution/source lock is taken. The statement snapshot retains receipt bytes
+across concurrent purge. Found/Open can be an older safe observation; ClosedAbsent
+requires committed Closed, unretired and fully retained state in the same snapshot.
+Its retained-until timestamp is a minimum promise and can precede observation while
+the contiguous watermark still preserves complete evidence; that remains valid
+ClosedAbsent, rather than Expired inferred from wall-clock time alone.
+Separate plain queries are insufficient. A stream of ordinary lookups must not
+starve exclusive closure/retirement by taking shared row guards.
 
 ## Guard-cost audit and comparative gate before production wiring
 
@@ -371,8 +410,13 @@ For each strategy and concurrency, a distinct deterministic closure drill holds 
 writer guards using barriers, queues maintenance, proves it has not closed while any
 admitted writer remains, releases a subset, then all. Report maintenance request-to-close
 and last-holder-release-to-close separately so intentional barrier time is not mistaken
-for lock overhead. Queue a bounded set of new writers while closure waits; check deadline
-refusal/next-epoch handling and absence of unbounded starvation. Repeat with one paused
+for lock overhead. Once the immutable database admission deadline expires, keep a
+bounded continuous stream of expired attempts arriving while closure waits. Prove
+every newcomer rejects at the precheck without acquiring any shared lifecycle guard;
+after the last old holder releases, closure completes despite that stream. Do not
+assume a queued exclusive row lock prevents new FOR SHARE holders: the diagnostic
+observed bypass. The transaction timeout installed before precheck bounds all
+predeadline transactions, including those paused before taking a guard. Repeat with one paused
 writer terminated by its transaction deadline and with rollback/cancellation. Drain
 all tasks before lease cleanup. Neither drill relies on sleeps alone.
 
@@ -406,6 +450,16 @@ through an explicit idempotent bootstrap operation after migrations. Existing ac
 state must match, missing host binding requires attach, and any mismatch/maintenance
 state fails closed. Ordinary startup does not repair or rotate identities.
 
+Separate control-plane roots can race first bootstrap. SQL chooses one namespace;
+the loser retains its exact Prepared plan and cannot use ordinary startup, Resume or
+Attach to change it. The explicit superseded-bootstrap attachment command requires
+that PlanId and the expected current SQL namespace. It accepts only a Prepared
+Bootstrap with absent prior SQL binding and a different supported Active SQL namespace,
+then durably replaces the local plan with Prepared Attach. It preserves SQL namespace
+and maintenance ID and reuses the ordinary Apply/Resume sequence. Incorrect expectations
+and Prepared Reactivate remain refused. A crash during replacement leaves either the
+old failed bootstrap or the exact new attachment plan, never an absent marker.
+
 Add a narrowly parsed offline Web-binary command mode for bootstrap/attach/reactivate/
 resume, selected before interactive services and hosted writers start. Composition
 creates explicit-profile contexts via IProfileAppDbContextFactory; Infrastructure
@@ -413,9 +467,13 @@ performs its lifecycle SQL and Projects initializes its owner state using existi
 CoordinatedDatabaseTransaction.ForProfile/CreateEnlistedAsync. No dependency from
 Infrastructure to Projects is introduced. No database credentials are printed.
 
-Reactivation requires an operator-recorded maintenance ID, expected old namespace and
-new namespace after restored files are in place. Write durable Pending activation;
-in one SQL transaction rotate namespace and initialize new Projects epoch state;
+Reactivation requires an operator-recorded maintenance ID and explicit expected old
+SQL binding after restored files are in place. Composition mints the new namespace
+once and persists that exact target in the Prepared plan; callers cannot choose or
+reuse a previously retired namespace. Write durable Prepared activation;
+in one SQL transaction rotate namespace, call Projects
+`RetireForReactivationAsync(previousBinding, newBinding)` to close its previous open
+epoch at database time, and initialize new Projects epoch state;
 commit SQL; durably write Active activation. Recovery resumes the exact maintenance
 ID and checks matching SQL, never allocates another namespace because acknowledgement
 was lost. There are no file writes inside the SQL transaction. Update both backup/restore
@@ -423,6 +481,77 @@ runbooks to invoke this step before reopening writers and preserve the known-goo
 Stopping all hosts is an explicit supported-operation prerequisite, not something a
 database/profile-local lock can prove. Restoring a matching SQL/file pair while bypassing
 reactivation remains operationally unsupported and cannot be detected from that pair.
+
+All target transfers capture the Active binding before BEGIN and use the existing
+Serializable isolation. The first statements are utility `SET LOCAL lock_timeout =
+'5s'` and `LOCK TABLE Infrastructure_DatasetLifecycle IN EXCLUSIVE MODE`, followed by
+the complete sorted owner-table lock set; only then may the exact lifecycle `FOR UPDATE`
+query establish a snapshot. Waiting on an unchanged
+lifecycle row alone does not refresh a Serializable snapshot. PostgreSQL documents the
+[required pre-query explicit-lock order](https://www.postgresql.org/docs/18/sql-lock.html).
+`DatabaseTransferLifecycleGuard` supplies the first utility exclusion stage for generic
+transfer and exclusive import before participant admission. The latter preserves its
+managed-storage session gate before BEGIN, then the lifecycle barrier, ACCESS EXCLUSIVE
+NOWAIT tables, binding check and transaction keys. Ordinary definition writes never take the import
+session gate. Five-second target lock waits refuse contention; no live-drain guarantee
+or runtime strategy toggle is introduced. Infrastructure never references Projects.
+
+The 77-case transfer run exposed a second snapshot boundary: an unprotected shared
+provider writer can commit while transfer waits for its later owner table lock. A
+lifecycle row query before that wait caused the retained-secret guard to miss it and
+fail with a foreign-key violation. Generic transfer now requires a frozen typed
+`DatabaseTransferTargetPlan` before BEGIN, resolves it from metadata, takes its complete
+SHARE ROW EXCLUSIVE set before the lifecycle read, and admits only owner contexts whose
+complete model is in that set. Subsequent lock calls validate subsets without issuing
+new locks; no lazy first-query or first-lock admission exists. Workspace, Providers,
+History and SimpleChats are the four production entry callers. Cross-owner Security,
+Agent locator and Projects reference participants declare their entity types through
+their existing owner boundaries. Existing manual internal session proofs and explicit
+InMemory tests retain their old primitive; relational generic transfer cannot omit a plan.
+
+History and SimpleChats declare the existing initialization key as a session gate before
+BEGIN. Sort/deduplicate gates, retain the physical connection, release attempted keys
+in finally even after cancellation or BEGIN failure, and evict on unconfirmed cleanup.
+After table/binding admission, acquire matching transaction keys and release session
+keys before owner effects, retaining finally cleanup for incomplete handoff. An
+acknowledged generic target commit carries the exact result and profile IDs through
+later source/connection cleanup failure. Service and Workspace presentation retain its
+accepted count with a typed cleanup warning and operator-review state. Logs retain
+profile/group identities, counts and failure type without raw exception/driver payloads. A target CommitAsync exception
+does not establish known commit. Five additional `DatabaseTransferCommitOutcomeTests`
+cases cover source commit failure, precommit rejection, server commit with lost ack,
+final connection close failure, and preflight disposal before handler dispatch,
+including service warning mapping.
+Keep ordinary History initialization's transaction gate and ReadCommitted re-read.
+`DatabaseTransferPlanTests` adds seven discovery cases: no plan, undeclared owner, later
+plan extension, BEGIN failure cleanup, acquired-prefix cancellation cleanup, and both
+initializer/transfer winner orders. The provider regression now observes an actual
+`pg_locks` owner-table waiter before committing its concurrent writer. Lifecycle/binding
+tests continue to prove project+receipt visibility and exact captured-binding refusal.
+These cases are authored requirements until the parent records build-backed discovery
+and execution; no new tests were run by the implementation agent.
+
+Exclusive import now retains narrow target commit knowledge outside scope/context
+cleanup. `DatabaseImportCommitException` carries the target profile and Acknowledged or
+Unconfirmed state without a generic result payload. Projects row transfer preserves its
+own exact result through the existing typed committed-transfer adapter. Package import
+preserves staged bytes after either acknowledged or uncertain commit; only known
+precommit failure permits compensation. Its accepted counts and cleanup warning survive
+storage/extraction cleanup, and uncertainty holds further native import. See the
+[migration, maintenance and outcome review](../reviews/P02b-migration-maintenance-transfer-review.md)
+for the concrete deleted-file defect, six authored real-PG/file cases and residual
+process-crash/operator-recovery limitation. Do not expand this into an untyped payload
+or generic receipt framework.
+`DatabaseTransferService` scopes/disposes its CanConnect-only preflight contexts
+before dispatch so their cleanup cannot erase later committed group results.
+
+Normal empty-database/schema provisioning already calls Composition dataset readiness
+after migration. Standalone transfer fixtures explicitly activate their target. The
+new race proof holds an ordinary lifecycle SHARE, stages project plus receipt, observes
+the target transfer blocked on lifecycle EXCLUSIVE, commits the writer, and requires
+the transfer's Serializable owner to observe both rows. The full project handler must
+refuse its final target inspection; retained receipt-only targets also refuse clearing,
+while initialized empty epoch metadata remains usable.
 
 Logical project import preserves the target namespace and excludes source live receipts
 and epochs. Retained target receipts survive project deletion/import. Do not copy them
@@ -444,13 +573,19 @@ must not make every otherwise empty target unusable.
 
 The current in-memory ProjectEditorDraft alone does not survive host/circuit/browser
 restart. Native P02b release requires restart recovery of the frozen pending submission
-and exact accepted result. Add a small Projects UI pending-submission store boundary with a Web
-implementation reusing `wwwroot/js/browserState.js` load/save/remove primitives.
+and exact accepted result. Add a small Projects UI pending-submission store boundary
+with a narrow Web IndexedDB implementation, as specified by
+[P02c](P02c-native-pending-recovery.md). Existing browserState.js localStorage
+load/save/remove does not provide atomic same-operation transitions across tabs.
 Do not widen BrowserWorkspaceStateStore/WorkbenchSessionSnapshot, whose schema and
 profile-fingerprint binding belong to Workbench navigation. Persist the bounded
 pending address **and frozen typed command** before dispatch, keyed per dataset,
 expected caller binding and operation; tabs must not overwrite or clear each
-other. Storage events never auto-submit. Quota/write failure visibly prevents first
+other. Compare expected record revision and transition/clear within one readwrite
+transaction. Persist Prepared, then Dispatching, before the owner call; Accepted is
+monotonic even when an older attempt reports later. Require supported strict
+durability and wait for transaction completion, not individual request success.
+No localStorage/memory fallback. Storage events never auto-submit. Quota/write failure visibly prevents first
 dispatch; no silent eviction of unresolved records or TTL deletion pretending they
 were never sent. The client partition key is correlation, never submitted authority.
 
@@ -461,7 +596,7 @@ failure separately, never repeat the effect. After restart resolve through autho
 receipt lookup. Pending/accepted text may contain private descriptions and notes, so
 document bounded same-origin plaintext retention and explicit inspect/discard controls;
 never store credentials, opaque authorization objects, whole history or live leases.
-The pilot explicitly selects the existing plaintext same-origin browser primitive;
+The pilot explicitly selects plaintext same-origin IndexedDB storage;
 it does not provide isolation between people sharing a browser profile. Revalidate
 current caller binding before displaying stored content after account change. A future
 per-person browser confidentiality feature requires a separate protected-storage design.

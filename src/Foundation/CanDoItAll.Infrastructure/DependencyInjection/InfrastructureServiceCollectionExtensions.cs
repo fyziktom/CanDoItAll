@@ -158,6 +158,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
         services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
         services.AddSingleton<DurableFileWriter>();
+        services.AddSingleton<DatasetActivationService>();
         services.AddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.AddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.AddSingleton<StorageCatalogService>();

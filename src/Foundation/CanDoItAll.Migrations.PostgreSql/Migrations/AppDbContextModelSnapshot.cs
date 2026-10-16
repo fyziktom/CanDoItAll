@@ -1234,6 +1234,40 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Infrastructure_BackgroundJobRecords", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Infrastructure.ControlPlane.DatasetLifecycleRecord", b => {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GuardProtocol")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaintenanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Infrastructure_DatasetLifecycle", null, t => {
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Maintenance", "\"MaintenanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Singleton", "\"Id\" = 1");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_State", "\"State\" IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Versions", "\"SchemaVersion\" > 0 AND \"GuardProtocol\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Infrastructure.Search.SearchDocument", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -5779,6 +5813,77 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         });
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectDefinitionReceiptRecord", b => {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CallerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("CallerKey")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("AcceptedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("AcceptedRevision")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CommandKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CreationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NormalizationVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ResultVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("SemanticDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId");
+
+                    b.ToTable("Projects_DefinitionReceipts", null, t => {
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Caller", "\"CallerKind\" IN (1, 2, 3, 4) AND octet_length(\"CallerKey\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Creation", "(\"CommandKind\" = 1 AND \"CreationFingerprint\" IS NOT NULL AND \"CreationFingerprint\" ~ '^[0-9a-f]{64}$') OR (\"CommandKind\" <> 1 AND \"CreationFingerprint\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Digest", "octet_length(\"SemanticDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"CommandKind\" IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 2097152");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"AcceptedRevision\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectHierarchyLink", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -5803,6 +5908,67 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsUnique();
 
                     b.ToTable("Projects_ProjectHierarchyLinks", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOperationEpochRecord", b => {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("AdmissionClosesAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MutationDeadlineMilliseconds")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ReplayRetentionSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("NamespaceId", "Epoch");
+
+                    b.HasIndex("NamespaceId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 1");
+
+                    b.ToTable("Projects_OperationEpochs", null, t => {
+                            t.HasCheckConstraint("CK_Projects_OperationEpoch_Deadline", "\"MutationDeadlineMilliseconds\" > 0 AND \"ReplayRetentionSeconds\" > 0 AND \"AdmissionClosesAtUtc\" > \"OpenedAtUtc\"");
+
+                            t.HasCheckConstraint("CK_Projects_OperationEpoch_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Projects_OperationEpoch_Number", "\"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Projects_OperationEpoch_State", "(\"State\" = 1 AND \"ClosedAtUtc\" IS NULL) OR (\"State\" = 2 AND \"ClosedAtUtc\" IS NOT NULL AND \"ClosedAtUtc\" >= \"OpenedAtUtc\")");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOperationStateRecord", b => {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CurrentEpoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RetiredThroughEpoch")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("NamespaceId");
+
+                    b.ToTable("Projects_OperationState", null, t => {
+                            t.HasCheckConstraint("CK_Projects_OperationState_Epoch", "\"CurrentEpoch\" > 0 AND \"RetiredThroughEpoch\" >= 0 AND \"RetiredThroughEpoch\" < \"CurrentEpoch\"");
+
+                            t.HasCheckConstraint("CK_Projects_OperationState_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOptionSelection", b => {

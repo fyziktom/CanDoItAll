@@ -43,8 +43,9 @@ public sealed class ProjectsProfileTransferStore(DatabaseTransferOperationRunner
         RequireMutation(session);
         await using var context = await CreateAsync(session, cancellationToken);
         if (await context.Set<ProjectRetirementRecord>().AnyAsync(cancellationToken) ||
-            await context.Set<ProjectCreationReservationRecord>().AnyAsync(cancellationToken)) {
-            throw new InvalidOperationException("Project transfer cannot replace retained project lifetime evidence.");
+            await context.Set<ProjectCreationReservationRecord>().AnyAsync(cancellationToken) ||
+            await context.Set<ProjectDefinitionReceiptRecord>().AnyAsync(cancellationToken)) {
+            throw new InvalidOperationException("Project transfer cannot replace retained project lifetime or operation evidence.");
         }
         context.RemoveRange(await context.Set<ProjectHierarchyLink>().ToArrayAsync(cancellationToken));
         await context.SaveChangesAsync(cancellationToken);

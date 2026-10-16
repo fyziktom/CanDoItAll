@@ -5,7 +5,8 @@ namespace CanDoItAll.Infrastructure.ControlPlane;
 internal enum ControlPlaneCoordinationScope
 {
     DatabaseProfiles,
-    FileApplicationPreferences
+    FileApplicationPreferences,
+    DatasetActivation
 }
 
 internal static class ControlPlaneFileCoordination
@@ -27,6 +28,11 @@ internal static class ControlPlaneFileCoordination
             ControlPlaneCoordinationScope.FileApplicationPreferences => Path.Combine(
                 controlPlaneRoot,
                 ".file-application-preferences.candoitall.lock"),
+            ControlPlaneCoordinationScope.DatasetActivation => Path.Combine(
+                controlPlaneRoot,
+                "database-profiles",
+                "dataset-activations",
+                ".activation.candoitall.lock"),
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unsupported control-plane lock scope.")
         };
 

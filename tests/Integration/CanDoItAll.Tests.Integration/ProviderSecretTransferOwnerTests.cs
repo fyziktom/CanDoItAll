@@ -11,6 +11,7 @@ using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -44,7 +45,7 @@ public sealed class ProviderSecretTransferOwnerTests {
             await changed.Set<ProviderProfile>().Where(profile => profile.Id == profiles[0].Id)
                 .ExecuteUpdateAsync(update => update.SetProperty(profile => profile.Name, "Changed after source snapshot"));
         });
-        var handler = new AiProvidersDatabaseTransferHandler(secrets, sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions), [new SharedProviderDatabaseTransferGuard()]);
+        var handler = new AiProvidersDatabaseTransferHandler(secrets, sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()), [new SharedProviderDatabaseTransferGuard()]);
 
         var result = await handler.TransferAsync(new(source.Profile, target.Profile, true));
 
@@ -91,7 +92,7 @@ public sealed class ProviderSecretTransferOwnerTests {
             observed = true;
             throw new InjectedTransferFailure();
         });
-        var handler = new AiProvidersDatabaseTransferHandler(secrets, sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions), [new SharedProviderDatabaseTransferGuard()]);
+        var handler = new AiProvidersDatabaseTransferHandler(secrets, sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()), [new SharedProviderDatabaseTransferGuard()]);
 
         await Assert.ThrowsAsync<InjectedTransferFailure>(() => handler.TransferAsync(new(source.Profile, target.Profile, true)));
 
@@ -125,10 +126,17 @@ public sealed class ProviderSecretTransferOwnerTests {
         await using var targetDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>(AppDbContextOptionsConfigurator.CreateOptions(target.Profile))
             .AddInterceptors(probe).Options);
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        var handler = new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions), [new SharedProviderDatabaseTransferGuard()]);
+        var handler = new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()), [new SharedProviderDatabaseTransferGuard()]);
         var transfer = handler.TransferAsync(new(source.Profile, target.Profile, true));
-        await probe.Requested.Task.WaitAsync(TimeSpan.FromSeconds(20));
-        await writerTransaction.CommitAsync();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var processId = await probe.Requested.Task.WaitAsync(deadline.Token);
+        await using (var observer = target.Factory.CreateDbContext()) {
+            while (!await observer.Database.SqlQuery<bool>($"SELECT EXISTS (SELECT 1 FROM pg_locks WHERE pid = {processId} AND mode = 'ShareRowExclusiveLock' AND NOT granted) AS \"Value\"")
+                    .SingleAsync(deadline.Token)) {
+                await Task.Delay(TimeSpan.FromMilliseconds(20), deadline.Token);
+            }
+        }
+        await writerTransaction.CommitAsync(deadline.Token);
 
         var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => transfer);
 
@@ -208,7 +216,7 @@ public sealed class ProviderSecretTransferOwnerTests {
         await using var targetDb = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>(AppDbContextOptionsConfigurator.CreateOptions(target.Profile))
             .AddInterceptors(failure).Options);
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        var handler = new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions));
+        var handler = new AiProvidersDatabaseTransferHandler(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()));
 
         await Assert.ThrowsAsync<InjectedTransferFailure>(() => handler.TransferAsync(new(source.Profile, target.Profile, true)));
 
@@ -230,6 +238,7 @@ public sealed class ProviderSecretTransferOwnerTests {
 
     private sealed class ObservedSecrets(ISecretDatabaseTransferParticipant inner,
         Func<DatabaseTransferOwnerRequest, Task>? afterTable = null, Func<DatabaseTransferOwnerRequest, Task>? afterCopy = null) : ISecretDatabaseTransferParticipant {
+        public IReadOnlyCollection<Type> TargetEntityTypes => inner.TargetEntityTypes;
         public async Task<DatabaseTransferTable> GetTargetTableAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken = default) {
             var table = await inner.GetTargetTableAsync(transfer, cancellationToken);
             if (afterTable is not null) {
@@ -247,13 +256,13 @@ public sealed class ProviderSecretTransferOwnerTests {
     }
 
     private sealed class LockProbe : DbCommandInterceptor {
-        public TaskCompletionSource Requested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<int> Requested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public string? Command { get; private set; }
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
-            if (command.CommandText.StartsWith("LOCK TABLE ", StringComparison.Ordinal)) {
+            if (command.CommandText.EndsWith(" IN SHARE ROW EXCLUSIVE MODE", StringComparison.Ordinal)) {
                 Command = command.CommandText;
-                Requested.TrySetResult();
+                Requested.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
             return ValueTask.FromResult(result);
         }

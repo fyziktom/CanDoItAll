@@ -33,7 +33,7 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         var sourceJson = JsonSerializer.Serialize(original);
         var olderJson = JsonSerializer.Serialize(older);
         var expected = JsonSerializer.Deserialize<WorkspaceSettings>(JsonSerializer.Serialize(current))!;
-        var handler = CreateHandler();
+        var handler = CreateHandler(targetApplication);
         var transfer = Context(sourceApplication, targetApplication, source, target);
 
         var preview = await handler.PreviewAsync(transfer);
@@ -109,7 +109,8 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         await using var target = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>(AppDbContextOptionsConfigurator.CreateOptions(targetProfile))
             .AddInterceptors(probe).Options);
         var transfer = new DatabaseTransferOperation(sourceProfile, targetProfile, false);
-        var operations = DatabaseTransferTestSupport.For(transfer, source, target, sessions);
+        var operations = DatabaseTransferTestSupport.For(transfer, source, target, sessions,
+            activation: targetApplication.Services.GetRequiredService<DatasetActivationService>());
         var handler = new WorkspaceDefaultProviderDatabaseTransferHandler(operations, sessions);
         Assert.Same(probe.Failure, await Assert.ThrowsAsync<InjectedPreferenceFailure>(() => handler.TransferAsync(transfer)));
         Assert.True(observed);
@@ -143,7 +144,7 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         var sourceSnapshot = await SettingsSnapshotAsync(source);
         var targetSnapshot = await SettingsSnapshotAsync(target);
         var serialized = JsonSerializer.Serialize(retained);
-        var handler = CreateHandler();
+        var handler = CreateHandler(targetApplication);
         var transfer = Context(sourceApplication, targetApplication, source, target);
 
         var preview = await handler.PreviewAsync(transfer);
@@ -225,9 +226,9 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
             return ValueTask.FromResult(result);
         }
     }
-    private static WorkspaceDefaultProviderDatabaseTransferHandler CreateHandler() {
+    private static WorkspaceDefaultProviderDatabaseTransferHandler CreateHandler(TestApplication target) {
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        return new(DatabaseTransferTestSupport.Create(sessions), sessions);
+        return new(DatabaseTransferTestSupport.Create(sessions, activation: target.Services.GetRequiredService<DatasetActivationService>()), sessions);
     }
 
     private sealed class InjectedPreferenceFailure : Exception;
