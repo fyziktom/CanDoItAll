@@ -60,8 +60,7 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                 relationalLocks,
                 cancellationToken);
             IDbContextTransaction? transaction = null;
-            try
-            {
+            try {
                 transaction = await dbContext.Database.BeginTransactionAsync(
                     IsolationLevel.Serializable,
                     cancellationToken);
@@ -70,15 +69,19 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                     normalizedScopeKeys,
                     cancellationToken);
                 return new(transaction, acquiredRelationalLocks);
-            }
-            catch
-            {
-                if (transaction is not null)
-                {
-                    await transaction.DisposeAsync();
+            } catch (Exception acquisitionFailure) {
+                try {
+                    if (transaction is not null) {
+                        await transaction.DisposeAsync();
+                    }
+                } catch (Exception cleanupFailure) {
+                    throw new AggregateException(
+                        "Mutation scope acquisition and transaction cleanup both failed.",
+                        acquisitionFailure,
+                        cleanupFailure);
+                } finally {
+                    ReleaseProcessLocks(acquiredRelationalLocks);
                 }
-
-                ReleaseProcessLocks(acquiredRelationalLocks);
                 throw;
             }
         }
@@ -232,22 +235,18 @@ public sealed class SerializableMutationScope : IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (disposed)
-        {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
             return;
         }
 
         disposed = true;
-        if (transaction is not null)
-        {
-            await transaction.DisposeAsync();
-        }
-
-        for (var index = processLocks.Count - 1; index >= 0; index--)
-        {
-            processLocks[index].Release();
+        try {
+            if (transaction is not null) {
+                await transaction.DisposeAsync();
+            }
+        } finally {
+            ReleaseProcessLocks(processLocks);
         }
     }
 }

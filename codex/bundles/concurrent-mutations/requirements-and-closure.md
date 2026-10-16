@@ -3,12 +3,12 @@
 | ID | Requirement | Owner / proof destination | Current closure |
 | --- | --- | --- | --- |
 | R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Not solved; present Projects defect verified |
-| R2 | Complete architecture/risk analysis before implementation | Maintained architecture, independent reviews, P00 gates | In progress; architecture drafted, cross-review active |
+| R2 | Complete architecture/risk analysis before implementation | Maintained architecture, independent reviews, P00 gates | Architecture direction and P01a passed independent review; later owner/runtime implementation gates remain explicit |
 | R3 | Preserve module ownership and dependency direction | Boundary/pattern map, compiled boundary guards, evaluated project graph | In progress; no production dependency changes |
 | R4 | Identify and address performance bottlenecks | Performance plan, baseline/candidate matched measurements | Not solved; cost constraints defined, measurements pending |
 | R5 | Configurable snapshot/refresh/replan behavior for agents/processes | Policy design, persisted settings, admission/checkpoint/runtime/UI proof; P04/P07 | Not solved; policy design drafted |
-| R6 | Test complete intended behavior and failure modes | Testability plan, exact discovery/results, portability, browser/host/cleanup proof | Not solved; tests planned, no new runtime proof |
-| R7 | Incremental commits and current documentation | Execution record, scoped commits and maintained design | In progress; documentation changes only |
+| R6 | Test complete intended behavior and failure modes | Testability plan, exact discovery/results, portability, browser/host/cleanup proof | P01a passed six focused cases and portability; broader owner/runtime proof remains pending |
+| R7 | Incremental commits and current documentation | Execution record, scoped commits and maintained design | Architecture commit ceb10731e; independently validated P01a source commit follows |
 
 ## Architect input coverage
 

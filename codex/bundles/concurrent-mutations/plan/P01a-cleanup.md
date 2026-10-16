@@ -1,6 +1,7 @@
 # P01a: reliable release after transaction cleanup failure
 
-Status: entry accepted after independent owner and UI/validation review. Proof tier: Behavioral.
+Status: Pass; implemented, independently reviewed and validated. Proof tier: Behavioral.
+Executed evidence: [P01a validation](../validation/P01a-cleanup.md).
 
 ## Outcome and boundary
 
@@ -37,9 +38,9 @@ directly, not construct the full application.
 
 Build Infrastructure Release, then refresh the Components test assembly and discover
 `FullyQualifiedName~SerializableMutationScopeTests`. Existing baseline is one test.
-Expected final count: existing serialization test plus four reviewed fault/normal cases
-described in `reviews/owner-design-review.md`; finalize exact data rows before execution
-and record the count. The successor acquisition in each failure case is the dependent-use
+Expected final count: six facts, including the existing serialization test, acquisition
+failure, combined acquisition/cleanup failure, disposal failure, repeated disposal and
+partial-acquisition cancellation. The successor acquisition in each failure case is the dependent-use
 proof. Use a test-only EF `IRelationalTransactionFactory` replacement and the isolated
 PostgreSQL fixture; test the released local stripe with an InMemory contender using the
 same scope key, so releasing a database lock cannot hide a local semaphore leak.

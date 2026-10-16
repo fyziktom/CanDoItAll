@@ -8,7 +8,7 @@ ceremony is required for dependency-ready work within that scope.
 | Phase | Coherent outcome | Dependencies | Entry/closure evidence and status |
 | --- | --- | --- | --- |
 | P00 | Refreshed architecture, complete first-owner perimeter and risk/test plan | Source package/current repository | In progress: independent persistence/runtime/UI reviews; baseline Infrastructure build passed with existing NuGet warnings |
-| P01a | Transaction cleanup always releases acquired process gates | P00 cleanup design review | Ready for review: see dedicated work card; no isolation or API change |
+| P01a | Transaction cleanup always releases acquired process gates | P00 cleanup design review | Pass: six discovered/passed tests, Infrastructure Release build, independent diff review and unchanged portability enforcement; see validation/P01a-cleanup.md |
 | P01b | Commit knowledge, source lock order and lifecycle namespace defined/proven | P00; P01a for lock fault proof | Pending: exact receipt/restore/retention decision and tests before public replay guarantee |
 | P02a | Projects definition handler and original-state contract | P00/P01 applicable guarantees | Pending: cohesive handler, full/scalar intent split, coherent read, child ownership, canonical model migration |
 | P02b | Complete Projects callers and durable result/projection | P02a/P01b | Pending: UI/API/tool/read/callers converted or explicitly refused; SQL receipt and enlisted search; import/delete lifecycle |

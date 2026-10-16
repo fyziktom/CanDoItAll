@@ -1,6 +1,7 @@
 # Concurrent mutations implementation bundle
 
-Status: architecture discovery; implementation has not started.
+Status: architecture direction reviewed; P01a cleanup implemented and validated.
+Projects protection and runtime policies remain pending.
 
 Maintained design: [Concurrent mutations architecture](../../../docs/architecture/concurrent-mutations/README.md).
 Work order: [execution plan](plan/execution-plan.md). Input mapping and closure:
@@ -32,9 +33,9 @@ belong to this bundle and the maintained design under `docs/architecture`.
 ## Resource ownership
 
 This bundle owns `codex/bundles/concurrent-mutations` and may own small validation
-artifacts under `.artifacts/concurrent-mutations`. No host, container, database, volume
-or network has been created or claimed. Record any future resource before creation and
-verify its cleanup after its last required use.
+artifacts under `.artifacts/concurrent-mutations`. One isolated PostgreSQL 18 test
+container and volume are recorded in [resource ownership](resources.md). Reuse them
+across related validation lanes and verify cleanup after their last required use.
 
 ## Compatibility map
 
@@ -45,5 +46,6 @@ phase status and closure; it does not rewrite the historical package's proposed 
 
 ## Closure
 
-Not solved: architecture and implementation discovery is in progress. No runtime
-guarantee, test result or performance improvement is claimed yet.
+End-to-end work remains open. The [P01a validation record](validation/P01a-cleanup.md)
+proves lock release after cleanup faults; it does not prove stale-write rejection,
+durable replay, user conflict recovery or agent freshness policies.

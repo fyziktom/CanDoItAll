@@ -20,3 +20,13 @@ conversion; the planning publication needs its complete material-writer perimete
 These do not change the correctness of finally-releasing an already-owned semaphore.
 P01a may proceed after the design commit. Its closure needs affected build, exact
 discovery/results, portability enforcement and independent diff review.
+
+## P01a closure review
+
+Status: Pass. Independent review of the two changed source/test files found no
+blocking issues. The implementation retains the existing cohesive Infrastructure
+helper with no new references, partials, interfaces or service location. Its six
+focused cases passed, including real PostgreSQL transaction-disposal faults and
+independent same-key successor acquisition. Infrastructure Release and final
+portability enforcement passed. See [validation](../validation/P01a-cleanup.md).
+This conclusion does not extend to commit knowledge, owner CAS or durable replay.
