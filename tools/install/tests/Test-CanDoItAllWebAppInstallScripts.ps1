@@ -547,3 +547,6 @@ Assert-Condition `
     GeneratedLauncherParsed = $true
     WhatIfWasNonMutating = $true
 }
+
+# Handled Docker probes can leave a nonzero native exit code after all assertions pass.
+exit 0
