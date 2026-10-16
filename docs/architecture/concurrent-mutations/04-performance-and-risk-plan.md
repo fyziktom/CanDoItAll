@@ -1,6 +1,29 @@
 # Performance and operational risk plan
 
-Status: design; no new benchmark result is claimed.
+Status: pre-change Projects baseline and SSI diagnostic recorded; candidate implementation
+still requires comparison and correctness proof before acceptance.
+
+## Baseline finding and constrained response
+
+The opt-in real-service baseline found 50-65 PostgreSQL serialization failures per 100
+disjoint save attempts. Same-project writes all succeeded, which does not establish
+lost-update safety. See the [baseline record](../../../codex/bundles/concurrent-mutations/validation/projects-performance-baseline.md)
+for the exact samples, selection and measurement limitations.
+
+The [eight-connection SQL diagnostic](../../../codex/bundles/concurrent-mutations/validation/projects-ssi-diagnostic.md)
+reproduced unrelated failures with root-only indexed reads/updates: only one of eight
+writers committed in each of 12 samples. Disabling sequential scans did not improve it;
+root primary-index page predicate locks were already present. Index or semaphore tuning
+does not solve this case.
+
+The candidate response is confined to source-null Projects definition writes: complete
+existing advisory keys, Read Committed, original root CAS, and transactional children.
+Generic mutation consumers and source-authorized definition writes retain Serializable.
+See [the owner protocol](01-owner-transaction-design.md#transaction-and-lock-protocol).
+No automatic retry hides rejected attempts. Unchanged-target serialization aborts use
+`projects.definition-transaction-conflict`, distinct from a changed definition. Re-run the
+same service baseline and independent-connection correctness proof before accepting the
+candidate; optional postcommit projection failures remain visible until P02b's atomic path.
 
 ## Hard cost constraints
 

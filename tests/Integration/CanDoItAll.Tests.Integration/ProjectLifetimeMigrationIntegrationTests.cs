@@ -190,7 +190,7 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
     private static Task<string[]> ReadProjectPayloadsAsync(AppDbContext context)
         => context.Database.SqlQueryRaw<string>("""
             SELECT (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL)
-                || (to_jsonb(project) - 'LifetimeId' - 'LegacyAgentAccessBindingEligible'))::text AS "Value"
+                || (to_jsonb(project) - 'LifetimeId' - 'LegacyAgentAccessBindingEligible' - 'ConcurrencyToken'))::text AS "Value"
             FROM "Projects_Projects" project ORDER BY project."Id"
             """).ToArrayAsync();
 

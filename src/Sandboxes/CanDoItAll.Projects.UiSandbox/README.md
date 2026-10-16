@@ -17,3 +17,9 @@ output directory to verify its independent static assets. The scenarios cover em
 populated portfolios, failed acquisition, rejected save, unknown seed acknowledgement and
 partial deletion. Holding a save permits continued typing; close the modal to reach the
 release control and observe that its result cannot reopen the retired editor.
+
+`DefinitionConflict` opens an original editor and changes the synthetic stored definition
+behind it once. Save to reach the actual conflict surface, then explicitly read the current
+definition and either discard/reload or reconcile in a new current-based draft. Manual
+reconciliation also displays previous linked-object plans for copying; no plan is recreated
+automatically. Comparison and recovery do not increase the simulated write count.

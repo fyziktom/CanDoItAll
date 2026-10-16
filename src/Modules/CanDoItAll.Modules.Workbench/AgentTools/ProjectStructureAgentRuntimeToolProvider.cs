@@ -337,9 +337,13 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "project_structure_projects_list",
                     "Lists the CanDoItAll projects that this internal agent is allowed to access."),
                 AIFunctionFactory.Create(
+                    (Guid projectId, CancellationToken cancellationToken = default) => ProjectStructureProjectDefinitionGetAsync(agent, accessState, projectId, cancellationToken),
+                    ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet,
+                    "Reads one coherent current project definition and its original expectation. Retain expectation unchanged as request.expectedDefinition when updating the project. Project summaries and mutation leases do not supply this expectation."),
+                AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureProjectSaveRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureProjectUpdateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_project_update",
-                    "Updates an existing CanDoItAll project through the internal workspace project-structure service."),
+                    "Updates project scalar values while preserving phases and options. Requires request.expectedDefinition unchanged from project_structure_project_definition_get. Returns the exact accepted scalar acknowledgement. A stale expectation rejects; read and explicitly reconcile before a new proposal."),
                 AIFunctionFactory.Create(
                     (Guid projectId, CancellationToken cancellationToken = default) => ProjectStructureHierarchyGetAsync(agent, accessState, projectId, cancellationToken),
                     "project_structure_hierarchy_get",
@@ -915,7 +919,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 projectIdSelector: response => response.Id);
         }
 
-        private Task<ProjectSummary> ProjectStructureProjectUpdateAsync(
+        private Task<ProjectDefinitionSnapshot> ProjectStructureProjectDefinitionGetAsync(
+            AgentDefinition agent, ProjectStructureAccessState accessState, Guid projectId, CancellationToken cancellationToken)
+            => ExecuteAsync(agent, "projects.definition.get", projectId, null, null, null, null, async token => {
+                accessState.EnsureProjectReadAllowed(projectId);
+                return await agentService.GetProjectDefinitionAsync(projectId, token);
+            }, cancellationToken);
+
+        private Task<ProjectDefinitionScalarsAcknowledgement> ProjectStructureProjectUpdateAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
             Guid projectId,
@@ -935,7 +946,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 {
                     accessState.EnsureProjectWriteAllowed(projectId);
                     var project = await CaptureNodeMutationAdmissionAsync(agent, accessState, projectId, cancellationToken);
-                    return await agentService.SaveProjectAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = project }, cancellationToken);
+                    if (request.ExpectedDefinition is { } expected &&
+                        expected.Project.DatabaseProfileId == project.DatabaseProfileId &&
+                        expected.Project.ProjectId == project.ProjectId && expected.Project.LifetimeId != project.LifetimeId) {
+                        throw ProjectStructureAgentException.CreateAgentVisible(409, ProjectErrorCodes.LifetimeChanged,
+                            "The original project definition belongs to a replaced lifetime. Read and reconcile the current project before another proposal.",
+                            canRetryWithCorrectedInput: true, effectState: AgentToolEffectState.NotCommitted);
+                    }
+                    return await agentService.UpdateProjectDefinitionAsync(projectId, request, BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = project }, cancellationToken);
                 },
                 cancellationToken);
         }

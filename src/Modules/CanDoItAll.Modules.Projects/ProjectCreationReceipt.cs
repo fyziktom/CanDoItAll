@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,8 +26,6 @@ public interface IProjectPartyDeletionStateQuery {
 }
 
 public sealed partial class ProjectsService {
-    private const string CreationFingerprintDomain = "projects-owner-creation-v1";
-
     private sealed record ProjectSaveOutcome(Guid Id, ProjectCreationReceipt? CreationReceipt, ProjectEditorAcknowledgement Editor);
 
     public async Task<Result<ProjectCreationReceipt>> CreateWithReceiptAsync(Guid newProjectId, ProjectEditorModel model,
@@ -80,7 +76,7 @@ public sealed partial class ProjectsService {
         if (receipt.Reservation is { } reservation && !await writeAdmissionService.IsConsumedCreationAsync(context, reservation, cancellationToken)) {
             return false;
         }
-        var fingerprint = await ReadCreationFingerprintAsync(context, receipt.Project, cancellationToken);
+        var fingerprint = await ProjectCreationFingerprint.ReadAsync(context, receipt.Project, cancellationToken);
         if (!string.Equals(fingerprint, receipt.Fingerprint, StringComparison.Ordinal)) {
             return false;
         }
@@ -90,30 +86,4 @@ public sealed partial class ProjectsService {
         return await guard.CanCompensateForMutationAsync(receipt.Project, cancellationToken);
     }
 
-    private static async Task<string> ReadCreationFingerprintAsync(ProjectsDbContext context, ProjectWriteAdmission admission,
-        CancellationToken cancellationToken) {
-        var project = await context.Set<Project>().AsNoTracking().SingleAsync(row =>
-            row.Id == admission.ProjectId && row.LifetimeId == admission.LifetimeId, cancellationToken);
-        var phases = await context.Set<ProjectPhase>().AsNoTracking().Where(row => row.ProjectId == admission.ProjectId)
-            .OrderBy(row => row.Id).ToArrayAsync(cancellationToken);
-        var options = await context.Set<ProjectOptionSelection>().AsNoTracking().Where(row => row.ProjectId == admission.ProjectId)
-            .OrderBy(row => row.Id).ToArrayAsync(cancellationToken);
-        var hierarchy = await context.Set<ProjectHierarchyLink>().AsNoTracking().Where(row =>
-            row.ChildProjectId == admission.ProjectId || row.ParentProjectId == admission.ProjectId)
-            .OrderBy(row => row.Id).ToArrayAsync(cancellationToken);
-        var payload = JsonSerializer.SerializeToUtf8Bytes(new {
-            Domain = CreationFingerprintDomain,
-            ProfileId = admission.DatabaseProfileId,
-            Project = new {
-                project.Id, project.LifetimeId, project.LegacyAgentAccessBindingEligible, project.Name, project.Slug,
-                project.ExternalNamespace, project.ExternalKey,
-                project.Description, project.Objective, project.Status, project.CurrentPhase, project.TargetDateUtc,
-                project.CreatedAtUtc, project.UpdatedAtUtc
-            },
-            Phases = phases,
-            Options = options,
-            Hierarchy = hierarchy
-        });
-        return Convert.ToHexStringLower(SHA256.HashData(payload));
-    }
 }

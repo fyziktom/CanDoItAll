@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 using System.ComponentModel;
 
 namespace CanDoItAll.Web.Api;
@@ -27,6 +28,13 @@ internal static class ProjectsApi
             .WithName("GetProjectEditor")
             .Produces<ProjectEditorModel>();
 
+        projects.MapGet("/{projectId:guid}/definition", GetProjectDefinitionAsync)
+            .WithName("GetProjectDefinition")
+            .WithSummary("Read a coherent project definition and its original edit expectation.")
+            .WithDescription("Returns normalized definition scalars, ordered phases/options and the matching expectation from one database snapshot. Retain that expectation unchanged for a conditional update. A missing project returns 404; this read never returns a creation template. Uses the current Projects read permission when API authorization is enabled.")
+            .Produces<ProjectDefinitionSnapshot>()
+            .ProducesApiErrors(StatusCodes.Status404NotFound);
+
         projects.MapGet("/by-external-key/{externalNamespace}/{externalKey}", ResolveExternalIdentityAsync)
             .WithName("ResolveProjectExternalIdentity")
             .WithSummary("Resolve a project by its stable external namespace and key.")
@@ -43,11 +51,13 @@ internal static class ProjectsApi
 
         projects.MapPost("/", SaveProjectAsync)
             .WithName("SaveProject")
+            .WithSummary("Create a project or conditionally replace its definition.")
+            .WithDescription("Existing projects require expectedDefinition unchanged from an original coherent read. Replaces scalar values and both phase/option lists; missing expectations, contradictory identities and unknown child IDs reject. A stale revision or lifetime returns 409 without changing the definition. Creation must omit the expectation. Uses the Projects write permission when API authorization is enabled. Returns the accepted project ID; this compatibility route has no durable retry guarantee, and a lost response must not trigger a blind repeat.")
             .Produces<Guid>()
             .ProducesApiErrors(StatusCodes.Status400BadRequest)
             .ProducesApiErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict)
             .AddOpenApiOperationTransformer((operation, _, _) => {
-                operation.Responses!["409"].Description = "The external identity is already bound to another project, or an existing binding cannot be changed. The project was not saved.";
+                operation.Responses!["409"].Description = "The original definition revision/lifetime is stale, the transaction was rejected by a concurrency guard, the external identity is already bound, or an existing identity binding cannot be changed. The definition was not saved. Inspect the error code; a transaction conflict does not establish that the target definition changed.";
                 return Task.CompletedTask;
             });
 
@@ -170,48 +180,24 @@ internal static class ProjectsApi
         CancellationToken cancellationToken)
         => Results.Ok(await projectsService.GetAsync(projectId, cancellationToken));
 
-    /// <summary>
-    /// Create a project, or overwrite the editable fields, phases and options of an existing project.
-    /// </summary>
-    /// <remarks>
-    /// Without <c>id</c> a new project with a new identifier is created; every such call creates another project. With
-    /// <c>id</c> the project with that identifier is updated: all editable fields are overwritten with the values sent,
-    /// phases and options missing from the request are deleted, entries whose <c>id</c> matches a stored entry are
-    /// updated and the other entries are added. Start from <c>GET /api/projects/{projectId}</c> and send the complete
-    /// object. Phases are stored in array order; option entries with an empty name and empty notes are skipped.
-    ///
-    /// Send <c>expectedLifetimeId</c> from the read: when the project was deleted and recreated with the same
-    /// identifier since then, the save is rejected with <c>projects.lifetime-changed</c>. Without it the save applies
-    /// to the current project with that identifier. There is no other concurrency check; the last save wins. Subproject
-    /// links are changed with the subproject operations, not with this request.
-    ///
-    /// The project is saved first; the search index and the activity feed are updated afterwards, and failures of those
-    /// updates are logged without changing the response.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
-    /// </remarks>
-    /// <param name="request">
-    /// The project's editable fields, phases and options; omit <c>id</c> to create a project.
-    /// </param>
-    /// <response code="200">
-    /// The project was saved. The body is its identifier as a JSON string (a GUID); read it back with
-    /// <c>GET /api/projects/{projectId}</c>.
-    /// </response>
-    /// <response code="400">
-    /// The project was not saved: <c>validation</c> (blank name) or <c>projects.lifetime-changed</c>
-    /// (<c>expectedLifetimeId</c> names an earlier lifetime of the project; read it again). A body the framework cannot
-    /// bind is rejected with HTTP 400 without the <c>errors</c> envelope.
-    /// </response>
-    /// <response code="404">
-    /// No project has the sent <c>id</c> (<c>projects.not-found</c>), for example because it was deleted. Omit
-    /// <c>id</c> to create a project.
-    /// </response>
+    internal static async Task<IResult> GetProjectDefinitionAsync(Guid projectId, ProjectsService projectsService,
+        CancellationToken cancellationToken)
+        => DefinitionResult(await projectsService.GetDefinitionAsync(projectId, cancellationToken));
+
     internal static async Task<IResult> SaveProjectAsync(
-        ProjectEditorModel request,
+        ProjectEditorSaveRequest request,
         ProjectsService projectsService,
         CancellationToken cancellationToken) {
-        var result = await projectsService.SaveAsync(request, cancellationToken);
+        if (request.Id.HasValue && !request.HasReplacementCollections) {
+            return ApiEndpointResults.BadRequest("An existing-project replacement requires explicit non-null phases and options arrays.",
+                ProjectErrorCodes.DefinitionChildInvalid);
+        }
+        return DefinitionResult(await projectsService.SaveAsync(request.ToEditor(), cancellationToken));
+    }
+
+    private static IResult DefinitionResult<T>(Result<T> result) {
         var conflict = result.Errors.FirstOrDefault(error => error.Code is
+            ProjectErrorCodes.DefinitionConflict or ProjectErrorCodes.DefinitionTransactionConflict or ProjectErrorCodes.LifetimeChanged or
             ProjectErrorCodes.ExternalIdentityConflict or ProjectErrorCodes.ExternalIdentityImmutable);
         return conflict is not null
             ? ApiEndpointResults.Conflict(conflict.Message, conflict.Code)

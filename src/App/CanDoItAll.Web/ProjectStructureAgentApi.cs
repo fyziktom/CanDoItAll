@@ -42,6 +42,13 @@ public static class ProjectStructureAgentApi
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status500InternalServerError);
 
+        group.MapGet("/projects/{projectId:guid}/definition", GetProjectDefinitionAsync)
+            .WithSummary("Read a coherent project definition for a conditional scalar update.")
+            .WithDescription("Returns current normalized scalar and child values with their original definition expectation. Pass that expectation unchanged as expectedDefinition to the project update. A project lease is a separate authority check. Uses the Project Structure API scope when authorization is enabled; a missing project returns 404.")
+            .Produces<ProjectDefinitionSnapshot>()
+            .ProducesProjectStructureErrors(StatusCodes.Status404NotFound, StatusCodes.Status409Conflict,
+                StatusCodes.Status500InternalServerError);
+
         group.MapPost("/projects", CreateProjectAsync)
             .Produces<ProjectSummary>()
             .ProducesProjectStructureErrors(
@@ -51,7 +58,9 @@ public static class ProjectStructureAgentApi
                 StatusCodes.Status500InternalServerError);
 
         group.MapPut("/projects/{projectId:guid}", UpdateProjectAsync)
-            .Produces<ProjectSummary>()
+            .WithSummary("Conditionally update project scalar values.")
+            .WithDescription("Requires expectedDefinition unchanged from GET /api/project-structure/projects/{projectId}/definition and a matching route project ID. Preserves phases, options and external identity. Returns the exact normalized scalar acknowledgement and accepted revision. Missing/invalid expectations return 400; stale definitions return 409 with no definition effect. Existing lease and Project Structure API authority requirements still apply. No durable retry guarantee is provided; preserve an unconfirmed submission instead of blindly resending it.")
+            .Produces<ProjectDefinitionScalarsAcknowledgement>()
             .ProducesProjectStructureErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status404NotFound,
@@ -714,6 +723,12 @@ public static class ProjectStructureAgentApi
             (_, cancellationToken) => agentService.ListProjectsAsync(cancellationToken),
             cancellationToken);
 
+    internal static Task<IResult> GetProjectDefinitionAsync(Guid projectId, HttpContext httpContext,
+        ProjectStructureAgentService agentService, ProjectStructureAnalyticsService analyticsService,
+        CancellationToken cancellationToken)
+        => ExecuteAsync(httpContext, analyticsService, "projects.definition.get", projectId, null, null, null, null,
+            (_, token) => agentService.GetProjectDefinitionAsync(projectId, token), cancellationToken);
+
     /// <summary>
     /// Create a root project.
     /// </summary>
@@ -766,42 +781,6 @@ public static class ProjectStructureAgentApi
             cancellationToken,
             response => response.Id);
 
-    /// <summary>
-    /// Replace the values of an existing project.
-    /// </summary>
-    /// <remarks>
-    /// Replaces the project's name, description, objective, current phase, status and target date with the sent values
-    /// and returns the updated summary. Omitted members are not kept: send the current value of everything you keep.
-    /// The update also removes the project's phases and option selections, which this request cannot carry. The
-    /// project structure and the project hierarchy are not changed.
-    ///
-    /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
-    /// <c>api.project-structure.write</c> scope. Send <c>leaseToken</c> to work under your own project lease. Without
-    /// it the operation uses the project lease your identity already holds, or else takes a five-minute project lease
-    /// for its own duration; if another identity holds the lease, it waits when that lease ends within 30 seconds and
-    /// otherwise fails with HTTP 409 <c>LeaseConflict</c>.
-    ///
-    /// A body the framework cannot bind (malformed JSON, or a member of the wrong JSON type such as a status name
-    /// instead of its integer) is rejected with HTTP 400 before the operation runs and has no envelope.
-    /// </remarks>
-    /// <param name="projectId">
-    /// Identifier of the project, as returned in <c>id</c> by <c>GET /api/project-structure/projects</c> or by project
-    /// creation.
-    /// </param>
-    /// <param name="request">The complete new values of the project and an optional lease token.</param>
-    /// <response code="200">The updated project.</response>
-    /// <response code="400">
-    /// Nothing was changed: <c>ProjectNameRequired</c> (blank name) or <c>ProjectCreationRejected</c> (the project
-    /// owner rejected the values; <c>details</c> lists its errors; the code has this name for updates too).
-    /// </response>
-    /// <response code="404"><c>ProjectNotFound</c>: no project with this id exists.</response>
-    /// <response code="409">
-    /// <c>LeaseConflict</c>, <c>LeaseMissing</c> or <c>ProjectStructureConcurrentMutation</c>.
-    /// </response>
-    /// <response code="500">
-    /// <c>ProjectIdMissing</c> or <c>UnhandledError</c>. The update may have been committed before the failure; read
-    /// the project before retrying.
-    /// </response>
     internal static Task<IResult> UpdateProjectAsync(
         Guid projectId,
         HttpContext httpContext,
@@ -818,7 +797,7 @@ public static class ProjectStructureAgentApi
             ProjectStructureLeaseScopeKind.Project,
             projectId.ToString(),
             request,
-            (agent, cancellationToken) => agentService.SaveProjectAsync(projectId, request, agent, cancellationToken),
+            (agent, cancellationToken) => agentService.UpdateProjectDefinitionAsync(projectId, request, agent, cancellationToken),
             cancellationToken);
 
     /// <summary>
@@ -4347,6 +4326,12 @@ public static class ProjectStructureAgentApi
                         ProjectStructureAnalyticsService.SerializeSummary(requestSummary),
                         ProjectStructureAnalyticsService.SerializeResponseSummary(response)),
                     cancellationToken);
+            } catch (Exception exception) when (response is ProjectDefinitionScalarsAcknowledgement) {
+                var accepted = (ProjectDefinitionScalarsAcknowledgement)(object)response;
+                httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ProjectDefinitionSave")
+                    .LogWarning(exception, "Project {ProjectId} definition {Revision} was committed; analytics acknowledgement failed.",
+                        accepted.Definition.Project.ProjectId, accepted.Definition.Revision);
+                return Results.Json(accepted, ProjectStructureHttpJsonContract.SerializerOptions);
             } catch (Exception exception) when (response is ProjectStructureWorkflowNodeStartResult) {
                 var admitted = (ProjectStructureWorkflowNodeStartResult)(object)response;
                 httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ProjectStructureWorkflowLaunch")

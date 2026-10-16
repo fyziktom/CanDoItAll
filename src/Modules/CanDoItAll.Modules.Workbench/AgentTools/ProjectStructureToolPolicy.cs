@@ -10,6 +10,7 @@ public static class ProjectStructureToolPolicy {
         [ProcessOperationContractNames.ExternalActionControlled], canExecuteExternalAction: true);
 
     public const string ProjectStructureProjectsList = "project_structure_projects_list";
+    public const string ProjectStructureProjectDefinitionGet = "project_structure_project_definition_get";
     public const string ProjectStructureProjectCreate = "project_structure_project_create";
     public const string ProjectStructureProjectUpdate = "project_structure_project_update";
     public const string ProjectStructureHierarchyGet = "project_structure_hierarchy_get";
@@ -73,6 +74,7 @@ public static class ProjectStructureToolPolicy {
 
     public static IReadOnlyList<ToolCapabilityMetadata> Capabilities { get; } = Array.AsReadOnly<ToolCapabilityMetadata>([
         Read(ProjectStructureProjectsList, ToolCapabilitySideEffectKind.WorkspaceRead),
+        Read(ProjectStructureProjectDefinitionGet, ToolCapabilitySideEffectKind.WorkspaceRead),
         Mutation(ProjectStructureProjectCreate, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },
         Mutation(ProjectStructureProjectUpdate, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },
         Read(ProjectStructureHierarchyGet, ToolCapabilitySideEffectKind.WorkspaceRead),
@@ -137,6 +139,7 @@ public static class ProjectStructureToolPolicy {
 
     public static IReadOnlyList<string> ReadTools { get; } = Array.AsReadOnly<string>([
         ProjectStructureProjectsList,
+        ProjectStructureProjectDefinitionGet,
         ProjectStructureHierarchyGet,
         ProjectStructureRead,
         ProjectStructureNodeCatalog,

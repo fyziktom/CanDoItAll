@@ -43,12 +43,32 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
     private bool committed;
     private int disposed;
 
-    internal static async Task<ProjectSourceMutationScope> BeginAsync(ProjectsDbContext context,
+    internal bool IsCommitted => committed;
+
+    internal static Task<ProjectSourceMutationScope> BeginDefinitionAsync(ProjectsDbContext context,
+        IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
+        IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
+        ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
+        CancellationToken cancellationToken, ProjectCreationReservation? reservation = null,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
+        => BeginCoreAsync(context, keys, purpose, projectId, existingProjectIds, authorization, admissions,
+            transactions, cancellationToken, reservation, null, expectedProjectAdmissions, definitionWrite: true);
+
+    internal static Task<ProjectSourceMutationScope> BeginAsync(ProjectsDbContext context,
         IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
         IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
         CancellationToken cancellationToken, ProjectCreationReservation? reservation = null, Guid? requesterId = null,
-        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null) {
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
+        => BeginCoreAsync(context, keys, purpose, projectId, existingProjectIds, authorization, admissions,
+            transactions, cancellationToken, reservation, requesterId, expectedProjectAdmissions, definitionWrite: false);
+
+    private static async Task<ProjectSourceMutationScope> BeginCoreAsync(ProjectsDbContext context,
+        IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
+        IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
+        ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
+        CancellationToken cancellationToken, ProjectCreationReservation? reservation, Guid? requesterId,
+        IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions, bool definitionWrite) {
         IProjectMutationSourceLease? source = null;
         SerializableMutationScope? mutation = null;
         IDbContextTransaction? transaction = null;
@@ -80,6 +100,9 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
                 transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
                 using var coordination = transactions.Enter(context);
                 await source.RequireForMutationAsync(cancellationToken);
+                await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, orderedKeys, cancellationToken);
+            } else if (definitionWrite && context.Database.IsNpgsql()) {
+                transaction = await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
                 await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, orderedKeys, cancellationToken);
             } else {
                 mutation = await SerializableMutationScope.BeginAsync(context, orderedKeys, cancellationToken);

@@ -161,10 +161,13 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             ["request"] = new ProjectStructureProjectSaveRequest("Governed original source creation", "", "", "")
         }));
         var update = Assert.Single(tools.OfType<AIFunction>(), tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
-        var edited = ReadRegisteredToolResult<ProjectSummary>(update, await update.InvokeAsync(new AIFunctionArguments {
-            ["projectId"] = created.Id, ["request"] = new ProjectStructureProjectSaveRequest("Same-session retained target", "", "", "")
+        var definition = (await services.GetRequiredService<ProjectsService>().GetDefinitionAsync(created.Id)).Value!;
+        var edited = ReadRegisteredToolResult<ProjectDefinitionScalarsAcknowledgement>(update, await update.InvokeAsync(new AIFunctionArguments {
+            ["projectId"] = created.Id, ["request"] = new ProjectStructureProjectSaveRequest("Same-session retained target", "", "", "") {
+                ExpectedDefinition = definition.Expectation
+            }
         }));
-        Assert.Equal(created.Id, edited.Id);
+        Assert.Equal(created.Id, edited.Definition.Project.ProjectId);
         Assert.Equal("Same-session retained target", (await services.GetRequiredService<ProjectsService>().GetAsync(created.Id)).Name);
         await using var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var reservation = await read.Set<ProjectCreationReservationRecord>().SingleAsync(row => row.ProjectId == created.Id);

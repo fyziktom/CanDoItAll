@@ -93,7 +93,8 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
         await using var delayedScope = application.Services.CreateAsyncScope();
         await using var deletionScope = application.Services.CreateAsyncScope();
         var factory = new PausingProjectsFactory(delayedScope.ServiceProvider.GetRequiredService<IDbContextFactory<ProjectsDbContext>>());
-        var delayed = ActivatorUtilities.CreateInstance<ProjectsService>(delayedScope.ServiceProvider, factory);
+        var writer = ActivatorUtilities.CreateInstance<ProjectDefinitionWriter>(delayedScope.ServiceProvider, factory);
+        var delayed = ActivatorUtilities.CreateInstance<ProjectsService>(delayedScope.ServiceProvider, factory, writer);
         var projectId = Guid.NewGuid();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var save = delayed.CreateAsync(projectId, new() { Name = "Old delayed search" }, timeout.Token);

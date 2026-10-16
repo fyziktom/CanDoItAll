@@ -134,7 +134,9 @@ public sealed class ProjectCreationReservationIntegrationTests {
         var reservation = await admissions.ReserveCreationAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var options = new DbContextOptionsBuilder<ProjectsDbContext>(services.GetRequiredService<DbContextOptions<ProjectsDbContext>>())
             .AddInterceptors(new RejectProjectInsert()).Options;
-        var failingProjects = ActivatorUtilities.CreateInstance<ProjectsService>(services, new ProjectFactory(options));
+        var factory = new ProjectFactory(options);
+        var writer = ActivatorUtilities.CreateInstance<ProjectDefinitionWriter>(services, factory);
+        var failingProjects = ActivatorUtilities.CreateInstance<ProjectsService>(services, factory, writer);
         await Assert.ThrowsAsync<InjectedProjectSaveException>(() => failingProjects.CreateAsync(reservation, new() { Name = "Rejected insert" }));
         await using (var read = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync()) {
             Assert.False(await read.Set<Project>().AnyAsync(project => project.Id == reservation.ProjectId));

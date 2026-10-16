@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-15T03:31:25.912430+00:00",
+  "generated_utc": "2026-10-16T15:49:17.202663+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15419,
+  "allowance_count": 15423,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -12863,6 +12863,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261009124700_AddProcessAuthoring.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "70ac1556a97a2f78058889931af4969db1d83f8674dca5db8dad8b8fd05b188e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016151626_AddProjectDefinitionConcurrency.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0a26a288586422fe13a1b18480b8335b36dc84a1f04f16b838bc36268042b1e2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016151626_AddProjectDefinitionConcurrency.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5d24e713ff9b7d09cc4335f0d89d09d0b67f87e19564d3e5bad94f1144c5216d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016151626_AddProjectDefinitionConcurrency.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "1042c2a8cea9c2ca5d41e882881d4eef48d57dea9a10fa687bb1c6a42fbfdfed",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016151626_AddProjectDefinitionConcurrency.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5d09cf2d40b2a6e00b64cfa06be29d712b88fc6a756cefbfd59f10edbb8f0f66",
       "count": 1
     },
     {

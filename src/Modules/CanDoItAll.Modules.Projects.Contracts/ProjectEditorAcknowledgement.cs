@@ -1,9 +1,10 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Projects;
 
 public sealed record ProjectEditorAcknowledgement(
-    ProjectWriteAdmission Project,
+    ProjectDefinitionExpectation Definition,
     string Name,
     string Description,
     string Objective,
@@ -11,7 +12,11 @@ public sealed record ProjectEditorAcknowledgement(
     string CurrentPhase,
     DateTime? TargetDateUtc,
     IReadOnlyList<ProjectPhaseAcknowledgement> Phases,
-    IReadOnlyList<ProjectOptionAcknowledgement> Options);
+    IReadOnlyList<ProjectOptionAcknowledgement> Options,
+    ProjectDefinitionExternalIdentity? ExternalIdentity) {
+    [JsonIgnore]
+    public ProjectWriteAdmission Project => Definition.Project;
+}
 
 public sealed record ProjectPhaseAcknowledgement(
     int SubmittedIndex, Guid Id, string Name, string Goal, ProjectPhaseStatus Status,

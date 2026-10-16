@@ -4554,6 +4554,7 @@ public sealed class AgentToolInvocationPolicyTests
         var expectedReadTools = new[]
         {
             ProjectStructureToolPolicy.ProjectStructureProjectsList,
+            ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet,
             ProjectStructureToolPolicy.ProjectStructureHierarchyGet,
             ProjectStructureToolPolicy.ProjectStructureRead,
             ProjectStructureToolPolicy.ProjectStructureNodeCatalog,

@@ -76,7 +76,7 @@ These names describe proposed semantics; they are not existing public API promis
 
 | Setting | Values | Meaning |
 | --- | --- | --- |
-| `ReadBasisMode` | `RunSnapshot`, `StepSnapshot`, `RefreshBeforeProposal` | Capture business inputs once per run, once per admitted step/turn, or afresh before producing each new proposal. Never refresh partway through a model call or mutate its existing basis. |
+| `ReadBasisMode` | `RunSnapshot`, `StepSnapshot` | Capture the declared, bounded business inputs once per run or once per admitted logical step/turn. A transport retry, executor retry or exact-intent replay retains that same basis. A later logical step captures a new basis in `StepSnapshot`; never refresh partway through a model call. |
 | `PublicationFreshness` | `PinnedObservation`, `RequireCurrent` | Permit publication explicitly derived from the captured observation where the owner supports that semantic, or require all owner-defined material inputs to remain current at publication. Both require current authority and conditional target state. |
 | `OnBasisChange` | `Fail`, `PauseForReview`, `Replan` | Return a final no-effect rejection, preserve the proposal and wait for an explicit decision, or capture new inputs and generate a new proposal under a bounded budget. |
 | `ReplanBudget` | Count, elapsed-work deadline and provider cost/token ceiling when available | Limits semantic rework independently of SQL transport retry and executor retry. The effective allowance is bounded by every enclosing run/step budget. |
@@ -87,7 +87,7 @@ These names describe proposed semantics; they are not existing public API promis
 | Analysis/report of an explicitly selected historical snapshot | `RunSnapshot` | `PinnedObservation`; output says which snapshot it describes. Current authority still applies to result disclosure and storage. | Finish from that snapshot; fail if permission/lifetime is lost. |
 | Ordinary interactive agent planning for the current project | `StepSnapshot` (one proposing turn) | `RequireCurrent` for objective, applicable mandate and bounded relevant task membership; conditional target writes. | `PauseForReview` by default. Replan is an explicit setting. |
 | Automated process step planning current work | `StepSnapshot` | `RequireCurrent`, plus current Process dispatch claim and attempt. | Default pause/manager action; optional bounded `Replan` only for a proven replay-safe planning step. |
-| Long pipeline where later steps intentionally use new input | `RefreshBeforeProposal` at step/proposal boundaries | Every proposal records its own coherent basis; `RequireCurrent` for mutable decisions. | Replan/pause according to admitted node policy. Earlier completed steps remain recorded effects. |
+| Long pipeline where later steps intentionally use new input | `StepSnapshot` at each newly admitted logical step | Every proposal records its own coherent basis; `RequireCurrent` for mutable decisions. | Replan/pause according to admitted node policy. Earlier completed steps remain recorded effects. |
 | Reproducible process with immutable published definition and pinned documents | `RunSnapshot` for selected business inputs; definition closure always remains pinned | Owner-specific publication contract. Current project changes still reject strict publication even though computation may finish. | Preserve result; explicit re-admission/replanning before current-state publication. |
 | Workflow node replacing an existing record | Read original target and required source basis at node admission | Expected original target state plus owner minimum source freshness. | Conflict is a typed no-effect outcome, not a transient executor retry. |
 | External action that may already have happened | Preserve the exact dispatched proposal | Provider conditional/idempotent contract and receipt reconciliation. | Unknown outcome goes to reconciliation; never replan or blindly replay. |
@@ -98,6 +98,15 @@ project plan” must reject a configuration attempting to weaken its mandatory
 `RequireCurrent` requirement. A distinct explicit historical-report operation may
 accept the pinned basis. The owner advertises supported modes so the editor can reject
 invalid combinations before launch, and the owner repeats validation at execution.
+
+The initial contract has no separate `RefreshBeforeProposal` enum value. Refreshing
+before the next logical step is already `StepSnapshot`; refreshing a rejected proposal
+is an explicit semantic replan with a new basis, intent and approval. A future distinct
+mode needs a tested server-owned proposal admission boundary before becoming a setting.
+The concrete P04/P07 cards are in
+`codex/bundles/concurrent-mutations/plan/P04-P07-runtime-policy.md`. They distinguish
+the Agent filesystem approval checkpoint, durable Workflow backend checkpoint and
+Process runtime recovery state; none can be substituted by metadata-only checkpoints.
 
 ## Policy resolution and configuration ownership
 
@@ -345,7 +354,7 @@ The full requested settings experience is not complete until AP-2 is closed.
 
 The default replan budget is zero, so AP-6 can first deliver a complete durable
 pause/review path. Automatic replanning is then enabled only after its separate budget,
-approval, effect-reconciliation and claim tests pass. `RefreshBeforeProposal` requires
+approval, effect-reconciliation and claim tests pass. An explicit semantic replan requires
 invalidation of every downstream derived artifact that consumes the replaced basis;
 completed effects stay recorded, and independent branches may retain their own bases.
 

@@ -1,6 +1,7 @@
 # Concurrent mutations architecture
 
-Status: design under current-source review. This document specifies the target; it does
+Status: architecture direction reviewed; P01a cleanup validated and committed; P02a
+definition protection is in progress. This document specifies the target and does
 not claim that the engine already provides every guarantee below. Implementation and
 proof are tracked in the [execution bundle](../../../codex/bundles/concurrent-mutations/README.md).
 
@@ -56,6 +57,9 @@ Detailed design:
 - [Agent, workflow and process policies](02-agent-process-policies.md)
 - [Editor behavior and validation](03-editor-and-validation-design.md)
 - [Performance, capacity and operational risks](04-performance-and-risk-plan.md)
+- [Owner coverage and remaining write perimeters](05-owner-coverage.md)
+- [Caller, dataset and operation-retention lifecycle](06-operation-lifecycle-contract.md)
+- [Exact Projects contracts and caller cutover](07-projects-contract-cutover.md)
 
 ## Invariants
 
@@ -118,7 +122,12 @@ Preserve source authority before owner locks, then acquire the complete bounded 
 key set in the existing deterministic order. Do not nest independently sorted sets and
 claim that global ordering follows. A Serializable snapshot taken before an advisory
 wait may be stale; current row locking/conditional writes must still detect that case.
-Do not downgrade isolation globally to improve a benchmark.
+Do not downgrade isolation globally to improve a benchmark. The measured baseline
+exposed SSI index-page conflicts between disjoint Projects writes even with indexed
+root-only queries. The definition-specific ordinary path therefore uses Read Committed
+under complete ordered project/identity guards, mandatory original root CAS and existing
+database uniqueness constraints. Other scope consumers and source-authorized mutation
+isolation remain unchanged. See the owner design for the invariant proof and diagnostic.
 
 Use the existing coordinated transaction for the small same-database Projects search
 projection, subject to measured bounded cost. If that cost fails the release gate, the

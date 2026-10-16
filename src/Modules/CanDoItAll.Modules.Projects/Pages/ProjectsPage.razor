@@ -128,6 +128,9 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                   NextStep="NextStep"
                   Save="SaveAsync"
                   SaveAndOpenStructure="SaveAndOpenStructureAsync"
+                  ReadCurrentDefinition="ReadCurrentDefinitionAsync"
+                  DiscardAndReloadDefinition="DiscardAndReloadDefinition"
+                  BeginDefinitionReconciliation="BeginDefinitionReconciliation"
                   Delete="DeleteAsync"
                   OpenProjectDashboard="OpenProjectDashboardAsync"
                   OpenProcesses="OpenProcessesAsync"
@@ -944,17 +947,24 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         }
         long intent = ++editorIntent;
         bool projectCommitted = false;
+        bool seeding = false;
         try {
             var result = await ProjectsService.SaveEditorAsync(submitted.Model);
             if (result.IsFailure) {
+                if (result.Errors.Any(error => error.Code == ProjectErrorCodes.DefinitionConflict)) {
+                    ReleaseMutation(target, ProjectEditorMutationState.Conflict);
+                    target.RecordConflict(submitted);
+                    return null;
+                }
                 target.Message = string.Join(" ", result.Errors.Select(error => error.Message));
                 target.IsError = true;
                 ReleaseMutation(target);
                 return null;
             }
-            target.Acknowledge(submitted, result.Value!);
             projectCommitted = true;
+            target.RecordAcceptedOutcome(submitted, result.Value!);
             mutationTargets[result.Value!.Project.ProjectId] = target;
+            target.Acknowledge(submitted, result.Value);
             if (submitted.Model.Id is null && IsActiveEditor(target, intent)) {
                 PublishCreatedProject(result.Value.Project.ProjectId);
             }
@@ -962,6 +972,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             target.IsError = false;
             if (submitted.Seeds.Count > 0) {
                 target.Mutation = ProjectEditorMutationState.Seeding;
+                seeding = true;
                 try {
                     await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(result.Value.Project, submitted.Seeds.Select(seed => seed.Value).ToArray());
                 } catch (ProjectWriteAdmissionRejectedException exception) when (exception.Admission == result.Value.Project) {
@@ -969,6 +980,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                     return null;
                 }
                 target.AcknowledgeSeeds(submitted);
+                seeding = false;
                 target.Message = "Project saved and starter objects seeded to the structure workbench.";
             }
             ReleaseMutation(target);
@@ -980,10 +992,13 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return IsActiveEditor(target, intent) ? result.Value.Project.ProjectId : null;
         } catch (Exception exception) {
             Logger.LogError(exception, "Project editor operation failed for {ProjectId}; current stage {Stage}.", target.Model.Id, target.Mutation);
-            target.Mutation = projectCommitted ? ProjectEditorMutationState.SeedOutcomeUnknown : ProjectEditorMutationState.SaveOutcomeUnknown;
-            target.Message = projectCommitted
+            target.Mutation = !projectCommitted ? ProjectEditorMutationState.SaveOutcomeUnknown
+                : seeding ? ProjectEditorMutationState.SeedOutcomeUnknown : ProjectEditorMutationState.SaveReconciliationFailed;
+            target.Message = !projectCommitted
+                ? "Save completion is unconfirmed. Inspect the project inventory before attempting another write."
+                : seeding
                 ? "Project saved. Starter-object completion is unconfirmed. Inspect Structure before creating any of these objects again."
-                : "Save completion is unconfirmed. Inspect the project inventory before attempting another write.";
+                : "Project saved, but its accepted result could not be reconciled safely with this draft. Your input is preserved. Inspect the saved project before another write.";
             target.IsError = true;
             return null;
         }
@@ -1021,6 +1036,61 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
 
     private bool IsActiveEditor(ProjectEditorDraft target, long intent)
         => !disposed && showProjectModal && ReferenceEquals(draft, target) && editorIntent == intent;
+
+    private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
+        if (!showProjectModal || !ReferenceEquals(draft, target) || target.Model.Id is not { } projectId ||
+            target.Conflict is null or { ReadState: ProjectEditorConflictReadState.Loading }) {
+            return;
+        }
+        long intent = ++editorIntent;
+        editorRead?.Cancel();
+        using var read = CancellationTokenSource.CreateLinkedTokenSource(readLifetime.Token);
+        editorRead = read;
+        target.BeginConflictRead();
+        try {
+            var result = await ProjectsService.GetDefinitionAsync(projectId, read.Token);
+            if (!IsActiveEditor(target, intent) || read.IsCancellationRequested) {
+                return;
+            }
+            if (result.IsFailure) {
+                target.FailConflictRead(string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+            target.CompleteConflictRead(result.Value!);
+        } catch (OperationCanceledException) when (read.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogError(exception, "Current project definition comparison failed for {ProjectId}.", projectId);
+            if (IsActiveEditor(target, intent)) {
+                target.FailConflictRead("Unable to read the current definition. Your draft is preserved; retry the comparison read.");
+            }
+        } finally {
+            if (ReferenceEquals(editorRead, read)) {
+                editorRead = null;
+            }
+        }
+    }
+
+    private void DiscardAndReloadDefinition(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: false);
+
+    private void BeginDefinitionReconciliation(ProjectEditorDraft target) => StartCurrentDefinitionDraft(target, preservePrevious: true);
+
+    private void StartCurrentDefinitionDraft(ProjectEditorDraft target, bool preservePrevious) {
+        if (!showProjectModal || !ReferenceEquals(draft, target) ||
+            target.Conflict is not { ReadState: ProjectEditorConflictReadState.Ready }) {
+            return;
+        }
+        if (preservePrevious && !target.EditContext.Validate()) {
+            target.Message = "Complete or clear invalid dates before preserving this draft for reconciliation. Discard and reload remains available.";
+            target.IsError = true;
+            return;
+        }
+        editorIntent++;
+        editorRead?.Cancel();
+        draft = target.StartFromCurrent(preservePrevious);
+        wizardStep = 0;
+        modalMode = ProjectsModalMode.Editor;
+        PublishModalSection();
+    }
 
     // The first save gives the draft its identity; the editor becomes addressable without a new history entry.
     private void PublishCreatedProject(Guid projectId) {

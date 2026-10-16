@@ -28,3 +28,26 @@ Cleanup status: retained for P01a and subsequent database lanes. After the last 
 identity/labels/mounts/ports, remove this container and exclusively owned volume, verify
 their absence and released port, then delete only the owned credential/runtime files.
 The fixture is retained across related unfinished lanes, not provisioned per phase.
+
+## P02a browser fixture ownership, declared before launch
+
+The single new `ProjectsPortfolioBrowserTests.Two_browser_contexts_preserve_conflicting_drafts_and_require_explicit_current_based_recovery`
+case owns one `LiveUiHost` / `PlaywrightAppFixture`, its hidden `dotnet run` Web process,
+headless Chromium and two 1920x1080 contexts. The existing harness owns a unique
+`CanDoItAllTestEnvironment` with its private workspace and bounded PostgreSQL database
+lease on the fixture above. It selects a free loopback port; explicitly unset
+`CANDOITALL_PLAYWRIGHT_BASEURL` before execution so it cannot reuse a supplied application.
+Set `CANDOITALL_TEST_CONFIGURATION=Release` to use the refreshed standard output.
+
+`await using` closes both contexts/host and the fixture kills only its owned process tree,
+then disposes its database/environment. Preserve screenshots/host log only for the exact
+new artifact directory under `output/playwright/crm-hr-live-agent-tools`; do not delete
+other existing browser evidence.
+
+The case discovered and passed once in 27 seconds. Retained evidence directory:
+`output/playwright/crm-hr-live-agent-tools/20261016T154021597Z-b73198bdea1340c2bbb21634922f6a75`.
+The server log identifies owned PID 11552, loopback port 51477 and database lease
+`cditall_primary_40cf89f382984abd9374b37bafde6e4d` on the owned fixture. After the test,
+PID 11552 was absent, no listener remained on 51477 and `pg_database` contained no
+matching lease. Both screenshots were visually reviewed. The shared PostgreSQL
+container remains intentionally retained for the unfinished bundle's next lanes.

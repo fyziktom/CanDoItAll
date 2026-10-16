@@ -10,23 +10,28 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 public sealed class ProjectsApiDeletionIntegrationTests
 {
     [Fact]
-    public async Task Save_with_an_explicit_missing_project_id_returns_typed_not_found()
+    public async Task Save_with_an_original_read_of_a_deleted_project_returns_typed_not_found()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
-        var missingProjectId = Guid.NewGuid();
-
-        using var response = await host.Client.PostAsJsonAsync("/api/projects/", new ProjectEditorModel
-        {
-            Id = missingProjectId,
-            Name = "Missing project update",
+        using var created = await host.Client.PostAsJsonAsync("/api/projects/", new ProjectEditorModel {
+            Name = "Project read before deletion",
             Objective = "Prove the direct project-save HTTP boundary.",
             CurrentPhase = "Validation"
         });
+        created.EnsureSuccessStatusCode();
+        var projectId = await created.Content.ReadFromJsonAsync<Guid>();
+        var editor = (await host.Client.GetFromJsonAsync<ProjectEditorModel>($"/api/projects/{projectId:D}"))!;
+        using var deleted = await host.Client.DeleteAsync($"/api/projects/{projectId:D}");
+        deleted.EnsureSuccessStatusCode();
+        editor.Name = "Missing project update";
+        using var response = await host.Client.PostAsJsonAsync("/api/projects/", editor);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var error = Assert.Single(body.RootElement.GetProperty("errors").EnumerateArray());
         Assert.Equal(ProjectErrorCodes.NotFound, error.GetProperty("code").GetString());
+        Assert.DoesNotContain((await host.Client.GetFromJsonAsync<ProjectSummary[]>("/api/projects/"))!,
+            project => project.Id == projectId);
     }
 
     [Fact]

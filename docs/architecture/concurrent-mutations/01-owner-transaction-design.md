@@ -141,11 +141,38 @@ current values happen to equal the submitted values.
 
 ## Transaction and lock protocol
 
-The initial pilot retains the existing guarded Serializable mutation mode. Do
-not lower isolation while introducing the original-state condition. Technical
-retries, if added, recreate the context and whole transaction while preserving
-the exact original command, expectation, operation ID, and authority. Business
-content conflicts are not technical retries.
+The measured P02a definition path uses the narrow protocol below; other existing
+mutation paths retain their current guarded Serializable mode. Technical retries,
+if added, recreate the context and whole transaction while preserving the exact
+original command, expectation, operation ID, and authority. Business content
+conflicts are not technical retries.
+
+The pre-change baseline rejected 50-65 of 100 disjoint writes with PostgreSQL 40001.
+A bounded eight-connection reproduction then accepted only one writer in each of
+12 samples, including root-only updates with index scans. Held `SIReadLock` entries
+included shared primary-index pages; disabling sequential scans did not help.
+See the [diagnostic record](../../../codex/bundles/concurrent-mutations/validation/projects-ssi-diagnostic.md).
+This justifies reopening the initial isolation decision rather than adding retries
+that amplify unrelated contention.
+
+`ProjectSourceMutationScope.BeginDefinitionAsync` is an explicit Projects-only
+entrypoint. For PostgreSQL definitions without source authorization it opens
+Read Committed and acquires the complete existing sorted project/hierarchy/external
+identity advisory-key set before owner reads. These database keys coordinate with
+existing deletion, hierarchy and reservation paths. It does not acquire the generic
+helper's process stripes; PostgreSQL supplies the shared guard. InMemory retains
+the existing striped test path. The generic helper and ordinary scope entrypoint
+are unchanged.
+
+This branch is safe only with mandatory original profile/project/lifetime/revision
+validation, a root original-value concurrency predicate, explicit root advancement,
+all child changes enclosed in that transaction, and existing uniqueness constraints.
+Never use it for an unguarded predicate-based owner mutation. The source-authorized
+definition branch retains Serializable and existing source-first ordering/rechecks
+until that source protocol is independently audited. Its known 40001 aborts reject
+the submitted attempt without an automatic retry. Unknown commit outcomes remain
+unconfirmed. The owner classifies known conflicts from a fresh context after rollback,
+and preserves confirmed commit knowledge through cleanup failures.
 
 Existing order is significant:
 

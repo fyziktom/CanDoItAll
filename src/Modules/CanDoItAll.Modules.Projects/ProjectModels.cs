@@ -6,13 +6,13 @@ using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace CanDoItAll.Modules.Projects;
 
-public sealed class Project
-{
+public sealed class Project : IHasConcurrencyToken {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 
     [JsonIgnore]
     public Guid LifetimeId { get; private set; } = Guid.NewGuid();
@@ -100,6 +100,7 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.ToTable("Projects_Projects", table => table.HasCheckConstraint(
             ProjectExternalIdentity.CheckConstraintName, ProjectExternalIdentity.CheckConstraintSql));
         builder.HasKey(project => project.Id);
+        builder.Property(project => project.ConcurrencyToken).IsConcurrencyToken().HasDefaultValueSql("gen_random_uuid()");
         builder.Property(project => project.LifetimeId).HasDefaultValueSql("gen_random_uuid()");
         builder.Property(project => project.LegacyAgentAccessBindingEligible).HasDefaultValue(false);
         builder.Property(project => project.Name).HasMaxLength(200).IsRequired();
@@ -158,7 +159,6 @@ public sealed partial class ProjectsService(
     IDbContextFactory<ProjectsDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
     IProjectPartyIntegrationBridge projectPartyIntegrationBridge,
     IEnumerable<IProjectDeletionParticipant> deletionParticipants,
     ILogger<ProjectsService> logger,
@@ -166,6 +166,8 @@ public sealed partial class ProjectsService(
     StorageCatalogService storageCatalogService,
     CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectWriteAdmissionService writeAdmissionService,
+    ProjectDefinitionWriter definitionWriter,
+    ProjectDefinitionReader definitionReader,
     IProjectCreationCompensationGuard? creationCompensationGuard = null) : IProjectSummaryQueryService {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
@@ -486,62 +488,49 @@ public sealed partial class ProjectsService(
         return Result.Success();
     }
 
-    public async Task<ProjectEditorModel> GetAsync(Guid? id, CancellationToken cancellationToken = default)
-    {
-        if (!id.HasValue)
-        {
+    public Task<Result<ProjectDefinitionSnapshot>> GetDefinitionAsync(Guid id, CancellationToken cancellationToken = default)
+        => definitionReader.ReadAsync(id, cancellationToken);
+
+    public async Task<ProjectEditorModel> GetAsync(Guid? id, CancellationToken cancellationToken = default) {
+        if (!id.HasValue) {
             return CreateNew();
         }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
-        if (project is null)
-        {
-            return CreateNew();
+        var result = await GetDefinitionAsync(id.Value, cancellationToken);
+        if (!result.IsSuccess) {
+            if (result.Errors.All(error => error.Code == ProjectErrorCodes.NotFound)) {
+                return CreateNew();
+            }
+            throw new InvalidOperationException("The project definition could not be read.");
         }
-
-        var projectPhases = await dbContext.Set<ProjectPhase>()
-            .Where(item => item.ProjectId == project.Id)
-            .OrderBy(item => item.OrderIndex)
-            .ToListAsync(cancellationToken);
-        var phases = projectPhases
-            .Select(item => new ProjectPhaseEditorModel
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Goal = item.Goal,
-                Status = item.Status,
-                StartDateUtc = NormalizeNullableUtc(item.StartDateUtc),
-                EndDateUtc = NormalizeNullableUtc(item.EndDateUtc)
-            })
-            .ToList();
-
-        var options = await dbContext.Set<ProjectOptionSelection>()
-            .Where(item => item.ProjectId == project.Id)
-            .Select(item => new ProjectOptionEditorModel
-            {
-                Id = item.Id,
-                Category = item.Category,
-                OptionName = item.OptionName,
-                Notes = item.Notes
-            })
-            .ToListAsync(cancellationToken);
-
+        var definition = result.Value!;
+        var phases = definition.Phases.Select(item => new ProjectPhaseEditorModel {
+            Id = item.Id,
+            Name = item.Name,
+            Goal = item.Goal,
+            Status = item.Status,
+            StartDateUtc = NormalizeNullableUtc(item.StartDateUtc),
+            EndDateUtc = NormalizeNullableUtc(item.EndDateUtc)
+        }).ToList();
+        var options = definition.Options.Select(item => new ProjectOptionEditorModel {
+            Id = item.Id,
+            Category = item.Category,
+            OptionName = item.OptionName,
+            Notes = item.Notes
+        }).ToList();
         EnsureDefaultCategories(options);
-
-        return new ProjectEditorModel
-        {
-            Id = project.Id,
-            ExpectedLifetimeId = project.LifetimeId,
-            ExpectedProjectAdmission = writeAdmissionService.Capture(project),
-            ExternalNamespace = project.ExternalNamespace,
-            ExternalKey = project.ExternalKey,
-            Name = project.Name,
-            Description = project.Description,
-            Objective = project.Objective,
-            Status = project.Status,
-            CurrentPhase = project.CurrentPhase,
-            TargetDateUtc = NormalizeNullableUtc(project.TargetDateUtc),
+        return new ProjectEditorModel {
+            Id = definition.Expectation.Project.ProjectId,
+            ExpectedDefinition = definition.Expectation,
+            ExpectedLifetimeId = definition.Expectation.Project.LifetimeId,
+            ExpectedProjectAdmission = definition.Expectation.Project,
+            ExternalNamespace = definition.ExternalIdentity?.Namespace,
+            ExternalKey = definition.ExternalIdentity?.Key,
+            Name = definition.Scalars.Name,
+            Description = definition.Scalars.Description,
+            Objective = definition.Scalars.Objective,
+            Status = definition.Scalars.Status,
+            CurrentPhase = definition.Scalars.CurrentPhase,
+            TargetDateUtc = NormalizeNullableUtc(definition.Scalars.TargetDateUtc),
             Phases = phases,
             Options = options.OrderBy(option => option.Category).ToList()
         };
@@ -566,13 +555,12 @@ public sealed partial class ProjectsService(
         ProjectMutationAuthorization? authorization = null)
         => SaveCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken, authorization: authorization);
 
+    public Task<Result<ProjectDefinitionScalarsAcknowledgement>> SaveScalarsAsync(UpdateProjectDefinitionScalarsCommand command,
+        CancellationToken cancellationToken = default, ProjectMutationAuthorization? authorization = null)
+        => definitionWriter.UpdateScalarsAsync(command, cancellationToken, authorization);
+
     public async Task<Result<ProjectEditorAcknowledgement>> SaveEditorAsync(ProjectEditorModel model,
         CancellationToken cancellationToken = default) {
-        if (model.Id.HasValue && (model.ExpectedProjectAdmission is not { } original ||
-            original.ProjectId != model.Id || original.LifetimeId != model.ExpectedLifetimeId ||
-            original.DatabaseProfileId != writeAdmissionService.DatabaseProfileId)) {
-            return Result<ProjectEditorAcknowledgement>.Failure(Error.Validation("The editor's original project admission is unavailable or belongs to another profile. Reload it before saving changes."));
-        }
         var result = await SaveWithReceiptCoreAsync(model, parentProjectId: null, newProjectId: null, cancellationToken);
         return result.IsSuccess
             ? Result<ProjectEditorAcknowledgement>.Success(result.Value!.Editor)
@@ -688,283 +676,38 @@ public sealed partial class ProjectsService(
             : Result<Guid>.Failure(result.Errors);
     }
 
-    private async Task<Result<ProjectSaveOutcome>> SaveWithReceiptCoreAsync(
-        ProjectEditorModel model,
-        Guid? parentProjectId,
-        Guid? newProjectId,
-        CancellationToken cancellationToken,
-        ProjectCreationReservation? reservation = null,
-        ProjectMutationAuthorization? authorization = null)
-    {
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            return Result<ProjectSaveOutcome>.Failure(Error.Validation("Project name is required."));
+    private async Task<Result<ProjectSaveOutcome>> SaveWithReceiptCoreAsync(ProjectEditorModel model,
+        Guid? parentProjectId, Guid? newProjectId, CancellationToken cancellationToken,
+        ProjectCreationReservation? reservation = null, ProjectMutationAuthorization? authorization = null) {
+        ArgumentNullException.ThrowIfNull(model);
+        if (model.Phases is null || model.Options is null || model.Phases.Any(phase => phase is null) || model.Options.Any(option => option is null)) {
+            return Result<ProjectSaveOutcome>.Failure(Error.Validation("A full definition requires both complete child collections.", ProjectErrorCodes.DefinitionChildInvalid));
         }
-
-        ProjectExternalIdentity? externalIdentity = null;
-        if (model.ExternalNamespace is not null || model.ExternalKey is not null) {
-            var normalized = ProjectExternalIdentity.Normalize(model.ExternalNamespace, model.ExternalKey);
-            if (normalized.IsFailure) {
-                return Result<ProjectSaveOutcome>.Failure(normalized.Errors);
-            }
-            externalIdentity = normalized.Value!;
-            if (model.Id.HasValue && (!model.ExpectedLifetimeId.HasValue || model.ExpectedLifetimeId == Guid.Empty)) {
-                return Result<ProjectSaveOutcome>.Failure(Error.Validation(
-                    "Saving an external identity on an existing project requires its current expectedLifetimeId.",
-                    ProjectErrorCodes.ExternalIdentityLifetimeRequired));
-            }
+        var expected = model.ExpectedDefinition;
+        if (model.Id.HasValue && expected is null) {
+            return Result<ProjectSaveOutcome>.Failure(Error.Validation("An existing project requires its original definition expectation.", ProjectErrorCodes.DefinitionExpectationRequired));
         }
-
-        var targetProjectId = model.Id ?? newProjectId ?? Guid.NewGuid();
-        var mutationKeys = parentProjectId.HasValue
-            ? BuildProjectHierarchyMutationScopeKeys(targetProjectId, parentProjectId)
-            : BuildProjectMutationScopeKeys(targetProjectId);
-        if (externalIdentity is not null) {
-            mutationKeys = [.. mutationKeys, externalIdentity.MutationScopeKey];
+        if (model.Id.HasValue && (model.Id == Guid.Empty || expected!.Project.ProjectId != model.Id ||
+                model.ExpectedLifetimeId.HasValue && model.ExpectedLifetimeId != expected.Project.LifetimeId ||
+                model.ExpectedProjectAdmission is not null && model.ExpectedProjectAdmission != expected.Project) ||
+                !model.Id.HasValue && (expected is not null || model.ExpectedLifetimeId.HasValue || model.ExpectedProjectAdmission is not null)) {
+            return Result<ProjectSaveOutcome>.Failure(Error.Validation("The definition expectation and editor identities disagree.", ProjectErrorCodes.DefinitionExpectationInvalid));
         }
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
-            dbContext,
-            mutationKeys,
-            model.Id.HasValue ? ProjectMutationPurpose.ExistingWrite : parentProjectId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
-            targetProjectId, model.Id.HasValue ? [targetProjectId] : parentProjectId.HasValue ? [parentProjectId.Value] : [],
-            authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, reservation);
-        if (newProjectId.HasValue && await dbContext.Set<Project>()
-                .AnyAsync(project => project.Id == newProjectId.Value, cancellationToken))
-        {
-            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
-                "The reserved project id is already in use.",
-                ProjectErrorCodes.ReservedIdConflict));
+        var scalars = new ProjectDefinitionScalars(model.Name, model.Description, model.Objective, model.Status, model.CurrentPhase, model.TargetDateUtc);
+        var phases = model.Phases.Select(phase => new ProjectDefinitionPhaseInput(phase.Id, phase.Name, phase.Goal,
+            phase.Status, phase.StartDateUtc, phase.EndDateUtc)).ToArray();
+        var options = model.Options.Select(option => new ProjectDefinitionOptionInput(option.Id, option.Category, option.OptionName, option.Notes)).ToArray();
+        var identity = model.ExternalNamespace is null && model.ExternalKey is null ? null
+            : new ProjectDefinitionExternalIdentity(model.ExternalNamespace!, model.ExternalKey!);
+        if (expected is not null) {
+            var replacement = await definitionWriter.ReplaceAsync(new(expected, scalars, phases, options, identity), cancellationToken, authorization);
+            return replacement.IsSuccess ? Result<ProjectSaveOutcome>.Success(new(replacement.Value!.Project.ProjectId, null, replacement.Value))
+                : Result<ProjectSaveOutcome>.Failure(replacement.Errors);
         }
-
-        Project? parentProject = null;
-        if (parentProjectId.HasValue)
-        {
-            parentProject = await dbContext.Set<Project>()
-                .FirstOrDefaultAsync(project => project.Id == parentProjectId.Value, cancellationToken);
-            if (parentProject is null)
-            {
-                return Result<ProjectSaveOutcome>.Failure(Error.Validation("The selected parent project could not be found."));
-            }
-        }
-
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
-
-        if (model.Id.HasValue && entity is null)
-        {
-            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
-                "The project no longer exists.",
-                ProjectErrorCodes.NotFound));
-        }
-
-        if (entity is not null && model.ExpectedLifetimeId.HasValue && model.ExpectedLifetimeId.Value != entity.LifetimeId) {
-            return Result<ProjectSaveOutcome>.Failure(Error.Failure(
-                "This project belongs to a different lifetime. Reload it before saving changes.", ProjectErrorCodes.LifetimeChanged));
-        }
-
-        if (externalIdentity is not null) {
-            if (entity?.ExternalNamespace is not null &&
-                (entity.ExternalNamespace != externalIdentity.Namespace || entity.ExternalKey != externalIdentity.Key)) {
-                return Result<ProjectSaveOutcome>.Failure(Error.Failure(
-                    "A project's assigned external identity cannot be changed or cleared.", ProjectErrorCodes.ExternalIdentityImmutable));
-            }
-            if (await dbContext.Set<Project>().AnyAsync(project => project.Id != targetProjectId &&
-                    project.ExternalNamespace == externalIdentity.Namespace && project.ExternalKey == externalIdentity.Key, cancellationToken)) {
-                return ExternalIdentityConflict();
-            }
-        }
-
-        if (entity is null)
-        {
-            if (reservation is null && await dbContext.Set<ProjectCreationReservationRecord>().AnyAsync(record =>
-                    record.ProjectId == targetProjectId && record.State == ProjectCreationReservationState.Reserved && record.ImportedHistory == null, cancellationToken)) {
-                return Result<ProjectSaveOutcome>.Failure(Error.Failure("The project id belongs to a pending creation reservation.", ProjectErrorCodes.ReservedIdConflict));
-            }
-            if (reservation is not null && !await writeAdmissionService.TryConsumeCreationAsync(dbContext, reservation, parentProjectId, cancellationToken)) {
-                return Result<ProjectSaveOutcome>.Failure(Error.Failure("The exact project creation reservation is closed or its parent lifetime has changed.", ProjectErrorCodes.ReservationClosed));
-            }
-            entity = new Project
-            {
-                Id = targetProjectId,
-                CreatedAtUtc = clock.GetUtcNow()
-            };
-
-            if (reservation is not null) {
-                entity.BindReservedLifetime(reservation.LifetimeId);
-            }
-            await dbContext.Set<Project>().AddAsync(entity, cancellationToken);
-        }
-
-        if (externalIdentity is not null) {
-            entity.ExternalNamespace = externalIdentity.Namespace;
-            entity.ExternalKey = externalIdentity.Key;
-        }
-
-        if (parentProject is not null)
-        {
-            await dbContext.Set<ProjectHierarchyLink>().AddAsync(
-                new ProjectHierarchyLink
-                {
-                    ParentProjectId = parentProject.Id,
-                    ChildProjectId = entity.Id,
-                    CreatedAtUtc = clock.GetUtcNow()
-                },
-                cancellationToken);
-        }
-
-        entity.Name = model.Name.Trim();
-        entity.Slug = FileSafeSlugBuilder.Build(model.Name);
-        entity.Description = model.Description?.Trim() ?? string.Empty;
-        entity.Objective = model.Objective?.Trim() ?? string.Empty;
-        entity.Status = model.Status;
-        entity.CurrentPhase = model.CurrentPhase?.Trim() ?? string.Empty;
-        entity.TargetDateUtc = NormalizeNullableUtc(model.TargetDateUtc);
-        entity.UpdatedAtUtc = clock.GetUtcNow();
-
-        var existingPhases = await dbContext.Set<ProjectPhase>()
-            .Where(item => item.ProjectId == entity.Id)
-            .ToListAsync(cancellationToken);
-
-        var acceptedPhases = new List<ProjectPhaseAcknowledgement>(model.Phases.Count);
-        dbContext.RemoveRange(existingPhases.Where(phase => model.Phases.All(item => item.Id != phase.Id)));
-        for (var index = 0; index < model.Phases.Count; index++)
-        {
-            var phaseModel = model.Phases[index];
-            var phase = phaseModel.Id.HasValue
-                ? existingPhases.FirstOrDefault(item => item.Id == phaseModel.Id.Value)
-                : null;
-
-            if (phase is null)
-            {
-                phase = new ProjectPhase
-                {
-                    ProjectId = entity.Id
-                };
-
-                await dbContext.Set<ProjectPhase>().AddAsync(phase, cancellationToken);
-            }
-
-            phase.Name = phaseModel.Name.Trim();
-            phase.Goal = phaseModel.Goal?.Trim() ?? string.Empty;
-            phase.Status = phaseModel.Status;
-            phase.OrderIndex = index;
-            phase.StartDateUtc = NormalizeNullableUtc(phaseModel.StartDateUtc);
-            phase.EndDateUtc = NormalizeNullableUtc(phaseModel.EndDateUtc);
-            acceptedPhases.Add(new(index, phase.Id, phase.Name, phase.Goal, phase.Status, phase.StartDateUtc, phase.EndDateUtc));
-        }
-
-        var existingOptions = await dbContext.Set<ProjectOptionSelection>()
-            .Where(item => item.ProjectId == entity.Id)
-            .ToListAsync(cancellationToken);
-
-        dbContext.RemoveRange(existingOptions.Where(option => model.Options.All(item => item.Id != option.Id)));
-        var acceptedOptions = new List<ProjectOptionAcknowledgement>(model.Options.Count);
-        for (int index = 0; index < model.Options.Count; index++) {
-            var optionModel = model.Options[index];
-            if (string.IsNullOrWhiteSpace(optionModel.OptionName) && string.IsNullOrWhiteSpace(optionModel.Notes))
-            {
-                continue;
-            }
-
-            var option = optionModel.Id.HasValue
-                ? existingOptions.FirstOrDefault(item => item.Id == optionModel.Id.Value)
-                : null;
-
-            if (option is null)
-            {
-                option = new ProjectOptionSelection
-                {
-                    ProjectId = entity.Id
-                };
-
-                await dbContext.Set<ProjectOptionSelection>().AddAsync(option, cancellationToken);
-            }
-
-            option.Category = optionModel.Category;
-            option.OptionName = optionModel.OptionName.Trim();
-            option.Notes = optionModel.Notes?.Trim() ?? string.Empty;
-            acceptedOptions.Add(new(index, option.Id, option.Category, option.OptionName, option.Notes));
-        }
-
-        try {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        } catch (DbUpdateException exception) when (externalIdentity is not null &&
-            (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception) &&
-                DbUpdateExceptionClassifier.GetConstraintName(exception) == ProjectExternalIdentity.UniqueIndexName ||
-             exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })) {
-            return ExternalIdentityConflict();
-        }
-        var admission = writeAdmissionService.Capture(entity);
-        var editorAcknowledgement = new ProjectEditorAcknowledgement(admission, entity.Name, entity.Description,
-            entity.Objective, entity.Status, entity.CurrentPhase, entity.TargetDateUtc,
-            acceptedPhases.AsReadOnly(), acceptedOptions.AsReadOnly());
-        var creationReceipt = model.Id.HasValue ? null : new ProjectCreationReceipt(admission, reservation,
-            await ReadCreationFingerprintAsync(dbContext, admission, cancellationToken), authorization);
-        try {
-            await mutationScope.CommitAsync(cancellationToken);
-        } catch (PostgresException exception) when (externalIdentity is not null && exception.SqlState == PostgresErrorCodes.SerializationFailure) {
-            return ExternalIdentityConflict();
-        }
-        await mutationScope.DisposeAsync();
-        await RunPostCommitActionAsync(
-            "search-index-upsert",
-            entity.Id,
-            () => UpsertAdmittedSearchProjectionAsync(admission, new SearchDocumentInput(
-                "project",
-                entity.Id.ToString(),
-                "Projects",
-                entity.Name,
-                entity.Description,
-                $"{entity.Objective}\nCurrent phase: {entity.CurrentPhase}\nOptions: {string.Join(", ", model.Options.Where(option => !string.IsNullOrWhiteSpace(option.OptionName)).Select(option => $"{option.Category}:{option.OptionName}"))}",
-                $"/projects?projectId={entity.Id}",
-                entity.Id), cancellationToken));
-        await RunPostCommitActionAsync(
-            "activity-project-save",
-            entity.Id,
-            () => activityStream.RecordAsync(new ActivityWriteRequest(
-                "projects",
-                model.Id.HasValue ? "update" : "create",
-                $"{(model.Id.HasValue ? "Updated" : "Created")} project",
-                entity.Name,
-                ProjectId: entity.Id,
-                ArtifactKind: "project",
-                ArtifactId: entity.Id,
-                Route: $"/projects?projectId={entity.Id}"), cancellationToken));
-        if (parentProject is not null)
-        {
-            await RunPostCommitActionAsync(
-                "activity-subproject-attach",
-                entity.Id,
-                () => activityStream.RecordAsync(new ActivityWriteRequest(
-                    "projects",
-                    "attach-subproject",
-                    "Created subproject",
-                    $"{entity.Name} is now under {parentProject.Name}.",
-                    ProjectId: entity.Id,
-                    ArtifactKind: "project",
-                    ArtifactId: entity.Id,
-                    Route: $"/projects?projectId={entity.Id}"), cancellationToken));
-        }
-
-        return Result<ProjectSaveOutcome>.Success(new(entity.Id, creationReceipt, editorAcknowledgement));
-    }
-
-    private static Result<ProjectSaveOutcome> ExternalIdentityConflict() => Result<ProjectSaveOutcome>.Failure(Error.Failure(
-        "The external identity is already assigned or changed concurrently. Read the current binding before another save.",
-        ProjectErrorCodes.ExternalIdentityConflict));
-
-    private async Task UpsertAdmittedSearchProjectionAsync(ProjectWriteAdmission admission, SearchDocumentInput input,
-        CancellationToken cancellationToken) {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await SerializableMutationScope.BeginAsync(
-            dbContext, ProjectMutationScopeKeys.ForProject(admission.ProjectId), cancellationToken);
-        await writeAdmissionService.RequireAsync(dbContext, admission, cancellationToken);
-        using (coordinatedTransaction.Enter(dbContext)) {
-            await searchIndexService.UpsertForMutationAsync(input, cancellationToken);
-        }
-        await mutationScope.CommitAsync(cancellationToken);
+        var created = await definitionWriter.CreateAsync(new(scalars, phases, options, identity),
+            new(newProjectId ?? Guid.NewGuid(), parentProjectId, reservation, authorization), cancellationToken);
+        return created.IsSuccess ? Result<ProjectSaveOutcome>.Success(new(created.Value!.Editor.Project.ProjectId, created.Value.Receipt, created.Value.Editor))
+            : Result<ProjectSaveOutcome>.Failure(created.Errors);
     }
 
     private static string[] BuildProjectMutationScopeKeys(

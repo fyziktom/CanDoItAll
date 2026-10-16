@@ -47,7 +47,7 @@ public sealed class ProjectExternalIdentityPersistenceTests {
         await current.SaveChangesAsync();
         await Assert.ThrowsAsync<PostgresException>(() => current.GetService<IMigrator>().MigrateAsync(PreviousMigration));
         await using var readback = new AppDbContext(lease.CreateAppDbContextOptions());
-        Assert.Equal("workspace", (await readback.Set<Project>().SingleAsync()).ExternalKey);
+        Assert.Equal("workspace", await readback.Set<Project>().Select(project => project.ExternalKey).SingleAsync());
         Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
     }
 
@@ -121,12 +121,24 @@ public sealed class ProjectExternalIdentityPersistenceTests {
             await store.SaveAsync(session, imported, token);
             return true;
         });
-        await using var readback = target.Factory.CreateDbContext();
-        var restored = await readback.Set<Project>().SingleAsync();
-        Assert.Equal(project.Id, restored.Id);
-        Assert.NotEqual(project.LifetimeId, restored.LifetimeId);
-        Assert.Equal(project.ExternalNamespace, restored.ExternalNamespace);
-        Assert.Equal(project.ExternalKey, restored.ExternalKey);
+        Guid targetRevision;
+        await using (var readback = target.Factory.CreateDbContext()) {
+            var restored = await readback.Set<Project>().SingleAsync();
+            Assert.Equal(project.Id, restored.Id);
+            Assert.NotEqual(project.LifetimeId, restored.LifetimeId);
+            Assert.Equal(project.ExternalNamespace, restored.ExternalNamespace);
+            Assert.Equal(project.ExternalKey, restored.ExternalKey);
+            Assert.NotEqual(Guid.Empty, restored.ConcurrencyToken);
+            Assert.NotEqual(project.ConcurrencyToken, restored.ConcurrencyToken);
+            targetRevision = restored.ConcurrencyToken;
+            restored.Name = "A source revision must not authorize a target write";
+            readback.Entry(restored).Property(row => row.ConcurrencyToken).OriginalValue = project.ConcurrencyToken;
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => readback.SaveChangesAsync());
+        }
+        await using var reopened = target.Factory.CreateDbContext();
+        var retained = await reopened.Set<Project>().SingleAsync();
+        Assert.Equal(targetRevision, retained.ConcurrencyToken);
+        Assert.Equal(project.Name, retained.Name);
     }
 
     [Fact]

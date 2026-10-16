@@ -164,6 +164,8 @@ public sealed class ProjectsEditorMutationTests {
         await pending;
         Guid id = Assert.IsType<Guid>(draft.Model.Id);
         var saved = await projects.GetAsync(id);
+        Assert.Same(draft.Acknowledgement, draft.AcceptedOutcome!.Accepted);
+        Assert.Equal("Submitted project", draft.AcceptedOutcome.Submitted.Model.Name);
         Assert.Equal("Submitted project", saved.Name);
         Assert.Equal("Later unblurred name", draft.Model.Name);
         Assert.Null(draft.Model.Phases[0].Id);
@@ -399,6 +401,123 @@ public sealed class ProjectsEditorMutationTests {
         await pending;
         Assert.Equal(id, reopened.Instance.Editor.Id);
         Assert.Single(await ObjectsAsync(harness, id));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Conflict_preserves_live_input_and_only_explicit_recovery_starts_a_current_based_editor(bool reconcile) {
+        var controls = new Controls();
+        await using var harness = await Harness(controls);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid id = (await projects.SaveAsync(new() {
+            Name = "Original definition", Phases = [new() { Name = "Original phase" }],
+            Options = [new() { Category = ProjectOptionCategory.Language, OptionName = "Original language" }]
+        })).Value;
+        var cut = RenderProjectsPage(harness);
+        cut.WaitForElement("[data-testid='project-card']");
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.SwitchToEditor.InvokeAsync());
+        var original = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        var originalContext = original.EditContext;
+        var originalExpectation = original.Model.ExpectedDefinition;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "My submitted name" }));
+        var competitor = await projects.GetAsync(id);
+        competitor.Name = "Saved by competitor";
+        competitor.Phases = [new() { Name = "Competitor phase", Goal = "Competitor goal" }];
+        competitor.Options = [new() { Category = ProjectOptionCategory.Language, OptionName = "Competitor language", Notes = "Competitor notes" }];
+        Assert.True((await projects.SaveAsync(competitor)).IsSuccess);
+
+        controls.HoldNextRead = 1;
+        Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        await using var operation = new PendingOperation(pending, controls);
+        await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "My later name" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = "not-a-date" }));
+        controls.Release.TrySetResult();
+        await pending;
+        Assert.Equal(ProjectEditorMutationState.Conflict, original.Mutation);
+        Assert.Same(original, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Same(originalContext, cut.FindComponent<Microsoft.AspNetCore.Components.Forms.EditForm>().Instance.EditContext);
+        Assert.Equal(originalExpectation, original.Model.ExpectedDefinition);
+        Assert.Equal("My submitted name", original.Conflict!.Submitted.Model.Name);
+        Assert.Equal("My later name", original.Model.Name);
+        Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+        Assert.True(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled"));
+
+        controls.FailNextRead = 1;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        Assert.Equal(ProjectEditorConflictReadState.Failed, original.Conflict.ReadState);
+        Assert.Equal(originalExpectation, original.Model.ExpectedDefinition);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        Assert.Equal(ProjectEditorConflictReadState.Ready, original.Conflict.ReadState);
+        Assert.Equal(originalExpectation, original.Model.ExpectedDefinition);
+        Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+        string comparison = cut.Find("[data-testid='project-definition-comparison']").TextContent;
+        Assert.Contains("Saved by competitor", comparison);
+        Assert.Contains("Competitor phase", comparison);
+        Assert.Contains("Competitor notes", comparison);
+
+        string recovery = reconcile ? "project-conflict-reconcile" : "project-conflict-reload";
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='{recovery}']").ClickAsync(new()));
+        if (reconcile) {
+            Assert.Same(original, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+            Assert.Contains("Complete or clear invalid dates", original.Message);
+            Assert.Equal("not-a-date", cut.Find("[data-testid='project-target-date']").GetAttribute("value"));
+            await cut.InvokeAsync(() => cut.Find("[data-testid='project-target-date']").ChangeAsync(new() { Value = string.Empty }));
+            await cut.InvokeAsync(() => cut.Find($"[data-testid='{recovery}']").ClickAsync(new()));
+        }
+        var replacement = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        Assert.NotSame(originalContext, replacement.EditContext);
+        Assert.Equal(original.Conflict.Current!.Expectation, replacement.Model.ExpectedDefinition);
+        Assert.Equal("Saved by competitor", replacement.Model.Name);
+        Assert.Equal("Competitor phase", Assert.Single(replacement.Model.Phases).Name);
+        Assert.Equal(reconcile ? original : null, replacement.PreviousDraft);
+        if (reconcile) {
+            Assert.Contains("My later name", cut.Find("[data-testid='project-definition-comparison']").TextContent);
+        }
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = "Explicitly reconciled name" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        Assert.Equal(ProjectEditorMutationState.Ready, replacement.Mutation);
+        Assert.Null(replacement.PreviousDraft);
+        var saved = await projects.GetAsync(id);
+        Assert.Equal("Explicitly reconciled name", saved.Name);
+        Assert.Equal("Competitor phase", Assert.Single(saved.Phases).Name);
+        Assert.Equal("Competitor language", saved.Options.Single(row => row.Category == ProjectOptionCategory.Language).OptionName);
+    }
+
+    [Fact]
+    public async Task Late_conflict_comparison_cannot_replace_a_successor_draft() {
+        var controls = new Controls();
+        await using var harness = await Harness(controls);
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        Guid id = (await projects.SaveAsync(new() { Name = "Original definition" })).Value;
+        var cut = RenderProjectsPage(harness);
+        cut.WaitForElement("[data-testid='project-card']");
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectsBoard>().Instance.OpenProjectPreview.InvokeAsync(id));
+        await cut.InvokeAsync(() => cut.FindComponent<ProjectModalHost>().Instance.SwitchToEditor.InvokeAsync());
+        var original = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        var competitor = await projects.GetAsync(id);
+        competitor.Name = "Changed definition";
+        Assert.True((await projects.SaveAsync(competitor)).IsSuccess);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
+        Assert.Equal(ProjectEditorMutationState.Conflict, original.Mutation);
+
+        controls.HoldNextRead = 1;
+        Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-conflict-read']").ClickAsync(new()));
+        await using var operation = new PendingOperation(pending, controls);
+        await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
+        await NewAsync(cut, "Successor draft");
+        var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        controls.Release.TrySetResult();
+        await pending;
+        Assert.Same(successor, cut.FindComponent<ProjectModalHost>().Instance.Draft);
+        Assert.Equal("Successor draft", successor.Model.Name);
+        Assert.Null(successor.Conflict);
+        Assert.Null(successor.Model.ExpectedDefinition);
+        Assert.Empty(cut.FindAll("[data-testid='project-definition-comparison']"));
+        Assert.Null(original.Conflict!.Current);
     }
 
     private static Task<ComponentTestHarness> Harness(Controls controls, IProjectDeletionParticipant? participant = null) => ComponentTestHarness.CreateAsync(services => {

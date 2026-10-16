@@ -264,12 +264,6 @@ public sealed record ProjectStructureLeaseConflict(
     DateTimeOffset RenewedAtUtc,
     DateTimeOffset ExpiresAtUtc);
 
-/// <summary>
-/// Project values for creating a root project or replacing an existing project's values. An update replaces every
-/// member with the sent value, so send the current values of members you keep: an omitted <c>status</c> becomes Draft
-/// and an omitted <c>targetDateUtc</c> is cleared. An update also removes the project's phases and option selections,
-/// which this request cannot carry.
-/// </summary>
 /// <param name="Name">Project name; required, not blank, trimmed.</param>
 /// <param name="Description">Project description; null is stored as empty. Trimmed.</param>
 /// <param name="Objective">Project objective; null is stored as empty. Trimmed.</param>
@@ -287,6 +281,7 @@ public sealed record ProjectStructureLeaseConflict(
 /// caller's active project lease, otherwise HTTP 409 <c>LeaseMissing</c> or <c>LeaseConflict</c>. Ignored when creating
 /// a project.
 /// </param>
+[Description("Scalar values for project creation or a conditional existing-project update. Updates require the original expectedDefinition from a coherent definition read and preserve phases, options and external identity. All scalar members are replacement values; omitted status becomes Draft and null targetDateUtc clears it. Creation rejects expectedDefinition.")]
 public sealed record ProjectStructureProjectSaveRequest(
     string Name,
     string Description,
@@ -294,7 +289,10 @@ public sealed record ProjectStructureProjectSaveRequest(
     string CurrentPhase,
     ProjectStatus Status = ProjectStatus.Draft,
     DateTime? TargetDateUtc = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description("For an existing project, the unchanged expectation from project_structure_project_definition_get or GET /api/project-structure/projects/{projectId}/definition. Required for updates; must be absent for creation. A lease does not replace this original definition expectation.")]
+    public ProjectDefinitionExpectation? ExpectedDefinition { get; init; }
+}
 
 /// <summary>
 /// Hierarchy change that makes a project a subproject of the route's parent project, either as an additional parent or

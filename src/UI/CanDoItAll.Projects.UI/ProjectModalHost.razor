@@ -44,8 +44,40 @@
                 </HeaderActions>
                 <ChildContent>
                     <section hidden="@(!IsEditorMode)" aria-label="Project editor">
+                        @if (Draft.Conflict is { } conflict) {
+                            <Alert AlertStyle="AlertStyle.Warning" data-testid="project-definition-conflict">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <TextBlock Value="This project changed. Your draft and unsaved input are preserved." />
+                                    @if (conflict.ReadState == ProjectEditorConflictReadState.Loading) {
+                                        <TextBlock Value="Reading the current saved definition…" />
+                                    }
+                                    @if (conflict.ReadError is { } readError) {
+                                        <TextBlock Value="@readError" data-testid="project-conflict-read-error" />
+                                    }
+                                    <Cluster Wrap="FlexWrap.Wrap">
+                                        <Button Text="Read current definition" ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(conflict.ReadState == ProjectEditorConflictReadState.Loading)"
+                                                Click="@(() => ReadCurrentDefinition.InvokeAsync(Draft))" data-testid="project-conflict-read" />
+                                        <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light"
+                                                Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready)"
+                                                Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" data-testid="project-conflict-reload" />
+                                        <Button Text="Reconcile in a current-based draft"
+                                                Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready)"
+                                                Click="HandleReconciliationAsync" data-testid="project-conflict-reconcile" />
+                                    </Cluster>
+                                </Stack>
+                            </Alert>
+                        } else if (Draft.PreviousDraft is not null) {
+                            <Alert AlertStyle="AlertStyle.Info" data-testid="project-definition-reconciliation">
+                                <TextBlock Value="This editor starts from the saved definition you inspected. Copy only the changes you still want from the previous draft beside it, then save." />
+                            </Alert>
+                        }
                         <ValidationSummary />
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="@(Draft.ComparisonModel is null ? 1 : 2)">
                         <Stack GapScale="LayoutGap.Large">
+                            @if (Draft.ComparisonModel is not null) {
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(Draft.Conflict is null ? "Current-based editor" : "Your preserved draft")" />
+                            }
                             <Split Breakpoint="LayoutBreakpoint.Xl"
                                    Gap="LayoutGap.Large"
                                    AlignItems="AlignItems.Center"
@@ -251,6 +283,34 @@
                                 </FormSection>
                             </section>
                         </Stack>
+                        @if (Draft.ComparisonModel is not null) {
+                            <Stack GapScale="LayoutGap.Large">
+                                @if (Draft.Conflict?.CurrentModel is { } comparison) {
+                                    <FormSection Title="Current saved definition"
+                                                 Description="This is the saved snapshot from your comparison read. Reading it does not change your draft or its original expectation.">
+                                        <ProjectDefinitionComparison Model="comparison" />
+                                    </FormSection>
+                                }
+                                @if (SelectedPreviousDraft is { } previous) {
+                                    <FormSection Title="Previous draft"
+                                                 Description="Select and copy the values you want to keep. Every retained draft remains available until the reconciled save is accepted or the editor closes.">
+                                        <Actions>
+                                            <Cluster>
+                                                <TextBlock Value="@($"{previousDraftIndex + 1} of {PreviousDrafts.Count}")" />
+                                                <Button Text="Newer previous draft" ButtonStyle="ButtonStyle.Light" Disabled="@(previousDraftIndex == 0)"
+                                                        Click="() => previousDraftIndex--" data-testid="project-previous-draft-newer" />
+                                                <Button Text="Older previous draft" ButtonStyle="ButtonStyle.Light" Disabled="@(previousDraftIndex + 1 >= PreviousDrafts.Count)"
+                                                        Click="() => previousDraftIndex++" data-testid="project-previous-draft-older" />
+                                            </Cluster>
+                                        </Actions>
+                                        <ChildContent>
+                                            <ProjectDefinitionComparison Model="previous.Model" PreviousStarterObjects="previous.StarterObjects" />
+                                        </ChildContent>
+                                    </FormSection>
+                                }
+                            </Stack>
+                        }
+                        </Grid>
                     </section>
                     <section hidden="@IsEditorMode" aria-label="Project overview">
                         <Stack GapScale="LayoutGap.Large">
@@ -524,6 +584,15 @@
     public EventCallback<ProjectEditorSubmission> SaveAndOpenStructure { get; set; }
 
     [Parameter]
+    public EventCallback<ProjectEditorDraft> ReadCurrentDefinition { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectEditorDraft> DiscardAndReloadDefinition { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectEditorDraft> BeginDefinitionReconciliation { get; set; }
+
+    [Parameter]
     public EventCallback Delete { get; set; }
 
     [Parameter]
@@ -552,12 +621,25 @@
 
     private bool openAfterSubmit;
     private bool validating;
+    private int previousDraftIndex;
     private bool retired;
     private ProjectEditorDraft? focusDraft;
     private readonly string formId = $"project-editor-{Guid.NewGuid():N}";
     private Task<IJSObjectReference?>? moduleLoad;
     private IJSObjectReference? loadedModule;
     private Task? moduleCleanup;
+
+    private IReadOnlyList<ProjectEditorDraft> PreviousDrafts {
+        get {
+            var previous = new List<ProjectEditorDraft>();
+            for (var item = Draft.PreviousDraft; item is not null; item = item.PreviousDraft) {
+                previous.Add(item);
+            }
+            return previous;
+        }
+    }
+
+    private ProjectEditorDraft? SelectedPreviousDraft => PreviousDrafts.ElementAtOrDefault(previousDraftIndex);
 
     private async Task HandleSaveAsync() {
         bool open = openAfterSubmit;
@@ -569,24 +651,8 @@
         var origin = Draft;
         var submitted = origin.Capture();
         var save = open ? SaveAndOpenStructure : Save;
-        var changeStep = WizardTabChanged;
         try {
-            moduleLoad ??= AcquireModuleAsync();
-            var module = await moduleLoad;
-            if (module is null || !IsCurrent(origin)) {
-                return;
-            }
-            var validity = await module.InvokeAsync<ProjectFormValidity>("inspect", formId);
-            if (!IsCurrent(origin)) {
-                return;
-            }
-            if (!validity.IsValid) {
-                origin.Message = validity.Message ?? "Complete the invalid date before saving.";
-                origin.IsError = true;
-                focusDraft = origin;
-                if (validity.Step is { } step) {
-                    await changeStep.InvokeAsync(step.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                }
+            if (!await InspectFormAsync(origin)) {
                 return;
             }
             await save.InvokeAsync(submitted);
@@ -597,6 +663,54 @@
                 validating = false;
             }
         }
+    }
+
+    private async Task HandleReconciliationAsync() {
+        if (validating || retired || Draft.Conflict is not { ReadState: ProjectEditorConflictReadState.Ready }) {
+            return;
+        }
+        const string invalid = "Complete or clear invalid dates before preserving this draft for reconciliation. Discard and reload remains available.";
+        if (!Draft.EditContext.Validate()) {
+            Draft.Message = invalid;
+            Draft.IsError = true;
+            return;
+        }
+        var origin = Draft;
+        var conflict = origin.Conflict;
+        validating = true;
+        try {
+            if (await InspectFormAsync(origin, invalid) && ReferenceEquals(origin.Conflict, conflict)) {
+                await BeginDefinitionReconciliation.InvokeAsync(origin);
+            }
+        } catch (Exception exception) when (exception is JSException or OperationCanceledException) {
+            ReportInteropFailure(origin, exception);
+        } finally {
+            if (IsCurrent(origin)) {
+                validating = false;
+            }
+        }
+    }
+
+    private async Task<bool> InspectFormAsync(ProjectEditorDraft origin, string? invalidMessage = null) {
+        moduleLoad ??= AcquireModuleAsync();
+        var module = await moduleLoad;
+        if (module is null || !IsCurrent(origin)) {
+            return false;
+        }
+        var validity = await module.InvokeAsync<ProjectFormValidity>("inspect", formId);
+        if (!IsCurrent(origin)) {
+            return false;
+        }
+        if (validity.IsValid) {
+            return true;
+        }
+        origin.Message = invalidMessage ?? validity.Message ?? "Complete the invalid date before saving.";
+        origin.IsError = true;
+        focusDraft = origin;
+        if (validity.Step is { } step) {
+            await WizardTabChanged.InvokeAsync(step.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+        return false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {

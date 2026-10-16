@@ -141,8 +141,13 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         };
         var provider = Assert.Single(services.GetServices<IAgentRuntimeToolProvider>().OfType<ProjectStructureAgentRuntimeToolProvider>());
         var tool = Assert.Single((await provider.CreateToolsAsync(context, default)).OfType<AIFunction>(), item => item.Name == name);
+        var original = creation ? null : (await services.GetRequiredService<ProjectsService>()
+            .GetDefinitionAsync(fixture.Project.ProjectId)).Value!;
+        var request = new ProjectStructureProjectSaveRequest("Must not commit", "", "", "") {
+            ExpectedDefinition = original?.Expectation
+        };
         probe.BeforeRead = () => fixture.RevokeAsync(Revocation.Tools);
-        var arguments = new AIFunctionArguments { ["request"] = new ProjectStructureProjectSaveRequest("Must not commit", "", "", "") };
+        var arguments = new AIFunctionArguments { ["request"] = request };
         if (!creation) {
             arguments["projectId"] = fixture.Project.ProjectId;
         }

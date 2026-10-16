@@ -1,6 +1,8 @@
 # Execution plan
 
-Status: architecture review. No production source change is authorized by a phase's
+Status: P01a closed; P02a original-state implementation and focused validation recorded;
+P02b durable lifecycle/projection/recovery is next, including the open large-definition
+tail-cost investigation. No production source change is authorized by a phase's
 proposed status alone; its entry evidence must be satisfied. The user has authorized
 implementation after design review, tests and incremental commits; no extra approval
 ceremony is required for dependency-ready work within that scope.
@@ -10,7 +12,7 @@ ceremony is required for dependency-ready work within that scope.
 | P00 | Refreshed architecture, complete first-owner perimeter and risk/test plan | Source package/current repository | In progress: independent persistence/runtime/UI reviews; baseline Infrastructure build passed with existing NuGet warnings |
 | P01a | Transaction cleanup always releases acquired process gates | P00 cleanup design review | Pass: six discovered/passed tests, Infrastructure Release build, independent diff review and unchanged portability enforcement; see validation/P01a-cleanup.md |
 | P01b | Commit knowledge, source lock order and lifecycle namespace defined/proven | P00; P01a for lock fault proof | Pending: exact receipt/restore/retention decision and tests before public replay guarantee |
-| P02a | Projects definition handler and original-state contract | P00/P01 applicable guarantees | Pending: cohesive handler, full/scalar intent split, coherent read, child ownership, canonical model migration |
+| P02a | Projects definition handler and original-state contract | P00/P01 applicable guarantees | Conditional-write checkpoint recorded in validation/P02a-validation.md: builds, focused owner/HTTP/tool/UI/browser, migration/import, model/script, rendering/docs and portability pass; performance comparison retained with P02b tail-cost follow-up; no durable-replay or broad Stable closure claim |
 | P02b | Complete Projects callers and durable result/projection | P02a/P01b | Pending: UI/API/tool/read/callers converted or explicitly refused; SQL receipt and enlisted search; import/delete lifecycle |
 | P02c | Draft-preserving conflict and unknown-result recovery | P02a/P02b | Pending: real renderer/host, independent browser sessions, accepted-result versus current-state proof |
 | P03 | Selective narrow edits reduce unnecessary conflicts | Closed P02 | Pending: retain first scalar command, add only measured useful intentions; no automatic collection merge |

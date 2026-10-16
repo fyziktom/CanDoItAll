@@ -55,6 +55,8 @@
                   AddStarterObject="AddStarterObject" RemoveStarterObject="RemoveStarterObject"
                   PreviousStep="() => step = Math.Max(0, step - 1)" NextStep="() => step = Math.Min(4, step + 1)"
                   Save="submitted => SaveAsync(submitted, false)" SaveAndOpenStructure="submitted => SaveAsync(submitted, true)" Delete="Delete"
+                  ReadCurrentDefinition="ReadCurrentDefinitionAsync" DiscardAndReloadDefinition="target => RecoverDefinition(target, false)"
+                  BeginDefinitionReconciliation="target => RecoverDefinition(target, true)"
                   OpenProjectDashboard='() => Handoff(draft.Model.Id, "Dashboard")'
                   OpenProcesses='() => Handoff(draft.Model.Id, "Processes")'
                   OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")' />
@@ -189,11 +191,16 @@
         target.Mutation = ProjectEditorMutationState.Saving;
         var result = await owner.SaveAsync(submitted.Model);
         if (result.IsFailure) {
+            if (result.Errors.Any(error => error.Code == ProjectErrorCodes.DefinitionConflict)) {
+                target.RecordConflict(submitted);
+                return;
+            }
             target.Mutation = ProjectEditorMutationState.Ready;
             target.Message = string.Join(" ", result.Errors.Select(error => error.Message));
             target.IsError = true;
             return;
         }
+        target.RecordAcceptedOutcome(submitted, result.Value!);
         target.Acknowledge(submitted, result.Value!);
         target.Message = "Project saved in the synthetic scenario.";
         if (submitted.Seeds.Count > 0) {
@@ -222,6 +229,36 @@
             cleanupMessage = "Project deleted; synthetic cleanup remains pending.";
         }
         Close();
+    }
+
+    private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || target.Model.Id is not { } id ||
+            target.Conflict is null or { ReadState: ProjectEditorConflictReadState.Loading }) {
+            return;
+        }
+        long current = ++acquisition;
+        var owner = store;
+        target.BeginConflictRead();
+        try {
+            var saved = await owner.ReadDefinitionAsync(id);
+            if (current == acquisition && open && ReferenceEquals(target, draft) && ReferenceEquals(owner, store)) {
+                target.CompleteConflictRead(saved);
+            }
+        } catch (InvalidOperationException exception) {
+            if (current == acquisition && open && ReferenceEquals(target, draft)) {
+                target.FailConflictRead(exception.Message);
+            }
+        }
+    }
+
+    private void RecoverDefinition(ProjectEditorDraft target, bool preservePrevious) {
+        if (!open || !ReferenceEquals(target, draft) || target.Conflict is not { ReadState: ProjectEditorConflictReadState.Ready }) {
+            return;
+        }
+        acquisition++;
+        draft = target.StartFromCurrent(preservePrevious);
+        step = 0;
+        editing = true;
     }
 
     private void RetryCleanup(ProjectCleanupTarget target) {

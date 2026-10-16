@@ -12438,7 +12438,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "sha256_lf": "91304b09eb57b4d847e6f066ff554759e226b2a7adb7c0647424455769515547",
+      "sha256_lf": "958da9b375126e60732d38fb8e2cebca91da863938d8dce4f08f495e457c4ed5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
@@ -19274,7 +19274,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
       "path": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
-      "sha256_lf": "c8cefeb76cb52daee53e44d813c0fd10a7584b5de60c18c7ef6e1bcc30839454",
+      "sha256_lf": "e6f37db70929233f5a6ec20216a9698b65c5aae9f1ff2c9c5c7688281071ab0e",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.Projects.UiSandbox.Components.Projects",
@@ -31294,6 +31294,30 @@
       "rationale": "Evaluated build/import input; no rendering body. Dependency evaluation is recorded separately."
     },
     {
+      "identity": "src/UI/CanDoItAll.Projects.UI/ProjectDefinitionComparison.razor",
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectDefinitionComparison.razor",
+      "sha256_lf": "dfbb6524c89d9c7a5c48ea0a2773ebd8d018f10028ae88c2001fc726864a1456",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectDefinitionComparison",
+      "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor"
+      ],
+      "native_owner": "ProjectsPage owns comparison reads and editor recovery; this renderer only displays the supplied definition model.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "Stack",
+        "FormSection",
+        "TextBlock"
+      ],
+      "assets": "CanDoItAll.Projects.UI",
+      "scenario": "CanDoItAll.Projects.UI",
+      "evidence": "CanDoItAll.Projects.UI",
+      "rationale": "Reviewed read-only conflict comparison for scalars, phases, options and previous local linked-object plans. No injection, owner lookup, write, navigation or expectation adoption; typed model comes from the host-held draft. The DefinitionConflict sandbox scenario uses this renderer. P02a proof plan is recorded in codex/bundles/concurrent-mutations/validation/P02a-native-editor.md."
+    },
+    {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectDeletionStatusSurface.razor",
       "sha256_lf": "a50ad20fc3ee232f54960e96efe8454834dcbdd9a8e9a480c5c6952577b64d3e",
@@ -31342,7 +31366,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",
-      "sha256_lf": "243501038093c613aaaab12e3396ee1221f82e4389ddeb3de85c833e04d4f459",
+      "sha256_lf": "971bdd28cfbf39679f3cce55bbe9d810acf694b9d20bfe6d7e886758abfed9d2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.UI.ProjectModalHost",
@@ -31356,7 +31380,8 @@
       "native_owner": "IJSRuntime JS; ILogger<ProjectModalHost> Logger",
       "visual_owner": "CanDoItAll.Projects.UI",
       "descendants": [
-        "Dialog"
+        "Dialog",
+        "ProjectDefinitionComparison"
       ],
       "assets": "CanDoItAll.Projects.UI",
       "scenario": "CanDoItAll.Projects.UI",
