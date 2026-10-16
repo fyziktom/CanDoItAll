@@ -1,3 +1,4 @@
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Modules.Workspace.ApiAccess
 @using CanDoItAll.Modules.Workspace.ApiAccess.Contracts
 @using CanDoItAll.Workspace.ApiAccess.UI
@@ -14,10 +15,13 @@
 
 @code {
     [Parameter] public EventCallback<ApiAccessStatus?> StatusChanged { get; set; }
+    [Parameter] public ApiPageQuery AccountQuery { get; set; } = new();
+    [Parameter] public EventCallback<SettingsRouteChange<ApiPageQuery>> AccountQueryChanged { get; set; }
     [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
     private Task<AuthenticationState>? previousAuthentication;
     private ApiAccessSession? session;
     private ApiAccessConfiguration? reportedConfiguration;
+    private ApiPageQuery routedQuery = new();
     private bool reported;
     private bool disposed;
 
@@ -30,14 +34,32 @@
             previousAuthentication = AuthenticationState;
             Retire();
             await ActivateAsync();
+            return;
         }
+        if (session is null || AccountQuery == routedQuery) {
+            return;
+        }
+        routedQuery = AccountQuery;
+        await session.OpenAccountsAsync(AccountQuery);
     }
     private async Task ActivateAsync() {
         reported = false;
+        routedQuery = AccountQuery;
         session = new(ConfigurationOwner, TokenOwner, AccountOwner, Ledger);
         session.Changed += Changed;
+        session.AccountQueryAccepted += AccountQueryAccepted;
+        await session.OpenAccountsAsync(AccountQuery);
         await session.LoadAsync();
     }
+    private void AccountQueryAccepted(ApiPageQueryAcceptance acceptance) => _ = InvokeAsync(() => {
+        var accepted = acceptance.Query with { Search = acceptance.Query.Search.Trim() };
+        if (disposed || accepted == routedQuery) {
+            return Task.CompletedTask;
+        }
+        routedQuery = accepted;
+        var mode = acceptance.Cause == ApiPageQueryCause.Operator ? UrlHistoryMode.Push : UrlHistoryMode.Replace;
+        return AccountQueryChanged.InvokeAsync(new(accepted, mode));
+    });
     private void Changed() => _ = InvokeAsync(async () => {
         if (disposed || session is null) {
             return;
@@ -60,6 +82,7 @@
     private void Retire() {
         if (session is not null) {
             session.Changed -= Changed;
+            session.AccountQueryAccepted -= AccountQueryAccepted;
             session.Dispose();
             session = null;
         }

@@ -11,6 +11,7 @@
 @inject IPartyRecordQueryService PartyRecordQueryService
 @inject IAgentChatLauncher AgentChatLauncher
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrCrmPage> Logger
 
@@ -56,15 +57,29 @@
 
     private string? AccountActivityFailureMessage => accountActivity.FailureMessage;
 
-    [SupplyParameterFromQuery(Name = "accountId")]
-    public Guid? AccountIdQuery { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.AccountKey)]
+    public string? AccountIdQuery { get; set; }
 
-    [SupplyParameterFromQuery(Name = "opportunityId")]
-    public Guid? OpportunityIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.OpportunityKey)]
+    public string? OpportunityIdQuery { get; set; }
 
-    [SupplyParameterFromQuery(Name = "interactionId")]
-    public Guid? InteractionIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.InteractionKey)]
+    public string? InteractionIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.TagsKey)]
+    public string? TagsQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = CrmUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<CrmUrlState> url = default!;
     private readonly Dictionary<Guid, string> connectionPartyLabels = [];
     private CrmAccountWorkspaceModel? selectedAccount;
     private CrmInteractionDetailModel? selectedInteraction;
@@ -85,7 +100,6 @@
     private Guid? selectedOpportunityId;
     private Guid? selectedInteractionId;
     private int? connectionPartyPickerIndex;
-    private CrmRecordTab selectedCrmRecordTab = CrmRecordTab.Overview;
     private string? committedQueryKey;
     private readonly CrmQueryLoadGeneration queryLoadGeneration = new();
     private CrmQueryLoadStamp? activeQueryLoadStamp;
@@ -108,7 +122,10 @@
     private bool isInteractive;
     private bool isDisposed;
 
-    private int SelectedCrmRecordTabIndex => (int)selectedCrmRecordTab;
+    // The account section is navigation state: the tab index is only its rendering.
+    private int SelectedCrmRecordTabIndex => (int)url.State.Section;
+
+    private PagedRecordQueryState<PartyRecordScope> CatalogQuery => url.State.Catalog.ToQuery();
 
     private IReadOnlyList<PartyOptionModel> ParticipantOptions
         => selectedAccount is null
@@ -136,17 +153,11 @@
             : null;
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [
-                new("accountId", AccountIdQuery?.ToString("D")),
-                new("opportunityId", OpportunityIdQuery?.ToString("D")),
-                new("interactionId", InteractionIdQuery?.ToString("D"))
-            ]);
+        => CrmHrNavigationFence.Create(Navigation, url);
 
     protected override void OnInitialized()
     {
+        url = new UrlStateBinding<CrmUrlState>(Navigation, CrmUrlCodec.Instance, History, typeof(CrmHrCrmPage));
         accountActivity = new CrmHrActivityHistorySession(
             (query, cancellationToken) => CrmService.SearchAccountActivityAsync(query, cancellationToken),
             initialFailureMessage: "Account activity could not be loaded.",
@@ -154,22 +165,53 @@
             Logger);
     }
 
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // A different account, opportunity or interaction loads the route; another section of the open account loads
+    // only that section's lazy data; a catalog query belongs to the catalog, which loads it itself.
     protected override async Task OnParametersSetAsync()
     {
-        var requestedAccountId = AccountIdQuery;
-        var requestedOpportunityId = OpportunityIdQuery;
-        var requestedInteractionId = InteractionIdQuery;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged)
+        {
+            return;
+        }
+
+        if (change.IsInitial || IsOtherRecord(change.Previous, change.Current))
+        {
+            await LoadRouteAsync(change.Current);
+            return;
+        }
+
+        if (change.Previous.Section != change.Current.Section &&
+            change.Current.Section == CrmSection.Interactions &&
+            isAccountDialogOpen)
+        {
+            await EnsureAccountActivityLoadedAsync();
+        }
+    }
+
+    private static bool IsOtherRecord(CrmUrlState previous, CrmUrlState current)
+        => previous.AccountId != current.AccountId ||
+           previous.OpportunityId != current.OpportunityId ||
+           previous.InteractionId != current.InteractionId;
+
+    // Applies one location: the account an opportunity or interaction names is resolved, loaded with the requested
+    // opportunity and interaction and opened. An explicit identity that resolves to nothing never opens another
+    // record. The selected opportunity is the one the location names or its interaction relates to, nothing else.
+    private async Task LoadRouteAsync(CrmUrlState route)
+    {
+        var requestedAccountId = route.AccountId;
+        var requestedOpportunityId = route.OpportunityId;
+        var requestedInteractionId = route.InteractionId;
         var queryKey = BuildQueryKey(
             requestedAccountId,
             requestedOpportunityId,
             requestedInteractionId);
-        if (!string.Equals(committedQueryKey, queryKey, StringComparison.Ordinal))
+        if (requestedAccountId is null || selectedAccount?.AccountPartyId != requestedAccountId)
         {
             isAccountDialogOpen = false;
         }
 
-        var capturedSelectedAccountId = selectedAccount?.AccountPartyId;
-        var capturedSelectedOpportunityId = selectedOpportunityId;
         var loadGeneration = BeginQueryLoad(queryKey, resetTransientState: true);
         using var loadCancellation = new CancellationTokenSource();
         var supersededLoad = Interlocked.Exchange(ref queryLoadCancellation, loadCancellation);
@@ -205,6 +247,7 @@
                 ClearAccountSelection();
                 message = null;
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotifyRouteRecordUnavailable();
                 return;
             }
 
@@ -225,11 +268,14 @@
             {
                 ClearAccountSelection();
                 message = null;
-                agentChatContextAccessState = requestedAccountId.HasValue ||
-                                                  requestedOpportunityId.HasValue ||
-                                                  requestedInteractionId.HasValue
+                agentChatContextAccessState = route.HasAccountContext
                     ? AgentChatContextAccessState.Failed
                     : AgentChatContextAccessState.Ready;
+                if (route.HasAccountContext)
+                {
+                    NotifyRouteRecordUnavailable();
+                }
+
                 return;
             }
 
@@ -245,11 +291,7 @@
             }
 
             var relatedInteractionOpportunityId = interaction?.RelatedOpportunityId;
-            var preferredOpportunityId = requestedOpportunityId ??
-                                         relatedInteractionOpportunityId ??
-                                         (capturedSelectedAccountId == account.AccountPartyId
-                                             ? capturedSelectedOpportunityId
-                                             : null);
+            var preferredOpportunityId = requestedOpportunityId ?? relatedInteractionOpportunityId;
             var opportunity = await LoadOpportunityForAccountAsync(
                 preferredOpportunityId,
                 account.AccountPartyId,
@@ -267,13 +309,8 @@
                 requestedOpportunityId,
                 preferredOpportunityId,
                 requestedInteractionId);
-            SelectCrmRecordTabForRoute(
-                account.AccountPartyId,
-                capturedSelectedAccountId,
-                requestedOpportunityId,
-                requestedInteractionId);
             isAccountDialogOpen = true;
-            if (selectedCrmRecordTab == CrmRecordTab.Interactions)
+            if (url.State.Section == CrmSection.Interactions)
             {
                 await EnsureAccountActivityLoadedAsync();
             }
@@ -285,6 +322,10 @@
             agentChatContextAccessState = requestedSelectionFound
                 ? AgentChatContextAccessState.Ready
                 : AgentChatContextAccessState.Failed;
+            if (!requestedSelectionFound)
+            {
+                NotifyRouteRecordUnavailable();
+            }
         }
         catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
         {
@@ -500,7 +541,7 @@
                 preferredOpportunityId ?? action.SelectedOpportunityId,
                 action.RouteInteractionId,
                 committed);
-            if (selectedCrmRecordTab == CrmRecordTab.Interactions)
+            if (url.State.Section == CrmSection.Interactions)
             {
                 await EnsureAccountActivityLoadedAsync();
             }
@@ -555,9 +596,9 @@
 
         action = new CrmPageActionStamp(
             loadStamp,
-            AccountIdQuery,
-            OpportunityIdQuery,
-            InteractionIdQuery,
+            url.State.AccountId,
+            url.State.OpportunityId,
+            url.State.InteractionId,
             account.AccountPartyId,
             selectedOpportunityId,
             selectedInteractionId);
@@ -566,9 +607,9 @@
 
     private bool IsCurrentCrmAction(CrmPageActionStamp action)
         => IsCurrentQueryLoad(action.LoadStamp) &&
-           AccountIdQuery == action.RouteAccountId &&
-           OpportunityIdQuery == action.RouteOpportunityId &&
-           InteractionIdQuery == action.RouteInteractionId &&
+           url.State.AccountId == action.RouteAccountId &&
+           url.State.OpportunityId == action.RouteOpportunityId &&
+           url.State.InteractionId == action.RouteInteractionId &&
            selectedAccount?.AccountPartyId == action.AccountId &&
            selectedOpportunityId == action.SelectedOpportunityId &&
            selectedInteractionId == action.SelectedInteractionId;
@@ -577,26 +618,36 @@
         CrmQueryLoadStamp loadStamp,
         CrmPageActionStamp action)
         => IsCurrentQueryLoad(loadStamp) &&
-           AccountIdQuery == action.RouteAccountId &&
-           OpportunityIdQuery == action.RouteOpportunityId &&
-           InteractionIdQuery == action.RouteInteractionId &&
+           url.State.AccountId == action.RouteAccountId &&
+           url.State.OpportunityId == action.RouteOpportunityId &&
+           url.State.InteractionId == action.RouteInteractionId &&
            selectedAccount?.AccountPartyId == action.AccountId &&
            selectedOpportunityId == action.SelectedOpportunityId &&
            selectedInteractionId == action.SelectedInteractionId;
 
+    // A section of the open account refines its entry; it loads only the data that section shows.
     private async Task HandleCrmRecordTabChanged(int selectedIndex)
     {
-        var requestedTab = (CrmRecordTab)selectedIndex;
-        if (!Enum.IsDefined(requestedTab))
+        var requestedSection = (CrmSection)selectedIndex;
+        if (!Enum.IsDefined(requestedSection))
         {
             return;
         }
 
-        selectedCrmRecordTab = requestedTab;
-        if (requestedTab == CrmRecordTab.Interactions)
+        url.Navigate(url.State with { Section = requestedSection }, UrlHistoryMode.Replace);
+        if (requestedSection == CrmSection.Interactions)
         {
             await EnsureAccountActivityLoadedAsync();
         }
+    }
+
+    // The catalog committed a query and is already loading it: only the location follows.
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change)
+    {
+        url.Navigate(
+            url.State with { Catalog = CrmUrlCodec.Catalog.FromQuery(change.Query) },
+            CrmHrCatalogUrlCodec<PartyRecordScope>.HistoryMode(change.Kind));
+        return Task.CompletedTask;
     }
 
     // The account activity lane: the session owns the read, the accepted page, the busy gate and the fencing of
@@ -618,30 +669,6 @@
 
     private void InvalidateAccountActivity()
         => accountActivity.Invalidate();
-
-    private void SelectCrmRecordTabForRoute(
-        Guid accountPartyId,
-        Guid? previousAccountPartyId,
-        Guid? requestedOpportunityId,
-        Guid? requestedInteractionId)
-    {
-        if (requestedOpportunityId.HasValue)
-        {
-            selectedCrmRecordTab = CrmRecordTab.Opportunities;
-            return;
-        }
-
-        if (requestedInteractionId.HasValue)
-        {
-            selectedCrmRecordTab = CrmRecordTab.Interactions;
-            return;
-        }
-
-        if (previousAccountPartyId != accountPartyId)
-        {
-            selectedCrmRecordTab = CrmRecordTab.Overview;
-        }
-    }
 
     private void ClearAccountSelection()
     {
@@ -666,47 +693,42 @@
         isOpportunityEditDialogOpen = false;
         isOpportunityConversionDialogOpen = false;
         isAccountDialogOpen = false;
-        selectedCrmRecordTab = CrmRecordTab.Overview;
         UpdateAgentChatContext();
     }
 
-    private Task SelectAccountAsync(Guid accountPartyId)
+    // A card opens its account over the catalog as a new history entry; Back closes it again.
+    private async Task SelectAccountAsync(Guid accountPartyId)
     {
-        if (AccountIdQuery == accountPartyId &&
-            selectedAccount?.AccountPartyId == accountPartyId)
+        if (url.State.AccountId == accountPartyId &&
+            selectedAccount?.AccountPartyId == accountPartyId &&
+            isAccountDialogOpen)
         {
-            isAccountDialogOpen = true;
-            return Task.CompletedTask;
+            return;
         }
 
-        InvalidateCurrentQueryForNavigation();
-        Navigation.NavigateTo($"/crm-hr/crm?accountId={accountPartyId}");
-        return Task.CompletedTask;
+        InvalidateCurrentQueryForNavigation(closeAccount: true);
+        url.OpenOverlay(url.State.WithoutRecord() with { AccountId = accountPartyId });
+        await LoadRouteAsync(url.State);
     }
 
-    private Task CloseAccountDialogAsync()
+    private async Task CloseAccountDialogAsync()
     {
         if (!isAccountDialogOpen)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        InvalidateCurrentQueryForNavigation();
+        InvalidateCurrentQueryForNavigation(closeAccount: true);
         ClearAccountSelection();
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        Navigation.NavigateTo("/crm-hr/crm", replace: true);
-        return Task.CompletedTask;
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
+        await LoadRouteAsync(url.State);
     }
 
     private void OpenDirectory()
     {
-        if (selectedAccount is null)
-        {
-            Navigation.NavigateTo("/crm-hr/directory");
-            return;
-        }
-
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={selectedAccount.AccountPartyId}");
+        var directory = DirectoryUrlCodec.Default with { PartyId = selectedAccount?.AccountPartyId };
+        Navigation.NavigateTo(DirectoryUrlCodec.Instance.Href(CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Directory).Route, directory));
     }
 
     // Prerendered markup has no event handlers; OnAfterRender runs only for an interactive render, so the account
@@ -978,17 +1000,18 @@
         NotifySuccess("Interaction saved", "CRM interaction saved.");
     }
 
-    private Task SelectOpportunityAsync(Guid opportunityId)
+    // An opportunity opens over its account as a new history entry; Back closes it again and keeps the account on the
+    // section it showed.
+    private async Task SelectOpportunityAsync(Guid opportunityId)
     {
         if (selectedAccount is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        InvalidateCurrentQueryForNavigation();
-        Navigation.NavigateTo(
-            $"/crm-hr/crm?accountId={selectedAccount.AccountPartyId:D}&opportunityId={opportunityId:D}");
-        return Task.CompletedTask;
+        InvalidateCurrentQueryForNavigation(closeAccount: false);
+        url.OpenOverlay(url.State with { OpportunityId = opportunityId });
+        await LoadRouteAsync(url.State);
     }
 
     private async Task SaveOpportunityAsync(CrmOpportunityEditorModel model)
@@ -1024,6 +1047,12 @@
                         keepDialogMessage: true);
                 }
 
+                return;
+            }
+
+            if (url.State.OpportunityId != result.Value)
+            {
+                await OpenCommittedOpportunityAsync(action, result.Value);
                 return;
             }
 
@@ -1096,10 +1125,59 @@
         return Task.CompletedTask;
     }
 
-    private Task CloseOpportunityDetailDialogAsync()
+    // Closing the opportunity returns to its account: Back when the opportunity was opened here, otherwise the location
+    // is replaced with the account it belongs to.
+    private async Task CloseOpportunityDetailDialogAsync()
     {
         isOpportunityDetailDialogOpen = false;
-        return Task.CompletedTask;
+        if (url.State.OpportunityId is null)
+        {
+            return;
+        }
+
+        var account = url.State with { OpportunityId = null };
+        if (!account.HasAccountContext && selectedAccount is { } selected)
+        {
+            account = account with { AccountId = selected.AccountPartyId };
+        }
+
+        InvalidateCurrentQueryForNavigation(closeAccount: false);
+        await url.CloseOverlayAsync(account);
+        await LoadRouteAsync(url.State);
+    }
+
+    // An opportunity created, or advanced from the board, is another record than the location names: it opens over
+    // the account as a new history entry, so an opportunity the location named before can never outrank it. The
+    // write committed; a failed read-back afterwards is only a warning.
+    private async Task OpenCommittedOpportunityAsync(CrmPageActionStamp action, Guid opportunityId)
+    {
+        if (!IsCurrentCrmAction(action))
+        {
+            return;
+        }
+
+        InvalidateCurrentQueryForNavigation(closeAccount: false);
+        url.OpenOverlay(url.State with { OpportunityId = opportunityId });
+        try
+        {
+            await LoadRouteAsync(url.State);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(exception, "The saved CRM opportunity {OpportunityId} could not be opened.", opportunityId);
+            NotificationService.Warning(
+                "Saved, refresh failed",
+                "The opportunity was saved, but the account could not be refreshed. Reload the page to see the current state.");
+            return;
+        }
+
+        if (SelectedOpportunity?.Id != opportunityId)
+        {
+            return;
+        }
+
+        opportunityPipelineRefreshVersion++;
+        NotifySuccess("Opportunity saved", "Opportunity saved.");
     }
 
     private void OpenOpportunityEditDialog()
@@ -1424,12 +1502,14 @@
                queryLoadGeneration.IsCurrent(
                    loadGeneration,
                    BuildQueryKey(
-                       AccountIdQuery,
-                       OpportunityIdQuery,
-                       InteractionIdQuery));
+                       url.State.AccountId,
+                       url.State.OpportunityId,
+                       url.State.InteractionId));
     }
 
-    private void InvalidateCurrentQueryForNavigation()
+    // Retires the current load and every transient action before the page moves to another location. A move within
+    // the open account keeps its dialog on screen while the account reloads.
+    private void InvalidateCurrentQueryForNavigation(bool closeAccount)
     {
         queryLoadGeneration.Invalidate();
         activeQueryLoadStamp = null;
@@ -1441,12 +1521,22 @@
         isOpportunityDetailDialogOpen = false;
         isOpportunityEditDialogOpen = false;
         isOpportunityConversionDialogOpen = false;
-        isAccountDialogOpen = false;
+        if (closeAccount)
+        {
+            isAccountDialogOpen = false;
+        }
+
         agentChatAccountContext = null;
         agentChatOpportunityContext = null;
         agentChatInteractionContext = null;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
     }
+
+    // The identity the location names stays in the location and no other record takes its place.
+    private void NotifyRouteRecordUnavailable()
+        => NotificationService.Warning(
+            "CRM record unavailable",
+            "The requested account, opportunity or interaction does not exist or is no longer available.");
 
     private static string BuildQueryKey(
         Guid? accountId,
@@ -1554,15 +1644,6 @@
             CurrentPhase = source.CurrentPhase,
             LastChangedBy = source.LastChangedBy
         };
-    }
-
-    private enum CrmRecordTab
-    {
-        Overview,
-        Financials,
-        ConnectedRecords,
-        Interactions,
-        Opportunities
     }
 
     private readonly record struct CrmPageActionStamp(

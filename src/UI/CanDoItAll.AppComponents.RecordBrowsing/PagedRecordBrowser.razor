@@ -19,6 +19,7 @@
                      Immediate="true"
                      Disabled="@(!isInteractive)"
                      Class="paged-record-browser__filter-field paged-record-browser__search"
+                     maxlength="@MaximumSearchLength"
                      aria-label="@SearchPlaceholder"
                      data-testid="@($"{DataTestId}-search")" />
 
@@ -337,6 +338,12 @@
     private string searchText = string.Empty;
     private Exception? loadError;
     private TFilter currentFilter = default!;
+    // The last query this browser applied or committed. An owner-supplied query equal to it is this browser's own
+    // commit coming back and loads nothing; the search box keeps whatever the operator typed since.
+    private PagedRecordQueryState<TFilter>? committedQuery;
+    // The owner's query as last supplied. Only a change of it is the owner moving: the same value supplied again, for
+    // example right after a correction the owner has not written back yet, is not applied a second time.
+    private PagedRecordQueryState<TFilter>? ownerQuery;
     private long loadGeneration;
     private bool isLoading = true;
     private bool disposed;
@@ -435,6 +442,20 @@
     [Parameter]
     public string DataTestId { get; set; } = "paged-record-browser";
 
+    // The committed query when the owner keeps it, for example in the page URL; null when the browser keeps its own.
+    // A changed value is applied and loaded, the browser's own commits coming back are not.
+    [Parameter]
+    public PagedRecordQueryState<TFilter>? Query { get; set; }
+
+    // Raised once per committed change: a search after its debounce, a tag, filter or reset change, a page move, and
+    // the correction of a requested page beyond the last one. What is still being typed is never reported.
+    [Parameter]
+    public EventCallback<PagedRecordQueryChange<TFilter>> QueryChanged { get; set; }
+
+    // The longest search text the source accepts; the search box enforces it. Null leaves the box unbounded.
+    [Parameter]
+    public int? MaximumSearchLength { get; set; }
+
     private string ResultText => isLoading
         ? "Searching"
         : $"{page.TotalCount:N0} matching record(s)";
@@ -517,9 +538,50 @@
                 nameof(ColumnTemplate));
         }
 
-        currentFilter = InitialFilter;
+        if (MaximumSearchLength is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaximumSearchLength),
+                MaximumSearchLength,
+                "Maximum search length must be positive.");
+        }
+
+        var initialPageIndex = 0;
+        if (Query is { } query)
+        {
+            ownerQuery = query;
+            ApplyQuery(query);
+            initialPageIndex = query.PageIndex;
+        }
+        else
+        {
+            currentFilter = InitialFilter;
+            committedQuery = CaptureQuery(0);
+        }
+
         page = new PagedRecordPage<TKey>([], 0, PageSize, 0);
-        await LoadPageAsync(0);
+        await LoadPageAsync(initialPageIndex);
+    }
+
+    // The owner moved to another committed query, for example by Back or Forward: it replaces whatever the operator
+    // was typing and loads. The owner returning this browser's own commit, or supplying its query again unchanged,
+    // changes nothing.
+    protected override Task OnParametersSetAsync()
+    {
+        if (Query is not { } query || query.Equals(ownerQuery))
+        {
+            ownerQuery = Query;
+            return Task.CompletedTask;
+        }
+
+        ownerQuery = query;
+        if (query.Equals(committedQuery))
+        {
+            return Task.CompletedTask;
+        }
+
+        ApplyQuery(query);
+        return LoadPageAsync(query.PageIndex);
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -541,6 +603,12 @@
         try
         {
             await Task.Delay(SearchDebounceMilliseconds, currentOperation.Token);
+            var query = await CommitQueryAsync(PagedRecordQueryChangeKind.Search, 0);
+            if (!ReferenceEquals(committedQuery, query))
+            {
+                return;
+            }
+
             await LoadPageCoreAsync(0, currentOperation, generation);
         }
         catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
@@ -551,7 +619,7 @@
     private async Task HandleTagsChangedAsync(IReadOnlyList<string> value)
     {
         tagFilters = NormalizeTags(value);
-        await LoadPageAsync(0);
+        await CommitAndLoadAsync(PagedRecordQueryChangeKind.Tags, 0);
     }
 
     private async Task HandleFilterChangedAsync(TFilter value)
@@ -562,7 +630,7 @@
         }
 
         currentFilter = value;
-        await LoadPageAsync(0);
+        await CommitAndLoadAsync(PagedRecordQueryChangeKind.Filter, 0);
     }
 
     private async Task ResetFiltersAsync()
@@ -570,21 +638,66 @@
         searchText = string.Empty;
         tagFilters = [];
         currentFilter = InitialFilter;
-        await LoadPageAsync(0);
+        await CommitAndLoadAsync(PagedRecordQueryChangeKind.Reset, 0);
     }
 
     private Task PreviousPageAsync()
     {
         return CanMovePrevious
-            ? LoadPageAsync(page.PageIndex - 1)
+            ? CommitAndLoadAsync(PagedRecordQueryChangeKind.Page, page.PageIndex - 1)
             : Task.CompletedTask;
     }
 
     private Task NextPageAsync()
     {
         return CanMoveNext
-            ? LoadPageAsync(page.PageIndex + 1)
+            ? CommitAndLoadAsync(PagedRecordQueryChangeKind.Page, page.PageIndex + 1)
             : Task.CompletedTask;
+    }
+
+    // Commits the query of the next load and then loads it, unless the owner answered the commit with a query of its
+    // own, which it already applied and is loading.
+    private async Task CommitAndLoadAsync(PagedRecordQueryChangeKind kind, int pageIndex)
+    {
+        var query = await CommitQueryAsync(kind, pageIndex);
+        if (!ReferenceEquals(committedQuery, query))
+        {
+            return;
+        }
+
+        await LoadPageAsync(pageIndex);
+    }
+
+    // Reports the query the next load requests and returns the committed query; an unchanged query is not reported.
+    private async Task<PagedRecordQueryState<TFilter>> CommitQueryAsync(PagedRecordQueryChangeKind kind, int pageIndex)
+    {
+        var query = CaptureQuery(pageIndex);
+        if (committedQuery is { } committed && query.Equals(committed))
+        {
+            return committed;
+        }
+
+        committedQuery = query;
+        await QueryChanged.InvokeAsync(new PagedRecordQueryChange<TFilter>(query, kind));
+        return query;
+    }
+
+    private PagedRecordQueryState<TFilter> CaptureQuery(int pageIndex)
+        => new(searchText.Trim(), NormalizeTags(tagFilters), currentFilter, pageIndex);
+
+    private void ApplyQuery(PagedRecordQueryState<TFilter> query)
+    {
+        ArgumentNullException.ThrowIfNull(query.SearchText, nameof(Query));
+        ArgumentNullException.ThrowIfNull(query.Tags, nameof(Query));
+        if (query.PageIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Query), query.PageIndex, "A query page index cannot be negative.");
+        }
+
+        searchText = query.SearchText;
+        tagFilters = NormalizeTags(query.Tags);
+        currentFilter = query.Filter;
+        committedQuery = query;
     }
 
     private Task RetryAsync()
@@ -611,6 +724,11 @@
         CancellationTokenSource currentOperation,
         long generation)
     {
+        if (!IsCurrent(currentOperation, generation))
+        {
+            return;
+        }
+
         isLoading = true;
         loadError = null;
         try
@@ -628,6 +746,12 @@
             }
 
             ValidatePage(result, request);
+            if (IsBeyondLastPage(result))
+            {
+                await CorrectPageAsync(result, currentOperation, generation);
+                return;
+            }
+
             page = result;
         }
         catch (OperationCanceledException) when (currentOperation.IsCancellationRequested)
@@ -655,6 +779,28 @@
                 isLoading = false;
             }
         }
+    }
+
+    // An owner-supplied page that no longer exists, for example from a bookmark after records were removed. Only a
+    // browser whose owner keeps the query corrects it; the last page is reported as a correction and loaded instead.
+    private bool IsBeyondLastPage(PagedRecordPage<TKey> result)
+        => Query is not null &&
+           result.PageIndex > 0 &&
+           result.PageIndex >= result.TotalPages;
+
+    private async Task CorrectPageAsync(
+        PagedRecordPage<TKey> result,
+        CancellationTokenSource currentOperation,
+        long generation)
+    {
+        var lastPageIndex = Math.Max(0, result.TotalPages - 1);
+        var query = await CommitQueryAsync(PagedRecordQueryChangeKind.Correction, lastPageIndex);
+        if (!ReferenceEquals(committedQuery, query))
+        {
+            return;
+        }
+
+        await LoadPageCoreAsync(lastPageIndex, currentOperation, generation);
     }
 
     private CancellationTokenSource ReplaceOperation()

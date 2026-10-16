@@ -6048,6 +6048,18 @@
       ],
       "static_assets": [],
       "boundary_test_projects": []
+    },
+    "CanDoItAll.AppComponents.Navigation": {
+      "project": "src/UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj",
+      "boundary": "src/UI/CanDoItAll.AppComponents.Navigation/README.md",
+      "scenarios": [],
+      "evaluated": false,
+      "proof": "Unit tests of the project and the component tests of its consuming pages; not part of the decoupling evaluation snapshot.",
+      "asset_inputs": [],
+      "evaluated_project_references": [],
+      "evaluated_packages": [],
+      "static_assets": [],
+      "boundary_test_projects": []
     }
   },
   "entries": [
@@ -6094,7 +6106,7 @@
     {
       "identity": "src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
       "path": "src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj",
-      "sha256_lf": "89070bcb7000f1d714714ae5568dbc4cbf9421b550c52433d6411fe41cc2ef0b",
+      "sha256_lf": "3e14371e5b3cf8e394e2edc97a9f8092fc84991600eb9888aec7e34da7c7b2eb",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -6238,7 +6250,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Lifetime.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Lifetime.cs",
-      "sha256_lf": "06ebdd2d1826922434d9c10aa356edbce1a5717fa4de1d750cb431711d570aee",
+      "sha256_lf": "c8649d772e2114f641638a0073bf3ddae880b201915b9566bc6452267c138f8e",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout, CanDoItAll.Web.Components.Layout.NavigationRead",
@@ -6258,7 +6270,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
-      "sha256_lf": "5c03a3ae7118a3b14a5f5f650aae20294cbc7c0aac23cffeda1a2e410934b659",
+      "sha256_lf": "b0e9f822fd7c689334c7552aaa8d243178dffe07d1a6a42325e0ddeaa32e1af7",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6278,7 +6290,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
-      "sha256_lf": "1c8ebca231ffb007a31e22306376807fc31ac2e308b306987edcae27aa24933f",
+      "sha256_lf": "09a9917172875163cbf93f74d12cda4ba6551ef4f5e93f11cb8a2a8bc994a95f",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6491,7 +6503,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Routes.razor",
       "path": "src/App/CanDoItAll.Web/Components/Routes.razor",
-      "sha256_lf": "92973f1aa64f1c6630bd135f89131401c7b6dc12bf3c5a1e72dfa9dd3c3a8b05",
+      "sha256_lf": "7043d5ff21c0302f6f7b2196dccaa51e4162f800054b008c44965407ffa4d9a5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Routes",
@@ -9483,7 +9495,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
-      "sha256_lf": "46482a86b948ff3b905409ec5a3cfb1ed71383db803107dc569a70aaa595f8a3",
+      "sha256_lf": "494990a903252e2bb5048117f6d31517090b90ad4521d1c1659b385e4f988e77",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -9501,9 +9513,29 @@
       "rationale": "Evaluated build/import input; no rendering body. Dependency evaluation is recorded separately."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.Url.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.Url.cs",
+      "sha256_lf": "18b091b6de80f68862035ce6bdeffa636102ce0b23307831e753492720899f9f",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
+      ],
+      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Query-trigger partial of the routed page: string [SupplyParameterFromQuery] triggers named by the page's URL codec keys so every owned key re-applies the location; no markup and no rendering body."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
-      "sha256_lf": "9c49809b71e08188927325810df6f7ef0789f108d26ca1b1caea7c0dbddb3e2f",
+      "sha256_lf": "8fad1fc21bafb183e71af30d611a80c400772981c7c080a238e313b6961c0f13",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9538,7 +9570,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
-      "sha256_lf": "0580fd4f4736f5a5c93259b5c5001ce441d6d3ec905cbcb30aa887f13cc1f05f",
+      "sha256_lf": "7310e007c45e230d4e83bb9f55196ccb2781b51512f31b73e32d7c4d9a721c80",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9646,7 +9678,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "f15df073e02ac6dd242be8ace8bfe0a652090e5e8b21741df590ab4784c007d6",
+      "sha256_lf": "f739fa450c9de37f1176fb75c4cb27570bd8658a970b987a7564491128dcddcd",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9984,7 +10016,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
-      "sha256_lf": "ba53d387b3450cb7db16a8e1217b2aa556fa3a023c4bea9d9f086237420214e7",
+      "sha256_lf": "c4424aab71cde6691e7f350071578ad042826b9ec32a6837f93b0e969edbabe8",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentProviderProfilesPanel",
@@ -10010,7 +10042,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "sha256_lf": "007040655a606e51c52103a6c52c819c15636a3325ec55166b3ad17bfc04601b",
+      "sha256_lf": "5095a25d9ab1345e172a3fe8047bd0b70ba2ff480f4056d15ad879f615be161c",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentProviderProfilesPanel",
@@ -10342,7 +10374,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor",
-      "sha256_lf": "038ae7a8f86492ef651269db8c3e8621c4354a023f7ca8ef9851b2d493b92e03",
+      "sha256_lf": "f3bd42bcbeea59032f1ac1934225fadbf5ededdfc051530362c2e494db757719",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel",
@@ -10364,7 +10396,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/History/ProviderRequestHistoryPanel.razor.cs",
-      "sha256_lf": "444ddc1658e8d6cb94a5955428b495a63a2daa1e1998412d272a17cf333984a3",
+      "sha256_lf": "ba65de2da89e7358e48b3dbf13cd3bbbd43a32b64f1d2d06a93f96feb2e8f832",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel",
@@ -10968,7 +11000,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/LlmChatsCompatibilityRedirect.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/LlmChatsCompatibilityRedirect.razor",
-      "sha256_lf": "fc2d53471ad4d92ec030d0f54c4da3cab16a6170457ef900e485411055b1ec3c",
+      "sha256_lf": "e9e9c3aae79dd77fcbc9e844ddf875ff42248d2980304f4a2d0d0945a20f0763",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.LlmChatsCompatibilityRedirect",
@@ -10986,9 +11018,29 @@
       "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.Url.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.Url.cs",
+      "sha256_lf": "99a7074f7d45e833bdaf26ecd1a64283a846db478c91c7e7c9b07e9f3cd6645d",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage, CanDoItAll.Modules.AgentFramework.Pages.WorkflowRouteRequest, CanDoItAll.Modules.AgentFramework.Pages.ProjectWorkflowRouteValidation, CanDoItAll.Modules.AgentFramework.Pages.PageOwner",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
+      ],
+      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Query-trigger partial of the routed page: string [SupplyParameterFromQuery] triggers named by the page's URL codec keys so every owned key re-applies the location; no markup and no rendering body."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
-      "sha256_lf": "4b476aa12ba695ebca79af107e202bfeb54940e059881f9661fa23a95fa6925e",
+      "sha256_lf": "3f1b2f2084c3725bb3ec8566243133e57c11c237d73ef688e90dfbbbc03b63aa",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage",
@@ -11022,7 +11074,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "sha256_lf": "4969294c15a958f19f7d800da585283509351523bdef23b794e6c961b6a5a023",
+      "sha256_lf": "0a853aa2ffb6ef0db482154497826d414fefe14a40aba2996e03a97113243aa6",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage, CanDoItAll.Modules.AgentFramework.Pages.WorkflowRouteRequest, CanDoItAll.Modules.AgentFramework.Pages.ProjectWorkflowRouteValidation, CanDoItAll.Modules.AgentFramework.Pages.PageOwner",
@@ -11146,7 +11198,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj",
-      "sha256_lf": "e05abe84890cacf38f1c2152a879a07563b7173c28549f7fa66e58b31bc65324",
+      "sha256_lf": "85692ad6ecc7b9b1262e27ef650e1e697f5d8bee2a7b3456706076130312cf69",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11188,7 +11240,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Collaboration/Pages/CollaborationHomePage.razor.cs",
-      "sha256_lf": "5bec44c0f47b8d014aa1de6902dffb227ab6dde14fca8a59a34c552076de22f9",
+      "sha256_lf": "d03ffa697953d91e1d59adf12d5ce1e971e712dc87d5d80efd5fa7d6b8b0dddb",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Collaboration.Pages.CollaborationHomePage",
@@ -11248,7 +11300,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj",
-      "sha256_lf": "39d12942ef8fece7863c38af8c7935b8421eaa2477e93aab7e43f0fe97b793a5",
+      "sha256_lf": "8d19d6264016757b13a20b279bf935112032f92d5c9ada640e399bef852eac58",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11445,7 +11497,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.View.cs",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.View.cs",
-      "sha256_lf": "64edb1a3ef07caa093f7167729c0783b50a0a3f209d86d63d6fe3c0011f487ae",
+      "sha256_lf": "93f5ab37766fea618afe0e0e6f74ed5069673ff15aca2e234ff893d32712b974",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrAgentsPage",
@@ -11465,7 +11517,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAgentsPage.razor",
-      "sha256_lf": "9c16b432c27676f9ff1875d556610bc66080dd3c816fe83f4ee35b877d63673e",
+      "sha256_lf": "75381db9c32e13a1149c9e2fef115aa1bef4ddb470409522e84bb3f1a1ab36d8",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrAgentsPage",
@@ -11474,7 +11526,7 @@
       "caller": [
         "/crm-hr/agents"
       ],
-      "native_owner": "AiAgentService AiAgentService; IAiAgentDirectoryQueryService AiAgentDirectoryQueryService; NavigationManager Navigation",
+      "native_owner": "AiAgentService AiAgentService; IAiAgentDirectoryQueryService AiAgentDirectoryQueryService; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService",
       "visual_owner": "AgentChatContextSurfaceProvider, AgentRecruitingEvidencePanel, CrmHrAgentsWorkspaceSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -11510,7 +11562,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAssignmentsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrAssignmentsPage.razor",
-      "sha256_lf": "a9d413735810daea40661dec98b1db9b9768f345e0548e95cfb8251857e48c0e",
+      "sha256_lf": "0d6bff6bda9945050e6e281eae763c44bcebd591024ab247ac3257e72c15c8e7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrAssignmentsPage",
@@ -11519,7 +11571,7 @@
       "caller": [
         "/crm-hr/assignments"
       ],
-      "native_owner": "ProjectWriteAdmissionService ProjectWriteAdmissions; IProjectRecordQueryService ProjectRecordQueryService; ProjectPartyIntegrationService ProjectPartyIntegrationService; IProjectNodeDetailsBridge ProjectNodeDetailsBridge; HrService HrService; CanDoItAll.SharedKernel.IClock Clock; NavigationManager Navigation; NotificationService NotificationService; Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger",
+      "native_owner": "ProjectWriteAdmissionService ProjectWriteAdmissions; IProjectRecordQueryService ProjectRecordQueryService; ProjectPartyIntegrationService ProjectPartyIntegrationService; IProjectNodeDetailsBridge ProjectNodeDetailsBridge; HrService HrService; CanDoItAll.SharedKernel.IClock Clock; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService; Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, CrmHrAssignmentsWorkspaceSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -11543,7 +11595,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.View.cs",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.View.cs",
-      "sha256_lf": "dd2b095b36114a7d4db5c8199110d2f86355e2be0a810100b767ceacc35e66ac",
+      "sha256_lf": "4144e683cb1b63316f6922e21c5015b9e25a0dcefc0335d22c29263d1cb6c816",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrCrmPage",
@@ -11563,7 +11615,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrCrmPage.razor",
-      "sha256_lf": "168facb1bc472a2e38a10aa0c13515142d80234b23178f4607489c27671fba16",
+      "sha256_lf": "6a81a783f0d72c50e5cf78b32a4dc80e08f8318be1a171375c936d7d73d2c35c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrCrmPage",
@@ -11572,7 +11624,7 @@
       "caller": [
         "/crm-hr/crm"
       ],
-      "native_owner": "CrmService CrmService; ProjectWriteAdmissionService ProjectWriteAdmissions; IPartyRecordQueryService PartyRecordQueryService; IAgentChatLauncher AgentChatLauncher; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrCrmPage> Logger",
+      "native_owner": "CrmService CrmService; ProjectWriteAdmissionService ProjectWriteAdmissions; IPartyRecordQueryService PartyRecordQueryService; IAgentChatLauncher AgentChatLauncher; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService; ILogger<CrmHrCrmPage> Logger",
       "visual_owner": "AccountSummaryPanel, CrmAgentChatContextProvider, CrmFinancialsPanel, CrmHrCrmWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
       "descendants": [
         "AccountSummaryPanel",
@@ -11599,7 +11651,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.View.cs",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.View.cs",
-      "sha256_lf": "0596000378a6065c17483b70ea891b4fc969d8970e36a227fcfb231a0e1407fc",
+      "sha256_lf": "624b261c743d11c00787dcb0d0708b36d1885fc1284b8adb9c8ce91a9e2fecc1",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrDirectoryPage",
@@ -11619,7 +11671,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrDirectoryPage.razor",
-      "sha256_lf": "1d20429b2722f79c19c8dab7ca3af29c86de79ec3cb70a85be0d38cce7485294",
+      "sha256_lf": "ef2f1b2303452d2fe3474f749453e859a3824517df3ca23d8811aeee20978b45",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrDirectoryPage",
@@ -11628,7 +11680,7 @@
       "caller": [
         "/crm-hr/directory"
       ],
-      "native_owner": "PartyDirectoryService PartyDirectoryService; PartyDirectoryManagementService ManagementService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrDirectoryPage> Logger",
+      "native_owner": "PartyDirectoryService PartyDirectoryService; PartyDirectoryManagementService ManagementService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService; ILogger<CrmHrDirectoryPage> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, CrmHrDirectoryWorkspaceSurface, CrmHrSecondaryTabs, InteractionTimeline",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -11653,7 +11705,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrHomePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrHomePage.razor",
-      "sha256_lf": "9e069e6bebc2e88810174159f9e6d3ef5d3f684b2371ceb2d625daa356674ad1",
+      "sha256_lf": "50173a579c01e9e6fdb57fd94301c98977c5adde4404acc1ce9d49420acd241c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrHomePage",
@@ -11686,7 +11738,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.View.cs",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.View.cs",
-      "sha256_lf": "bd06116d9f1c203ad417e5c46af946625a82ed51332ceefb92c4745c42800b89",
+      "sha256_lf": "ba13899b4607b03e553d3e2ef9943e625e7f16ef84c07e923ab80b608a37009d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrRecruitingPage",
@@ -11706,7 +11758,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrRecruitingPage.razor",
-      "sha256_lf": "19cf67ac17f66b52ba736fe842dc7cf227599ca55cc768ef64815551f50db92a",
+      "sha256_lf": "e758c5bab0d8af6635c5dd67025935a1744a20f73fd127e994082c3f194d8e19",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrRecruitingPage",
@@ -11715,7 +11767,7 @@
       "caller": [
         "/crm-hr/recruiting"
       ],
-      "native_owner": "RecruitingService RecruitingService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrRecruitingPage> Logger",
+      "native_owner": "RecruitingService RecruitingService; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService; ILogger<CrmHrRecruitingPage> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, AgentRecruitingEvidencePanel, CrmHrRecruitingWorkspaceSurface, CrmHrSecondaryTabs",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -11740,7 +11792,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.View.cs",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.View.cs",
-      "sha256_lf": "0ca15f1d965bb41fc9db458609ad56e125e7b3b420e9f1e105c2017bf26a95db",
+      "sha256_lf": "80d073cac067e583710834fdeea3ec4884b8704f21f44a71b7c8cf3ee87b0e21",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrWorkforcePage",
@@ -11760,7 +11812,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/Pages/CrmHrWorkforcePage.razor",
-      "sha256_lf": "fcbdc3bb46935551fa0f0cd7a72b39e09b65c6ea63d50c684a1ffcd3c3d6366f",
+      "sha256_lf": "aa2f7464f1de950880f441a271b52176ff6a3f9eea7145d0fa36902e5fcc729a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr.Pages.CrmHrWorkforcePage",
@@ -11769,7 +11821,7 @@
       "caller": [
         "/crm-hr/workforce"
       ],
-      "native_owner": "HrService HrService; PartyDirectoryService PartyDirectoryService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; NotificationService NotificationService; ILogger<CrmHrWorkforcePage> Logger",
+      "native_owner": "HrService HrService; PartyDirectoryService PartyDirectoryService; IPartyOrganizationAffiliationService AffiliationService; NavigationManager Navigation; IAppNavigationHistory History; NotificationService NotificationService; ILogger<CrmHrWorkforcePage> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, CrmHrSecondaryTabs, CrmHrWorkforceWorkspaceSurface, InteractionTimeline",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -11794,7 +11846,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.CrmHr/_Imports.razor",
       "path": "src/Modules/CanDoItAll.Modules.CrmHr/_Imports.razor",
-      "sha256_lf": "4bb37bd2db52652004499ee1cd1510c965579d8bc7f7d2cb8f11c2347a0b6edc",
+      "sha256_lf": "7d3f1f6e946b247ca6e642ce42170b0fc27a8fea9a08916c6a0bc4e245d8b557",
       "kind": "IMPORT",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.CrmHr._Imports",
@@ -11834,7 +11886,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Memory.Presentation/CanDoItAll.Modules.Memory.Presentation.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Memory.Presentation/CanDoItAll.Modules.Memory.Presentation.csproj",
-      "sha256_lf": "7f725c4a7cae2f45d1fc5fe97659a852d0d86541c6e0145de892f317aa0d0384",
+      "sha256_lf": "f66dfd63fce514ca530d723e926608b78595e8a12272bd1dc4a1316ba5ec01be",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11854,7 +11906,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj",
-      "sha256_lf": "7bf1319b0ec5a40022649e90bbcdae2b28c702d48973813d52dca4e5f78a5a46",
+      "sha256_lf": "f8d442ff410d28349e06b34bce5d3474428cdbd671de1be91a9c6776343fb325",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11874,7 +11926,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Memory/Pages/MemoryProvidersPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Memory/Pages/MemoryProvidersPage.razor",
-      "sha256_lf": "36e8c470e5f29e0bce7706e4062d22cc0f88632c5c3d30d742fdbfa3b0a44fc8",
+      "sha256_lf": "2e82764c310b1197e22bc1e79466c9fc4143f502efc75774fa9a944f8b7f5f77",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Memory.Pages.MemoryProvidersPage",
@@ -11883,7 +11935,7 @@
       "caller": [
         "/memory"
       ],
-      "native_owner": "MemoryProvidersPageController Controller",
+      "native_owner": "MemoryProvidersPageController Controller; NavigationManager Navigation",
       "visual_owner": "MemoryWorkspaceSurface",
       "descendants": [
         "MemoryWorkspaceSurface"
@@ -11936,7 +11988,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Plugins.Presentation/CanDoItAll.Modules.Plugins.Presentation.csproj",
-      "sha256_lf": "3b160fb0cef7727ee7c8b0b5f79a3e873be456bceb81a51dec02db56f0f24e0f",
+      "sha256_lf": "6e64755cccbe16c327a2cd52b7bd1cd45e2294643a52462f9f0f7f1a65cc90cb",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11956,7 +12008,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj",
-      "sha256_lf": "a1adf710dcbcbaf3700d7fc6cefc0158d7b5e3dadcf000f24d851c04865740e2",
+      "sha256_lf": "9d44d5f2eec10b416f36726068d6b43389615d597c576982cf911aef1278d0ca",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -11976,7 +12028,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor",
-      "sha256_lf": "15c475531623ff886ddfe27d759da29770cf1580ddf99ad1f1a22bd123b30249",
+      "sha256_lf": "d174a6a09e230863c260567c01b4e66bfafb59698de8697da4468d80b5796c0b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Plugins.Pages.PluginsPage",
@@ -11985,7 +12037,7 @@
       "caller": [
         "/plugins"
       ],
-      "native_owner": "PluginWorkspaceSession Session; NavigationManager Navigation; IJSRuntime JsRuntime",
+      "native_owner": "PluginWorkspaceSession Session; NavigationManager Navigation; IJSRuntime JsRuntime; IAppNavigationHistory History",
       "visual_owner": "PluginsWorkspaceSurface",
       "descendants": [
         "PluginsWorkspaceSurface"
@@ -11996,9 +12048,29 @@
       "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor.cs",
+      "sha256_lf": "6be377b08b07773b3d59b7ee87df032226048c4bce12a113e194f4ee43bcec53",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Plugins.Pages.PluginsPage",
+      "project": "src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.Modules.Plugins"
+      ],
+      "native_owner": "PluginWorkspaceSession Session; NavigationManager Navigation; IJSRuntime JsRuntime; IAppNavigationHistory History",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.Plugins",
+      "scenario": "CanDoItAll.Modules.Plugins",
+      "evidence": "CanDoItAll.Modules.Plugins",
+      "rationale": "Code-behind of the routed page: URL-state binding, route intents and their fences; markup and rendered descendants are reviewed on the page's .razor row."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj",
-      "sha256_lf": "cdafc299eb4e942b221b30f126aae0da914905e67e274c1b865d164aa5dfef50",
+      "sha256_lf": "067f572a6a9ee57c533cb7a44f77e32f235192dc57f04a4bc557cf300667a2cf",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12018,7 +12090,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor",
-      "sha256_lf": "268508315d636ada0fe72a1206e4778e6f4fea8ed889e0d3f7711f7c9264d8b0",
+      "sha256_lf": "2d53804cb38f2b2a493131207276560eadd9b9aa03c14b935cc4eaf6e7db3b3c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.LiveProcessesDashboard",
@@ -12027,7 +12099,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor"
       ],
-      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; ProcessWorkspaceMockProjectionFactory MockProjectionFactory; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; NotificationService Notifications; TooltipService TooltipService; IJSRuntime JsRuntime; IDatabaseRuntimeState DatabaseRuntimeState; TimeProvider TimeProvider; ILogger<LiveProcessesDashboard> Logger",
+      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; ProcessWorkspaceMockProjectionFactory MockProjectionFactory; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IAppNavigationHistory NavigationHistory; NotificationService Notifications; TooltipService TooltipService; IJSRuntime JsRuntime; IDatabaseRuntimeState DatabaseRuntimeState; TimeProvider TimeProvider; ILogger<LiveProcessesDashboard> Logger",
       "visual_owner": "AgentChatContextSurfaceProvider, LiveProcessesSurface, ProcessRunCancellationAction, ProcessRunFilesDialog",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -12114,7 +12186,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
-      "sha256_lf": "f31d46264dbc19aa5eb6376d4123177f4c7cd22775f6ae97fbdeb14926b5db84",
+      "sha256_lf": "1ae0d232861684f9cf9c803687d36c34447402b85d9a3205d893158b66f12b72",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.ProcessWorkspaceShell",
@@ -12124,7 +12196,7 @@
         "src/Modules/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
         "src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor"
       ],
-      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; IServiceProvider Services; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IJSRuntime JsRuntime; ILogger<ProcessWorkspaceShell> Logger; IDatabaseRuntimeState DatabaseRuntimeState; IDatabaseSwitchNotificationService DatabaseChanges; TimeProvider TimeProvider; IAgentChatExecutionOrchestrator ChatExecutionOrchestrator",
+      "native_owner": "IProcessWorkspaceProjectionClient ProjectionClient; IServiceProvider Services; ICurrencyFormatter CurrencyFormatter; NavigationManager Navigation; IAppNavigationHistory NavigationHistory; IJSRuntime JsRuntime; ILogger<ProcessWorkspaceShell> Logger; IDatabaseRuntimeState DatabaseRuntimeState; IDatabaseSwitchNotificationService DatabaseChanges; TimeProvider TimeProvider; IAgentChatExecutionOrchestrator ChatExecutionOrchestrator",
       "visual_owner": "AgentChatContextSurfaceProvider, ChatWorkspacePanel, ProcessWorkspaceSurface",
       "descendants": [
         "AgentChatContextSurfaceProvider",
@@ -12148,7 +12220,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/LiveProcessesPage.razor",
-      "sha256_lf": "4dd2cdf8dcacd70c89447a8a216c985d16f33faffef9a9c0c838704c70cb4e57",
+      "sha256_lf": "227a4cb314b1d0190fb4a229b097f58495c5288fd2b40152c8f09478f17e4e64",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.Pages.LiveProcessesPage",
@@ -12171,7 +12243,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor",
-      "sha256_lf": "2561e07b0ce3b6c69d1ed23ba25000081d41481fa72f5bf97f6167c3dc125bfb",
+      "sha256_lf": "10f62e935fb41e26f10e8702bfef6142b0f63e36149990a1d3deced44ca5b848",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.Pages.ProcessesPage",
@@ -12193,7 +12265,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor",
-      "sha256_lf": "cda9f666a593894bbbd3fc5bbf052361a5b5d49579273ef04ac3be7893068a18",
+      "sha256_lf": "eb16cc7254b57ea811b10c237ecd5deb7bcff30ae3c78b61046485f0cf654506",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Processes.Pages.ProjectProcessesPage",
@@ -12255,7 +12327,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
-      "sha256_lf": "624b7a9e9c8545e3bbb3fa6b054f87d381351f2df3e98a6e32f9ca682b2eee7c",
+      "sha256_lf": "b93d0c0d1413518476bfc63e858004d9aa71853e8fb9caad8911174c4b93b396",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12366,7 +12438,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "sha256_lf": "33c873c9948724434eb3355ed1e2a3cb58397f432cbdb1f946710de6bc35d49e",
+      "sha256_lf": "91304b09eb57b4d847e6f066ff554759e226b2a7adb7c0647424455769515547",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
@@ -12375,7 +12447,7 @@
       "caller": [
         "/projects"
       ],
-      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation",
+      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History",
       "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard",
       "descendants": [
         "ProjectDeletionStatusSurface",
@@ -12443,7 +12515,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj",
-      "sha256_lf": "b7e03f77e6ee5af85a1710832e5a36ac120d698d14a6dc6a78c728ed84a552b1",
+      "sha256_lf": "ff9bbd153e79b93c7f5f121de7e159dfefe49484948da4cec78231cd0085c41c",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12552,7 +12624,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.Prompts/Components/PromptGallerySearchHost.razor",
-      "sha256_lf": "8575298a45f3cd51fc79233dab28b2f1248856de9b8e869207c409ed6e0ebc8b",
+      "sha256_lf": "95d75efe36ea73ee58f47d95639652e31f4fe3a1c666c5e5979304bde38cf88d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Prompts.Components.PromptGallerySearchHost",
@@ -12575,7 +12647,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Prompts/Pages/PromptGalleryPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Prompts/Pages/PromptGalleryPage.razor",
-      "sha256_lf": "dea0c8a24bfddace55728f7bae42301a5ba5697abfef94249a35fb6fba41f3a4",
+      "sha256_lf": "2261728725795f8781f7b3b6ffeabd2cdb53ad35e31c44a36c662012d3103e10",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Prompts.Pages.PromptGalleryPage",
@@ -12584,7 +12656,7 @@
       "caller": [
         "/prompt-gallery"
       ],
-      "native_owner": "IPromptGalleryCuratorLauncher CuratorLauncher; NotificationService Notifications",
+      "native_owner": "IPromptGalleryCuratorLauncher CuratorLauncher; NotificationService Notifications; NavigationManager Navigation; IAppNavigationHistory History",
       "visual_owner": "AgentAvatarActionButton, Dialog, PromptGalleryItemEditorHost, PromptGallerySearchHost",
       "descendants": [
         "AgentAvatarActionButton",
@@ -12660,7 +12732,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj",
-      "sha256_lf": "ca76c147837305a021b5ba87335d4936c2011ce98c0fc4204fff2c38cce81294",
+      "sha256_lf": "a2ab15b49579e3b4eb80e036800bcdb9671bdf6971b3e6c1895c053125e64d2e",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12680,7 +12752,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
-      "sha256_lf": "672ff2a5257ff97ddd559c97d0ae3b95ea3b45a9d728151b974ca68c6edba001",
+      "sha256_lf": "9194b42ed77993fefa8f1ef527d33b0913c32079dfd28bdf9324bbbe4a0f40f5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Resources.Pages.ResourcesPage",
@@ -12703,7 +12775,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor.cs",
-      "sha256_lf": "7414a121213173ad6ca9db62a1fdd12f927cb31b413dc1bcfc930e4d53a8318d",
+      "sha256_lf": "600e9e3b5fb0e1cfa0b6b0abdc010e88e36d21643d910c66ec9cf9180f3f27c9",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Resources.Pages.ResourcesPage",
@@ -12783,7 +12855,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
       "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj",
-      "sha256_lf": "24d3ee90b9b443f64e3b3370980d3f706d1d471cd66260aecccb21667e7b1dfd",
+      "sha256_lf": "7eec497ac83db9394ffa1209f30eb1563da7335deaea5c65f7a8682ac9927b33",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12803,7 +12875,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.SchedulerPlanner/Pages/SchedulerPlannerPage.razor",
-      "sha256_lf": "03cc228a4c8c315fd687c546f0a48aab6a38d046efef6999e1085f0a51918cdd",
+      "sha256_lf": "b11cd840b8c953d7ba52056687c18d589668b97d7e621a772be5d7c5e875101a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.SchedulerPlanner.Pages.SchedulerPlannerPage",
@@ -12812,7 +12884,7 @@
       "caller": [
         "/scheduler"
       ],
-      "native_owner": "SchedulerWorkspaceSession Session; IAgentFrameworkWorkspaceService AgentWorkspaceService; IAgentChatLauncher AgentChatLauncher; NotificationService Notifications",
+      "native_owner": "SchedulerWorkspaceSession Session; IAgentFrameworkWorkspaceService AgentWorkspaceService; IAgentChatLauncher AgentChatLauncher; NotificationService Notifications; NavigationManager Navigation; IAppNavigationHistory NavigationHistory",
       "visual_owner": "AgentAvatarActionButton, AgentChatContextSurfaceProvider, SchedulerWorkspaceSurface",
       "descendants": [
         "AgentAvatarActionButton",
@@ -12887,7 +12959,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj",
       "path": "src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj",
-      "sha256_lf": "8fe9dbc9f1b13e7dd90a5257364a857fee9f97147ae8a91580d153fb511e8352",
+      "sha256_lf": "16cbed5fceb03a9328f40d4f1e8ca8346aababa7c86ebd2864f0d6d4b2a5f637",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12907,7 +12979,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.TestLab/Pages/TestLabPage.razor",
-      "sha256_lf": "5c54fbf680839ec52f6a39be2ad77fe6109c6dd662f8cf2b56c89d90e88235a8",
+      "sha256_lf": "3ce6383d5d0db7846556c24e062cff89ecae2619aa12ca2dcd3268a1245b3beb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.TestLab.Pages.TestLabPage",
@@ -12916,7 +12988,7 @@
       "caller": [
         "/test-lab"
       ],
-      "native_owner": "ITestLabWorkspaceOwner Owner; NotificationService Notifications; ILogger<TestLabWorkspaceSession> Logger",
+      "native_owner": "ITestLabWorkspaceOwner Owner; NotificationService Notifications; NavigationManager Navigation; ILogger<TestLabWorkspaceSession> Logger",
       "visual_owner": "TestLabWorkspaceSurface",
       "descendants": [
         "TestLabWorkspaceSurface"
@@ -12989,7 +13061,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
-      "sha256_lf": "7b5e1f39c7a0e5bb88932348ef7ff4a3e9efbcb77619c76306b2bd77aa81d10c",
+      "sha256_lf": "426aeff896968e5d00ff092307385daa189b4f6774b781e507c3bfcf3a2ad3a5",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -13532,7 +13604,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectCalendarPage.razor.cs",
-      "sha256_lf": "593f7e84ba74a6cc4ab77c0b67dbb68a10079af3f310d1ecb2c7454ecf740dc2",
+      "sha256_lf": "c094859606188e545178031d0c6dc1f141d4be0045bf9818239c0cf5ae3e51cf",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectCalendarPage",
@@ -13592,7 +13664,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.AgentWindows.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.AgentWindows.cs",
-      "sha256_lf": "d2731c9cd455995645a813d6e92f06433736267d373c79dac9e3bef8343e1e79",
+      "sha256_lf": "c328071b4e8c1a32b6e8dd8fb84772f7552cb5e734f6bbdf1257b671def92315",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -13632,7 +13704,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "11bca97295f08678fc864f484edae84ad44c3a908d603c287e019e2fad4e0f58",
+      "sha256_lf": "bf2b9475806eb08bd52791c515d6969b856e111dffc74effc8ad0eee1dd01752",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -13772,7 +13844,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
-      "sha256_lf": "ab524f2f0e3f9c14aea3d5efcb5bc7df51b1f14156de42ce6531dc64b379b7b2",
+      "sha256_lf": "6ed757604ce3bc295d4911fbb759cf51e66d1ce55909eb20225ab2058bea263a",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureInspectorAction, CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeEditModel",
@@ -13872,7 +13944,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Processes.cs",
-      "sha256_lf": "b533205e1497b1aaa2f99eec290dafa7699b3b367cff7d468c646a91101a4452",
+      "sha256_lf": "25c5e2bd86c67aa5bbfc6e137dadffe61cc1c4d576c3198a5da5ddbb41ec9417",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProcessLinkReceipt, CanDoItAll.Modules.Workbench.Pages.ProjectStructureProcessStartAgentMetadata",
@@ -14152,7 +14224,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "4b4c8dd20441c587bc83c513617a3cc53a4f0a08f5e8244e830e0eecc9889b95",
+      "sha256_lf": "922f231ee4b99bfdb93117c64ba6218188cb80c063c7af8a32d69bbcd2ff0f03",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14420,7 +14492,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj",
-      "sha256_lf": "69e54b92cad6b0964de0d5907a89d62823d0c12689fa48dfb03f977aca29efc8",
+      "sha256_lf": "fb0030a4a5c0f8934960f92ef77ce53b9f21a6d1c21909d12488e8d5a48e49b6",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -14482,7 +14554,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/DatabaseSourcesSettingsPanel.razor",
-      "sha256_lf": "2f66f72f4322edc8de513dffd05cf474ba0e350280ddfa5b446916c8ca0e9e3b",
+      "sha256_lf": "72ea4ff198fd4445487f11ad1985f351b0002552377487f182fb1aed7e7fa2ae",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.Components.DatabaseSourcesSettingsPanel",
@@ -14591,7 +14663,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/StorageSettingsPanel.razor",
-      "sha256_lf": "566bd6b28d62a382e4f97776bde4efb70add72a04919dac8a3d1a730830ccb7d",
+      "sha256_lf": "8ad1d75f55dc3d538ee42be96b9a9732f48475a9c6a35dd7f92261e8ee9342c2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.Components.StorageSettingsPanel",
@@ -14614,7 +14686,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/WorkspaceApiAccessHost.razor",
-      "sha256_lf": "e865a135e8927f820b6a66193e7c0bc98e92f70d51817433b26db9f25d7620e9",
+      "sha256_lf": "5e7c5712f88120508c8198856f35d760da0273709fc39ccee4c89d38eb89326a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.Components.WorkspaceApiAccessHost",
@@ -14636,7 +14708,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
-      "sha256_lf": "8cf39fb5239d4fccf7508b557e7455cec47a44b845744ef2c17c949c2b7e175c",
+      "sha256_lf": "8bea567167452c8e0d93c5297ee13e033c21f7b8a41447a89cd2a908597a6e3f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.SettingsPage",
@@ -14662,7 +14734,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
-      "sha256_lf": "e51658a235de065932fffbae1e9058a2611bff84baf2093bd41ec64a34b24293",
+      "sha256_lf": "4af23cd9abd0d33b2f0547bff77bf47a409e5f110b2054bde2c639e71011056d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.SettingsPage",
@@ -17817,7 +17889,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Components/CrmHrAgentsWorkspaceSpecimen.razor",
       "path": "src/Sandboxes/CanDoItAll.CrmHr.UiSandbox/Components/CrmHrAgentsWorkspaceSpecimen.razor",
-      "sha256_lf": "6a666782af15aea3cbacc6e751c0d66c0f793643d93d38d49113dcfc83a0bcc5",
+      "sha256_lf": "cf432a406bf256a0f60cf1aea2e0f5941d49fff0e6bea1e015dc1200151bcaf1",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.CrmHr.UiSandbox.Components.CrmHrAgentsWorkspaceSpecimen",
@@ -19202,7 +19274,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
       "path": "src/Sandboxes/CanDoItAll.Projects.UiSandbox/Components/Projects.razor",
-      "sha256_lf": "c97dd1a21d2bf4de1cc39aec88292b9c3987b8077072dc13196aa1124c489cc5",
+      "sha256_lf": "c8cefeb76cb52daee53e44d813c0fd10a7584b5de60c18c7ef6e1bcc30839454",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.Projects.UiSandbox.Components.Projects",
@@ -24541,7 +24613,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor",
-      "sha256_lf": "cfcd90f040027ce6962bae352394846239aab439066392ac3bed06fdb6741e67",
+      "sha256_lf": "152064694e2ac142684035a8e16020ef89a33e56b408ee025d590c95bedfb54a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Providers.UI.ProviderProfilesSurface",
@@ -24566,7 +24638,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.Providers.UI/ProviderProfilesSurface.razor.cs",
-      "sha256_lf": "81fd6f0591271aff388cd4282f90737ccf345a603e621c9c9138404a1d6618f2",
+      "sha256_lf": "4f01f0f317e140691d9e9d47bbde974746066d4213807f5319c5d5795836196d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Providers.UI.ProviderProfilesSurface",
@@ -25690,7 +25762,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryWorkspace.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/History/ProviderHistoryWorkspace.razor.cs",
-      "sha256_lf": "678b89a61e73127220ac41eb8ba53a631ea1e29d25ac798086e3a8d8446c7a1a",
+      "sha256_lf": "d5fb03ebfd3e712fbb55b18da858df9235f2f2a87778e6efd31d41ff21e5cce2",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.History.ProviderHistoryWorkspace, CanDoItAll.AgentFramework.UI.History.DetailSelection",
@@ -26642,6 +26714,26 @@
       "rationale": "Razor compile imports only; no component body."
     },
     {
+      "identity": "src/UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj",
+      "path": "src/UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj",
+      "sha256_lf": "a90d172918deb2a23cb054fe2861cbee93187f04e45bcb13cebe468b376a4c70",
+      "kind": "BUILD",
+      "role": "PRODUCT",
+      "type": "Not a component type",
+      "project": "src/UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj",
+      "classification": "NON_RENDERING",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.AppComponents.Navigation"
+      ],
+      "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.AppComponents.Navigation",
+      "scenario": "CanDoItAll.AppComponents.Navigation",
+      "evidence": "CanDoItAll.AppComponents.Navigation",
+      "rationale": "Build input; no rendering body. Dependency direction is recorded in the project README and boundary tests."
+    },
+    {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj",
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/CanDoItAll.AppComponents.RecordBrowsing.csproj",
       "sha256_lf": "b8b0d834e891e794528167311fda97fd4f0c9fcf66f0b8b2f82904f9adcf16d1",
@@ -26684,7 +26776,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor",
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor",
-      "sha256_lf": "91b365ac11c8e4279140defbc992dab3b153e0f5f0355055a4a5d41099a17428",
+      "sha256_lf": "6d7ce3533224ba9e66d095a8e379476342ce1ecb46e02e04da09bd921a4106bc",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.PagedRecordBrowser",
@@ -28498,7 +28590,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
-      "sha256_lf": "052665bb33f88cbf6adef9a2d0804d5c8332f0a2f86097571d8a153f41a26554",
+      "sha256_lf": "0539e0d17ebc2f8d725c0157726238b279ef41d8d99fd39411babdf7aee64703",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Agents.CrmHrAgentRecordDialog",
@@ -28520,7 +28612,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentsWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentsWorkspaceSurface.razor",
-      "sha256_lf": "ce0533d2d5a9d9caf19786ac3facd83b95346298a0ba2296f1ee0d7f8d835455",
+      "sha256_lf": "b3fb54e10a580d27d2f5d2f7e070728132a6aa815f56806aad50aac86bac8a8e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Agents.CrmHrAgentsWorkspaceSurface",
@@ -28778,7 +28870,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Crm/CrmHrCrmWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Crm/CrmHrCrmWorkspaceSurface.razor",
-      "sha256_lf": "8a96fa54cb8571e7dbc86ad604260ce1e5efcc9b0f5196af8b6b60f7d67355e3",
+      "sha256_lf": "562bbf416d871855dde5451849a0a047ec2e1a46ad807d6ec9c2d8c17fcb4c2d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Crm.CrmHrCrmWorkspaceSurface",
@@ -29081,7 +29173,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Parties/CrmHrDirectoryWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Parties/CrmHrDirectoryWorkspaceSurface.razor",
-      "sha256_lf": "859e313aab5744e9629468b20299f0afb0485139f071527fc637610333a3bb97",
+      "sha256_lf": "179082dafdb72ffe8642eb3079bd1a2d33041a86091915abe92be9701876f74b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Parties.CrmHrDirectoryWorkspaceSurface",
@@ -29290,7 +29382,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Pickers/PartyRecordBrowser.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Pickers/PartyRecordBrowser.razor",
-      "sha256_lf": "916fcaebfe8be6abbfea71f437be1dda0ff2dc4f4d176e94b7823e6543aa0079",
+      "sha256_lf": "172ce2ecf9ceec72c70931f8f6c74fcf6a8c1cb881b6276c299fdaf9cb092184",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Pickers.PartyRecordBrowser",
@@ -29439,7 +29531,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Pickers/WorkforceRecordBrowser.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Pickers/WorkforceRecordBrowser.razor",
-      "sha256_lf": "4f0da9bd56105453e44128920bf7b7f669d8f4a16fb996eb2547d258337054e0",
+      "sha256_lf": "866f9caa2c7587dba33ba3532a481b3404c441f2d3a11beb628604f410bad96f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Pickers.WorkforceRecordBrowser",
@@ -29508,7 +29600,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Recruiting/CrmHrRecruitingWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Recruiting/CrmHrRecruitingWorkspaceSurface.razor",
-      "sha256_lf": "b0e63bd6532c0692e7356f4d47023ed678c8127ad8f9ce7352aa0e3f497c5a5a",
+      "sha256_lf": "226c2d5e924cffac841f367f604a3d14c6daf3cdcc3d6ce1f0e0301037c1e6b6",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Recruiting.CrmHrRecruitingWorkspaceSurface",
@@ -29691,7 +29783,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Workforce/CrmHrWorkforceWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Workforce/CrmHrWorkforceWorkspaceSurface.razor",
-      "sha256_lf": "30953453f496664f20306bcebe522d3ca3cd5aa5f056e8ab40e296bb8c340ad5",
+      "sha256_lf": "77dc0bcda78a4c6560281bcaafded0468d0191236004c468568e338a96339b88",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Workforce.CrmHrWorkforceWorkspaceSurface",
@@ -30763,7 +30855,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor",
-      "sha256_lf": "52ed79b61cc9b93de878e9bcd579f9216d5ee94aad4b3d34fd482d8e4041e153",
+      "sha256_lf": "a7448447d9887c5cdbb20cf6f8b15d0ec89d3d8efc99022d3641b5d14dfe71e4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.LiveProcessesSurface",
@@ -31037,7 +31129,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor",
-      "sha256_lf": "305025b0e3924bb0952f5fb09661d705c37b04e0d0a897566b17cc95bc00f947",
+      "sha256_lf": "14f4127c48df4ef777208e0fee0165f755e76bcb10de086b65e58b2e3b2000f3",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.ProcessWorkspaceSurface",
@@ -31323,7 +31415,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
-      "sha256_lf": "2756c98e9994276cf259f08a7c2945f37b7e3ffa93c4c6b9f7881b7d06d3dec8",
+      "sha256_lf": "bf82441f0ce8d76422cc490897a2cf4b30283b79eb725069139e6381b97aa07d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.UI.ProjectsBoard",
@@ -31696,7 +31788,7 @@
     {
       "identity": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
-      "sha256_lf": "c6f8dc605be8f901fd224b2692f955ca70f3dfe947f4aaab9be7cb7b201b5f86",
+      "sha256_lf": "d320f398f3da134997f0150dad8a9a1cc525a1cad177e6a1048489c2e679e3a5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Resources.UI.ResourcesWorkspaceSurface",
@@ -31863,7 +31955,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerHistory.razor",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerHistory.razor",
-      "sha256_lf": "ef027b764255483a5cc8a5773ea888740732a0d8ed2b827452ba3eec45632ab9",
+      "sha256_lf": "164db65b818b2dc2870a0eac17870c4157f3b3d6e46403975ba6e41b58a4ef93",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.SchedulerPlanner.UI.SchedulerHistory",
@@ -31903,7 +31995,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerSchedules.razor",
-      "sha256_lf": "d8542aa38797fc5db9f937989d0dcd1c0ee4e57954d28a802be24c208053e51b",
+      "sha256_lf": "42c8b10d09c170b9529f47508b48984e3a512ca46412350b67a44ec9b6406719",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.SchedulerPlanner.UI.SchedulerSchedules",
@@ -31985,7 +32077,7 @@
     {
       "identity": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.SchedulerPlanner.UI/SchedulerWorkspaceSurface.razor",
-      "sha256_lf": "3e5409263bb97d6f11bcd8888a8ad32135d0bcdb086dfb2c17cb4462c56daad3",
+      "sha256_lf": "d409641f82681d421261949b29588566e2f1907b82a842b7d8130b977613ed06",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.SchedulerPlanner.UI.SchedulerWorkspaceSurface",
@@ -32093,7 +32185,7 @@
     {
       "identity": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.TestLab.UI/TestLabWorkspaceSurface.razor",
-      "sha256_lf": "d979a7fda93a2fdb6b843a10ac0b216b797454011d83ff10fa56f48b99802781",
+      "sha256_lf": "23be6488d831c9eb5e117ea7867480717735cdb7af22fb7a72f460ea9abb5f5d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.TestLab.UI.TestLabWorkspaceSurface",

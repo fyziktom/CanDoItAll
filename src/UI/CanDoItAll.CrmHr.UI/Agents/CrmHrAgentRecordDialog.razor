@@ -24,7 +24,7 @@
             }
             else
             {
-                <Tabs SelectedIndex="@selectedTabIndex"
+                <Tabs SelectedIndex="@((int)Section)"
                       SelectedIndexChanged="HandleTabChangedAsync"
                       RenderMode="TabRenderMode.Server"
                       Variant="TabsVariant.WorkspaceSecondary"
@@ -219,10 +219,16 @@
 
     private Guid? renderedPartyId;
     private IReadOnlyList<string> visibleTags = [];
-    private int selectedTabIndex;
 
     [Parameter]
     public bool IsOpen { get; set; }
+
+    // The selected section is the host's state; the dialog renders it and raises the operator's choice.
+    [Parameter]
+    public CrmHrAgentRecordSection Section { get; set; }
+
+    [Parameter]
+    public EventCallback<CrmHrAgentRecordSection> SectionChanged { get; set; }
 
     [Parameter]
     public bool IsLoading { get; set; }
@@ -266,13 +272,17 @@
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToArray()
             ?? [];
-        selectedTabIndex = 0;
     }
 
     private Task HandleTabChangedAsync(int index)
     {
-        selectedTabIndex = index;
-        return Task.CompletedTask;
+        var section = (CrmHrAgentRecordSection)index;
+        if (!Enum.IsDefined(section))
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), index, "The agent record dialog has no such section.");
+        }
+
+        return SectionChanged.InvokeAsync(section);
     }
 
     private static string ResolveAgentStatusTone(AgentLifecycleStatus status)

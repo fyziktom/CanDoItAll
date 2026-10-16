@@ -27,20 +27,31 @@
             } else {
                 <Tabs SelectedIndex="@((int)Workspace.Tab)" SelectedIndexChanged="index => Workspace.Tab = (SchedulerTab)index" RenderMode="TabRenderMode.Server" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Scheduler planner tabs" data-testid="scheduler-tabs">
                     <TabsItem Text="Calendar" Icon="calendar_month" data-testid="scheduler-tab-calendar"><SchedulerCalendar Workspace="Workspace" Surface="Workspace.Data.CalendarSurface" /></TabsItem>
-                    <TabsItem Text="Schedules" Icon="event_note" data-testid="scheduler-tab-schedules"><SchedulerSchedules Workspace="Workspace" Filters="scheduleFilters" /></TabsItem>
+                    <TabsItem Text="Schedules" Icon="event_note" data-testid="scheduler-tab-schedules"><SchedulerSchedules Workspace="Workspace" /></TabsItem>
                     <TabsItem Text="New schedule" Icon="event_repeat" data-testid="scheduler-tab-new"><SchedulerDraftForm Workspace="Workspace" Draft="Workspace.NewDraft" @key="Workspace.NewDraft.Origin" /></TabsItem>
                     <TabsItem Text="History" Icon="history" data-testid="scheduler-tab-history"><SchedulerHistory Workspace="Workspace" /></TabsItem>
                 </Tabs>
                 <SchedulerTargetPicker Workspace="Workspace" />
-                @if (Workspace.EditorLoading) {
-                    <SurfaceCard><TextBlock Value="Loading the exact plan…" /></SurfaceCard>
-                }
-                @if (Workspace.EditDraft is { } draft) {
+                @if (Workspace.EditDraft is not null || Workspace.EditingPlanId is not null) {
+                    var draft = Workspace.EditDraft;
                     <Dialog IsOpen="true" Title="Edit schedule" Eyebrow="Schedule" Size="ModalSize.Wide" DenseChrome="true" TestId="scheduler-edit-dialog" OnClose="Workspace.CloseEdit">
-                        <ChildContent><SchedulerDraftForm Workspace="Workspace" Draft="draft" Editing="true" @key="draft.Origin" /></ChildContent>
+                        <ChildContent>
+                            @if (draft is not null) {
+                                <SchedulerDraftForm Workspace="Workspace" Draft="draft" Editing="true" @key="draft.Origin" />
+                            } else if (Workspace.EditorLoading) {
+                                <div data-testid="scheduler-edit-loading">
+                                    <LoadingState Eyebrow="Schedule" Title="Loading the exact plan…" Description="The editor opens when the saved plan has been read." />
+                                </div>
+                            } else {
+                                <div data-testid="scheduler-edit-unavailable">
+                                    <EmptyState Eyebrow="Schedule" Title="This schedule is not available"
+                                                Description="The plan may have been deleted, or it is not part of the active database profile. Close this dialog to return to the scheduler." />
+                                </div>
+                            }
+                        </ChildContent>
                         <Footer>
                             <div class="scheduler-dialog-footer">
-                                @if (Plans.FirstOrDefault(plan => plan.Id == draft.Values.Id) is { } plan) {
+                                @if (draft is not null && Plans.FirstOrDefault(plan => plan.Id == draft.Values.Id) is { } plan) {
                                     <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => Workspace.AskDelete(plan))" Disabled="@Workspace.IsPlanLocked(plan.Id)" data-testid="scheduler-edit-delete" />
                                 }
                                 <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="Workspace.CloseEdit" data-testid="scheduler-edit-cancel" />
@@ -84,7 +95,6 @@
     [Parameter, EditorRequired] public ISchedulerWorkspace Workspace { get; set; } = null!;
     [Parameter] public RenderFragment? AgentAction { get; set; }
     private ISchedulerWorkspace? subscribed;
-    private SchedulerScheduleFilters scheduleFilters = new();
     private bool disposed;
     private IReadOnlyList<SchedulerPlanSummary> Plans => Workspace.Data?.Plans ?? [];
     protected override void OnParametersSet() {
@@ -95,7 +105,6 @@
             subscribed.Changed -= Changed;
         }
         subscribed = Workspace;
-        scheduleFilters = new();
         subscribed.Changed += Changed;
     }
     private async void Changed() {

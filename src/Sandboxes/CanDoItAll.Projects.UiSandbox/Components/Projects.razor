@@ -33,7 +33,8 @@
                    OpenHierarchyModal="OpenHierarchy" OpenProjectFiles='id => Handoff(id, "Files")'
                    OpenProjectDashboard='id => Handoff(id, "Dashboard")' OpenProcesses='id => Handoff(id, "Processes")'
                    OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")'
-                   OpenGantt='id => Handoff(id, "Gantt")' PortfolioViewChanged='view => notice = $"Selected {view}."'
+                   OpenGantt='id => Handoff(id, "Gantt")' PortfolioView="portfolioView"
+                   PortfolioViewChanged='view => { portfolioView = view; notice = $"Selected {view}."; }'
                    ProjectPackagePath="@packagePath" ProjectPackagePathChanged="value => packagePath = value"
                    ProjectPackageTargetProfiles="packageTargets" ProjectPackageTargetProfileId="packageTarget"
                    ProjectPackageTargetProfileIdChanged="value => packageTarget = value"
@@ -79,6 +80,7 @@
     private Guid? hierarchyId;
     private ProjectHierarchyFilterMode hierarchyMode;
     private bool includeSubprojects = true;
+    private ProjectsAgentChatView portfolioView = ProjectsAgentChatView.Cards;
     private ProjectHierarchyDialogState? hierarchy;
     private string? notice;
     private string packagePath = string.Empty;

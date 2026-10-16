@@ -348,4 +348,114 @@ public sealed class PromptGallerySearchSessionTests
         Assert.Null(session.Presentation.LoadError);
         Assert.Single(session.Presentation.Items);
     }
+
+    [Fact]
+    public async Task Requested_filters_and_page_load_once_and_a_repeated_request_does_not_reload()
+    {
+        var gallery = new ScriptedPromptGalleryService
+        {
+            Search = (query, _) => Task.FromResult(ScriptedPromptGalleryService.Page(query, [ScriptedPromptGalleryService.Item()], 100))
+        };
+        var commits = new List<PromptGallerySearchCommit>();
+        await using var session = new PromptGallerySearchSession(gallery)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; }
+        };
+        var request = new PromptGallerySearchRequest(PromptGalleryFilterValues.Initial with { Kind = PromptGalleryItemKind.Part, Tags = ["alpha"] }, 2);
+
+        await session.ConfigureAsync(DesktopContext, request);
+        await session.ConfigureAsync(DesktopContext, request with { Filters = request.Filters with { Tags = ["alpha"] } });
+
+        var query = Assert.Single(gallery.Queries);
+        Assert.Equal(PromptGalleryItemKind.Part, query.Kind);
+        Assert.Equal(["alpha"], query.Tags!);
+        Assert.Equal(2, query.PageIndex);
+        Assert.Equal(2, session.Presentation.PageIndex);
+        Assert.Empty(commits);
+
+        await session.ConfigureAsync(DesktopContext, request with { PageIndex = 0 });
+
+        Assert.Equal(2, gallery.Queries.Count);
+        Assert.Equal(0, gallery.Queries[^1].PageIndex);
+        Assert.Empty(commits);
+    }
+
+    [Fact]
+    public async Task Explicit_filter_and_page_intents_commit_immediately_and_typed_text_commits_after_the_debounce()
+    {
+        var gallery = new ScriptedPromptGalleryService
+        {
+            Search = (query, _) => Task.FromResult(ScriptedPromptGalleryService.Page(query, [ScriptedPromptGalleryService.Item()], 100))
+        };
+        var delay = new TaskCompletionSource();
+        var commits = new List<PromptGallerySearchCommit>();
+        await using var session = new PromptGallerySearchSession(gallery, _ => delay.Task)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; }
+        };
+        await session.ConfigureAsync(DesktopContext);
+
+        await session.ApplyAsync(new PromptGallerySearchIntent.ChangeFilters(
+            session.Presentation.Filters with { Status = PromptArtifactStatus.Final }, Debounce: false));
+        await session.ApplyAsync(new PromptGallerySearchIntent.LoadPage(1));
+        var typed = session.ApplyAsync(new PromptGallerySearchIntent.ChangeFilters(
+            session.Presentation.Filters with { Text = "brief" }, Debounce: true));
+
+        Assert.Equal(2, commits.Count);
+        Assert.Equal(PromptGallerySearchCommitKind.Explicit, commits[0].Kind);
+        Assert.Equal(PromptArtifactStatus.Final, commits[0].Filters.Status);
+        Assert.Equal(0, commits[0].PageIndex);
+        Assert.Equal(PromptGallerySearchCommitKind.Explicit, commits[1].Kind);
+        Assert.Equal(1, commits[1].PageIndex);
+
+        delay.SetResult();
+        await typed;
+
+        var live = commits[^1];
+        Assert.Equal(3, commits.Count);
+        Assert.Equal(PromptGallerySearchCommitKind.Live, live.Kind);
+        Assert.Equal("brief", live.Filters.Text);
+        Assert.Equal(0, live.PageIndex);
+    }
+
+    [Fact]
+    public async Task A_requested_page_beyond_the_last_page_moves_to_the_last_page_and_reports_a_correction()
+    {
+        var gallery = new ScriptedPromptGalleryService
+        {
+            Search = (query, _) => Task.FromResult(ScriptedPromptGalleryService.Page(query, [], 30))
+        };
+        var commits = new List<PromptGallerySearchCommit>();
+        await using var session = new PromptGallerySearchSession(gallery)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; }
+        };
+
+        await session.ConfigureAsync(DesktopContext, new PromptGallerySearchRequest(PromptGalleryFilterValues.Initial, 7));
+
+        Assert.Equal([7, 1], gallery.Queries.Select(query => query.PageIndex));
+        var correction = Assert.Single(commits);
+        Assert.Equal(PromptGallerySearchCommitKind.Correction, correction.Kind);
+        Assert.Equal(1, correction.PageIndex);
+        Assert.Equal(1, session.Presentation.PageIndex);
+    }
+
+    [Fact]
+    public async Task A_filter_the_list_does_not_offer_is_reported_at_its_default()
+    {
+        var gallery = new ScriptedPromptGalleryService();
+        var commits = new List<PromptGallerySearchCommit>();
+        await using var session = new PromptGallerySearchSession(gallery)
+        {
+            Committed = commit => { commits.Add(commit); return Task.CompletedTask; }
+        };
+        await session.ConfigureAsync(DesktopContext);
+
+        await session.ApplyAsync(new PromptGallerySearchIntent.ClearFilters());
+
+        Assert.False(session.Presentation.Filters.ActualChatModelOnly);
+        Assert.True(Assert.Single(commits).Filters.ActualChatModelOnly);
+    }
+
+    private static readonly PromptGallerySearchContext DesktopContext = new(null, null, null, false, Compact: false, PageSize: 15);
 }

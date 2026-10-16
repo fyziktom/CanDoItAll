@@ -41,5 +41,14 @@ AgentDetailsDialog composes the renderer with its captured editor lifetime and r
 explicit Save and access normalization. Recovery, Data Sources and residual configuration
 hosts remain here. See the [selection record](../../../docs/architecture/workspace-storage-selection-ui-boundary.md).
 
+`SettingsPage` owns the `/settings` URL through `SettingsUrlCodec` (see
+[navigation state](../../../docs/architecture/navigation-state.md)): `tab` (`data-sources`,
+`storage`, `files`, `provider-history`, `secrets`, `api-access`; Workspace is the omitted
+default and `providers` remains a Replace redirect to `/agents?tab=providers`), `secretId` on
+Secrets, `profileId` on Data Sources, `storageId` on Storage and the committed account search
+`q` and one-based `page` on API Access. Only identities and the committed search are written;
+secret values, connection strings, passwords and tokens never are. Tab, record and explicit
+search or paging intents push; defaults, owner-resolved identities and corrections replace.
+
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`

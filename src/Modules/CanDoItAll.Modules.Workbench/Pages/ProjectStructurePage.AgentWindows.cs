@@ -5,10 +5,6 @@ using CanDoItAll.Modules.Workbench.ProjectStructure;
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
-    protected override void OnInitialized() {
-        ConversationShellCoordinator.Changed += HandleConversationShellChanged;
-    }
-
     private Task ToggleAgentWindowAsync() {
         if (ConversationShellCoordinator.Snapshot().IsCatalogVisible) {
             ConversationShellCoordinator.HideCatalog();

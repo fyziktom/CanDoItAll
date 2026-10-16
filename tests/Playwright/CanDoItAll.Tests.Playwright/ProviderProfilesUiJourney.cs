@@ -128,7 +128,7 @@ internal static class ProviderProfilesUiJourney {
         await Assertions.Expect(page.GetByTestId("provider-request-history")).ToBeVisibleAsync();
         await page.GetByTestId("providers-connections").ClickAsync();
         await Assertions.Expect(page.GetByTestId("shared-provider-connections-dialog")).ToBeVisibleAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         await File.WriteAllTextAsync(host.Artifact("provider-pp1-created.json"), JsonSerializer.Serialize(saved));
         return saved;
 

@@ -1,3 +1,4 @@
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Modules.Workspace.StorageCatalog.Contracts
 @using CanDoItAll.Workspace.StorageCatalog.UI
 @using CanDoItAll.Infrastructure.Persistence
@@ -15,34 +16,67 @@
 }
 
 @code {
+    [Parameter] public Guid? StorageId { get; set; }
+    [Parameter] public EventCallback<SettingsRouteChange<Guid?>> StorageIdChanged { get; set; }
     [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
     private Task<AuthenticationState>? previousAuthentication;
     private CatalogSession? session;
     private bool recoveryOpen;
     private Guid? recoveryTarget;
+    private Guid? routed;
     private bool disposed;
-    protected override async Task OnInitializedAsync() {
+    protected override Task OnInitializedAsync() {
         previousAuthentication = AuthenticationState;
         ProfileChanges.Changed += ProfileChanged;
-        session = new(Owner, Ledger);
-        await session.LoadAsync();
+        return OpenSessionAsync();
     }
     protected override async Task OnParametersSetAsync() {
         if (!ReferenceEquals(previousAuthentication, AuthenticationState)) {
             previousAuthentication = AuthenticationState;
-            session?.Dispose();
+            RetireSession();
             recoveryOpen = false;
-            session = new(Owner, Ledger);
-            await session.LoadAsync();
+            await OpenSessionAsync();
+            return;
         }
+        if (session is null || StorageId == routed) {
+            return;
+        }
+        routed = StorageId;
+        if (StorageId is { } id) {
+            await session.SelectAsync(id);
+        } else {
+            session.New(CatalogProvider.FileSystem);
+        }
+    }
+    private Task OpenSessionAsync() {
+        var current = new CatalogSession(Owner, Ledger);
+        current.SelectionChanged += SelectionChanged;
+        session = current;
+        routed = StorageId;
+        return Task.WhenAll(current.LoadAsync(), StorageId is { } id ? current.SelectAsync(id) : Task.CompletedTask);
+    }
+    private void SelectionChanged(CatalogSelection selection) => _ = InvokeAsync(() => PublishAsync(selection));
+    private Task PublishAsync(CatalogSelection selection) {
+        if (disposed || selection.StorageId == routed) {
+            return Task.CompletedTask;
+        }
+        routed = selection.StorageId;
+        var mode = selection.Cause == CatalogSelectionCause.Operator ? UrlHistoryMode.Push : UrlHistoryMode.Replace;
+        return StorageIdChanged.InvokeAsync(new(selection.StorageId, mode));
     }
     private void OpenRecovery(Guid? target) {
         recoveryTarget = target;
         recoveryOpen = true;
     }
+    private void RetireSession() {
+        if (session is not null) {
+            session.SelectionChanged -= SelectionChanged;
+            session.Dispose();
+        }
+    }
     private void ProfileChanged(object? sender, DatabaseProfileChangedNotification notification) => _ = InvokeAsync(() => {
         if (!disposed) {
-            session?.Dispose();
+            RetireSession();
             recoveryOpen = false;
             StateHasChanged();
         }
@@ -50,6 +84,6 @@
     public void Dispose() {
         disposed = true;
         ProfileChanges.Changed -= ProfileChanged;
-        session?.Dispose();
+        RetireSession();
     }
 }

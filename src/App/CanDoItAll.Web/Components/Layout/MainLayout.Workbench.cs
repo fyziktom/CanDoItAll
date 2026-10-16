@@ -48,7 +48,7 @@ public partial class MainLayout
             return;
         }
 
-        Navigation.NavigateTo(tab.Route);
+        NavigateToTab(tab.Route);
         if (IsLayoutCurrent) {
             await Workbench.ActivateAsync(tab.TabId, layoutLifetime.Token);
         }
@@ -63,7 +63,7 @@ public partial class MainLayout
         var activeTab = Workbench.GetActiveTab();
         if (activeTab is not null && !string.Equals(CurrentRouteDisplay, activeTab.Route, StringComparison.OrdinalIgnoreCase))
         {
-            Navigation.NavigateTo(activeTab.Route);
+            NavigateToTab(activeTab.Route);
         }
     });
 
@@ -90,7 +90,7 @@ public partial class MainLayout
         var reopened = Workbench.GetActiveTab();
         if (reopened is not null)
         {
-            Navigation.NavigateTo(reopened.Route);
+            NavigateToTab(reopened.Route);
         }
     });
 
@@ -107,7 +107,7 @@ public partial class MainLayout
         if (!IsLayoutCurrent || !workbenchInitialized) {
             return;
         }
-        var read = BeginNavigationRead();
+        var read = BeginNavigationRead(e.HistoryEntryState);
         NavigationCompletion = RunLayoutWorkAsync(nameof(HandleLocationChanged), () => InvokeAsync(() => TrackNavigationAsync(read)));
         _ = RunLayoutWorkAsync(nameof(LoadCollaborationShellStateAsync), LoadCollaborationShellStateAsync);
     }
@@ -145,7 +145,7 @@ public partial class MainLayout
 
         if (staleActiveTab)
         {
-            Navigation.NavigateTo(Workbench.GetActiveTab()?.Route ?? "/projects", replace: true);
+            NavigateToTab(Workbench.GetActiveTab()?.Route ?? "/projects", replace: true);
         }
     }
 
@@ -156,7 +156,8 @@ public partial class MainLayout
         var query = QueryHelpers.ParseQuery(uri.Query);
         var route = $"{path}{uri.Query}";
 
-        if (string.Equals(path, "/projects", StringComparison.OrdinalIgnoreCase) &&
+        if (read.ExplicitTab &&
+            string.Equals(path, "/projects", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "projectId", out var projectId))
         {
             var project = await LoadExistingProjectForWorkbenchAsync(projectId, read);
@@ -295,7 +296,8 @@ public partial class MainLayout
                 IsPinned: false);
         }
 
-        if (string.Equals(path, "/test-lab", StringComparison.OrdinalIgnoreCase) &&
+        if (read.ExplicitTab &&
+            string.Equals(path, "/test-lab", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "planId", out var testPlanId))
         {
             return new WorkbenchTabDescriptor(
@@ -311,7 +313,8 @@ public partial class MainLayout
                 TabGroup: "Testing");
         }
 
-        if (string.Equals(path, "/prompt-gallery", StringComparison.OrdinalIgnoreCase) &&
+        if (read.ExplicitTab &&
+            string.Equals(path, "/prompt-gallery", StringComparison.OrdinalIgnoreCase) &&
             TryReadGuid(query, "promptId", out var promptId))
         {
             return new WorkbenchTabDescriptor(
@@ -329,6 +332,12 @@ public partial class MainLayout
 
         return BuildPageDescriptor(path, route);
     }
+
+    private void NavigateToTab(string route, bool replace = false)
+        => Navigation.NavigateTo(route, new NavigationOptions {
+            ReplaceHistoryEntry = replace,
+            HistoryEntryState = WorkbenchNavigation.OpenTabHistoryState
+        });
 
     private static bool TryReadGuid(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key, out Guid value)
         => Guid.TryParse(query.TryGetValue(key, out var raw) ? raw.ToString() : null, out value);

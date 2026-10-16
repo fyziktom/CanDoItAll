@@ -1,8 +1,11 @@
 using Bunit;
+using Bunit.TestDoubles;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Processes;
 
@@ -28,8 +31,13 @@ public sealed partial class ProcessWorkspaceShellTests {
         cut.WaitForElement("[data-testid='live-processes-run-open-details']");
         await cut.InvokeAsync(() => cut.Find("[data-testid='live-processes-run-open-details']")
             .ClickAsync(new MouseEventArgs()));
-        cut.WaitForAssertion(() => Assert.Contains("0 of 2 executable steps complete",
-            cut.Find("[data-testid='live-processes-run-detail-dialog']").TextContent));
+        // Opening the dialog selects its run, so the selection's read finishes before the live tick.
+        cut.WaitForAssertion(() => {
+            Assert.False(((ILiveProcessesSession)cut.Instance).IsLoading);
+            Assert.Equal(2, client.Requests.Count);
+            Assert.Contains("0 of 2 executable steps complete",
+                cut.Find("[data-testid='live-processes-run-detail-dialog']").TextContent);
+        });
 
         completed = true;
         clock.Advance(TimeSpan.FromSeconds(10));
@@ -94,13 +102,21 @@ public sealed partial class ProcessWorkspaceShellTests {
         await cut.InvokeAsync(() => cut.Find("[data-testid='live-processes-run-open-details']")
             .ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='live-processes-run-detail-dialog']");
+        cut.WaitForAssertion(() => {
+            Assert.False(((ILiveProcessesSession)cut.Instance).IsLoading);
+            Assert.Equal(2, client.Requests.Count);
+        });
+        Assert.Contains("dialog=run", CurrentLocation(context), StringComparison.Ordinal);
 
         replaced = true;
         clock.Advance(TimeSpan.FromSeconds(10));
 
         cut.WaitForAssertion(() => {
-            Assert.Equal(2, client.Requests.Count);
+            Assert.Equal(3, client.Requests.Count);
             Assert.Empty(cut.FindAll("[data-testid='live-processes-run-detail-dialog']"));
         });
+        // The record of the replaced lifetime leaves the address without a history entry of its own.
+        Assert.DoesNotContain("dialog=", CurrentLocation(context), StringComparison.Ordinal);
+        Assert.True(((BunitNavigationManager)context.Services.GetRequiredService<NavigationManager>()).History.First().Options.ReplaceHistoryEntry);
     }
 }

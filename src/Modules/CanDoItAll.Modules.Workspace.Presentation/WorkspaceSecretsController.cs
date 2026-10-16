@@ -3,6 +3,10 @@ using CanDoItAll.Workspace.UI;
 
 namespace CanDoItAll.Modules.Workspace;
 
+public enum WorkspaceSelectionCause { Operator, Owner }
+
+public readonly record struct WorkspaceSecretSelection(Guid? SecretId, WorkspaceSelectionCause Cause);
+
 public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : IWorkspaceSecretsState, IDisposable {
     private readonly SettingsOperationLedger ledger = new();
     private readonly CancellationTokenSource lifetime = new();
@@ -12,8 +16,11 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
     private Task? refresh;
     private string? referenceError;
     private string? editorError;
+    private Guid? publishedSelection;
     public event Action? Changed;
+    public event Action<WorkspaceSecretSelection>? SelectionChanged;
     public WorkspaceSecretDraft Draft { get; private set; } = CreateDraft();
+    public Guid? SelectedSecretId => Draft.Model.Id;
     public IReadOnlyList<SecretListItem> Secrets { get; private set; } = [];
     public IReadOnlyList<SettingsReceipt> Receipts => ledger.Entries;
     public string Search { get; set; } = string.Empty;
@@ -61,6 +68,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         var draft = Draft;
         acquired = false;
         Error = null;
+        PublishSelection(WorkspaceSelectionCause.Operator);
         Notify();
         try {
             var model = await owner.GetAsync(id, lifetime.Token);
@@ -85,7 +93,9 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         }
     }
 
-    public void New() {
+    public void New() => Reset(WorkspaceSelectionCause.Operator);
+
+    private void Reset(WorkspaceSelectionCause cause) {
         if (disposed || !owner.IsCurrent) {
             return;
         }
@@ -94,6 +104,7 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
         Draft = CreateDraft();
         acquired = true;
         Error = null;
+        PublishSelection(cause);
         Notify();
     }
 
@@ -127,10 +138,13 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
                     draft.Model.Id = result.Value;
                 }
                 if (draft.Revision == revision) {
-                    New();
-                } else if (delete) {
-                    acquired = false;
-                    Error = "This secret was deleted. Newer input is retained; explicitly start a new secret to create another record.";
+                    Reset(WorkspaceSelectionCause.Owner);
+                } else {
+                    if (delete) {
+                        acquired = false;
+                        Error = "This secret was deleted. Newer input is retained; explicitly start a new secret to create another record.";
+                    }
+                    PublishSelection(WorkspaceSelectionCause.Owner);
                 }
                 receipt.IsReconciling = true;
                 Notify();
@@ -183,6 +197,15 @@ public sealed class WorkspaceSecretsController(IWorkspaceSecretsOwner owner) : I
     private static void ClearSensitive(SecretEditorModel model) {
         model.SecretValue = string.Empty;
         model.MetadataJson = string.Empty;
+    }
+
+    private void PublishSelection(WorkspaceSelectionCause cause) {
+        var current = Draft.Model.Id;
+        if (disposed || publishedSelection == current) {
+            return;
+        }
+        publishedSelection = current;
+        SelectionChanged?.Invoke(new(current, cause));
     }
 
     private void Notify() {

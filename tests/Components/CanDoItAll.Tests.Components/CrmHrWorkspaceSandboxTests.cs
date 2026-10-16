@@ -194,6 +194,7 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
     [Theory]
     [InlineData("catalog", "data-testid=\"crmhr-agent-catalog\"")]
     [InlineData("selected-existing", "Atlas Ops Agent")]
+    [InlineData("non-default-section", "AgentFramework owns this runtime")]
     [InlineData("loading", "Loading CRM-HR agent details")]
     [InlineData("unavailable-references", "Scheduler Agent")]
     [InlineData("empty", "No projected AI agents")]

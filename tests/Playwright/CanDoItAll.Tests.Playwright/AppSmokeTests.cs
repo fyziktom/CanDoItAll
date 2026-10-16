@@ -104,6 +104,35 @@ public sealed partial class AppSmokeTests
         Assert.NotNull(calendarResponse);
         Assert.True(calendarResponse!.Ok, $"Expected calendar route to return 2xx, got {(int)calendarResponse.Status}.");
         await page.WaitForSelectorAsync("text=Project calendar");
+        // The resolved view and date become explicit in the URL, so a copied link reproduces the same range.
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/calendar\?view=week&date=\d{4}-\d{2}-\d{2}$"));
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Url_state_written_while_a_page_becomes_interactive_stays_client_side()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        var pageLoads = new List<string>();
+        page.Request += (_, request) =>
+        {
+            if (request.ResourceType is "document" or "fetch" && new Uri(request.Url).AbsolutePath == "/agents")
+            {
+                pageLoads.Add(request.Url);
+            }
+        };
+
+        // The legacy tab token is canonicalized with Replace while the page becomes interactive. Before client-side
+        // navigation is on, that write would make blazor.web.js fetch and render the whole page again.
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=AGENTS");
+        Assert.NotNull(response);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/agents?tab=agents");
+        await page.GetByTestId("agents-shell-tabs").WaitForAsync();
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        Assert.Equal([$"{fixture.BaseUrl}/agents?tab=AGENTS"], pageLoads);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -188,7 +217,7 @@ public sealed partial class AppSmokeTests
         await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).ToContainTextAsync("Select a stored source credential.");
         await page.GetByTestId("shared-provider-source-dialog").GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
         await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).Not.ToBeVisibleAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         await Assertions.Expect(page.GetByTestId("shared-provider-connections-dialog")).Not.ToBeVisibleAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -3949,7 +3978,10 @@ public sealed partial class AppSmokeTests
             await page.WaitForTimeoutAsync(120);
         }
 
-        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'.");
+        var lastScene = lastSnapshot is null
+            ? "none"
+            : string.Join(", ", lastSnapshot.Nodes.Select(node => $"'{node.DisplayTitle}'{(node.Selected ? " (selected)" : string.Empty)}"));
+        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'. Last scene: {lastScene}.");
     }
 
     private static async Task WaitForSceneNodeTitleAsync(IPage page, string title, bool selectedOnly = false, int timeoutMs = 6_000)

@@ -44,6 +44,12 @@ concrete service, a command surface or `NavigationManager`, and no component wri
 are host methods or host-supplied delegates (`PartyImportExportActions`), and a project admission
 is bound to the profile identifier the host passes (`OpportunityConversionDialog`).
 
+Navigation state is host state like any other. A routed host passes the committed catalog query
+(`CatalogQuery`) and the selected record section through its view contract and receives the
+catalog's committed changes (`HandleCatalogQueryChangedAsync`) and section changes as intents; it
+keeps both in the page URL. The surfaces never read or build a URL. A backend-free host passes no
+catalog query, and the catalog then keeps its own.
+
 Three rules keep the surfaces' actions on the record the operator sees. An action outside its form
 element (a dialog footer Save) validates the form's `EditContext`, parsing errors included, through
 `CrmHrWorkspaceSurface.SubmitAsync` before the host sees it. A row action inside a loop names the

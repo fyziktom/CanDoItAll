@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.Workflows.UI;
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Modules.AgentFramework.Pages.Navigation;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
@@ -97,14 +99,8 @@ public partial class WorkflowsPage : IDisposable {
     [Inject]
     public IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
 
-    [SupplyParameterFromQuery(Name = "projectId")]
-    public Guid? RequestedProjectId { get; set; }
-
-    [SupplyParameterFromQuery(Name = "workflowId")]
-    public Guid? RequestedWorkflowId { get; set; }
-
-    [SupplyParameterFromQuery(Name = "runId")]
-    public Guid? RequestedRunId { get; set; }
+    [Inject]
+    private IAppNavigationHistory NavigationHistory { get; set; } = default!;
 
     private IReadOnlyList<WorkflowCatalogItem> definitions = [];
     private IReadOnlyList<LlmCallComponent> components = [];
@@ -161,7 +157,6 @@ public partial class WorkflowsPage : IDisposable {
     private bool isDefinitionSelectionLoading;
     private bool isRunsPageLoading;
     private bool isRunSelectionLoading;
-    private bool hasObservedNavigation;
     private bool hasRouteIdentityFailure;
     private long selectedDefinitionGeneration;
     private long runPageGeneration;
@@ -169,7 +164,8 @@ public partial class WorkflowsPage : IDisposable {
     private WorkflowRunId? selectedRunRequestId;
     private long analyticsRefreshVersion;
     private long pageLoadGeneration;
-    private AgentChatNavigationIdentity observedNavigation;
+    private UrlStateBinding<WorkflowsUrlState> url = default!;
+    private AgentChatNavigationIdentity routeIdentity;
     private AgentChatNavigationIdentity selectedDefinitionNavigation;
     private Task? componentLibraryLoadTask;
     private Task? workflowCuratorResolutionTask;
@@ -191,14 +187,18 @@ public partial class WorkflowsPage : IDisposable {
             selectedCanvasNode,
             selectedRouteProject);
 
-    private AgentChatNavigationIdentity AgentChatNavigationFence
+    private WorkflowsUrlState route => url.State;
+
+    private AgentChatNavigationIdentity AgentChatNavigationFence => routeIdentity;
+
+    private AgentChatNavigationIdentity CreateRouteIdentity(WorkflowsUrlState state)
         => AgentChatNavigationIdentity.CreateForLocation(
             Navigation.BaseUri,
-            Navigation.Uri,
+            Navigation.BaseUri + WorkflowsUrlCodec.Path.TrimStart('/'),
             [
-                new("projectId", RequestedProjectId?.ToString("D")),
-                new("workflowId", RequestedWorkflowId?.ToString("D")),
-                new("runId", RequestedRunId?.ToString("D"))
+                new(WorkflowsUrlCodec.ProjectKey, state.ProjectId?.ToString("D")),
+                new(WorkflowsUrlCodec.WorkflowKey, state.WorkflowId?.ToString("D")),
+                new(WorkflowsUrlCodec.RunKey, state.RunId?.ToString("D"))
             ]);
 
     private Task HandleCanvasSelectedNodeChangedAsync(WorkflowAgentChatNodeSelection? selection) {
@@ -452,10 +452,10 @@ public partial class WorkflowsPage : IDisposable {
                 await CancelSelectedRunAsync();
                 break;
             case WorkflowAction.SelectRun when runs.FirstOrDefault(run => run.RunId.Value == intent.TargetId) is { } run:
-                await SelectRunAsync(run.RunId);
+                await SelectRunFromIntentAsync(run);
                 break;
             case WorkflowAction.RunDetails when runs.FirstOrDefault(run => run.RunId.Value == intent.TargetId) is { } run:
-                await OpenRunDetailDialogAsync(run);
+                await OpenRunDetailsAsync(run);
                 break;
             case WorkflowAction.EventDetails when runEvents.FirstOrDefault(item => item.Id == intent.TargetId) is { } item:
                 OpenEventDetailDialog(item);
@@ -498,18 +498,42 @@ public partial class WorkflowsPage : IDisposable {
 
     private int HistoryEventTotalPages => CalculateTotalPages(historyEventTotalCount, HistoryEventPageSize);
 
+    protected override void OnInitialized() {
+        url = new(Navigation, WorkflowsUrlCodec.Instance, NavigationHistory, typeof(WorkflowsPage));
+    }
+
     protected override async Task OnParametersSetAsync() {
-        var navigation = AgentChatNavigationFence;
-        if (hasObservedNavigation && observedNavigation == navigation) {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged) {
             return;
         }
 
-        hasObservedNavigation = true;
-        observedNavigation = navigation;
+        if (!change.IsInitial && change.Previous.SameSelection(change.Current)) {
+            if (change.Current.Tab != change.Previous.Tab) {
+                await ShowTabAsync((int)change.Current.Tab);
+            }
+
+            await ReconcileRunDetailAsync();
+            return;
+        }
+
+        routeIdentity = CreateRouteIdentity(change.Current);
+        activeWorkflowTabIndex = (int)change.Current.Tab;
+        presentationRevision++;
+        var navigation = routeIdentity;
+        var tabRevision = ++tabGeneration;
         await RefreshRouteAsync(WorkflowRouteRequest.Create(
-            RequestedProjectId,
-            RequestedWorkflowId,
-            RequestedRunId), navigation);
+            change.Current.ProjectId,
+            change.Current.WorkflowId,
+            change.Current.RunId), navigation);
+        if (disposed || navigation != routeIdentity || tabRevision != tabGeneration) {
+            return;
+        }
+
+        await EnsureTabRequirementsAsync(activeWorkflowTabIndex, tabRevision);
+        if (!disposed && navigation == routeIdentity) {
+            await ReconcileRunDetailAsync();
+        }
     }
 
     private async Task RefreshAsync() {
@@ -517,18 +541,21 @@ public partial class WorkflowsPage : IDisposable {
             return;
         }
 
-        var route = WorkflowRouteRequest.Create(
-            RequestedProjectId,
-            RequestedWorkflowId,
-            RequestedRunId);
+        var request = WorkflowRouteRequest.Create(
+            route.ProjectId,
+            route.WorkflowId,
+            route.RunId);
         var navigation = AgentChatNavigationFence;
-        var generation = BeginPageLoad(clearSelection: route.HasExplicitSelection);
+        var generation = BeginPageLoad(clearSelection: request.HasExplicitSelection);
         await ExecutePageLoadAsync(
-            route.HasExplicitSelection ? route.WorkflowId : CurrentDefinitionId,
-            route.HasExplicitSelection ? route.RunId : selectedRun?.RunId,
-            route.HasExplicitSelection ? route : null,
+            request.HasExplicitSelection ? request.WorkflowId : CurrentDefinitionId,
+            request.HasExplicitSelection ? request.RunId : selectedRun?.RunId,
+            request.HasExplicitSelection ? request : null,
             generation,
             navigation);
+        if (IsCurrentPageLoad(generation, navigation)) {
+            await ReconcileRunDetailAsync();
+        }
     }
 
     private async Task RefreshRouteAsync(
@@ -601,7 +628,7 @@ public partial class WorkflowsPage : IDisposable {
         await EnsureWorkflowCuratorAgentAsync();
     }
 
-    private Task LoadPageAsync(
+    private async Task LoadPageAsync(
         WorkflowId? preferredDefinitionId = null,
         WorkflowRunId? preferredRunId = null) {
         var navigation = AgentChatNavigationFence;
@@ -610,12 +637,16 @@ public partial class WorkflowsPage : IDisposable {
         var route = selectedRouteProject is { } project && targetDefinition == CurrentDefinitionId
             ? WorkflowRouteRequest.Create(project.ProjectId, targetDefinition?.Value, preferredRunId?.Value)
             : null;
-        return LoadPageCoreAsync(
+        await LoadPageCoreAsync(
             targetDefinition,
             preferredRunId,
             requiredRoute: route,
             generation,
             navigation);
+        // A tab opened while this load was selecting found nothing to prepare, so prepare the loaded selection for it.
+        if (IsCurrentPageLoad(generation, navigation)) {
+            await EnsureTabRequirementsAsync(activeWorkflowTabIndex, tabGeneration);
+        }
     }
 
     private async Task LoadPageCoreAsync(
@@ -769,7 +800,68 @@ public partial class WorkflowsPage : IDisposable {
             return;
         }
 
+        url.Navigate(route with {
+            ProjectId = selectedRouteProject?.ProjectId,
+            WorkflowId = definitionId.Value,
+            RunId = null,
+            Dialog = null
+        });
         await SelectDefinitionAsync(definitionId);
+    }
+
+    private async Task SelectRunFromIntentAsync(WorkflowRunSnapshot run) {
+        url.Navigate(route with {
+            ProjectId = selectedRouteProject?.ProjectId,
+            WorkflowId = run.WorkflowId.Value,
+            RunId = run.RunId.Value,
+            Dialog = null
+        });
+        await SelectRunAsync(run.RunId);
+    }
+
+    private async Task OpenRunDetailsAsync(WorkflowRunSnapshot run) {
+        if (CurrentDefinitionId != run.WorkflowId) {
+            await OpenRunDetailDialogAsync(run);
+            return;
+        }
+
+        url.OpenOverlay(route with {
+            ProjectId = selectedRouteProject?.ProjectId,
+            WorkflowId = run.WorkflowId.Value,
+            RunId = run.RunId.Value,
+            Dialog = WorkflowsPageDialog.RunDetails
+        });
+        if (selectedRun?.RunId != run.RunId) {
+            await SelectRunAsync(run.RunId);
+        }
+
+        if (!disposed && route.Dialog == WorkflowsPageDialog.RunDetails && route.RunId == run.RunId.Value) {
+            await OpenRunDetailDialogAsync(selectedRun?.RunId == run.RunId ? selectedRun : run);
+        }
+    }
+
+    private async Task CloseRunDetailFromUserAsync() {
+        CloseRunDetailDialog();
+        if (route.Dialog == WorkflowsPageDialog.RunDetails) {
+            await url.CloseOverlayAsync(route with { Dialog = null });
+        }
+    }
+
+    private async Task ReconcileRunDetailAsync() {
+        var requested = route.Dialog == WorkflowsPageDialog.RunDetails ? route.RunId : null;
+        if (requested is null) {
+            if (runDetail is not null) {
+                CloseRunDetailDialog();
+            }
+
+            return;
+        }
+
+        if (runDetail?.RunId.Value == requested || selectedRun is not { } run || run.RunId.Value != requested) {
+            return;
+        }
+
+        await OpenRunDetailDialogAsync(run);
     }
 
     private Task HandleWorkflowTreeToggleAsync(string nodeId) {
@@ -901,6 +993,7 @@ public partial class WorkflowsPage : IDisposable {
             CloseTemplatePreviewDialog();
             CloseTemplateCatalogueDialog();
             isBusy = false;
+            OpenCreatedDefinition(saved.Id);
             await LoadPageAsync(preferredDefinitionId: saved.Id);
         } catch (Exception exception) {
             if (!Owns(owner) || generation != templateGeneration) {
@@ -1008,6 +1101,7 @@ public partial class WorkflowsPage : IDisposable {
 
             isBusy = false;
             NotificationService.Success("Workflow created", "Starter workflow and LLM component were created.");
+            OpenCreatedDefinition(definition.Id);
             await LoadPageAsync(preferredDefinitionId: definition.Id);
         } catch (Exception exception) {
             if (!Owns(owner)) {
@@ -1219,7 +1313,7 @@ public partial class WorkflowsPage : IDisposable {
             await LoadRunsPageAsync(definition.Id, pageIndex: 0, preferredRunId: result.Run?.RunId,
                 expectedDefinitionGeneration: selectedDefinitionGeneration);
             if (Owns(owner) && activeTestOperation == operation && result.Run is { } completed) {
-                await OpenRunDetailDialogAsync(selectedRun ?? completed);
+                await OpenRunDetailsAsync(selectedRun ?? completed);
             }
         } catch (Exception exception) {
             if (Owns(owner) && activeTestOperation == operation) {
@@ -1540,6 +1634,9 @@ public partial class WorkflowsPage : IDisposable {
         if (disposed || CurrentDefinitionId is { } current && current != definition.Id) {
             return;
         }
+        if (CurrentDefinitionId is null) {
+            url.Navigate(route with { ProjectId = null, WorkflowId = definition.Id.Value, RunId = null, Dialog = null }, UrlHistoryMode.Replace);
+        }
         selectedDefinitionId = definition.Id;
         selectedDefinition = FreezeDefinition(definition);
         selectedDefinitionDetailLoaded = true;
@@ -1555,6 +1652,7 @@ public partial class WorkflowsPage : IDisposable {
     }
 
     private async Task StartCanvasDraftAsync() {
+        url.Navigate(new WorkflowsUrlState { Tab = WorkflowTab.Editor });
         ClearSelectedDefinitionState();
         ClearHistoryState(markLoaded: false);
         activeWorkflowTabIndex = EditorTabIndex;
@@ -1573,11 +1671,23 @@ public partial class WorkflowsPage : IDisposable {
         }
 
         if (Owns(owner)) {
-            await OpenRunDetailDialogAsync(selectedRun ?? run);
+            await OpenRunDetailsAsync(selectedRun ?? run);
         }
     }
 
+    private void OpenCreatedDefinition(WorkflowId definitionId)
+        => url.Navigate(route with { ProjectId = null, WorkflowId = definitionId.Value, RunId = null, Dialog = null });
+
     private async Task HandleWorkflowTabChangedAsync(int index) {
+        if (disposed || index == activeWorkflowTabIndex || !Enum.IsDefined((WorkflowTab)index)) {
+            return;
+        }
+
+        url.Navigate(route with { Tab = (WorkflowTab)index, Dialog = null });
+        await ShowTabAsync(index);
+    }
+
+    private async Task ShowTabAsync(int index) {
         if (disposed || index == activeWorkflowTabIndex || !Enum.IsDefined((WorkflowTab)index)) {
             return;
         }
@@ -1596,6 +1706,10 @@ public partial class WorkflowsPage : IDisposable {
         isDefinitionSelectionLoading = false;
         isRunsPageLoading = false;
         isRunSelectionLoading = false;
+        await EnsureTabRequirementsAsync(index, generation);
+    }
+
+    private async Task EnsureTabRequirementsAsync(int index, long generation) {
         if (WorkflowTabRequiresDefinitionDetail(index)) {
             await EnsureSelectedDefinitionLoadedAsync();
         }
@@ -2233,7 +2347,7 @@ public partial class WorkflowsPage : IDisposable {
     }
 
     private void OpenAgents() {
-        Navigation.NavigateTo("/agents");
+        Navigation.NavigateTo(AgentsUrlCodec.Path);
     }
 
     private async Task OpenWorkflowCuratorAsync() {

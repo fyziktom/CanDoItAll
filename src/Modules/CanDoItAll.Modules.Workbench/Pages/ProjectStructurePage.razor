@@ -9,6 +9,7 @@ risks: stale-node-selection, invalid-command-routing, overlapping-create-placeme
 tests: component:ProjectStructurePageTests, e2e:workbench-structure
 *@
 @using CanDoItAll.Components.CanvasLib
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.AgentFramework.Providers
@@ -333,19 +334,18 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private const int CanvasViewIndex = 0;
     private const int GanttViewIndex = 1;
     private const int ManagerSummaryViewIndex = 2;
-    private const string GanttTabQueryValue = "gantt";
-    private const string ManagerSummaryTabQueryValue = "manager-summary";
 
     [Parameter]
     public Guid ProjectId { get; set; }
 
-    [SupplyParameterFromQuery(Name = "tab")]
-    public string? RequestedTab { get; set; }
+    [SupplyParameterFromQuery(Name = ProjectStructureUrlCodec.TabKey)]
+    public string? TabQuery { get; set; }
 
+    private UrlStateBinding<ProjectStructureUrlState> url = default!;
+    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? observedActor;
     private ProjectStructureSurface? surface;
     private CanvasWorkbenchSurface? canvasSurface;
     private StructureWorkspace? workbenchRef;
-    private int structureViewIndex;
     private AgentContext.ProjectStructureGanttObservation? ganttObservation;
 
     private void HandleGanttObservationChanged(
@@ -353,23 +353,42 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     {
         ganttObservation = observation;
     }
-    private StructureViewNavigationIdentity? appliedStructureViewNavigationIdentity;
+
+    private int structureViewIndex => url.State.View switch
+    {
+        ProjectStructureView.Canvas => CanvasViewIndex,
+        ProjectStructureView.Gantt => GanttViewIndex,
+        ProjectStructureView.ManagerSummary => ManagerSummaryViewIndex,
+        _ => throw new ArgumentOutOfRangeException(nameof(url.State.View), url.State.View, "The project structure view is undefined.")
+    };
 
     private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;
 
     private ProjectStructureAgentChatView ActiveAgentChatView
-        => structureViewIndex switch
+        => url.State.View switch
         {
-            GanttViewIndex => ProjectStructureAgentChatView.Gantt,
-            ManagerSummaryViewIndex => ProjectStructureAgentChatView.ManagerSummary,
+            ProjectStructureView.Gantt => ProjectStructureAgentChatView.Gantt,
+            ProjectStructureView.ManagerSummary => ProjectStructureAgentChatView.ManagerSummary,
             _ => ProjectStructureAgentChatView.Canvas
         };
 
     private Task OpenGanttViewAsync()
     {
-        structureViewIndex = GanttViewIndex;
+        SelectStructureView(ProjectStructureView.Gantt);
         return Task.CompletedTask;
     }
+
+    private void SelectStructureView(int index)
+        => SelectStructureView(index switch
+        {
+            CanvasViewIndex => ProjectStructureView.Canvas,
+            GanttViewIndex => ProjectStructureView.Gantt,
+            ManagerSummaryViewIndex => ProjectStructureView.ManagerSummary,
+            _ => throw new ArgumentOutOfRangeException(nameof(index), index, "The project structure view index is undefined.")
+        });
+
+    private void SelectStructureView(ProjectStructureView view)
+        => url.Navigate(url.State with { View = view }, UrlHistoryMode.Push);
 
     private readonly ProjectStructureActionCatalogAdapter actionCatalog = new();
     private readonly ProjectStructureGraphAdapter graphAdapter = new();
@@ -446,13 +465,33 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             Navigation.BaseUri,
             Navigation.Uri);
 
+    // The page's own URL state (the view) never retires the project scope; only the path and foreign keys do.
+    private AgentChatNavigationIdentity StructureNavigationFence
+        => AgentChatNavigationIdentity.CreateForLocation(
+            Navigation.BaseUri,
+            Navigation.Uri,
+            OwnedQueryRemovals);
+
+    private static readonly IReadOnlyList<KeyValuePair<string, string?>> OwnedQueryRemovals = ProjectStructureUrlCodec.Instance.Keys
+        .Select(key => new KeyValuePair<string, string?>(key, null))
+        .ToArray();
+
+    protected override void OnInitialized()
+    {
+        url = new(Navigation, ProjectStructureUrlCodec.Instance, null, typeof(ProjectStructurePage));
+        ConversationShellCoordinator.Changed += HandleConversationShellChanged;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
-        ApplyRequestedStructureView();
+        url.Apply(canonicalize: RendererInfo.IsInteractive);
         RetireInactiveAuthoring();
 
-        var processNavigation = AgentChatNavigationFence;
-        if (loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation) {
+        var processNavigation = StructureNavigationFence;
+        var scopeChanged = loadedProjectId != ProjectId || processDialogNavigationIdentity != processNavigation;
+        var actorChanged = !ReferenceEquals(observedActor, InsightsAuthentication);
+        observedActor = InsightsAuthentication;
+        if (scopeChanged) {
             processDialogNavigationIdentity = processNavigation;
             CancelRuntimePreviewWait();
             CloseProcessStartDialog();
@@ -488,46 +527,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             await CloseAttachmentPreviewAsync();
         }
 
-        await ReloadSurfaceAsync();
-    }
-
-    private void ApplyRequestedStructureView()
-    {
-        var navigationIdentity = new StructureViewNavigationIdentity(
-            ProjectId,
-            ResolveRequestedStructureView(RequestedTab));
-        if (appliedStructureViewNavigationIdentity == navigationIdentity)
-        {
-            return;
+        if (scopeChanged || actorChanged) {
+            await ReloadSurfaceAsync();
         }
-
-        appliedStructureViewNavigationIdentity = navigationIdentity;
-        structureViewIndex = navigationIdentity.View switch
-        {
-            StructureView.Gantt => GanttViewIndex,
-            StructureView.ManagerSummary => ManagerSummaryViewIndex,
-            _ => CanvasViewIndex
-        };
     }
-
-    private static StructureView ResolveRequestedStructureView(string? tab)
-        => tab?.Trim() switch
-        {
-            var value when string.Equals(value, GanttTabQueryValue, StringComparison.OrdinalIgnoreCase) =>
-                StructureView.Gantt,
-            var value when string.Equals(value, ManagerSummaryTabQueryValue, StringComparison.OrdinalIgnoreCase) =>
-                StructureView.ManagerSummary,
-            _ => StructureView.Canvas
-        };
-
-    private enum StructureView
-    {
-        Canvas,
-        Gantt,
-        ManagerSummary
-    }
-
-    private readonly record struct StructureViewNavigationIdentity(Guid ProjectId, StructureView View);
 
     private async Task ReloadSurfaceAsync(string? preferredSelectionId = null, Func<bool>? canPublish = null)
     {

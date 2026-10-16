@@ -41,6 +41,8 @@ public partial class CrmHrCrmPage : ICrmHrCrmWorkspaceView
     bool ICrmHrCrmWorkspaceView.IsAccountDialogOpen => isAccountDialogOpen;
     bool ICrmHrCrmWorkspaceView.IsOpportunityConversionBusy => isOpportunityConversionBusy;
     int ICrmHrCrmWorkspaceView.SelectedCrmRecordTabIndex => SelectedCrmRecordTabIndex;
+    PagedRecordQueryState<PartyRecordScope>? ICrmHrCrmWorkspaceView.CatalogQuery => CatalogQuery;
+    Task ICrmHrCrmWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => HandleCatalogQueryChangedAsync(change);
     IReadOnlyList<PartyOptionModel> ICrmHrCrmWorkspaceView.ParticipantOptions => ParticipantOptions;
     CrmOpportunityDetailModel? ICrmHrCrmWorkspaceView.SelectedOpportunity => SelectedOpportunity;
     Guid? ICrmHrCrmWorkspaceView.SelectedConnectionPartyId => SelectedConnectionPartyId;

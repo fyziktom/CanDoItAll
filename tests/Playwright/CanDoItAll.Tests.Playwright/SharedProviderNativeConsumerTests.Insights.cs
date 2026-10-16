@@ -77,6 +77,23 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await AssertInsightsDescendantAsync(fixture, projectId);
     }
 
+    // The Gantt task editor keeps a task's length when its Start changes and renders the End it derives. An End typed
+    // before that render arrives is overwritten by it, so End is typed once the derived End shows, and the new length
+    // confirms the typed End was applied.
+    private static async Task SetGanttScheduleAsync(ILocator editor, DateTimeOffset start, DateTimeOffset end) {
+        var length = editor.GetByTestId("project-structure-gantt-task-duration");
+        var hours = decimal.Parse(await length.InputValueAsync(), CultureInfo.InvariantCulture);
+        await editor.GetByTestId("project-structure-gantt-task-start").FillAsync(start.ToString("O", CultureInfo.InvariantCulture));
+        await editor.GetByTestId("project-structure-gantt-task-start").PressAsync("Tab");
+        await Assertions.Expect(editor.GetByTestId("project-structure-gantt-task-end"))
+            .ToHaveValueAsync(start.AddHours((double)hours).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture));
+        await editor.GetByTestId("project-structure-gantt-task-end").FillAsync(end.ToString("O", CultureInfo.InvariantCulture));
+        await editor.GetByTestId("project-structure-gantt-task-end").PressAsync("Tab");
+        var expectedHours = (decimal)(end - start).TotalHours;
+        await Assertions.Expect(length).ToHaveValueAsync(new Regex(
+            "^" + Regex.Escape(expectedHours.ToString(CultureInfo.InvariantCulture)) + @"(\.0+)?$"));
+    }
+
     private static async Task AssertInsightsDescendantAsync(SharedProviderConsumerFixture fixture, Guid projectId) {
         var childId = await CreatePlanningProjectAsync(fixture, "WB2 descendant " + Guid.NewGuid().ToString("N"));
         var page = fixture.Page;
@@ -87,10 +104,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
             await page.GetByRole(AriaRole.Button, new() { Name = "Add task", Exact = true }).ClickAsync();
             var editor = page.GetByTestId("project-structure-gantt-task-dialog-content");
             await editor.GetByTestId("project-structure-gantt-task-title").FillAsync(priced ? "WB2 known zero" : "WB2 unpriced");
-            await editor.GetByTestId("project-structure-gantt-task-start").FillAsync(start.ToString("O", CultureInfo.InvariantCulture));
-            await editor.GetByTestId("project-structure-gantt-task-start").PressAsync("Tab");
-            await editor.GetByTestId("project-structure-gantt-task-end").FillAsync(start.AddHours(priced ? 1 : 2).ToString("O", CultureInfo.InvariantCulture));
-            await editor.GetByTestId("project-structure-gantt-task-end").PressAsync("Tab");
+            await SetGanttScheduleAsync(editor, start, start.AddHours(priced ? 1 : 2));
             await editor.GetByTestId("project-structure-gantt-task-estimate-cost").FillAsync(priced ? "0" : "");
             await editor.GetByTestId("project-structure-gantt-task-estimate-currency").FillAsync("USD");
             await editor.GetByTestId("project-structure-gantt-task-submit").ClickAsync();

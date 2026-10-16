@@ -45,6 +45,8 @@
                     <WorkforceRecordBrowser @key="View.WorkforceBrowserVersion"
                                             SelectedPartyId="View.SelectedWorkspace?.PartyId"
                                             SelectionChanged="View.SelectPartyAsync"
+                                            Query="@View.CatalogQuery"
+                                            QueryChanged="View.HandleCatalogQueryChangedAsync"
                                             LoadFailed="View.HandleWorkforceBrowserLoadFailedAsync"
                                             PageSize="12"
                                             ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"

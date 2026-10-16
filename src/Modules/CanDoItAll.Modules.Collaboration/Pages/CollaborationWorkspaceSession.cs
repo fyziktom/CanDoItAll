@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Collaboration.UI;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ public sealed class CollaborationWorkspaceSession(
     ICollaborationWorkspaceOwner owner,
     ILogger<CollaborationWorkspaceSession> logger,
     Action changed,
-    Action<Guid?> selectionChanged,
+    Action<CollaborationUrlState, UrlHistoryMode> routeChanged,
     Action<string> navigate,
     Action<string, bool> notify) : ICollaborationWorkspaceView, IDisposable {
     private CancellationTokenSource? readCancellation;
@@ -16,7 +17,7 @@ public sealed class CollaborationWorkspaceSession(
     private long selectionGeneration;
     private bool disposed;
     private bool routeDelivered;
-    private Guid? lastRoute;
+    private CollaborationUrlState? lastRoute;
     private SelectionKind selectionKind;
 
     public CollaborationWorkspaceModel? Workspace { get; private set; }
@@ -30,30 +31,36 @@ public sealed class CollaborationWorkspaceSession(
     public CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; private set; } = new(new());
     public CollaborationDraft<CollaborationReplyEditorModel> Reply { get; private set; } = new(new());
     public CollaborationTarget? Target { get; private set; }
+    public CollaborationUrlState Route => new(Section, UnreadOnly, Target?.ThreadId);
 
-    public async Task ApplyRouteAsync(Guid? threadId) {
-        if (disposed || routeDelivered && lastRoute == threadId) {
+    public async Task ApplyRouteAsync(CollaborationUrlState route) {
+        ArgumentNullException.ThrowIfNull(route);
+        if (disposed || routeDelivered && lastRoute == route) {
             return;
         }
 
         routeDelivered = true;
-        lastRoute = threadId;
-        if (threadId.HasValue) {
-            UnreadOnly = false;
+        lastRoute = route;
+        Section = route.View ?? Section;
+        UnreadOnly = route.ThreadId is null && route.UnreadOnly;
+        ChangeTarget(route.ThreadId, route.ThreadId.HasValue ? SelectionKind.Explicit : SelectionKind.Initial);
+        if (route.ThreadId.HasValue && route.UnreadOnly) {
+            Publish(UrlHistoryMode.Replace);
         }
-        ChangeTarget(threadId, threadId.HasValue ? SelectionKind.Explicit : SelectionKind.Initial);
-        await ReadAsync(resolveSection: threadId.HasValue);
+        await ReadAsync(resolveSection: route.ThreadId.HasValue && route.View is null);
     }
 
     public Task RefreshAsync() => ReadAsync();
 
-    public async Task SelectAsync(Guid threadId) {
+    public Task SelectAsync(Guid threadId) => SelectAsync(threadId, UrlHistoryMode.Push);
+
+    private async Task SelectAsync(Guid threadId, UrlHistoryMode mode) {
         if (disposed || Target?.ThreadId == threadId) {
             return;
         }
 
         ChangeTarget(threadId, SelectionKind.Explicit);
-        PublishSelection();
+        Publish(mode);
         await ReadAsync();
     }
 
@@ -64,6 +71,7 @@ public sealed class CollaborationWorkspaceSession(
 
         Section = section;
         ++selectionGeneration;
+        Publish(UrlHistoryMode.Push);
         await RealignAsync();
     }
 
@@ -74,6 +82,7 @@ public sealed class CollaborationWorkspaceSession(
 
         UnreadOnly = unreadOnly;
         ++selectionGeneration;
+        Publish(UrlHistoryMode.Push);
         await RealignAsync();
     }
 
@@ -97,12 +106,12 @@ public sealed class CollaborationWorkspaceSession(
             Workspace = accepted with { SelectedThread = null };
             ReadError = readError;
             ReadState = readError is null ? CollaborationReadState.Ready : CollaborationReadState.Stale;
-            PublishSelection();
+            Publish(UrlHistoryMode.Replace);
             changed();
             return;
         }
 
-        await SelectAsync(next.Value);
+        await SelectAsync(next.Value, UrlHistoryMode.Replace);
     }
 
     private IEnumerable<Guid> VisibleIds(CollaborationWorkspaceModel workspace) => Section switch {
@@ -146,6 +155,7 @@ public sealed class CollaborationWorkspaceSession(
             }
 
             Workspace = kind == SelectionKind.Empty ? result with { SelectedThread = null } : result;
+            var published = Route;
             if (kind == SelectionKind.Initial) {
                 Target = result.SelectedThread is { } selected ? new(selected.ThreadId) : null;
                 selectionKind = Target is null ? SelectionKind.Empty : SelectionKind.Explicit;
@@ -155,6 +165,10 @@ public sealed class CollaborationWorkspaceSession(
                 Section = result.Escalations.Any(item => item.ThreadId == selectedTarget.ThreadId)
                     ? CollaborationSection.Escalations
                     : result.Threads.Any(item => item.ThreadId == selectedTarget.ThreadId) ? CollaborationSection.Threads : CollaborationSection.Inbox;
+            }
+
+            if (Route != published || resolveSection && selection == selectionGeneration) {
+                Publish(UrlHistoryMode.Replace);
             }
 
             ReadState = CollaborationReadState.Ready;
@@ -227,7 +241,7 @@ public sealed class CollaborationWorkspaceSession(
             ChangeTarget(result.Value, SelectionKind.Explicit);
             var createdTarget = Target;
             var acceptedDraft = NewThread;
-            PublishSelection();
+            Publish(UrlHistoryMode.Push);
             notify(NewThread.Message, false);
             await ReadAsync();
             if (!disposed && ReferenceEquals(Target, createdTarget) && ReferenceEquals(NewThread, acceptedDraft)
@@ -383,10 +397,10 @@ public sealed class CollaborationWorkspaceSession(
     private bool IsCurrentRead(long generation) => !disposed && generation == readGeneration;
     private bool IsCurrentTarget(CollaborationTarget target) => !disposed && ReferenceEquals(Target, target);
 
-    private void PublishSelection() {
-        lastRoute = Target?.ThreadId;
+    private void Publish(UrlHistoryMode mode) {
+        lastRoute = Route;
         routeDelivered = true;
-        selectionChanged(lastRoute);
+        routeChanged(lastRoute, mode);
     }
 
     public void Dispose() {

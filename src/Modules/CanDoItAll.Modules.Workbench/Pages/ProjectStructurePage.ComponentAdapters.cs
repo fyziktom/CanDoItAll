@@ -87,7 +87,7 @@ public partial class ProjectStructurePage
         }
         switch (intent) {
             case StructureViewIntent view when view.Index is >= CanvasViewIndex and <= ManagerSummaryViewIndex:
-                structureViewIndex = view.Index;
+                SelectStructureView(view.Index);
                 break;
             case StructureSelectionIntent selection:
                 await TrackAuthoringOperationAsync(HandleSelectionChangedAsync(selection.Selection));

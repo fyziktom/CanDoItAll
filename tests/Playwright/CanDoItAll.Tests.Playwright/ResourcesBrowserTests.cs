@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
@@ -49,6 +50,8 @@ public sealed class ResourcesBrowserTests(PlaywrightAppFixture fixture) {
             await page.GetByTestId("resource-save-button").EvaluateAsync("e => e.click()");
             await Assertions.Expect(page.GetByTestId("resource-mutation-receipt").First).ToContainTextAsync("Committed");
             var resource = Assert.Single(await owner.ListAsync(), r => r.ProjectId == project.Value);
+            // The first save addresses the new resource without adding a history entry; the project seed stays.
+            await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/resources?resourceId={resource.Id:D}&projectId={project.Value:D}");
             await page.GetByTestId("resource-name-input").FillAsync("Browser edited resource");
             await page.GetByTestId("resource-primary-input").FillAsync("https://example.test/browser-edited");
             await page.GetByTestId("resource-save-button").EvaluateAsync("e => e.click()");
@@ -59,8 +62,16 @@ public sealed class ResourcesBrowserTests(PlaywrightAppFixture fixture) {
             Assert.Equal("https://example.test/browser-edited", edited.LocationOrIdentifier);
             await Shot(page, "production-registry");
             await page.GetByTestId("resources-tab-browse").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/resources?view=browse&resourceId={resource.Id:D}&projectId={project.Value:D}");
             await page.GetByTestId($"resources-source-storage:{storage.Id:N}").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex($"&source=storage%3A{storage.Id:N}$"));
             var file = page.Locator(".ft-file-browser__item-main").Filter(new() { HasText = fileName });
+            await Assertions.Expect(file).ToBeVisibleAsync();
+            // Back and Forward close and reopen the addressed source in the same page.
+            await page.GoBackAsync();
+            await Assertions.Expect(file).ToHaveCountAsync(0);
+            await page.GoForwardAsync();
+            await Assertions.Expect(file).ToBeVisibleAsync();
             await file.DblClickAsync();
             await page.GetByTestId("resources-promotion-project").SelectOptionAsync(project.Value.ToString());
             await page.GetByTestId("resources-promotion-name").FillAsync("Browser governed file");

@@ -83,6 +83,13 @@
             <Stack GapScale="LayoutGap.Medium"
                    Class="processes-workspace-root min-h-0 flex-1"
                    data-testid="processes-shell">
+                @if (!string.IsNullOrWhiteSpace(Session.UnavailableSelectionText)) {
+                    <SurfaceCard Soft="true" data-testid="processes-selection-unavailable">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Unavailable" />
+                        <p class="mt-1 text-sm leading-6 text-slate-700">@Session.UnavailableSelectionText</p>
+                    </SurfaceCard>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(Session.AgentContextNotice)) {
                     <p class="text-xs font-semibold text-slate-500" data-testid="processes-agent-context-notice">@Session.AgentContextNotice</p>
                 }
@@ -165,17 +172,21 @@
     </ChildContent>
 </PageScaffold>
 
-@if (Session.RunDetailDialogOpen && Session.RunDetailSnapshot is not null) {
+@if (Session.RunDetailDialogOpen) {
     <Dialog IsOpen="true"
             Eyebrow="Process run"
-            Title="@BuildRunTitle(Session.RunDetailSnapshot)"
-            Subtitle="@BuildRunSubtitle(Session.RunDetailSnapshot)"
+            Title="@(Session.RunDetailSnapshot is { } titledRun ? BuildRunTitle(titledRun) : "Process run")"
+            Subtitle="@(Session.RunDetailSnapshot is { } subtitledRun ? BuildRunSubtitle(subtitledRun) : string.Empty)"
             Size="ModalSize.Full"
             DenseChrome="true"
             TestId="processes-run-detail-dialog"
             OnClose="Session.CloseRunDetailDialogAsync">
         <ChildContent>
-            @RenderRunDetailDialog(Session.RunDetailSnapshot)
+            @if (Session.RunDetailSnapshot is { } detailRun) {
+                @RenderRunDetailDialog(detailRun)
+            } else {
+                @RenderOverlayUnavailable("processes-run-detail-unavailable", "The requested process run is not available in the current projection.")
+            }
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
@@ -188,17 +199,21 @@
     </Dialog>
 }
 
-@if (Session.EventDetailDialogOpen && Session.EventDetail is not null) {
+@if (Session.EventDetailDialogOpen) {
     <Dialog IsOpen="true"
             Eyebrow="Runtime event"
-            Title="@Session.EventDetail.EventType"
-            Subtitle="@Session.EventDetail.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)"
+            Title="@(Session.EventDetail?.EventType ?? "Runtime event")"
+            Subtitle="@(Session.EventDetail?.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture) ?? string.Empty)"
             Size="ModalSize.Wide"
             DenseChrome="true"
             TestId="processes-runtime-event-detail-dialog"
             OnClose="Session.CloseEventDetailDialogAsync">
         <ChildContent>
-            @RenderEventDetailDialog(Session.EventDetail)
+            @if (Session.EventDetail is { } detailEvent) {
+                @RenderEventDetailDialog(detailEvent)
+            } else {
+                @RenderOverlayUnavailable("processes-runtime-event-detail-unavailable", "The requested runtime event is not on the current event page of this history window.")
+            }
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
@@ -305,6 +320,19 @@
             case ProcessWorkspaceDetailTabKey.ManagerChat:
                 @RenderManagerChatTab()
                 break;
+        }
+    </div>;
+
+
+    private RenderFragment RenderOverlayUnavailable(string testId, string description) => @<div data-testid="@testId">
+        @if (Session.Shell is null || Session.IsBusy) {
+            <LoadingState Eyebrow="Loading"
+                          Title="Loading the requested record"
+                          Description="The process workspace projection is loading." />
+        } else {
+            <EmptyState Eyebrow="Unavailable"
+                        Title="This record is not available"
+                        Description="@description" />
         }
     </div>;
 

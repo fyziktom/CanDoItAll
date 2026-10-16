@@ -127,6 +127,7 @@ public sealed class PluginScenarioStore : IPluginWorkspaceOwner {
     public int GrantWrites => grantWrites;
     public int LifecycleWrites { get; private set; }
     public int OAuthStarts { get; private set; }
+    public PluginOAuthStartRequest? LastOAuthStart { get; private set; }
     public int BrowserEffects { get; private set; }
     public int PackageWrites { get; private set; }
     public int RestartRequests { get; private set; }
@@ -267,6 +268,7 @@ public sealed class PluginScenarioStore : IPluginWorkspaceOwner {
     public async Task<PluginWriteReceipt<PluginOAuthStartResponse>> StartOAuthAsync(PluginId id, PluginOAuthStartRequest request) {
         await WaitAsync(PluginScenarioWait.OAuth);
         OAuthStarts++;
+        LastOAuthStart = request;
         return PluginWriteReceipt<PluginOAuthStartResponse>.Saved(new(request.ConnectionId!.Value,
             "https://provider.invalid/authorize", "/api/plugins/oauth/callback", ["profile"]));
     }

@@ -1,3 +1,4 @@
+@using CanDoItAll.AppComponents.Navigation
 @using CanDoItAll.Workspace.DataSources.UI
 @using CanDoItAll.Modules.Workspace.DataSources.Contracts
 @using CanDoItAll.Infrastructure.ControlPlane
@@ -14,13 +15,35 @@
 }
 
 @code {
+    [Parameter] public Guid? ProfileId { get; set; }
+    [Parameter] public EventCallback<SettingsRouteChange<Guid?>> ProfileIdChanged { get; set; }
     private DataSourcesSession? session;
     private readonly HashSet<Guid> notified = [];
+    private Guid? routed;
+    private bool disposed;
     protected override async Task OnInitializedAsync() {
         notified.UnionWith(Operations.Receipts.Where(item => item.Result is not null).Select(item => item.OperationId));
         Operations.Changed += NotifyCompleted;
         session = new(new WorkspaceDataSourcesOwner(Profiles, Canonical, Logger), Operations);
-        await session.InitializeAsync();
+        session.SelectionChanged += SelectionChanged;
+        routed = ProfileId;
+        await session.InitializeAsync(ProfileId);
+    }
+    protected override Task OnParametersSetAsync() {
+        if (session is null || ProfileId == routed) {
+            return Task.CompletedTask;
+        }
+        routed = ProfileId;
+        return ProfileId is { } id ? session.SelectAsync(id) : session.SelectDefaultAsync();
+    }
+    private void SelectionChanged(DataSourceSelection selection) => _ = InvokeAsync(() => PublishAsync(selection));
+    private Task PublishAsync(DataSourceSelection selection) {
+        if (disposed || selection.ProfileId == routed) {
+            return Task.CompletedTask;
+        }
+        routed = selection.ProfileId;
+        var mode = selection.Cause == DataSourceSelectionCause.Operator ? UrlHistoryMode.Push : UrlHistoryMode.Replace;
+        return ProfileIdChanged.InvokeAsync(new(selection.ProfileId, mode));
     }
     private void NotifyCompleted() {
         foreach (var receipt in Operations.Receipts.Where(item => item.Result is not null)) {
@@ -35,7 +58,11 @@
         }
     }
     public void Dispose() {
+        disposed = true;
         Operations.Changed -= NotifyCompleted;
-        session?.Dispose();
+        if (session is not null) {
+            session.SelectionChanged -= SelectionChanged;
+            session.Dispose();
+        }
     }
 }

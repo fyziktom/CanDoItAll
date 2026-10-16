@@ -31,6 +31,8 @@ The architecture documentation is intentionally small:
   split of the Prompt Gallery, its behavior matrix, contracts decision and validation.
 - [HTTP API documentation](api-documentation.md) explains how XML documentation becomes the
   OpenAPI document and Swagger UI text, the conventions that pipeline requires, and its gates.
+- [Navigation state](navigation-state.md) defines what a routed page keeps in its URL, the
+  codec and binding contract, Push and Replace history, route-driven dialogs and the Workbench rule.
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.

@@ -1,20 +1,39 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers.UI;
+using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.Components.BaseLib;
 using Microsoft.AspNetCore.Components;
 using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+// The provider and editor section a route-controlled panel shows, for its page to write into the URL.
+public readonly record struct ProviderRouteSelection(Guid ProviderId, ProviderEditorSection Section);
+
 public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDisposable {
     [Inject] public IProviderEditorCommands Commands { get; set; } = default!;
     [Inject] public ProviderEditorRecovery Recovery { get; set; } = default!;
     [Inject] public IProviderProfilesReads Reads { get; set; } = default!;
     [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Parameter] public Guid? ProviderId { get; set; }
+    [Parameter] public ProviderEditorSection Section { get; set; } = ProviderEditorSection.Connection;
+    [Parameter] public bool ConnectionsOpen { get; set; }
+    [Parameter] public ProviderHistoryLocation? HistoryLocation { get; set; }
+    [Parameter] public EventCallback<ProviderRouteSelection> ProviderRequested { get; set; }
+    [Parameter] public EventCallback<ProviderRouteSelection> ProviderPublished { get; set; }
+    [Parameter] public EventCallback NewDraftRequested { get; set; }
+    [Parameter] public EventCallback<ProviderEditorSection> SectionRequested { get; set; }
+    [Parameter] public EventCallback<bool> ConnectionsRequested { get; set; }
+    [Parameter] public EventCallback<ProviderHistoryLocationChange> HistoryLocationChanged { get; set; }
     private ProviderProfilesSession session = default!;
     private ProviderEditorOperations operations = default!;
     private long sharingRevision;
     private bool disposed;
+    private bool routeApplied;
+    private Guid? appliedProviderId;
+    private ProviderEditorSection? appliedSection;
+
+    private bool IsRouteControlled => ProviderRequested.HasDelegate;
 
     public ProviderProfilesState State => session.State;
     public ProviderEditorDraft Editor => session.Editor;
@@ -38,22 +57,83 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
     protected override async Task OnInitializedAsync() {
         session = new(Reads, Recovery);
         operations = new(session, Commands);
-        await session.RefreshAsync();
+        if (!IsRouteControlled) {
+            await session.RefreshAsync();
+        }
     }
-    public void SelectSection(ProviderEditorSection section) => session.SelectSection(section);
-    public void SetSharedConnectionsOpen(bool open) => session.SetSharedConnectionsOpen(open);
+
+    protected override Task OnParametersSetAsync() => IsRouteControlled ? ApplyRouteAsync() : Task.CompletedTask;
+
+    // A location applies its section when the section changes or the location names another provider, never on a mere
+    // render: a new draft has no provider in its URL and so no section there either, and keeps the one it is on.
+    private async Task ApplyRouteAsync() {
+        var initial = !routeApplied;
+        if (initial || appliedProviderId != ProviderId || Section != appliedSection) {
+            appliedSection = Section;
+            session.SelectSection(Section);
+        }
+        session.SetSharedConnectionsOpen(ConnectionsOpen);
+        if (!initial && appliedProviderId == ProviderId) {
+            return;
+        }
+        routeApplied = true;
+        appliedProviderId = ProviderId;
+        if (initial && !await session.RefreshCatalogAsync()) {
+            return;
+        }
+        if (ProviderId is { } providerId) {
+            await session.SelectAsync(providerId);
+            return;
+        }
+        var fallback = session.Catalog.Providers.FirstOrDefault()?.Id;
+        await session.SelectAsync(fallback);
+        if (fallback is { } selected && appliedProviderId is null) {
+            appliedProviderId = selected;
+            await ProviderPublished.InvokeAsync(new(selected, State.Section));
+        }
+    }
+
+    public void SelectSection(ProviderEditorSection section) {
+        session.SelectSection(section);
+        if (IsRouteControlled) {
+            _ = SectionRequested.InvokeAsync(section);
+        }
+    }
+
+    public void SetSharedConnectionsOpen(bool open) {
+        session.SetSharedConnectionsOpen(open);
+        if (IsRouteControlled) {
+            _ = ConnectionsRequested.InvokeAsync(open);
+        }
+    }
+
     public async Task RefreshAsync() {
         await session.RefreshAsync();
         await RenderCurrentAsync();
     }
+
     public async Task SelectAsync(Guid providerId) {
+        if (IsRouteControlled) {
+            routeApplied = true;
+            appliedProviderId = providerId;
+            await ProviderRequested.InvokeAsync(new(providerId, State.Section));
+        }
         await session.SelectAsync(providerId);
         await RenderCurrentAsync();
     }
+
+    // A draft has no identity to put in the URL, so New leaves the provider's location: Back returns to that provider,
+    // and a reload or a shared link opens the catalog's default selection rather than an unsaved draft.
     public async Task NewAsync() {
+        if (IsRouteControlled) {
+            routeApplied = true;
+            appliedProviderId = null;
+            await NewDraftRequested.InvokeAsync();
+        }
         await session.NewAsync();
         await RenderCurrentAsync();
     }
+
     public async Task ExecuteAsync(ProviderEditorIntent intent) {
         if (!IsCurrent(intent.Target) || intent.Target.ProviderId != State.ProviderId) {
             return;
@@ -84,8 +164,18 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
                     break;
             }
         }
+        await PublishCommittedIdentityAsync();
         await InvokeAsync(StateHasChanged);
     }
+
+    private async Task PublishCommittedIdentityAsync() {
+        if (!IsRouteControlled || State.ProviderId is not { } providerId || providerId == appliedProviderId) {
+            return;
+        }
+        appliedProviderId = providerId;
+        await ProviderPublished.InvokeAsync(new(providerId, State.Section));
+    }
+
     private Task RefreshSharedAsync(ProviderEditorTarget target, SharedProviderChangeDelivery delivery) =>
         delivery.ReconcileAsync(async () => {
             if (!IsCurrent(target)) {
@@ -105,11 +195,15 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IDispos
             }
             await InvokeAsync(StateHasChanged);
         });
+
     private void CloseConnections(ProviderEditorTarget target) {
         if (IsCurrent(target)) {
-            session.SetSharedConnectionsOpen(false);
+            SetSharedConnectionsOpen(false);
         }
     }
+
+    private EventCallback<ProviderHistoryLocationChange> HistoryChanged => IsRouteControlled ? HistoryLocationChanged : default;
+
     private bool IsCurrent(ProviderEditorTarget target) => session.IsCurrentSelection(target.Activation) &&
         ReferenceEquals(target.Context, session.EditContext);
     private Task RenderCurrentAsync() => disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);

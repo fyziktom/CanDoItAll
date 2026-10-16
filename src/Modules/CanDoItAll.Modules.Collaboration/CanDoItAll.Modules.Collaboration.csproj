@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../UI/CanDoItAll.Collaboration.UI/CanDoItAll.Collaboration.UI.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

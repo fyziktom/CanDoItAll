@@ -1,10 +1,12 @@
 using Bunit;
+using Bunit.TestDoubles;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Charts;
@@ -12,6 +14,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Processes.AgentChat;
+using CanDoItAll.Modules.Processes.Pages;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
@@ -31,14 +34,14 @@ public sealed partial class ProcessWorkspaceShellTests
     [InlineData(true)]
     public async Task Delayed_dialog_callbacks_cannot_publish_old_rows_with_the_recreated_project_lifetime(bool live) {
         if (live) {
-            await AssertDelayedProjectCallbacksAsync<LiveProcessesDashboard>(component => component.ProjectId, "OpenAgentDetailDialogAsync", "agentDetailAgent");
+            await AssertDelayedProjectCallbacksAsync<LiveProcessesDashboard>(component => component.ProjectId, "OpenAgentDetailDialogAsync", "AgentDetailAgent", "live-processes-refresh-button");
         } else {
-            await AssertDelayedProjectCallbacksAsync<ProcessWorkspaceShell>(component => component.ProjectId, "OpenEventDetailDialogAsync", "eventDetail");
+            await AssertDelayedProjectCallbacksAsync<ProcessWorkspaceShell>(component => component.ProjectId, "OpenEventDetailDialogAsync", "EventDetail", "processes-refresh");
         }
     }
 
     private static async Task AssertDelayedProjectCallbacksAsync<T>(System.Linq.Expressions.Expression<Func<T, Guid?>> projectParameter,
-        string secondCallback, string secondField) where T : ComponentBase {
+        string secondCallback, string secondDetail, string refreshTestId) where T : ComponentBase {
         using var context = CreateContext(out var client, timeProvider: new ManualTimeProvider(Now));
         var projectId = Guid.NewGuid();
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), projectId, Guid.NewGuid());
@@ -63,11 +66,12 @@ public sealed partial class ProcessWorkspaceShellTests
             cut.WaitForAssertion(() => Assert.NotEmpty(held!.Runtime.Events));
         }
         var oldRun = held!.Runtime.Runs.First();
-        object oldDetail = secondField == "agentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
+        object oldDetail = secondDetail == "AgentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
         replace = true;
-        await cut.InvokeAsync(() => cut.Render());
+        cut.Find($"[data-testid='{refreshTestId}']").Click();
         cut.WaitForAssertion(() => Assert.Equal(successor,
             ((ProcessWorkspaceShellProjection)typeof(T).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)!).ProjectBinding));
+        var location = CurrentLocation(context);
         await cut.InvokeAsync(async () => {
             foreach (var (method, value) in new[] { ("OpenRunDetailDialogAsync", (object)oldRun), (secondCallback, oldDetail) }) {
                 await (Task)typeof(T).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(cut.Instance, [value])!;
@@ -75,8 +79,10 @@ public sealed partial class ProcessWorkspaceShellTests
             cut.Render();
         });
         cut.WaitForAssertion(() => {
-            Assert.Null(typeof(T).GetField("runDetailSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
-            Assert.Null(typeof(T).GetField(secondField, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            Assert.Null(typeof(T).GetProperty("RunDetailSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            Assert.Null(typeof(T).GetProperty(secondDetail, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            // A row of the replaced lifetime opens no overlay, so the location gains no history entry.
+            Assert.Equal(location, CurrentLocation(context));
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture());
             Assert.Equal(successor.LifetimeId, snapshot.Scope.ObservedProjectLifetime!.LifetimeId);
             Assert.DoesNotContain(snapshot.Scope.SurfacePosition!.Facts, fact => fact.Name == "focused-dialog");
@@ -256,8 +262,7 @@ public sealed partial class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         navigation.NavigateTo($"/processes/live?runId={selectedRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, selectedRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -285,6 +290,14 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Equal(initialScopeId, snapshot.Scope.Id);
             Assert.Contains(position.Facts, fact => fact.Name == "focused-dialog" && fact.Value == "run-detail");
         });
+        // The dialog is an overlay entry of its own: the address is shareable and closing returns to the run.
+        Assert.Equal($"/processes/live?runId={selectedRunId:D}&dialog=run", CurrentLocation(context));
+        Assert.False(((BunitNavigationManager)navigation).History.First().Options.ReplaceHistoryEntry);
+
+        await cut.InvokeAsync(() => ((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).CloseRunDetailDialogAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='live-processes-run-detail-dialog']")));
+        Assert.Equal($"/processes/live?runId={selectedRunId:D}", CurrentLocation(context));
     }
 
     [Fact]
@@ -293,9 +306,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes/live?runId={missingRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, missingRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -308,7 +321,10 @@ public sealed partial class ProcessWorkspaceShellTests
                 position.SelectedEntities,
                 entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
             Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+            Assert.NotNull(cut.Find("[data-testid='live-processes-selection-unavailable']"));
         });
+        // The requested run is never silently replaced by another one.
+        Assert.Equal($"/processes/live?runId={missingRunId:D}", CurrentLocation(context));
     }
 
     [Theory]
@@ -316,15 +332,20 @@ public sealed partial class ProcessWorkspaceShellTests
     [InlineData("66666666-6666-6666-6666-666666666666", true)]
     public void Live_processes_launch_notice_waits_only_for_an_unprojected_run(string runId, bool expectedNotice) {
         using var context = CreateContext(out var client);
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, Guid.Parse(runId))
-            .Add(component => component.LaunchStarted, true));
+        NavigateTo(context, $"/processes/live?runId={runId}&processStarted=1");
+
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => {
             Assert.Equal(expectedNotice ? 1 : 0, cut.FindAll("[data-testid='live-processes-started-notification']").Count);
             Assert.DoesNotContain("Process started. Live run projection is loading.", cut.Markup, StringComparison.Ordinal);
             Assert.True(client.Requests[0].ForceRefresh);
+            Assert.Empty(cut.FindAll("[data-testid='live-processes-selection-unavailable']"));
         });
+        // The launch signal is consumed once: the canonical location replaces it without a history entry.
+        Assert.Single(client.Requests);
+        Assert.Equal($"/processes/live?runId={runId}", CurrentLocation(context));
+        Assert.True(((BunitNavigationManager)context.Services.GetRequiredService<NavigationManager>()).History.First().Options.ReplaceHistoryEntry);
     }
 
     [Theory]
@@ -335,12 +356,11 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var unresolvedId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, useProcessId
+            ? $"/processes/live?processId={unresolvedId:D}"
+            : $"/processes/live?launchPlanId={unresolvedId:D}");
 
-        var cut = useProcessId
-            ? context.Render<LiveProcessesDashboard>(parameters => parameters
-                .Add(component => component.ProcessIdQuery, unresolvedId))
-            : context.Render<LiveProcessesDashboard>(parameters => parameters
-                .Add(component => component.LaunchPlanIdQuery, unresolvedId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -359,9 +379,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?runId={missingRunId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, missingRunId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -374,7 +394,10 @@ public sealed partial class ProcessWorkspaceShellTests
                 position.SelectedEntities,
                 entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
             Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+            Assert.NotNull(cut.Find("[data-testid='processes-selection-unavailable']"));
         });
+        // The requested run is never silently replaced by another one.
+        Assert.Contains($"runId={missingRunId:D}", CurrentLocation(context), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -399,8 +422,9 @@ public sealed partial class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, missingDefinitionKey));
+        NavigateTo(context, $"/processes?definitionKey={missingDefinitionKey}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -414,7 +438,10 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.DoesNotContain(
                 position.Facts,
                 IsSelectedDefinitionFact);
+            // The page shows the unavailable selection instead of the fallback definition's editor.
+            Assert.NotNull(cut.Find("[data-testid='processes-selection-unavailable']"));
         });
+        Assert.Equal($"/processes?definitionKey={missingDefinitionKey}", CurrentLocation(context));
     }
 
     [Fact]
@@ -441,8 +468,9 @@ public sealed partial class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, targetProcessId));
+        NavigateTo(context, $"/processes?processId={targetProcessId:D}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -450,6 +478,8 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
             Assert.Equal(targetDefinitionKey, snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
         });
+        // The legacy process id stays the link's identity; it is not rewritten to a definition key.
+        Assert.Equal($"/processes?processId={targetProcessId:D}", CurrentLocation(context));
     }
 
     [Fact]
@@ -458,9 +488,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingProcessId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?processId={missingProcessId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, missingProcessId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -484,9 +514,9 @@ public sealed partial class ProcessWorkspaceShellTests
             new ProcessDefinitionCatalogItemKey("architecture-decision-governance")).Value;
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, conflictingProcessId)
-            .Add(component => component.SelectedDefinitionKey, requestedDefinitionKey));
+        NavigateTo(context, $"/processes?definitionKey={requestedDefinitionKey}&processId={conflictingProcessId:D}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -507,9 +537,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var launchPlanId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?launchPlanId={launchPlanId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.LaunchPlanIdQuery, launchPlanId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -538,8 +568,7 @@ public sealed partial class ProcessWorkspaceShellTests
             new AgentChatWorkspacePosition("live", "Live processes", "/processes/live", "page"),
             AgentChatNavigationIdentity.CreateForLocation(navigation.BaseUri, navigation.Uri));
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() =>
             Assert.Equal(
                 firstRunId.ToString("D"),
@@ -564,8 +593,7 @@ public sealed partial class ProcessWorkspaceShellTests
             async () => await registry.CaptureAsync());
         Assert.Equal(AgentChatContextPositionMismatchReason.NavigationChanged, mismatch.Reason);
 
-        cut.Render(parameters => parameters
-            .Add(component => component.RunIdQuery, secondRunId));
+        navigation.NavigateTo(nextLocation);
 
         cut.WaitForAssertion(() =>
         {
@@ -585,13 +613,12 @@ public sealed partial class ProcessWorkspaceShellTests
         var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
+        NavigateTo(context, $"/processes/live?runId={firstRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.Render(parameters => parameters
-            .Add(component => component.RunIdQuery, secondRunId));
+        NavigateQuery(context, LiveProcessesUrlCodec.RunKey, secondRunId);
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
             AgentChatContextAccessState.Loading,
@@ -620,7 +647,7 @@ public sealed partial class ProcessWorkspaceShellTests
         var nextProjectId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
-        client.ShellResultTransform = (requestIndex, projection) => requestIndex == 1
+        client.ShellResultTransform = (requestIndex, projection) => requestIndex == 0
             ? projection with
             {
                 Runtime = projection.Runtime with
@@ -631,25 +658,17 @@ public sealed partial class ProcessWorkspaceShellTests
                 }
             }
             : projection;
+        NavigateTo(context, $"/processes/live?runId={firstRunId:D}&status=needs-attention");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
-        SetPrivateField<Guid?>(cut.Instance, "requiredRouteRunId", null);
-        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.Active);
 
-        client.CompleteShellRequest(0);
-        Assert.True(
-            SpinWait.SpinUntil(() => client.Requests.Count == 2, TimeSpan.FromSeconds(10)),
-            "The filtered follow-up projection request was not started.");
+        // The explicit run and its filter survive the project change; the superseded read stays pending.
+        cut.Render(parameters => parameters.Add(component => component.ProjectId, nextProjectId));
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        Assert.Equal(firstRunId, client.Requests[1].Selection.RunId);
 
-        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.NeedsAttention);
-        cut.Render(parameters => parameters
-            .Add(component => component.ProjectId, nextProjectId)
-            .Add(component => component.RunIdQuery, firstRunId));
-        cut.WaitForAssertion(() => Assert.Equal(3, client.Requests.Count));
-
-        client.CompleteShellRequest(2);
+        client.CompleteShellRequest(1);
         cut.WaitForAssertion(() =>
         {
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
@@ -658,17 +677,106 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Contains(
                 snapshot.Scope.SurfacePosition!.Facts,
                 fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+            Assert.Contains(
+                snapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "status-filter" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
         });
 
-        client.CompleteShellRequest(1);
+        client.CompleteShellRequest(0);
         Assert.True(
-            SpinWait.SpinUntil(() => client.CompletedShellRequestCount == 3, TimeSpan.FromSeconds(10)),
-            "The superseded filtered projection did not finish.");
-        var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        Assert.Equal(firstRunId.ToString("D"), finalSnapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
-        Assert.Contains(
-            finalSnapshot.Scope.SurfacePosition!.Facts,
-            fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+            SpinWait.SpinUntil(() => client.CompletedShellRequestCount == 2, TimeSpan.FromSeconds(10)),
+            "The superseded projection did not finish.");
+        cut.WaitForAssertion(() =>
+        {
+            var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, finalSnapshot.Scope.AccessState);
+            Assert.Equal(firstRunId.ToString("D"), finalSnapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+            Assert.Contains(
+                finalSnapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+        });
+        Assert.Equal($"/processes/live?runId={firstRunId:D}&status=needs-attention", CurrentLocation(context));
+    }
+
+    [Fact]
+    public void Selecting_another_definition_replaces_the_legacy_selection_key_and_keeps_the_context_ready()
+    {
+        using var context = CreateContext(out _);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        var processId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
+            new ProcessDefinitionCatalogItemKey("blazor-app-delivery")).Value;
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var navigation = (BunitNavigationManager)NavigateTo(context, $"/processes?processId={processId:D}&runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Ready, registry.Capture()?.Scope.AccessState));
+        ActivateProcessDetailTab(cut, "processes-tab-definitions", "processes-tab-panel-definitions");
+
+        cut.Find("[data-testid='processes-definition-architecture-decision-governance']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal("architecture-decision-governance", snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+        // The in-app selection is the new address; the legacy process id that named the old definition is gone.
+        Assert.Equal($"/processes?tab=definition&definitionKey=architecture-decision-governance&runId={runId:D}", CurrentLocation(context));
+        Assert.False(navigation.History.First().Options.ReplaceHistoryEntry);
+        Assert.Empty(cut.FindAll("[data-testid='processes-selection-unavailable']"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_deep_linked_run_dialog_for_a_missing_run_reports_it_unavailable_and_close_replaces_the_location(bool live)
+    {
+        using var context = CreateContext(out _);
+        var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var path = live ? "/processes/live" : "/processes";
+        var navigation = (BunitNavigationManager)NavigateTo(context, $"{path}?runId={missingRunId:D}&dialog=run");
+        var dialog = live ? "live-processes-run-detail-dialog" : "processes-run-detail-dialog";
+        var unavailable = live ? "live-processes-run-detail-unavailable" : "processes-run-detail-unavailable";
+
+        IRenderedComponent<IComponent> cut = live ? context.Render<LiveProcessesDashboard>() : context.Render<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{dialog}'] [data-testid='{unavailable}']")));
+        Assert.Contains("dialog=run", CurrentLocation(context), StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() => live
+            ? ((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).CloseRunDetailDialogAsync()
+            : ((CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance).CloseRunDetailDialogAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll($"[data-testid='{dialog}']")));
+        // A deep-linked overlay has no parent entry, so Close replaces the location instead of going Back.
+        Assert.DoesNotContain("dialog=", CurrentLocation(context), StringComparison.Ordinal);
+        Assert.Contains($"runId={missingRunId:D}", CurrentLocation(context), StringComparison.Ordinal);
+        Assert.True(navigation.History.First().Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public void Live_processes_choosing_all_runs_clears_an_explicit_run_without_snapping_back()
+    {
+        using var context = CreateContext(out var client);
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        NavigateTo(context, $"/processes/live?runId={runId:D}");
+        var cut = context.Render<LiveProcessesDashboard>();
+        cut.WaitForElement("[data-testid='live-processes-run-filter']");
+        cut.WaitForAssertion(() => Assert.False(((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).IsLoading));
+        var requests = client.Requests.Count;
+
+        cut.Find("[data-testid='live-processes-run-filter']").Change(string.Empty);
+
+        cut.WaitForAssertion(() =>
+        {
+            var session = (CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance;
+            Assert.False(session.IsLoading);
+            Assert.Null(session.SelectedRuntimeRunId);
+            Assert.Equal(string.Empty, session.RuntimeRunSelectValue);
+            Assert.Equal("/processes/live", CurrentLocation(context));
+            Assert.Equal(requests + 1, client.Requests.Count);
+            Assert.Null(client.LastRequest!.Selection.RunId);
+        });
+        Assert.False(((BunitNavigationManager)context.Services.GetRequiredService<NavigationManager>()).History.First().Options.ReplaceHistoryEntry);
     }
 
     [Fact]
@@ -677,13 +785,12 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
+        var navigation = NavigateTo(context, "/processes?definitionKey=blazor-app-delivery");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, "blazor-app-delivery"));
+        var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.Render(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, "architecture-decision-governance"));
+        navigation.NavigateTo("/processes?definitionKey=architecture-decision-governance");
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
             AgentChatContextAccessState.Loading,
@@ -815,11 +922,10 @@ public sealed partial class ProcessWorkspaceShellTests
         var projectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var processId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        NavigateTo(context, $"/projects/{projectId:D}/processes?processId={processId:D}&runId={runId:D}");
 
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, projectId)
-            .Add(component => component.ProcessIdQuery, processId)
-            .Add(component => component.RunIdQuery, runId));
+            .Add(component => component.ProjectId, projectId));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-detail-panel-runs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Project, client.LastRequest?.Scope.Kind);
@@ -926,9 +1032,8 @@ public sealed partial class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
         var runId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
-        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var navigation = NavigateTo(context, $"/processes?runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-agent-context']")));
         cut.Find("[data-testid='processes-agent-context']").Click();
@@ -1536,8 +1641,8 @@ public sealed partial class ProcessWorkspaceShellTests
         var workspaceService = new RecordingManagerChatWorkspaceService();
         using var context = CreateContext(out _, workspaceService);
         var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
+        NavigateTo(context, $"/processes?runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForElement("[data-testid='chat-prompt-input']");
         const string prompt = "Explain the selected process in one sentence.";
@@ -1554,8 +1659,8 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, workspaceService);
         var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        NavigateTo(context, $"/processes?runId={firstRunId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
 
@@ -1588,8 +1693,9 @@ public sealed partial class ProcessWorkspaceShellTests
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var binding = original;
         client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        NavigateTo(context, $"/projects/{original.ProjectId:D}/processes?runId={firstRun:D}");
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+            .Add(component => component.ProjectId, original.ProjectId));
         cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
         var load = typeof(ProcessWorkspaceShell).GetMethod("EnsureManagerChatLoadedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var oldLoad = cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
@@ -1597,7 +1703,7 @@ public sealed partial class ProcessWorkspaceShellTests
         try {
             workspaceService.WorkspaceReadPause = null;
             binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             await cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
             Assert.Contains(secondRun.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal);
         } finally {
@@ -1654,8 +1760,9 @@ public sealed partial class ProcessWorkspaceShellTests
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var binding = original;
         client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        NavigateTo(context, $"/projects/{original.ProjectId:D}/processes?runId={firstRun:D}");
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+            .Add(component => component.ProjectId, original.ProjectId));
         cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
         await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
         var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
@@ -1704,7 +1811,7 @@ public sealed partial class ProcessWorkspaceShellTests
             if (recreateProject) {
                 binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
             }
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
             currentSession = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace").SelectedSession!.Id;
             await InvokeManagerChatAsync(cut, "HandleManagerChatDraftPromptChangedAsync", "New project draft");
@@ -1779,7 +1886,8 @@ public sealed partial class ProcessWorkspaceShellTests
         var recording = context.JSInterop.SetupVoid("CanDoItAll.agentFramework.voice.startRecordingForOwner", _ => true);
         var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        NavigateTo(context, $"/processes?runId={firstRun:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
         var originalOwner = ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N");
@@ -1788,7 +1896,7 @@ public sealed partial class ProcessWorkspaceShellTests
             cut.WaitForAssertion(() => Assert.Single(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"]));
             await InvokeManagerChatAsync(cut, "ReloadManagerChatAsync");
             Assert.Equal(originalOwner, ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N"));
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"],
                 invocation => Equals(invocation.Arguments[0], originalOwner));
         } finally {
@@ -1812,7 +1920,8 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, workspaceService);
         var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        NavigateTo(context, $"/processes?runId={firstRun:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
         var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
@@ -1834,7 +1943,9 @@ public sealed partial class ProcessWorkspaceShellTests
             client.CompleteShellRequest(0);
             await oldLoad.WaitAsync(TimeSpan.FromSeconds(5));
             await change.WaitAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(secondRun, ReadManagerChatField<Guid>(cut, "selectedRuntimeRunId"));
+            Assert.Equal(secondRun, ((CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance).SelectedRuntimeRunId);
+            Assert.Contains("tab=manager-chat", CurrentLocation(context), StringComparison.Ordinal);
+            Assert.Contains($"runId={secondRun:D}", CurrentLocation(context), StringComparison.Ordinal);
             Assert.Equal(secondRun, client.LastRequest!.RuntimeQuery!.SelectedRunId);
             var current = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
             Assert.NotEqual(oldWorkspace.SelectedSession!.Id, current.SelectedSession!.Id);
@@ -1895,9 +2006,9 @@ public sealed partial class ProcessWorkspaceShellTests
             timeProvider: new ManualTimeProvider(Now));
         ConfigureReadyRefresh(client, () => Now);
         var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        NavigateTo(context, $"/processes?runId={runId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() =>
@@ -2060,9 +2171,9 @@ public sealed partial class ProcessWorkspaceShellTests
     public void Live_processes_dashboard_uses_own_projection_page()
     {
         using var context = CreateContext(out var client);
+        NavigateTo(context, "/processes/live?processStarted=1");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.LaunchStarted, true));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
@@ -2159,9 +2270,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var tooltipHost = context.Render<Tooltip>();
         var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        NavigateTo(context, $"/processes/live?runId={activeRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, activeRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
         var activeCard = cut
@@ -2351,7 +2462,8 @@ public sealed partial class ProcessWorkspaceShellTests
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
         IAgentVoiceService? voiceService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        Action<IServiceCollection>? services = null)
     {
         var effectiveTimeProvider = timeProvider ?? TimeProvider.System;
         var context = new BunitContext();
@@ -2392,7 +2504,44 @@ public sealed partial class ProcessWorkspaceShellTests
 
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
+        context.Services.AddSingleton<IAppNavigationHistory>(provider => new BunitNavigationBack(provider.GetRequiredService<NavigationManager>()));
+        services?.Invoke(context.Services);
+        // The routed hosts read RendererInfo; setting it builds the renderer, so it follows every registration.
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
+    }
+
+    private static NavigationManager NavigateTo(BunitContext context, string location)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo(location);
+        return navigation;
+    }
+
+    // A location change of one query value, as Back, Forward or an edited address produces it.
+    private static void NavigateQuery(BunitContext context, string key, Guid? value)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo(navigation.GetUriWithQueryParameter(key, value?.ToString("D")));
+    }
+
+    private static string CurrentLocation(BunitContext context)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        return "/" + navigation.ToBaseRelativePath(navigation.Uri);
+    }
+
+    // Mirrors the browser's Back: the previous entry returns with its own entry state.
+    private sealed class BunitNavigationBack(NavigationManager navigation) : IAppNavigationHistory
+    {
+        public ValueTask BackAsync(CancellationToken cancellationToken = default)
+        {
+            var previous = ((BunitNavigationManager)navigation).History.Skip(1).FirstOrDefault();
+            navigation.NavigateTo(
+                previous?.Uri ?? navigation.BaseUri,
+                new NavigationOptions { HistoryEntryState = previous?.Options.HistoryEntryState });
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ManualTimeProvider(DateTimeOffset initialUtcNow) : TimeProvider

@@ -18,10 +18,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
             await OwnerButton(page, kind, owner).ClickAsync();
             await Assertions.Expect(page.GetByTestId("history-detail-error")).ToHaveTextAsync(HistoryPublicErrors.Message(HistoryFailure.Denied));
             await Assertions.Expect(page.GetByTestId("history-content-text")).ToHaveCountAsync(0);
-            await page.GetByTestId("history-detail-close").ClickAsync();
+            await CloseHistoryDetailAsync(page);
             page = await fixture.OpenLocalOperatorPageAsync();
         } else {
-            await page.GetByTestId("history-detail-close").ClickAsync();
+            await CloseHistoryDetailAsync(page);
         }
         try {
             await OpenHistoryAsync(page, fixture, profile, model, kind, true);
@@ -45,12 +45,19 @@ public sealed partial class SharedProviderNativeConsumerTests {
             });
             await content.GetByTestId("history-content-close").ClickAsync();
             await Assertions.Expect(page.GetByTestId("history-content-text")).ToHaveCountAsync(0);
-            await page.GetByTestId("history-detail-close").ClickAsync();
+            await CloseHistoryDetailAsync(page);
         } finally {
             if (requiresOperator) {
                 await page.Context.CloseAsync();
             }
         }
+    }
+
+    // A detail is a route-driven overlay: its close goes Back after the server has handled the click, and a navigation
+    // started before that Back arrives is aborted by it. The close is complete once the location has left the entry.
+    private static async Task CloseHistoryDetailAsync(IPage page) {
+        await page.GetByTestId("history-detail-close").ClickAsync();
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new Regex("[?&]entryId="));
     }
 
     private static async Task OpenHistoryAsync(IPage page, SharedProviderConsumerFixture fixture, ProviderProfile profile,
@@ -110,7 +117,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
                     var reference = await OwnerLabel(page, kind, owner).InnerTextAsync();
                     return new(Guid.Parse(identityText[..36]), Guid.Parse(ids[0].Value), Guid.Parse(ids[1].Value), reference);
                 }
-                await detail.GetByTestId("history-detail-close").ClickAsync();
+                await CloseHistoryDetailAsync(page);
                 await detail.WaitForAsync(new() { State = WaitForSelectorState.Detached });
             }
             await Task.Delay(250);

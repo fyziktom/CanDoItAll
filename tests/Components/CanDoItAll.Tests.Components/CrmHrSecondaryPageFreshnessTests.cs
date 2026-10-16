@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Pages;
 using CanDoItAll.Modules.Projects;
@@ -98,17 +99,17 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         Assert.Empty(cut.Instance.WorkspaceRequests);
         Assert.Empty(cut.Instance.DirectoryItemRequests);
         cut.Instance.Delay(firstPartyId, secondPartyId);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
 
-        cut.Instance.PartyIdQuery = firstPartyId;
-        var staleLoad = cut.InvokeAsync(() => InvokeAgentLoadAsync(cut.Instance, firstPartyId));
+        // Each location loads its own agent: the second one arrives while the first one is still loading.
+        navigation.NavigateTo($"/crm-hr/agents?partyId={firstPartyId:D}");
         await cut.Instance.WaitForRequestsAsync(firstPartyId);
         Assert.Equal(AgentChatContextAccessState.Loading, ReadAgentAccessState(cut.Instance));
 
-        cut.Instance.PartyIdQuery = secondPartyId;
-        var currentLoad = cut.InvokeAsync(() => InvokeAgentLoadAsync(cut.Instance, secondPartyId));
+        navigation.NavigateTo($"/crm-hr/agents?partyId={secondPartyId:D}");
         await cut.Instance.WaitForRequestsAsync(secondPartyId);
         cut.Instance.Complete(secondPartyId);
-        await currentLoad;
+        cut.WaitForAssertion(() => AssertAgentDialogSurface(cut, secondPartyId, "Second agent"));
 
         if (staleRequestFails)
         {
@@ -119,7 +120,7 @@ public sealed class CrmHrSecondaryPageFreshnessTests
             cut.Instance.Complete(firstPartyId);
         }
 
-        await staleLoad;
+        // The late result resumes on the renderer before this render runs.
         await cut.InvokeAsync(cut.Instance.RenderNow);
 
         AssertAgentDialogSurface(cut, secondPartyId, "Second agent");
@@ -455,12 +456,85 @@ public sealed class CrmHrSecondaryPageFreshnessTests
         Assert.Equal(1, cut.Instance.StaffingDashboardRequestCount);
     }
 
-    private static Task InvokeAgentLoadAsync(CrmHrAgentsPage page, Guid? partyId)
+    [Fact]
+    public async Task Agents_page_record_opens_as_an_entry_its_section_refines_it_and_closing_goes_back()
     {
-        var method = typeof(CrmHrAgentsPage).GetMethod(
-            "LoadAsync",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        return Assert.IsAssignableFrom<Task>(method?.Invoke(page, [partyId]));
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddScoped<IAppNavigationHistory, TestNavigationHistory>());
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var partyId = Guid.NewGuid();
+        var workspace = CreateAgentWorkspace(partyId, "Located agent");
+        navigation.NavigateTo("/crm-hr/agents");
+        var history = (TestNavigationHistory)harness.Context.Services.GetRequiredService<IAppNavigationHistory>();
+        var cut = harness.Context.Render<RacingCrmHrAgentsPage>(parameters => parameters
+            .Add(page => page.TestItems, [CreateAgentItem(workspace)])
+            .Add(page => page.TestWorkspaces, new Dictionary<Guid, AiAgentWorkspaceModel>
+            {
+                [partyId] = workspace
+            }));
+        var view = (ICrmHrAgentsWorkspaceView)cut.Instance;
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='crmhr-agent-item']").HasAttribute("disabled")));
+
+        cut.Find("[data-testid='crmhr-agent-item']").Click();
+
+        cut.WaitForAssertion(() => AssertAgentDialogSurface(cut, partyId, "Located agent"));
+        Assert.EndsWith($"/crm-hr/agents?partyId={partyId:D}", navigation.Uri, StringComparison.Ordinal);
+        Assert.Equal(2, history.Locations.Count);
+
+        cut.Find("[data-testid='crmhr-agent-record-tab-projection']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("AgentFramework owns this runtime", cut.Markup, StringComparison.Ordinal));
+        Assert.Equal(CrmHrAgentRecordSection.TechnicalProjection, view.RecordSection);
+        Assert.EndsWith($"/crm-hr/agents?partyId={partyId:D}&section=technical-projection", navigation.Uri, StringComparison.Ordinal);
+        Assert.Equal(2, history.Locations.Count);
+
+        cut.Find("[data-testid='crmhr-agent-record-close']").Click();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='crmhr-agent-record-dialog']")));
+        Assert.EndsWith("/crm-hr/agents", navigation.Uri, StringComparison.Ordinal);
+        Assert.Equal(1, history.BackCount);
+        Assert.Equal(0, history.Index);
+    }
+
+    [Fact]
+    public async Task Assignments_page_writes_the_project_it_chose_into_its_entry_and_follows_back()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(
+            services => services.AddScoped<IAppNavigationHistory, TestNavigationHistory>());
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        var firstProject = CreateProject("First chosen project");
+        var secondProject = CreateProject("Second chosen project");
+        navigation.NavigateTo("/crm-hr/assignments");
+        var history = (TestNavigationHistory)harness.Context.Services.GetRequiredService<IAppNavigationHistory>();
+        var cut = harness.Context.Render<RacingCrmHrAssignmentsPage>(parameters => parameters
+            .Add(page => page.TestProjects, [firstProject, secondProject])
+            .Add(page => page.TestAssignments, new Dictionary<Guid, IReadOnlyList<ProjectPartyAssignmentDetail>>
+            {
+                [firstProject.Id] = [CreateAssignment(firstProject.Id, "First chosen assignment")],
+                [secondProject.Id] = [CreateAssignment(secondProject.Id, "Second chosen assignment")]
+            }));
+
+        // The location named no project: the page shows the first one and its own entry now names it.
+        cut.WaitForAssertion(() =>
+        {
+            AssertAssignmentSurface(cut, firstProject);
+            Assert.EndsWith($"/crm-hr/assignments?projectId={firstProject.Id:D}", navigation.Uri, StringComparison.Ordinal);
+        });
+        Assert.Single(history.Locations);
+
+        // Another project is the operator's choice and a new entry. The host method is called directly, so the test
+        // renders afterwards as the picker's event callback would.
+        await cut.InvokeAsync(() => InvokeProjectSelectionAsync(cut.Instance, secondProject.Id));
+        await cut.InvokeAsync(cut.Instance.RenderNow);
+
+        cut.WaitForAssertion(() => AssertAssignmentSurface(cut, secondProject));
+        Assert.EndsWith($"/crm-hr/assignments?projectId={secondProject.Id:D}", navigation.Uri, StringComparison.Ordinal);
+        Assert.Equal(2, history.Locations.Count);
+
+        await cut.InvokeAsync(() => history.BackAsync().AsTask());
+
+        cut.WaitForAssertion(() => AssertAssignmentSurface(cut, firstProject));
+        Assert.EndsWith($"/crm-hr/assignments?projectId={firstProject.Id:D}", navigation.Uri, StringComparison.Ordinal);
     }
 
     private static Task InvokeProjectSelectionAsync(CrmHrAssignmentsPage page, Guid? projectId)

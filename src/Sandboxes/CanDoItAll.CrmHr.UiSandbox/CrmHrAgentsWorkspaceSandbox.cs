@@ -5,13 +5,13 @@ using CanDoItAll.Modules.CrmHr;
 
 namespace CanDoItAll.CrmHr.UiSandbox;
 
-// The Agents workspace surface has no create action (agents are provisioned only in AgentFramework) and its record
-// dialog owns its own tab index internally, so this scenario set has no NewDraft or NonDefaultSection token; see the
-// sandbox README for the exact contract reason.
+// The Agents workspace surface has no create action (agents are provisioned only in AgentFramework), so this
+// scenario set has no NewDraft token; see the sandbox README for the exact contract reason.
 public enum CrmHrAgentsWorkspaceSandboxScenario
 {
     Catalog,
     SelectedExisting,
+    NonDefaultSection,
     Loading,
     UnavailableReferences,
     Empty
@@ -65,7 +65,12 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
 
     public bool IsRecordDialogOpen { get; private set; }
 
+    public CrmHrAgentRecordSection RecordSection { get; private set; }
+
     public PagedRecordSelection<Guid>? AgentSelection => SelectedDirectoryItem is { } item ? new PagedRecordSelection<Guid>(item.PartyId) : null;
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<AiAgentValidationFilter>? CatalogQuery => null;
 
     public bool ShouldShowListLoadingState { get; private set; }
 
@@ -109,6 +114,7 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
 
         SelectedDirectoryItem = item;
         IsRecordDialogOpen = true;
+        RecordSection = CrmHrAgentRecordSection.Overview;
         SelectedWorkspace = new AiAgentWorkspaceModel(
             item.PartyId, item.Agent.Name, item.Agent.Summary, item.Governance.LifecycleStatus, "", "",
             item.Governance.BindingStatus == AiResourceBindingStatus.Bound ? item.Agent.Id : null, item.Governance.BindingStatus,
@@ -123,6 +129,15 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
                 Notes = $"Synthetic governance note for {item.Agent.Name}."
             });
         Log($"Select agent: {item.Agent.Name}");
+        return Task.CompletedTask;
+    }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<AiAgentValidationFilter> change) => Task.CompletedTask;
+
+    public Task SelectRecordSectionAsync(CrmHrAgentRecordSection section)
+    {
+        RecordSection = section;
+        Log($"Change agent record section: {section}");
         return Task.CompletedTask;
     }
 
@@ -143,6 +158,7 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
     {
         IntentLog = "No intent yet.";
         IsRecordDialogOpen = false;
+        RecordSection = CrmHrAgentRecordSection.Overview;
         SelectedDirectoryItem = null;
         SelectedWorkspace = null;
         IsWorkspaceLoading = false;
@@ -154,6 +170,10 @@ public sealed class CrmHrAgentsSandboxView : ICrmHrAgentsWorkspaceView
         {
             case CrmHrAgentsWorkspaceSandboxScenario.SelectedExisting:
                 _ = SelectPartyAsync(CrmHrSandboxData.AtlasOpsAgent);
+                break;
+            case CrmHrAgentsWorkspaceSandboxScenario.NonDefaultSection:
+                _ = SelectPartyAsync(CrmHrSandboxData.AtlasOpsAgent);
+                RecordSection = CrmHrAgentRecordSection.TechnicalProjection;
                 break;
             case CrmHrAgentsWorkspaceSandboxScenario.Loading:
                 ShouldShowListLoadingState = true;

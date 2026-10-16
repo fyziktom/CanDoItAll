@@ -74,6 +74,40 @@ They return only the fields already exposed by the development routes; they do n
 repair or refresh the technical catalog. Web retains its development/local-or-authorized
 access gate, synchronization sequence, response envelopes and status mapping.
 
+## Navigation state
+
+Each routed page keeps its location in the URL through one immutable state record and one codec
+in `Pages/CrmHr*UrlState.cs`, built on `CanDoItAll.AppComponents.Navigation`. A codec reads and
+writes only the page's own keys: tokens are lowercase kebab-case, defaults are omitted, unknown or
+malformed values are dropped, and a corrected location replaces its entry while keys of other
+owners stay as they are. The page applies every location in `OnParametersSetAsync` through its
+`UrlStateBinding`; its string `[SupplyParameterFromQuery]` properties are only triggers. A pasted
+link, a reload, Back and Forward therefore reach the same state. The renderers in
+`CanDoItAll.CrmHr.UI` never see URLs: they render the state the host passes and report intents.
+
+| Route | Keys | Rules |
+| --- | --- | --- |
+| `/crm-hr/directory` | `partyId`, `dialog=new-party`, `section` (`profile`, `contacts`, `handling`, `activity`, `relationships`), `q`, `tags` (comma separated), `scope` (`all`, `people`, `organizations`, `units`, `agents`), `page` | `partyId` wins over `dialog`; a section needs a record; the new-party editor has only `profile`, `contacts` and `handling`. |
+| `/crm-hr/crm` | `accountId`, `opportunityId`, `interactionId`, `section` (`overview`, `financials`, `connected-records`, `interactions`, `opportunities`), `q`, `tags`, `page` | An opportunity or an interaction alone names its account. An omitted section is the default of the context: `opportunities` with an opportunity, `interactions` with an interaction, `overview` otherwise. The account catalog lists organizations only, so it has no scope key. |
+| `/crm-hr/workforce` | `partyId`, `section` (`overview`, `profile`, `skills`, `allocations`, `history`), `q`, `kind` (`all`, `employee`, `contractor`, `freelancer`, `external-contact`, `delivery-unit`), `page` | A section needs a record. |
+| `/crm-hr/recruiting` | `applicationId`, `partyId` (the candidate's latest application), `dialog=new-application`, `section` (`application`, `interviews`, `assessments`, `development`, `conversion`), `q`, `stage` (`all`, `applied`, `screening`, `interviewing`, `offer`, `hired`, `rejected`, `withdrawn`), `page` | An application identity wins over the editor and a section needs one. A resolved `partyId` is replaced by its `applicationId`. |
+| `/crm-hr/agents` | `partyId`, `section` (`overview`, `crm-profile`, `technical-projection`, `evidence`), `q`, `validation` (`all`, `draft`, `review-required`, `approved`, `suspended`), `page` | A section needs a record. |
+| `/crm-hr/assignments` | `projectId`, `tab` (`resource-schedule`, `relationships`, `staffing-requests`, `allocations`), `q`, `role`, `status`, `page` | List filters belong to the project and to the tab's list: `role` filters relationships (any role) and allocations (allocation roles only), `status` filters staffing requests, and the resource schedule has none. |
+
+History follows the operator's intent. A record, an editor or a created opportunity or delivery
+unit opens as a new entry over the entry it was opened from, and closing it goes back to that
+entry; a record reached otherwise (a deep link, a reload) closes by replacing its entry with the
+catalog location. A record section, a live catalog search and the correction of a page that no
+longer exists replace the current entry; a tag, filter, reset, page, tab or project choice is a
+new entry. A choice the page makes itself replaces the entry: the first project Assignments shows
+when the location names none, the application a candidate link resolves to, and the party or
+application the open new-record editor created. An identity the location names is never replaced
+by another record: when it does not resolve, the page says so and keeps the location. Catalog
+search text is bounded like the read port accepts it; drafts, notes and other typed content never
+enter the URL. Home has no state of its own; its links are built with the codecs of the pages
+they open. The codec contracts are tested in `tests/Unit/CanDoItAll.Tests.Unit/CrmHr/*UrlCodecTests.cs`
+and the history behavior in `CrmHrUrlStateTests` and `CrmHrCatalogDialogTests`.
+
 ## Ordinary planning reads
 
 The CRM-owned `CrmPlanningAgentRuntimeToolProvider` exposes `crm_planning_search`

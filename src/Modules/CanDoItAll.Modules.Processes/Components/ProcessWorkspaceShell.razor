@@ -1,6 +1,8 @@
 @using CanDoItAll.Processes.UI
 @namespace CanDoItAll.Modules.Processes
 @using System.Globalization
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Processes.Pages
 @using CanDoItAll.AgentFramework.Components
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
@@ -21,6 +23,7 @@
 @inject IServiceProvider Services
 @inject ICurrencyFormatter CurrencyFormatter
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory NavigationHistory
 @inject IJSRuntime JsRuntime
 @inject ILogger<ProcessWorkspaceShell> Logger
 @inject IDatabaseRuntimeState DatabaseRuntimeState
@@ -74,49 +77,54 @@
     [Parameter]
     public Guid? ProjectId { get; set; }
 
-    [Parameter]
-    public Guid? ProcessIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.TabKey)]
+    public string? TabQuery { get; set; }
 
-    [Parameter]
-    public Guid? RunIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.DefinitionKey)]
+    public string? DefinitionKeyQuery { get; set; }
 
-    [Parameter]
-    public Guid? LaunchPlanIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.ProcessKey)]
+    public string? ProcessIdQuery { get; set; }
 
-    [Parameter]
-    public string? DefinitionSearchText { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.LaunchPlanKey)]
+    public string? LaunchPlanIdQuery { get; set; }
 
-    [Parameter]
-    public string? SelectedDefinitionKey { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
 
-    [Parameter]
-    public bool LiveRoute { get; set; }
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.ScopeKey)]
+    public string? ScopeQuery { get; set; }
 
-    private const int SelectedRunGraphsViewIndex = 4;
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.RunKey)]
+    public string? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.RunViewKey)]
+    public string? RunViewQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.WindowKey)]
+    public string? WindowQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.ChatWindowKey)]
+    public string? ChatWindowQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.DialogKey)]
+    public string? DialogQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = ProcessWorkspaceUrlCodec.EventKey)]
+    public string? EventIdQuery { get; set; }
+
+    private UrlStateBinding<ProcessWorkspaceUrlState> url = default!;
+    private string? routePath;
+    private Guid? routeProjectId;
+    private bool routeApplied;
+    private Guid? loadedRunId;
     private ProcessWorkspaceShellProjection? shell;
     private long? acceptedProfileGeneration;
-    private int activeDetailTabIndex;
-    private int selectedRunViewIndex = 1;
-    private Guid? selectedRuntimeRunId;
-    private Guid? routeSelectionProjectId;
-    private Guid? routeSelectionProcessId;
-    private Guid? routeSelectionRunId;
-    private Guid? routeSelectionLaunchPlanId;
-    private Guid? requiredRouteProcessId;
-    private Guid? requiredRouteRunId;
-    private Guid? requiredRouteLaunchPlanId;
-    private string? routeSelectionDefinitionKey;
-    private string? requiredRouteDefinitionKey;
-    private bool routeSelectionInitialized;
-    private ProcessRuntimeHistoryWindow runtimeHistoryWindow = ProcessRuntimeHistoryWindow.LiveHour;
-    private ProcessRuntimeHistoryWindow managerChatHistoryWindow = ProcessRuntimeHistoryWindow.OneDay;
-    private int runtimeEventPage;
     private const int RuntimeEventPageSize = 25;
     private bool processGraphsHistoryLoaded;
-    private bool runDetailDialogOpen;
-    private ProcessLiveProcessSnapshot? runDetailSnapshot;
-    private bool eventDetailDialogOpen;
-    private ProcessTimelineEventProjection? eventDetail;
     private IReadOnlyList<AgentDefinition> managerChatAgents = [];
     private AgentDefinition? managerChatAgent;
     private Guid? managerChatAgentId;
@@ -151,7 +159,6 @@
     private ProcessAgentChatContextPublication? agentChatPublication;
     private ProcessAgentChatFreshnessLease? agentChatFreshnessLease;
     private bool isDisposed;
-    private bool activeDetailTabInitialized;
     private bool isBusy;
     private string? errorMessage;
     private long workspaceGeneration;
@@ -168,10 +175,7 @@
     private bool WorkspaceBusy => isBusy || definitionOperation is not null || definitionOutcomeUnknown;
     private const string UnknownAuthoringOutcome = "The authoring command's outcome is unknown. Check its saved status before continuing. Refresh only reads and does not repeat the command.";
     private string? agentContextNotice;
-    private string searchText = string.Empty;
     private string pendingSearchText = string.Empty;
-    private string? selectedDefinitionKey;
-    private ProcessDefinitionCatalogScopeKind selectedDefinitionScope = ProcessDefinitionCatalogScopeKind.All;
     private string? catalogCommandNotice;
     private ProcessLaunchRequest? pendingLaunchRequest;
     private string? pendingLaunchStorageKey;
@@ -292,30 +296,53 @@
     private ProcessDefinitionCatalogProjection DefinitionCatalog
         => shell?.DefinitionCatalog ?? throw new InvalidOperationException("Definition catalog is not loaded.");
 
+    // The renderer never sees a fallback definition in place of an unresolved URL selection; while a read is
+    // in flight the accepted projection stays visible.
+    private ProcessDefinitionCatalogProjection VisibleDefinitionCatalog
+        => (isBusy ? shell : AgentChatShell)?.DefinitionCatalog ?? throw new InvalidOperationException("Definition catalog is not loaded.");
+
     private ProcessWorkspaceShellProjection CurrentShell
         => shell ?? throw new InvalidOperationException("Process workspace shell is not loaded.");
 
+    private ProcessWorkspaceUrlState Route => url.State;
+
+    private ProcessWorkspaceDetailTabKey ActiveTab => Route.EffectiveTab;
+
+    private Guid? SelectedRuntimeRunId => Route.RunId ?? shell?.Runtime.SelectedRunId;
+
+    private ProcessLiveProcessSnapshot? RunDetailSnapshot
+        => Route.RunDialog && Route.RunId is { } runId
+            ? shell?.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId)
+            : null;
+
+    private ProcessTimelineEventProjection? EventDetail
+        => Route.EventId is { } eventId
+            ? shell?.Runtime.Events.FirstOrDefault(runtimeEvent => runtimeEvent.EventId.Value == eventId)
+            : null;
+
+    // A run selected while a load is deferred (the Graphs history gate) is pending, not unresolved.
     private bool HasUnresolvedRouteRunSelection
-        => requiredRouteRunId is { } requestedRunId &&
+        => Route.RunId is { } requestedRunId &&
            shell is not null &&
+           loadedRunId == requestedRunId &&
            shell.Runtime.SelectedRunId != requestedRunId;
 
     private bool HasUnresolvedRouteDefinitionSelection
-        => !string.IsNullOrWhiteSpace(requiredRouteDefinitionKey) &&
+        => Route.DefinitionKey is { } requestedDefinitionKey &&
            shell is not null &&
            !string.Equals(
                shell.DefinitionCatalog.SelectedItem?.Key.Value,
-               requiredRouteDefinitionKey,
+               requestedDefinitionKey,
                StringComparison.Ordinal);
 
     private bool HasUnresolvedRouteProcessSelection
-        => requiredRouteProcessId is { } requestedProcessId &&
+        => Route.ProcessId is { } requestedProcessId &&
            shell is not null &&
            (shell.DefinitionCatalog.SelectedItem is not { } selectedDefinition ||
             ProcessDefinitionCatalogProjectionService.CreateDefinitionId(selectedDefinition.Key).Value != requestedProcessId);
 
     private bool HasUnresolvedRouteLaunchPlanSelection
-        => requiredRouteLaunchPlanId.HasValue && shell is not null;
+        => Route.LaunchPlanId.HasValue && shell is not null;
 
     private bool HasUnresolvedNonRunRouteSelection
         => HasUnresolvedRouteDefinitionSelection ||
@@ -325,6 +352,17 @@
     private bool HasUnresolvedRouteSelection
         => HasUnresolvedRouteRunSelection || HasUnresolvedNonRunRouteSelection;
 
+    private string? UnavailableSelectionText
+        => shell is null || isBusy
+            ? null
+            : HasUnresolvedRouteLaunchPlanSelection
+                ? "The requested launch plan is not available in this workspace."
+                : HasUnresolvedRouteDefinitionSelection || HasUnresolvedRouteProcessSelection
+                    ? "The requested process definition is not available in this scope. Select a definition from the list."
+                    : HasUnresolvedRouteRunSelection
+                        ? "The requested process run is not available in this scope."
+                        : null;
+
     private ProcessWorkspaceShellProjection? AgentChatShell {
         get {
             if (!HasUnresolvedNonRunRouteSelection || shell is null) {
@@ -333,9 +371,9 @@
 
             return shell with {
                 DefinitionCatalog = shell.DefinitionCatalog with {
-                    SelectedDefinitionKey = string.IsNullOrWhiteSpace(requiredRouteDefinitionKey)
-                        ? null
-                        : new ProcessDefinitionCatalogItemKey(requiredRouteDefinitionKey),
+                    SelectedDefinitionKey = Route.DefinitionKey is { } requestedDefinitionKey
+                        ? new ProcessDefinitionCatalogItemKey(requestedDefinitionKey)
+                        : null,
                     SelectedItem = null,
                     SelectedEditor = null
                 }
@@ -351,10 +389,10 @@
             AgentChatRunView,
             HasUnresolvedNonRunRouteSelection
                 ? null
-                : requiredRouteRunId ?? selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery,
+                : SelectedRuntimeRunId,
             AgentChatShell,
-            !HasUnresolvedRouteSelection && runDetailDialogOpen ? runDetailSnapshot : null,
-            !HasUnresolvedRouteSelection && eventDetailDialogOpen ? eventDetail : null,
+            !HasUnresolvedRouteSelection ? RunDetailSnapshot : null,
+            !HasUnresolvedRouteSelection ? EventDetail : null,
             AgentChatAccessState,
             shell?.ProjectBinding is { } binding ? new(binding.DatabaseProfileId, binding.ProjectId, binding.LifetimeId) : null);
         agentChatPublication = ProcessInvocationSnapshotMapper.BuildWorkspacePublication(
@@ -397,46 +435,43 @@
                 ? AgentChatContextAccessState.Loading
                 : AgentChatContextAccessState.Failed;
 
+    // The surface identity describes the applied URL state, so a location this shell has not applied yet
+    // never matches the published context.
     private AgentChatNavigationIdentity AgentChatNavigationFence
         => AgentChatNavigationIdentity.CreateForLocation(
             Navigation.BaseUri,
             Navigation.Uri,
-            [
-                new("processId", ProcessIdQuery?.ToString("D")),
-                new("runId", RunIdQuery?.ToString("D")),
-                new("launchPlanId", LaunchPlanIdQuery?.ToString("D")),
-                new("q", DefinitionSearchText),
-                new("definitionKey", SelectedDefinitionKey)
-            ]);
+            ProcessWorkspaceUrlCodec.Instance.OwnedValues(Route));
 
     private ProcessAgentChatWorkspaceView AgentChatWorkspaceView
-        => (!activeDetailTabInitialized && ResolvePreferredDetailTab() == ProcessWorkspaceDetailTabKey.Runs
-                ? 3
-                : activeDetailTabIndex) switch {
-            0 => ProcessAgentChatWorkspaceView.Definition,
-            1 => ProcessAgentChatWorkspaceView.Roles,
-            2 => ProcessAgentChatWorkspaceView.Steps,
-            3 => ProcessAgentChatWorkspaceView.Runs,
-            4 => ProcessAgentChatWorkspaceView.Graphs,
-            5 => ProcessAgentChatWorkspaceView.Analytics,
-            6 => ProcessAgentChatWorkspaceView.Exchange,
-            7 => ProcessAgentChatWorkspaceView.ManagerChat,
-            _ => ProcessAgentChatWorkspaceView.Definition
+        => ActiveTab switch {
+            ProcessWorkspaceDetailTabKey.Definition => ProcessAgentChatWorkspaceView.Definition,
+            ProcessWorkspaceDetailTabKey.Roles => ProcessAgentChatWorkspaceView.Roles,
+            ProcessWorkspaceDetailTabKey.Steps => ProcessAgentChatWorkspaceView.Steps,
+            ProcessWorkspaceDetailTabKey.Runs => ProcessAgentChatWorkspaceView.Runs,
+            ProcessWorkspaceDetailTabKey.Graphs => ProcessAgentChatWorkspaceView.Graphs,
+            ProcessWorkspaceDetailTabKey.Analytics => ProcessAgentChatWorkspaceView.Analytics,
+            ProcessWorkspaceDetailTabKey.Exchange => ProcessAgentChatWorkspaceView.Exchange,
+            ProcessWorkspaceDetailTabKey.ManagerChat => ProcessAgentChatWorkspaceView.ManagerChat,
+            _ => throw new InvalidOperationException($"Process workspace tab {ActiveTab} has no agent chat view.")
         };
 
     private ProcessAgentChatRunView AgentChatRunView
-        => selectedRunViewIndex switch {
-            0 => ProcessAgentChatRunView.Launch,
-            1 => ProcessAgentChatRunView.Activity,
-            2 => ProcessAgentChatRunView.Control,
-            3 => ProcessAgentChatRunView.Execution,
-            4 => ProcessAgentChatRunView.Graphs,
-            5 => ProcessAgentChatRunView.Coordination,
-            6 => ProcessAgentChatRunView.Evidence,
-            _ => ProcessAgentChatRunView.Activity
+        => Route.RunView switch {
+            ProcessWorkspaceRunView.Launch => ProcessAgentChatRunView.Launch,
+            ProcessWorkspaceRunView.Activity => ProcessAgentChatRunView.Activity,
+            ProcessWorkspaceRunView.Control => ProcessAgentChatRunView.Control,
+            ProcessWorkspaceRunView.Execution => ProcessAgentChatRunView.Execution,
+            ProcessWorkspaceRunView.Graphs => ProcessAgentChatRunView.Graphs,
+            ProcessWorkspaceRunView.Coordination => ProcessAgentChatRunView.Coordination,
+            ProcessWorkspaceRunView.Evidence => ProcessAgentChatRunView.Evidence,
+            _ => throw new InvalidOperationException($"Process run view {Route.RunView} has no agent chat view.")
         };
 
-    protected override void OnInitialized() => DatabaseChanges.Changed += OnDatabaseChanged;
+    protected override void OnInitialized() {
+        url = new(Navigation, ProcessWorkspaceUrlCodec.Instance, NavigationHistory);
+        DatabaseChanges.Changed += OnDatabaseChanged;
+    }
 
     private void OnDatabaseChanged(object? sender, DatabaseProfileChangedNotification notification)
         => _ = ReloadDatabaseProfileAsync();
@@ -456,48 +491,89 @@
     }
 
     protected override async Task OnParametersSetAsync() {
-        var previousRunId = ResolveSelectedManagerChatRunId();
-        SynchronizeRouteSelections();
-        if (previousRunId != ResolveSelectedManagerChatRunId()) {
-            ResetManagerChatForSelectedRunChange();
-        }
-        searchText = DefinitionSearchText?.Trim() ?? string.Empty;
-        pendingSearchText = searchText;
-        selectedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
-            ? null
-            : SelectedDefinitionKey.Trim();
-        await LoadAsync(forceRefresh: false);
-    }
-
-    private void SynchronizeRouteSelections(bool force = false) {
-        var normalizedDefinitionKey = string.IsNullOrWhiteSpace(SelectedDefinitionKey)
-            ? null
-            : SelectedDefinitionKey.Trim();
-        if (!force && routeSelectionInitialized &&
-            routeSelectionProjectId == ProjectId &&
-            routeSelectionProcessId == ProcessIdQuery &&
-            routeSelectionRunId == RunIdQuery &&
-            routeSelectionLaunchPlanId == LaunchPlanIdQuery &&
-            string.Equals(routeSelectionDefinitionKey, normalizedDefinitionKey, StringComparison.Ordinal)) {
+        var path = UrlLocation.Split(Navigation.Uri).Path;
+        var reload = !routeApplied || routeProjectId != ProjectId;
+        if (!reload && !string.Equals(path, routePath, StringComparison.OrdinalIgnoreCase)) {
+            // Another page's location: the router replaces this page and its state stays untouched.
             return;
         }
 
-        routeSelectionInitialized = true;
-        routeSelectionProjectId = ProjectId;
-        routeSelectionProcessId = ProcessIdQuery;
-        routeSelectionRunId = RunIdQuery;
-        routeSelectionLaunchPlanId = LaunchPlanIdQuery;
-        requiredRouteProcessId = ProcessIdQuery;
-        requiredRouteRunId = RunIdQuery;
-        requiredRouteLaunchPlanId = LaunchPlanIdQuery;
-        routeSelectionDefinitionKey = normalizedDefinitionKey;
-        requiredRouteDefinitionKey = normalizedDefinitionKey;
-        selectedRuntimeRunId = RunIdQuery;
-        runtimeEventPage = 0;
-        runDetailDialogOpen = false;
-        runDetailSnapshot = null;
-        eventDetailDialogOpen = false;
-        eventDetail = null;
+        // Recorded before Apply: a canonical Replace can re-enter this method when the navigation is local.
+        routeApplied = true;
+        routePath = path;
+        routeProjectId = ProjectId;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!reload && !change.IsChanged) {
+            return;
+        }
+
+        await ApplyRouteAsync(change.Previous, change.Current, reload);
+    }
+
+    private async Task ApplyRouteAsync(ProcessWorkspaceUrlState previous, ProcessWorkspaceUrlState current, bool reload) {
+        if (reload || !string.Equals(previous.Search, current.Search, StringComparison.Ordinal)) {
+            pendingSearchText = current.Search ?? string.Empty;
+        }
+
+        if (reload || ManagerChatRunId(previous) != ManagerChatRunId(current) || previous.ChatWindow != current.ChatWindow) {
+            ResetManagerChatForSelectedRunChange();
+        }
+
+        if (!reload && !RequiresRead(previous, current)) {
+            return;
+        }
+
+        if (!reload && ShouldDeferProcessGraphsHistoryLoad && SameDefinitionQuery(previous, current)) {
+            return;
+        }
+
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private Guid? ManagerChatRunId(ProcessWorkspaceUrlState state)
+        => state.RunId ?? shell?.Runtime.SelectedRunId;
+
+    private static bool RequiresRead(ProcessWorkspaceUrlState previous, ProcessWorkspaceUrlState current)
+        => !ProcessWorkspaceUrlCodec.Instance.SameState(WithoutOverlays(previous), WithoutOverlays(current));
+
+    private static bool SameDefinitionQuery(ProcessWorkspaceUrlState previous, ProcessWorkspaceUrlState current)
+        => ProcessWorkspaceUrlCodec.Instance.SameState(DefinitionQuery(previous), DefinitionQuery(current));
+
+    private static ProcessWorkspaceUrlState WithoutOverlays(ProcessWorkspaceUrlState state)
+        => state.Pinned with { RunDialog = false, EventId = null };
+
+    private static ProcessWorkspaceUrlState DefinitionQuery(ProcessWorkspaceUrlState state)
+        => new(Tab: ProcessWorkspaceDetailTabKey.Definition, DefinitionKey: state.DefinitionKey, ProcessId: state.ProcessId,
+            LaunchPlanId: state.LaunchPlanId, Search: state.Search, Scope: state.Scope);
+
+    private Task NavigateAsync(ProcessWorkspaceUrlState next, UrlHistoryMode mode) {
+        var previous = Route;
+        url.Navigate(next, mode);
+        return ApplyIntentAsync(previous);
+    }
+
+    private Task OpenOverlayAsync(ProcessWorkspaceUrlState next) {
+        var previous = Route;
+        url.OpenOverlay(next);
+        return ApplyIntentAsync(previous);
+    }
+
+    private async Task CloseOverlayAsync(ProcessWorkspaceUrlState parent) {
+        var previous = Route;
+        await url.CloseOverlayAsync(parent);
+        await ApplyIntentAsync(previous);
+    }
+
+    private Task ApplyIntentAsync(ProcessWorkspaceUrlState previous)
+        => isDisposed || ProcessWorkspaceUrlCodec.Instance.SameState(previous, Route)
+            ? Task.CompletedTask
+            : ApplyRouteAsync(previous, Route, reload: false);
+
+    // Replace keeps one history entry for the selection this page resolved by itself.
+    private void PublishResolved(ProcessWorkspaceUrlState next) {
+        if (RendererInfo.IsInteractive && !ProcessWorkspaceUrlCodec.Instance.SameState(Route, next)) {
+            url.Navigate(next, UrlHistoryMode.Replace);
+        }
     }
 
     private async Task RefreshAsync() {
@@ -509,34 +585,33 @@
         var originScope = ResolveScope();
         var originProfileGeneration = DatabaseRuntimeState.GetSnapshot().Generation;
         var completionSequence = definitionCompletionSequence;
+        var route = Route;
         if (shell is not null && (shell.Scope != originScope || acceptedProfileGeneration != originProfileGeneration)) {
             shell = null;
             RetireDefinitionEditor();
             ResetManagerChatForSelectedRunChange();
-            SynchronizeRouteSelections(force: true);
-        } else if (selectedDefinitionKey is not null && shell?.DefinitionCatalog.SelectedDefinitionKey?.Value != selectedDefinitionKey) {
+        } else if (route.DefinitionKey is { } requestedDefinitionKey && shell?.DefinitionCatalog.SelectedDefinitionKey?.Value != requestedDefinitionKey) {
             RetireDefinitionEditor();
         }
         isBusy = true;
         errorMessage = definitionOutcomeUnknown ? UnknownAuthoringOutcome : null;
 
         try {
-            var detailTabKey = ResolveRequestedDetailTabKey();
+            var detailTabKey = route.EffectiveTab;
             var definitionLoadOptions = CreateDefinitionLoadOptions(detailTabKey);
-            var runtimeLoadOptions = CreateRuntimeLoadOptions(detailTabKey);
-            var runtimeQueryHistoryWindow = ResolveRuntimeHistoryWindow(detailTabKey);
-            var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ||
-                (selectedRuntimeRunId ?? RunIdQuery).HasValue;
+            var runtimeLoadOptions = CreateRuntimeLoadOptions(route);
+            var runtimeQueryHistoryWindow = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat ? route.ChatWindow : route.Window;
+            var shouldAutoSelectRuntimeRun = detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat || route.RunId.HasValue;
             var scope = ResolveScope();
             var request = new ProcessWorkspaceShellRequest(
                 scope,
-                new ProcessWorkspaceSelectionProjection(ProcessIdQuery, RunIdQuery, LaunchPlanIdQuery),
+                new ProcessWorkspaceSelectionProjection(route.ProcessId, route.RunId, route.LaunchPlanId),
                 new ProcessDefinitionCatalogQueryProjection(
-                    searchText,
-                    string.IsNullOrWhiteSpace(selectedDefinitionKey)
-                        ? null
-                        : new ProcessDefinitionCatalogItemKey(selectedDefinitionKey),
-                    selectedDefinitionScope,
+                    route.Search ?? string.Empty,
+                    route.DefinitionKey is { } definitionKey
+                        ? new ProcessDefinitionCatalogItemKey(definitionKey)
+                        : null,
+                    route.Scope,
                     Take: 50),
                 new ProcessTemplateCatalogQueryProjection(
                     templateSearchText,
@@ -547,9 +622,9 @@
                 forceRefresh,
                 new ProcessRuntimeWorkspaceQueryProjection(
                     runtimeQueryHistoryWindow,
-                    runtimeEventPage,
+                    route.Page - 1,
                     RuntimeEventPageSize,
-                    selectedRuntimeRunId ?? RunIdQuery,
+                    route.RunId,
                     AutoSelectRun: shouldAutoSelectRuntimeRun,
                     TakeRuns: 50,
                     runtimeLoadOptions) {
@@ -565,24 +640,29 @@
                 return;
             }
 
+            var lifetimeChanged = shell is not null && shell.ProjectBinding != loadedShell.ProjectBinding;
             if (shell?.ProjectBinding != loadedShell.ProjectBinding ||
                 shell?.DefinitionCatalog.SelectedDefinitionKey != loadedShell.DefinitionCatalog.SelectedDefinitionKey) {
                 RetireDefinitionEditor();
-                SynchronizeRouteSelections(force: true);
                 ResetManagerChatForSelectedRunChange();
             } else {
                 loadedShell = ReconcileDefinitionRead(loadedShell, completionSequence);
             }
             shell = loadedShell;
-            selectedDefinitionKey ??= loadedShell.DefinitionCatalog.SelectedDefinitionKey?.Value;
+            loadedRunId = route.RunId;
             acceptedProfileGeneration = originProfileGeneration;
-            selectedRuntimeRunId = requiredRouteRunId is { } requestedRunId &&
-                loadedShell.Runtime.SelectedRunId != requestedRunId
-                    ? requestedRunId
-                    : loadedShell.Runtime.SelectedRunId ?? selectedRuntimeRunId ?? RunIdQuery;
-            if (!activeDetailTabInitialized) {
-                activeDetailTabIndex = ResolveDetailTabIndex(ResolvePreferredDetailTab());
-                activeDetailTabInitialized = true;
+            if (lifetimeChanged && (Route.RunDialog || Route.EventId.HasValue)) {
+                // The open dialog showed a record of the replaced project lifetime.
+                PublishResolved(Route with { RunDialog = false, EventId = null });
+            }
+            if (Route.DefinitionKey is null && Route.ProcessId is null && Route.LaunchPlanId is null &&
+                loadedShell.DefinitionCatalog.SelectedDefinitionKey is { } resolvedDefinitionKey) {
+                PublishResolved(Route with { DefinitionKey = resolvedDefinitionKey.Value });
+            }
+            if (Route.RunId is null && route.RunId is null && shouldAutoSelectRuntimeRun &&
+                loadedShell.Runtime.SelectedRunId is { } resolvedRunId) {
+                PublishResolved(Route.Pinned with { RunId = resolvedRunId });
+                loadedRunId = resolvedRunId;
             }
 
             if (!HasUnresolvedNonRunRouteSelection &&
@@ -595,8 +675,7 @@
                 SyncTemplateCatalogQuery(shell.DefinitionCatalog.SelectedEditor?.TemplateCatalog);
             }
 
-            if (!HasUnresolvedRouteSelection &&
-                activeDetailTabIndex == ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat)) {
+            if (!HasUnresolvedRouteSelection && ActiveTab == ProcessWorkspaceDetailTabKey.ManagerChat) {
                 await EnsureManagerChatLoadedAsync();
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
@@ -614,7 +693,6 @@
             if (!retainAccepted) {
                 shell = null;
                 RetireDefinitionEditor();
-                SynchronizeRouteSelections(force: true);
             }
             Logger.LogWarning("Process projection read failed. ProjectId={ProjectId} FailureType={FailureType} Retained={Retained}.", originScope.ProjectId, exception.GetType().Name, retainAccepted);
         } finally {
@@ -713,19 +791,6 @@
             ? loadedShell.Runtime.ReusableRuns
             : null;
 
-    private ProcessWorkspaceDetailTabKey ResolvePreferredDetailTab()
-        => LiveRoute || RunIdQuery.HasValue || LaunchPlanIdQuery.HasValue
-            ? ProcessWorkspaceDetailTabKey.Runs
-            : ProcessWorkspaceDetailTabKey.Definition;
-
-    private ProcessWorkspaceDetailTabKey ResolveRequestedDetailTabKey() {
-        if (!activeDetailTabInitialized) {
-            return ResolvePreferredDetailTab();
-        }
-
-        return DetailTabs.ElementAtOrDefault(activeDetailTabIndex)?.Key ?? ResolvePreferredDetailTab();
-    }
-
     private ProcessDefinitionWorkspaceLoadOptions CreateDefinitionLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey) {
         var options = detailTabKey switch {
             ProcessWorkspaceDetailTabKey.Definition => ProcessDefinitionWorkspaceLoadOptions.Basics,
@@ -746,15 +811,17 @@
         return options;
     }
 
-    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(ProcessWorkspaceDetailTabKey detailTabKey) {
-        var hasExplicitRuntimeSelection = (selectedRuntimeRunId ?? RunIdQuery).HasValue || LiveRoute || LaunchPlanIdQuery.HasValue;
-        return detailTabKey switch {
+    private ProcessRuntimeWorkspaceLoadOptions CreateRuntimeLoadOptions(ProcessWorkspaceUrlState route) {
+        var hasExplicitRuntimeSelection = route.RunId.HasValue || route.LaunchPlanId.HasValue;
+        var needsMetrics = route.RunView == ProcessWorkspaceRunView.Graphs;
+        var needsActiveAgents = route.RunView is not (ProcessWorkspaceRunView.Launch or ProcessWorkspaceRunView.Graphs);
+        return route.EffectiveTab switch {
             ProcessWorkspaceDetailTabKey.Runs => new ProcessRuntimeWorkspaceLoadOptions {
-                IncludeSelectedRun = !SelectedRunViewNeedsMetrics,
-                IncludeHistory = !SelectedRunViewNeedsMetrics,
-                IncludeMetricHistory = SelectedRunViewNeedsMetrics,
-                IncludeUsageTelemetry = SelectedRunViewNeedsMetrics,
-                IncludeActiveAgents = SelectedRunViewNeedsActiveAgents
+                IncludeSelectedRun = !needsMetrics,
+                IncludeHistory = !needsMetrics,
+                IncludeMetricHistory = needsMetrics,
+                IncludeUsageTelemetry = needsMetrics,
+                IncludeActiveAgents = needsActiveAgents
             },
             ProcessWorkspaceDetailTabKey.Graphs when !processGraphsHistoryLoaded => ProcessRuntimeWorkspaceLoadOptions.ListOnly,
             ProcessWorkspaceDetailTabKey.Graphs or ProcessWorkspaceDetailTabKey.Analytics => new ProcessRuntimeWorkspaceLoadOptions {
@@ -778,40 +845,33 @@
         };
     }
 
-    private ProcessRuntimeHistoryWindow ResolveRuntimeHistoryWindow(ProcessWorkspaceDetailTabKey detailTabKey)
-        => detailTabKey == ProcessWorkspaceDetailTabKey.ManagerChat
-            ? managerChatHistoryWindow
-            : runtimeHistoryWindow;
-
-    private bool SelectedRunViewNeedsMetrics
-        => selectedRunViewIndex == SelectedRunGraphsViewIndex;
-
-    private bool SelectedRunViewNeedsActiveAgents
-        => selectedRunViewIndex is 1 or 2 or 3 or 5 or 6;
-
     private bool ShouldDeferProcessGraphsHistoryLoad
-        => ResolveRequestedDetailTabKey() == ProcessWorkspaceDetailTabKey.Graphs && !processGraphsHistoryLoaded;
+        => ActiveTab == ProcessWorkspaceDetailTabKey.Graphs && !processGraphsHistoryLoaded;
 
+    // The renderer's tab and section indexes are render details; the URL carries the typed values.
     private int ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey key) {
         var index = DetailTabs
             .Select((tab, tabIndex) => new { tab.Key, Index = tabIndex })
             .FirstOrDefault(item => item.Key == key)?.Index;
 
-        return index ?? 0;
+        return index ?? throw new InvalidOperationException($"Process workspace tab {key} is not rendered.");
     }
 
-    private async Task HandleDetailTabChangedAsync(int index) {
-        activeDetailTabIndex = index;
-        if (ShouldDeferProcessGraphsHistoryLoad) {
-            return;
+    private Task HandleDetailTabChangedAsync(int index) {
+        if (DetailTabs.ElementAtOrDefault(index) is not { } tab) {
+            return Task.CompletedTask;
         }
 
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(Route with { Tab = tab.Key }, UrlHistoryMode.Push);
     }
 
-    private async Task HandleSelectedRunViewChangedAsync(int index) {
-        selectedRunViewIndex = index;
-        await LoadAsync(forceRefresh: false);
+    private Task HandleSelectedRunViewChangedAsync(int index) {
+        var runView = (ProcessWorkspaceRunView)index;
+        if (!Enum.IsDefined(runView)) {
+            return Task.CompletedTask;
+        }
+
+        return NavigateAsync(Route with { Tab = ProcessWorkspaceDetailTabKey.Runs, RunView = runView }, UrlHistoryMode.Push);
     }
 
     private async Task ExecuteCommandAsync(ProcessWorkspaceCommandProjection command) {
@@ -830,9 +890,7 @@
                 await FeedDefaultsAsync();
                 break;
             case ProcessWorkspaceCommandKind.OpenLiveDashboard:
-                Navigation.NavigateTo(ProjectId.HasValue
-                    ? $"/projects/{ProjectId.Value:D}/processes/live"
-                    : "/processes/live");
+                Navigation.NavigateTo(LiveProcessesPath);
                 break;
             case ProcessWorkspaceCommandKind.LaunchRun:
                 if (CanStartAnotherLaunch) {
@@ -993,44 +1051,30 @@
         pendingSearchText = args.Value?.ToString() ?? string.Empty;
     }
 
-    private async Task ApplyDefinitionSearchAsync() {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteDefinitionKey = null;
-        searchText = pendingSearchText.Trim();
-        selectedDefinitionKey = null;
+    // Every definition selection replaces the legacy selection keys that would contradict it.
+    private ProcessWorkspaceUrlState WithDefinitionSelection(string? definitionKey)
+        => Route.Pinned with { DefinitionKey = definitionKey, ProcessId = null, LaunchPlanId = null };
+
+    private Task ApplyDefinitionSearchAsync() {
+        var search = pendingSearchText.Trim();
         selectedTemplateItemKey = null;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(WithDefinitionSelection(null) with { Search = search.Length == 0 ? null : search }, UrlHistoryMode.Push);
     }
 
-    private async Task ClearDefinitionSearchAsync() {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteDefinitionKey = null;
+    private Task ClearDefinitionSearchAsync() {
         pendingSearchText = string.Empty;
-        searchText = string.Empty;
-        selectedDefinitionKey = null;
         selectedTemplateItemKey = null;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(WithDefinitionSelection(null) with { Search = null }, UrlHistoryMode.Push);
     }
 
-    private async Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteDefinitionKey = null;
-        selectedDefinitionKey = key.Value;
+    private Task SelectDefinitionAsync(ProcessDefinitionCatalogItemKey key) {
         selectedTemplateItemKey = null;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(WithDefinitionSelection(key.Value), UrlHistoryMode.Push);
     }
 
-    private async Task SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind scopeKind) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteDefinitionKey = null;
-        selectedDefinitionScope = scopeKind;
-        selectedDefinitionKey = null;
+    private Task SelectDefinitionScopeAsync(ProcessDefinitionCatalogScopeKind scopeKind) {
         selectedTemplateItemKey = null;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(WithDefinitionSelection(null) with { Scope = scopeKind }, UrlHistoryMode.Push);
     }
 
     private async Task FeedDefaultsAsync() {
@@ -1063,131 +1107,99 @@
 
     private string ManagerChatManagerLabel => managerChatAgent?.Name ?? CurrentShell.AgentEntry.Label;
 
-    private async Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args) {
-        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed)) {
-            runtimeHistoryWindow = parsed;
-            runtimeEventPage = 0;
-            if (ShouldDeferProcessGraphsHistoryLoad) {
-                return;
-            }
-
-            await LoadAsync(forceRefresh: false);
+    private Task ChangeRuntimeHistoryWindowAsync(ChangeEventArgs args) {
+        if (!Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed) || !Enum.IsDefined(parsed)) {
+            return Task.CompletedTask;
         }
+
+        return NavigateAsync(Route.Pinned with { Window = parsed, Page = 1, EventId = null }, UrlHistoryMode.Push);
     }
 
-    private async Task ChangeManagerChatHistoryWindowAsync(ChangeEventArgs args) {
-        if (Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed)) {
-            managerChatHistoryWindow = parsed;
-            runtimeEventPage = 0;
-            ResetManagerChatForSelectedRunChange();
-            await LoadAsync(forceRefresh: false);
+    private Task ChangeManagerChatHistoryWindowAsync(ChangeEventArgs args) {
+        if (!Enum.TryParse<ProcessRuntimeHistoryWindow>(ReadChangeValue(args), out var parsed) || !Enum.IsDefined(parsed)) {
+            return Task.CompletedTask;
         }
+
+        return NavigateAsync(Route.Pinned with { ChatWindow = parsed, Page = 1 }, UrlHistoryMode.Push);
     }
 
     private async Task LoadProcessGraphsHistoryAsync() {
         processGraphsHistoryLoaded = true;
-        runtimeEventPage = 0;
+        if (Route.Page != 1) {
+            url.Navigate(Route with { Page = 1 }, UrlHistoryMode.Replace);
+        }
         await LoadAsync(forceRefresh: false);
     }
 
-    private async Task SelectRuntimeRunAsync(ChangeEventArgs args) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        var value = ReadChangeValue(args);
-        selectedRuntimeRunId = Guid.TryParse(value, out var parsed) && parsed != Guid.Empty
-            ? parsed
-            : null;
-        runtimeEventPage = 0;
-        ResetManagerChatForSelectedRunChange();
-        if (ShouldDeferProcessGraphsHistoryLoad) {
-            return;
+    private ProcessWorkspaceUrlState WithRunSelection(Guid? runId)
+        => Route.Pinned with {
+            RunId = runId,
+            ProcessId = null,
+            LaunchPlanId = null,
+            Page = runId == Route.RunId ? Route.Page : 1,
+            RunDialog = false,
+            EventId = null
+        };
+
+    private Task SelectRuntimeRunAsync(ChangeEventArgs args)
+        => NavigateAsync(WithRunSelection(Guid.TryParse(ReadChangeValue(args), out var parsed) && parsed != Guid.Empty ? parsed : null),
+            UrlHistoryMode.Push);
+
+    private Task SelectRuntimeRunAsync(Guid runId)
+        => NavigateAsync(WithRunSelection(runId == Guid.Empty ? null : runId), UrlHistoryMode.Push);
+
+    private Task PreviousRuntimeEventPageAsync() {
+        if (Route.Page <= 1) {
+            return Task.CompletedTask;
         }
 
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(Route.Pinned with { Page = Route.Page - 1, EventId = null }, UrlHistoryMode.Push);
     }
 
-    private async Task SelectRuntimeRunAsync(Guid runId) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        selectedRuntimeRunId = runId == Guid.Empty ? null : runId;
-        runtimeEventPage = 0;
-        ResetManagerChatForSelectedRunChange();
-        if (ShouldDeferProcessGraphsHistoryLoad) {
-            return;
-        }
-
-        await LoadAsync(forceRefresh: false);
-    }
-
-    private async Task PreviousRuntimeEventPageAsync() {
-        if (runtimeEventPage == 0) {
-            return;
-        }
-
-        runtimeEventPage--;
-        await LoadAsync(forceRefresh: false);
-    }
-
-    private async Task NextRuntimeEventPageAsync() {
+    private Task NextRuntimeEventPageAsync() {
         if (!CurrentShell.Runtime.HasMoreEvents) {
-            return;
+            return Task.CompletedTask;
         }
 
-        runtimeEventPage++;
-        await LoadAsync(forceRefresh: false);
+        return NavigateAsync(Route.Pinned with { Page = Route.Page + 1, EventId = null }, UrlHistoryMode.Push);
     }
 
     private Task OpenRunDetailDialogAsync(ProcessLiveProcessSnapshot run) {
         if (shell?.Runtime.Runs.FirstOrDefault(current => current.RunId == run.RunId) is not { } currentRun) {
             return Task.CompletedTask;
         }
-        runDetailSnapshot = currentRun;
-        runDetailDialogOpen = true;
-        return Task.CompletedTask;
+
+        return OpenOverlayAsync(WithRunSelection(currentRun.RunId.Value) with { Tab = ProcessWorkspaceDetailTabKey.Runs, RunDialog = true });
     }
 
     private Task OpenChildRunAsync(Guid runId) {
-        requiredRouteProcessId = null;
-        requiredRouteLaunchPlanId = null;
-        requiredRouteRunId = null;
-        selectedRuntimeRunId = runId;
-        runDetailSnapshot = CurrentShell.Runtime.Runs.FirstOrDefault(run => run.RunId.Value == runId);
-        if (runDetailSnapshot is null) {
-            Navigation.NavigateTo(ProjectId.HasValue
-                ? $"/projects/{ProjectId.Value:D}/processes/live?runId={runId:D}"
-                : $"/processes/live?runId={runId:D}");
+        if (shell?.Runtime.Runs.Any(run => run.RunId.Value == runId) == true) {
+            return OpenOverlayAsync(WithRunSelection(runId) with { Tab = ProcessWorkspaceDetailTabKey.Runs, RunDialog = true });
         }
 
+        Navigation.NavigateTo(LiveProcessesUrlCodec.Instance.Href(LiveProcessesPath, new(RunId: runId)));
         return Task.CompletedTask;
     }
 
-    private Task CloseRunDetailDialogAsync() {
-        runDetailDialogOpen = false;
-        runDetailSnapshot = null;
-        return Task.CompletedTask;
-    }
+    private Task CloseRunDetailDialogAsync()
+        => CloseOverlayAsync(Route with { RunDialog = false });
 
     private Task OpenEventDetailDialogAsync(ProcessTimelineEventProjection runtimeEvent) {
         if (shell?.Runtime.Events.FirstOrDefault(current => current.EventId == runtimeEvent.EventId) is not { } currentEvent) {
             return Task.CompletedTask;
         }
-        eventDetail = currentEvent;
-        eventDetailDialogOpen = true;
-        return Task.CompletedTask;
+
+        return OpenOverlayAsync(Route.Pinned with { Tab = ProcessWorkspaceDetailTabKey.Runs, RunDialog = false, EventId = currentEvent.EventId.Value });
     }
 
-    private Task CloseEventDetailDialogAsync() {
-        eventDetailDialogOpen = false;
-        eventDetail = null;
-        return Task.CompletedTask;
-    }
+    private Task CloseEventDetailDialogAsync()
+        => CloseOverlayAsync(Route with { EventId = null });
 
-    private async Task OpenManagerChatTabAsync() {
-        activeDetailTabIndex = ResolveDetailTabIndex(ProcessWorkspaceDetailTabKey.ManagerChat);
-        await LoadAsync(forceRefresh: false);
-    }
+    private Task OpenManagerChatTabAsync()
+        => NavigateAsync(Route with { Tab = ProcessWorkspaceDetailTabKey.ManagerChat }, UrlHistoryMode.Push);
+
+    private string LiveProcessesPath
+        => ProjectId.HasValue ? $"/projects/{ProjectId.Value:D}/processes/live" : "/processes/live";
 
     private async Task ReloadManagerChatAsync() {
         if (ManagerChatReloadDisabled) {
@@ -1519,7 +1531,7 @@
     }
 
     private Guid? ResolveSelectedManagerChatRunId()
-        => selectedRuntimeRunId ?? shell?.Runtime.SelectedRunId ?? RunIdQuery;
+        => SelectedRuntimeRunId;
 
     private readonly record struct ManagerChatOperationContext(long Generation, Guid? ProjectId,
         ProcessProjectionProjectBinding? ProjectBinding, Guid? RunId, Guid? AgentId, Guid? SessionId, Guid VoiceOwnerId);
@@ -2417,7 +2429,7 @@
     Task IProcessWorkspaceSession.CloseEventDetailDialogAsync() => DispatchViewActionAsync(() => CloseEventDetailDialogAsync());
     Task IProcessWorkspaceSession.CloseRunDetailDialogAsync() => DispatchViewActionAsync(() => CloseRunDetailDialogAsync());
     ProcessWorkspaceShellProjection IProcessWorkspaceSession.CurrentShell => CurrentShell;
-    ProcessDefinitionCatalogProjection IProcessWorkspaceSession.DefinitionCatalog => DefinitionCatalog;
+    ProcessDefinitionCatalogProjection IProcessWorkspaceSession.DefinitionCatalog => VisibleDefinitionCatalog;
     string IProcessWorkspaceSession.DefinitionTooltip => DefinitionTooltip;
     string IProcessWorkspaceSession.DefinitionTotalText => DefinitionTotalText;
     IReadOnlyList<ProcessWorkspaceDetailTabDescriptor> IProcessWorkspaceSession.DetailTabs => DetailTabs;
@@ -2458,35 +2470,36 @@
     Task IProcessWorkspaceSession.SelectManagerChatAgentAsync(ChangeEventArgs args) => DispatchViewActionAsync(() => SelectManagerChatAgentAsync(args));
     Task IProcessWorkspaceSession.SelectRuntimeRunAsync(ChangeEventArgs args) => DispatchViewActionAsync(() => SelectRuntimeRunAsync(args));
     Task IProcessWorkspaceSession.SelectRuntimeRunAsync(Guid runId) => DispatchViewActionAsync(() => SelectRuntimeRunAsync(runId));
-    string? IProcessWorkspaceSession.SelectedDefinitionKey => SelectedDefinitionKey;
+    string? IProcessWorkspaceSession.SelectedDefinitionKey => Route.DefinitionKey;
     Task IProcessWorkspaceSession.StartNewProcessLaunchAsync() => DispatchViewActionAsync(() => StartNewProcessLaunchAsync());
     void IProcessWorkspaceSession.UpdateDefinitionSearchText(ChangeEventArgs args) => DispatchViewAction(() => UpdateDefinitionSearchText(args));
-    int IProcessWorkspaceSession.ActiveDetailTabIndex => activeDetailTabIndex;
+    int IProcessWorkspaceSession.ActiveDetailTabIndex => ResolveDetailTabIndex(ActiveTab);
+    string? IProcessWorkspaceSession.UnavailableSelectionText => UnavailableSelectionText;
     string? IProcessWorkspaceSession.AgentContextNotice => agentContextNotice;
     string? IProcessWorkspaceSession.CatalogCommandNotice => catalogCommandNotice;
     ProcessDefinitionDraft IProcessWorkspaceSession.DefinitionDraft => definitionDraft;
     string? IProcessWorkspaceSession.EditorCommandNotice => editorCommandNotice;
     string? IProcessWorkspaceSession.ErrorMessage => errorMessage;
-    ProcessTimelineEventProjection? IProcessWorkspaceSession.EventDetail => eventDetail;
-    bool IProcessWorkspaceSession.EventDetailDialogOpen => eventDetailDialogOpen;
+    ProcessTimelineEventProjection? IProcessWorkspaceSession.EventDetail => EventDetail;
+    bool IProcessWorkspaceSession.EventDetailDialogOpen => Route.EventId.HasValue;
     bool IProcessWorkspaceSession.IsBusy => WorkspaceBusy;
     bool IProcessWorkspaceSession.HasManagerChatAgent => managerChatAgent is not null;
     IReadOnlyList<ProcessManagerAgentOption> IProcessWorkspaceSession.ManagerChatAgents => managerChatAgents.Select(agent => new ProcessManagerAgentOption(agent.Id, agent.Name)).ToArray();
     string? IProcessWorkspaceSession.ManagerChatErrorMessage => managerChatErrorMessage;
-    ProcessRuntimeHistoryWindow IProcessWorkspaceSession.ManagerChatHistoryWindow => managerChatHistoryWindow;
+    ProcessRuntimeHistoryWindow IProcessWorkspaceSession.ManagerChatHistoryWindow => Route.ChatWindow;
     bool IProcessWorkspaceSession.ManagerChatIsLoading => managerChatIsLoading;
     string? IProcessWorkspaceSession.PendingLaunchStorageKey => pendingLaunchStorageKey;
     string IProcessWorkspaceSession.PendingSearchText => pendingSearchText;
     bool IProcessWorkspaceSession.ProcessGraphsHistoryLoaded => processGraphsHistoryLoaded;
     ProcessRoleEditorState IProcessWorkspaceSession.RoleEditorState => roleEditorState;
     ProcessTemplateBrowserState IProcessWorkspaceSession.TemplateBrowserState => templateBrowserState;
-    bool IProcessWorkspaceSession.RunDetailDialogOpen => runDetailDialogOpen;
-    ProcessLiveProcessSnapshot? IProcessWorkspaceSession.RunDetailSnapshot => runDetailSnapshot;
-    int IProcessWorkspaceSession.RuntimeEventPage => runtimeEventPage;
-    ProcessRuntimeHistoryWindow IProcessWorkspaceSession.RuntimeHistoryWindow => runtimeHistoryWindow;
-    ProcessDefinitionCatalogScopeKind IProcessWorkspaceSession.SelectedDefinitionScope => selectedDefinitionScope;
-    int IProcessWorkspaceSession.SelectedRunViewIndex => selectedRunViewIndex;
-    Guid? IProcessWorkspaceSession.SelectedRuntimeRunId => selectedRuntimeRunId;
+    bool IProcessWorkspaceSession.RunDetailDialogOpen => Route.RunDialog;
+    ProcessLiveProcessSnapshot? IProcessWorkspaceSession.RunDetailSnapshot => RunDetailSnapshot;
+    int IProcessWorkspaceSession.RuntimeEventPage => Route.Page - 1;
+    ProcessRuntimeHistoryWindow IProcessWorkspaceSession.RuntimeHistoryWindow => Route.Window;
+    ProcessDefinitionCatalogScopeKind IProcessWorkspaceSession.SelectedDefinitionScope => Route.Scope;
+    int IProcessWorkspaceSession.SelectedRunViewIndex => (int)Route.RunView;
+    Guid? IProcessWorkspaceSession.SelectedRuntimeRunId => SelectedRuntimeRunId;
     ProcessWorkspaceShellProjection? IProcessWorkspaceSession.Shell => shell;
     ProcessStepEditorState IProcessWorkspaceSession.StepEditorState => stepEditorState;
 

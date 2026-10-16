@@ -1,7 +1,10 @@
 @page "/prompt-gallery"
+@using CanDoItAll.AppComponents.Navigation
 @implements IDisposable
 @inject IPromptGalleryCuratorLauncher CuratorLauncher
 @inject NotificationService Notifications
+@inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 
 <PageTitle>Prompt Gallery</PageTitle>
 
@@ -43,6 +46,8 @@
                                  Compact="false"
                                  AllowEdit="true"
                                  ShowSelectAction="false"
+                                 Request="@url.State.ToSearchRequest()"
+                                 Committed="HandleSearchCommitted"
                                  EditRequested="OpenEditorAsync" />
     </ChildContent>
 </PageScaffold>
@@ -68,12 +73,12 @@
 
 @code {
     private readonly CancellationTokenSource lifetime = new();
+    private UrlStateBinding<PromptGalleryUrlState> url = default!;
     private PromptGallerySearchHost? searchHost;
     private Guid? selectedItemId;
-    private Guid? observedPromptIdQuery;
-    private bool promptIdObserved;
     private bool editorDirty;
     private bool editorOpen;
+    private bool creatingNew;
     private bool isOpeningCurator;
     private bool isLoadingCuratorPresentation;
     private bool curatorContextFailed;
@@ -81,32 +86,85 @@
     private PromptGalleryCuratorPresentation? curatorPresentation;
     private IPromptGalleryCuratorContextLease? curatorContextLease;
 
-    [SupplyParameterFromQuery(Name = "promptId")]
-    public Guid? PromptIdQuery { get; set; }
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.PromptKey)]
+    public string? PromptIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.TagsKey)]
+    public string? TagsQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.KindKey)]
+    public string? KindQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.StatusKey)]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.ProviderKey)]
+    public string? ProviderQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.ModelKey)]
+    public string? ModelQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.FavoritesKey)]
+    public string? FavoritesQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.ArchivedKey)]
+    public string? ArchivedQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.ChatModelKey)]
+    public string? ChatModelQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = PromptGalleryUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
 
     private string EditorTitle => selectedItemId.HasValue ? "Edit Gallery item" : "New Gallery item";
 
     private string CuratorDisplayName => curatorPresentation?.Name ?? "Prompts Curator Agent";
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
+        => url = new(Navigation, PromptGalleryUrlCodec.Instance, History, typeof(PromptGalleryPage));
+
+    protected override Task OnParametersSetAsync()
     {
         SynchronizeCurator();
 
-        // A changed promptId request opens the editor; the same value echoed by a rerender never reopens a closed one.
-        if (promptIdObserved && observedPromptIdQuery == PromptIdQuery)
+        // The editor is open exactly while its promptId is in the URL; an echo of the same location changes nothing.
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged || !change.IsInitial && change.Previous.PromptId == change.Current.PromptId)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ApplyEditorRouteAsync(change.Current.PromptId);
+    }
+
+    private async Task ApplyEditorRouteAsync(Guid? promptId)
+    {
+        if (promptId is { } id)
+        {
+            selectedItemId = id;
+            creatingNew = false;
+            editorOpen = true;
+            return;
+        }
+
+        // A new item stays a local draft until its first save; only an addressed editor follows the URL.
+        if (!editorOpen || creatingNew)
         {
             return;
         }
 
-        promptIdObserved = true;
-        observedPromptIdQuery = PromptIdQuery;
-        if (PromptIdQuery.HasValue)
-        {
-            selectedItemId = PromptIdQuery;
-            editorDirty = false;
-            editorOpen = true;
-        }
+        editorOpen = false;
+        selectedItemId = null;
+        await RefreshAfterEditorAsync();
     }
+
+    private void HandleSearchCommitted(PromptGallerySearchCommit commit)
+        => url.Navigate(
+            url.State.WithSearch(commit.Filters, commit.PageIndex),
+            commit.Kind == PromptGallerySearchCommitKind.Explicit ? UrlHistoryMode.Push : UrlHistoryMode.Replace);
 
     private void SynchronizeCurator()
     {
@@ -134,16 +192,22 @@
 
     private Task CreateNewAsync()
     {
+        if (url.State.PromptId is not null)
+        {
+            url.Navigate(url.State with { PromptId = null }, UrlHistoryMode.Replace);
+        }
+
         selectedItemId = null;
-        editorDirty = false;
+        creatingNew = true;
         editorOpen = true;
         return Task.CompletedTask;
     }
 
     private Task OpenEditorAsync(Guid itemId)
     {
+        url.OpenOverlay(url.State with { PromptId = itemId });
         selectedItemId = itemId;
-        editorDirty = false;
+        creatingNew = false;
         editorOpen = true;
         return Task.CompletedTask;
     }
@@ -257,13 +321,31 @@
         // The editor reports the identity it owns; the page echoes it back as the requested target.
         selectedItemId = commit.ItemId;
         editorDirty = true;
+        if (creatingNew && editorOpen)
+        {
+            // The first save gives the draft its identity; the editor becomes addressable without a new history entry.
+            creatingNew = false;
+            url.Navigate(url.State with { PromptId = commit.ItemId }, UrlHistoryMode.Replace);
+        }
+
         return Task.CompletedTask;
     }
 
     private async Task CloseEditorAsync()
     {
         editorOpen = false;
+        creatingNew = false;
         selectedItemId = null;
+        if (url.State.PromptId is not null)
+        {
+            await url.CloseOverlayAsync(url.State with { PromptId = null });
+        }
+
+        await RefreshAfterEditorAsync();
+    }
+
+    private async Task RefreshAfterEditorAsync()
+    {
         if (disposed || !editorDirty)
         {
             return;

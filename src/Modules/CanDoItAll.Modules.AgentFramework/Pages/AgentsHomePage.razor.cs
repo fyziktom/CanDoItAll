@@ -6,7 +6,10 @@ using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Components.BaseLib;
 using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.UI.Overview;
+using CanDoItAll.AgentFramework.UI.History;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.AgentFramework.Pages.Navigation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using CanDoItAll.Infrastructure.Persistence;
@@ -38,34 +41,14 @@ public partial class AgentsHomePage : IDisposable {
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
-    [SupplyParameterFromQuery(Name = "tab")]
-    public string? RequestedTab { get; set; }
-
-    [SupplyParameterFromQuery(Name = "agentId")]
-    public Guid? RequestedAgentId { get; set; }
-
-    [SupplyParameterFromQuery(Name = "teamId")]
-    public Guid? RequestedTeamId { get; set; }
-
-    [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.SimpleChatViewQueryKey)]
-    public string? RequestedSimpleChatView { get; set; }
-
-    [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.DefinitionIdQueryKey)]
-    public string? RequestedDefinitionId { get; set; }
-
-    [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.ConversationIdQueryKey)]
-    public string? RequestedConversationId { get; set; }
-
-    [SupplyParameterFromQuery(Name = AgentWorkspaceRouteState.UsageScopeQueryKey)]
-    public string? RequestedUsageScope { get; set; }
-
-    [SupplyParameterFromQuery(Name = ProviderUsagePeriods.QueryKey)]
-    public string? RequestedUsagePeriod { get; set; }
+    [Inject]
+    private IAppNavigationHistory NavigationHistory { get; set; } = default!;
 
     [Inject]
     private ILogger<AgentsHomePage> Logger { get; set; } = default!;
 
     private readonly CancellationTokenSource lifetime = new();
+    private UrlStateBinding<AgentsUrlState> url = default!;
     private AgentsOverviewSession session = default!;
     private bool disposed;
     private bool hasRendered;
@@ -125,21 +108,24 @@ public partial class AgentsHomePage : IDisposable {
     private int capabilityCount => overview.Totals.CapabilityCount;
     private int activeRunCount => overview.Totals.ActiveRuns;
     private int failedRunCount => overview.Totals.FailedRuns;
-    private AgentsWorkspaceState workspaceState = new();
-    private string selectedTab => workspaceState.Section.ToTabKey();
-    private Guid? effectiveRequestedAgentId => workspaceState.AgentId;
-    private Guid? effectiveRequestedTeamId => workspaceState.TeamId;
-    private SimpleChatWorkspaceRouteState simpleChatRouteState => workspaceState.SimpleChat;
+    private AgentsUrlState route => url.State;
+    private AgentChatContextAccessState selectionAccessState = AgentChatContextAccessState.Loading;
+    private (ProviderUsageWorkloadSelection Selection, ProviderUsagePeriod Period) overviewUsage =
+        (ProviderUsageWorkloadSelection.Both, ProviderUsagePeriod.SevenDays);
+    private string selectedTab => route.Tab.ToTabKey();
+    private Guid? effectiveRequestedAgentId => route.AgentId ?? (route.Tab == AgentWorkspaceSection.Agents ? selectedContextAgent?.Id : null);
+    private Guid? effectiveRequestedTeamId => route.TeamId;
+    private SimpleChatWorkspaceRouteState simpleChatRouteState => route.SimpleChat;
+    private ProviderHistoryLocation? historyLocation => route.History is { IsAnchored: true } history ? history.ToLocation() : null;
     private AgentDefinition? selectedContextAgent;
     private AgentTeamDefinition? selectedContextTeam;
     private AgentsHeaderAgent? hrAgent => session.Header?.HrAgent;
-    private AgentChatContextAccessState selectionAccessState => workspaceState.SelectionAccess;
     private bool isConfirmingDefaults;
     private bool isFeedingDefaults;
     private bool isOpeningHrAgent;
     private AgentRuntimeSummary overview => session.Overview ?? AgentRuntimeSummary.Empty;
-    private ProviderUsageWorkloadSelection usageSelection => workspaceState.UsageSelection;
-    private ProviderUsagePeriod usagePeriod => workspaceState.UsagePeriod;
+    private ProviderUsageWorkloadSelection usageSelection => route.UsageSelection;
+    private ProviderUsagePeriod usagePeriod => route.UsagePeriod;
     private bool isUsageLoading => !hasRendered || session.UsageLoading;
     private bool isOverviewLoading => !hasRendered || session.OverviewLoading;
     private bool hasUsageLoaded => session.GetAcceptedUsage(usageSelection, usagePeriod) is not null;
@@ -180,13 +166,13 @@ public partial class AgentsHomePage : IDisposable {
             Navigation.BaseUri,
             Navigation.Uri,
             [
-                new("tab", RequestedTab),
-                new("agentId", RequestedAgentId?.ToString("D")),
-                new("teamId", RequestedTeamId?.ToString("D"))
+                new(AgentsUrlCodec.TabKey, TabQuery),
+                new(AgentsUrlCodec.AgentKey, AgentIdQuery),
+                new(AgentsUrlCodec.TeamKey, TeamIdQuery)
             ]);
 
     private AgentChatContextAccessState AgentChatAccessState
-        => workspaceState.Section.UsesAgentSelection() ? selectionAccessState : AgentChatContextAccessState.Ready;
+        => route.Tab.UsesAgentSelection() ? selectionAccessState : AgentChatContextAccessState.Ready;
 
     private string HrAgentDisplayName
         => hrAgent?.Name ?? HrAgentIdentity.DefaultDisplayName;
@@ -210,6 +196,7 @@ public partial class AgentsHomePage : IDisposable {
     ];
 
     protected override void OnInitialized() {
+        url = new(Navigation, AgentsUrlCodec.Instance, NavigationHistory, typeof(AgentsHomePage));
         samePageDialogs = DialogService.PreserveDialogsOnSamePageNavigation();
         session = new(WorkspaceQuery, LoggerFactory.CreateLogger<AgentsOverviewSession>(),
             () => disposed ? Task.CompletedTask : InvokeAsync(() => {
@@ -237,8 +224,14 @@ public partial class AgentsHomePage : IDisposable {
     }
 
     protected override Task OnParametersSetAsync() {
-        ApplyRequestedTab();
-        return hasRendered ? session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod) : Task.CompletedTask;
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (change.IsChanged) {
+            ApplyRouteChange(change.Previous, change.Current, change.IsInitial);
+        }
+        if (RendererInfo.IsInteractive && route.History is { IsAnchored: false } history) {
+            Go(route with { History = history.AnchoredAt(Clock.GetUtcNow()) }, UrlHistoryMode.Replace);
+        }
+        return hasRendered ? session.EnsureAsync(route.Tab, usageSelection, usagePeriod) : Task.CompletedTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -246,7 +239,7 @@ public partial class AgentsHomePage : IDisposable {
             return;
         }
         hasRendered = true;
-        var load = session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
+        var load = session.EnsureAsync(route.Tab, usageSelection, usagePeriod);
         StateHasChanged();
         await load;
     }
@@ -291,7 +284,7 @@ public partial class AgentsHomePage : IDisposable {
             if (disposed) {
                 return;
             }
-            await session.RefreshDemandedAsync(workspaceState.Section, usageSelection, usagePeriod);
+            await session.RefreshDemandedAsync(route.Tab, usageSelection, usagePeriod);
             if (disposed) {
                 return;
             }
@@ -313,29 +306,72 @@ public partial class AgentsHomePage : IDisposable {
     }
 
     private Task HandleTabChangedAsync(string key) {
-        if (key != selectedTab) {
-            CloseOverviewDialogs();
+        var tab = AgentWorkspaceSections.FromTabKey(key);
+        if (tab == route.Tab) {
+            return Task.CompletedTask;
         }
-        workspaceState = workspaceState.SelectSection(AgentWorkspaceSections.FromTabKey(key));
-        Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
+        var carriedAgent = tab.UsesAgentSelection() && tab != AgentWorkspaceSection.Agents
+            ? route.Tab == AgentWorkspaceSection.Agents ? selectedContextAgent?.Id : route.AgentId
+            : null;
+        Go(new AgentsUrlState {
+            Tab = tab,
+            AgentId = carriedAgent,
+            UsageSelection = overviewUsage.Selection,
+            UsagePeriod = overviewUsage.Period
+        }, UrlHistoryMode.Push);
         return Task.CompletedTask;
     }
 
-    private Task HandleSelectedAgentChangedAsync(AgentDefinition? agent) {
-        workspaceState = workspaceState with { AgentId = agent?.Id };
+    private Task HandleCatalogAgentChangedAsync(AgentDefinition? agent) {
         selectedContextAgent = agent;
-        if (!string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal)) {
-            workspaceState = workspaceState with { TeamId = null };
-            selectedContextTeam = null;
-        }
+        return Task.CompletedTask;
+    }
 
+    private Task HandlePanelAgentChangedAsync(AgentDefinition? agent) {
+        selectedContextAgent = agent;
+        if (agent is null || agent.Id == route.AgentId) {
+            return Task.CompletedTask;
+        }
+        Go(route with { AgentId = agent.Id }, route.AgentId is null ? UrlHistoryMode.Replace : UrlHistoryMode.Push);
         return Task.CompletedTask;
     }
 
     private Task HandleSelectedTeamChangedAsync(AgentTeamDefinition? team) {
-        workspaceState = workspaceState with { TeamId = team?.Id };
         selectedContextTeam = team;
+        if (team is null && route.TeamId is not null && route.Tab == AgentWorkspaceSection.Agents) {
+            Go(route with { TeamId = null }, UrlHistoryMode.Replace);
+        }
         return Task.CompletedTask;
+    }
+
+    private Task HandleTeamSelectionRequestedAsync(Guid? teamId) {
+        if (teamId != route.TeamId) {
+            Go(route with { TeamId = teamId }, UrlHistoryMode.Push);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAgentOpenRequestedAsync(Guid agentId) {
+        var previous = route;
+        url.OpenOverlay(route with { Tab = AgentWorkspaceSection.Agents, AgentId = agentId, AgentSection = AgentEditorSection.Identity });
+        ApplyRouteChange(previous, route, initial: false);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAgentSectionChangedAsync(AgentEditorSection section) {
+        if (route.OpenAgentId is not null && section != route.AgentSection) {
+            Go(route with { AgentSection = section }, UrlHistoryMode.Replace);
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleAgentCloseRequestedAsync() {
+        if (route.OpenAgentId is null) {
+            return;
+        }
+        var previous = route;
+        await url.CloseOverlayAsync(route with { AgentId = null, AgentSection = AgentEditorSection.Identity });
+        ApplyRouteChange(previous, route, initial: false);
     }
 
     private Task HandleSelectionAccessStateChangedAsync(AgentChatContextAccessState state) {
@@ -343,110 +379,93 @@ public partial class AgentsHomePage : IDisposable {
             throw new ArgumentOutOfRangeException(nameof(state), state, "The Agents selection access state is undefined.");
         }
 
-        workspaceState = workspaceState with { SelectionAccess = state };
+        selectionAccessState = state;
         return Task.CompletedTask;
     }
 
-    private void ApplyRequestedTab() {
-        var routeState = AgentWorkspaceRouteState.Parse(
-            ResolveRequestedTab(),
-            ResolveRequestedAgentId(),
-            ResolveRequestedTeamId(),
-            RequestedSimpleChatView ?? TryGetQueryValue(AgentWorkspaceRouteState.SimpleChatViewQueryKey),
-            RequestedDefinitionId ?? TryGetQueryValue(AgentWorkspaceRouteState.DefinitionIdQueryKey),
-            RequestedConversationId ?? TryGetQueryValue(AgentWorkspaceRouteState.ConversationIdQueryKey),
-            RequestedUsageScope ?? TryGetQueryValue(AgentWorkspaceRouteState.UsageScopeQueryKey),
-            RequestedUsagePeriod ?? TryGetQueryValue(ProviderUsagePeriods.QueryKey));
-        var requestedAgentId = routeState.AgentId;
-        var requestedTeamId = routeState.TeamId;
-        if (selectedContextAgent?.Id != requestedAgentId) {
+    private Task HandleProviderRequestedAsync(ProviderRouteSelection requested) {
+        if (requested.ProviderId != route.ProviderId || requested.Section != route.ProviderSection) {
+            Go(route with { ProviderId = requested.ProviderId, ProviderSection = requested.Section, Dialog = null, History = null },
+                UrlHistoryMode.Push);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task HandleProviderPublishedAsync(ProviderRouteSelection published) {
+        if (published.ProviderId != route.ProviderId || published.Section != route.ProviderSection) {
+            Go(route with { ProviderId = published.ProviderId, ProviderSection = published.Section, History = null },
+                UrlHistoryMode.Replace);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNewProviderDraftRequestedAsync() {
+        if (route.ProviderId is not null) {
+            Go(route with { ProviderId = null, ProviderSection = ProviderEditorSection.Connection, Dialog = null, History = null },
+                UrlHistoryMode.Push);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task HandleProviderSectionRequestedAsync(ProviderEditorSection section) {
+        if (route.ProviderId is not null && section != route.ProviderSection) {
+            Go(route with { ProviderSection = section, History = null }, UrlHistoryMode.Push);
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleConnectionsRequestedAsync(bool open) {
+        if (open == route.IsSharedConnectionsOpen) {
+            return;
+        }
+        if (open) {
+            url.OpenOverlay(route with { Dialog = AgentsPageDialog.SharedConnections });
+        } else {
+            await url.CloseOverlayAsync(route with { Dialog = null });
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleHistoryLocationChangedAsync(ProviderHistoryLocationChange change) {
+        var next = route with { History = AgentsHistoryUrlState.FromLocation(change.Location) };
+        switch (change.Kind) {
+            case ProviderHistoryLocationChangeKind.OpenEntry:
+                url.OpenOverlay(next);
+                break;
+            case ProviderHistoryLocationChangeKind.CloseEntry:
+                await url.CloseOverlayAsync(next);
+                break;
+            default:
+                url.Navigate(next, UrlHistoryMode.Push);
+                break;
+        }
+        StateHasChanged();
+    }
+
+    private void Go(AgentsUrlState next, UrlHistoryMode mode) {
+        var previous = route;
+        url.Navigate(next, mode);
+        ApplyRouteChange(previous, route, initial: false);
+    }
+
+    private void ApplyRouteChange(AgentsUrlState previous, AgentsUrlState current, bool initial) {
+        var tabChanged = initial || previous.Tab != current.Tab;
+        if (tabChanged || current.AgentId is not null && selectedContextAgent?.Id != current.AgentId) {
             selectedContextAgent = null;
         }
-
-        if (selectedContextTeam?.Id != requestedTeamId) {
+        if (selectedContextTeam?.Id != current.TeamId) {
             selectedContextTeam = null;
         }
-
-        var next = workspaceState.ApplyRoute(routeState);
-        if (workspaceState.Section == AgentWorkspaceSection.Overview &&
-            (next.Section != AgentWorkspaceSection.Overview || next.UsageSelection != usageSelection || next.UsagePeriod != usagePeriod)) {
+        if (tabChanged || previous.AgentId != current.AgentId || previous.TeamId != current.TeamId) {
+            selectionAccessState = current.Tab.UsesAgentSelection() ? AgentChatContextAccessState.Loading : AgentChatContextAccessState.Ready;
+        }
+        if (!initial && previous.Tab == AgentWorkspaceSection.Overview &&
+            (current.Tab != AgentWorkspaceSection.Overview || current.UsageSelection != previous.UsageSelection || current.UsagePeriod != previous.UsagePeriod)) {
             CloseOverviewDialogs();
         }
-        workspaceState = next;
-    }
-
-    private string? ResolveRequestedTab() {
-        if (!string.IsNullOrWhiteSpace(RequestedTab)) {
-            return RequestedTab;
+        if (current.Tab == AgentWorkspaceSection.Overview) {
+            overviewUsage = (current.UsageSelection, current.UsagePeriod);
         }
-
-        return TryGetQueryValue("tab");
-    }
-
-    private Guid? ResolveRequestedAgentId() {
-        if (RequestedAgentId.HasValue) {
-            return RequestedAgentId;
-        }
-
-        return Guid.TryParse(TryGetQueryValue("agentId"), out var agentId)
-            ? agentId
-            : null;
-    }
-
-    private Guid? ResolveRequestedTeamId() {
-        if (RequestedTeamId.HasValue) {
-            return RequestedTeamId;
-        }
-
-        return Guid.TryParse(TryGetQueryValue("teamId"), out var teamId)
-            ? teamId
-            : null;
-    }
-
-    private string? TryGetQueryValue(
-        string key) {
-        var query = Navigation.ToAbsoluteUri(Navigation.Uri).Query;
-        if (string.IsNullOrWhiteSpace(query)) {
-            return null;
-        }
-
-        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)) {
-            var segments = pair.Split('=', 2);
-            if (!string.Equals(Uri.UnescapeDataString(segments[0]), key, StringComparison.OrdinalIgnoreCase)) {
-                continue;
-            }
-
-            return segments.Length > 1
-                ? Uri.UnescapeDataString(segments[1])
-                : string.Empty;
-        }
-
-        return null;
-    }
-
-    private static string BuildAgentsRoute(
-        string tab,
-        Guid? agentId,
-        Guid? teamId) {
-        if (!agentId.HasValue &&
-            !teamId.HasValue &&
-            string.Equals(tab, AgentWorkspaceTabs.Overview, StringComparison.Ordinal)) {
-            return "/agents";
-        }
-
-        var query = new List<string> {
-            $"tab={Uri.EscapeDataString(tab)}"
-        };
-
-        if (agentId.HasValue) {
-            query.Add($"agentId={agentId.Value:D}");
-        }
-
-        if (teamId.HasValue) {
-            query.Add($"teamId={teamId.Value:D}");
-        }
-
-        return $"/agents?{string.Join("&", query)}";
     }
 
     private string ResolveSummaryValue(int value) {
@@ -476,10 +495,8 @@ public partial class AgentsHomePage : IDisposable {
         if (disposed || selection == usageSelection) {
             return;
         }
-        CloseOverviewDialogs();
-        workspaceState = workspaceState with { UsageSelection = selection };
-        Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
-        await session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
+        Go(route with { UsageSelection = selection }, UrlHistoryMode.Push);
+        await session.EnsureAsync(route.Tab, usageSelection, usagePeriod);
     }
 
     private async Task HandleUsagePeriodChangedAsync(ProviderUsagePeriod period) {
@@ -489,24 +506,37 @@ public partial class AgentsHomePage : IDisposable {
         if (disposed || period == usagePeriod) {
             return;
         }
-        CloseOverviewDialogs();
-        workspaceState = workspaceState with { UsagePeriod = period };
-        Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
-        await session.EnsureAsync(workspaceState.Section, usageSelection, usagePeriod);
+        Go(route with { UsagePeriod = period }, UrlHistoryMode.Push);
+        await session.EnsureAsync(route.Tab, usageSelection, usagePeriod);
     }
 
-    private Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state) {
+    private async Task HandleSimpleChatRouteStateChangedAsync(SimpleChatWorkspaceRouteState state) {
         ArgumentNullException.ThrowIfNull(state);
-        workspaceState = workspaceState with { SimpleChat = state };
-        Navigation.NavigateTo(BuildCurrentRoute(), replace: true);
-        return Task.CompletedTask;
+        var current = route.SimpleChat;
+        if (state == current) {
+            return;
+        }
+        var next = route with { SimpleChat = state };
+        if (state.View != current.View) {
+            Go(next, UrlHistoryMode.Push);
+            return;
+        }
+        if (state.View == SimpleChatWorkspaceView.Definitions) {
+            if (state.DefinitionId is null) {
+                await url.CloseOverlayAsync(next);
+            } else if (current.DefinitionId is null) {
+                url.OpenOverlay(next);
+            } else {
+                url.Navigate(next, UrlHistoryMode.Push);
+            }
+            StateHasChanged();
+            return;
+        }
+        Go(next, current.ConversationId is null || state.ConversationId is null ? UrlHistoryMode.Replace : UrlHistoryMode.Push);
     }
-
-    private string BuildCurrentRoute()
-        => AgentWorkspaceRouteState.Build(workspaceState.ToRoute());
 
     private async Task OpenUsageDialogAsync(AgentsOverviewDetail detail, ProviderUsageQuery query) {
-        if (disposed || workspaceState.Section != AgentWorkspaceSection.Overview || query != session.GetAcceptedUsage(usageSelection, usagePeriod)?.Query
+        if (disposed || route.Tab != AgentWorkspaceSection.Overview || query != session.GetAcceptedUsage(usageSelection, usagePeriod)?.Query
             || !CanOpenUsage || !openDetails.Add(detail)) {
             return;
         }
@@ -562,9 +592,7 @@ public partial class AgentsHomePage : IDisposable {
         if (disposed || session.Overview?.TeamShortcuts.Any(team => team.TeamId == teamId) != true) {
             return Task.CompletedTask;
         }
-        CloseOverviewDialogs();
-        workspaceState = workspaceState with { Section = AgentWorkspaceSection.Agents, AgentId = null, TeamId = teamId };
-        Navigation.NavigateTo(BuildAgentsRoute(AgentWorkspaceTabs.Agents, null, teamId));
+        Go(new AgentsUrlState { Tab = AgentWorkspaceSection.Agents, TeamId = teamId }, UrlHistoryMode.Push);
         return Task.CompletedTask;
     }
 

@@ -31,10 +31,7 @@ public partial class ProviderProfilesSurface : IDisposable {
         get => View.State.SharedConnectionsOpen;
         set => View.SetSharedConnectionsOpen(value);
     }
-    private int providerEditorTabIndex {
-        get => ProviderEditorSections.IndexOf(View.State.Section);
-        set => View.SelectSection(ProviderEditorSections.At(value).Section);
-    }
+    private int providerEditorTabIndex => ProviderEditorSections.IndexOf(View.State.Section);
     private string suggestedModelsText => View.SourceManaged && SelectedProvider is { } provider
             ? string.Join(Environment.NewLine, providerModel.SuggestedModels.Select(provider.GetModelDisplayName))
             : View.Editor.SuggestedModelsText;
@@ -54,6 +51,13 @@ public partial class ProviderProfilesSurface : IDisposable {
     private Task LoadAsync() => View.RefreshAsync();
     private bool Current(ProviderEditorTarget target) => !disposed && target.Activation == View.Activation && ReferenceEquals(target.Context, View.Editor.Context);
     private Task ResetProviderAsync(ProviderEditorTarget target) => Current(target) ? View.NewAsync() : Task.CompletedTask;
+    // A tab click dispatched before New or another selection replaced the editor still arrives at the replaced tabs;
+    // like every editor intent, it changes only the editor it was made in.
+    private void SelectSection(ProviderEditorTarget target, int index) {
+        if (Current(target)) {
+            View.SelectSection(ProviderEditorSections.At(index).Section);
+        }
+    }
     private void SetField<T>(ProviderEditorTarget target, ProviderEditorDraft editor, string property, T value, Action<T> assign) {
         if (Current(target) && View.CanEdit && !View.SourceManaged) {
             assign(value);

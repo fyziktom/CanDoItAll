@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
@@ -6,6 +7,9 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
+using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Structure.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -344,8 +348,10 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
             services.AddScoped<ProjectStructureGanttTaskEditCoordinator>());
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var firstProjectId = await CreateProjectAsync(projectsService, "First lazy Gantt project");
         var secondProjectId = await CreateProjectAsync(projectsService, "Second lazy Gantt project");
+        navigation.NavigateTo($"http://localhost/projects/{firstProjectId:D}/structure");
 
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, firstProjectId));
@@ -359,7 +365,9 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
                 .Click();
         });
         cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
+        Assert.EndsWith($"/projects/{firstProjectId:D}/structure?tab=gantt", navigation.Uri, StringComparison.Ordinal);
 
+        navigation.NavigateTo($"http://localhost/projects/{secondProjectId:D}/structure");
         cut.Render(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
 
         cut.WaitForAssertion(() =>
@@ -368,6 +376,67 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             var selectedTab = Assert.Single(cut.FindAll(".cad-tabs__tab[aria-selected='true']"));
             Assert.Contains("Canvas", selectedTab.TextContent, StringComparison.Ordinal);
         });
+    }
+
+    [Fact]
+    public async Task Selecting_a_view_pushes_its_tab_and_the_canvas_omits_it()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.AddScoped<ProjectStructureGanttTaskEditCoordinator>());
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var navigation = Assert.IsType<BunitNavigationManager>(harness.Context.Services.GetRequiredService<NavigationManager>());
+        var projectId = await CreateProjectAsync(projectsService, "Pushed view project");
+        var structureUrl = $"http://localhost/projects/{projectId:D}/structure";
+        navigation.NavigateTo(structureUrl);
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(page => page.ProjectId, projectId));
+        cut.WaitForElement(".cad-tabs__tab");
+        var entries = navigation.History.Count;
+
+        await cut.InvokeAsync(() => SelectTab(cut, "Gantt"));
+
+        cut.WaitForElement("[data-testid='project-structure-gantt-panel']");
+        Assert.Equal($"{structureUrl}?tab=gantt", navigation.Uri);
+        Assert.Equal(entries + 1, navigation.History.Count);
+        Assert.False(navigation.History.First().Options.ReplaceHistoryEntry);
+
+        await cut.InvokeAsync(() => SelectTab(cut, "Canvas"));
+
+        AssertSelectedStructureTab(cut, "Canvas");
+        Assert.Equal(structureUrl, navigation.Uri);
+        Assert.Equal(entries + 2, navigation.History.Count);
+    }
+
+    [Fact]
+    public async Task A_view_location_change_keeps_the_workspace_its_dialogs_and_the_loaded_surface()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.AddScoped<ProjectStructureGanttTaskEditCoordinator>());
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var navigation = Assert.IsType<BunitNavigationManager>(harness.Context.Services.GetRequiredService<NavigationManager>());
+        var projectId = await CreateProjectAsync(projectsService, "Stable view project");
+        var node = await workbench.CreateObjectAsync(projectId,
+            new ProjectObjectCreateRequest(ProjectObjectType.Note, "Summary target", "Fixture", "Notes", $"project:{projectId:D}"));
+        var structureUrl = $"http://localhost/projects/{projectId:D}/structure";
+        navigation.NavigateTo($"{structureUrl}?tab=CANVAS");
+        var entries = navigation.History.Count;
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters
+            .Add(page => page.ProjectId, projectId));
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, item => item.Id == node.Id));
+        Assert.Equal(structureUrl, navigation.Uri);
+        Assert.Equal(entries, navigation.History.Count);
+        var workspace = cut.FindComponent<StructureWorkspace>().Instance;
+        var loaded = cut.FindComponent<ProjectStructureAgentChatContextProvider>().Instance.Surface;
+        await cut.InvokeAsync(() => cut.FindComponent<CanvasWorkbench>().Instance.OnContextAction(node.Id, "summary", 0, 0));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<ProjectStructureSupportDialogs>().Instance.SummaryDialog));
+
+        navigation.NavigateTo($"{structureUrl}?tab=manager-summary");
+
+        cut.WaitForElement("[data-testid='project-manager-summary']");
+        Assert.Same(workspace, cut.FindComponent<StructureWorkspace>().Instance);
+        Assert.Same(loaded, cut.FindComponent<ProjectStructureAgentChatContextProvider>().Instance.Surface);
+        Assert.NotNull(cut.FindComponent<ProjectStructureSupportDialogs>().Instance.SummaryDialog);
     }
 
     [Fact]
@@ -436,6 +505,11 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             Assert.DoesNotContain($"{expectedProjectName} workbench", cut.Markup, StringComparison.Ordinal);
         });
     }
+
+    private static void SelectTab(IRenderedComponent<ProjectStructurePage> cut, string label)
+        => cut.FindAll(".cad-tabs__tab")
+            .Single(tab => tab.TextContent.Contains(label, StringComparison.Ordinal))
+            .Click();
 
     private static void AssertSelectedStructureTab(
         IRenderedComponent<ProjectStructurePage> cut,

@@ -9,6 +9,8 @@ public partial class ProviderHistoryWorkspace : IDisposable {
     [Parameter, EditorRequired] public HistoryProviderScope Scope { get; set; } = default!;
     [Parameter, EditorRequired] public IProviderRequestHistory History { get; set; } = default!;
     [Parameter] public TimeProvider Clock { get; set; } = TimeProvider.System;
+    [Parameter] public ProviderHistoryLocation? Location { get; set; }
+    [Parameter] public EventCallback<ProviderHistoryLocationChange> LocationChanged { get; set; }
     [Inject] public ILogger<ProviderHistorySearchState> Logger { get; set; } = default!;
 
     private ProviderHistorySearchState state = default!;
@@ -19,51 +21,109 @@ public partial class ProviderHistoryWorkspace : IDisposable {
     private ProviderHistoryResultsSurface? results;
     private ProviderHistoryDetailsDialog? details;
     private DetailSelection? selectedEntry;
+    private ProviderHistoryAppliedFilter? appliedFilter;
+    private ProviderHistoryLocation? publishedLocation;
+    private bool locationApplied;
     private bool draftChanged;
     private bool disposed;
 
-    protected override void OnParametersSet() {
+    private bool IsControlled => LocationChanged.HasDelegate;
+
+    protected override Task OnParametersSetAsync() {
         ArgumentNullException.ThrowIfNull(Scope);
         ArgumentNullException.ThrowIfNull(History);
-        if (disposed || previousScope == Scope && ReferenceEquals(previousHistory, History)) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (previousScope != Scope || !ReferenceEquals(previousHistory, History)) {
+            ClearDetails();
+            state?.Dispose();
+            state = new(History, Logger);
+            state.Changed += Render;
+            ReplaceDraft(new(Clock.GetUtcNow()));
+            appliedFilter = null;
+            publishedLocation = null;
+            locationApplied = false;
+            previousScope = Scope;
+            previousHistory = History;
+        }
+        if (!IsControlled || locationApplied && Location == publishedLocation) {
+            return Task.CompletedTask;
+        }
+        locationApplied = true;
+        publishedLocation = Location;
+        return ApplyLocationAsync(Location);
+    }
+
+    private ProviderHistoryLocation? CurrentLocation => appliedFilter is { } filter
+        ? new(filter, state.CurrentCursor, state.PageNumber, selectedEntry?.EntryId)
+        : null;
+
+    private Task ApplyLocationAsync(ProviderHistoryLocation? location) {
+        if (location is null) {
+            ClearDetails();
+            appliedFilter = null;
+            draftChanged = false;
+            if (state.HasRequested) {
+                state.Reset();
+            }
+            return Task.CompletedTask;
+        }
+        if (appliedFilter != location.Filter) {
+            ReplaceDraft(location.Filter.ToDraft());
+        }
+        appliedFilter = location.Filter;
+        draftChanged = false;
+        if (selectedEntry?.EntryId != location.EntryId) {
+            ClearDetails();
+            if (location.EntryId is { } entryId) {
+                selectedEntry = new(entryId, HistoryViewOrigin.New());
+            }
+        }
+        return state.ShowAsync(location.Filter.ToQuery(Scope), location.Cursor, location.Page);
+    }
+
+    private Task PublishAsync(ProviderHistoryLocationChangeKind kind, ProviderHistoryLocation? location) {
+        if (!IsControlled || disposed) {
+            return Task.CompletedTask;
+        }
+        publishedLocation = location;
+        locationApplied = true;
+        return LocationChanged.InvokeAsync(new(location, kind));
+    }
+
+    private async Task SearchAsync(HistoryViewOrigin origin, EditContext context) {
+        if (!state.IsCurrent(origin) || !ReferenceEquals(editContext, context) || !context.Validate()) {
             return;
         }
-        ClearDetails();
-        state?.Dispose();
-        state = new(History, Logger);
-        state.Changed += Render;
-        if (editContext is not null) {
-            editContext.OnFieldChanged -= DraftChanged;
-        }
-        draft = new(Clock.GetUtcNow());
-        editContext = new(draft);
-        editContext.OnFieldChanged += DraftChanged;
-        draftChanged = false;
-        previousScope = Scope;
-        previousHistory = History;
-    }
-
-    private Task SearchAsync(HistoryViewOrigin origin, EditContext context) {
-        if (!state.IsCurrent(origin) || !ReferenceEquals(editContext, context) || !context.Validate()) {
-            return Task.CompletedTask;
-        }
-        var query = draft.ToQuery(Scope, Clock.GetUtcNow());
+        var filter = ProviderHistoryAppliedFilter.Capture(draft, Clock.GetUtcNow());
         ClearDetails();
         draftChanged = false;
-        return state.SearchAsync(query);
+        appliedFilter = filter;
+        var search = state.SearchAsync(filter.ToQuery(Scope));
+        await PublishAsync(ProviderHistoryLocationChangeKind.Search, CurrentLocation);
+        await search;
     }
 
-    private Task DispatchAsync(HistoryResultsIntent intent) {
+    private async Task DispatchAsync(HistoryResultsIntent intent) {
         if (!state.IsCurrent(intent.Origin)) {
-            return Task.CompletedTask;
+            return;
         }
         switch (intent) {
-            case HistoryResultsIntent.Previous:
+            case HistoryResultsIntent.Previous when appliedFilter is { } filter && state.CanPrevious:
                 ClearDetails();
-                return state.PreviousAsync();
-            case HistoryResultsIntent.Next:
+                var previous = new ProviderHistoryLocation(filter, state.PreviousCursor, state.PageNumber - 1);
+                var previousRead = state.PreviousAsync();
+                await PublishAsync(ProviderHistoryLocationChangeKind.Page, previous);
+                await previousRead;
+                break;
+            case HistoryResultsIntent.Next when appliedFilter is { } filter && state.CanNext:
                 ClearDetails();
-                return state.NextAsync();
+                var next = new ProviderHistoryLocation(filter, state.NextCursor, state.PageNumber + 1);
+                var nextRead = state.NextAsync();
+                await PublishAsync(ProviderHistoryLocationChangeKind.Page, next);
+                await nextRead;
+                break;
             case HistoryResultsIntent.Cancel:
                 ClearDetails();
                 state.Cancel();
@@ -71,28 +131,42 @@ public partial class ProviderHistoryWorkspace : IDisposable {
             case HistoryResultsIntent.Clear:
                 ClearDetails();
                 state.Reset();
+                appliedFilter = null;
                 draftChanged = false;
+                await PublishAsync(ProviderHistoryLocationChangeKind.Clear, null);
                 break;
             case HistoryResultsIntent.Details selection when state.Page?.Entries.Any(entry => entry.Id == selection.EntryId) == true:
                 ClearDetails();
                 selectedEntry = new(selection.EntryId, HistoryViewOrigin.New());
                 state.InvalidateIntents();
+                await PublishAsync(ProviderHistoryLocationChangeKind.OpenEntry, CurrentLocation);
                 break;
         }
-        return Task.CompletedTask;
     }
 
-    private void CloseDetails(DetailSelection selection) {
-        if (!disposed && ReferenceEquals(selectedEntry, selection)) {
-            ClearDetails();
-            state.InvalidateIntents();
+    private Task CloseDetails(DetailSelection selection) {
+        if (disposed || !ReferenceEquals(selectedEntry, selection)) {
+            return Task.CompletedTask;
         }
+        ClearDetails();
+        state.InvalidateIntents();
+        return PublishAsync(ProviderHistoryLocationChangeKind.CloseEntry, CurrentLocation);
     }
 
     private void ClearDetails() {
         details?.Dispose();
         details = null;
         selectedEntry = null;
+    }
+
+    private void ReplaceDraft(ProviderHistoryFilterDraft next) {
+        if (editContext is not null) {
+            editContext.OnFieldChanged -= DraftChanged;
+        }
+        draft = next;
+        editContext = new(draft);
+        editContext.OnFieldChanged += DraftChanged;
+        draftChanged = false;
     }
 
     private void DraftChanged(object? sender, FieldChangedEventArgs args) {

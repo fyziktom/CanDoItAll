@@ -6,6 +6,7 @@
 @using Microsoft.Extensions.Logging
 @inject RecruitingService RecruitingService
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrRecruitingPage> Logger
 
@@ -31,12 +32,29 @@
 </CrmHrRecruitingWorkspaceSurface>
 
 @code {
-    [SupplyParameterFromQuery]
-    private Guid? ApplicationId { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.ApplicationKey)]
+    public string? ApplicationIdQuery { get; set; }
 
-    [SupplyParameterFromQuery]
-    private Guid? PartyId { get; set; }
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.PartyKey)]
+    public string? PartyIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.DialogKey)]
+    public string? DialogQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.StageKey)]
+    public string? StageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<RecruitingUrlState> url = default!;
     private RecruitmentWorkspaceModel? currentWorkspace;
     private RecruitmentApplicationEditorModel applicationEditor = new();
     private RecruitmentInterviewEditorModel interviewEditor = new();
@@ -56,12 +74,7 @@
     private const string TaskDraft = "task";
     private const string SupportDraft = "support";
     private const string ConversionDraft = "conversion";
-    private Guid? committedApplicationId;
-    private Guid? committedPartyId;
-    private RecruitingRecordTab selectedRecruitingTab = RecruitingRecordTab.Application;
-    private bool hasCommittedRecruitmentRoute;
     private bool isRecruitmentDialogOpen;
-    private bool openNewApplicationAfterRouteReset;
     private bool isDisposed;
 
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
@@ -78,7 +91,10 @@
         ? new PagedRecordSelection<Guid>(applicationId)
         : null;
 
-    private int SelectedRecruitingTabIndex => (int)selectedRecruitingTab;
+    // The record section is navigation state: the tab index is only its rendering.
+    private int SelectedRecruitingTabIndex => (int)url.State.Section;
+
+    private PagedRecordQueryState<RecruitmentApplicationScope> CatalogQuery => url.State.Catalog.ToQuery();
 
     private string RecruitmentDialogTitle
         => currentWorkspace?.HasSelectedApplication == true &&
@@ -93,8 +109,8 @@
             if (agentChatContextAccessState != AgentChatContextAccessState.Ready ||
                 currentWorkspace is not { HasSelectedApplication: true } workspace ||
                 !RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
-                    ApplicationId,
-                    PartyId,
+                    url.State.ApplicationId,
+                    url.State.PartyId,
                     workspace))
             {
                 return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface();
@@ -110,34 +126,49 @@
     }
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [
-                new("applicationId", ApplicationId?.ToString("D")),
-                new("partyId", PartyId?.ToString("D"))
-            ]);
+        => CrmHrNavigationFence.Create(Navigation, url);
 
+    protected override void OnInitialized()
+        => url = new UrlStateBinding<RecruitingUrlState>(Navigation, RecruitingUrlCodec.Instance, History, typeof(CrmHrRecruitingPage));
+
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // Another application or the new-application editor loads the record; a section and a catalog query load nothing
+    // here, the catalog loads its own query.
     protected override async Task OnParametersSetAsync()
     {
-        var requestedApplicationId = ApplicationId;
-        var requestedPartyId = PartyId;
-        if (!hasCommittedRecruitmentRoute ||
-            committedApplicationId != requestedApplicationId ||
-            committedPartyId != requestedPartyId)
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged)
         {
-            InvalidateRecruitmentActions();
-            isRecruitmentDialogOpen = false;
+            return;
         }
 
-        await LoadAsync();
+        if (change.IsInitial || IsOtherRecord(change.Previous, change.Current))
+        {
+            if (change.Current.IsRecordOpen)
+            {
+                InvalidateRecruitmentActions();
+                isRecruitmentDialogOpen = false;
+            }
+            else
+            {
+                RetireRecord();
+            }
+
+            await LoadAsync();
+        }
     }
+
+    private static bool IsOtherRecord(RecruitingUrlState previous, RecruitingUrlState current)
+        => previous.ApplicationId != current.ApplicationId ||
+           previous.PartyId != current.PartyId ||
+           previous.Dialog != current.Dialog;
 
     private async Task LoadAsync(RecruitingEditor committed = RecruitingEditor.None)
     {
         var loadGeneration = Interlocked.Increment(ref agentChatContextLoadGeneration);
-        var requestedApplicationId = ApplicationId;
-        var requestedPartyId = PartyId;
+        var route = url.State;
+        var requestedApplicationId = route.ApplicationId;
+        var requestedPartyId = route.PartyId;
         var previousApplicationId = currentWorkspace?.Application.Id;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         try
@@ -159,35 +190,28 @@
                 loadedWorkspace,
                 applicationChanged: previousApplicationId != loadedWorkspace.Application.Id,
                 committed);
-            committedApplicationId = requestedApplicationId;
-            committedPartyId = requestedPartyId;
-            hasCommittedRecruitmentRoute = true;
             if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
                     requestedApplicationId,
                     requestedPartyId,
                     loadedWorkspace))
             {
+                // The requested identity stays in the location and no other application takes its place.
                 isRecruitmentDialogOpen = false;
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                NotificationService.Warning(
+                    "Recruitment application unavailable",
+                    "The requested recruitment application does not exist or is no longer available.");
                 return;
             }
 
-            if (previousApplicationId != loadedWorkspace.Application.Id)
-            {
-                selectedRecruitingTab = RecruitingRecordTab.Application;
-            }
-
-            var shouldOpenNewApplication =
-                openNewApplicationAfterRouteReset &&
-                !requestedApplicationId.HasValue &&
-                !requestedPartyId.HasValue &&
+            var opensNewApplication =
+                route.Dialog == RecruitingDialog.NewApplication &&
                 !loadedWorkspace.HasSelectedApplication;
-            openNewApplicationAfterRouteReset = false;
             isRecruitmentDialogOpen =
-                shouldOpenNewApplication ||
-                (loadedWorkspace.HasSelectedApplication &&
-                 (requestedApplicationId.HasValue || requestedPartyId.HasValue));
+                opensNewApplication ||
+                (loadedWorkspace.HasSelectedApplication && route.NamesApplication);
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            PublishResolvedApplication(route, loadedWorkspace);
         }
         catch when (!IsCurrentAgentChatContextLoad(loadGeneration))
         {
@@ -202,6 +226,20 @@
     private bool IsCurrentAgentChatContextLoad(long loadGeneration)
         => !isDisposed &&
            loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
+
+    // A candidate link opens the candidate's latest application. Once resolved, the location names that application,
+    // so a refresh, a copied link and a later card selection all mean the same record.
+    private void PublishResolvedApplication(RecruitingUrlState route, RecruitmentWorkspaceModel workspace)
+    {
+        if (route.PartyId is null ||
+            !workspace.HasSelectedApplication ||
+            workspace.Application.Id is not { } applicationId)
+        {
+            return;
+        }
+
+        url.Navigate(url.State with { ApplicationId = applicationId, PartyId = null }, UrlHistoryMode.Replace);
+    }
 
     // A reload of the application already on screen (another editor's commit, a deleted interview or task, an agent
     // refresh) keeps what the operator typed into the editors it did not commit. Closing the record and starting a new
@@ -286,20 +324,27 @@
             result.TotalCount);
     }
 
+    // A card opens its application over the catalog as a new history entry; Back closes it again.
     private Task SelectApplicationAsync(Guid applicationId)
     {
-        if (currentWorkspace?.Application.Id == applicationId &&
-            (ApplicationId == applicationId || PartyId == currentWorkspace.Application.PartyId))
+        if (currentWorkspace?.Application.Id == applicationId && url.State.ApplicationId == applicationId)
         {
             isRecruitmentDialogOpen = true;
             return Task.CompletedTask;
         }
 
         InvalidateRecruitmentActions();
-        Interlocked.Increment(ref agentChatContextLoadGeneration);
         isRecruitmentDialogOpen = false;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={applicationId:D}");
+        url.OpenOverlay(url.State.WithoutRecord() with { ApplicationId = applicationId });
+        return LoadAsync();
+    }
+
+    // The catalog committed a query and is already loading it: only the location follows.
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change)
+    {
+        url.Navigate(
+            url.State with { Catalog = RecruitingUrlCodec.Catalog.FromQuery(change.Query) },
+            CrmHrCatalogUrlCodec<RecruitmentApplicationScope>.HistoryMode(change.Kind));
         return Task.CompletedTask;
     }
 
@@ -312,55 +357,40 @@
         return Task.CompletedTask;
     }
 
+    // The new-application editor opens over the catalog as a new history entry; Back closes it again.
     private Task CreateNewApplicationAsync()
     {
-        if (ApplicationId.HasValue || PartyId.HasValue)
-        {
-            openNewApplicationAfterRouteReset = true;
-            InvalidateRecruitmentActions();
-            Interlocked.Increment(ref agentChatContextLoadGeneration);
-            isRecruitmentDialogOpen = false;
-            agentChatContextAccessState = AgentChatContextAccessState.Loading;
-            Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
-            return Task.CompletedTask;
-        }
-
-        if (currentWorkspace is null)
-        {
-            openNewApplicationAfterRouteReset = true;
-            return Task.CompletedTask;
-        }
-
-        if (currentWorkspace.HasSelectedApplication)
-        {
-            return Task.CompletedTask;
-        }
-
         InvalidateRecruitmentActions();
-        selectedRecruitingTab = RecruitingRecordTab.Application;
-        ApplyWorkspace(currentWorkspace, applicationChanged: true);
-        isRecruitmentDialogOpen = true;
-        return Task.CompletedTask;
+        url.OpenOverlay(url.State.WithoutRecord() with { Dialog = RecruitingDialog.NewApplication });
+        if (currentWorkspace is { HasSelectedApplication: false } workspace)
+        {
+            ApplyWorkspace(workspace, applicationChanged: true);
+            isRecruitmentDialogOpen = true;
+            return Task.CompletedTask;
+        }
+
+        isRecruitmentDialogOpen = false;
+        return LoadAsync();
     }
 
-    private Task CloseRecruitmentDialogAsync()
+    // Closing is the operator's own discard: the record leaves the location and its drafts go with it.
+    private async Task CloseRecruitmentDialogAsync()
     {
         if (!isRecruitmentDialogOpen)
         {
-            return Task.CompletedTask;
+            return;
         }
 
+        RetireRecord();
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
+        await LoadAsync();
+    }
+
+    // The catalog without a record: the open record, its drafts, its actions and its reads are retired.
+    private void RetireRecord()
+    {
         InvalidateRecruitmentActions();
-        openNewApplicationAfterRouteReset = false;
         isRecruitmentDialogOpen = false;
-        selectedRecruitingTab = RecruitingRecordTab.Application;
-        if (currentWorkspace is { } workspace)
-        {
-            ApplyWorkspace(workspace, applicationChanged: true);
-            agentChatContextAccessState = AgentChatContextAccessState.Ready;
-            return Task.CompletedTask;
-        }
-
         Interlocked.Increment(ref agentChatContextLoadGeneration);
         currentWorkspace = null;
         drafts.Reset();
@@ -369,17 +399,17 @@
         taskEditor = new();
         supportEditor = new();
         conversionEditor = new();
+        assessmentReadiness = null;
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
-        return Task.CompletedTask;
     }
 
+    // A section of the open record refines its entry.
     private Task HandleRecruitingTabChangedAsync(int selectedIndex)
     {
-        var requestedTab = (RecruitingRecordTab)selectedIndex;
-        if (Enum.IsDefined(requestedTab))
+        var requestedSection = (RecruitingSection)selectedIndex;
+        if (Enum.IsDefined(requestedSection))
         {
-            selectedRecruitingTab = requestedTab;
+            url.Navigate(url.State with { Section = requestedSection }, UrlHistoryMode.Replace);
         }
 
         return Task.CompletedTask;
@@ -417,14 +447,14 @@
 
         NotificationService.Success("Recruitment application saved", "Recruitment application saved.");
         applicationBrowserRevision++;
-        if (ApplicationId != result.Value)
+        if (url.State.ApplicationId != result.Value)
         {
+            // A created application is the open record from now on: the new-application entry names it, so a
+            // refresh, a copied link or a failed read-back still shows it and never offers a second create.
             InvalidateRecruitmentActions();
-            Interlocked.Increment(ref agentChatContextLoadGeneration);
-            isRecruitmentDialogOpen = false;
-            agentChatContextAccessState = AgentChatContextAccessState.Loading;
-            Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
-            return;
+            url.Navigate(
+                url.State with { ApplicationId = result.Value, PartyId = null, Dialog = null },
+                UrlHistoryMode.Replace);
         }
 
         await RefreshAfterCommitAsync(RecruitingEditor.Application);
@@ -587,7 +617,7 @@
             (request.Gaps.Count == 0
                 ? "No structured gaps were supplied."
                 : $"Target gaps: {string.Join(", ", request.Gaps)}.");
-        selectedRecruitingTab = RecruitingRecordTab.Development;
+        url.Navigate(url.State with { Section = RecruitingSection.Development }, UrlHistoryMode.Replace);
         return Task.CompletedTask;
     }
 
@@ -727,10 +757,12 @@
 
     private Task OpenWorkforceAsync()
     {
-        if (SelectedPartyId.HasValue)
+        if (SelectedPartyId is { } partyId)
         {
             InvalidateRecruitmentActions();
-            Navigation.NavigateTo($"/crm-hr/workforce?partyId={SelectedPartyId.Value:D}");
+            Navigation.NavigateTo(WorkforceUrlCodec.Instance.Href(
+                CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Workforce).Route,
+                WorkforceUrlCodec.Default with { PartyId = partyId }));
         }
 
         return Task.CompletedTask;
@@ -739,16 +771,16 @@
     private RecruitmentActionStamp CaptureRecruitmentAction()
         => new(
             Volatile.Read(ref recruitmentActionGeneration),
-            ApplicationId,
-            PartyId,
+            url.State.ApplicationId,
+            url.State.PartyId,
             currentWorkspace?.Application.Id,
             isRecruitmentDialogOpen);
 
     private bool IsCurrentRecruitmentAction(RecruitmentActionStamp action)
         => !isDisposed &&
            action.Generation == Volatile.Read(ref recruitmentActionGeneration) &&
-           action.RouteApplicationId == ApplicationId &&
-           action.RoutePartyId == PartyId &&
+           action.RouteApplicationId == url.State.ApplicationId &&
+           action.RoutePartyId == url.State.PartyId &&
            action.SelectedApplicationId == currentWorkspace?.Application.Id &&
            action.DialogWasOpen &&
            isRecruitmentDialogOpen;
@@ -966,15 +998,6 @@
         Task = 4,
         Support = 8,
         Conversion = 16
-    }
-
-    private enum RecruitingRecordTab
-    {
-        Application,
-        Interviews,
-        Assessments,
-        Development,
-        Conversion
     }
 
     private readonly record struct RecruitmentActionStamp(

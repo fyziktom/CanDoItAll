@@ -5,6 +5,25 @@ using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.Resources;
 
+public enum ResourceRegistryRouteChangeKind {
+    // The operator selected another resource.
+    Selected,
+    // The operator started a new draft.
+    Cleared,
+    // A new draft received its identity from its first save.
+    Created,
+    // The selected resource was deleted.
+    Deleted
+}
+
+public enum ResourceRegistryFilterChangeKind {
+    Edited,
+    Reset
+}
+
+// The selected resource and the project that seeds new drafts, as the routed owner addresses them.
+public readonly record struct ResourceRegistryRoute(Guid? ResourceId, Guid? ProjectId);
+
 public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : IResourceRegistryWorkspace, IDisposable {
     private readonly List<ResourceMutationReceipt> receipts = [];
     private readonly CancellationTokenSource lifetime = new();
@@ -20,9 +39,15 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     private string? catalogError;
     private string? editorError;
     private string? actionError;
+    private string search = string.Empty;
+    private Guid? projectFilter;
+    private string? connectorFilter;
+    private ResourceValidationStatus? validationFilter;
 
     public event Action? Changed;
     public event Action<ResourceMutationReceipt>? Completed;
+    public event Action<ResourceRegistryRoute, ResourceRegistryRouteChangeKind>? RouteChanged;
+    public event Action<ResourceRegistryFilterChangeKind>? FiltersChanged;
     public ResourceRegistryDraft Draft { get; private set; } = new(new());
     public IReadOnlyList<ResourceSummary> Resources { get; private set; } = [];
     public IReadOnlyList<ResourceProjectOption> Projects { get; private set; } = [];
@@ -38,10 +63,10 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
     public bool IsLoading { get; private set; }
     public bool IsBusy => Blocked(Draft);
     public bool IsGoverned => Draft.Editor.ConnectorPluginKey == ResourceConnectorPluginKeys.StorageObject;
-    public string Search { get; set; } = string.Empty;
-    public Guid? ProjectFilter { get; set; }
-    public string? ConnectorFilter { get; set; }
-    public ResourceValidationStatus? ValidationFilter { get; set; }
+    public string Search { get => search; set => SetFilter(ref search, value ?? string.Empty); }
+    public Guid? ProjectFilter { get => projectFilter; set => SetFilter(ref projectFilter, value); }
+    public string? ConnectorFilter { get => connectorFilter; set => SetFilter(ref connectorFilter, string.IsNullOrWhiteSpace(value) ? null : value); }
+    public ResourceValidationStatus? ValidationFilter { get => validationFilter; set => SetFilter(ref validationFilter, value); }
     public ConnectorPluginManifest? SelectedManifest => Manifests.FirstOrDefault(m => string.Equals(m.PluginKey, Draft.Editor.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase));
     public string? SelectedProjectName => Projects.FirstOrDefault(p => p.Admission == Draft.Editor.ExpectedProjectAdmission)?.Name;
     public string PreviewLocation => SelectedManifest is null ? Draft.Editor.LocationOrIdentifier : owner.BuildLocationPreview(Draft.Editor);
@@ -148,6 +173,9 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             Notify();
             return;
         }
+        if (routeResource != id) {
+            PublishRoute(id, Resources.FirstOrDefault(resource => resource.Id == id)?.ProjectId, ResourceRegistryRouteChangeKind.Selected);
+        }
         ReplaceDraft(new() { Id = id });
         await LoadEditorAsync(id, ++editorVersion);
     }
@@ -164,6 +192,9 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             return;
         }
         editorVersion++;
+        if (routeResource is not null) {
+            PublishRoute(null, null, ResourceRegistryRouteChangeKind.Cleared);
+        }
         ReplaceDraft(NewEditor(routeProject));
         EditorAccess = routeProject is null || Projects.Any(p => p.Id == routeProject) ? ResourceViewAccess.Ready : ResourceViewAccess.Failed;
         editorError = EditorAccess == ResourceViewAccess.Ready ? null : "The requested project is unavailable.";
@@ -357,10 +388,14 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
             }
             if (kind == ResourceMutationKind.Save) {
                 draft.Editor.Id = receipt.ResourceId;
+                if (command.Id is null) {
+                    PublishRoute(receipt.ResourceId, command.ProjectId, ResourceRegistryRouteChangeKind.Created);
+                }
             } else {
                 Resources = Resources.Where(r => r.Id != receipt.ResourceId).ToArray();
                 ReplaceDraft(NewEditor(routeProject));
                 Parties = [];
+                PublishRoute(null, null, ResourceRegistryRouteChangeKind.Deleted);
             }
         }
     }
@@ -454,11 +489,36 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         }
     }
     public void ResetFilters() {
-        Search = string.Empty;
-        ProjectFilter = null;
-        ConnectorFilter = null;
-        ValidationFilter = null;
+        search = string.Empty;
+        projectFilter = null;
+        connectorFilter = null;
+        validationFilter = null;
         Notify();
+        FiltersChanged?.Invoke(ResourceRegistryFilterChangeKind.Reset);
+    }
+
+    // Filters the routed owner restores from its location; restoring them is not an edit.
+    public void ApplyRouteFilters(string? searchText, Guid? project, string? connector, ResourceValidationStatus? validation) {
+        search = searchText ?? string.Empty;
+        projectFilter = project;
+        connectorFilter = string.IsNullOrWhiteSpace(connector) ? null : connector;
+        validationFilter = validation;
+        Notify();
+    }
+
+    private void SetFilter<T>(ref T field, T value) {
+        if (EqualityComparer<T>.Default.Equals(field, value)) {
+            return;
+        }
+        field = value;
+        FiltersChanged?.Invoke(ResourceRegistryFilterChangeKind.Edited);
+    }
+
+    // A selection keeps the project seed only while the selected resource belongs to it, so the route stays a valid binding.
+    private void PublishRoute(Guid? resourceId, Guid? resourceProjectId, ResourceRegistryRouteChangeKind kind) {
+        routeResource = resourceId;
+        routeProject = routeProject is { } seed && (resourceId is null || resourceProjectId == seed) ? seed : null;
+        RouteChanged?.Invoke(new(routeResource, routeProject), kind);
     }
     private void Notify() {
         if (!disposed) {
@@ -474,5 +534,7 @@ public sealed class ResourceRegistryController(IResourceRegistryOwner owner) : I
         lifetime.Dispose();
         Changed = null;
         Completed = null;
+        RouteChanged = null;
+        FiltersChanged = null;
     }
 }

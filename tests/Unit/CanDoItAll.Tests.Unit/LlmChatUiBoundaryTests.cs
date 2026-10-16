@@ -684,7 +684,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             "LlmChatsCompatibilityRedirect.razor");
         var compatibilitySource = File.ReadAllText(compatibilityRoute);
         Assert.Contains("@page \"/chats\"", compatibilitySource, StringComparison.Ordinal);
-        Assert.Contains("AgentWorkspaceRouteState.BuildCompatibilityRedirect", compatibilitySource, StringComparison.Ordinal);
+        Assert.Contains("AgentsUrlCodec.BuildChatsCompatibilityRedirect", compatibilitySource, StringComparison.Ordinal);
     }
 
     [Fact]

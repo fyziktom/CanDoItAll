@@ -19,6 +19,8 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
     private ResourceFileSelection? previewSelection;
     private (Guid Id, ResourceFileSelection Selection)? promotedSelection;
     public event Action? Changed;
+    // Raised when the operator selects another source; a source restored from the route is not a selection.
+    public event Action<ResourceFileSourceKey>? SourceSelected;
     public Func<Guid, Task>? Promoted { get; set; }
     public ResourceBrowseCatalog? Catalog { get; private set; }
     public ResourceBrowseLease? Workspace { get; private set; }
@@ -82,8 +84,36 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
         }
     }
 
-    public Task SelectAsync(ResourceFileSourceKey key) => Workspace?.Source.Key == key && Access == ResourceViewAccess.Ready
-        ? Task.CompletedTask : OpenSourceAsync(key);
+    public Task SelectAsync(ResourceFileSourceKey key) {
+        if (Workspace?.Source.Key == key && Access == ResourceViewAccess.Ready) {
+            return Task.CompletedTask;
+        }
+        if (Current && SelectedSource != key) {
+            SourceSelected?.Invoke(key);
+        }
+        return OpenSourceAsync(key);
+    }
+
+    public Task ApplyRouteSourceAsync(ResourceFileSourceKey? key) {
+        if (key is { } requested) {
+            return SelectedSource == requested ? Task.CompletedTask : OpenSourceAsync(requested);
+        }
+        return SelectedSource is null ? Task.CompletedTask : ClearSelectionAsync();
+    }
+
+    private async Task ClearSelectionAsync() {
+        if (!Current) {
+            return;
+        }
+        RetireSelection();
+        SelectedSource = null;
+        SourceError = null;
+        IsOpening = false;
+        Access = CatalogError is not null ? ResourceViewAccess.Failed : Catalog is null ? ResourceViewAccess.Loading : ResourceViewAccess.Ready;
+        Notify();
+        await ReleaseCurrentAsync();
+        Notify();
+    }
 
     private async Task OpenSourceAsync(ResourceFileSourceKey key) {
         if (!Current) {
@@ -383,6 +413,7 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
         selectionLifetime.Dispose();
         lifetime.Dispose();
         Changed = null;
+        SourceSelected = null;
         Promoted = null;
     }
 }

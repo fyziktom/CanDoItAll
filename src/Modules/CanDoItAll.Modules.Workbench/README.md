@@ -31,6 +31,18 @@ This module retains native reporting queries, project admission, mutation outcom
 and the page adapters. Main Structure canvas, runtime and file integrations retain
 their existing owners; the renderer libraries receive typed projections and intents.
 
+`ProjectStructurePage` owns `tab` (`gantt`, `manager-summary`; Canvas is the omitted default)
+through `ProjectStructureUrlCodec`, and a view intent pushes it. Only the path (and foreign
+query keys) retire the project scope: a view change neither reloads the surface nor closes
+dialogs nor remounts the workspace. `ProjectCalendarPage` owns `view`, `date` (`yyyy-MM-dd`)
+and `eventId` through `ProjectCalendarUrlCodec`; the URL wins over the persisted calendar
+preference, which wins over the default. The resolved view and date are made explicit with
+Replace; a user view or date change pushes, and selecting another event pushes one entry that
+also carries the date the calendar moves to. Back or Forward re-creates the native calendar
+at the addressed range. An unknown `eventId` is reported as
+unavailable instead of selecting another event; an event deleted while it is open is
+dropped from the URL with Replace. See [navigation state](../../../docs/architecture/navigation-state.md).
+
 Processes.Application owns process-run root semantics through `ProcessRunArtifactRootPolicy`. Workbench consumes its typed resolution when projecting current-run managed roots, collapses artifact evidence under `artifacts/.../process-runs/{runId}` to the run artifact folder, and collapses generated or external-delivery output persisted under `output/.../process-runs/{runId}/{productRoot}` to the product folder. Wrong-run, dated receipt, absolute, traversal, or otherwise unanchored paths are ignored instead of mirroring noisy artifact subtrees. Raw `external-target/...` aliases remain Processes grounding metadata; Workbench projects the managed output root that records the run-owned delivery evidence.
 
 ### Runtime node execution and terminal presentation

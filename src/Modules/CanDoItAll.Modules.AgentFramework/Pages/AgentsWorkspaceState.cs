@@ -1,7 +1,3 @@
-using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
-using CanDoItAll.AgentFramework.Usage;
-using CanDoItAll.AgentFramework.Models;
-
 namespace CanDoItAll.Modules.AgentFramework.Pages;
 
 public static class AgentWorkspaceSections {
@@ -35,45 +31,4 @@ public static class AgentWorkspaceSections {
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown Agents tab key.")
     };
 
-}
-
-public sealed record AgentsWorkspaceState {
-    public AgentWorkspaceSection Section { get; init; } = AgentWorkspaceSection.Overview;
-    public Guid? AgentId { get; init; }
-    public Guid? TeamId { get; init; }
-    public SimpleChatWorkspaceRouteState SimpleChat { get; init; } = SimpleChatWorkspaceRouteState.Default;
-    public ProviderUsageWorkloadSelection UsageSelection { get; init; } = ProviderUsageWorkloadSelection.Both;
-    public ProviderUsagePeriod UsagePeriod { get; init; } = ProviderUsagePeriod.SevenDays;
-    public AgentChatContextAccessState SelectionAccess { get; init; } = AgentChatContextAccessState.Loading;
-
-    public AgentsWorkspaceState SelectSection(AgentWorkspaceSection section) {
-        _ = section.ToTabKey();
-        return this with {
-            Section = section,
-            TeamId = section == AgentWorkspaceSection.Agents ? TeamId : null,
-            SelectionAccess = Section == section ? SelectionAccess : InitialAccess(section)
-        };
-    }
-
-    public AgentsWorkspaceState ApplyRoute(AgentWorkspaceRouteState route) {
-        ArgumentNullException.ThrowIfNull(route);
-        var section = AgentWorkspaceSections.FromTabKey(route.Tab);
-        return this with {
-            Section = section,
-            AgentId = route.AgentId,
-            TeamId = route.TeamId,
-            SimpleChat = route.SimpleChat,
-            UsageSelection = route.UsageSelection,
-            UsagePeriod = route.UsagePeriod,
-            SelectionAccess = Section == section && AgentId == route.AgentId && TeamId == route.TeamId
-                ? SelectionAccess
-                : InitialAccess(section)
-        };
-    }
-
-    public AgentWorkspaceRouteState ToRoute()
-        => new(Section.ToTabKey(), AgentId, TeamId, SimpleChat, UsageSelection, UsagePeriod);
-
-    private static AgentChatContextAccessState InitialAccess(AgentWorkspaceSection section)
-        => section.UsesAgentSelection() ? AgentChatContextAccessState.Loading : AgentChatContextAccessState.Ready;
 }

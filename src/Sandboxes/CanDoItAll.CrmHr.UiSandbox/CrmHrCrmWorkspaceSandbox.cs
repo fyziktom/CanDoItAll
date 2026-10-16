@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents;
 using CanDoItAll.CrmHr.UI.Activity;
 using CanDoItAll.CrmHr.UI.Crm;
 using CanDoItAll.Modules.CrmHr;
@@ -95,6 +96,9 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
     public bool IsOpportunityConversionBusy { get; private set; }
 
     public int SelectedCrmRecordTabIndex { get; private set; }
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<PartyRecordScope>? CatalogQuery => null;
 
     public IReadOnlyList<PartyOptionModel> ParticipantOptions => ConnectedRecordEditors
         .Where(editor => editor.RelatedPartyId != Guid.Empty)
@@ -194,6 +198,8 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         Log($"Change CRM record tab: {selectedIndex}");
         return Task.CompletedTask;
     }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => Task.CompletedTask;
 
     public Task RetryAccountActivityAsync()
     {

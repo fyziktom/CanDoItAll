@@ -12,6 +12,7 @@
 @inject HrService HrService
 @inject CanDoItAll.SharedKernel.IClock Clock
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject Microsoft.Extensions.Logging.ILogger<CrmHrAssignmentsPage> Logger
 
@@ -32,19 +33,28 @@
     private const int AssignmentSearchDebounceMilliseconds = 250;
     private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllAssignmentRoles =
         Enum.GetValues<ProjectPartyAssignmentRole>();
-    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles =
-    [
-        ProjectPartyAssignmentRole.TeamMember,
-        ProjectPartyAssignmentRole.DeliveryUnit,
-        ProjectPartyAssignmentRole.Manager,
-        ProjectPartyAssignmentRole.AiAgent,
-        ProjectPartyAssignmentRole.Reviewer,
-        ProjectPartyAssignmentRole.WorkItemAssignee
-    ];
+    private static readonly IReadOnlyList<ProjectPartyAssignmentRole> AllocationRoles = AssignmentsUrlCodec.AllocationRoles;
 
-    [SupplyParameterFromQuery(Name = "projectId")]
-    public Guid? ProjectIdQuery { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.ProjectKey)]
+    public string? ProjectIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.TabKey)]
+    public string? TabQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.RoleKey)]
+    public string? RoleQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.StatusKey)]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = AssignmentsUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<AssignmentsUrlState> url = default!;
     private ProjectRecordQueryItem? selectedProject;
     private int projectCount;
     private IReadOnlyList<ProjectPartyAssignmentDetail> scheduleAssignments = [];
@@ -122,14 +132,13 @@
         }
     }
 
+    // The location of the state on screen: the project the page applies, also while the default project it chose
+    // itself is still on its way into the location.
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [
-                new("projectId", selectedProjectId?.ToString("D")),
-                new("routeProjectId", ProjectIdQuery?.ToString("D"))
-            ]);
+        => CrmHrNavigationFence.Create(
+            Navigation,
+            url,
+            new KeyValuePair<string, string?>(AssignmentsUrlCodec.ProjectKey, selectedProjectId?.ToString("D")));
 
     private WorkspaceTabsIdentity WorkspaceTabsKey => new(
         selectedProjectId,
@@ -148,10 +157,44 @@
         ? selectedProject
         : null;
 
+    protected override void OnInitialized()
+        => url = new UrlStateBinding<AssignmentsUrlState>(Navigation, AssignmentsUrlCodec.Instance, History, typeof(CrmHrAssignmentsPage));
+
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // Another project loads the route; another tab or filter of the same project loads only that tab's list.
     protected override async Task OnParametersSetAsync()
     {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged)
+        {
+            return;
+        }
+
+        if (change.IsInitial || change.Previous.ProjectId != change.Current.ProjectId)
+        {
+            await LoadRouteAsync(change.Current);
+            return;
+        }
+
+        await ApplyRouteViewAsync(change.Current);
+    }
+
+    // The tab and filters of a location within the same project. Filters that differ from the ones the tab's list was
+    // loaded with reload that list; a tab whose list is current only shows it.
+    private async Task ApplyRouteViewAsync(AssignmentsUrlState route)
+    {
+        var filtersChanged = !RouteFiltersMatch(route);
+        ApplyRouteFilters(route);
+        await InvokeAsync(StateHasChanged);
+        await EnsureSelectionDataLoadedAsync(
+            AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab),
+            force: filtersChanged);
+    }
+
+    private async Task LoadRouteAsync(AssignmentsUrlState route)
+    {
         EnsureScheduleWindow();
-        var requestedProjectId = ProjectIdQuery;
+        var requestedProjectId = route.ProjectId;
         isProjectContextLoading = true;
         var generation = BeginLoad(out var cancellation);
         if (requestedProjectId.HasValue)
@@ -159,6 +202,8 @@
             SetSelectedProject(requestedProjectId);
         }
 
+        // The project selection reset every list filter; the location's tab and filters apply to the new project.
+        ApplyRouteFilters(route);
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -223,6 +268,7 @@
             }
 
             agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            PublishDefaultProject(route);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -250,8 +296,98 @@
         }
     }
 
+    // A location without a project shows the first project of the catalog. The page chose it, so the location names
+    // it by replacing its entry: a refresh, a copied link and Back show the same project, and its tab and filters can
+    // be written.
+    private void PublishDefaultProject(AssignmentsUrlState route)
+    {
+        if (route.ProjectId is not null || selectedProjectId is not { } projectId)
+        {
+            return;
+        }
+
+        url.Navigate(RouteFor(selectedWorkspaceTab) with { ProjectId = projectId }, UrlHistoryMode.Replace);
+    }
+
+    // An explicit project choice is a new history entry; another project starts without the filters of the one left.
     private Task HandleProjectChanged(Guid? projectId)
-        => LoadSelectionAsync(projectId);
+    {
+        var route = projectId == selectedProjectId
+            ? RouteFor(selectedWorkspaceTab)
+            : AssignmentsUrlCodec.Default with { Tab = selectedWorkspaceTab };
+        url.Navigate(route with { ProjectId = projectId }, UrlHistoryMode.Push);
+        return LoadSelectionAsync(projectId);
+    }
+
+    // The location of a tab with the filters its list holds now.
+    private AssignmentsUrlState RouteFor(AssignmentWorkspaceTab tab)
+        => tab switch
+        {
+            AssignmentWorkspaceTab.Relationships => url.State with
+            {
+                Tab = tab,
+                Search = relationshipAssignmentSearchText,
+                Role = relationshipAssignmentRoleFilter,
+                Status = null,
+                Page = relationshipAssignmentPageIndex + 1
+            },
+            AssignmentWorkspaceTab.StaffingRequests => url.State with
+            {
+                Tab = tab,
+                Search = staffingRequestSearchText,
+                Role = null,
+                Status = staffingRequestStatusFilter,
+                Page = staffingRequestPageIndex + 1
+            },
+            AssignmentWorkspaceTab.Allocations => url.State with
+            {
+                Tab = tab,
+                Search = allocationAssignmentSearchText,
+                Role = allocationAssignmentRoleFilter,
+                Status = null,
+                Page = allocationAssignmentPageIndex + 1
+            },
+            _ => url.State with { Tab = tab, Search = null, Role = null, Status = null, Page = 1 }
+        };
+
+    // The tab of a location and the filters of its list; the other tabs keep the filters they hold.
+    private void ApplyRouteFilters(AssignmentsUrlState route)
+    {
+        selectedWorkspaceTab = route.Tab;
+        switch (route.Tab)
+        {
+            case AssignmentWorkspaceTab.Relationships:
+                relationshipAssignmentSearchText = route.Search ?? string.Empty;
+                relationshipAssignmentRoleFilter = route.Role;
+                relationshipAssignmentPageIndex = route.Page - 1;
+                break;
+            case AssignmentWorkspaceTab.StaffingRequests:
+                staffingRequestSearchText = route.Search ?? string.Empty;
+                staffingRequestStatusFilter = route.Status;
+                staffingRequestPageIndex = route.Page - 1;
+                break;
+            case AssignmentWorkspaceTab.Allocations:
+                allocationAssignmentSearchText = route.Search ?? string.Empty;
+                allocationAssignmentRoleFilter = route.Role;
+                allocationAssignmentPageIndex = route.Page - 1;
+                break;
+        }
+    }
+
+    private bool RouteFiltersMatch(AssignmentsUrlState route)
+        => AssignmentsUrlCodec.Instance.SameState(RouteFor(route.Tab), route);
+
+    // A committed filter or page of a list: the location follows while that list's tab is on screen.
+    private void PublishListFilters(AssignmentWorkspaceTab tab, UrlHistoryMode mode)
+    {
+        // A page that was left publishes nothing: its location intents would land in the page shown now.
+        if (isDisposed || tab != selectedWorkspaceTab)
+        {
+            return;
+        }
+
+        url.Navigate(RouteFor(tab), mode);
+    }
 
     private async Task LoadSelectionAsync(Guid? projectId)
     {
@@ -329,6 +465,7 @@
         }
     }
 
+    // A workflow tab is a peer area of the project: a new history entry with the filters that tab's list holds.
     private async Task HandleWorkspaceTabChangedAsync(int selectedIndex)
     {
         if (!Enum.IsDefined(typeof(AssignmentWorkspaceTab), selectedIndex))
@@ -337,6 +474,7 @@
         }
 
         selectedWorkspaceTab = (AssignmentWorkspaceTab)selectedIndex;
+        url.Navigate(RouteFor(selectedWorkspaceTab), UrlHistoryMode.Push);
         await InvokeAsync(StateHasChanged);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.AssignmentCounts | GetRequiredData(selectedWorkspaceTab));
@@ -656,7 +794,7 @@
     private bool IsCurrentRouteLoad(long generation, Guid? expectedRouteProjectId)
         => !isDisposed &&
            generation == Volatile.Read(ref loadGeneration) &&
-           ProjectIdQuery == expectedRouteProjectId;
+           url.State.ProjectId == expectedRouteProjectId;
 
     private bool IsCurrentRouteSelectionLoad(
         long generation,
@@ -957,6 +1095,7 @@
         if (selectedProjectId == projectId)
         {
             staffingRequestPageIndex = 0;
+            PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Replace);
             loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;
             await EnsureSelectionDataLoadedAsync(AssignmentSelectionData.StaffingRequests, force: true);
             await RefreshStaffingDashboardAsync();
@@ -1005,6 +1144,7 @@
             await Task.Delay(
                 StaffingRequestSearchDebounceMilliseconds,
                 currentSearch.Token);
+            PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Replace);
             await EnsureSelectionDataLoadedAsync(
                 AssignmentSelectionData.StaffingRequests,
                 force: true);
@@ -1032,6 +1172,7 @@
         CancelStaffingRequestSearch();
         staffingRequestStatusFilter = status;
         staffingRequestPageIndex = 0;
+        PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.StaffingRequests,
             force: true);
@@ -1055,6 +1196,7 @@
         try
         {
             await Task.Delay(AssignmentSearchDebounceMilliseconds, currentSearch.Token);
+            PublishListFilters(AssignmentWorkspaceTab.Relationships, UrlHistoryMode.Replace);
             await EnsureSelectionDataLoadedAsync(
                 AssignmentSelectionData.RelationshipAssignments,
                 force: true);
@@ -1094,6 +1236,7 @@
         try
         {
             await Task.Delay(AssignmentSearchDebounceMilliseconds, currentSearch.Token);
+            PublishListFilters(AssignmentWorkspaceTab.Allocations, UrlHistoryMode.Replace);
             await EnsureSelectionDataLoadedAsync(
                 AssignmentSelectionData.AllocationAssignments,
                 force: true);
@@ -1121,6 +1264,7 @@
         CancelRelationshipAssignmentSearch();
         relationshipAssignmentRoleFilter = role;
         relationshipAssignmentPageIndex = 0;
+        PublishListFilters(AssignmentWorkspaceTab.Relationships, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.RelationshipAssignments,
             force: true);
@@ -1140,6 +1284,7 @@
         CancelAllocationAssignmentSearch();
         allocationAssignmentRoleFilter = role;
         allocationAssignmentPageIndex = 0;
+        PublishListFilters(AssignmentWorkspaceTab.Allocations, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.AllocationAssignments,
             force: true);
@@ -1154,6 +1299,7 @@
         }
 
         relationshipAssignmentPageIndex = pageIndex;
+        PublishListFilters(AssignmentWorkspaceTab.Relationships, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.RelationshipAssignments,
             force: true);
@@ -1168,6 +1314,7 @@
         }
 
         allocationAssignmentPageIndex = pageIndex;
+        PublishListFilters(AssignmentWorkspaceTab.Allocations, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.AllocationAssignments,
             force: true);
@@ -1182,6 +1329,7 @@
         }
 
         staffingRequestPageIndex = pageIndex;
+        PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Push);
         await EnsureSelectionDataLoadedAsync(
             AssignmentSelectionData.StaffingRequests,
             force: true);
@@ -1298,6 +1446,7 @@
             if (staffingRequests.Count == 1 && staffingRequestPageIndex > 0)
             {
                 staffingRequestPageIndex--;
+                PublishListFilters(AssignmentWorkspaceTab.StaffingRequests, UrlHistoryMode.Replace);
             }
 
             loadedSelectionData &= ~AssignmentSelectionData.StaffingRequests;

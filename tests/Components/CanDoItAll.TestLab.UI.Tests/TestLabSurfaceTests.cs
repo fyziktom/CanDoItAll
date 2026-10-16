@@ -92,7 +92,11 @@ public sealed class TestLabSurfaceTests : BunitContext {
         Assert.Empty(view.State.VisiblePlans);
         Assert.Same(original, view.State.Draft);
         await cut.InvokeAsync(() => cut.Find("[data-testid=testlab-project-filter]").ChangeAsync(new() { Value = view.State.Projects[1].Id.ToString() }));
-        await cut.InvokeAsync(() => view.State.ResetFilters());
+        Assert.Equal(new TestLabPlanFilter("no results", view.State.Projects[1].Id), view.State.Filter);
+        // The list pane's Reset clears the filters; the editor's Reset starts a new draft.
+        await cut.InvokeAsync(() => cut.FindComponent<FilterBar>().FindAll("button").Single(button => button.TextContent.Trim() == "Reset").ClickAsync(new()));
+        Assert.True(view.State.Filter.IsEmpty);
+        Assert.Same(original, view.State.Draft);
         Assert.Equal(3, view.State.VisiblePlans.Count);
         await TabAsync(cut, "Cases");
         await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Add case").ClickAsync(new()));

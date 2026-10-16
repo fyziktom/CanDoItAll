@@ -348,10 +348,12 @@
 @code {
     [Parameter, EditorRequired] public IResourceRegistryWorkspace Registry { get; set; } = default!;
     [Parameter, EditorRequired] public IResourceBrowseWorkspace Browse { get; set; } = default!;
+    [Parameter] public int SelectedTab { get; set; }
     [Parameter] public EventCallback<int> TabChanged { get; set; }
     private IResourceRegistryWorkspace? subscribedRegistry;
     private IResourceBrowseWorkspace? subscribedBrowse;
     private int resourcesTabIndex;
+    private int appliedSelectedTab;
     private ResourceEditorModel editor => Registry.Draft.Editor;
     private IReadOnlyList<ResourceSummary> resources => Registry.Resources;
     private IReadOnlyList<ResourceSummary> FilteredResources => Registry.FilteredResources;
@@ -372,6 +374,10 @@
     private string? connectorFilter { get => Registry.ConnectorFilter; set => Registry.ConnectorFilter = value; }
     private ResourceValidationStatus? validationFilter { get => Registry.ValidationFilter; set => Registry.ValidationFilter = value; }
     protected override void OnParametersSet() {
+        if (SelectedTab != appliedSelectedTab) {
+            appliedSelectedTab = SelectedTab;
+            resourcesTabIndex = SelectedTab;
+        }
         if (!ReferenceEquals(subscribedRegistry, Registry) || !ReferenceEquals(subscribedBrowse, Browse)) {
             Dispose();
             subscribedRegistry = Registry;

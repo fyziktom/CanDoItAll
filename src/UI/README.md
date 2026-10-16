@@ -12,6 +12,7 @@ route/effect hosts, contributed content, compatibility identities and assets.
 | [CanDoItAll.Application.UI](CanDoItAll.Application.UI/README.md) | Dashboard, runtime capability facts, safe profile dialog, shell utilities and status presentation |
 | [CanDoItAll.AppComponents](CanDoItAll.AppComponents/README.md) | Application-level file, storage, dialog, and shared UI integration |
 | [CanDoItAll.AppComponents.RecordBrowsing](CanDoItAll.AppComponents.RecordBrowsing/README.md) | Server-paged record browser and picker family on BaseLib only |
+| [CanDoItAll.AppComponents.Navigation](CanDoItAll.AppComponents.Navigation/README.md) | Feature-neutral URL-state codecs, canonical query writing and the page-to-URL binding used by routed pages; never by renderers |
 | [CanDoItAll.Conversations.Components](CanDoItAll.Conversations.Components/README.md) | Backend-neutral conversation presentation contracts and Blazor components |
 | [CanDoItAll.Components.Git](CanDoItAll.Components.Git/README.md) | Retained assembly marker; no current renderer |
 | [CanDoItAll.CrmHr.UI](CanDoItAll.CrmHr.UI/README.md) | CRM / HR renderers, workspace surfaces and view contracts on the CRM / HR and Projects contracts |

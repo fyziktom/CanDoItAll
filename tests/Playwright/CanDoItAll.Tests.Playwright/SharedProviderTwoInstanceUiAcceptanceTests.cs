@@ -340,14 +340,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             await AssertProviderVisibleAsync(page, OpenAiImageProviderName);
             await AssertProviderVisibleAsync(page, OllamaProviderName);
             await ScreenshotAsync(page, settings, "04-client-three-shared-providers-imported.png");
-            await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+            await CloseSharedConnectionsAsync(page);
             await CreateAgentAsync(page, settings, OllamaAgentName, OllamaProviderName, null);
             await CreateAgentAsync(page, settings, MultimediaAgentName, OpenAiChatProviderName, OpenAiImageProviderName);
             await ScreenshotAsync(page, settings, "05-client-agents-created-from-shared-providers.png");
             return;
         }
 
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await CloseSharedConnectionsAsync(page);
         await AssertNoLocalProvidersAsync(page);
         await NewProviderAsync(page);
         await page.GetByTestId("provider-editor-tab-sharing").ClickAsync();
@@ -403,7 +403,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await AssertProviderVisibleAsync(page, OllamaProviderName);
         await ScreenshotAsync(page, settings, "04-client-three-shared-providers-imported.png");
 
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await CloseSharedConnectionsAsync(page);
         await CreateAgentAsync(page, settings, OllamaAgentName, OllamaProviderName, null);
         await CreateAgentAsync(page, settings, MultimediaAgentName, OpenAiChatProviderName, OpenAiImageProviderName);
         await ScreenshotAsync(page, settings, "05-client-agents-created-from-shared-providers.png");
@@ -760,6 +760,14 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         var value = await option.GetAttributeAsync("value");
         Assert.False(string.IsNullOrWhiteSpace(value));
         await select.SelectOptionAsync(value);
+    }
+
+    // The shared connections dialog is a route-driven overlay: its close goes Back after the server has handled the
+    // click, and a navigation started before that Back arrives is aborted by it. The close is complete once the
+    // location has left the dialog.
+    internal static async Task CloseSharedConnectionsAsync(IPage page) {
+        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("[?&]dialog=shared-connections(?:&|$)"));
     }
 
     internal static async Task NavigateAsync(IPage page, string url, Func<string, Task<IResponse?>>? navigate = null) {

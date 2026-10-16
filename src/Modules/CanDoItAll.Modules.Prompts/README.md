@@ -63,6 +63,16 @@ This module keeps the effect owners: `PromptGallerySearchSession`/`PromptGallery
 `PromptGalleryPickerButton`, `PromptGalleryChatComposerButton` and `PromptGalleryPage`.
 See [Prompt Gallery UI boundary](../../../docs/architecture/prompt-gallery-ui-boundary.md).
 
+`PromptGalleryPage` owns the `/prompt-gallery` URL through `PromptGalleryUrlCodec` (see
+[navigation state](../../../docs/architecture/navigation-state.md)): `promptId` is the editor
+overlay, and `q`, `tags`, `kind`, `status`, `provider`, `model`, `favorites`, `archived`,
+`chatModel=false` and the one-based `page` are the committed search. The page passes the
+requested search to `PromptGallerySearchHost` (`Request`) and writes what the session commits
+(`Committed`): typed text replaces once the debounce elapses, explicit filters, clear and
+paging push, and a page beyond the last one is corrected with Replace. Edit pushes the editor
+and Close or Back closes it; a new item stays a local draft until its first save replaces the
+location with its identity. Prompt content never enters the URL.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

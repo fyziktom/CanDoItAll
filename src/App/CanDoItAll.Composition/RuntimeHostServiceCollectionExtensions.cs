@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
@@ -62,6 +63,7 @@ public static class RuntimeHostServiceCollectionExtensions
 
         services.Configure<ProviderInitializationOptions>(configuration.GetSection(ProviderInitializationOptions.SectionName));
 
+        services.AddAppNavigation();
         services.AddSecurityModule(configuration);
         services.AddAgentFrameworkProviderManagement();
         services.AddWorkspaceModule();

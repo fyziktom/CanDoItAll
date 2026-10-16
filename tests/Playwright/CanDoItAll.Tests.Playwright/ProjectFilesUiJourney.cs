@@ -200,6 +200,23 @@ internal static class ProjectFilesUiJourney {
         await page.WaitForFunctionAsync("() => Array.from(document.querySelectorAll('.cw-canvas-host')).some(host => !!host.__canvasWorkbenchState)");
     }
 
+    // Selection-window buttons carry the Insights origin of the render they came from, and the page drops an intent from
+    // an origin it has since replaced: every view-state save and selection detail load replaces it. A dropped click
+    // changes nothing, so it is repeated, at most a few times, until what it opens shows.
+    internal static async Task ClickUntilVisibleAsync(ILocator trigger, ILocator opened, int attempts = 3) {
+        for (var attempt = 1; ; attempt++) {
+            if (await opened.IsVisibleAsync()) {
+                return;
+            }
+            await trigger.ClickAsync();
+            try {
+                await Assertions.Expect(opened).ToBeVisibleAsync(new() { Timeout = attempt == attempts ? 5_000 : 2_000 });
+                return;
+            } catch (PlaywrightException) when (attempt < attempts) {
+            }
+        }
+    }
+
     internal static async Task SelectFileNodeAsync(IPage page, string nodeId, string title) {
         var toolbox = page.GetByTestId("project-structure-toolbox-window");
         if (await toolbox.IsVisibleAsync()) {

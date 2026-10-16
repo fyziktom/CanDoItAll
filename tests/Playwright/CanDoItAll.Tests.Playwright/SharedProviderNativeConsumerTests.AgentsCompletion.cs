@@ -122,7 +122,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.NavigateAsync("/agents?tab=overview");
         foreach (var (label, token) in tabs) {
             await page.GetByTestId("agents-shell-tabs").GetByText(label, new() { Exact = true }).ClickAsync();
-            await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]tab=" + token + "(?:&|$)"));
+            // Overview is the default tab, and a canonical URL omits defaults.
+            await Assertions.Expect(page).ToHaveURLAsync(token == "overview"
+                ? new Regex("^" + Regex.Escape(fixture.Address + "/agents") + "$")
+                : new Regex("[?&]tab=" + token + "(?:&|$)"));
             await Assertions.Expect(page.GetByTestId("agents-shell-tabs")).ToBeVisibleAsync();
         }
         await fixture.NavigateAsync("/agents?tab=voice");

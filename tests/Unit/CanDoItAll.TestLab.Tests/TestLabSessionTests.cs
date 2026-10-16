@@ -1,6 +1,8 @@
 using System.Text.Json;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.TestLab;
+using CanDoItAll.Modules.TestLab.Pages;
 using CanDoItAll.TestLab.UI;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -21,22 +23,22 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Repeated_route_preserves_draft_context_section_raw_input_and_admission() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
         var draft = fixture.Draft;
         draft.Model.Title = "Unsaved";
         draft.Model.Runs.Add(new());
         draft.InputTimestamp(draft.Model.Runs[0], "unfinished");
-        fixture.Session.State.Section = TestLabSection.Evidence;
-        fixture.Session.State.Search = "filter";
+        fixture.Session.SelectSection(TestLabSection.Evidence);
+        fixture.Session.ApplyFilter(new("filter"));
         var reads = fixture.Owner.Reads;
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(fixture.Session.Route);
         Assert.Same(draft, fixture.Draft);
         Assert.Equal(reads, fixture.Owner.Reads);
         Assert.Same(fixture.Owner.Project.Admission, draft.Model.ExpectedProjectAdmission);
         Assert.Equal("unfinished", draft.Timestamp(draft.Model.Runs[0]));
         Assert.False(draft.Context.Validate());
         Assert.Equal(TestLabSection.Evidence, fixture.Session.State.Section);
-        Assert.Equal("filter", fixture.Session.State.Search);
+        Assert.Equal("filter", fixture.Session.State.Filter.Search);
     }
 
     [Theory]
@@ -76,7 +78,7 @@ public sealed class TestLabSessionTests {
         using var fixture = new Fixture();
         var gate = new TaskCompletionSource<IReadOnlyList<TestLabProjectOption>>(TaskCreationOptions.RunContinuationsAsynchronously);
         fixture.Owner.ReadProjects = _ => gate.Task;
-        var pending = fixture.Session.ApplyRouteAsync(Guid.NewGuid(), null);
+        var pending = fixture.Session.ApplyRouteAsync(new(PlanId: Guid.NewGuid()));
         await fixture.Session.NewAsync();
         var draft = fixture.Draft;
         draft.Model.Title = "Explicit reset";
@@ -89,7 +91,7 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Party_A_B_A_fences_list_and_saved_fallback_independently_of_current_values() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         var oldList = new TaskCompletionSource<IReadOnlyList<TestLabPartyOption>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var oldFallback = new TaskCompletionSource<TestLabPartyOption?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var saved = Guid.NewGuid();
@@ -141,7 +143,7 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Party_change_retires_a_pending_saved_lookup_without_leaving_loading_state() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
         var old = new TaskCompletionSource<TestLabPartyOption?>(TaskCreationOptions.RunContinuationsAsynchronously);
         fixture.Owner.ReadParty = (_, _) => old.Task;
         var pending = fixture.Session.ChangePartyAsync(fixture.Draft, Guid.NewGuid());
@@ -157,7 +159,7 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Callbacks_from_an_old_render_cannot_save_or_change_the_current_project_target() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         var draft = fixture.Draft;
         draft.Model.Title = "Draft";
         var oldVersion = draft.TargetVersion;
@@ -174,14 +176,14 @@ public sealed class TestLabSessionTests {
     public async Task Failed_empty_filtered_missing_and_stale_reads_are_distinct() {
         using var fixture = new Fixture();
         fixture.Owner.FailList = true;
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         Assert.Equal(TestLabReadState.Unavailable, fixture.Session.State.PlansRead);
         fixture.Owner.FailList = false;
         await fixture.Session.RetryAsync();
         Assert.Equal(TestLabReadState.Empty, fixture.Session.State.PlansRead);
         fixture.Draft.Model.Title = "Saved";
         await fixture.Session.SaveAsync(fixture.Draft);
-        fixture.Session.State.Search = "no match";
+        fixture.Session.State.Filter = new("no match");
         Assert.Empty(fixture.Session.State.VisiblePlans);
         Assert.Equal(TestLabReadState.Ready, fixture.Session.State.PlansRead);
         fixture.Owner.FailList = true;
@@ -196,7 +198,7 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Snapshot_and_single_submission_are_bound_to_origin_while_successor_can_save() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
         var first = fixture.Draft;
         first.Model.Title = "First";
         first.Model.Cases.Add(new() { Name = "Original case" });
@@ -226,7 +228,7 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Readback_reconciles_fields_and_original_rows_without_changing_context_tabs_or_filters() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         var draft = fixture.Draft;
         draft.Model.Title = "  Submitted  ";
         draft.Model.Phase = "  Phase  ";
@@ -245,7 +247,7 @@ public sealed class TestLabSessionTests {
         first.Notes = "Newer notes";
         draft.InputTimestamp(draft.Model.Runs[0], "invalid raw time");
         fixture.Session.State.Section = TestLabSection.Runs;
-        fixture.Session.State.Search = "keep filter";
+        fixture.Session.State.Filter = new("keep filter");
         var accepted = TestLabSubmission.Clone(Assert.Single(fixture.Owner.Store.Values));
         accepted.Cases.Reverse();
         gate.SetResult(accepted);
@@ -261,13 +263,13 @@ public sealed class TestLabSessionTests {
         Assert.Equal("invalid raw time", draft.Timestamp(draft.Model.Runs[0]));
         Assert.False(draft.Context.Validate());
         Assert.Equal(TestLabSection.Runs, fixture.Session.State.Section);
-        Assert.Equal("keep filter", fixture.Session.State.Search);
+        Assert.Equal("keep filter", fixture.Session.State.Filter.Search);
     }
 
     [Fact]
     public async Task Project_A_B_A_does_not_patch_or_unlock_a_newer_submission() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
         var draft = fixture.Draft;
         draft.Model.Title = "Original";
         var firstGate = new Gate();
@@ -296,7 +298,7 @@ public sealed class TestLabSessionTests {
     [InlineData(TestLabWriteOutcome.Unknown)]
     public async Task Refusal_is_editable_but_unknown_is_locked_even_after_refresh(TestLabWriteOutcome outcome) {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         fixture.Draft.Model.Title = "Submission";
         fixture.Owner.Outcome = outcome;
         await fixture.Session.SaveAsync(fixture.Draft);
@@ -321,7 +323,7 @@ public sealed class TestLabSessionTests {
     [InlineData(true)]
     public async Task Known_commit_warning_retains_all_ids_and_retry_only_reads(bool missingReadback) {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         fixture.Draft.Model.Title = "Saved";
         fixture.Draft.Model.Cases.Add(new());
         fixture.Draft.Model.Evidence.Add(new());
@@ -350,7 +352,7 @@ public sealed class TestLabSessionTests {
     [InlineData(TestLabWriteOutcome.Unknown)]
     public async Task Refresh_cannot_use_an_earlier_receipt_to_resolve_a_later_unsuccessful_write(TestLabWriteOutcome outcome) {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         fixture.Draft.Model.Title = "First accepted edit";
         await fixture.Session.SaveAsync(fixture.Draft);
         Assert.NotNull(fixture.Draft.LastCommitted);
@@ -371,7 +373,7 @@ public sealed class TestLabSessionTests {
     [InlineData(TestLabWriteOutcome.Unknown, true)]
     public async Task Earlier_refresh_cannot_complete_over_a_later_unsuccessful_write(TestLabWriteOutcome outcome, bool holdReadback) {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         var draft = fixture.Draft;
         draft.Model.Title = "First accepted edit";
         await fixture.Session.SaveAsync(draft);
@@ -406,14 +408,14 @@ public sealed class TestLabSessionTests {
     [Fact]
     public async Task Project_refresh_never_recaptures_admission_and_filter_excludes_old_lifetime() {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, fixture.Owner.Project.Id);
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
         var admission = fixture.Draft.Model.ExpectedProjectAdmission;
         fixture.Draft.Model.Title = "Historical";
         await fixture.Session.SaveAsync(fixture.Draft);
         fixture.Owner.Project = fixture.Owner.Project with { Admission = new(Guid.NewGuid(), fixture.Owner.Project.Id, Guid.NewGuid()) };
         await fixture.Session.RetryAsync();
         Assert.Same(admission, fixture.Draft.Model.ExpectedProjectAdmission);
-        fixture.Session.State.ProjectFilter = fixture.Owner.Project.Id;
+        fixture.Session.State.Filter = new(ProjectId: fixture.Owner.Project.Id);
         Assert.Empty(fixture.Session.State.VisiblePlans);
         Assert.Equal("Unavailable project", fixture.Session.State.ProjectName(Assert.Single(fixture.Session.State.Plans)));
         await fixture.Session.ChangeProjectAsync(fixture.Draft, fixture.Owner.Project.Id);
@@ -425,7 +427,7 @@ public sealed class TestLabSessionTests {
     [InlineData(true)]
     public async Task Disposal_ignores_noncooperative_completion_and_starts_no_followup_services(bool write) {
         using var fixture = new Fixture();
-        await fixture.Session.ApplyRouteAsync(null, null);
+        await fixture.Session.ApplyRouteAsync(new());
         var gate = new Gate();
         Task pending;
         if (write) {
@@ -452,13 +454,85 @@ public sealed class TestLabSessionTests {
         Assert.Equal(write ? 1 : 0, fixture.Owner.Store.Count);
     }
 
+    [Fact]
+    public async Task User_intents_publish_their_address_with_the_history_rule_and_applied_routes_stay_silent() {
+        using var fixture = new Fixture();
+        var stored = Guid.NewGuid();
+        fixture.Owner.Store[stored] = new() { Id = stored, Title = "Stored" };
+        await fixture.Session.ApplyRouteAsync(new(ProjectId: fixture.Owner.Project.Id));
+        Assert.Empty(fixture.Navigations);
+
+        await fixture.Session.SelectAsync(stored);
+        fixture.Session.SelectSection(TestLabSection.Cases);
+        fixture.Session.SelectSection(TestLabSection.Cases);
+        fixture.Session.ApplyFilter(new("Stored", Result: TestCaseStatus.Passed));
+        fixture.Session.ApplyFilter(new("Stored", Result: TestCaseStatus.Passed));
+        await fixture.Session.NewAsync();
+        fixture.Draft.Model.Title = "Created";
+        await fixture.Session.SaveAsync(fixture.Draft);
+
+        var project = fixture.Owner.Project.Id;
+        var created = Assert.IsType<Guid>(fixture.Draft.Model.Id);
+        Assert.Equal([
+            (new TestLabUrlState(stored, ProjectId: project), UrlHistoryMode.Push),
+            (new TestLabUrlState(stored, TestLabSection.Cases, project), UrlHistoryMode.Push),
+            (new TestLabUrlState(stored, TestLabSection.Cases, project, "Stored", Result: TestCaseStatus.Passed), UrlHistoryMode.Replace),
+            (new TestLabUrlState(null, ProjectId: project, Search: "Stored", Result: TestCaseStatus.Passed), UrlHistoryMode.Push),
+            (new TestLabUrlState(created, ProjectId: project, Search: "Stored", Result: TestCaseStatus.Passed), UrlHistoryMode.Replace)
+        ], fixture.Navigations);
+    }
+
+    [Fact]
+    public async Task An_applied_address_changes_section_and_filters_without_reads_and_another_selection_selects_again() {
+        using var fixture = new Fixture();
+        var stored = Guid.NewGuid();
+        fixture.Owner.Store[stored] = new() { Id = stored, Title = "Stored" };
+        await fixture.Session.ApplyRouteAsync(new(stored));
+        var draft = fixture.Draft;
+        var reads = fixture.Owner.Reads;
+
+        await fixture.Session.ApplyRouteAsync(new(stored, TestLabSection.Runs, Search: "night", Phase: "Browser phase"));
+
+        Assert.Same(draft, fixture.Draft);
+        Assert.Equal(reads, fixture.Owner.Reads);
+        Assert.Equal(TestLabSection.Runs, fixture.Session.State.Section);
+        Assert.Equal(new TestLabPlanFilter("night", Phase: "Browser phase"), fixture.Session.State.Filter);
+
+        await fixture.Session.ApplyRouteAsync(new(Section: TestLabSection.Evidence));
+
+        Assert.NotSame(draft, fixture.Draft);
+        Assert.Null(fixture.Draft.Model.Id);
+        Assert.Equal(TestLabSection.Evidence, fixture.Session.State.Section);
+        Assert.Equal(new TestLabPlanFilter(), fixture.Session.State.Filter);
+        Assert.Empty(fixture.Navigations);
+    }
+
+    [Fact]
+    public async Task A_missing_plan_stays_addressed_and_retry_reads_it_again_without_navigation() {
+        using var fixture = new Fixture();
+        var missing = Guid.NewGuid();
+        await fixture.Session.ApplyRouteAsync(new(missing));
+        Assert.Equal(TestLabReadState.Missing, fixture.Session.State.EditorRead);
+        Assert.Equal(missing, fixture.Session.Route.PlanId);
+        var reads = fixture.Owner.Reads;
+
+        await fixture.Session.RetryAsync();
+
+        Assert.True(fixture.Owner.Reads > reads);
+        Assert.Equal(TestLabReadState.Missing, fixture.Session.State.EditorRead);
+        Assert.Equal(missing, fixture.Session.Route.PlanId);
+        Assert.Empty(fixture.Navigations);
+    }
+
     private sealed class Fixture : IDisposable {
         public Owner Owner { get; } = new();
         public List<TestLabReceipt> Receipts { get; } = [];
+        public List<(TestLabUrlState Address, UrlHistoryMode Mode)> Navigations { get; } = [];
         public int Changes { get; private set; }
         public TestLabWorkspaceSession Session { get; }
         public TestLabDraft Draft => Assert.IsType<TestLabDraft>(Session.State.Draft);
-        public Fixture() => Session = new(Owner, () => Changes++, Receipts.Add, NullLogger<TestLabWorkspaceSession>.Instance);
+        public Fixture() => Session = new(Owner, () => Changes++, Receipts.Add, NullLogger<TestLabWorkspaceSession>.Instance,
+            (address, mode) => Navigations.Add((address, mode)));
         public void Dispose() => Session.Dispose();
     }
 

@@ -283,9 +283,8 @@ public sealed partial class ProcessWorkspaceShellTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Authoring_profile_notification_retires_read_and_write_without_parameter_echo(bool fail) {
-        using var context = CreateContext(out var client);
         var runtime = new AuthoringDatabaseRuntime();
-        context.Services.AddSingleton<IDatabaseRuntimeState>(runtime);
+        using var context = CreateContext(out var client, services: services => services.AddSingleton<IDatabaseRuntimeState>(runtime));
         var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForElement("[data-testid='processes-definition-save']");
         var session = (IProcessWorkspaceSession)cut.Instance;

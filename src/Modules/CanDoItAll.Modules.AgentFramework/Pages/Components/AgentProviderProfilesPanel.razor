@@ -10,7 +10,8 @@
     <HistorySlot Context="slot">
         @if (slot.Target.ProviderId is { } providerId) {
             <CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel @key="providerId"
-                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.SingleProvider(new(providerId)))" />
+                Scope="@(new CanDoItAll.AgentFramework.ProviderHistory.HistoryProviderScope.SingleProvider(new(providerId)))"
+                Location="@(IsRouteControlled ? HistoryLocation : null)" LocationChanged="HistoryChanged" />
         } else {
             <EmptyState Title="Save this provider first" Description="Request history is scoped to a saved provider identity." />
         }

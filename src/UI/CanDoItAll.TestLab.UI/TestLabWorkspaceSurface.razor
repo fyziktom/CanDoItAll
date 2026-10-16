@@ -38,26 +38,26 @@
                                  Count="@($"{visiblePlans.Count} plan(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{visiblePlans.Count} matching plan(s)")">
-                            <TextBox @bind-Value="View.State.Search" Immediate="true" Placeholder="Search test plans" data-testid="testlab-search" />
-                            <InputSelect @bind-Value="View.State.ProjectFilter" class="cda-input" data-testid="testlab-project-filter">
+                            <TextBox Value="@View.State.Filter.Search" ValueChanged="@(value => View.ApplyFilter(View.State.Filter with { Search = value ?? string.Empty }))" Immediate="true" Placeholder="Search test plans" data-testid="testlab-search" />
+                            <InputSelect @bind-Value:get="View.State.Filter.ProjectId" @bind-Value:set="value => View.ApplyFilter(View.State.Filter with { ProjectId = value })" class="cda-input" data-testid="testlab-project-filter">
                                 <option value="">All projects</option>
                                 @foreach (var project in View.State.Projects.OrderBy(item => item.Name)) {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="View.State.PhaseFilter" class="cda-input" data-testid="testlab-phase-filter">
+                            <InputSelect @bind-Value:get="View.State.Filter.Phase" @bind-Value:set="value => View.ApplyFilter(View.State.Filter with { Phase = value ?? string.Empty })" class="cda-input" data-testid="testlab-phase-filter">
                                 <option value="">All phases</option>
                                 @foreach (var phase in View.State.Plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item)) {
                                     <option value="@phase">@phase</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="View.State.ResultFilter" class="cda-input" data-testid="testlab-result-filter">
+                            <InputSelect @bind-Value:get="View.State.Filter.Result" @bind-Value:set="value => View.ApplyFilter(View.State.Filter with { Result = value })" class="cda-input" data-testid="testlab-result-filter">
                                 <option value="">All latest results</option>
                                 @foreach (var status in Enum.GetValues<TestCaseStatus>()) {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="View.State.ResetFilters" />
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => View.ApplyFilter(new()))" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -274,7 +274,7 @@
         new(nameof(TestLabSection.Runs), "Runs", Editor.Runs.Count.ToString())
     ];
     private TestCaseStatus? LatestRunResult => Editor.Runs.OrderByDescending(run => run.ExecutedAtUtc).FirstOrDefault()?.Result;
-    private void HandleDetailTabChanged(string key) => View.State.Section = Enum.Parse<TestLabSection>(key);
+    private void HandleDetailTabChanged(string key) => View.SelectSection(Enum.Parse<TestLabSection>(key));
     private string BuildPlanMeta(TestPlanSummary plan) => $"{View.State.ProjectName(plan)} / {plan.CaseCount} case(s) / {plan.EvidenceCount} evidence item(s)";
     private static string BuildPlanSummary(TestPlanSummary plan) => $"Updated {plan.UpdatedAtUtc.LocalDateTime:g}";
     private string ListStatus => View.State.PlansRead switch {

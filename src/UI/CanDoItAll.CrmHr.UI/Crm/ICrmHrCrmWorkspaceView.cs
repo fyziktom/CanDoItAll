@@ -38,12 +38,16 @@ public interface ICrmHrCrmWorkspaceView : ICrmHrWorkspaceView
     bool IsAccountDialogOpen { get; }
     bool IsOpportunityConversionBusy { get; }
     int SelectedCrmRecordTabIndex { get; }
+    // The account catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<PartyRecordScope>? CatalogQuery { get; }
     IReadOnlyList<PartyOptionModel> ParticipantOptions { get; }
     CrmOpportunityDetailModel? SelectedOpportunity { get; }
     Guid? SelectedConnectionPartyId { get; }
     Task HandleCrmRecordTabChanged(int selectedIndex);
     Task RetryAccountActivityAsync();
     Task SelectAccountAsync(Guid accountPartyId);
+    // A committed catalog change: a debounced search, tags, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change);
     Task CloseAccountDialogAsync();
     void OpenDirectory();
     Task SaveAccountProfileAsync();

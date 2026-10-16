@@ -138,7 +138,7 @@ public partial class MainLayout
                 ], layoutLifetime.Token);
             EnsureLayoutCurrent();
             workbenchInitialized = true;
-            await TrackNavigationAsync(BeginNavigationRead(), pruneDeletedTabs: true);
+            await TrackNavigationAsync(BeginNavigationRead(Navigation.HistoryEntryState), pruneDeletedTabs: true);
             EnsureLayoutCurrent();
             await RegisterDatabaseSwitchListenerAsync();
             EnsureLayoutCurrent();

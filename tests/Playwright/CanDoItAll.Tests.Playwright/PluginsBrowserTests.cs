@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.Tests.Playwright.Plugins;
@@ -38,10 +39,18 @@ public sealed class PluginsBrowserTests(PlaywrightAppFixture fixture) {
             var errors = Observe(page);
             await page.GotoAsync(host.BaseUrl + "/plugins");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=[a-z0-9._-]+$"));
             await page.GetByTestId("plugins-list-item-office365-mail").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail$"));
             foreach (var section in new[] { "main", "executors", "settings", "connections", "logs", "grants" }) {
                 await TabAsync(page, section);
             }
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=grants$"));
+            await page.GoBackAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs$"));
+            await Assertions.Expect(page.GetByTestId("plugins-logs-all-filter")).ToBeVisibleAsync();
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=grants$"));
             await TabAsync(page, "settings");
             await page.GetByTestId(ClientInput).FillAsync(ClientId);
             await page.GetByTestId(NameInput).FillAsync("Submitted browser account");
@@ -100,8 +109,11 @@ public sealed class PluginsBrowserTests(PlaywrightAppFixture fixture) {
             await TabAsync(page, "logs");
             await page.GetByTestId("plugins-logs-all-filter").ClickAsync();
             await Assertions.Expect(page.GetByText("All plugins", new() { Exact = true }).Last).ToBeVisibleAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs&logs=all$"));
             await page.GetByTestId("plugins-logs-selected-filter").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs$"));
             await page.GetByTestId("plugin-packages-open").ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs&dialog=packages$"));
             await page.GetByTestId("plugin-package-upload").SetInputFilesAsync(new FilePayload {
                 Name = "controlled-package.zip", MimeType = "application/zip", Buffer = Archive()
             });
@@ -110,9 +122,17 @@ public sealed class PluginsBrowserTests(PlaywrightAppFixture fixture) {
             Assert.Empty(Directory.EnumerateFiles(Path.Combine(host.PackageRoot!, "state", "uploads")));
             await ScreenshotAsync(page, "production-package-dialog");
             await page.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs$"));
+            await Assertions.Expect(page.GetByTestId("plugin-package-upload")).ToHaveCountAsync(0);
+            await page.GoForwardAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs&dialog=packages$"));
+            await Assertions.Expect(page.GetByTestId("plugin-package-upload")).ToBeEnabledAsync();
+            await page.GoBackAsync();
+            await Assertions.Expect(page.GetByTestId("plugin-package-upload")).ToHaveCountAsync(0);
             await page.GetByTestId("plugin-packages-open").ClickAsync();
             await Assertions.Expect(page.GetByTestId("plugin-package-upload")).ToBeEnabledAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
+            await Assertions.Expect(page).ToHaveURLAsync(new Regex("/plugins\\?pluginId=office365\\.mail&section=logs$"));
             using (var client = new HttpClient()) {
                 var icon = await client.GetAsync(host.BaseUrl + "/api/plugins/packages/browser.ui.package/icon");
                 Assert.True(icon.IsSuccessStatusCode);

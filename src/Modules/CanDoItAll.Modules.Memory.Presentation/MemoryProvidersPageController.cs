@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.UI;
 using CanDoItAll.Modules.Memory.Services;
@@ -6,14 +7,22 @@ namespace CanDoItAll.Modules.Memory.Pages;
 
 public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiService owner) : IMemoryWorkspace, IDisposable {
     private const int SubmissionLimit = 32;
+    private static readonly MemoryWorkspaceTab[] TabOrder = [
+        MemoryWorkspaceTab.Providers, MemoryWorkspaceTab.Operations, MemoryWorkspaceTab.Events, MemoryWorkspaceTab.Feedback,
+        MemoryWorkspaceTab.Query, MemoryWorkspaceTab.Ingestion, MemoryWorkspaceTab.ProviderUi
+    ];
     private readonly List<MemorySubmission> submissions = [];
     private CancellationTokenSource? read;
     private long readVersion;
     private long selectionVersion;
+    private int activeTabIndex;
     private bool disposed;
     private string? readError;
 
     public event Action? Changed;
+    public event Action<MemoryUrlState, UrlHistoryMode>? RouteChanged;
+    public MemoryWorkspaceTab Tab => TabOrder[activeTabIndex];
+    public MemoryUrlState UrlState => new(SelectedProviderId, Tab);
     public MemoryWorkspaceDraft Draft { get; private set; } = new(null);
     public MemoryProviderManagementSnapshot? Snapshot { get; private set; }
     public string? SelectedProviderId { get; private set; }
@@ -28,7 +37,19 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
     public MemoryProviderManualIngestionUiResult? IngestionResult => Draft.IngestionResult;
     public MemoryProviderEventAcknowledgeUiResult? EventActionResult => Draft.EventResult;
     public IReadOnlyList<MemorySubmission> Submissions => submissions;
-    public int ActiveTabIndex { get; set; }
+    public int ActiveTabIndex {
+        get => activeTabIndex;
+        set {
+            if (value < 0 || value >= TabOrder.Length) {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "The Memory workspace has no tab at this index.");
+            }
+            if (activeTabIndex == value) {
+                return;
+            }
+            activeTabIndex = value;
+            Publish(UrlHistoryMode.Push);
+        }
+    }
     public bool IsLoading { get; private set; } = true;
     public bool IsBusy => IsLoading || Blocked(Editor.InstanceId.Trim()) || submissions.Any(s => s.Action == MemoryAction.Demo && s.BlocksDispatch);
     public bool IsQueryBusy => Blocked(SelectedProviderId);
@@ -40,10 +61,42 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
 
     public Task RefreshAsync() => ReadAsync();
 
-    public Task SelectProviderAsync(string providerId) {
+    public Task OpenAsync(MemoryUrlState route) {
+        ArgumentNullException.ThrowIfNull(route);
         if (disposed) {
             return Task.CompletedTask;
         }
+        activeTabIndex = Array.IndexOf(TabOrder, route.Tab);
+        if (route.ProviderId is { } providerId) {
+            ChangeSelection(providerId);
+        }
+        return ReadAsync();
+    }
+
+    public Task ApplyRouteAsync(MemoryUrlState route) {
+        ArgumentNullException.ThrowIfNull(route);
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        activeTabIndex = Array.IndexOf(TabOrder, route.Tab);
+        if (string.Equals(route.ProviderId, SelectedProviderId, StringComparison.Ordinal)) {
+            Notify();
+            return Task.CompletedTask;
+        }
+        ChangeSelection(route.ProviderId);
+        return ReadAsync();
+    }
+
+    public Task SelectProviderAsync(string providerId) {
+        if (disposed || string.Equals(providerId, SelectedProviderId, StringComparison.Ordinal)) {
+            return Task.CompletedTask;
+        }
+        ChangeSelection(providerId);
+        Publish(UrlHistoryMode.Push);
+        return ReadAsync();
+    }
+
+    private void ChangeSelection(string? providerId) {
         readError = null;
         SelectedProviderId = providerId;
         Draft = new(providerId);
@@ -51,7 +104,6 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
         if (Snapshot is not null) {
             Snapshot = Snapshot with { SelectedProvider = null, Editor = null, Operations = [], Feedback = [], Events = [], ProviderUiSurfaces = [], FailedRegions = [] };
         }
-        return ReadAsync();
     }
 
     public Task ResetDraftAsync() {
@@ -269,9 +321,11 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
             if (!IsCurrentRead()) {
                 return false;
             }
+            var adopted = false;
             if (SelectedProviderId is null && next.SelectedProvider is not null) {
                 if (!draft.IsInitialized) {
                     SelectedProviderId = next.SelectedProvider.InstanceId.Value;
+                    adopted = true;
                 } else {
                     next = next with { SelectedProvider = null, SelectedRevision = null, Editor = null, Operations = [], Feedback = [], Events = [], ProviderUiSurfaces = [] };
                 }
@@ -304,6 +358,9 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
             if (SelectedProviderId is not null && next.SelectedProvider is null) {
                 readError = "The selected provider is missing. Its draft is retained; no other provider was selected automatically.";
             }
+            if (adopted) {
+                Publish(UrlHistoryMode.Replace);
+            }
             return next.FailedRegions.Count == 0;
         } catch (Exception) {
             if (IsCurrentRead()) {
@@ -328,6 +385,11 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
 
     private bool Blocked(string? provider) => submissions.Any(s => s.BlocksDispatch && string.Equals(s.ProviderId, provider, StringComparison.Ordinal));
     private bool Current(MemoryWorkspaceDraft draft) => !disposed && owner.IsCurrent && ReferenceEquals(Draft, draft);
+    private void Publish(UrlHistoryMode mode) {
+        if (!disposed) {
+            RouteChanged?.Invoke(UrlState, mode);
+        }
+    }
     private void Notify() {
         if (!disposed) {
             Changed?.Invoke();
@@ -338,5 +400,6 @@ public sealed class MemoryProvidersPageController(IMemoryProviderManagementUiSer
         readVersion++;
         read?.Cancel();
         Changed = null;
+        RouteChanged = null;
     }
 }

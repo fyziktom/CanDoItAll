@@ -18,6 +18,7 @@
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Common" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="../CanDoItAll.Modules.Memory.Presentation/CanDoItAll.Modules.Memory.Presentation.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj" />
     <ProjectReference Include="../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />

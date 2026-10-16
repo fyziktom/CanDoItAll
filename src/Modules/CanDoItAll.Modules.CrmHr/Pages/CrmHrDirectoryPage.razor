@@ -7,6 +7,7 @@
 @inject PartyDirectoryManagementService ManagementService
 @inject IPartyOrganizationAffiliationService AffiliationService
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrDirectoryPage> Logger
 
@@ -39,15 +40,29 @@
 
     private string? PartyActivityFailureMessage => partyActivity.FailureMessage;
 
-    [SupplyParameterFromQuery(Name = "partyId")]
-    public Guid? PartyIdQuery { get; set; }
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.PartyKey)]
+    public string? PartyIdQuery { get; set; }
 
-    private const int ProfileTabIndex = 0;
-    private const int ContactsTabIndex = 1;
-    private const int HandlingTabIndex = 2;
-    private const int ActivityTabIndex = 3;
-    private const int RelationshipsTabIndex = 4;
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.DialogKey)]
+    public string? DialogQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.TagsKey)]
+    public string? TagsQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.ScopeKey)]
+    public string? ScopeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = DirectoryUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<DirectoryUrlState> url = default!;
     private PartyEditorViewModel editor = PartyEditorViewModel.CreateNew();
     private IReadOnlyList<PartyOrganizationAffiliationListItemModel> affiliationItems = [];
     private IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliationEditors = [];
@@ -64,8 +79,7 @@
     private bool isImportExportDialogOpen;
     private bool isRelationshipsLoading;
     private bool isProjectAssignmentsLoading;
-    private string? handledPartyKey;
-    private bool hasHandledPartyRequest;
+    private bool isDisposed;
     private long directoryLoadGeneration;
     private readonly CrmHrMutationGate mutationGate = new();
     private readonly CrmHrDraftReconciler drafts = new();
@@ -73,7 +87,6 @@
     private const string AffiliationsDraft = "affiliations";
     private const string RelationshipsDraft = "relationships";
     private long directoryBrowserVersion;
-    private int selectedEditorTabIndex = ProfileTabIndex;
     private string relationshipsLoadError = string.Empty;
     private string projectAssignmentsLoadError = string.Empty;
     private Guid? relationshipsLoadedPartyId;
@@ -89,7 +102,7 @@
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
 
     private AgentChatContextSurface AgentChatSurface => editor.Id is { } partyId &&
-                                                         (!PartyIdQuery.HasValue || PartyIdQuery.Value == partyId)
+                                                         (url.State.PartyId is not { } routePartyId || routePartyId == partyId)
         ? CrmHrAgentChatSurfaceBuilder.BuildDirectorySurface(
             partyId,
             editor.DisplayName,
@@ -97,10 +110,12 @@
         : CrmHrAgentChatSurfaceBuilder.BuildDirectorySurface();
 
     private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [new("partyId", PartyIdQuery?.ToString("D"))]);
+        => CrmHrNavigationFence.Create(Navigation, url);
+
+    // The record section is navigation state: the tab index is only its rendering.
+    private DirectorySection SelectedSection => url.State.Section;
+
+    private PagedRecordQueryState<PartyRecordScope> CatalogQuery => url.State.Catalog.ToQuery();
 
     private string EditorTitle => editor.Id.HasValue ? editor.DisplayName : "New party";
 
@@ -128,6 +143,7 @@
 
     protected override void OnInitialized()
     {
+        url = new UrlStateBinding<DirectoryUrlState>(Navigation, DirectoryUrlCodec.Instance, History, typeof(CrmHrDirectoryPage));
         partyActivity = new CrmHrActivityHistorySession(
             (query, cancellationToken) => PartyDirectoryService.SearchPartyActivityAsync(query, cancellationToken),
             initialFailureMessage: "Activity and project assignments could not be loaded.",
@@ -135,13 +151,46 @@
             Logger);
     }
 
+    // Every location reaches the same instance: a pasted link, Back, Forward and this page's own intents arriving.
+    // Only a change of the applied state does anything; the binding ignores the page's own locations in flight.
     protected override async Task OnParametersSetAsync()
     {
-        var requestedPartyId = PartyIdQuery;
-        var currentPartyKey = PartyIdQuery?.ToString("N") ?? "new";
-        if (hasHandledPartyRequest &&
-            string.Equals(currentPartyKey, handledPartyKey, StringComparison.Ordinal))
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged)
         {
+            return;
+        }
+
+        await ApplyRouteAsync(change.Previous, change.Current, change.IsInitial);
+    }
+
+    // A record opened, closed or replaced loads or retires the editor; another section of the same record loads only
+    // that section's lazy data; a catalog query belongs to the catalog, which loads it itself.
+    private async Task ApplyRouteAsync(DirectoryUrlState previous, DirectoryUrlState current, bool initial)
+    {
+        if (initial || previous.PartyId != current.PartyId || previous.Dialog != current.Dialog)
+        {
+            await OpenRouteRecordAsync(current);
+            return;
+        }
+
+        if (previous.Section != current.Section && isEditorDialogOpen)
+        {
+            await EnsureSelectedTabDataLoadedAsync();
+        }
+    }
+
+    private async Task OpenRouteRecordAsync(DirectoryUrlState route)
+    {
+        if (route.Dialog == DirectoryDialog.NewParty)
+        {
+            StartNewParty();
+            return;
+        }
+
+        if (route.PartyId is not { } requestedPartyId)
+        {
+            RetireRecord();
             return;
         }
 
@@ -159,17 +208,20 @@
             return;
         }
 
-        handledPartyKey = currentPartyKey;
-        hasHandledPartyRequest = true;
         agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
-        isEditorDialogOpen = outcome == DirectoryLoadOutcome.Ready && requestedPartyId.HasValue;
-
-        if (outcome == DirectoryLoadOutcome.Ready)
+        isEditorDialogOpen = outcome == DirectoryLoadOutcome.Ready;
+        if (outcome == DirectoryLoadOutcome.Missing)
         {
-            await EnsureSelectedTabDataLoadedAsync();
+            // The requested identity stays in the location and no other record takes its place.
+            NotificationService.Warning(
+                "Party unavailable",
+                "The requested directory record does not exist or is no longer available.");
+            return;
         }
+
+        await EnsureSelectedTabDataLoadedAsync();
     }
 
     private async Task LoadAsync(Guid? selectedPartyId, bool clearMessage = true, bool committed = false)
@@ -183,8 +235,6 @@
             return;
         }
 
-        handledPartyKey = selectedPartyId?.ToString("N") ?? "new";
-        hasHandledPartyRequest = true;
         agentChatContextAccessState = outcome == DirectoryLoadOutcome.Ready
             ? AgentChatContextAccessState.Ready
             : AgentChatContextAccessState.Failed;
@@ -195,14 +245,16 @@
         }
     }
 
+    // A card opens its record over the catalog as a new history entry; Back closes it again.
     private Task SelectPartyAsync(Guid partyId)
     {
-        Interlocked.Increment(ref directoryLoadGeneration);
-        isEditorDialogOpen = false;
-        selectedEditorTabIndex = ProfileTabIndex;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={partyId}", replace: true);
-        return Task.CompletedTask;
+        if (url.State.PartyId == partyId && isEditorDialogOpen)
+        {
+            return Task.CompletedTask;
+        }
+
+        url.OpenOverlay(url.State.WithoutRecord() with { PartyId = partyId });
+        return OpenRouteRecordAsync(url.State);
     }
 
     private DirectoryLoadRequest BeginDirectoryLoad(
@@ -212,7 +264,7 @@
         agentChatContextAccessState = AgentChatContextAccessState.Loading;
         return new DirectoryLoadRequest(
             requestedPartyId,
-            binding == DirectoryLoadBinding.RouteBound ? PartyIdQuery : null,
+            binding == DirectoryLoadBinding.RouteBound ? url.State.PartyId : null,
             binding,
             Interlocked.Increment(ref directoryLoadGeneration));
     }
@@ -287,11 +339,6 @@
             isPartySelectionChanged,
             committed,
             static (current, owner) => current.AdoptOwnerContactPoints(owner));
-        if (isPartySelectionChanged)
-        {
-            selectedEditorTabIndex = ProfileTabIndex;
-        }
-
         ResetDirectoryDetailState(retainEditedRelationships);
         ApplyAffiliations(snapshot.Affiliations, committed, editedAffiliations);
     }
@@ -299,20 +346,13 @@
     private bool IsCurrentDirectoryLoad(DirectoryLoadRequest request)
         => request.Generation == Volatile.Read(ref directoryLoadGeneration) &&
            (request.Binding == DirectoryLoadBinding.Interactive ||
-            PartyIdQuery == request.RoutePartyId);
+            url.State.PartyId == request.RoutePartyId);
 
+    // The new-party editor opens over the catalog as a new history entry; Back closes it again.
     private Task CreateNewAsync()
     {
-        Interlocked.Increment(ref directoryLoadGeneration);
-        drafts.Reset();
-        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
-        selectedEditorTabIndex = ProfileTabIndex;
-        ResetDirectoryDetailState();
-        handledPartyKey = "new";
-        hasHandledPartyRequest = true;
-        agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        isEditorDialogOpen = true;
-        Navigation.NavigateTo("/crm-hr/directory", replace: true);
+        url.OpenOverlay(url.State.WithoutRecord() with { Dialog = DirectoryDialog.NewParty });
+        StartNewParty();
         return Task.CompletedTask;
     }
 
@@ -323,17 +363,30 @@
             return Task.CompletedTask;
         }
 
+        RetireRecord();
+        return url.CloseOverlayAsync(url.State.WithoutRecord());
+    }
+
+    // An empty editor for a new party: any earlier record and its drafts are retired.
+    private void StartNewParty()
+    {
+        Interlocked.Increment(ref directoryLoadGeneration);
+        drafts.Reset();
+        editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
+        ResetDirectoryDetailState();
+        agentChatContextAccessState = AgentChatContextAccessState.Ready;
+        isEditorDialogOpen = true;
+    }
+
+    // The catalog without a record: the open record, its drafts and every load of it are retired.
+    private void RetireRecord()
+    {
         Interlocked.Increment(ref directoryLoadGeneration);
         drafts.Reset();
         isEditorDialogOpen = false;
         editor = drafts.Replace(PartyDraft, PartyEditorViewModel.CreateNew());
-        selectedEditorTabIndex = ProfileTabIndex;
         ResetDirectoryDetailState();
-        handledPartyKey = "new";
-        hasHandledPartyRequest = true;
         agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        Navigation.NavigateTo("/crm-hr/directory", replace: true);
-        return Task.CompletedTask;
     }
 
     private async Task SaveAsync()
@@ -374,7 +427,13 @@
 
         var savedPartyId = result.Value;
         editor.Id = savedPartyId;
-        handledPartyKey = savedPartyId.ToString("N");
+        // A created party is the open record from now on: the new-party entry names it, so a refresh, a copied link
+        // or a failed read-back below still shows this party and never offers a second create.
+        if (url.State.PartyId != savedPartyId)
+        {
+            url.Navigate(url.State with { PartyId = savedPartyId, Dialog = null }, UrlHistoryMode.Replace);
+            action = action with { RoutePartyId = savedPartyId };
+        }
 
         if (affiliationsLoadedPartyId == savedPartyId)
         {
@@ -426,24 +485,13 @@
                 NotificationService.Warning(
                     "Party saved with relationship issue",
                     $"Relationships were not updated. {string.Join(" ", relationshipSaveResult.Errors.Select(error => error.Message))}");
-                Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
                 return;
             }
         }
 
         NotificationService.Success("Party saved", "Party saved.");
         directoryBrowserVersion++;
-        if (!await RefreshAfterCommitAsync(savedPartyId, committed: true))
-        {
-            return;
-        }
-
-        if (!isEditorDialogOpen || editor.Id != savedPartyId)
-        {
-            return;
-        }
-
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={savedPartyId}", replace: true);
+        await RefreshAfterCommitAsync(savedPartyId, committed: true);
     }
 
     // CSV stewardship effects of the import and export region: the directory management owner exports, previews and
@@ -480,18 +528,34 @@
         return Task.CompletedTask;
     }
 
+    // A section of the open record refines its entry; it loads only the data that section shows.
     private async Task HandleEditorTabChangedAsync(int index)
     {
-        selectedEditorTabIndex = index;
+        var section = (DirectorySection)index;
+        if (!Enum.IsDefined(section))
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), index, "The party editor has no such section.");
+        }
+
+        url.Navigate(url.State with { Section = section }, UrlHistoryMode.Replace);
         await EnsureSelectedTabDataLoadedAsync();
+    }
+
+    // The catalog committed a query and is already loading it: only the location follows.
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change)
+    {
+        url.Navigate(
+            url.State with { Catalog = DirectoryUrlCodec.Catalog.FromQuery(change.Query) },
+            CrmHrCatalogUrlCodec<PartyRecordScope>.HistoryMode(change.Kind));
+        return Task.CompletedTask;
     }
 
     private Task EnsureSelectedTabDataLoadedAsync()
     {
-        return selectedEditorTabIndex switch
+        return SelectedSection switch
         {
-            ActivityTabIndex => EnsureActivityLoadedAsync(),
-            RelationshipsTabIndex => EnsureRelationshipsLoadedAsync(),
+            DirectorySection.Activity => EnsureActivityLoadedAsync(),
+            DirectorySection.Relationships => EnsureRelationshipsLoadedAsync(),
             _ => Task.CompletedTask
         };
     }
@@ -776,19 +840,8 @@
 
         await HandleMergeCloseAsync();
         NotificationService.Success("Party merged", summary.Summary);
-        handledPartyKey = retainedPartyId.ToString("N");
         directoryBrowserVersion++;
-        if (!await RefreshAfterCommitAsync(retainedPartyId))
-        {
-            return;
-        }
-
-        if (!isEditorDialogOpen || editor.Id != retainedPartyId)
-        {
-            return;
-        }
-
-        Navigation.NavigateTo($"/crm-hr/directory?partyId={retainedPartyId}", replace: true);
+        await RefreshAfterCommitAsync(retainedPartyId);
     }
 
     // The owner committed and the saved identity is already bound. A failed read-back is a warning: it never repeats
@@ -824,12 +877,14 @@
     private DirectoryActionStamp CaptureDirectoryAction()
         => new(
             Volatile.Read(ref directoryLoadGeneration),
-            PartyIdQuery,
+            url.State.PartyId,
             editor);
 
+    // A page that was left publishes nothing: its location intents would land in the page shown now.
     private bool IsCurrentDirectoryAction(DirectoryActionStamp action)
-        => action.Generation == Volatile.Read(ref directoryLoadGeneration) &&
-           action.RoutePartyId == PartyIdQuery &&
+        => !isDisposed &&
+           action.Generation == Volatile.Read(ref directoryLoadGeneration) &&
+           action.RoutePartyId == url.State.PartyId &&
            ReferenceEquals(action.Editor, editor);
 
     // A merge, an import and a new selection re-read the record detail lanes. Only the relationship rows the
@@ -872,6 +927,8 @@
 
     public void Dispose()
     {
+        isDisposed = true;
+        Interlocked.Increment(ref directoryLoadGeneration);
         partyActivity.Dispose();
         CancelProjectAssignmentsLoad();
     }

@@ -29,7 +29,9 @@ public partial class CrmHrWorkforcePage : ICrmHrWorkforceWorkspaceView
     PartySkillEditorModel ICrmHrWorkforceWorkspaceView.SkillEditor => skillEditor;
     CapacityBlockEditorModel ICrmHrWorkforceWorkspaceView.CapacityBlockEditor => capacityBlockEditor;
     string ICrmHrWorkforceWorkspaceView.CapacityWorkspaceError => capacityWorkspaceError;
-    int ICrmHrWorkforceWorkspaceView.SelectedDetailTabIndex => selectedDetailTabIndex;
+    int ICrmHrWorkforceWorkspaceView.SelectedDetailTabIndex => SelectedDetailTabIndex;
+    PagedRecordQueryState<WorkforceRecordViewFilter>? ICrmHrWorkforceWorkspaceView.CatalogQuery => CatalogQuery;
+    Task ICrmHrWorkforceWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<WorkforceRecordViewFilter> change) => HandleCatalogQueryChangedAsync(change);
     int ICrmHrWorkforceWorkspaceView.WorkforceBrowserVersion => workforceBrowserVersion;
     bool ICrmHrWorkforceWorkspaceView.IsCapacityWorkspaceLoading => isCapacityWorkspaceLoading;
     bool ICrmHrWorkforceWorkspaceView.IsRecordDialogOpen => isRecordDialogOpen;

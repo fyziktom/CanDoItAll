@@ -39,6 +39,7 @@ public sealed class SchedulerBrowserTests(PlaywrightAppFixture fixture) {
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await Assertions.Expect(page.GetByTestId("scheduler-agent-open")).ToBeEnabledAsync();
         await page.GetByTestId("scheduler-tab-new").ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/scheduler\\?tab=new$"));
         await page.GetByTestId("scheduler-name").FillAsync("Browser schedule");
         await page.GetByTestId("scheduler-input-json").FillAsync("{broken");
         await page.GetByTestId("scheduler-save").ClickAsync();
@@ -60,12 +61,20 @@ public sealed class SchedulerBrowserTests(PlaywrightAppFixture fixture) {
         await Assertions.Expect(card.GetByRole(AriaRole.Button, new() { Name = "Resume", Exact = true })).ToBeVisibleAsync();
         Assert.False((await database.Set<SchedulerPlan>().AsNoTracking().SingleAsync(item => item.Id == plan.Id)).IsEnabled);
         await card.GetByTestId("scheduler-plan-edit").ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex($"/scheduler\\?tab=schedules&planId={plan.Id:D}$"));
         await page.GetByTestId("scheduler-edit-name").FillAsync("Browser updated");
         await page.GetByTestId("scheduler-edit-save").ClickAsync();
         await Assertions.Expect(page.GetByTestId("scheduler-edit-dialog").GetByTestId("scheduler-draft-receipt")).ToContainTextAsync("Committed");
         await ScreenshotAsync(page, "production-edit");
         Assert.Equal("Browser updated", (await database.Set<SchedulerPlan>().AsNoTracking().SingleAsync(item => item.Id == plan.Id)).Name);
         await page.GetByTestId("scheduler-edit-cancel").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("scheduler-edit-dialog")).ToHaveCountAsync(0);
+        await Assertions.Expect(page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/scheduler\\?tab=schedules$"));
+        // Close went Back, so Forward reopens the exact plan's editor from history and Back closes it again.
+        await page.GoForwardAsync();
+        await Assertions.Expect(page.GetByTestId("scheduler-edit-name")).ToHaveValueAsync("Browser updated");
+        await page.GoBackAsync();
+        await Assertions.Expect(page.GetByTestId("scheduler-edit-dialog")).ToHaveCountAsync(0);
         await page.GetByTestId("scheduler-plan-card").Filter(new() { HasText = "Browser updated" }).GetByTestId("scheduler-plan-delete").ClickAsync();
         await Assertions.Expect(page.GetByTestId("scheduler-delete-dialog")).ToContainTextAsync("Display run history is deleted");
         await ScreenshotAsync(page, "production-delete");
@@ -76,6 +85,10 @@ public sealed class SchedulerBrowserTests(PlaywrightAppFixture fixture) {
             await page.GetByTestId("scheduler-tab-" + tab).ClickAsync();
             await ScreenshotAsync(page, "production-" + tab);
         }
+        // Tabs are pushed: Back returns to the calendar, which is the default and leaves the query empty.
+        await page.GoBackAsync();
+        await Assertions.Expect(page.GetByTestId("scheduler-calendar")).ToBeVisibleAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/scheduler$"));
         Assert.Empty(errors);
     }
 

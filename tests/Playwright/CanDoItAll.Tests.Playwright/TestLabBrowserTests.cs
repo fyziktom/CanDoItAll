@@ -40,6 +40,8 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         await FillAggregateAsync(page, title);
         await page.GetByTestId("testlab-save-button").ClickAsync();
         var id = await SavedIdAsync(page, "Saved");
+        // The saved draft's identity replaces the draft address, so a refresh reopens the same plan.
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"[?&]planId={id:D}(&|$)", RegexOptions.IgnoreCase));
         var saved = await owner.GetAsync(id);
         Assert.Equal(admission, saved.ExpectedProjectAdmission);
         Assert.Equal(party.Value, saved.ResponsiblePartyId);
@@ -66,6 +68,13 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToHaveValueAsync(title);
         await page.GetByTestId("testlab-title-input").FillAsync(title + " edited");
         await TabAsync(page, "Cases");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]section=cases(&|$)"));
+        // Back and Forward move between the editor sections of the same plan without discarding the unsaved title.
+        await page.GoBackAsync();
+        await Assertions.Expect(page.GetByTestId("testlab-workspace")).ToHaveAttributeAsync("data-section", "Overview");
+        await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToHaveValueAsync(title + " edited");
+        await page.GoForwardAsync();
+        await Assertions.Expect(page.GetByTestId("testlab-workspace")).ToHaveAttributeAsync("data-section", "Cases");
         await TabAsync(page, "Overview");
         await Assertions.Expect(page.GetByTestId("testlab-title-input")).ToHaveValueAsync(title + " edited");
         await page.GetByTestId("testlab-save-button").ClickAsync();
@@ -77,9 +86,21 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         await page.GetByTestId("testlab-phase-filter").SelectOptionAsync("Browser phase");
         await page.GetByTestId("testlab-result-filter").SelectOptionAsync(nameof(TestCaseStatus.Passed));
         await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync("1 matching plans");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex($"[?&]project={admission.ProjectId:D}(&|$)", RegexOptions.IgnoreCase));
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]phase=Browser%20phase(&|$)"));
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]result=passed(&|$)"));
         await page.GetByTestId("testlab-search").FillAsync("no matching result");
         await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync("0 matching plans");
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex("[?&]q=no%20matching%20result(&|$)"));
+        // A refresh reproduces the applied filters from the address.
+        await page.ReloadAsync();
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await Assertions.Expect(page.GetByTestId("testlab-workspace")).ToHaveAttributeAsync("data-interactive", "true", new() { Timeout = 30_000 });
+        await Assertions.Expect(page.GetByTestId("testlab-search")).ToHaveValueAsync("no matching result");
+        await Assertions.Expect(page.GetByTestId("testlab-result-filter")).ToHaveValueAsync(nameof(TestCaseStatus.Passed));
+        await Assertions.Expect(page.GetByTestId("testlab-list-state")).ToHaveTextAsync("0 matching plans");
         await page.GetByRole(AriaRole.Button, new() { Name = "Reset", Exact = true }).First.ClickAsync();
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new Regex("[?&](q|project|phase|result)="));
         var allPlans = await owner.ListAsync();
         Assert.Contains(allPlans, plan => plan.Id == id);
         Assert.Contains(allPlans, plan => plan.Id == unrelated.Value);

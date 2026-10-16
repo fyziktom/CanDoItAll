@@ -2,6 +2,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workbench.Pages;
 using System.Globalization;
 using System.Text;
 
@@ -94,11 +95,11 @@ public static class ProjectStructureAgentChatContextBuilder
             ProjectStructureAgentChatView.Canvas => (
                 Surface: "project-structure",
                 View: "canvas",
-                Route: $"/projects/{projectId:D}/structure"),
+                Route: ProjectStructureUrlCodec.Route(projectId, ProjectStructureView.Canvas)),
             ProjectStructureAgentChatView.Gantt => (
                 Surface: "project-structure",
                 View: "gantt",
-                Route: $"/projects/{projectId:D}/structure"),
+                Route: ProjectStructureUrlCodec.Route(projectId, ProjectStructureView.Gantt)),
             ProjectStructureAgentChatView.Calendar => (
                 Surface: "project-calendar",
                 View: "calendar",
@@ -106,7 +107,7 @@ public static class ProjectStructureAgentChatContextBuilder
             ProjectStructureAgentChatView.ManagerSummary => (
                 Surface: "project-structure",
                 View: "manager-summary",
-                Route: $"/projects/{projectId:D}/structure?tab=manager-summary"),
+                Route: ProjectStructureUrlCodec.Route(projectId, ProjectStructureView.ManagerSummary)),
             _ => throw new ArgumentOutOfRangeException(nameof(activeView), activeView, "The project-structure agent-chat view is undefined.")
         };
 

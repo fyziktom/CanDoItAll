@@ -34,7 +34,9 @@ public partial class CrmHrDirectoryPage : ICrmHrDirectoryWorkspaceView
     bool ICrmHrDirectoryWorkspaceView.IsRelationshipsLoading => isRelationshipsLoading;
     bool ICrmHrDirectoryWorkspaceView.IsProjectAssignmentsLoading => isProjectAssignmentsLoading;
     long ICrmHrDirectoryWorkspaceView.DirectoryBrowserVersion => directoryBrowserVersion;
-    int ICrmHrDirectoryWorkspaceView.SelectedEditorTabIndex => selectedEditorTabIndex;
+    int ICrmHrDirectoryWorkspaceView.SelectedEditorTabIndex => (int)SelectedSection;
+    PagedRecordQueryState<PartyRecordScope>? ICrmHrDirectoryWorkspaceView.CatalogQuery => CatalogQuery;
+    Task ICrmHrDirectoryWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => HandleCatalogQueryChangedAsync(change);
     string ICrmHrDirectoryWorkspaceView.RelationshipsLoadError => relationshipsLoadError;
     string ICrmHrDirectoryWorkspaceView.ProjectAssignmentsLoadError => projectAssignmentsLoadError;
     string ICrmHrDirectoryWorkspaceView.EditorTitle => EditorTitle;

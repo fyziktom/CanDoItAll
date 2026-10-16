@@ -62,7 +62,7 @@
             }
 
             @if (runDetail is { } currentRunDetail) {
-                <WorkflowRunDetailDialog Presentation="BuildRunDetailPresentation(currentRunDetail)" Closed="CloseRunDetailDialog" />
+                <WorkflowRunDetailDialog Presentation="BuildRunDetailPresentation(currentRunDetail)" Closed="CloseRunDetailFromUserAsync" />
             }
             @if (eventDetail is { } currentEventDetail) {
                 <WorkflowEventDetailDialog Presentation="BuildEventDetailPresentation(currentEventDetail)" Closed="CloseEventDetailDialog" />
