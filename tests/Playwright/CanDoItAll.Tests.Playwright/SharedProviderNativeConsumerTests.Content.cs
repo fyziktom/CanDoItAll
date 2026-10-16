@@ -253,8 +253,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
             }
         }
         await SelectFileNodeAsync(page, nodeId, title);
-        await page.GetByTestId("project-structure-object-index-window")
-            .GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
+        var index = page.GetByTestId("project-structure-object-index-window");
+        await index.GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
+        await Assertions.Expect(index).ToBeHiddenAsync();
     }
 
     private static async Task OpenContentToolboxAsync(SharedProviderConsumerFixture fixture, Guid projectId, string action) {
@@ -276,8 +277,9 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.NavigateAsync($"/projects/{projectId:D}/structure");
         await ReadyFileCanvasAsync(fixture.Page);
         await SelectContentNodeAsync(fixture.Page, node.Id, node.Title);
-        await fixture.Page.GetByTestId("project-structure-selection-window").GetByRole(AriaRole.Button, new() { Name = "Expand preview", Exact = true }).ClickAsync();
-        await Assertions.Expect(fixture.Page.GetByTestId("project-structure-direct-file-interaction")).ToBeVisibleAsync();
+        await ClickUntilVisibleAsync(
+            fixture.Page.GetByTestId("project-structure-selection-window").GetByRole(AriaRole.Button, new() { Name = "Expand preview", Exact = true }),
+            fixture.Page.GetByTestId("project-structure-direct-file-interaction"));
     }
 
     private static async Task<byte[]> ContentBytesAsync(SharedProviderConsumerFixture fixture, Guid projectId, string nodeId) {

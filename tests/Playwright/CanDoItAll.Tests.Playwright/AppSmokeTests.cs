@@ -3978,7 +3978,10 @@ public sealed partial class AppSmokeTests
             await page.WaitForTimeoutAsync(120);
         }
 
-        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'.");
+        var lastScene = lastSnapshot is null
+            ? "none"
+            : string.Join(", ", lastSnapshot.Nodes.Select(node => $"'{node.DisplayTitle}'{(node.Selected ? " (selected)" : string.Empty)}"));
+        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'. Last scene: {lastScene}.");
     }
 
     private static async Task WaitForSceneNodeTitleAsync(IPage page, string title, bool selectedOnly = false, int timeoutMs = 6_000)
