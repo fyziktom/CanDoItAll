@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Npgsql;
@@ -105,6 +106,32 @@ public sealed class DataSourcesBrowserTests {
 
         var targetProject = await targetScope.ServiceProvider.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Owned target project B" });
         Assert.True(targetProject.IsSuccess);
+        await using var sourceScope = host.Services.CreateAsyncScope();
+        var sourceWorkspaceOwner = sourceScope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        Assert.Equal(host.ProfileA, sourceScope.ServiceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id);
+        var sourceBeforePartial = await sourceWorkspaceOwner.ReadSettingsSnapshotAsync();
+        var targetBeforePartial = await ReadTargetSettingsAsync();
+        Assert.Equal(host.DefaultProviderId, sourceBeforePartial.Values.DefaultProviderProfileId);
+        Assert.Equal(host.DefaultProviderId, targetBeforePartial.Values.DefaultProviderProfileId);
+        var sourceOriginalHead = Assert.IsType<WorkspaceSettingsHead>(sourceBeforePartial.Expectation.Head);
+        var partialProviderId = Guid.NewGuid();
+        Assert.NotEqual(host.DefaultProviderId, partialProviderId);
+        var sourceDraft = sourceBeforePartial.Values.ToEditorModel();
+        sourceDraft.DefaultProviderProfileId = partialProviderId;
+        var sourceValues = WorkspaceSettingsValues.Capture(sourceDraft);
+        var sourceChanged = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await sourceWorkspaceOwner.SaveSettingsAsync(
+            new ReplaceWorkspaceSettingsCommand(sourceBeforePartial.Expectation, sourceValues)));
+        Assert.Equal(sourceValues, sourceChanged.Snapshot.Values);
+        Assert.Equal(sourceBeforePartial.Expectation.Namespace, sourceChanged.Snapshot.Expectation.Namespace);
+        var sourceChangedHead = Assert.IsType<WorkspaceSettingsHead>(sourceChanged.Snapshot.Expectation.Head);
+        Assert.Equal(sourceOriginalHead.Id, sourceChangedHead.Id);
+        Assert.NotEqual(sourceOriginalHead.Revision, sourceChangedHead.Revision);
+        Assert.Equal(sourceChanged.Snapshot, await sourceWorkspaceOwner.ReadSettingsSnapshotAsync());
+        Assert.Equal(targetBeforePartial, await ReadTargetSettingsAsync());
+        var beforePartialTransfer = await host.ReadRuntimeAsync();
+        Assert.Equal(host.ProfileA, beforePartialTransfer.RuntimeProfileId);
+        Assert.Equal(profileB, beforePartialTransfer.PendingRestartProfileId);
+        Assert.Equal(beforeRestart, beforePartialTransfer);
         await page.GetByTestId("database-profile-transfer-settings").ClickAsync();
         await Assertions.Expect(dialog.GetByTestId("database-transfer-item-projects")).ToBeVisibleAsync();
         await dialog.GetByTestId("database-transfer-item-workspace-default-provider").Locator("input").CheckAsync();
@@ -115,10 +142,20 @@ public sealed class DataSourcesBrowserTests {
         await Assertions.Expect(dialog.GetByTestId("database-transfer-group-result-projects")).ToContainTextAsync("did not report success");
         var targetProjects = await targetScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync();
         Assert.Equal(targetProject.Value, Assert.Single(targetProjects).Id);
-        await using var sourceScope = host.Services.CreateAsyncScope();
-        var sourceWorkspace = await sourceScope.ServiceProvider.GetRequiredService<WorkspaceService>().GetSettingsAsync();
+        var targetAfterPartial = await ReadTargetSettingsAsync();
+        var expectedTargetDraft = targetBeforePartial.Values.ToEditorModel();
+        expectedTargetDraft.DefaultProviderProfileId = partialProviderId;
+        Assert.Equal(WorkspaceSettingsValues.Capture(expectedTargetDraft), targetAfterPartial.Values);
+        Assert.Equal(targetBeforePartial.Id, targetAfterPartial.Id);
+        Assert.NotEqual(targetBeforePartial.Revision, targetAfterPartial.Revision);
+        Assert.Equal(sourceChanged.Snapshot, await sourceWorkspaceOwner.ReadSettingsSnapshotAsync());
+        var afterPartialTransfer = await host.ReadRuntimeAsync();
+        Assert.Equal(host.ProfileA, afterPartialTransfer.RuntimeProfileId);
+        Assert.Equal(profileB, afterPartialTransfer.PendingRestartProfileId);
+        Assert.Equal(beforePartialTransfer, afterPartialTransfer);
+        var sourceWorkspace = await sourceWorkspaceOwner.GetSettingsAsync();
         Assert.Equal("Marker A", sourceWorkspace.WorkspaceName);
-        Assert.Equal(host.DefaultProviderId, sourceWorkspace.DefaultProviderProfileId);
+        Assert.Equal(partialProviderId, sourceWorkspace.DefaultProviderProfileId);
         Assert.Equal(host.ProjectA, Assert.Single(await sourceScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync()).Id);
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "production-partial-groups.png") });
         await CloseTransfer();
@@ -144,6 +181,13 @@ public sealed class DataSourcesBrowserTests {
         Assert.Equal(profileB, afterRestart.RuntimeProfileId);
         Assert.Null(afterRestart.PendingRestartProfileId);
         Assert.Equal(host.B.WorkspaceRootPath, afterRestart.WorkspaceRoot, ignoreCase: OperatingSystem.IsWindows());
+        await using var selectedServices = host.BuildSelectedServices();
+        await using var selectedScope = selectedServices.CreateAsyncScope();
+        var selectedProfile = selectedScope.ServiceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+        Assert.Equal(profileB, selectedProfile.Id);
+        Assert.False(selectedProfile.Runtime.LockedByRuntimeOverride);
+        Assert.Equal(host.B.WorkspaceRootPath, selectedProfile.Storage.WorkspaceRoot, ignoreCase: OperatingSystem.IsWindows());
+        var selectedBinding = await selectedScope.ServiceProvider.GetRequiredService<DatasetActivationService>().ReadActiveBindingAsync(profileB);
         await using var restartedContext = await browser.NewContextAsync(new() { ViewportSize = new() { Width = 1600, Height = 1000 } });
         var restartedPage = await restartedContext.NewPageAsync();
         await restartedPage.GotoAsync(host.BaseUrl + "/settings?tab=data-sources");
@@ -152,11 +196,15 @@ public sealed class DataSourcesBrowserTests {
         await Assertions.Expect(restartedPage.GetByTestId("database-data-sources-summary")).ToContainTextAsync("Owned workspace B");
         await restartedPage.GetByRole(AriaRole.Button).Filter(new() { Has = restartedPage.GetByText("Secrets", new() { Exact = true }) }).ClickAsync();
         await Assertions.Expect(restartedPage.GetByText("A-only secret", new() { Exact = true })).ToHaveCountAsync(0);
-        Assert.Null(await targetScope.ServiceProvider.GetRequiredService<SecretService>().GetAsync(host.SecretA));
-        Assert.Null((await targetScope.ServiceProvider.GetRequiredService<ResourcesService>().GetAsync(host.ResourceA)).Id);
-        Assert.NotEqual("Marker A", (await targetWorkspace.GetSettingsAsync()).WorkspaceName);
-        Assert.Equal(host.AccountId, Assert.Single(await targetScope.ServiceProvider.GetRequiredService<IApiUserStore>().ReadAsync()).Id);
-        Assert.NotNull(await targetScope.ServiceProvider.GetRequiredService<IApiTokenRegistry>().FindAsync(host.TokenId));
+        Assert.Null(await selectedScope.ServiceProvider.GetRequiredService<SecretService>().GetAsync(host.SecretA));
+        var missingResource = Assert.IsType<ResourceMetadataReadResult.Missing>(
+            await selectedScope.ServiceProvider.GetRequiredService<ResourcesService>().ReadAsync(host.ResourceA));
+        Assert.Equal(host.ResourceA, missingResource.ResourceId);
+        Assert.Equal(profileB, missingResource.Context.DatabaseProfileId);
+        Assert.Equal(selectedBinding.Namespace, missingResource.Context.Namespace);
+        Assert.NotEqual("Marker A", (await selectedScope.ServiceProvider.GetRequiredService<WorkspaceService>().GetSettingsAsync()).WorkspaceName);
+        Assert.Equal(host.AccountId, Assert.Single(await selectedScope.ServiceProvider.GetRequiredService<IApiUserStore>().ReadAsync()).Id);
+        Assert.NotNull(await selectedScope.ServiceProvider.GetRequiredService<IApiTokenRegistry>().FindAsync(host.TokenId));
         await restartedPage.GotoAsync(host.BaseUrl + "/projects");
         await Assertions.Expect(restartedPage.GetByTestId("projects-tree-workspace").GetByText("Owned target project B", new() { Exact = true }).First).ToBeVisibleAsync();
         await Assertions.Expect(restartedPage.GetByText("Owned source project A", new() { Exact = true })).ToHaveCountAsync(0);
@@ -167,9 +215,23 @@ public sealed class DataSourcesBrowserTests {
         await File.WriteAllTextAsync(Path.Combine(evidence, "production-proof.json"), JsonSerializer.Serialize(new {
             host.ProfileA, ProfileB = profileB, host.ProjectA, ProjectB = targetProject.Value, host.SecretA, host.ResourceA,
             host.DefaultProviderId, host.AccountId, host.TokenId, beforeRestart, afterRestart,
-            SourceUnchanged = true, TargetPreferenceCopied = true, LaterProjectGroupRefused = true,
+            SourceUnchangedByTransfer = true, SourcePreferenceChangedByFixture = true,
+            SourceOriginalHead = sourceOriginalHead, SourceAcknowledgedHead = sourceChangedHead,
+            SourceOriginalProviderId = sourceBeforePartial.Values.DefaultProviderProfileId, SourceAcknowledgedProviderId = partialProviderId,
+            beforePartialTransfer, afterPartialTransfer,
+            TargetOriginalId = targetBeforePartial.Id, TargetOriginalRevision = targetBeforePartial.Revision,
+            TargetTransferredRevision = targetAfterPartial.Revision, SelectedNamespace = selectedBinding.Namespace,
+            TargetPreferenceCopied = true, LaterProjectGroupRefused = true,
             ProfileSecretsResourcesAndPreferencesIsolated = true, InstanceAccountsAndTokensPreserved = true
         }, new JsonSerializerOptions { WriteIndented = true }));
+
+        async Task<(Guid Id, Guid Revision, WorkspaceSettingsValues Values)> ReadTargetSettingsAsync() {
+            var contexts = targetScope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkspaceSettingsDbContext>>();
+            await using var owner = await contexts.CreateDbContextAsync();
+            var settings = await owner.Set<WorkspaceSettings>().AsNoTracking().SingleAsync(item => item.IsCurrent);
+            return (settings.Id, settings.ConcurrencyToken, new(settings.WorkspaceName, settings.DefaultProviderProfileId,
+                settings.DefaultPromptOutputFormat, settings.CurrencyCode, settings.CurrencyCultureName, settings.Notes));
+        }
 
         async Task CloseTransfer() {
             await dialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();

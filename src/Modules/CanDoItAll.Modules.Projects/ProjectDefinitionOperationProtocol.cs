@@ -13,16 +13,23 @@ internal sealed class ProjectDefinitionProtocolRejectedException(Error error) : 
 public sealed class ProjectDefinitionOperationProtocol(
     DatasetActivationService activation,
     ProjectWriteAdmissionService admissions,
-    ProjectOperationEpochService epochs,
+    FiniteOperationEpochStore epochs,
     ProjectDefinitionReceiptReader reader,
     IOptions<ProjectDefinitionOperationOptions> configuredOptions) {
     internal ProjectDefinitionLimits Limits => configuredOptions.Value.GetLimits();
+    private FiniteOperationPoolRegistration Pool => ProjectFiniteOperationPool.Create(configuredOptions.Value);
 
     public async Task<ProjectDefinitionWriteContext> GetWriteContextAsync(ProjectMutationCallerScope caller,
         CancellationToken cancellationToken = default) {
         var binding = await activation.ReadActiveBindingAsync(admissions.DatabaseProfileId, cancellationToken);
-        await epochs.RotateExpiredAsync(binding, cancellationToken);
-        return await epochs.GetWriteContextAsync(binding, caller, cancellationToken);
+        var pool = Pool;
+        await epochs.RotateExpiredAsync(binding, pool, cancellationToken);
+        var current = await epochs.ReadCurrentAsync(binding, pool, cancellationToken);
+        if (current.AdmissionClosesAtUtc <= current.ObservedAtUtc) {
+            throw new InvalidOperationException("The Projects operation epoch requires maintenance before new admission.");
+        }
+        return new(binding.Namespace, caller.Bind(binding.Namespace), new(current.Epoch), current.AdmissionClosesAtUtc,
+            current.ReplayUntilUtc, [ProjectDefinitionRequestVersion.VersionOne], [ProjectDefinitionResultVersion.VersionOne], Limits);
     }
 
     internal async Task<ProjectDefinitionOperationAttempt> PrepareAsync(ProjectDefinitionOperation operation,
@@ -76,7 +83,7 @@ public sealed class ProjectDefinitionOperationProtocol(
 
     internal async Task<bool> EnterBeforeOwnerAdmissionAsync(ProjectsDbContext context, ProjectDefinitionOperationAttempt attempt,
         CancellationToken cancellationToken) {
-        attempt.Epoch = await epochs.EnterAsync(context, attempt.Binding, attempt.Operation, attempt.Invocation.Caller, cancellationToken);
+        attempt.Epoch = await epochs.EnterAsync(context, attempt.Binding, Pool, attempt.Operation.Epoch.Value, cancellationToken);
         var operationKey = FormattableString.Invariant($"projects:definition-operation:{attempt.Operation.Namespace.Value:D}:{attempt.Operation.Epoch.Value}:{(int)attempt.Invocation.Caller.Kind}:{attempt.Invocation.Caller.Key.Hex}:{attempt.Operation.Id:D}");
         await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, [operationKey], cancellationToken);
         if (await ProjectDefinitionOperationStore.FindLockedAsync(context, attempt.Operation, attempt.Invocation.Caller, cancellationToken) is { } receipt) {
@@ -89,15 +96,19 @@ public sealed class ProjectDefinitionOperationProtocol(
             attempt.ReplayObserved = true;
             return true;
         }
-        await ProjectOperationEpochService.RequireOpenAsync(context, attempt.Epoch, cancellationToken);
+        await RequireAdmissibleAsync(context, attempt, cancellationToken);
         return false;
     }
 
+    internal Task RequireAdmissibleAsync(ProjectsDbContext context, ProjectDefinitionOperationAttempt attempt, CancellationToken cancellationToken)
+        => epochs.RequireAdmissibleAsync(context, attempt.Epoch
+            ?? throw new InvalidOperationException("The operation has not entered its original epoch."), cancellationToken);
+
     internal async Task RecordAcceptedAsync(ProjectsDbContext context, ProjectDefinitionOperationAttempt attempt,
         ProjectEditorAcknowledgement acknowledgement, string? creationFingerprint, CancellationToken cancellationToken) {
-        var now = await ProjectOperationEpochService.ReadTimeAsync(context, cancellationToken);
+        var now = await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken);
         var accepted = new ProjectDefinitionAccepted<ProjectEditorAcknowledgement>(attempt.Operation, ProjectDefinitionResultVersion.VersionOne,
-            attempt.Intent.Kind, now, ProjectOperationEpochService.ReplayUntil(attempt.Epoch!), acknowledgement);
+            attempt.Intent.Kind, now, attempt.Epoch!.ReplayUntilUtc, acknowledgement);
         var payload = ProjectDefinitionOperationCodec.EncodeAccepted(accepted, Limits);
         await InsertAsync(context, attempt, acknowledgement.Definition, now, payload, creationFingerprint, cancellationToken);
         attempt.Accepted = new ProjectDefinitionDecodedReceipt.Full(accepted);
@@ -106,9 +117,9 @@ public sealed class ProjectDefinitionOperationProtocol(
 
     internal async Task RecordAcceptedAsync(ProjectsDbContext context, ProjectDefinitionOperationAttempt attempt,
         ProjectDefinitionScalarsAcknowledgement acknowledgement, CancellationToken cancellationToken) {
-        var now = await ProjectOperationEpochService.ReadTimeAsync(context, cancellationToken);
+        var now = await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken);
         var accepted = new ProjectDefinitionAccepted<ProjectDefinitionScalarsAcknowledgement>(attempt.Operation, ProjectDefinitionResultVersion.VersionOne,
-            attempt.Intent.Kind, now, ProjectOperationEpochService.ReplayUntil(attempt.Epoch!), acknowledgement);
+            attempt.Intent.Kind, now, attempt.Epoch!.ReplayUntilUtc, acknowledgement);
         var payload = ProjectDefinitionOperationCodec.EncodeAccepted(accepted, Limits);
         await InsertAsync(context, attempt, acknowledgement.Definition, now, payload, null, cancellationToken);
         attempt.Accepted = new ProjectDefinitionDecodedReceipt.Scalars(accepted);
@@ -149,11 +160,12 @@ internal sealed class ProjectDefinitionOperationAttempt(DatasetActivationBinding
     internal ProjectDefinitionNormalizedIntent Intent { get; } = intent;
     internal ProjectDefinitionDigest Digest { get; } = digest;
     internal int CanonicalByteLength { get; } = canonicalByteLength;
-    internal ProjectOperationEpochRecord? Epoch { get; set; }
+    internal FiniteOperationEpochSnapshot? Epoch { get; set; }
     internal ProjectDefinitionDecodedReceipt? Accepted { get; set; }
     internal string? CreationFingerprint { get; set; }
     internal bool Replayed { get; set; }
     internal bool ReplayObserved { get; set; }
     internal bool CommitAttempted { get; set; }
     internal bool Committed { get; set; }
+    internal ProjectDefinitionWriteAccessDecision? CurrentWriteRefusal { get; set; }
 }

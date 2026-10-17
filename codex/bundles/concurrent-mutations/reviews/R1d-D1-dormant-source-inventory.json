@@ -1,0 +1,139 @@
+{
+  "Owner": "agent_process_architecture",
+  "Status": "Source frozen, unbuilt and unexecuted; dormant D1 only",
+  "CreatedAtUtc": "2026-10-17T04:27:32.1787093+00:00",
+  "ManagedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "Plan": "codex/bundles/concurrent-mutations/plan/P02b-R1d-saved-dispatch-abi-amendment.md",
+  "PlanSha256": "2A09FDAF0BA84B967C7CED1729F10C48269737A9DA71D32B9BBE372ACAA5A97E",
+  "PredecessorOwnership": ".artifacts/concurrent-mutations/candidates/r1d-d1-predecessor-ownership.json",
+  "PredecessorOwnershipSha256": "314F140F79CADBD66C770855E9A2E8275D525A9E5A312347B2DC22E67804C577",
+  "FrozenTransitions": {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+    "Sha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186"
+  },
+  "ProductionFiles": 9,
+  "ExistingSuccessors": 5,
+  "NewProductionFiles": 4,
+  "TestFiles": 2,
+  "ProofNotes": 1,
+  "Selection": {
+    "Assembly": "CanDoItAll.Tests.Integration",
+    "Filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests",
+    "Category": "FileSystemPortability",
+    "ExpectedDiscovery": 6,
+    "ExpectedExecution": 6,
+    "Facts": [
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Full_exact_decisions_select_after_rejection_and_preserve_original_checkpoint_on_conflict",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Saved_lease_claims_one_exact_restored_effect_and_cannot_resume_the_original_provider_origin",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Competing_exact_commands_and_cancellation_cannot_replace_an_entered_effect_outcome",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Prepared_receipt_inconsistency_refuses_without_fabricated_claim_while_entered_effect_uses_existing_reconciliation",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Real_journal_publication_faults_and_lease_cleanup_preserve_exact_decisions_and_outcome",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Dormant_defaults_and_historical_journal_schemas_do_not_acquire_saved_effect_authority"
+    ]
+  },
+  "Limits": [
+    "No compilation, discovery, execution, database, host or provider proof.",
+    "No MAF, API, native, producer, Process, Workflow or P07 policy activation.",
+    "Parent must integrate frozen historical predecessors separately before overlaying these successors.",
+    "Current canonical-generation requirement remains; no restart mutation grant.",
+    "Whole-record cost, D2 outcome/finalization and D4 public compatibility remain open."
+  ],
+  "Inputs": [
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolRunLease.cs",
+      "Sha256": "CE67E8160072E159832868ED6BCF85D3306A02D9F2B0D69CB80A007F0D0D26C4",
+      "Kind": "Production",
+      "MainBaseSha256": "00711FD6AE92B5212ED6E48176AAF676520C6753F64D962D4C4B449CAE81D8F5",
+      "ManagedPredecessorSha256": "00711FD6AE92B5212ED6E48176AAF676520C6753F64D962D4C4B449CAE81D8F5",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolRunLease.cs"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.cs",
+      "Sha256": "A3D15073CFDEA6D1944E816ABCCC3528EE8A5FF5731C790FE9EB867E5764924D",
+      "Kind": "Production",
+      "MainBaseSha256": "87387767C254F39496720790F29348A42BA9BD48B1124C4F4E4AE9151D3F545F",
+      "ManagedPredecessorSha256": "87387767C254F39496720790F29348A42BA9BD48B1124C4F4E4AE9151D3F545F",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolAdmissionJournal.cs"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolReceiptReconciliation.cs",
+      "Sha256": "5B3A9C8BE19CCDB6E50DE05F2387762F44BC9C576A61A32F1E1AF1F6DCD39564",
+      "Kind": "Production",
+      "MainBaseSha256": "A87DFD160B34D14D27BC9F5B8F779B6A2FF8CF106AB6725023114E59C0A322C9",
+      "ManagedPredecessorSha256": "A87DFD160B34D14D27BC9F5B8F779B6A2FF8CF106AB6725023114E59C0A322C9",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolReceiptReconciliation.cs"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/AgentRuntimePorts.cs",
+      "Sha256": "42814D2022115DAD19EEBB251304CF2D1CFC4E2646CFE2991B77676EE0BB35BC",
+      "Kind": "Production",
+      "MainBaseSha256": "8FD9545140C690F6014040379C5C8A7605B4452781DD4BD0CD27195904ACB48A",
+      "ManagedPredecessorSha256": "8FD9545140C690F6014040379C5C8A7605B4452781DD4BD0CD27195904ACB48A",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Runtime.Abstractions\\AgentRuntimePorts.cs"
+    },
+    {
+      "Path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs",
+      "Sha256": "3CFFD67A3308DC002067B7D04E61F755CBCC2BCAB6B3A26A001232A4B492DAEA",
+      "Kind": "Production",
+      "MainBaseSha256": "9A8A4D632543DB05ED59341CEDF72613524C235BF15AA941226296543ACA4DBE",
+      "ManagedPredecessorSha256": "9A8A4D632543DB05ED59341CEDF72613524C235BF15AA941226296543ACA4DBE",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tooling\\IAgentRuntimeToolProvider.cs"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentSavedEffectContinuationRequest.cs",
+      "Sha256": "373E89DA2394F5DCA4AEF2D801607EDD82D3030D43C540FF20F581A3C7F8F450",
+      "Kind": "Production",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/AgentSavedEffectDispatch.cs",
+      "Sha256": "E5BD0E3FE195B598AD929B473FD8045FACB8F192A7BA089965A4FDC6FA154DAC",
+      "Kind": "Production",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/AgentRuntimeSavedEffectTool.cs",
+      "Sha256": "BC7C030B8C7EC5075FABF3D9232DCEF2514828AC22B72AB91D79634E55E5947D",
+      "Kind": "Production",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs",
+      "Sha256": "03AD3538DB8DDCACAE6BCF5D5F800E1F38B12C0301DEF30B882E3C088A4BDA49",
+      "Kind": "Production",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs",
+      "Sha256": "61FEC6FA4F46504729C0FADCE19F94BE504A62434BB023F520AEA03103D00EC1",
+      "Kind": "Integration source",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchFixture.cs",
+      "Sha256": "A2279C80B00C73238BF962674378DD55D1D7D576749D957EE8A2AEA43F8E98AE",
+      "Kind": "Integration source",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    },
+    {
+      "Path": "codex/bundles/concurrent-mutations/validation/R1d-D1-dormant-source.md",
+      "Sha256": "EFFE99F5D06A4EF5CF0ABE764567CC73F2C0873776C5DE0F78FC8FD066C984D3",
+      "Kind": "Proof note",
+      "MainBaseSha256": null,
+      "ManagedPredecessorSha256": null,
+      "SavedPredecessorImage": null
+    }
+  ]
+}

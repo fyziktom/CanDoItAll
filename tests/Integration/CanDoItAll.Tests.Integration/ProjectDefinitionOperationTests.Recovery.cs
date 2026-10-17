@@ -1,4 +1,5 @@
 using System.Data.Common;
+using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +56,64 @@ public sealed partial class ProjectDefinitionOperationTests {
     }
 
     [Fact]
+    public async Task Actual_commit_with_lost_acknowledgement_and_revoked_disclosure_remains_unconfirmed() {
+        var access = new ReceiptAccess();
+        var fault = new CommittedAcknowledgementFailure(() => access.Allowed = false);
+        await using var application = await TestApplication.CreateAsync(WithInterceptors(fault));
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var invocation = Invocation(access);
+        var request = new ProjectDefinitionRequest<CreateProjectDefinitionCommand>(
+            await NewOperationAsync(services, invocation), Version, Creation());
+        var writer = services.GetRequiredService<ProjectDefinitionWriter>();
+        fault.Armed = true;
+
+        var outcome = Assert.IsType<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>.Unconfirmed>(
+            await writer.CreateAsync(request, invocation));
+
+        Assert.True(fault.Committed);
+        Assert.False(access.Allowed);
+        Assert.Equal(request.Operation, outcome.Operation);
+        Assert.Equal(ProjectDefinitionRecoveryReason.CommitUnconfirmed, outcome.Reason);
+        Guid projectId;
+        Guid revision;
+        byte[] acceptedBytes;
+        await using (var database = await DatabaseAsync(services)) {
+            var project = Assert.Single(await database.Set<Project>().AsNoTracking().ToArrayAsync());
+            var receipt = Assert.Single(await database.Set<ProjectDefinitionReceiptRecord>().AsNoTracking().ToArrayAsync());
+            Assert.Equal(request.Operation.Id, receipt.OperationId);
+            Assert.Equal(project.Id, receipt.ProjectId);
+            Assert.Equal(project.ConcurrencyToken, receipt.AcceptedRevision);
+            projectId = project.Id;
+            revision = project.ConcurrencyToken;
+            acceptedBytes = receipt.AcceptedPayload;
+        }
+        await using (var search = await services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync()) {
+            var projection = Assert.Single(await search.Set<SearchDocument>().AsNoTracking()
+                .Where(document => document.SourceType == SearchDocument.ProjectSourceType).ToArrayAsync());
+            Assert.Equal(projectId, projection.ProjectId);
+        }
+        var beforeRetry = await StateAsync(services);
+        var lookup = Assert.IsType<ProjectDefinitionLookup.DetailUnavailable>(await services.GetRequiredService<ProjectDefinitionReceiptReader>()
+            .LookupAsync(request.Operation, invocation));
+        Assert.Equal(ProjectDefinitionDetailUnavailableReason.AccessDenied, lookup.Reason);
+        var refusedRetry = Assert.IsType<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>.Rejected>(
+            await writer.CreateAsync(request, invocation));
+        Assert.Contains(refusedRetry.Errors, error => error.Code == ProjectErrorCodes.DefinitionReceiptUnavailable);
+        Assert.Equal(beforeRetry, await StateAsync(services));
+
+        access.Allowed = true;
+        var replay = Assert.IsType<ProjectDefinitionOutcome<ProjectEditorAcknowledgement>.Accepted>(
+            await writer.CreateAsync(request, invocation));
+        Assert.True(replay.Replayed);
+        Assert.Equal(acceptedBytes, Encoded(replay.Result));
+        Assert.Equal(projectId, replay.Result.Acknowledgement.Project.ProjectId);
+        Assert.Equal(revision, replay.Result.Acknowledgement.Definition.Revision);
+        Assert.Equal(beforeRetry, await StateAsync(services));
+        Assert.Equal(ProjectDefinitionRecoveryReason.CommitUnconfirmed, outcome.Reason);
+    }
+
+    [Fact]
     public async Task Duplicate_recovery_with_two_connection_pool_releases_owner_before_fresh_receipt_lookup() {
         await using var lease = PostgresTestDatabaseLease.Create("project-operation-small-pool");
         await using var environment = CanDoItAllTestEnvironment.Create("project-operation-small-pool");
@@ -98,7 +157,7 @@ public sealed partial class ProjectDefinitionOperationTests {
         }
     }
 
-    private sealed class CommittedAcknowledgementFailure : DbTransactionInterceptor {
+    private sealed class CommittedAcknowledgementFailure(Action? afterCommit = null) : DbTransactionInterceptor {
         public bool Armed { get; set; }
         public bool Committed { get; private set; }
         public bool RecoveryBlocked { get; set; }
@@ -107,6 +166,7 @@ public sealed partial class ProjectDefinitionOperationTests {
             if (Armed) {
                 Armed = false;
                 Committed = true;
+                afterCommit?.Invoke();
                 throw new TimeoutException("Owned acknowledgement loss after PostgreSQL COMMIT completed.");
             }
             return Task.CompletedTask;

@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -20,6 +21,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     private readonly IAgentExecutionActivityCoordinator activityCoordinator;
     private readonly IAgentExecutionProfileGenerationSource executionProfileGenerationSource;
     private readonly ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger;
+    private readonly Func<IAgentHistoricalReceiptReviewService>? historicalReceipts;
+    private readonly IDatabaseRuntimeState? historicalRuntimeState;
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry>
         executionUpdatedDispatcher;
     private readonly Lock executionSubscriptionGate = new();
@@ -35,7 +38,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         IDatabaseSwitchNotificationService databaseSwitchNotificationService,
         IAgentExecutionActivityCoordinator activityCoordinator,
         IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
-        ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger)
+        ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger,
+        Func<IAgentHistoricalReceiptReviewService>? historicalReceipts = null,
+        IDatabaseRuntimeState? historicalRuntimeState = null)
     {
         this.workspaceFactory = workspaceFactory;
         this.technicalAgentBridge = technicalAgentBridge;
@@ -45,6 +50,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         this.activityCoordinator = activityCoordinator;
         this.executionProfileGenerationSource = executionProfileGenerationSource;
         this.logger = logger;
+        this.historicalReceipts = historicalReceipts;
+        this.historicalRuntimeState = historicalRuntimeState;
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
         databaseSwitchNotificationService.Changed += HandleDatabaseProfileChanged;
     }
@@ -118,6 +125,34 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
 
     public Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => ResolveService().LoadCatalogSnapshotAsync(cancellationToken);
+
+    public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default)
+        => ResolveService().ReadAgentDecisionDataPolicyAsync(agentId, cancellationToken);
+
+    public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
+        var outcome = await ResolveService().ReplaceAgentDecisionDataPolicyAsync(command, cancellationToken);
+        if (outcome is not AgentDecisionDataPolicySaveOutcome.Accepted accepted) {
+            return outcome;
+        }
+        try {
+            referenceDataCacheInvalidator.Invalidate();
+            return accepted;
+        } catch (Exception failure) {
+            var diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.CacheInvalidation,
+                failure, accepted.Failure);
+            try {
+                logger.LogWarning("Agent policy operation {OperationId} for Agent {AgentId} in profile {ProfileId} was accepted but cache invalidation failed; failure types {FailureTypes}; truncated {Truncated}.",
+                    command.OperationId, command.Expectation.AgentId, command.Expectation.Workspace.DatabaseProfileId,
+                    string.Join(", ", diagnostic.ExceptionTypes), diagnostic.Truncated);
+            } catch (Exception diagnosticFailure) {
+                diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.Diagnostics,
+                    diagnosticFailure, diagnostic);
+            }
+            return new AgentDecisionDataPolicySaveOutcome.Accepted(accepted.Command, accepted.Snapshot, followupRequired: true, diagnostic);
+        }
+    }
 
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
@@ -738,6 +773,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetExecutionRunDetailAsync(executionRunId, cancellationToken);
     }
 
+    public Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default) {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        AgentHistoricalReceiptReviewService.RequireInitialized(historicalRuntimeState);
+        return (historicalReceipts ?? throw new NotSupportedException("Historical receipt review is not registered."))()
+            .ReadSavedEffectReceiptsAsync(request, cancellationToken);
+    }
+
     public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListExecutionArtifactsAsync(executionRunId, cancellationToken);
@@ -811,6 +854,12 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                     pinnedService.Service,
                     operation);
             }
+            catch (Exception exception) when (AgentEffectActivityFinalization.IsEffectFailure(exception)) {
+                var failure = AgentEffectActivityFinalization.Publish(operation, null, exception);
+                failure = AgentEffectActivityFinalization.Dispose(operation, null, failure);
+                ExceptionDispatchInfo.Capture(failure!).Throw();
+                throw;
+            }
             catch (OperationCanceledException)
             {
                 try
@@ -848,9 +897,27 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         IAgentExecutionActivityOperationLease operation,
         Task<TResult> completion)
     {
+        TResult result = default!;
+        Exception? primary = null;
+        try {
+            result = await completion.ConfigureAwait(false);
+        } catch (Exception exception) {
+            primary = exception;
+        }
+        var continuation = AgentEffectActivityFinalization.Continuation(result);
+        if (continuation is not null || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
+            primary = AgentEffectActivityFinalization.Publish(operation, continuation, primary);
+            primary = AgentEffectActivityFinalization.Dispose(operation, continuation, primary);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
+            return result;
+        }
         try
         {
-            var result = await completion.ConfigureAwait(false);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
             if (!operation.IsTerminal)
             {
                 TerminalizeOwnedFailure(operation);

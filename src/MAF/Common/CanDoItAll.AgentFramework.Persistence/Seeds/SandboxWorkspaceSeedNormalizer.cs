@@ -40,8 +40,11 @@ internal static class SandboxWorkspaceSeedNormalizer
         var seeded = SandboxWorkspaceSeedFactory.Create();
         var providers = MergeProviders(catalog.Providers, seeded.Providers);
         var capabilities = MergeCapabilities(catalog.Capabilities, seeded.Capabilities);
+        var ordinaryAgents = catalog.Agents.Select(agent => agent with {
+            ConfigurationJson = AgentDecisionDataPolicyMetadata.ProjectOrdinaryConfiguration(agent.ConfigurationJson)
+        }).ToArray();
         var agents = MergeAgents(
-            catalog.Agents,
+            ordinaryAgents,
             seeded.Agents,
             providers.Items,
             capabilities.Items,
@@ -49,7 +52,8 @@ internal static class SandboxWorkspaceSeedNormalizer
             capabilities.IdMap);
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
-        var activeAgents = RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities);
+        var activeAgents = AgentDecisionDataPolicyMetadata.Preserve(catalog.Agents,
+            RemoveUnavailableAgentCapabilities(agents.Items, activeCapabilities)).ToList();
         var now = DateTimeOffset.UtcNow;
         activeAgents = activeAgents.Select(agent => {
             if (!previousAgents.TryGetValue(agent.Id, out var previous) ||

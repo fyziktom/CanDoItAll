@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.DependencyInjection;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -79,9 +80,14 @@ public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind,
         builder.Services.AddOptions<ProjectDefinitionOperationOptions>()
             .Bind(builder.Configuration.GetSection(ProjectDefinitionOperationOptions.SectionName))
             .Validate(options => options.IsValid(), "Projects definition operation limits and deadlines must remain within supported bounds.");
+        builder.Services.AddOptions<ProjectTaskPlanOperationOptions>()
+            .Bind(builder.Configuration.GetSection(ProjectTaskPlanOperationOptions.SectionName))
+            .Validate(options => options.IsValid(), "Workbench task plan operation deadlines must remain within supported bounds.");
+        CanDoItAll.Composition.FiniteOperationComposition.AddFiniteOperationPools(builder.Services);
         builder.Services.AddSingleton<DatasetActivationCoordinator>();
         await using var host = builder.Build();
         _ = host.Services.GetRequiredService<IOptions<ProjectDefinitionOperationOptions>>().Value;
+        _ = host.Services.GetRequiredService<IOptions<ProjectTaskPlanOperationOptions>>().Value;
         var profile = host.Services.GetRequiredService<DatabaseProfileControlPlaneService>().ResolveProfile(ProfileId);
         if (profile.Profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
             throw new NotSupportedException("Offline dataset activation requires an explicit PostgreSQL profile.");

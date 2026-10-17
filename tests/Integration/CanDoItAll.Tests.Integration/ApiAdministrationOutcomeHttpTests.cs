@@ -25,7 +25,8 @@ public sealed class ApiAdministrationOutcomeHttpTests {
             }
         });
         await using var host = await CreateHostAsync(password, configureServices: services =>
-            services.AddSingleton<IApiTokenRegistry>(provider => new FileApiTokenRegistry(provider.GetRequiredService<IControlPlanePathResolver>(), writer)));
+            services.AddSingleton<IApiTokenRegistry>(provider => new FileApiTokenRegistry(provider.GetRequiredService<IControlPlanePathResolver>(), writer,
+                provider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>())));
         var administrator = await LoginAsync(host.Client, "admin", password);
         SetToken(host.Client, administrator.Token);
         using var acknowledged = await host.Client.PostAsJsonAsync("/api/access/tokens", new ApiTokenIssueRequest { Subject = "acknowledged", Scopes = [ApiAccessScopeNames.ReadWorkflows] });
@@ -116,6 +117,10 @@ public sealed class ApiAdministrationOutcomeHttpTests {
     private sealed class ReadBackFailureStore(FileApiUserStore inner) : IApiUserStore {
         public bool FailNextRead { get; set; }
         public int Writes { get; private set; }
+        public Task EnsureAuthorityFormatAsync(CancellationToken cancellationToken = default) => inner.EnsureAuthorityFormatAsync(cancellationToken);
+        public Task<ApiUserStoreSnapshot> ReadSnapshotAsync(CancellationToken cancellationToken = default) => inner.ReadSnapshotAsync(cancellationToken);
+        public ValueTask<ApiUserAuthorityObservation> ObserveAuthorityAsync(ApiUserAuthorityGeneration expected, CancellationToken cancellationToken = default) =>
+            inner.ObserveAuthorityAsync(expected, cancellationToken);
         public Task<IReadOnlyList<ApiUserRecord>> ReadAsync(CancellationToken cancellationToken = default) {
             if (FailNextRead) {
                 FailNextRead = false;

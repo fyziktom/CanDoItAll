@@ -21,6 +21,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
     private const string PreviousMigration = "20260911000227_MoveWorkItemAssignments";
     private const string CurrentMigration = "20260911010404_AddSourceBoundExecutionAdmissions";
     private const string OwnerLifetimeMigration = "20260911094704_BindOwnerLifetimesAndRetainedHistory";
+    private const string SeedMigration = "20261016163615_AddProjectDefinitionOperationLifecycle";
     private static readonly DateTimeOffset SavedAt = new(2026, 4, 5, 6, 7, 8, TimeSpan.Zero);
 
     [Fact]
@@ -28,6 +29,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("source-admission-upgrade");
         var profile = environment.CreatePostgreSqlProfile("original");
         string[] expected;
+        Guid retainedDefinitionRevision;
         await using (var services = CreateProvider(profile)) {
             await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
@@ -41,6 +43,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await context.Database.MigrateAsync();
             Assert.Equal(expected, await ReadLegacyAsync(context));
             await AssertCurrentReferenceOnlyAsync(context);
+            retainedDefinitionRevision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context);
         }
 
         for (var restart = 0; restart < 2; restart++) {
@@ -51,7 +54,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await AssertNoAuthorityAsync(context);
             await AssertCurrentReferenceOnlyAsync(context);
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(164, context.Model.GetEntityTypes().Count());
+            await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context, retainedDefinitionRevision);
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         }
     }
@@ -89,7 +92,9 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await AssertNoAuthorityAsync(restored);
         await AssertCurrentReferenceOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
-        Assert.Equal(164, restored.Model.GetEntityTypes().Count());
+        var revision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(restored);
+        await restored.Database.MigrateAsync();
+        await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(restored, revision);
         Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 
@@ -105,12 +110,13 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
             await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             await SeedLegacyAsync(context);
-            await context.Database.MigrateAsync();
+            await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+            Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            await HistoricalProjectMigrationAssertions.RevisionAsync(context);
             await AssertCurrentReferenceOnlyAsync(context);
             await AssertNoAuthorityAsync(context);
             expected = await ReadLegacyAsync(context);
-            currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-            Assert.Equal(context.Database.GetMigrations(), currentMigrations);
+            currentMigrations = context.Database.GetMigrations().ToArray();
             await context.GetService<IMigrator>().MigrateAsync(OwnerLifetimeMigration);
             Assert.Equal(expected, await ReadLegacyAsync(context));
             await AssertCurrentReferenceOnlyAsync(context);
@@ -137,6 +143,9 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await AssertCurrentReferenceOnlyAsync(readback);
         Assert.Equal(lifetime, (await readback.Set<ProjectWorkAssignmentRecord>().AsNoTracking().SingleAsync()).ProjectLifetimeId);
         await AssertNoAuthorityAsync(readback);
+        var revision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(readback);
+        await readback.Database.MigrateAsync();
+        await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(readback, revision);
     }
 
     [Theory]
@@ -151,7 +160,8 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         await using var services = CreateProvider(environment.CreatePostgreSqlProfile("retained"));
         await using var scope = services.CreateAsyncScope();
         await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+        Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         object row = evidence switch {
             RetainedEvidence.CreationReservation => new ProjectCreationReservationRecord {
                 Id = Guid.NewGuid(), DatabaseProfileId = Guid.NewGuid(), ProjectId = Guid.NewGuid(), LifetimeId = Guid.NewGuid(),
@@ -181,7 +191,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
         context.Add(row);
         await context.SaveChangesAsync();
         var current = await ReadEvidenceAsync(context);
-        var currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+        var currentMigrations = context.Database.GetMigrations().ToArray();
         await context.GetService<IMigrator>().MigrateAsync(CurrentMigration);
         Assert.Equal(CurrentMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         var expected = await ReadEvidenceAsync(context);
@@ -311,7 +321,7 @@ public sealed class SourceBoundExecutionAdmissionMigrationTests {
     }
 
     private static Task<string[]> ReadLegacyAsync(AppDbContext context) => context.Database.SqlQueryRaw<string>("""
-        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || to_jsonb(row))::text AS "Value"
+        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || (to_jsonb(row) - 'ConcurrencyToken'))::text AS "Value"
             FROM "Projects_Projects" row
         UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
         UNION ALL SELECT 'work:' || (to_jsonb(row) - 'ProjectLifetimeId')::text AS "Value" FROM "Workbench_WorkAssignments" row

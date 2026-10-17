@@ -1,0 +1,37 @@
+{
+  "status": "source-only; runtime validation pending",
+  "originalRows": 54,
+  "originalPassed": 47,
+  "originalFailed": 7,
+  "originalSkipped": 0,
+  "affectedClassRows": 26,
+  "modifiedFactRows": 8,
+  "newRows": 0,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SourceBoundExecutionAdmissionMigrationTests.cs",
+      "bytes": 25931,
+      "sha256": "486DDCA082537FAE1DCC4D3BF68A2DC6DB516F0AF8ED7D8ACCB32C388506C294"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkAssignmentMigrationIntegrationTests.cs",
+      "bytes": 25039,
+      "sha256": "635916BF983A28AC54C5A185495590BCBA86B0EC7A41BA1072507B8A1CE3E9B4"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkflowReceiptMigrationIntegrationTests.cs",
+      "bytes": 15579,
+      "sha256": "47F6C2B60AF49B78381BF241DF7D6D934E0D31B3933269B35F2B8EF9DFF8F8E7"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalProjectMigrationAssertions.cs",
+      "bytes": 1521,
+      "sha256": "84E04E102ABCB477B10B802D365EE0E93816A1F6BA05F7FB7C25D8171F95F1AA"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C2-historical-project-metadata-repair.md",
+      "bytes": 4692,
+      "sha256": "5E51A4203AE62036F947EAC861D651A11323CEDEBF04BCD178A8FE821F253213"
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace CanDoItAll.Modules.Workbench;
+
+internal sealed class ProjectTaskPlanReceiptReader(IDbContextFactory<WorkbenchDbContext> contexts,
+    DatasetActivationService activation, ProjectWriteAdmissionService admissions, ILogger<ProjectTaskPlanReceiptReader> logger) {
+    internal async Task<ProjectTaskPlanLookup> LookupAsync(ProjectTaskPlanOperation operation,
+        ProjectTaskPlanReceiptInvocation invocation, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(invocation);
+        try {
+            var binding = await activation.ReadActiveBindingAsync(admissions.DatabaseProfileId, cancellationToken);
+            if (operation.Namespace != binding.Namespace) {
+                return new(ProjectTaskPlanLookupStatus.DatasetChanged);
+            }
+            if (invocation.Caller.Bind(binding.Namespace) != operation.CallerBinding) {
+                return new(ProjectTaskPlanLookupStatus.CallerContextChanged);
+            }
+            TaskPlanObservation? observed;
+            await using (var context = await contexts.CreateDbContextAsync(cancellationToken)) {
+                observed = await ObserveAsync(context, operation, invocation.Caller, cancellationToken);
+            }
+            if (observed is null || observed.NamespaceId != binding.Namespace.Value || observed.MaintenanceId != binding.MaintenanceId ||
+                    observed.SchemaVersion != binding.SchemaVersion || observed.GuardProtocol != (int)binding.GuardProtocol ||
+                    observed.DatasetState != (int)DatasetLifecycleState.Active) {
+                return new(ProjectTaskPlanLookupStatus.DatasetChanged);
+            }
+            if (observed.ProtocolVersion != WorkbenchTaskPlanFiniteOperations.ProtocolVersion || observed.CurrentEpoch is not > 0 ||
+                    observed.RetiredThroughEpoch is not >= 0 || observed.RetiredThroughEpoch >= observed.CurrentEpoch) {
+                return new(ProjectTaskPlanLookupStatus.Unavailable);
+            }
+            if (operation.Epoch <= observed.RetiredThroughEpoch) {
+                return new(ProjectTaskPlanLookupStatus.Expired);
+            }
+            if (operation.Epoch > observed.CurrentEpoch) {
+                return new(observed.EpochState is null && !observed.ReceiptPresent
+                    ? ProjectTaskPlanLookupStatus.InvalidContext : ProjectTaskPlanLookupStatus.Unavailable);
+            }
+            if (observed.EpochState is null || observed.AdmissionClosesAtUtc is null ||
+                    observed.MutationDeadlineMilliseconds is not > 0 || observed.ReplayRetentionSeconds is not > 0 ||
+                    observed.EpochState == (int)FiniteOperationEpochState.Open &&
+                        (operation.Epoch != observed.CurrentEpoch || observed.ClosedAtUtc is not null) ||
+                    observed.EpochState == (int)FiniteOperationEpochState.Closed && observed.ClosedAtUtc is null ||
+                    observed.EpochState != (int)FiniteOperationEpochState.Open && observed.EpochState != (int)FiniteOperationEpochState.Closed) {
+                return new(ProjectTaskPlanLookupStatus.Unavailable);
+            }
+            DateTimeOffset replayUntil;
+            try {
+                replayUntil = observed.AdmissionClosesAtUtc.Value.AddMilliseconds(observed.MutationDeadlineMilliseconds.Value)
+                    .AddSeconds(observed.ReplayRetentionSeconds.Value);
+            } catch (ArgumentOutOfRangeException) {
+                return new(ProjectTaskPlanLookupStatus.Unavailable);
+            }
+            if (observed.ReceiptPresent) {
+                if (observed.ResultVersion != 1 || observed.ReceiptSchemaVersion != 1 || observed.NormalizationVersion != 1 || observed.SourceVersion != 1) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.UnsupportedVersion);
+                }
+                ProjectTaskPlanAccepted accepted;
+                try {
+                    accepted = ProjectTaskPlanOperationProtocol.Decode(observed.Receipt(operation, invocation.Caller), operation,
+                        invocation.Caller, replayUntil);
+                } catch (ProjectTaskPlanReceiptDecodeException) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.InvalidStoredResult);
+                }
+                if (accepted.OriginalDefinition.Project.DatabaseProfileId != admissions.DatabaseProfileId) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.InvalidStoredResult);
+                }
+                try {
+                    await admissions.RequireCurrentAsync(accepted.OriginalDefinition.Project, cancellationToken);
+                } catch (ProjectWriteAdmissionRejectedException) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.TargetUnavailable);
+                }
+                if (!await invocation.ReceiptAccess.CanReadAsync(accepted.Source, accepted.OriginalDefinition.Project, cancellationToken)) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.AccessDenied);
+                }
+                try {
+                    await admissions.RequireCurrentAsync(accepted.OriginalDefinition.Project, cancellationToken);
+                } catch (ProjectWriteAdmissionRejectedException) {
+                    return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.TargetUnavailable);
+                }
+                var finalBinding = await activation.ReadActiveBindingAsync(admissions.DatabaseProfileId, cancellationToken);
+                if (finalBinding != binding || accepted.OriginalDefinition.Project.DatabaseProfileId != admissions.DatabaseProfileId) {
+                    return new(ProjectTaskPlanLookupStatus.DatasetChanged);
+                }
+                await using (var finalContext = await contexts.CreateDbContextAsync(cancellationToken)) {
+                    var active = await finalContext.Database.SqlQuery<bool>($"""
+                        SELECT EXISTS (SELECT 1 FROM "Infrastructure_DatasetLifecycle" AS d
+                            WHERE d."Id" = 1 AND d."NamespaceId" = {binding.Namespace.Value} AND d."MaintenanceId" = {binding.MaintenanceId}
+                                AND d."SchemaVersion" = {binding.SchemaVersion} AND d."GuardProtocol" = {(int)binding.GuardProtocol}
+                                AND d."State" = {(int)DatasetLifecycleState.Active}) AS "Value"
+                        """).SingleAsync(cancellationToken);
+                    return active ? new(ProjectTaskPlanLookupStatus.Found, accepted) : new(ProjectTaskPlanLookupStatus.DatasetChanged);
+                }
+            }
+            if (observed.EpochState == (int)FiniteOperationEpochState.Closed && observed.ClosedAtUtc is { } closed) {
+                var actualRetention = closed.AddSeconds(observed.ReplayRetentionSeconds.Value);
+                return new(ProjectTaskPlanLookupStatus.ClosedAbsent, ClosedAtUtc: closed, ObservedAtUtc: observed.ObservedAtUtc,
+                    RetainedUntilUtc: actualRetention > replayUntil ? actualRetention : replayUntil);
+            }
+            if (observed.EpochState != (int)FiniteOperationEpochState.Open || operation.Epoch != observed.CurrentEpoch) {
+                return new(ProjectTaskPlanLookupStatus.Unavailable);
+            }
+            return new(observed.AdmissionClosesAtUtc > observed.ObservedAtUtc ? ProjectTaskPlanLookupStatus.Open : ProjectTaskPlanLookupStatus.Draining);
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        } catch (Exception exception) {
+            logger.LogWarning("Task-plan receipt observation unavailable for operation {OperationId}; failure type {FailureType}.",
+                operation.Id, exception.GetType().Name);
+            return new(ProjectTaskPlanLookupStatus.Unavailable);
+        }
+    }
+
+    private static Task<TaskPlanObservation?> ObserveAsync(WorkbenchDbContext context, ProjectTaskPlanOperation operation,
+        ProjectTaskPlanCaller caller, CancellationToken cancellationToken) {
+        var key = caller.Key.ToArray();
+        return context.Database.SqlQuery<TaskPlanObservation>($"""
+            SELECT d."NamespaceId", d."MaintenanceId", d."SchemaVersion", d."GuardProtocol", d."State" AS "DatasetState",
+                s."CurrentEpoch", s."RetiredThroughEpoch", s."RetentionProtocolVersion" AS "ProtocolVersion",
+                e."State" AS "EpochState", e."AdmissionClosesAtUtc", e."ClosedAtUtc", e."MutationDeadlineMilliseconds", e."ReplayRetentionSeconds",
+                clock_timestamp() AS "ObservedAtUtc", r."OperationId" IS NOT NULL AS "ReceiptPresent",
+                r."SchemaVersion" AS "ReceiptSchemaVersion", r."NormalizationVersion", r."ResultVersion", r."SemanticDigest",
+                r."ProjectId", r."LifetimeId", r."OriginalDefinitionRevision", r."DecisionId", r."DecisionGeneration",
+                r."SourceKind", r."SourceVersion", r."SourceFingerprint", r."AcceptedAtUtc",
+                CASE WHEN octet_length(r."AcceptedPayload") <= {ProjectTaskPlanReceiptRecord.MaximumPayloadBytes}
+                    THEN r."AcceptedPayload" ELSE NULL END AS "AcceptedPayload"
+            FROM "Infrastructure_DatasetLifecycle" AS d
+            LEFT JOIN "Infrastructure_FiniteOperationState" AS s ON s."NamespaceId" = d."NamespaceId"
+                AND s."PoolId" = {WorkbenchTaskPlanFiniteOperations.Pool.Value}
+            LEFT JOIN "Infrastructure_FiniteOperationEpochs" AS e ON e."NamespaceId" = s."NamespaceId"
+                AND e."PoolId" = s."PoolId" AND e."Epoch" = {operation.Epoch}
+            LEFT JOIN "Workbench_TaskPlanReceipts" AS r ON r."NamespaceId" = {operation.Namespace.Value}
+                AND r."Epoch" = {operation.Epoch} AND r."CallerKind" = {(int)caller.Kind}
+                AND r."CallerKey" = {key} AND r."OperationId" = {operation.Id}
+            WHERE d."Id" = 1
+            """).SingleOrDefaultAsync(cancellationToken);
+    }
+}
+
+internal sealed class TaskPlanObservation {
+    public Guid NamespaceId { get; set; }
+    public Guid MaintenanceId { get; set; }
+    public int SchemaVersion { get; set; }
+    public int GuardProtocol { get; set; }
+    public int DatasetState { get; set; }
+    public long? CurrentEpoch { get; set; }
+    public long? RetiredThroughEpoch { get; set; }
+    public int? ProtocolVersion { get; set; }
+    public int? EpochState { get; set; }
+    public DateTimeOffset? AdmissionClosesAtUtc { get; set; }
+    public DateTimeOffset? ClosedAtUtc { get; set; }
+    public int? MutationDeadlineMilliseconds { get; set; }
+    public long? ReplayRetentionSeconds { get; set; }
+    public DateTimeOffset ObservedAtUtc { get; set; }
+    public bool ReceiptPresent { get; set; }
+    public int? ReceiptSchemaVersion { get; set; }
+    public int? NormalizationVersion { get; set; }
+    public int? ResultVersion { get; set; }
+    public byte[]? SemanticDigest { get; set; }
+    public Guid? ProjectId { get; set; }
+    public Guid? LifetimeId { get; set; }
+    public Guid? OriginalDefinitionRevision { get; set; }
+    public Guid? DecisionId { get; set; }
+    public long? DecisionGeneration { get; set; }
+    public int? SourceKind { get; set; }
+    public int? SourceVersion { get; set; }
+    public byte[]? SourceFingerprint { get; set; }
+    public DateTimeOffset? AcceptedAtUtc { get; set; }
+    public byte[]? AcceptedPayload { get; set; }
+
+    internal ProjectTaskPlanReceiptRecord Receipt(ProjectTaskPlanOperation operation, ProjectTaskPlanCaller caller) {
+        if (AcceptedPayload is null || SemanticDigest is not { Length: 32 } || SourceFingerprint is not { Length: 32 } ||
+                ProjectId is null || LifetimeId is null || OriginalDefinitionRevision is null || DecisionId is null ||
+                DecisionGeneration is null || SourceKind is null || AcceptedAtUtc is null) {
+            throw new ProjectTaskPlanReceiptDecodeException();
+        }
+        return new() {
+            NamespaceId = operation.Namespace.Value, Epoch = operation.Epoch, CallerKind = (int)caller.Kind,
+            CallerKey = caller.Key.ToArray(), OperationId = operation.Id, SchemaVersion = ReceiptSchemaVersion!.Value,
+            NormalizationVersion = NormalizationVersion!.Value, ResultVersion = ResultVersion!.Value,
+            SemanticDigest = SemanticDigest, ProjectId = ProjectId.Value, LifetimeId = LifetimeId.Value,
+            OriginalDefinitionRevision = OriginalDefinitionRevision.Value, DecisionId = DecisionId.Value,
+            DecisionGeneration = DecisionGeneration.Value, SourceKind = SourceKind.Value, SourceVersion = SourceVersion!.Value,
+            SourceFingerprint = SourceFingerprint, AcceptedAtUtc = AcceptedAtUtc.Value, AcceptedPayload = AcceptedPayload
+        };
+    }
+}

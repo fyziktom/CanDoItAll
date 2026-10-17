@@ -24,7 +24,7 @@ internal static class AgentExecutionActivityTransitionRules
             AgentExecutionActivityTerminalOutcome.Succeeded =>
                 current == AgentExecutionActivityPhase.PersistingResult,
             AgentExecutionActivityTerminalOutcome.Suspended =>
-                current is AgentExecutionActivityPhase.AwaitingApproval or
+                current is AgentExecutionActivityPhase.AwaitingApproval or AgentExecutionActivityPhase.AwaitingContinuation or
                     AgentExecutionActivityPhase.PersistingResult,
             AgentExecutionActivityTerminalOutcome.Failed or
                 AgentExecutionActivityTerminalOutcome.Cancelled =>
@@ -126,6 +126,7 @@ internal static class AgentExecutionActivityTransitionRules
                 AgentExecutionActivityPhase.UsingTool => 10,
             AgentExecutionActivityPhase.AwaitingApproval => 11,
             AgentExecutionActivityPhase.PersistingResult => 12,
+            AgentExecutionActivityPhase.AwaitingContinuation => 13,
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null)
         };
     }

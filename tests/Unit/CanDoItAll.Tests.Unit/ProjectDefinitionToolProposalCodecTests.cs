@@ -134,14 +134,14 @@ public sealed class ProjectDefinitionToolProposalCodecTests {
         var input = new ProjectDefinitionToolArguments(Request() with { ExpectedParentAdmission = Parent }, ParentProjectId: Parent.ProjectId);
         var reservation = new ProjectCreationReservation(Intent.Value, Profile,
             ProjectDefinitionToolProposalCodec.ReservedProjectId(source, Intent), Chat, Agent, Parent.ProjectId, Parent.LifetimeId);
-        ProjectDefinitionToolAdmission.RequireReservation(source, Intent, input, reservation);
-        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolAdmission.RequireReservation(source, Intent, input,
+        ProjectDefinitionToolReceiptRecovery.RequireReservation(source, Intent, input, reservation);
+        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolReceiptRecovery.RequireReservation(source, Intent, input,
             reservation with { ProjectId = Authority }));
-        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolAdmission.RequireReservation(source, Intent, input,
+        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolReceiptRecovery.RequireReservation(source, Intent, input,
             reservation with { ParentLifetimeId = Authority }));
-        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolAdmission.RequireReservation(source, Intent, input,
+        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolReceiptRecovery.RequireReservation(source, Intent, input,
             reservation with { RequesterId = Authority }));
-        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolAdmission.RequireReservation(source, new(Authority), input, reservation));
+        Assert.Throws<AgentToolAdmissionException>(() => ProjectDefinitionToolReceiptRecovery.RequireReservation(source, new(Authority), input, reservation));
     }
 
     [Fact]

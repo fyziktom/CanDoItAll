@@ -16,6 +16,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
 
     public string WorkspaceLockPath => Path.Combine(DataRoot, "workspace.lock");
 
+    public string PublicationCoordinationRoot => Path.Combine(DataRoot, "publication-coordination");
+
     public string LegacyExecutionPath => Path.Combine(DataRoot, "workspace.execution.json");
 
     public string ExecutionStorageRoot => Path.Combine(DataRoot, "execution");

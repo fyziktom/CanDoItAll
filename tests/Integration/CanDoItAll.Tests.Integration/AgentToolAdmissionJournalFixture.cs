@@ -44,8 +44,10 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
         bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null,
         WorkspaceScopeDescriptor? storageScope = null,
         IReadOnlyList<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null,
-        AgentProjectStructureLifetime? sourceProjectLifetime = null) {
-        var environment = CanDoItAllTestEnvironment.Create($"tool-admission-{Guid.NewGuid():N}");
+        AgentProjectStructureLifetime? sourceProjectLifetime = null, string? ownedParentRoot = null) {
+        var environment = ownedParentRoot is null
+            ? CanDoItAllTestEnvironment.Create("tool-admission")
+            : CanDoItAllTestEnvironment.CreateUnder(ownedParentRoot, "tool-admission");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
             var actualStorageScope = storageScope ?? WorkspaceScopeDescriptor.Sandbox;
@@ -126,7 +128,7 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
 
     internal static async Task<AgentToolAdmissionJournalFixture> RestoreRetainedAsync(
         AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run) {
-        var environment = CanDoItAllTestEnvironment.Create($"retained-tool-admission-{Guid.NewGuid():N}");
+        var environment = CanDoItAllTestEnvironment.Create("retained-tool-admission");
         try {
             var workspace = environment.CreateInMemoryProfile("retained");
             var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, WorkspaceScopeDescriptor.Sandbox);

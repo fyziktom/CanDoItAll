@@ -287,6 +287,14 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     var creatingOpening = projectCreateOpening;
     var creatingDraft = projectCreateDraft;
 }
+@if (projectCreateRecoveryNotice is not null || ProjectCreateBlocked(projectCreatePending)) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="project-structure-create-recovery">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="@(projectCreateRecoveryNotice ?? "A retained project creation requires review before another create. Close the editor to open Projects recovery.")" />
+            <Button Text="Open Projects recovery" Click="OpenProjectCreateRecovery" data-testid="project-structure-create-recovery-open" />
+        </Stack>
+    </Alert>
+}
 <ProjectModalHost @key="projectCreateDraft" IsOpen="@showProjectCreateModal"
                   IsEditorMode="true"
                   Draft="@projectCreateDraft"
@@ -297,6 +305,10 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                   WizardTabs="@ProjectCreateWizardTabs"
                   Message="@projectCreateMessage"
                   IsErrorMessage="@IsProjectCreateErrorMessage"
+                  SubmissionReady="@ProjectCreateSubmissionReady"
+                  ValidateCapture="ValidateProjectCreateCapture"
+                  PendingRecovery="@ProjectCreatePendingView"
+                  PendingAction="@((ProjectPendingEditorIntent action) => DispatchAuthoringDialogAsync(creatingOpening, projectCreateOpening, () => HandleProjectCreatePendingAsync(creatingOpening, action)))"
                   Close="@(() => CloseProjectCreateDialogAsync(creatingOpening))"
                   SwitchToOverview="IgnoreProjectCreateModeChangeAsync"
                   SwitchToEditor="IgnoreProjectCreateModeChangeAsync"
@@ -312,7 +324,11 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                   Delete="DeleteProjectCreateAsync"
                   OpenProjectDashboard="OpenProjectCreateDashboardAsync"
                   OpenStructure="OpenStructure"
-                  OpenCalendar="OpenCalendar" />
+                  OpenCalendar="OpenCalendar">
+    <AdditionalEditorActions>
+        <Button Text="Open Projects recovery" Click="OpenProjectCreateRecovery" data-testid="project-create-recovery-open" />
+    </AdditionalEditorActions>
+</ProjectModalHost>
 
 @code {
     private static class CanvasAuthoringMode
@@ -508,6 +524,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             CloseBlockMutationDialog();
             CloseSubprojectTransferDialog();
             projectHierarchyDialogBeforeCreate = null;
+            RetireProjectCreateSession();
             projectCreateOpening = null;
             showProjectCreateModal = false;
             await CloseAttachmentPreviewAsync();
@@ -2310,6 +2327,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
     private void DisposeSynchronousState()
     {
+        foreach (var session in projectCreateSessions.Values) {
+            session.Dispose();
+        }
         Interlocked.Increment(ref surfaceReloadGeneration);
         CancelPendingCanvasViewStatePersistence();
         CancelRuntimePreviewWait();

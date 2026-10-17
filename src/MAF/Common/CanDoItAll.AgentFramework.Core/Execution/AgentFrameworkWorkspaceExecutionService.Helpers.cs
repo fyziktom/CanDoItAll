@@ -611,7 +611,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var runtimeModel = ResolveEffectiveManagedSeedModel(
             blueprint.Agent,
             provider);
-        var result = await chatRunStartStore.BeginChatBackedRunAsync(
+        var result = await chatRunStartStore.BeginChatBackedRunWithAdmissionKnowledgeAsync(
             new ChatBackedRunStartRequest(
                 blueprint.Agent.Id,
                 blueprint.Provider.Id,

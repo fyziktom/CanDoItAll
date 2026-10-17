@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
@@ -11,6 +12,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Xunit.Abstractions;
 
@@ -263,7 +265,10 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
         var canonicalProfile = scope.ServiceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
         var binding = await scope.ServiceProvider.GetRequiredService<DatasetActivationService>()
             .ReadActiveBindingAsync(canonicalProfile.Profile.Id, token);
-        var epochs = scope.ServiceProvider.GetRequiredService<ProjectOperationEpochService>();
+        var epochs = scope.ServiceProvider.GetRequiredService<FiniteOperationEpochStore>();
+        var retention = scope.ServiceProvider.GetRequiredService<FiniteOperationReceiptMaintenance>();
+        var pool = scope.ServiceProvider.GetServices<FiniteOperationPoolRegistration>().Single(registration => registration.Pool == ProjectFiniteOperationPool.Pool);
+        var schedule = new FiniteOperationMaintenanceState([pool]);
         await using var database = await CanonicalAsync(app, token);
         var operation = template.Result.Operation.Id;
         var payloadBytes = await database.Set<ProjectDefinitionReceiptRecord>().Where(row => row.OperationId == operation)
@@ -272,11 +277,11 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
         var rows = Math.Min(requestedRows, MaximumSyntheticPayloadBytes / payloadBytes);
         var inactiveNamespace = Guid.NewGuid();
         await database.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "Projects_OperationState" ("NamespaceId", "CurrentEpoch", "RetiredThroughEpoch")
-            VALUES ({inactiveNamespace}, 1, 0);
-            INSERT INTO "Projects_OperationEpochs" ("NamespaceId", "Epoch", "State", "OpenedAtUtc", "AdmissionClosesAtUtc",
+            INSERT INTO "Infrastructure_FiniteOperationState" ("NamespaceId", "PoolId", "RetentionProtocolVersion", "CurrentEpoch", "RetiredThroughEpoch")
+            VALUES ({inactiveNamespace}, {pool.Pool.Value}, {pool.ProtocolVersion}, 1, 0);
+            INSERT INTO "Infrastructure_FiniteOperationEpochs" ("NamespaceId", "PoolId", "Epoch", "State", "OpenedAtUtc", "AdmissionClosesAtUtc",
                 "ClosedAtUtc", "MutationDeadlineMilliseconds", "ReplayRetentionSeconds")
-            VALUES ({inactiveNamespace}, 1, 2, clock_timestamp() - interval '3 days', clock_timestamp() - interval '2 days',
+            VALUES ({inactiveNamespace}, {pool.Pool.Value}, 1, 2, clock_timestamp() - interval '3 days', clock_timestamp() - interval '2 days',
                 clock_timestamp() - interval '1 day', 1000, 1);
             INSERT INTO "Projects_DefinitionReceipts" ("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId",
                 "SchemaVersion", "NormalizationVersion", "ResultVersion", "CommandKind", "SemanticDigest", "ProjectId",
@@ -300,30 +305,13 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
             var wal = await ProjectsOperationStorageMeasurement.ReadWalAsync(database, token);
             var allocated = GC.GetTotalAllocatedBytes(precise: true);
             var started = Stopwatch.GetTimestamp();
-            var batches = new List<int>();
-            var stop = "batch-cap";
+            var configured = app.Services.GetRequiredService<IOptions<ProjectDefinitionOperationOptions>>().Value;
+            FiniteOperationMaintenanceResult result;
             probe.Reset();
             using (var budget = CancellationTokenSource.CreateLinkedTokenSource(token)) {
                 budget.CancelAfter(ProjectDefinitionOperationOptions.MaintenanceBudget);
                 using var observed = probe.Enter(cycle);
-                try {
-                    await epochs.RotateExpiredAsync(binding, budget.Token);
-                    for (var batch = 0; batch < ProjectDefinitionOperationOptions.MaximumMaintenanceBatches; batch++) {
-                        var deleted = await epochs.PurgeRetiredBatchAsync(binding, budget.Token);
-                        batches.Add(deleted);
-                        Assert.InRange(deleted, 0, ProjectDefinitionOperationOptions.PurgeBatchCount);
-                        Assert.InRange((long)deleted * payloadBytes, 0, ProjectDefinitionOperationOptions.PurgeBatchBytes);
-                        if (deleted == 0) {
-                            stop = "empty";
-                            break;
-                        }
-                    }
-                } catch (OperationCanceledException) when (!token.IsCancellationRequested && budget.IsCancellationRequested) {
-                    stop = "cycle-budget";
-                } catch (PostgresException exception) when (!token.IsCancellationRequested &&
-                    exception.SqlState is PostgresErrorCodes.QueryCanceled or "25P04") {
-                    stop = $"database-deadline:{exception.SqlState}";
-                }
+                result = await new FiniteOperationMaintenanceCycle(pool, schedule).RunAsync(epochs, retention, binding, budget.Token, token);
             }
             var elapsed = Stopwatch.GetElapsedTime(started);
             var allocation = GC.GetTotalAllocatedBytes(precise: true) - allocated;
@@ -333,23 +321,29 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
             Write(new {
                 Kind = "maintenance-cycle", ChildrenPerReceipt = children, RequestedSeedRows = requestedRows, SeedRows = rows,
                 SyntheticPayloadBytes = (long)rows * payloadBytes, PayloadBytesPerRow = payloadBytes, Cycle = cycle,
-                Before = before, After = after, DeletedRows = deletedRows, ConfirmedBatchRows = batches.Sum(),
-                Stop = stop, CompletedBatches = batches.Count, RowsPerBatch = batches,
+                MaintenanceVersion = "neutral-pool-separated-family-retention-v3",
+                Before = before, After = after, DeletedRows = deletedRows, ConfirmedBatchRows = result.DeletedReceipts,
+                ConfirmedPayloadBytes = result.DeletedBytes, Stop = result.Stop.ToString(), result.CompletedBatches,
+                EligibleWork = result.EligibleWork.ToString(), result.EligibleAtUtc, result.Failure,
                 ElapsedMilliseconds = elapsed.TotalMilliseconds, AllocatedProcessBytes = allocation,
                 ClusterWalBytes = walBytes, ObservedCommands = ProjectsOperationPerformanceProbe.Summarize(probe.Snapshot()),
                 ConfiguredCycleBudgetMilliseconds = ProjectDefinitionOperationOptions.MaintenanceBudget.TotalMilliseconds,
-                ConfiguredCadenceSeconds = ProjectDefinitionOperationOptions.MaintenanceInterval.TotalSeconds,
+                ConfiguredCadenceSeconds = configured.MaintenanceInterval.TotalSeconds,
                 StructuralRowsPerCycleCeiling = ProjectDefinitionOperationOptions.MaximumMaintenanceBatches *
                     Math.Min(ProjectDefinitionOperationOptions.PurgeBatchCount, ProjectDefinitionOperationOptions.PurgeBatchBytes / payloadBytes),
-                ObservedRowsPerConfiguredMinute = deletedRows,
+                ObservedRowsPerConfiguredMinute = deletedRows * 60 / configured.MaintenanceInterval.TotalSeconds,
                 BacklogExhausted = after == 0,
                 ArrivalScenarios = new[] { 1d, 10d, 100d }.Select(perSecond => new {
                     AssumedAcceptedPerSecond = perSecond, ArrivalsPerMinute = perSecond * 60,
-                    ObservedCycleNetRows = perSecond * 60 - deletedRows,
+                    AssumedArrivalsPerCycle = perSecond * configured.MaintenanceInterval.TotalSeconds,
+                    ObservedCycleNetRows = perSecond * configured.MaintenanceInterval.TotalSeconds - deletedRows,
                     SevenDayPayloadLowerBoundBytes = perSecond * 7 * 86400 * payloadBytes
                 }).ToArray()
             });
-            Assert.InRange(deletedRows, batches.Sum(),
+            Assert.Null(result.Failure);
+            Assert.InRange(result.CompletedBatches, 0, ProjectDefinitionOperationOptions.MaximumMaintenanceBatches);
+            Assert.InRange(result.DeletedBytes, 0, (long)result.CompletedBatches * ProjectDefinitionOperationOptions.PurgeBatchBytes);
+            Assert.InRange(deletedRows, result.DeletedReceipts,
                 (long)ProjectDefinitionOperationOptions.MaximumMaintenanceBatches * ProjectDefinitionOperationOptions.PurgeBatchCount);
             Assert.Equal(retainedActive, await database.Set<ProjectDefinitionReceiptRecord>()
                 .LongCountAsync(row => row.NamespaceId == binding.Namespace.Value, token));
@@ -358,8 +352,8 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
             Storage = await ProjectsOperationStorageMeasurement.ReadAsync(database, token),
             Note = "DELETE does not return allocated heap/index/TOAST space to the operating system; vacuum behavior is not measured." });
         await database.Set<ProjectDefinitionReceiptRecord>().Where(row => row.NamespaceId == inactiveNamespace).ExecuteDeleteAsync(token);
-        await database.Set<ProjectOperationEpochRecord>().Where(row => row.NamespaceId == inactiveNamespace).ExecuteDeleteAsync(token);
-        await database.Set<ProjectOperationStateRecord>().Where(row => row.NamespaceId == inactiveNamespace).ExecuteDeleteAsync(token);
+        await database.Set<FiniteOperationEpochRecord>().Where(row => row.NamespaceId == inactiveNamespace).ExecuteDeleteAsync(token);
+        await database.Set<FiniteOperationStateRecord>().Where(row => row.NamespaceId == inactiveNamespace).ExecuteDeleteAsync(token);
     }
 
     private async Task EnvironmentAsync(TestApplication app, string lane, CancellationToken token) {
@@ -390,7 +384,7 @@ public sealed class ProjectsProtectedMutationPerformanceTests(ITestOutputHelper 
                 services.ConfigureDbContext<ProjectsDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
                 services.ConfigureDbContext<SearchDbContext>(options => options.AddInterceptors(probe), ServiceLifetime.Singleton);
                 foreach (var descriptor in services.Where(item => item.ServiceType == typeof(IHostedService) &&
-                    item.ImplementationType == typeof(ProjectDefinitionOperationMaintenance)).ToArray()) {
+                    item.ImplementationType == typeof(FiniteOperationMaintenance)).ToArray()) {
                     services.Remove(descriptor);
                 }
             }

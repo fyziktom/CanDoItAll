@@ -1,0 +1,152 @@
+using System.Data;
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
+
+namespace CanDoItAll.Modules.Projects;
+
+internal static class ProjectDeletionTransactionEntry {
+    internal static async Task<IDbContextTransaction> BeginAsync(ProjectsDbContext owner,
+        DatasetActivationBinding binding, IReadOnlyList<string> orderedKeys, CancellationToken cancellationToken) {
+        if (!owner.Database.IsNpgsql() || owner.Database.CurrentTransaction is not null ||
+            System.Transactions.Transaction.Current is not null ||
+            System.Transactions.TransactionsDatabaseFacadeExtensions.GetEnlistedTransaction(owner.Database) is not null ||
+            owner.ChangeTracker.Entries().Any() || owner.Database.GetDbConnection() is not NpgsqlConnection connection ||
+            connection.State != ConnectionState.Closed) {
+            throw new InvalidOperationException("Project deletion requires a fresh, unopened PostgreSQL owner context.");
+        }
+        if (orderedKeys.Count == 0 || !orderedKeys.SequenceEqual(orderedKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))) {
+            throw new ArgumentException("Deletion requires its complete, distinct, ordered exclusion keys.", nameof(orderedKeys));
+        }
+        using var admission = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        admission.CancelAfter(TimeSpan.FromSeconds(5));
+        var token = admission.Token;
+        IDbContextTransaction? transaction = null;
+        var attemptedKeys = new List<string>(orderedKeys.Count);
+        var acknowledgedKeys = new HashSet<string>(StringComparer.Ordinal);
+        var openAttempted = false;
+        var transactionBeginAttempted = false;
+        var transactionDisposalAttempted = false;
+        var originalTimeout = owner.Database.GetCommandTimeout();
+        try {
+            owner.Database.SetCommandTimeout(5);
+            openAttempted = true;
+            await owner.Database.OpenConnectionAsync(token);
+            var backend = connection.ProcessID;
+            transactionBeginAttempted = true;
+            transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, token);
+            await owner.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '5s'", token);
+            await DatasetLifecycleStore.RequireActiveForMutationAsync(owner, binding, token);
+            foreach (var key in orderedKeys) {
+                attemptedKeys.Add(key);
+                await owner.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_lock(hashtextextended({key}, 0))", token);
+                acknowledgedKeys.Add(key);
+            }
+            await transaction.RollbackAsync(token);
+            transactionDisposalAttempted = true;
+            await transaction.DisposeAsync();
+            transaction = null;
+            transactionBeginAttempted = false;
+            transactionDisposalAttempted = false;
+            RequireBackend();
+            transactionBeginAttempted = true;
+            transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.Serializable, token);
+            await DatasetLifecycleStore.RequireActiveForDeletionHandoffAsync(owner, binding, token);
+            foreach (var key in orderedKeys) {
+                await owner.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({key}, 0))", token);
+            }
+            for (var index = attemptedKeys.Count - 1; index >= 0; index--) {
+                var key = attemptedKeys[index];
+                var released = await owner.Database.SqlQuery<bool>($"SELECT pg_advisory_unlock(hashtextextended({key}, 0)) AS \"Value\"")
+                    .SingleAsync(token);
+                if (!released) {
+                    throw new InvalidOperationException("An acknowledged deletion session exclusion was not held during handoff.");
+                }
+                attemptedKeys.RemoveAt(index);
+                acknowledgedKeys.Remove(key);
+            }
+            openAttempted = false;
+            await owner.Database.CloseConnectionAsync();
+            RequireBackend();
+            if (!ReferenceEquals(owner.Database.CurrentTransaction, transaction) ||
+                !ReferenceEquals(transaction.GetDbTransaction().Connection, connection)) {
+                throw new InvalidOperationException("Deletion transaction ownership changed during handoff.");
+            }
+            owner.Database.SetCommandTimeout(originalTimeout);
+            token.ThrowIfCancellationRequested();
+            return transaction;
+
+            void RequireBackend() {
+                if (connection.State != ConnectionState.Open || connection.ProcessID != backend ||
+                    !ReferenceEquals(owner.Database.GetDbConnection(), connection)) {
+                    throw new InvalidOperationException("Deletion handoff lost its original PostgreSQL session.");
+                }
+            }
+        } catch (Exception failure) {
+            var failures = new List<Exception> { failure };
+            using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var safeToUnlock = !transactionBeginAttempted;
+            if (transaction is not null && !transactionDisposalAttempted) {
+                try {
+                    await transaction.RollbackAsync(cleanup.Token);
+                    transactionDisposalAttempted = true;
+                    await transaction.DisposeAsync();
+                    safeToUnlock = true;
+                } catch (Exception cleanupFailure) {
+                    failures.Add(cleanupFailure);
+                }
+            }
+            if (safeToUnlock && connection.State == ConnectionState.Open) {
+                for (var index = attemptedKeys.Count - 1; index >= 0; index--) {
+                    var key = attemptedKeys[index];
+                    try {
+                        await using var command = connection.CreateCommand();
+                        command.CommandTimeout = 5;
+                        command.CommandText = "SELECT pg_advisory_unlock(hashtextextended(@key, 0))";
+                        command.Parameters.AddWithValue("key", key);
+                        var released = await command.ExecuteScalarAsync(cleanup.Token);
+                        if (released is not true && acknowledgedKeys.Contains(key)) {
+                            throw new InvalidOperationException("Deletion session exclusion release could not be confirmed.");
+                        }
+                    } catch (Exception cleanupFailure) {
+                        failures.Add(cleanupFailure);
+                    }
+                }
+            }
+            if (!safeToUnlock || failures.Count > 1) {
+                try {
+                    NpgsqlConnection.ClearPool(connection);
+                    await connection.CloseAsync();
+                } catch (Exception cleanupFailure) {
+                    failures.Add(cleanupFailure);
+                }
+            }
+            if (openAttempted) {
+                try {
+                    await owner.Database.CloseConnectionAsync();
+                } catch (Exception cleanupFailure) {
+                    failures.Add(cleanupFailure);
+                    try {
+                        NpgsqlConnection.ClearPool(connection);
+                    } catch (Exception quarantineFailure) {
+                        failures.Add(quarantineFailure);
+                    }
+                }
+            }
+            if (connection.State != ConnectionState.Closed) {
+                try {
+                    NpgsqlConnection.ClearPool(connection);
+                    await connection.CloseAsync();
+                } catch (Exception cleanupFailure) {
+                    failures.Add(cleanupFailure);
+                }
+            }
+            owner.Database.SetCommandTimeout(originalTimeout);
+            if (failures.Count > 1) {
+                throw new AggregateException("Deletion admission and owned session cleanup did not both complete.", failures);
+            }
+            throw;
+        }
+    }
+}

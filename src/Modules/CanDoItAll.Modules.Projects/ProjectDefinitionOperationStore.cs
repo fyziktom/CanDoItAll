@@ -20,15 +20,16 @@ internal static class ProjectDefinitionOperationStore {
         var key = caller.Key.ToArray();
         return context.Database.SqlQuery<ProjectDefinitionReceiptObservation>($"""
             SELECT d."NamespaceId" AS "ActiveNamespaceId", d."MaintenanceId", d."SchemaVersion" AS "DatasetSchemaVersion",
-                   d."GuardProtocol", d."State" AS "DatasetState", s."CurrentEpoch", s."RetiredThroughEpoch",
+                   d."GuardProtocol", d."State" AS "DatasetState", s."CurrentEpoch", s."RetiredThroughEpoch", s."RetentionProtocolVersion",
                    e."State" AS "EpochState", e."AdmissionClosesAtUtc", e."ClosedAtUtc",
                    e."MutationDeadlineMilliseconds", e."ReplayRetentionSeconds", clock_timestamp() AS "ObservedAtUtc",
                    r."SchemaVersion", r."NormalizationVersion", r."ResultVersion", r."CommandKind",
                    r."SemanticDigest", r."ProjectId", r."LifetimeId", r."AcceptedRevision", r."AcceptedAtUtc",
                    r."AcceptedPayload", r."CreationFingerprint", p."Id" IS NOT NULL AS "TargetAvailable"
             FROM "Infrastructure_DatasetLifecycle" AS d
-            LEFT JOIN "Projects_OperationState" AS s ON s."NamespaceId" = d."NamespaceId"
-            LEFT JOIN "Projects_OperationEpochs" AS e ON e."NamespaceId" = s."NamespaceId" AND e."Epoch" = {operation.Epoch.Value}
+            LEFT JOIN "Infrastructure_FiniteOperationState" AS s ON s."NamespaceId" = d."NamespaceId" AND s."PoolId" = {ProjectFiniteOperationPool.Pool.Value}
+            LEFT JOIN "Infrastructure_FiniteOperationEpochs" AS e ON e."NamespaceId" = s."NamespaceId" AND e."PoolId" = s."PoolId"
+                AND e."Epoch" = {operation.Epoch.Value}
             LEFT JOIN "Projects_DefinitionReceipts" AS r ON r."NamespaceId" = d."NamespaceId"
                 AND r."NamespaceId" = {operation.Namespace.Value} AND r."Epoch" = e."Epoch"
                 AND r."CallerKind" = {(int)caller.Kind} AND r."CallerKey" = {key} AND r."OperationId" = {operation.Id}
@@ -47,6 +48,7 @@ internal sealed class ProjectDefinitionReceiptObservation {
     public int DatasetState { get; set; }
     public long? CurrentEpoch { get; set; }
     public long? RetiredThroughEpoch { get; set; }
+    public int? RetentionProtocolVersion { get; set; }
     public int? EpochState { get; set; }
     public DateTimeOffset? AdmissionClosesAtUtc { get; set; }
     public DateTimeOffset? ClosedAtUtc { get; set; }

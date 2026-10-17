@@ -130,6 +130,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         Guid agentId,
         ExecutionStorageIndex currentIndex,
         ExecutionChatIndex currentChatIndex,
+        AgentUsageProjection currentUsageProjection,
         DateTimeOffset deletedAtUtc,
         CancellationToken cancellationToken)
     {
@@ -140,6 +141,12 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         ArgumentNullException.ThrowIfNull(currentIndex);
         ArgumentNullException.ThrowIfNull(currentChatIndex);
+        ArgumentNullException.ThrowIfNull(currentUsageProjection);
+        if (currentUsageProjection.Revision != currentIndex.Revision ||
+            !string.Equals(currentUsageProjection.Version, currentIndex.Version, StringComparison.Ordinal)) {
+            throw new InvalidDataException(
+                "The usage projection does not match the canonical execution index before agent deletion.");
+        }
         if (currentChatIndex.Revision != currentIndex.Revision)
         {
             throw new InvalidDataException(
@@ -270,9 +277,6 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             orphanArtifacts.Count,
             orphanReceipts.Count,
             deletedAtUtc);
-        var currentUsageProjection = await LoadOrBuildUsageProjectionAsync(
-            currentIndex,
-            cancellationToken);
         var targetUsageProjection = await CreateAgentDeletionUsageProjectionAsync(
             agentId,
             currentUsageProjection,
@@ -434,6 +438,25 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         if (snapshot is null) {
             return null;
         }
+        return await LoadRunDetailCoreAsync(executionRunId, snapshot, cancellationToken);
+    }
+
+    internal async Task<(ExecutionRunDetail Detail, FileSandboxWorkspaceRunReadSnapshot Snapshot)?> LoadRunDetailForUpdateAsync(
+        Guid executionRunId, CancellationToken cancellationToken) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.load");
+        var snapshot = await jsonStore.ReadRunSnapshotAsync(layout.RunPath(executionRunId), cancellationToken);
+        if (snapshot is null) {
+            return null;
+        }
+        var session = snapshot.Run.ChatSessionId is { } sessionId
+            ? await jsonStore.ReadJsonAsync<ChatSessionRecord>(layout.SessionPath(sessionId), cancellationToken)
+            : null;
+        var detail = await LoadRunDetailCoreAsync(executionRunId, new(snapshot.Run, session), cancellationToken);
+        return (detail, snapshot);
+    }
+
+    private async Task<ExecutionRunDetail> LoadRunDetailCoreAsync(Guid executionRunId,
+        ExecutionRunAdmissionSnapshot snapshot, CancellationToken cancellationToken) {
         return new ExecutionRunDetail(
             Run: snapshot.Run,
             ChatSession: snapshot.ChatSession,
@@ -1100,12 +1123,24 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             cancellationToken);
     }
 
-    public Task PersistExistingRunRecordAsync(
+    public async Task PersistExistingRunRecordAsync(
         ExistingExecutionRunPersistencePlan plan,
         ExistingRunDetailCommitOrigin origin,
-        CancellationToken cancellationToken) {
-        return PersistExistingRunPayloadAsync(
-            layout.RunPath(plan.TargetDetail.Run.Id),
+        CancellationToken cancellationToken,
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null) {
+        var path = layout.RunPath(plan.TargetDetail.Run.Id);
+        if (origin == ExistingRunDetailCommitOrigin.Prepared && snapshot is not null &&
+            snapshot.MatchesPrevious(path, plan.PreviousDetail.Run) &&
+            await jsonStore.MatchesRunSnapshotAsync(path, snapshot, cancellationToken)) {
+            if (!HasSamePayload(plan.PreviousDetail.Run, plan.TargetDetail.Run)) {
+                await jsonStore.WriteJsonAtomicallyAsync(path, plan.TargetDetail.Run, cancellationToken);
+            } else {
+                await jsonStore.WriteJsonIfChangedAsync(path, plan.TargetDetail.Run, cancellationToken);
+            }
+            return;
+        }
+        await PersistExistingRunPayloadAsync(
+            path,
             plan.PreviousDetail.Run,
             plan.TargetDetail.Run,
             plan.TargetDetail.Run.Id,

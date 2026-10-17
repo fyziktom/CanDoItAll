@@ -78,6 +78,51 @@ public sealed class AgentExternalProvisioningServiceTests
         Assert.Single(store.Document.AgentExternalProvisioningOperations);
     }
 
+    [Fact]
+    public async Task Prepared_upsert_and_archive_receipts_do_not_escape_refusal_or_uncertain_cleanup() {
+        Exception[] failures = [
+            new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged),
+            new SandboxWorkspaceConcurrencyException(4, 5),
+            new AggregateException(new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.PendingRecoveryChanged),
+                new IOException("Fixture key release failed."))
+        ];
+        foreach (var failure in failures) {
+            var store = new InMemoryWorkspaceStore(SandboxWorkspaceDocument.Empty);
+            var service = new AgentExternalProvisioningService(store, new ProviderProfileService());
+            var created = await service.UpsertAsync(new("partner-system", "publication-proof", "seed", null, CreateEditor()));
+            var original = store.Document;
+            store.PublicationFailure = failure;
+            var editor = CreateEditor();
+            editor.Summary = "Prepared but unpublished";
+            await RequireRefusalAsync(() => service.UpsertAsync(new("partner-system", "publication-proof", "changed",
+                created.ConfigurationVersion, editor)));
+            Assert.False(Assert.Single(store.PreparedDocument!.AgentExternalProvisioningOperations,
+                operation => operation.IdempotencyKey == "changed").Receipt.Archived);
+            await RequireRefusalAsync(() => service.ArchiveAsync(new("partner-system", "publication-proof", "archived",
+                created.ConfigurationVersion)));
+            Assert.True(Assert.Single(store.PreparedDocument!.AgentExternalProvisioningOperations,
+                operation => operation.IdempotencyKey == "archived").Receipt.Archived);
+            Assert.Equal(3, store.Preparations);
+            Assert.Same(original, store.Document);
+            Assert.Single(store.Document.AgentExternalProvisioningOperations);
+            Assert.Equal(AgentLifecycleStatus.Active, Assert.Single(store.Document.Agents).Status);
+
+            async Task RequireRefusalAsync(Func<Task<AgentExternalProvisioningReceipt>> invoke) {
+                AgentExternalProvisioningReceipt? accepted = null;
+                var observed = await Record.ExceptionAsync(async () => accepted = await invoke());
+                Assert.Null(accepted);
+                if (failure is AggregateException) {
+                    Assert.Same(failure, observed);
+                } else {
+                    var conflict = Assert.IsType<AgentExternalProvisioningException>(observed);
+                    Assert.Equal(AgentExternalProvisioningFailureKind.Conflict, conflict.Kind);
+                    Assert.Equal("agents.external-key-publication-conflict", conflict.Code);
+                    Assert.Same(failure, conflict.InnerException);
+                }
+            }
+        }
+    }
+
     private static AgentEditorModel CreateEditor()
     {
         return new AgentEditorModel
@@ -103,6 +148,9 @@ public sealed class AgentExternalProvisioningServiceTests
         : ISandboxWorkspaceStore
     {
         public SandboxWorkspaceDocument Document { get; private set; } = initialDocument;
+        public SandboxWorkspaceDocument? PreparedDocument { get; private set; }
+        public Exception? PublicationFailure { get; set; }
+        public int Preparations { get; private set; }
 
         public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
             AgentExecutionReportQuery query,
@@ -133,7 +181,12 @@ public sealed class AgentExternalProvisioningServiceTests
             Func<SandboxWorkspaceDocument, SandboxWorkspaceDocument> update,
             CancellationToken cancellationToken = default)
         {
-            Document = update(Document);
+            Preparations++;
+            PreparedDocument = update(Document);
+            if (PublicationFailure is { } failure) {
+                throw failure;
+            }
+            Document = PreparedDocument;
             return Task.FromResult(Document);
         }
 

@@ -261,7 +261,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     private string? packageTargetsError;
     private string? projectDeletionNotice;
     private bool projectDeletionNoticeIsError;
-    private readonly List<ProjectDeletionPendingCleanup> pendingProjectDeletionCleanups = [];
+    private readonly ProjectDeletionCleanupState deletionCleanups = new();
     private readonly List<ProjectDeletionCompletionNotice> projectDeletionCompletionNotices = [];
     private int wizardStep;
     private bool showProjectModal;
@@ -454,7 +454,6 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             if (!disposed) {
                 portfolioLoads.TryCommit(stamp, RouteProjectId, () => {
                     ApplyPortfolioState(state);
-                    unconfirmedCleanupTargets.Clear();
                     portfolioError = null;
                     portfolioAccessState = AgentChatContextAccessState.Ready;
                 });
@@ -613,8 +612,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     {
         projectSummaries = state.ProjectSummaries;
         hierarchyLinks = state.HierarchyLinks;
-        pendingProjectDeletionCleanups.Clear();
-        pendingProjectDeletionCleanups.AddRange(state.PendingDeletionCleanups);
+        deletionCleanups.Refresh(state.PendingDeletionCleanups);
         projectDeletionCompletionNotices.Clear();
         projectDeletionCompletionNotices.AddRange(
             state.DeletionCompletionNotices.Where(notice => notice.Warnings.Count > 0));
@@ -1110,13 +1108,10 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
             return;
         } catch (ProjectDeletionPartialCommitException exception) {
             RecordDeletion(target, intent);
-            foreach (var failure in exception.Recovery.Failures.Where(item => item.RecoveryId.HasValue)) {
-                if (!pendingProjectDeletionCleanups.Any(item => item.ProjectId == id && item.ParticipantId == failure.ParticipantId && item.RecoveryId == failure.RecoveryId)) {
-                    pendingProjectDeletionCleanups.Add(new(id, failure.ParticipantId, failure.RecoveryId!.Value,
-                        ProjectDeletionRecoveryStatus.Failed, true, null, exception.Recovery.RetryGuidance));
-                }
-            }
-            projectDeletionNotice = "The project was deleted, but cleanup remains pending. Retry the exact durable operation listed below.";
+            deletionCleanups.Observe(exception.Recovery);
+            projectDeletionNotice = exception.Recovery.OwnerCompletionUnconfirmed
+                ? ProjectDeletionCleanupState.OwnerCompletionGuidance
+                : "The project was deleted, but cleanup remains pending. Retry the exact durable operation listed below.";
             projectDeletionNoticeIsError = true;
         } catch (Exception exception) {
             Logger.LogError(exception, "Project deletion outcome is unconfirmed for {ProjectId}.", id);
@@ -1150,24 +1145,29 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     }
 
     private async Task RetryProjectDeletionCleanupAsync(ProjectCleanupTarget target) {
-        if (!pendingProjectDeletionCleanups.Any(cleanup => cleanup.ProjectId == target.ProjectId && cleanup.ParticipantId == target.ParticipantId && cleanup.RecoveryId == target.RecoveryId) ||
-            unconfirmedCleanupTargets.Contains(target) || !busyCleanupTargets.Add(target)) {
+        if (!deletionCleanups.CanRetry(target) || !busyCleanupTargets.Add(target)) {
             return;
         }
         try {
             var result = await ProjectsService.RetryDeletionCleanupAsync(target.ProjectId, target.ParticipantId, target.RecoveryId);
             portfolioLoads.Invalidate();
-            pendingProjectDeletionCleanups.RemoveAll(cleanup => cleanup.ProjectId == target.ProjectId && cleanup.ParticipantId == target.ParticipantId && cleanup.RecoveryId == target.RecoveryId);
+            deletionCleanups.Complete(target);
             projectDeletionNotice = result.Warnings.Count == 0 ? "Project cleanup completed."
                 : "Project cleanup completed. Retained media is recorded in cleanup history.";
             projectDeletionNoticeIsError = false;
-        } catch (ProjectDeletionPartialCommitException) {
-            projectDeletionNotice = "Project cleanup is still pending. The exact durable operation remains available for another retry.";
+        } catch (ProjectDeletionPartialCommitException exception) {
+            deletionCleanups.Observe(exception.Recovery);
+            if (exception.Recovery.OwnerCompletionUnconfirmed) {
+                deletionCleanups.MarkUnconfirmed(target, ownerCompletionUnconfirmed: true);
+            }
+            projectDeletionNotice = exception.Recovery.OwnerCompletionUnconfirmed
+                ? ProjectDeletionCleanupState.OwnerCompletionGuidance
+                : "Project cleanup is still pending. The exact durable operation remains available for another retry.";
             projectDeletionNoticeIsError = true;
         } catch (Exception exception) {
             Logger.LogError(exception, "Project cleanup observation failed for {ProjectId}, {ParticipantId}, {RecoveryId}.", target.ProjectId, target.ParticipantId, target.RecoveryId);
-            unconfirmedCleanupTargets.Add(target);
-            projectDeletionNotice = "Cleanup completion is unconfirmed. Refresh the inventory before another explicit retry.";
+            deletionCleanups.MarkUnconfirmed(target);
+            projectDeletionNotice = ProjectDeletionCleanupState.UnconfirmedGuidance;
             projectDeletionNoticeIsError = true;
         } finally {
             busyCleanupTargets.Remove(target);
@@ -1175,12 +1175,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
         await RefreshPortfolioAsync();
     }
 
-    private IReadOnlyList<ProjectCleanupStatus> CleanupStatuses => pendingProjectDeletionCleanups.Select(item => new ProjectCleanupStatus(
-        new(item.ProjectId, item.ParticipantId, item.RecoveryId), item.Status.ToString(),
-        item.CanRetryNow && !unconfirmedCleanupTargets.Contains(new(item.ProjectId, item.ParticipantId, item.RecoveryId)),
-        item.RetryAvailableAtUtc, item.RetryGuidance)).ToArray();
-
-    private readonly HashSet<ProjectCleanupTarget> unconfirmedCleanupTargets = [];
+    private IReadOnlyList<ProjectCleanupStatus> CleanupStatuses => deletionCleanups.Statuses;
 
     private IReadOnlyList<ProjectCleanupNotice> CleanupNotices => projectDeletionCompletionNotices.Select(item => new ProjectCleanupNotice(
         new(item.ProjectId, item.ParticipantId, item.RecoveryId), FormatCompletionOperation(item.Operation),

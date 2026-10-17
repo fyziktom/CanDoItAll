@@ -260,6 +260,9 @@ public sealed class ProjectsServiceIntegrationTests
 
     private sealed class ThrowingSearchIndexService : ISearchIndexService
     {
+        public Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Project fixture does not delete Resource metadata.");
+
         public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
             UpsertAsync(input, cancellationToken);
 

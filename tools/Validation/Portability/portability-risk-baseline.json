@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-16T18:29:09.983572+00:00",
+  "generated_utc": "2026-10-17T13:25:54.245853+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15439,
+  "allowance_count": 15525,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6266,6 +6266,12 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/AgentHistoricalReceiptOpenApiContract.cs",
+      "category": "windows-path",
+      "source_fingerprint": "20a0e4928200fed2f843dd9a677f95bcd3211dc38950a0a580726d4bcc0cfbf5",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs",
       "category": "case-policy",
       "source_fingerprint": "0fe5a8cf05f0e2f0a7fdd1b45b4d156b9d0ee5de99c88e2fa387f3d0a0e12d1a",
@@ -7502,6 +7508,30 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2096139b3a20f395c429e631f004dfc92d2d5fd516f51f9d937b3e2fe1faee7e",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsApi.cs",
+      "category": "case-policy",
+      "source_fingerprint": "236b90b936c0fd5e1dfac9c03e866712fe67f96db03b0b0e6b5e6efa06e3bd91",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsOpenApiContract.cs",
+      "category": "windows-path",
+      "source_fingerprint": "8e61bfbdea265fceb4700470d9a62914ce2fc20a77f388266c462ee31b26cce4",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkspaceSettingsOpenApiContract.cs",
+      "category": "windows-path",
+      "source_fingerprint": "ae7ee9722c5668d8dc8f0c6991d62738b522d415efa7d767a877fb61c7d7c4a4",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
       "category": "external-tool",
       "source_fingerprint": "6e346c8c60b83f3c2c6642d88df8fab94b8bb25d955eb63fc507e5ff17434ed5",
@@ -8444,6 +8474,78 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "aff2059e49d616862f01e7849fac6a489b3348a67c0eac25e30c81ccfb065b89",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b0848e2ca0749fd1f1fb034df5c2d272f15baf0ec3987d210e050f4abbc9522d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "59330b190ad5b9dc4cd0114a0831843a57392f33ce9ce0114e60b4893c403b98",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "97e646a4c7eead4680dd6b523e753da63608d0a4860083704375fae8da23a0a3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "os-branch",
+      "source_fingerprint": "1f0fd3f848b48aa827638f4f398100b8b0d1d626c0a7fab4a4dc058e0d8c9d64",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "os-branch",
+      "source_fingerprint": "44b914ab3c3d9af6c0d4cbc1c3951d7ed6cf40635f7d266efb247ccf8b5db4ed",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "path-api",
+      "source_fingerprint": "6c80f7c1797b54eed120fd42c1acde898f477b9791c304dd5b979e122d031856",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "path-api",
+      "source_fingerprint": "761abb4b6217058bbf8ed6d551aa4e16c00ab889d7ccecc17cee2d27272d72fc",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "permissions",
+      "source_fingerprint": "39d41c3a3ff74ddea69b61a5d56aba16d1607f71075ba00af9afc899efc1c737",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "permissions",
+      "source_fingerprint": "85fd107278a65454d2d70b584c2381ca6ff32455514a72e2154c05b4c2ad6c0b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "permissions",
+      "source_fingerprint": "a927eb654e417bcd9a73e979eb4be78db2b496595dcc95c8076f2f18aee083b7",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ApiAuthorityFileRead.cs",
+      "category": "permissions",
+      "source_fingerprint": "fb634342a5020fc9f6d2fbc636785060607cb6e7244f626eaffc0d7a281c37c8",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlaneFileCoordination.cs",
       "category": "path-api",
       "source_fingerprint": "2d977ff3f7e7b59874cb0633381346737146c7dc29569550a963eeccd5bc704a",
@@ -8465,6 +8567,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "057224d61277799a05038df1bd85865b6a397e5789239598f4189d486f16ef0a",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0b2e89c397dea181b1aab4772f3e792ed18ee20987e990fe26446c63e59c2607",
       "count": 1
     },
     {
@@ -8506,6 +8614,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "4a808933b27d5b9f19b20ab32441d1fa686bd684eb064548b171fa35c4fa6260",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "4d307605cbdc147a7f0738e75e600ae79979114e259e58f46c3b348437fc7868",
       "count": 1
     },
@@ -8513,12 +8627,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "4f1b90f7cf263faa4919f93460f1b03ca0c98c3f01417f889939084716e49380",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "52030dff49afc8ed1e2a4fee52667787bbca29344d1441cacb73271bdf270112",
       "count": 1
     },
     {
@@ -8560,6 +8668,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "7becad91bb2c47c6588417f25aec117d626f1526a9d38b92769ad125e86c386b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "7f0c501cf21cb723934ac59f73f28cab5dc1449b4fe9d0dfe5668506877f1f70",
       "count": 1
     },
@@ -8573,6 +8687,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "82554bf0b1954ed35a4b42b068b7022cc1042fc019537b59c2f080b65362afae",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "832a49075c015c3aaad883ad2ca0b5f0bab00c69ac101740944a04c10ac76ff2",
       "count": 1
     },
     {
@@ -9483,8 +9603,62 @@
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b3a25cc92bd803aad06811674623c7715819ace3761298b5269cb426ecb29f0c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
       "category": "atomic-write",
       "source_fingerprint": "507935e08738d39e497cd582d5c257bfada6b13d0c424afed08c53d801192179",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "5a045a158da276371e19add72629575a711452dd21ab138b445051e9eb9e5a37",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "case-policy",
+      "source_fingerprint": "0af652a4986159d01b5c9ae3f919ea1011dbc62a11ba1ed0651e87798e5632b8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "filesystem-enumeration",
+      "source_fingerprint": "6576dffda81699eaa40fe4c6425959c88eafefbc2dcd19eed2af14c17701a7df",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "os-branch",
+      "source_fingerprint": "0dae7582b081f693010dac1eb55b6af9f6a3b6f3229beb003c85dc271bb53f49",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "os-branch",
+      "source_fingerprint": "72362c1cf07488a4ecbcc0dc54d0b311990170394b5c4d0d8abf817abd3c4574",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "os-branch",
+      "source_fingerprint": "a55270194fdf70a929a8c8ead67e988315e26807695bcc730c497ccdee2992ee",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "path-api",
+      "source_fingerprint": "4c00561029e09aff2f913961e79e7d062c22ed90363e7afc6c03a4075db6666b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "path-api",
+      "source_fingerprint": "c3e3b3833c7775176372b01a550b0a959f4762facf0255eae8a55e85a50a9752",
       "count": 1
     },
     {
@@ -9497,6 +9671,36 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
       "category": "path-api",
       "source_fingerprint": "de89265bb7117ab7316024abb85ef76a985c40892a7034fe30b7afba158bb690",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "path-api",
+      "source_fingerprint": "f5e51cb8f12548cf207fa9872bd16dbf1a34775d01aa50dab351ac3a356ecaac",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "permissions",
+      "source_fingerprint": "038047a4b0f3e6deafd45190befaeb109a0d5c03de57e6f26f205e613340f6b1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "permissions",
+      "source_fingerprint": "2750d74491cbef896ccdc4dbffebc615cc5611341a0e899a78876474dec89a2f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "permissions",
+      "source_fingerprint": "799320eabf54bb548fc6458e9aabfaae18a8c4aebf8d2e72539aa2aa206fc7a3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "category": "permissions",
+      "source_fingerprint": "d28a5df7280faae9ac1407f164e78851a62fef3667ad8172a8272240d4f1bb7b",
       "count": 1
     },
     {
@@ -9561,14 +9765,20 @@
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
-      "category": "path-api",
-      "source_fingerprint": "2100e249a5ed84f068295e010d520122452d8e9fed3d301204835eebb3582da6",
+      "category": "case-policy",
+      "source_fingerprint": "3699280ced9769968b188c233b983b497f25a6b954a0cca410e8076e629af2e6",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
       "category": "path-api",
-      "source_fingerprint": "402b70cd393dfc59f9242795101971b6631a974e005a7c2ee3856419587140b2",
+      "source_fingerprint": "9e1a5f73eab5097a218913ab1dcea479c0d3bf6e59d1817b9d10928979fd0e4e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApiUserStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "a253b8bd68d11a5a48532973ebbe6c581a0fcf2d0e67ca8c1db2dc81db647bc4",
       "count": 1
     },
     {
@@ -9958,6 +10168,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
+      "source_fingerprint": "7f3632342f524d0dff9ccba100c9144419b99e20f3cc84d8afd9f4cc18fe499d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "category": "atomic-write",
       "source_fingerprint": "814074cc044eb9ece894924db02a42a27e9e7f1f49bcabc8275c1015254cdb61",
       "count": 2
     },
@@ -9982,6 +10198,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
+      "source_fingerprint": "c463f00556e09ac4d44cd2a9cecdfac19cc04d98585e06abc4ff829c27808470",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "category": "atomic-write",
       "source_fingerprint": "dc1513ba366ca02ac468b61202ea833f1f2a29fc882e146b246df91278ec91a2",
       "count": 1
     },
@@ -9995,6 +10217,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "os-branch",
       "source_fingerprint": "1098c480d2e4db5a4038ddf8afcbda08e89121a68fa5e3d10d22be28cf85f9a8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "category": "os-branch",
+      "source_fingerprint": "2f319b1e51df21745c1013438c3edcfefa43ff718fddb0810a57b2d2a2965def",
       "count": 1
     },
     {
@@ -11812,6 +12040,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "0ef0444b56a3b6e42c9ea8b602fd27ba49bfad7be02bf73823a79d5bdda458e6",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "123c2b4e03cb16251ce37020edb2ddc7d37542e64635ecda6ce3a55d7e5fdb8f",
       "count": 1
     },
@@ -11819,6 +12053,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "25284447cff5c72742c69c7b12d75c89cabd0795a817d76ad9026c684030a7d1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "30556b8d87c53a88f1aabb0c648c22194b16b184a38921ede4a457c1624b1df5",
       "count": 1
     },
     {
@@ -11866,6 +12106,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "679123eb9a869b8a44e26539c851c3753267381b9c9c252424d674142d76fef1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "7e6bc9ce5dd2e449f409900d5829168057a908a8a66975cc70893cd2b7e28b55",
       "count": 1
     },
@@ -11873,12 +12119,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "8a893c24600ff2a897704aee230a8eecc667ac71a7ff9bc1e2626d4f287f9b6c",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "8b3ed9df00ac638c2aa71fdd034d8a263decb9f41ed7d401d2a5aa5c8fd0b811",
       "count": 1
     },
     {
@@ -11903,6 +12143,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "bea0e398c32998464916e0023d2a7e7a0800bb656be6019c5f47594905b5509d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "c85887bccc83c0c07afda61bac417d1043effd5b1681f872a703ef8273e8c09f",
       "count": 1
     },
     {
@@ -11950,12 +12196,6 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "path-api",
-      "source_fingerprint": "322e7df6e069936c0996ed8682c6c59d31e0b8b3e6a8421fe0394a4d6b56a168",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
-      "category": "path-api",
       "source_fingerprint": "47305707a78f850e336d5cd394e5f679196280e1c1e18174b4576384b24531f6",
       "count": 1
     },
@@ -11969,6 +12209,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
       "category": "path-api",
       "source_fingerprint": "62a59a693e42671b6ab3eb2872d6c6761a05eafae34d07229efd88fdb5bd9f42",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "category": "path-api",
+      "source_fingerprint": "7973b6629059f808afee78b65bb1afff566df15d8be95a35065c22f6e6ce4d9e",
       "count": 1
     },
     {
@@ -12977,6 +13223,102 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016163615_AddProjectDefinitionOperationLifecycle.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "5e1ea6ad63dea57270f5715cbeac7d6dcaaa28b0c02d16a67c4262c4c9936b63",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016233100_ExtractFiniteOperationEpochMetadata.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "17f265e997321bdaaea2b4b4345dd629ce0ad78daee319ba454462e0e3fd10f3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016233100_ExtractFiniteOperationEpochMetadata.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a390a3aef7db2d50c583bacdab621f93ed5ba06500ef0feb3b455fcdfc6fd7a6",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016233100_ExtractFiniteOperationEpochMetadata.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "3984c524e6e3c35ce7af4e7fb9e2885adadadf46027da756fae15b7a4a731c7c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261016233100_ExtractFiniteOperationEpochMetadata.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "625db12c3f0bd4f9056467294e61f1b15c7fd74bf8fdbd897eb06ef9949d17f4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a899863b34ba95b15b908530ca04581ff60734a6a3d938c1820c0760340db8ab",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f1cebc60395c2aab616e2385c032186ee404085f46dca8a962d6f68d13870224",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "69e220be6e31501b346a11c4c9defc5fc9f6a9e542961b03cdb60b70733cece5",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "93c58dc5172d864921e580864ed270f8e771cdda3d41d6e7e88282782742c339",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "1299a7b40c0adc47da2fabf22ba4c773d47110ded315ed1dcdadcf1e62551769",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "52bd71a4bca33d08a5a9e194dc9372dba1231dd1c3581bf6521f3fcbad493114",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "06d8c375a806325dec22aa121d9334a495d684a31c7e17e9e81a76a803837d32",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "9c4535a031825d9fe4274011cf101b3315c5bafd2baa128d0c1676dbc712dd9f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017130214_AddWorkspaceDecisionDataPolicy.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2b1cf1c9d85225de455d5269515d6762e18783b8c1e215f21c02267cf68fdcc8",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017130214_AddWorkspaceDecisionDataPolicy.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f019b32d71b1ef05ba788290f8742cf7b5abed1d923828dd3d93dbc2cbcab2d2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017130214_AddWorkspaceDecisionDataPolicy.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "0df44fb1f3083a17b2f413ec16ebccb4f1a7fa81a15dda7eecc9ecd950df6fee",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017130214_AddWorkspaceDecisionDataPolicy.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "1957f3439ab043f83f60b00b0aa4d751bae44842a5fb601d3b65e9b3a65c4699",
       "count": 1
     },
     {
@@ -17540,6 +17882,18 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionEffectReconciliation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "19f833d1837608a2df0ef1208d2ab678da911f20a0dfe71cb486878eedd66c4f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionEffectReconciliation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "2f277f86ef73c888dcd458b8c85fba21580646d83726c375b28cc176353d87e2",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Chat.cs",
       "category": "case-policy",
       "source_fingerprint": "8a50c8ca73cfdcc36e5a8bb3cf54d9908e5bb80dc697dbb56cc5843f5869b1ca",
@@ -17674,7 +18028,7 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
       "category": "mcp",
-      "source_fingerprint": "01c97656c22908d8c9f1dcddde245b84eb0e6b70033fb5134ba94b7695521c87",
+      "source_fingerprint": "c865670efb62167a9ace941322a7fd07ea89bdf91377544caa8342fe407d22af",
       "count": 1
     },
     {
@@ -19415,6 +19769,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ReferenceData/WorkspaceBackedAgentReferenceDataProvider.cs",
       "category": "case-policy",
       "source_fingerprint": "a87d0802bd61488c105d6c2d209df4120993187bb368fb7a35a76fbcd1dce7e8",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.HistoricalRead.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5395adbb535a9184a89b1b9ce86d60e6cce375f93c558fc81f1b30a4094dea28",
       "count": 1
     },
     {
@@ -34562,6 +34922,66 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.Chat.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "8f5bf1d631d3386d8b9ffc57e0fbc8b41d8b03862e8e5e07a50a78e6274d3b41",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "1f68777f417f336e5916ae52face16dcd3fd6c84291d200aad358ca71953048a",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2f86c1979a4befcf378102694d5bb443a91b7b346ffa57487747f0b75bd15675",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "45a5dc3725c54cb558fc2bac6dccef338f4de03a1356fced2816cd7953aeb6e2",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "4b507c1526ca5fc9ee1a7f471a1b1f9627f1a78ea8aa923b16e7271ac8c50b33",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7a07b3096a4efb6da0f987d5634ed565f34fec74d0446bb9dac7ef0e5b1ac6a5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "04a8e106e5c8528243801e533bdaebd2e7a8b331cd8c54dd7e452bb78eee1f60",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "cc05c73c2291f48907fb6c94b5e8a9367b2cfbd387d75aef252a8c042a736ba0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "170a51c2849a35935f01c73da7521c3f3314bfeb71ac3b96c15889d80e16072e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "b7c7e6d7bdf1ddf68774af822ffd369fc199f063b66a19918539aa605e07c405",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "828606576d4b0ba22a490c57d1811e9ed610e7a4edeb948519c5deb74497bba5",
@@ -34625,6 +35045,48 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
       "category": "path-api",
       "source_fingerprint": "bebcc9e338e4a5856827db26ee27dbdcc029b9d19cef4cdc1d876243bf9cd6fc",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "0986e77ad86a7c8dbccadff18db45cfbbb89970536403dcaec68787ca13d1e91",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "291756455d2cf9a91f88702f5c5ce092c755055a2f36899054175c2fdae7377a",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "dc488832b0cc36107ddc65c5ae2cd45c886e9675fa82246eedad0fc179a74e56",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f4c893788297bc84b64a58adcbc5739be887732c1ad6447bfe20043a5f782670",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "filesystem-enumeration",
+      "source_fingerprint": "9254d55c929e7537fdcfd881763cccafa3068f59644382924b14e1067cbdf747",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+      "category": "filesystem-enumeration",
+      "source_fingerprint": "b113b60e0a5d9ee27e3859f21f3048e68bae861d8b4d26d671b9be8206b812d5",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspacePublicationScope.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "c195ec8b243a9eb55daf35fe2a59cc7e35904ffabe5992b8551940725bde22c3",
       "count": 1
     },
     {
@@ -34744,6 +35206,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
       "category": "path-api",
+      "source_fingerprint": "8ddd44997c55f6737404fd28c9d1af219ef96326bc007aec16aa261d311645f2",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs",
+      "category": "path-api",
       "source_fingerprint": "998cd82bd5a132f0daa7732c6ebad5e58f7626407e39d5812e0ad9199c2cb6ca",
       "count": 1
     },
@@ -34832,6 +35300,12 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.BackgroundReservation.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a3622b8d6a25b426b3be0ab3ca520f34deb9b974ad87438c70781fe48af95a0a",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0ee514aa0b8fab6207f9ed833dc4a4105f671d27921184b4d8a70339bc1ce1f2",
@@ -34877,6 +35351,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
       "category": "path-api",
       "source_fingerprint": "ed38ee65f0e1ce3784bafc13b221a745855f0e9978aea11c85499eb8550dd885",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceWriteSet.cs",
+      "category": "path-api",
+      "source_fingerprint": "a6dd486ce8e0bed3d953f2c3c5eb936e5d353f5ec8ed5f224a767dab2fd70dcf",
       "count": 1
     },
     {
@@ -43205,6 +43685,12 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentCatalogLeaseSource.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "0715967e66f5fccde6a4f64c52697807a24eba380389fd5d95fb6c406e0c169b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentHistoricalReadStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "901afb94899ff30383eb654127e7d2f81424cd9b988a4c3a8bea3fbb72111662",
       "count": 1
     },
     {
@@ -55604,6 +56090,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "category": "case-policy",
+      "source_fingerprint": "de3d71aeb45440d748d8fe1d7952e981ead4abbce899e6066972055204b445b3",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceModels.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "2da7161cc74f5145af90b0a8d802f6200d5e59e67e5ea4a98f8c3770d422e8d9",
@@ -55816,12 +56308,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
       "category": "external-tool",
-      "source_fingerprint": "0c7753061fcc68342eb937ce5abc7030f9b42aaf62090c3938b0005f53b4f6bc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
-      "category": "external-tool",
       "source_fingerprint": "0fb043095b68f13496a2f6e75e3f209e7b54a3e1947323065a36e617e1c423ad",
       "count": 1
     },
@@ -55829,6 +56315,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
       "category": "external-tool",
       "source_fingerprint": "46fdb5ea18c832d02743e1b4f9818655d26ef741fc07229033b1c2324c0ebdbd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "category": "external-tool",
+      "source_fingerprint": "48c2469133dcdafd47ec81c0ce3bc4966ca4b9998b5ef061efc24ecdbad7b16f",
       "count": 1
     },
     {
@@ -56120,21 +56612,27 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
       "category": "case-policy",
-      "source_fingerprint": "53d620a4e7b386004d98aebe7da9902a255730765efe798b1c374f6483f156de",
+      "source_fingerprint": "5138d3b1ae17f396c0d9e87ef5d57dcdf8aceaf685eaaa803b9ecfa43ad04232",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
       "category": "case-policy",
-      "source_fingerprint": "b53661df39e7440d8fb93a359a7a3988c383e9b2c64d516d36aba27d0af29d02",
+      "source_fingerprint": "9957bb658e257382110743ccd56525f64a01c1b9928aa27983e564735a87b182",
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcePromotionCommittedException.cs",
-      "category": "external-tool",
-      "source_fingerprint": "c7bbe916fd6936b9ff493bdf0897e059516365d62340d26fa6498f3b52c26766",
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ddd214c7b2be7429643035c920b9700edaae95acfdfa9e32970cc6a5f6f88e57",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
+      "category": "case-policy",
+      "source_fingerprint": "dec7ccab439729366379e56380a4bbd9ee0b428dc7bee68fd872b220cc6459c2",
       "count": 1
     },
     {
@@ -60173,6 +60671,18 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectNodes/ProjectNodeLegacyMetadata.cs",
       "category": "case-policy",
       "source_fingerprint": "f387624c0e1f42b1cefbc5f2a65a9ce9e025a7b9744ccacd95e4c6d6641b8680",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanMaterialProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4e205ed445f1bf09723f5d97993f6443b0ce74271c9912e42b1854eb5bf86673",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanMaterialProjection.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c7ddb0c1aa5cacb862ffd8096934e57aca66ec898f9f0f9c1061dc4321cc170a",
       "count": 1
     },
     {
@@ -76115,6 +76625,12 @@
       "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
       "category": "external-tool",
       "source_fingerprint": "7a3dbea7e1d4bccdc9047136a285dc7ba8bcf30bc6247c2ff94554a017f1bba7",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceRegistryWorkspace.cs",
+      "category": "case-policy",
+      "source_fingerprint": "66d5e8df448f2a42d5f8a1e0b95947e7ecd8fc1cf872264bce0389fae9439810",
       "count": 1
     },
     {

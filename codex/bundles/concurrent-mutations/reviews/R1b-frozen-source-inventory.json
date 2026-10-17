@@ -1,0 +1,98 @@
+{
+  "Status": "Source-only frozen; unbuilt and unexecuted",
+  "TotalRows": 24,
+  "PriorRows": 4,
+  "AddedRows": 20,
+  "FileStoreRows": 23,
+  "ProcessRows": 1,
+  "Files": [
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolJournalModels.cs",
+      "Sha256": "EABBFF4BD94DA05F44C5F0B1F983DDFA85505F118A723FF69DF44ED1D0D5BD6A"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentEffectContinuation.cs",
+      "Sha256": "128F88B7AE68B812471ED0E7C4D969AE0565BC89D83312D2A9136DF82BBE2FCE"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.cs",
+      "Sha256": "87387767C254F39496720790F29348A42BA9BD48B1124C4F4E4AE9151D3F545F"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Effects.cs",
+      "Sha256": "9370CCB77F3DAC567559E7A9CAFF99E4CEDDF12E16E34A9F5CE0A2CE1D165279"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.ProviderDispatch.cs",
+      "Sha256": "03461D841B99345955D49CDB980CE76171635D802A1FAFBE8E6A76CCD338CB4B"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+      "Sha256": "6E0D0A9D5C7E0C05B3E2D5CC4E8E591DE14A234D886FCDEC8CD266B080EDE52F"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolRunLease.cs",
+      "Sha256": "00711FD6AE92B5212ED6E48176AAF676520C6753F64D962D4C4B449CAE81D8F5"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolReceiptReconciliation.cs",
+      "Sha256": "A87DFD160B34D14D27BC9F5B8F779B6A2FF8CF106AB6725023114E59C0A322C9"
+    },
+    {
+      "Path": "src/Processes/CanDoItAll.Processes.Application/ProcessExecutionDispatchAuthority.cs",
+      "Sha256": "D14EB3DD5AE6B3DCAAF06E63A4D53B16B96C0F781C5A7E553317E8115C1DFFF6"
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessExecutionProjectAuthorityReader.cs",
+      "Sha256": "C8A8165F1E7FD8ED5E0C786C13447DE260374063DA3632381711BF2BCB0323D5"
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessExecutionMutationService.cs",
+      "Sha256": "8946318B68897E4AEFADD9D6B276A09EB8D05DA21141219C767D552B1D9063FE"
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectDefinitionGovernedReceiptAccess.cs",
+      "Sha256": "DBF2AE2B61DD7D5D33941C195F5009C4AE081F8E359AD8BD75B692C6B9580DBC"
+    },
+    {
+      "Path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectDefinitionToolReceiptRecovery.cs",
+      "Sha256": "838562D7064DD5D954B049DD9EAF4A57B95145D60774657345A8E910EEB72412"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs",
+      "Sha256": "FAB4A33561C05ADE260919446840E61612268932ED1CF6AA58D3FFACA18E1FB7"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs",
+      "Sha256": "995127AC4101027BF6D42323FEF791AD3722993187669E690BE2ED57DEE8890A"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs",
+      "Sha256": "9572F2996886C61926817FB5090C3661B54B7EB55EF2144ACD728D276D963EE9"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+      "Sha256": "39DDC069C59F2B946C1DF8CC3F3BF12E939EAF09B37BDB69634022F944924867"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs",
+      "Sha256": "B0A245C3D9B7ED700BB98711BCCE0472833803FA08147EB27B0CA7077F50ECCD"
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectReconciliation.cs",
+      "Sha256": "82B818E04A3050DAC4E1D94AFEA6485B6AEE6C9B6BE86DC1CFAFFE71B20E7E40"
+    },
+    {
+      "Path": "codex/bundles/concurrent-mutations/plan/P02b-R1b-core-effect-reconciliation.md",
+      "Sha256": "4B05B0E0A746E22416EC0A24084D87BF5921C8D4C9CCA5574C5DFC9BD4FB3E1A"
+    },
+    {
+      "Path": "codex/bundles/concurrent-mutations/plan/P02b-R1bc-bounded-reconciliation.md",
+      "Sha256": "39302169678C9A03E82C323C8DD0FCA45B52EC898B7D658558A8DA2CF9361273"
+    },
+    {
+      "Path": "codex/bundles/concurrent-mutations/reviews/R1b-bounded-reconciliation-source-proof.md",
+      "Sha256": "6B34274807A1B221983327CB6241A9EBECFB3441108033B03C2B981CF46F0848"
+    }
+  ]
+}

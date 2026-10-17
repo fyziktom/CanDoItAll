@@ -192,7 +192,7 @@ refreshed manifest and source scan at the final checkpoint.
 ## Frozen foundation and subsequent implementation checkout
 
 The Broad Stable foundation gate owns only its bounded logs/results under
-`.artifacts/concurrent-mutations/validation/p02bc-stable/` and uses the existing
+`.artifacts/concurrent-mutations/validation/p02bc-stable-qualified/` and uses the existing
 Release outputs and isolated PostgreSQL fixture. Its 36 assemblies inspect both
 binaries and repository source, so the main checkout must remain frozen during
 execution. After the foundation commit, create one managed checkout from that
@@ -202,3 +202,161 @@ build/test in that checkout or copy custom outputs while the main gate runs.
 Integrate reviewed changes only after the frozen gate finishes; archive the
 managed checkout after its last required use. Ordinary application resources and
 sibling repositories are not temporary checkout resources.
+
+The earlier `p02bc-stable/` record retains a runner failure after product restore,
+before any build or test. The repaired runner's separate `p02bc-stable-qualified/`
+run is the active evidence. Neither directory is a custom build output.
+
+The managed continuation checkout is now attached with identity/root
+`C:\Users\lucys\.codex\worktrees\concurrent-mutations-runtime\CanDoItAll`,
+created from foundation commit `702d0a93b1081c42d5a06893e7070219aee5d089`.
+Creation operation: `7881a9f7-91ad-4d1f-ab99-9ab7c415ca92`; attachment:
+`01a1462e-3aea-77f1-81c6-d3a05d5672d1`. The parent records ownership in the main
+checkout's ignored `p02bc-future-worktree-ownership.json` before edits. It is
+source-only while the main gate is running: no builds, tests, fixture creation
+or automatic dependency setup. Runtime journal, Projects retention, Workbench
+create and Web schema slices use nonoverlapping ownership in this one checkout.
+The main checkout and its Components/FileTools/Mcp source identities remain frozen.
+Archive this exact managed attachment after integrating and validating its last
+required changes; do not prune unrelated worktrees or sibling resources.
+
+SPA source preparation uses the separately owned Git worktree
+`C:\repositories\CanDoItAll.SPA-concurrent-mutations`, branch
+`codex/concurrent-mutations`, starting at
+`5533969fd7ca0807d9438229303a93c738e009a8`. Ownership was recorded before creation
+in the main checkout's ignored `p02d-spa-worktree-ownership.json`. The primary SPA
+checkout remains unchanged. The app worktree tool selects this chat's engine
+repository, so this sibling worktree uses ordinary Git registration. Prepare
+source only while the frozen gate runs; no dependency setup, generation, build
+or tests until the parent releases validation. Remove this exact registered
+worktree after reviewed changes are integrated and its final proof is retained;
+do not remove the primary SPA repository or its unrelated worktrees.
+
+After reviewing isolation, the parent permits the SPA's 20 pure Node preparation
+tests during the frozen .NET gate. They use no shared .NET outputs, database, server
+or dependency install. Their owned `candoitall-spec-preflight-*` and
+`candoitall-pending-asset-*` temporary roots are allocated with `mkdtemp` and removed
+in finally; setup failures are inside that cleanup boundary. Bounded TAP/provenance
+logs go under the main checkout's ignored validation directory. No other future
+checkout build/test/database restriction is released by this exception.
+
+The pure Node run passed 20 cases with zero failures/skips, used 0.2001274s command
+wall time, and left zero newly owned temporary roots. All 21 hashed source inputs
+were unchanged. Its proof directory is
+`.artifacts/concurrent-mutations/validation/p02d-spa-preparation/`.
+The parent additionally permits isolated SPA dependency setup and the app build,
+with ownership recorded before creation. They must use the existing lockfile and
+worktree-local outputs, avoid setup hooks changing shared Git configuration, and
+perform no backend generation, .NET build, database work or server launch. The
+frozen Stable elapsed-time record must acknowledge this separate host workload;
+it is not a controlled performance benchmark.
+
+The SPA preparation is committed at
+`2fe9e8ee1b6b7ce9e8777320b7daa19f895cfebb`: Node20, app build, direct owned
+format/lint, exact asset and non-root URL checks passed. Worktree-local
+`node_modules`, `packages/app/dist`, tsbuildinfo and `logs/concurrent-mutations`
+remain owned and retained for the next frontend slice. The pnpm exec dependency
+check unexpectedly reinstalled and invoked `prepare: vp config`; the exact
+introduced hook setting was removed and the shared config's complete original
+hash restored. Lock/root manifest/workspace/tracked hook were unchanged.
+
+Cleanup blocker: automatic approval review rejected guarded removal of the exact
+generated inactive directory
+`C:/repositories/CanDoItAll.SPA-concurrent-mutations/.vite-hooks/_` (16 files,
+created 2026-10-16T20:12:27Z) with `blocked by policy`. Do not retry its removal
+through another command or remove the worktree to bypass that rejection. Retain
+the recorded evidence and report this item until resolved. The original tracked
+`.vite-hooks/pre-commit`, primary SPA and shared caches are not cleanup targets.
+Subsequent package-manager entry uses process-scoped
+`pnpm_config_verify_deps_before_run=error`; direct final checks avoided pnpm.
+See [SPA proof](validation/P02d-spa-preparation.md) and the SPA validation record.
+
+The isolated SPA adapter validation reused those dependencies and refreshed only
+owned app outputs. Commit `0411cd3e65d50d43961a97480ac120d7d1552d30` records the
+four reviewed source inputs. Its 18 controlled-module Node cases, direct lint/format,
+typecheck and app build passed; exact proof is retained under the existing ignored
+`logs/concurrent-mutations/pending-adapter/`. No new server, browser, database or
+installation was created. This exception does not release the frozen .NET graph.
+The inactive hook directory and its cleanup blocker remain unchanged.
+
+The frozen Stable checkpoint ended and all original source/binary/runner identities
+were verified at 2026-10-16T21:53:30Z. The parent may integrate the reviewed managed
+candidate into the main checkout and resume serialized standard Release validation.
+The managed checkout becomes read-only after the recorded transfer manifest.
+
+One interrupted Integration fixture remains: database
+`cditall_primary_67c47aa1d495479495c55deaa4fdeedf` on the existing owned test server,
+and temporary root
+`C:/Users/lucys/AppData/Local/Temp/integration-agentframework-structured-output-continuation-failure/3bdf069eb3754e4894a4b9e77a186edd`.
+An independent audit matched its activation profile to the deterministic exact
+database endpoint identity and test. Original runner/testhost processes are absent;
+the database had zero active clients. Automatic approval review rejected the
+guarded cleanup command before execution with `blocked by policy`. Neither resource
+was removed. Do not bypass the rejection through a different removal mechanism.
+The ignored `integration-residue-cleanup-blocked.json` retains the exact ownership
+and rejected action. Reuse the current server; do not provision a replacement.
+
+## Current receipt diagnostics
+
+The parent closed the UTF-8 comparison with all 84 executions, exact source/binary
+identities and owned host/fixture cleanup verified. A read-only database inventory
+after the 15 compatibility Integration cases found only the prior blocked fixture
+with zero clients and the administrative `postgres` connection; no new database residue.
+
+Explicit-session diagnostics use the pre-recorded
+`.artifacts/concurrent-mutations/explicit-diagnostic.ownership.json` and fresh
+`validation/r1bc-explicit-gc-diagnostic` output. The collector and parser are local
+task tooling under `diagnostics`, built with standard Release outputs and existing
+installed dependencies. No tool installation, Docker stack or ordinary host is created.
+The collector must own only its recorded IPC session and child process; the parent
+records and releases the workload process tree separately. Raw traces remain local.
+Collection, parser acceptance, refusal arrangements and final output retention are
+separate gates; none is inferred from successful compilation.
+
+During this parent validation, managed-checkout agents may author the explicitly
+assigned historical-read and source-review successors. They must not build, execute
+tests, launch hosts or change databases there. Reviewed transfers remain guarded by
+exact predecessor hashes and occur only after the current main validation freeze ends.
+
+The explicit diagnostic freeze closed at 2026-10-17T03:03:35Z. The original launcher
+failure, V2 accepted trace, two refused parser interpretations and accepted third
+interpretation remain recorded separately. Missing-collector and wrong-identity V2
+arrangements and interrupted-collector V3 each verified natural testhost exit and
+fixture cleanup. V3 intentionally terminated only its recorded collector after actual
+workload-entry evidence; its partial trace is ineligible for parsing. The unused V2
+interruption root closed before discovery with no process or fixture created.
+See [diagnostic closure](validation/R1bc-controlled-allocation-diagnostic.md).
+
+All diagnostic processes and fixtures are closed. Retained proof, raw traces and
+reviewed local tool sources remain under the recorded task-owned `.artifacts` paths;
+no global cleanup is authorized. The earlier blocked Integration database/temp root
+and inactive SPA hook directory remain unresolved. Main may receive reviewed next
+candidate edits; managed authoring still does not run builds, hosts or databases.
+
+The prepared run-read candidate's source freeze ended at
+`2026-10-17T03:35:49.8728707Z` after all 8,619 source identities were rechecked.
+All 112 correctness cases passed; all 22 performance rows executed with 11 passed
+and 11 failed. Every owned host exited and every file fixture cleaned up. These
+lanes created no database or container. The original report-only closure failure
+and its successful V2 amendment are retained separately; no tests were rerun to
+repair reporting. See [candidate proof](validation/P02b-R1bc-run-witness-candidate.md).
+The earlier blocked cleanup resources and configured GPG signing wait remain open.
+
+The journal byte-count candidate's source freeze ended at
+`2026-10-17T04:02:03.016248+00:00` after all 8,626 source inputs and HEAD matched.
+All 135 correctness cases passed; 22 performance rows produced 12 passed and 10
+failed. All hosts exited naturally and owned file fixtures were removed; these
+lanes created no database or container. See [executed proof](validation/P02b-R1bc-journal-size-candidate.md).
+The next wire-comparison evidence root has its own ownership record before creation.
+It reuses standard Release outputs and preserves the prior immutable evidence.
+
+The wire-comparison source freeze ended at `2026-10-17T04:19:15.108405+00:00`
+after all 8,632 source inputs and HEAD matched. All 161 correctness cases passed;
+22 performance rows produced 11 passed and 11 failed. Every host exited naturally
+and all owned file fixtures were removed; no database/container was created.
+See [executed proof](validation/P02b-R1bc-journal-wire-candidate.md).
+The reviewed historical transfer source is preserved in a separately owned ignored
+directory: 113 files, 1,583,323 bytes, inventory
+`80F0B05601EF13B530005069432598949762D6EAB55A26EC5544F8D015AAE756`.
+This prevents later managed authoring from changing the admitted historical candidate.
+The exact restart runner source is retained separately; no restart test has run yet.

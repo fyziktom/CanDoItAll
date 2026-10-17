@@ -1,13 +1,17 @@
+using CanDoItAll.Infrastructure.Persistence;
+
 namespace CanDoItAll.Modules.Projects;
 
 public sealed class ProjectDefinitionOperationOptions {
     public const string SectionName = "Projects:DefinitionOperations";
-    public static readonly TimeSpan MaintenanceInterval = TimeSpan.FromMinutes(1);
-    public static readonly TimeSpan MaintenanceBudget = TimeSpan.FromSeconds(2);
-    public const int PurgeBatchCount = 128;
-    public const int PurgeBatchBytes = 16 * 1024 * 1024;
-    public const int MaximumMaintenanceBatches = 64;
+    public static readonly TimeSpan DefaultMaintenanceInterval = TimeSpan.FromMinutes(1);
+    public static readonly TimeSpan MaintenanceBudget = FiniteOperationBounds.MaintenanceBudget;
+    public const int PurgeBatchCount = FiniteOperationBounds.BatchRows;
+    public const int PurgeBatchBytes = FiniteOperationBounds.BatchBytes;
+    public const int MaximumMaintenanceBatches = FiniteOperationBounds.MaximumBatches;
 
+    public TimeSpan MaintenanceInterval { get; set; } = DefaultMaintenanceInterval;
+    public TimeSpan MaintenanceWarningAfter { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan AdmissionWindow { get; set; } = TimeSpan.FromDays(1);
     public TimeSpan ReplayRetention { get; set; } = TimeSpan.FromDays(7);
     public TimeSpan MutationDeadline { get; set; } = TimeSpan.FromSeconds(30);
@@ -22,7 +26,9 @@ public sealed class ProjectDefinitionOperationOptions {
 
     public bool IsValid() {
         var maximum = ProjectDefinitionLimits.VersionOneMaximum;
-        return AdmissionWindow >= TimeSpan.FromSeconds(1) && AdmissionWindow <= TimeSpan.FromDays(30) &&
+        return MaintenanceInterval >= TimeSpan.FromSeconds(5) && MaintenanceInterval <= TimeSpan.FromMinutes(1) &&
+            MaintenanceWarningAfter >= MaintenanceInterval * 2 && MaintenanceWarningAfter <= TimeSpan.FromHours(1) &&
+            AdmissionWindow >= TimeSpan.FromSeconds(1) && AdmissionWindow <= TimeSpan.FromDays(30) &&
             ReplayRetention >= TimeSpan.FromSeconds(1) && ReplayRetention <= TimeSpan.FromDays(365) &&
             MutationDeadline >= TimeSpan.FromSeconds(1) && MutationDeadline <= TimeSpan.FromMinutes(1) &&
             StatementDeadline >= TimeSpan.FromMilliseconds(1) && StatementDeadline <= MutationDeadline &&

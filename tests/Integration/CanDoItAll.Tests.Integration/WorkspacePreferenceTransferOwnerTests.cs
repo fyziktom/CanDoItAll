@@ -14,7 +14,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class WorkspacePreferenceTransferOwnerTests {
     [Fact]
-    public async Task Transfer_changes_only_the_latest_target_preference_and_preserves_source_and_other_profiles() {
+    public async Task Transfer_changes_only_the_current_target_preference_and_preserves_source_and_other_profiles() {
         await using var environment = CanDoItAllTestEnvironment.Create("workspace-preference-transfer");
         var sourceProfile = environment.CreatePostgreSqlProfile("source");
         var targetProfile = environment.CreatePostgreSqlProfile("target");
@@ -25,9 +25,9 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         var original = Settings("Source", 2003, Guid.NewGuid());
         var older = Settings("Older target", 2001, Guid.NewGuid());
         var current = Settings("Current target", 2002, Guid.NewGuid());
-        await SeedLatestAsync(source, original);
+        await SeedCurrentAsync(source, original);
         target.Add(older);
-        await SeedLatestAsync(target, current);
+        await SeedCurrentAsync(target, current);
         var sourceSnapshot = await SettingsSnapshotAsync(source);
         var otherTargetRows = await SettingsSnapshotAsync(target, current.Id);
         var sourceJson = JsonSerializer.Serialize(original);
@@ -50,6 +50,8 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         var updated = await target.Set<WorkspaceSettings>().SingleAsync(item => item.Id == current.Id);
         expected.DefaultProviderProfileId = original.DefaultProviderProfileId;
         expected.UpdatedAtUtc = updated.UpdatedAtUtc;
+        Assert.NotEqual(expected.ConcurrencyToken, updated.ConcurrencyToken);
+        expected.ConcurrencyToken = updated.ConcurrencyToken;
         Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(updated));
         Assert.True(updated.UpdatedAtUtc > current.UpdatedAtUtc);
         Assert.Equal(olderJson, JsonSerializer.Serialize(await target.Set<WorkspaceSettings>().SingleAsync(item => item.Id == older.Id)));
@@ -57,6 +59,12 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         Assert.False(await target.Set<WorkspaceSettings>().AnyAsync(item => item.Id == original.Id));
         Assert.Equal(sourceSnapshot, await SettingsSnapshotAsync(source));
         Assert.Equal(otherTargetRows, await SettingsSnapshotAsync(target, current.Id));
+        var acceptedTarget = await SettingsSnapshotAsync(target);
+        var repeated = await handler.TransferAsync(transfer);
+        Assert.True(repeated.Success);
+        Assert.Equal(0, repeated.RecordsCopied);
+        target.ChangeTracker.Clear();
+        Assert.Equal(acceptedTarget, await SettingsSnapshotAsync(target));
     }
 
     [Fact]
@@ -75,11 +83,11 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         string otherSourceRows;
         string targetSnapshot;
         await using (var seed = await CreateCanonicalAsync(sourceApplication)) {
-            await SeedLatestAsync(seed, original);
+            await SeedCurrentAsync(seed, original);
             otherSourceRows = await SettingsSnapshotAsync(seed, original.Id);
         }
         await using (var seed = await CreateCanonicalAsync(targetApplication)) {
-            await SeedLatestAsync(seed, retained);
+            await SeedCurrentAsync(seed, retained);
             targetSnapshot = await SettingsSnapshotAsync(seed);
         }
         var sessions = new DatabaseTransferOwnerSessionRunner();
@@ -127,7 +135,7 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
     }
 
     [Fact]
-    public async Task Latest_empty_source_preference_does_not_clear_or_replace_target_settings() {
+    public async Task Current_empty_source_preference_does_not_clear_or_replace_target_settings() {
         await using var environment = CanDoItAllTestEnvironment.Create("workspace-preference-empty");
         await using var sourceApplication = await TestApplication.CreateAsync(new TestHarnessOptions {
             TestEnvironment = environment, ActiveProfile = environment.CreatePostgreSqlProfile("source")
@@ -138,9 +146,9 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         await using var source = await CreateCanonicalAsync(sourceApplication);
         await using var target = await CreateCanonicalAsync(targetApplication);
         source.Add(Settings("Older source", 2001, Guid.NewGuid()));
-        await SeedLatestAsync(source, Settings("Latest source", 2002, null));
+        await SeedCurrentAsync(source, Settings("Current source", 2002, null));
         var retained = Settings("Retained target", 2001, Guid.NewGuid());
-        await SeedLatestAsync(target, retained);
+        await SeedCurrentAsync(target, retained);
         var sourceSnapshot = await SettingsSnapshotAsync(source);
         var targetSnapshot = await SettingsSnapshotAsync(target);
         var serialized = JsonSerializer.Serialize(retained);
@@ -190,15 +198,17 @@ public sealed class WorkspacePreferenceTransferOwnerTests {
         UpdatedAtUtc = new DateTimeOffset(year, 1, 2, 3, 4, 5, TimeSpan.Zero)
     };
 
-    private static async Task SeedLatestAsync(AppDbContext database, WorkspaceSettings latest) {
-        var previousLatest = await database.Set<WorkspaceSettings>().MaxAsync(item => (DateTimeOffset?)item.UpdatedAtUtc);
-        latest.UpdatedAtUtc = DateTimeOffset.UtcNow;
+    private static async Task SeedCurrentAsync(AppDbContext database, WorkspaceSettings latest) {
+        await using var transaction = await database.Database.BeginTransactionAsync();
+        await database.Database.ExecuteSqlRawAsync("LOCK TABLE \"Workspace_Settings\" IN SHARE ROW EXCLUSIVE MODE");
+        await database.Set<WorkspaceSettings>().Where(item => item.IsCurrent).ExecuteUpdateAsync(update => update.SetProperty(item => item.IsCurrent, false));
+        latest.IsCurrent = true;
         database.Add(latest);
         await database.SaveChangesAsync();
+        await transaction.CommitAsync();
         await database.Entry(latest).ReloadAsync();
-        Assert.True(!previousLatest.HasValue || latest.UpdatedAtUtc > previousLatest.Value);
-        Assert.Equal(latest.Id, await database.Set<WorkspaceSettings>().OrderByDescending(item => item.UpdatedAtUtc)
-            .Select(item => item.Id).FirstAsync());
+        Assert.Equal(latest.Id, await database.Set<WorkspaceSettings>().Where(item => item.IsCurrent)
+            .Select(item => item.Id).SingleAsync());
     }
 
     private static async Task<string> SettingsSnapshotAsync(AppDbContext database, Guid? excludedId = null) {

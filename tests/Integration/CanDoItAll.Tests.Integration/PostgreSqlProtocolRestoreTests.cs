@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
@@ -74,14 +76,14 @@ public sealed class PostgreSqlProtocolRestoreTests {
         }
     }
 
-    private static async Task RunClientAsync(string executable, string connectionString, params string[] arguments) {
-        var version = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+    internal static async Task RunClientAsync(string executable, string connectionString, params string[] arguments) {
+        var version = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
         version.ArgumentList.Add("--version");
         var reported = await RunAsync(version);
         Assert.Contains("(PostgreSQL) 18.", reported, StringComparison.Ordinal);
 
         var connection = new NpgsqlConnectionStringBuilder(connectionString);
-        var start = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+        var start = new ProcessStartInfo(executable) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
         start.Environment["PGHOST"] = connection.Host;
         start.Environment["PGPORT"] = connection.Port.ToString(CultureInfo.InvariantCulture);
         start.Environment["PGUSER"] = connection.Username;
@@ -98,20 +100,79 @@ public sealed class PostgreSqlProtocolRestoreTests {
 
     private static async Task<string> RunAsync(ProcessStartInfo start) {
         using var process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {start.FileName}.");
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
+        var output = DrainAsync(process.StandardOutput);
+        var error = DrainAsync(process.StandardError);
+        var pumps = Task.WhenAll(output, error);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        Exception? primary = null;
+        var cleanup = new List<Exception>();
         try {
             await process.WaitForExitAsync(timeout.Token);
-        } catch (OperationCanceledException) {
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync();
-            throw;
+            await pumps.WaitAsync(timeout.Token);
+            if (output.Result.Truncated || error.Result.Truncated) {
+                throw new InvalidOperationException("PostgreSQL client output exceeded the retained character bound. Diagnostics suppressed.");
+            }
+            Assert.True(process.ExitCode == 0, $"{start.FileName} exited with {process.ExitCode}. Client diagnostics suppressed to protect connection details.");
+        } catch (Exception failure) {
+            primary = failure;
+        } finally {
+            try {
+                if (!process.HasExited) {
+                    process.Kill(entireProcessTree: true);
+                }
+            } catch (Exception failure) {
+                RetainCleanup(failure);
+            }
+            try {
+                await process.WaitForExitAsync();
+            } catch (Exception failure) {
+                RetainCleanup(failure);
+            }
+            try {
+                await pumps;
+            } catch (Exception failure) {
+                if (pumps.Exception is { } aggregate) {
+                    foreach (var pumpFailure in aggregate.InnerExceptions) {
+                        RetainCleanup(pumpFailure);
+                    }
+                } else {
+                    RetainCleanup(failure);
+                }
+            }
         }
-        await Task.WhenAll(output, error);
-        Assert.True(process.ExitCode == 0, $"{start.FileName} exited with {process.ExitCode}. Client diagnostics suppressed to protect connection details.");
-        return await output;
+        if (cleanup.Count != 0) {
+            if (primary is not null) {
+                cleanup.Insert(0, primary);
+            }
+            throw new AggregateException("PostgreSQL client execution or terminal cleanup failed.", cleanup);
+        }
+        if (primary is not null) {
+            ExceptionDispatchInfo.Capture(primary).Throw();
+        }
+        return output.Result.Text;
+
+        void RetainCleanup(Exception failure) {
+            if (!ReferenceEquals(failure, primary) && !cleanup.Any(existing => ReferenceEquals(existing, failure))) {
+                cleanup.Add(failure);
+            }
+        }
     }
+
+    private static async Task<ClientOutput> DrainAsync(StreamReader reader) {
+        const int maximumCharacters = 1024 * 1024;
+        var retained = new StringBuilder();
+        var buffer = new char[4096];
+        var truncated = false;
+        int read;
+        while ((read = await reader.ReadAsync(buffer.AsMemory())) != 0) {
+            var count = Math.Min(read, maximumCharacters - retained.Length);
+            retained.Append(buffer, 0, count);
+            truncated |= count != read;
+        }
+        return new(retained.ToString(), truncated);
+    }
+
+    private sealed record ClientOutput(string Text, bool Truncated);
 
     private sealed record PreservedCheckpoint(Guid Id, AgentToolProtocolEnvelope Legacy,
         AgentToolProtocolEnvelope Compressed, AgentToolProtocolEnvelope Corrupt, AgentToolJournalRecord Journal);

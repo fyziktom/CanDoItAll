@@ -11,8 +11,6 @@ public sealed class ProjectsDbContext(DbContextOptions<ProjectsDbContext> option
         modelBuilder.ApplyConfiguration(new ProjectHierarchyLinkConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectRetirementRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectCreationReservationRecordConfiguration());
-        modelBuilder.ApplyConfiguration(new ProjectOperationStateRecordConfiguration());
-        modelBuilder.ApplyConfiguration(new ProjectOperationEpochRecordConfiguration());
         modelBuilder.ApplyConfiguration(new ProjectDefinitionReceiptRecordConfiguration());
         base.OnModelCreating(modelBuilder);
     }

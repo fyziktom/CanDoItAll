@@ -1,15 +1,16 @@
 using System.Data;
+using System.Collections.Immutable;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Composition;
 
 public sealed class DatasetActivationCoordinator(DatasetActivationService files,
-    IOptions<ProjectDefinitionOperationOptions> options) {
+    IEnumerable<FiniteOperationPoolRegistration> registrations) {
+    private readonly ImmutableArray<FiniteOperationPoolRegistration> pools = CaptureRegistrations(registrations);
+
     public async Task<DatasetActivationBinding> EnsureReadyAsync(ResolvedDatabaseProfile profile,
         CancellationToken cancellationToken = default) {
         RequirePostgreSql(profile);
@@ -28,12 +29,7 @@ public sealed class DatasetActivationCoordinator(DatasetActivationService files,
                 local.Plan.Binding != sql.Binding) {
             throw new InvalidOperationException("Dataset readiness requires matching active file and SQL bindings. Use explicit offline attach or activation recovery.");
         }
-        await using var owner = new DatasetLifecycleDbContext(stores.LifecycleOptions);
-        await using var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
-        using (stores.Transactions.Enter(owner)) {
-            await stores.Epochs.InitializeForActivationAsync(sql.Binding, cancellationToken);
-        }
-        await transaction.CommitAsync(cancellationToken);
+        await RequireReadyAsync(stores, sql.Binding, cancellationToken);
         return sql.Binding;
     }
 
@@ -49,6 +45,7 @@ public sealed class DatasetActivationCoordinator(DatasetActivationService files,
         }
         if (local is not null) {
             if (local.State == DatasetActivationFileState.Active && local.Plan.Binding == sql.Binding) {
+                await RequireReadyAsync(stores, sql.Binding, cancellationToken);
                 return sql.Binding;
             }
             throw new InvalidOperationException("This profile already has an activation record. Resume its exact plan or resolve the mismatch before attachment.");
@@ -119,22 +116,34 @@ public sealed class DatasetActivationCoordinator(DatasetActivationService files,
             if (sql is not { State: DatasetLifecycleState.Active } || sql.Binding != local.Plan.Binding) {
                 throw new InvalidOperationException("The completed activation no longer matches SQL. Resume cannot mint a replacement identity.");
             }
+            await RequireReadyAsync(stores, sql.Binding, cancellationToken);
             return sql.Binding;
         }
         await ApplyAsync(stores, lease, local.Plan, cancellationToken);
         return local.Plan.Binding;
     }
 
-    private static async Task ApplyAsync(ActivationStores stores, DatasetActivationLease lease,
+    private async Task ApplyAsync(ActivationStores stores, DatasetActivationLease lease,
         DatasetActivationPlan plan, CancellationToken cancellationToken) {
         await using (var owner = new DatasetLifecycleDbContext(stores.LifecycleOptions)) {
             await using var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
             using (stores.Transactions.Enter(owner)) {
-                await stores.Lifecycle.StageActivationAsync(plan, cancellationToken);
-                if (plan.Kind == DatasetActivationKind.Reactivate) {
-                    await stores.Epochs.RetireForReactivationAsync(plan.ExpectedPreviousSqlBinding!, plan.Binding, cancellationToken);
+                var staged = await stores.Lifecycle.StageActivationAsync(plan, cancellationToken);
+                if (staged == DatasetActivationStageResult.Staged) {
+                    if (plan.Kind == DatasetActivationKind.Reactivate) {
+                        await stores.Epochs.RequireInstalledPoolSetEnlistedAsync(plan.Binding,
+                            plan.ExpectedPreviousSqlBinding!.Namespace, pools, cancellationToken);
+                    }
+                    await stores.Epochs.RequireUnissuedNamespaceEnlistedAsync(plan.Binding, pools,
+                        plan.Kind == DatasetActivationKind.Reactivate ? plan.ExpectedPreviousSqlBinding!.Namespace : null, cancellationToken);
+                    foreach (var pool in pools) {
+                        if (plan.Kind == DatasetActivationKind.Reactivate) {
+                            await stores.Epochs.CloseForReactivationEnlistedAsync(plan.ExpectedPreviousSqlBinding!, plan.Binding, pool, cancellationToken);
+                        }
+                        await stores.Epochs.InitializeNewNamespaceEnlistedAsync(plan.Binding, pool, cancellationToken);
+                    }
                 }
-                await stores.Epochs.InitializeForActivationAsync(plan.Binding, cancellationToken);
+                await RequireReadyEnlistedAsync(stores, plan.Binding, cancellationToken);
             }
             await transaction.CommitAsync(cancellationToken);
         }
@@ -144,11 +153,32 @@ public sealed class DatasetActivationCoordinator(DatasetActivationService files,
     private ActivationStores CreateStores(ResolvedDatabaseProfile profile) {
         var lifecycleOptions = new DbContextOptionsBuilder<DatasetLifecycleDbContext>();
         AppDbContextOptionsConfigurator.Configure(lifecycleOptions, profile);
-        var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>();
-        AppDbContextOptionsConfigurator.Configure(projectOptions, profile);
+        var metadataOptions = new DbContextOptionsBuilder<FiniteOperationDbContext>();
+        AppDbContextOptionsConfigurator.Configure(metadataOptions, profile);
         var transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
         return new(lifecycleOptions.Options, transactions, new(lifecycleOptions.Options, transactions),
-            new(projectOptions.Options, transactions, options));
+            new(metadataOptions.Options, transactions));
+    }
+
+    private async Task RequireReadyAsync(ActivationStores stores, DatasetActivationBinding binding, CancellationToken cancellationToken) {
+        await using var owner = new DatasetLifecycleDbContext(stores.LifecycleOptions);
+        await using var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+        using (stores.Transactions.Enter(owner)) {
+            await RequireReadyEnlistedAsync(stores, binding, cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private Task RequireReadyEnlistedAsync(ActivationStores stores, DatasetActivationBinding binding,
+        CancellationToken cancellationToken)
+        => stores.Epochs.RequireInstalledPoolSetEnlistedAsync(binding, binding.Namespace, pools, cancellationToken);
+
+    private static ImmutableArray<FiniteOperationPoolRegistration> CaptureRegistrations(IEnumerable<FiniteOperationPoolRegistration> registrations) {
+        var captured = registrations.ToImmutableArray();
+        if (captured.IsEmpty || captured.Any(pool => pool is null) || captured.Select(pool => pool.Pool).Distinct().Count() != captured.Length) {
+            throw new InvalidOperationException("Dataset readiness requires the exact installed finite operation pools.");
+        }
+        return captured;
     }
 
     private static DatasetActivationBinding NewBinding(Guid maintenanceId)
@@ -161,5 +191,5 @@ public sealed class DatasetActivationCoordinator(DatasetActivationService files,
     }
 
     private sealed record ActivationStores(DbContextOptions<DatasetLifecycleDbContext> LifecycleOptions,
-        CoordinatedDatabaseTransaction Transactions, DatasetLifecycleStore Lifecycle, ProjectOperationEpochService Epochs);
+        CoordinatedDatabaseTransaction Transactions, DatasetLifecycleStore Lifecycle, FiniteOperationEpochStore Epochs);
 }

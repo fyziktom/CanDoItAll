@@ -1,5 +1,6 @@
 using System.Data;
 using System.Collections.Immutable;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -48,6 +49,34 @@ public sealed partial class ProjectProcessExecutionMutationService(
         }
         var access = dispatch.SourceAuthority is { } authority ? await authorities.ObserveAsync(authority, cancellationToken) : new(true, false);
         return new(dispatch, access.ReadAllowed, access.DispatchAllowed && dispatch.ObservedCurrentDispatch);
+    }
+
+    internal async Task<ProjectProcessExecutionAccess?> ReadReceiptAccessAsync(ProjectProcessMutationAdmission original,
+        AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken) {
+        var admitted = await claim.RequireAsync(cancellationToken);
+        if (admitted.PinnedEvidence is not { } pinned) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var (source, _) = ProjectDefinitionToolProposalCodec.Read(admitted.Payload);
+        ProjectDefinitionToolReceiptRecovery.RequireSession(source, admitted.Session);
+        if (source.Process is not { } saved || saved.Evidence != original.Dispatch.Evidence ||
+            saved.OwnerFingerprint != original.Dispatch.OwnerFingerprint || saved.ProjectReference != original.Dispatch.ProjectReference ||
+            saved.Evidence.ExecutionCreatedAtUtc != pinned.ExecutionCreatedAtUtc ||
+            saved.Evidence.ExecutionRunId != admitted.Session.Reference.ExecutionRunId ||
+            saved.Evidence.ExecutorAgentId != admitted.Session.AgentId ||
+            admitted.Session.Reference.BackgroundSource is not { } background || background.SourceId != saved.Evidence.StepKey ||
+            background.OwnerFingerprint != AgentToolProtocolEnvelope.ComputeDigest(saved.OwnerFingerprint)) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var observed = await reader.ObserveOriginalForReceiptReadAsync(saved.Evidence, cancellationToken);
+        if (observed.Snapshot is not { } dispatch || dispatch.OwnerFingerprint != saved.OwnerFingerprint ||
+            dispatch.Evidence != saved.Evidence || dispatch.SourceAuthority is not { } authority ||
+            authority.DatabaseProfileId != admitted.Session.Profile.ProfileId) {
+            return null;
+        }
+        var access = await authorities.ObserveAsync(authority, cancellationToken);
+        await claim.RequireAsync(cancellationToken);
+        return new(dispatch, access.ReadAllowed, CanWrite: false);
     }
 
     public async Task<ProjectProcessMutationAdmission?> ObserveAsync(Guid executionRunId, CancellationToken cancellationToken = default) {

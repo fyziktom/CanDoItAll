@@ -252,6 +252,9 @@ public sealed class ProjectStructureSubprojectTransferCoordinator
     private async Task<bool> CompensateEmptyCreatedSubprojectAsync(ProjectCreationReceipt receipt, Exception transferFailure) {
         try {
             return await operations.TryCompensateCreationAsync(receipt, CancellationToken.None);
+        } catch (ProjectDeletionPartialCommitException compensationFailure) {
+            throw ProjectCreationPartialCompletionFailure.Create(receipt.Project.ProjectId, true,
+                new AggregateException(transferFailure, compensationFailure), receipt, compensationFailure.Recovery);
         } catch (Exception compensationFailure) {
             throw ProjectCreationPartialCompletionFailure.Create(receipt.Project.ProjectId, true, new AggregateException(
                 $"Node transfer failed and the original creation of subproject '{receipt.Project.ProjectId:D}' could not be compensated.",

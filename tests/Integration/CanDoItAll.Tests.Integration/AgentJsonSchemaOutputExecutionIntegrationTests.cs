@@ -5,9 +5,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Agents.SimpleChats;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -58,6 +61,7 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
             });
         await using var scope = host.App.Services.CreateAsyncScope();
         var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        AssertReceiptRecoveryProviders(scope.ServiceProvider);
         var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
         var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
             .First(item => item.ProviderProfileId.HasValue);
@@ -167,6 +171,52 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
 
         using var openApi = JsonDocument.Parse(await host.Client.GetStringAsync("/openapi/v1.json"));
         AssertPortableRequestSchema(openApi.RootElement);
+    }
+
+    [Fact]
+    public async Task Fake_runtime_workspace_resolves_real_receipt_recovery_without_mutation_admission() {
+        var runtime = new DeterministicJsonSchemaAgentRuntime("""{"status":"ready","count":1}""");
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, agentRuntimeOverride: runtime,
+            configureServices: services => {
+                services.RemoveAll<ISecretVault>();
+                services.AddSingleton<ISecretVault, InMemorySecretVault>();
+                services.RemoveAll<ProjectDefinitionToolAdmission>();
+                services.AddScoped<ProjectDefinitionToolAdmission>(_ => throw new InvalidOperationException(
+                    "Receipt recovery must not construct definition mutation admission."));
+            });
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workspace = Assert.IsType<AgentFrameworkWorkspaceService>(
+            scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>());
+        AssertReceiptRecoveryProviders(scope.ServiceProvider);
+        var agent = (await workspace.ListAgentsAsync(includeTemplates: false)).First(item => item.ProviderProfileId.HasValue);
+        var session = await workspace.GetOrCreateChatSessionAsync(agent.Id);
+
+        var result = await workspace.ExecuteRunAsync(new ExecutionRunRequest(agent.Id,
+            "Return the deterministic receipt-composition smoke result.", AgentExecutionOperationId.New(),
+            ChatSessionId: session.Id, JsonSchemaOutput: CreateContract()));
+
+        Assert.Equal(ExecutionState.Completed, result.State);
+        var structured = Assert.IsType<AgentJsonSchemaOutputResult>(result.StructuredOutput);
+        Assert.Equal(AgentJsonSchemaOutputValidationStatus.Valid, structured.ValidationStatus);
+        Assert.Equal("ready", structured.Data!.Value.GetProperty("status").GetString());
+        Assert.Equal(1, structured.Data.Value.GetProperty("count").GetInt32());
+        Assert.Single(runtime.ExecutionOptions);
+    }
+
+    private static void AssertReceiptRecoveryProviders(IServiceProvider services) {
+        var providers = services.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray();
+        Assert.Equal(new[] {
+            typeof(HrSimpleChatRuntimeToolProvider),
+            typeof(ProjectDefinitionToolReceiptRecovery), typeof(ProjectProcessAssetToolAdmission),
+            typeof(ProjectStructureProcessToolAdmission), typeof(WorkflowProcessToolAdmission)
+        }.OrderBy(type => type.FullName), providers.Select(provider => provider.GetType()).OrderBy(type => type.FullName));
+        var definitions = Assert.Single(providers.OfType<ProjectDefinitionToolReceiptRecovery>());
+        foreach (var tool in new[] {
+            ProjectStructureToolPolicy.ProjectStructureProjectUpdate, ProjectStructureToolPolicy.ProjectStructureProjectCreate,
+            ProjectStructureToolPolicy.ProjectStructureSubprojectCreate
+        }) {
+            Assert.Same(definitions, Assert.Single(providers, provider => provider.Supports(tool)));
+        }
     }
 
     private static void AssertResponseFormatOptions(

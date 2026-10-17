@@ -1,7 +1,6 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
-using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Resources;
 
@@ -13,7 +12,15 @@ public sealed class ResourceRegistryOwner(ResourcesService resources, ProjectWri
     public IReadOnlyList<ConnectorPluginManifest> ListManifests() => resources.ListConnectorManifests();
     public string BuildLocationPreview(ResourceEditorModel editor) => resources.BuildLocationPreview(editor);
     public Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default) => resources.ListAsync(cancellationToken);
-    public Task<ResourceEditorModel> GetAsync(Guid id, CancellationToken cancellationToken = default) => resources.GetAsync(id, cancellationToken);
+    public Task<ResourceMetadataContext> ReadContextAsync(CancellationToken cancellationToken = default) {
+        RequireCurrent();
+        return resources.ReadContextAsync(cancellationToken);
+    }
+    public Task<ResourceMetadataReadResult> ReadAsync(Guid id, CancellationToken cancellationToken = default) {
+        RequireCurrent();
+        return resources.ReadAsync(id, cancellationToken);
+    }
+    public ResourceEditorModel CreateEditor(ResourceMetadataSnapshot snapshot) => resources.CreateEditor(snapshot);
     public async Task<IReadOnlyList<ResourceProjectOption>> ListProjectsAsync(CancellationToken cancellationToken = default) =>
         (await projects.ListAsync(cancellationToken: cancellationToken)).Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray();
     public async Task<IReadOnlyList<ResourceReferenceOption>> ListSecretsAsync(CancellationToken cancellationToken = default) =>
@@ -27,17 +34,13 @@ public sealed class ResourceRegistryOwner(ResourcesService resources, ProjectWri
         }
         return options.OrderBy(p => p.DisplayName).Select(p => new ResourceReferenceOption(p.PartyId, p.DisplayName)).ToArray();
     }
-    public async Task<Result<Guid>> SaveAsync(ResourceEditorModel command) {
-        RequireCurrent();
-        try {
-            return await resources.SaveAsync(command);
-        } catch (ProjectWriteAdmissionRejectedException) {
-            throw new ResourceActionRefusedException("The selected project lifetime no longer admits this write. Reload references and select a current project explicitly.");
-        }
+    public Task<ResourceMetadataSaveOutcome> SaveAsync(ReplaceResourceMetadataCommand command, CancellationToken cancellationToken = default) {
+        return IsCurrent ? resources.SaveAsync(command, cancellationToken)
+            : Task.FromResult<ResourceMetadataSaveOutcome>(new ResourceMetadataSaveOutcome.Rejected(ResourceMetadataRejectionReason.OwnerRetired));
     }
-    public Task DeleteAsync(Guid id, ProjectWriteAdmission? admission) {
-        RequireCurrent();
-        return resources.DeleteAsync(id, admission);
+    public Task<ResourceMetadataDeleteOutcome> DeleteAsync(DeleteResourceMetadataCommand command, CancellationToken cancellationToken = default) {
+        return IsCurrent ? resources.DeleteAsync(command, cancellationToken)
+            : Task.FromResult<ResourceMetadataDeleteOutcome>(new ResourceMetadataDeleteOutcome.Rejected(ResourceMetadataRejectionReason.OwnerRetired));
     }
     private void RequireCurrent() {
         if (!IsCurrent) {

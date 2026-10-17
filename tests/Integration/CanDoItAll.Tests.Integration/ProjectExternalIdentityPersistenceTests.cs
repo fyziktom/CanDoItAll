@@ -14,6 +14,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectExternalIdentityPersistenceTests {
     private const string PreviousMigration = "20260927120448_AddInvocationCompletionUsageIndex";
+    private const string IdentityMigration = "20261007193102_AddProjectExternalIdentity";
     private const string IdentityScope = "synthetic-project-external-identity-test";
 
     [Fact]
@@ -31,9 +32,11 @@ public sealed class ProjectExternalIdentityPersistenceTests {
         }
         for (var restart = 0; restart < 2; restart++) {
             await using var upgraded = new AppDbContext(lease.CreateAppDbContextOptions());
-            await upgraded.Database.MigrateAsync();
-            Assert.False(upgraded.Database.HasPendingModelChanges());
-            var project = await upgraded.Set<Project>().SingleAsync();
+            await upgraded.GetService<IMigrator>().MigrateAsync(IdentityMigration);
+            Assert.Equal(IdentityMigration, (await upgraded.Database.GetAppliedMigrationsAsync()).Last());
+            var project = await upgraded.Set<Project>().Select(row => new {
+                row.Id, row.LifetimeId, row.Description, row.ExternalNamespace, row.ExternalKey
+            }).SingleAsync();
             Assert.Equal(id, project.Id);
             Assert.Equal(lifetime, project.LifetimeId);
             Assert.Equal("Retained description", project.Description);
@@ -41,14 +44,18 @@ public sealed class ProjectExternalIdentityPersistenceTests {
             Assert.Null(project.ExternalKey);
         }
         await using var current = new AppDbContext(lease.CreateAppDbContextOptions());
-        var bound = await current.Set<Project>().SingleAsync();
-        bound.ExternalNamespace = "synthetic";
-        bound.ExternalKey = "workspace";
-        await current.SaveChangesAsync();
-        await Assert.ThrowsAsync<PostgresException>(() => current.GetService<IMigrator>().MigrateAsync(PreviousMigration));
+        Assert.Equal(1, await current.Set<Project>().Where(row => row.Id == id).ExecuteUpdateAsync(setters => setters
+            .SetProperty(row => row.ExternalNamespace, "synthetic").SetProperty(row => row.ExternalKey, "workspace")));
+        var failure = await Assert.ThrowsAsync<PostgresException>(() => current.GetService<IMigrator>().MigrateAsync(PreviousMigration));
+        Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+        Assert.Contains("Cannot remove project external identity columns while assigned identities exist", failure.MessageText, StringComparison.Ordinal);
         await using var readback = new AppDbContext(lease.CreateAppDbContextOptions());
         Assert.Equal("workspace", await readback.Set<Project>().Select(project => project.ExternalKey).SingleAsync());
-        Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(IdentityMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
+        await readback.Database.MigrateAsync();
+        Assert.False(readback.Database.HasPendingModelChanges());
+        var restored = await readback.Set<Project>().SingleAsync();
+        Assert.Equal((id, lifetime, "workspace"), (restored.Id, restored.LifetimeId, restored.ExternalKey));
     }
 
     [Theory]

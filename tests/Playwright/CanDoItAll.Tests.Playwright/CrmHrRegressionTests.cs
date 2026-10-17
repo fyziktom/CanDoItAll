@@ -296,9 +296,9 @@ public sealed class CrmHrRegressionTests
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
 
         var savedResourceSummary = Assert.Single(await resourcesService.ListAsync(), item => item.Name == resourceName);
-        var savedResource = await resourcesService.GetAsync(savedResourceSummary.Id);
-        Assert.Equal(seed.OwnerId, savedResource.OwnerPartyId);
-        Assert.Equal(seed.MaintainerId, savedResource.MaintainerPartyId);
+        var savedResource = Assert.IsType<ResourceMetadataReadResult.Found>(await resourcesService.ReadAsync(savedResourceSummary.Id));
+        Assert.Equal(seed.OwnerId, savedResource.Snapshot.Values.OwnerPartyId);
+        Assert.Equal(seed.MaintainerId, savedResource.Snapshot.Values.MaintainerPartyId);
 
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);

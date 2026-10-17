@@ -2,7 +2,6 @@ using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
@@ -106,91 +105,18 @@ public sealed class StorageObjectResourceConnectorTests
     }
 
     [Fact]
-    public async Task General_resource_save_rejects_governed_storage_object_connector()
-    {
-        Guid storageId = Guid.NewGuid();
-        var plugin = new StorageObjectResourceConnectorPlugin();
-        var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>()
-            .UseInMemoryDatabase(nameof(General_resource_save_rejects_governed_storage_object_connector)).Options;
-        var projectProfile = new ResolvedDatabaseProfile(new() { ProviderKind = DatabaseProviderKind.InMemory },
-            DatabaseProfileResolutionSource.ExplicitOverride,
-            nameof(General_resource_save_rejects_governed_storage_object_connector));
-        var service = new ResourcesService(
-            new ThrowingResourceDbContextFactory(),
-            new ProjectRecordQueryService(new ThrowingProjectDbContextFactory(), projectOptions, CoordinatedDatabaseTransaction.ForProfile(projectProfile)),
-            new FixedClock(),
-            new NullActivityStream(),
-            new NullSearchIndex(),
-            new ResourceConnectorPluginRegistry([plugin]),
-            new DbContextOptionsBuilder<ResourcesDbContext>()
-                .UseInMemoryDatabase(nameof(General_resource_save_rejects_governed_storage_object_connector)).Options,
-            CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
-                new() { ProviderKind = DatabaseProviderKind.InMemory },
-                DatabaseProfileResolutionSource.ExplicitOverride,
-                nameof(General_resource_save_rejects_governed_storage_object_connector))),
-            new ProjectWriteAdmissionService(new ThrowingProjectDbContextFactory(), projectOptions,
-                CoordinatedDatabaseTransaction.ForProfile(projectProfile), new CanonicalDatabase(projectProfile)));
-        var model = new ResourceEditorModel
-        {
-            ProjectId = Guid.NewGuid(),
+    public void General_resource_save_rejects_governed_storage_object_connector_before_persistence() {
+        var profile = Guid.NewGuid();
+        var project = new ProjectWriteAdmission(profile, Guid.NewGuid(), Guid.NewGuid());
+        var original = new ResourceMetadataExpectation.Absent(new(profile, new(Guid.NewGuid())), Guid.NewGuid());
+        var model = new ResourceEditorModel {
             Name = "Bypass attempt",
-            ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey,
-            ConfigJson = StorageObjectResourceConnectorPlugin.Serialize(new StorageObjectResourceConfig(
-                ResourceFileSourceKey.ForStorage(storageId).Value,
-                storageId,
-                StorageProviderKind.FileSystem,
-                StorageLocatorKind.RelativePath,
-                "file.txt",
-                "file.txt",
-                "text/plain",
-                1))
+            ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey
         };
-
-        Result<Guid> result = await service.SaveAsync(model);
-
-        Assert.False(result.IsSuccess);
-        Assert.Contains(result.Errors, error => error.Message.Contains("authorized Resources browse promotion", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task Writer_persists_curated_configuration_and_is_idempotent_per_project_object()
-    {
-        await using ResourcePersistenceFixture fixture = await ResourcePersistenceFixture.CreateAsync();
-        Guid storageId = Guid.NewGuid();
-        var config = new StorageObjectResourceConfig(
-            ResourceFileSourceKey.ForStorage(storageId).Value,
-            storageId,
-            StorageProviderKind.FileSystem,
-            StorageLocatorKind.RelativePath,
-            "folder/file.txt",
-            "file.txt",
-            "text/plain",
-            42);
-        var writer = new StorageObjectResourceWriter(fixture.OwnerFactory, fixture.Admissions, fixture.Coordinator, new FixedClock());
-        var request = new StorageObjectResourceWriteRequest(
-            fixture.ProjectId,
-            "Stored file",
-            ResourceSensitivity.Sensitive,
-            config,
-            (await fixture.Admissions.CaptureAsync(fixture.ProjectId))!);
-
-        StorageObjectResourceWriteResult created = await writer.SaveAsync(request);
-        StorageObjectResourceWriteResult repeated = await writer.SaveAsync(request);
-
-        Assert.True(created.Created);
-        Assert.False(repeated.Created);
-        Assert.Equal(created.ResourceId, repeated.ResourceId);
-        await using AppDbContext dbContext = fixture.Factory.CreateDbContext();
-        ProjectResource resource = Assert.Single(await dbContext.Set<ProjectResource>().AsNoTracking().ToListAsync());
-        Assert.Equal(StorageObjectResourceConnectorPlugin.PluginKey, resource.ConnectorPluginKey);
-        Assert.Equal(StorageObjectResourceConnectorPlugin.SchemaVersion, resource.ConfigSchemaVersion);
-        Assert.Equal(ResourceValidationStatus.Valid, resource.ValidationStatus);
-        Assert.Equal(ResourceSensitivity.Sensitive, resource.Sensitivity);
-        Assert.Equal(StorageObjectResourceConnectorPlugin.Serialize(config), resource.ConfigJson);
-        Assert.DoesNotContain("folder/file.txt", resource.LocationOrIdentifier, StringComparison.Ordinal);
-        Assert.DoesNotContain("handle", resource.ConfigJson, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("route", resource.ConfigJson, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("metadata", resource.ConfigJson, StringComparison.OrdinalIgnoreCase);
+        var preparation = new ResourceMetadataPreparation(new ResourceConnectorPluginRegistry([new StorageObjectResourceConnectorPlugin()]));
+        var refused = Assert.Throws<ResourceMetadataRefusedException>(() => preparation.Prepare(new ReplaceResourceMetadataCommand(original, project, ResourceMetadataValues.Capture(model))));
+        Assert.Equal(ResourceMetadataRejectionReason.GovernedResource, refused.Reason);
+        Assert.Contains("authorized Resources browse promotion", refused.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -372,37 +298,6 @@ public sealed class StorageObjectResourceConnectorTests
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
-    }
-
-    private sealed class ThrowingProjectDbContextFactory : IDbContextFactory<ProjectsDbContext> {
-        public ProjectsDbContext CreateDbContext() => throw new InvalidOperationException("DB must not be reached.");
-    }
-
-    private sealed class ThrowingResourceDbContextFactory : IDbContextFactory<ResourcesDbContext> {
-        public ResourcesDbContext CreateDbContext() => throw new InvalidOperationException("DB must not be reached.");
-    }
-
-    private sealed class FixedClock : IClock
-    {
-        public DateTimeOffset GetUtcNow() => DateTimeOffset.Parse("2026-07-13T00:00:00Z");
-    }
-
-    private sealed class NullSearchIndex : ISearchIndexService
-    {
-        public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
-            UpsertAsync(input, cancellationToken);
-
-        public Task UpsertAsync(SearchDocumentInput input, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task DeleteAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<IReadOnlyList<SearchResult>> SearchAsync(
-            string query,
-            int take = 12,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<SearchResult>>([]);
     }
 
     private sealed class StaticSourceCatalog(ResourceFileSourceDescriptor source) : IResourceFileSourceCatalog

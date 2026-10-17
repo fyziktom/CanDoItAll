@@ -59,6 +59,7 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        MafToolRunContext.RequireSupportedAdmission(request.ExecutionOptions?.ToolAdmissionSupport ?? AgentToolAdmissionSupport.Recoverable);
 
         var decisions = request.Decisions;
         var model = MafModelParametersBuilder.ResolveRuntimeModel(request.Agent, request.Provider);
@@ -109,6 +110,9 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         }
 
         using var admissionLeaseScope = admissionLease?.Bind();
+        if (admissionLease is not null) {
+            MafToolRunContext.RequireSupportedAdmission((await toolAdmissionJournal!.ReadAsync(admissionLease, cancellationToken)).Support);
+        }
         var supportsToolRecovery = admissionLease is not null &&
             runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable;
         await progressCallback(ExecutionState.Preparing, "Framework", "Rehydrating the Microsoft Agent Framework runtime to continue from a pending approval.");

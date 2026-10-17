@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using System.Runtime.ExceptionServices;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
@@ -12,6 +14,7 @@ namespace CanDoItAll.Modules.Projects;
 public sealed class Project : IHasConcurrencyToken {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    [JsonIgnore]
     public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 
     [JsonIgnore]
@@ -168,9 +171,13 @@ public sealed partial class ProjectsService(
     ProjectWriteAdmissionService writeAdmissionService,
     ProjectDefinitionWriter definitionWriter,
     ProjectDefinitionReader definitionReader,
+    ICanonicalRuntimeDatabase canonicalDatabase,
+    DatasetActivationService datasetActivation,
     IProjectCreationCompensationGuard? creationCompensationGuard = null) : IProjectSummaryQueryService {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
+    private const string DeleteOwnerReviewGuidance =
+        "The project deletion committed, but owner release or completion is unconfirmed. Keep the exact recovery identifiers for operator review; do not retry cleanup or deletion until owner release is independently established. A pending-list read does not establish release.";
 
     private sealed record ProjectHierarchyMetrics(
         IReadOnlyDictionary<Guid, int> ParentCounts,
@@ -767,151 +774,207 @@ public sealed partial class ProjectsService(
             ?? throw new InvalidOperationException("An ordinary project deletion returned a creation-compensation refusal.");
 
     private async Task<ProjectDeletionResult?> DeleteCoreAsync(Guid id, CancellationToken cancellationToken,
-        ProjectCreationReceipt? creationReceipt = null, ProjectWriteAdmission? expectedProjectAdmission = null)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var orderedParticipants = GetOrderedDeletionParticipants();
-        var mutationScopeKeys = ResolveDeletionPreparationScopeKeys(orderedParticipants)
-            .Append(ProjectMutationScopeKeys.ForProject(id))
-            .Append(ProjectMutationScopeKeys.Hierarchy)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(dbContext, mutationScopeKeys,
-            creationReceipt?.Reservation?.ParentProjectId is not null ? ProjectMutationPurpose.CreateChild :
-                creationReceipt is not null ? ProjectMutationPurpose.CreateRoot : ProjectMutationPurpose.ExistingWrite,
-            id, creationReceipt?.Authorization?.ExpectedProjects.Select(project => project.ProjectId).ToArray() ?? [],
-            creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, creationReceipt?.Reservation);
-        var project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (expectedProjectAdmission is not null) {
-            ProjectAssignmentAdmission.Require(id, expectedProjectAdmission);
-            await writeAdmissionService.RequireAsync(dbContext, expectedProjectAdmission, cancellationToken);
+        ProjectCreationReceipt? creationReceipt = null, ProjectWriteAdmission? expectedProjectAdmission = null) {
+        ProjectsDbContext? dbContext = null;
+        ProjectSourceMutationScope? mutationScope = null;
+        Project? project = null;
+        Exception? ownerFailure = null;
+        var compensationRefused = false;
+        var preparedParticipants = new List<(IProjectDeletionParticipant Participant, ProjectDeletionParticipantPreparation Preparation)>();
+        try {
+            var profile = canonicalDatabase.Profile;
+            var generation = canonicalDatabase.Generation;
+            var binding = profile.Profile.ProviderKind == DatabaseProviderKind.PostgreSql
+                ? await datasetActivation.ReadActiveBindingAsync(profile.Profile.Id, cancellationToken)
+                : null;
+            dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            coordinatedTransaction.RequireOwnerProfile(dbContext);
+            CoordinatedDatabaseTransaction.ForProfile(profile).RequireOwnerProfile(dbContext);
+            void RequireCurrentOwner() {
+                if (canonicalDatabase.Profile != profile || canonicalDatabase.Generation != generation) {
+                    throw new InvalidOperationException("The original project deletion database owner is no longer current.");
+                }
+            }
+            RequireCurrentOwner();
+            var orderedParticipants = GetOrderedDeletionParticipants();
+            var mutationScopeKeys = ResolveDeletionPreparationScopeKeys(orderedParticipants)
+                .Append(ProjectMutationScopeKeys.ForProject(id))
+                .Append(ProjectMutationScopeKeys.Hierarchy)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            var purpose = creationReceipt?.Reservation?.ParentProjectId is not null ? ProjectMutationPurpose.CreateChild :
+                creationReceipt is not null ? ProjectMutationPurpose.CreateRoot : ProjectMutationPurpose.ExistingWrite;
+            var existingIds = creationReceipt?.Authorization?.ExpectedProjects.Select(item => item.ProjectId).ToArray() ?? [];
+            mutationScope = binding is not null
+                ? await ProjectSourceMutationScope.BeginDeletionAsync(dbContext, mutationScopeKeys, purpose, id, existingIds,
+                    creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, binding, RequireCurrentOwner,
+                    cancellationToken, creationReceipt?.Reservation)
+                : await ProjectSourceMutationScope.BeginAsync(dbContext, mutationScopeKeys, purpose, id, existingIds,
+                    creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, creationReceipt?.Reservation);
+            project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (expectedProjectAdmission is not null) {
+                ProjectAssignmentAdmission.Require(id, expectedProjectAdmission);
+                await writeAdmissionService.RequireAsync(dbContext, expectedProjectAdmission, cancellationToken);
+            }
+            if (creationReceipt is not null && !await CanCompensateCreationAsync(dbContext, creationReceipt, cancellationToken)) {
+                compensationRefused = true;
+            } else {
+                RequireCurrentOwner();
+                using (coordinatedTransaction.Enter(dbContext)) {
+                    foreach (var participant in orderedParticipants) {
+                        var preparation = await participant.PrepareAsync(id, cancellationToken);
+                        if (preparation is null) {
+                            continue;
+                        }
+
+                        if (preparation.RecoveryId == Guid.Empty) {
+                            throw new InvalidOperationException(
+                                $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
+                        }
+
+                        if (preparation.ProjectId != id) {
+                            throw new InvalidOperationException(
+                                $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
+                        }
+
+                        preparedParticipants.Add((participant, preparation));
+                    }
+
+                    if (creationReceipt?.Reservation is { } originalReservation) {
+                        await writeAdmissionService.CancelConsumedCreationForCompensationAsync(dbContext, originalReservation, cancellationToken);
+                    }
+                    await ProjectWriteAdmissionService.CancelCreationForDeletionAsync(dbContext, id, cancellationToken);
+                    if (project is not null) {
+                        var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                        var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
+                        var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
+                            .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
+                            .ToListAsync(cancellationToken);
+                        dbContext.RemoveRange(phases);
+                        dbContext.RemoveRange(options);
+                        dbContext.RemoveRange(hierarchyLinks);
+                        dbContext.Add(new ProjectRetirementRecord {
+                            ProjectId = project.Id, LifetimeId = project.LifetimeId, RetiredAtUtc = clock.GetUtcNow()
+                        });
+                        dbContext.Remove(project);
+                    }
+
+                    await searchMutationService.DeleteProjectSearchForMutationAsync(id, cancellationToken);
+                    await storageCatalogService.DeleteProjectRoutingForMutationAsync(id, cancellationToken);
+
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                await mutationScope.CommitAsync(cancellationToken);
+            }
+        } catch (Exception failure) {
+            ownerFailure = failure;
         }
-        if (creationReceipt is not null && !await CanCompensateCreationAsync(dbContext, creationReceipt, cancellationToken)) {
+        if (mutationScope is not null) {
+            try {
+                await mutationScope.DisposeAsync();
+            } catch (Exception failure) {
+                ownerFailure = ownerFailure is null ? failure : new AggregateException(ownerFailure, failure);
+            }
+        }
+        if (dbContext is not null) {
+            try {
+                await dbContext.DisposeAsync();
+            } catch (Exception failure) {
+                ownerFailure = ownerFailure is null ? failure : new AggregateException(ownerFailure, failure);
+            }
+        }
+        if (ownerFailure is not null) {
+            try {
+                logger.LogError("Project {ProjectId} deletion owner failed with {FailureType}. CommitAttempted={CommitAttempted}; CommitAcknowledged={CommitAcknowledged}.",
+                    id, ownerFailure.GetType().FullName, mutationScope?.CommitAttempted == true, mutationScope?.IsCommitted == true);
+            } catch (Exception loggingFailure) {
+                ownerFailure = new AggregateException(ownerFailure, loggingFailure);
+            }
+            if (mutationScope?.IsCommitted == true) {
+                throw OwnerCompletionFailure(preparedParticipants, ownerFailure);
+            }
+            ExceptionDispatchInfo.Capture(ownerFailure).Throw();
+        }
+        if (compensationRefused) {
             return null;
-        }
-        var preparedParticipants = new List<(
-            IProjectDeletionParticipant Participant,
-            ProjectDeletionParticipantPreparation Preparation)>();
-        using (coordinatedTransaction.Enter(dbContext)) {
-            foreach (var participant in orderedParticipants)
-            {
-                var preparation = await participant.PrepareAsync(id, cancellationToken);
-                if (preparation is null)
-                {
-                    continue;
-                }
-
-                if (preparation.RecoveryId == Guid.Empty)
-                {
-                    throw new InvalidOperationException(
-                        $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
-                }
-
-                if (preparation.ProjectId != id)
-                {
-                    throw new InvalidOperationException(
-                        $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
-                }
-
-                preparedParticipants.Add((participant, preparation));
-            }
-
-            if (creationReceipt?.Reservation is { } originalReservation) {
-                await writeAdmissionService.CancelConsumedCreationForCompensationAsync(dbContext, originalReservation, cancellationToken);
-            }
-            await ProjectWriteAdmissionService.CancelCreationForDeletionAsync(dbContext, id, cancellationToken);
-            if (project is not null)
-            {
-                var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-                var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-                var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
-                    .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
-                    .ToListAsync(cancellationToken);
-                dbContext.RemoveRange(phases);
-                dbContext.RemoveRange(options);
-                dbContext.RemoveRange(hierarchyLinks);
-                dbContext.Add(new ProjectRetirementRecord {
-                    ProjectId = project.Id, LifetimeId = project.LifetimeId, RetiredAtUtc = clock.GetUtcNow()
-                });
-                dbContext.Remove(project);
-            }
-
-            await searchMutationService.DeleteProjectSearchForMutationAsync(id, cancellationToken);
-            await storageCatalogService.DeleteProjectRoutingForMutationAsync(id, cancellationToken);
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        await mutationScope.CommitAsync(cancellationToken);
-        await mutationScope.DisposeAsync();
-
-        if (project is not null)
-        {
-            await RunPostCommitActionAsync(
-                "activity-project-delete",
-                id,
-                () => activityStream.RecordAsync(new ActivityWriteRequest(
-                    "projects",
-                    "delete",
-                    "Deleted project",
-                    project.Name,
-                    ProjectId: id,
-                    ArtifactKind: "project",
-                    ArtifactId: id,
-                    Route: "/projects"), cancellationToken));
         }
 
         var failures = new List<ProjectDeletionRecoveryFailure>();
         var failureExceptions = new List<Exception>();
         var warnings = new List<ProjectDeletionWarning>();
-        foreach (var (participant, preparation) in preparedParticipants)
-        {
-            try
-            {
-                var completion = await participant.CompleteAsync(preparation, cancellationToken);
-                ValidateParticipantCompletion(participant, preparation, completion);
-                warnings.AddRange(completion.Warnings.Select(warning => new ProjectDeletionWarning(
-                    warning.Kind,
-                    participant.Id,
-                    completion.RecoveryId,
-                    warning.RetainedObject,
-                    warning.Message,
-                    warning.Remediation)));
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Project {ProjectId} was deleted, but participant {Participant} failed cleanup for recovery {RecoveryId}.",
+        var completedParticipants = 0;
+        try {
+            if (project is not null) {
+                await RunPostCommitActionAsync(
+                    "activity-project-delete",
                     id,
-                    participant.Id,
-                    preparation.RecoveryId);
-                var failedRecoveryId = exception is ProjectDeletionParticipantCleanupException cleanupException
-                    ? cleanupException.RecoveryId
-                    : preparation.RecoveryId;
-                failures.Add(new ProjectDeletionRecoveryFailure(
-                    ProjectDeletionRecoveryOperation.ParticipantCleanup,
-                    participant.Id,
-                    failedRecoveryId));
-                failureExceptions.Add(exception);
+                    () => activityStream.RecordAsync(new ActivityWriteRequest(
+                        "projects",
+                        "delete",
+                        "Deleted project",
+                        project.Name,
+                        ProjectId: id,
+                        ArtifactKind: "project",
+                        ArtifactId: id,
+                        Route: "/projects"), cancellationToken));
             }
+
+            foreach (var (participant, preparation) in preparedParticipants) {
+                try {
+                    var completion = await participant.CompleteAsync(preparation, cancellationToken);
+                    ValidateParticipantCompletion(participant, preparation, completion);
+                    warnings.AddRange(completion.Warnings.Select(warning => new ProjectDeletionWarning(
+                        warning.Kind,
+                        participant.Id,
+                        completion.RecoveryId,
+                        warning.RetainedObject,
+                        warning.Message,
+                        warning.Remediation)));
+                } catch (Exception exception) {
+                    var failedRecoveryId = exception is ProjectDeletionParticipantCleanupException cleanupException
+                        ? cleanupException.RecoveryId
+                        : preparation.RecoveryId;
+                    failures.Add(new ProjectDeletionRecoveryFailure(
+                        ProjectDeletionRecoveryOperation.ParticipantCleanup,
+                        participant.Id,
+                        failedRecoveryId));
+                    failureExceptions.Add(exception);
+                    logger.LogError("Project {ProjectId} committed deletion; participant {Participant} cleanup for recovery {RecoveryId} failed with {FailureType}.",
+                        id, participant.Id, preparation.RecoveryId, exception.GetType().FullName);
+                }
+                completedParticipants++;
+            }
+
+            await RecordDeletionWarningsAsync(id, warnings, cancellationToken);
+
+            if (failures.Count == 0) {
+                return new ProjectDeletionResult(id, warnings);
+            }
+
+            var recovery = new ProjectDeletionRecovery(id, failures.ToArray(), DeleteRetryGuidance);
+            var innerException = failureExceptions.Count == 1
+                ? failureExceptions[0]
+                : new AggregateException(failureExceptions);
+            throw new ProjectDeletionPartialCommitException(
+                recovery,
+                $"Project '{id:D}' was deleted, but cleanup is incomplete. {DeleteRetryGuidance}",
+                innerException);
+        } catch (ProjectDeletionPartialCommitException) {
+            throw;
+        } catch (Exception failure) {
+            var pending = failures.Concat(preparedParticipants.Skip(completedParticipants).Select(item =>
+                new ProjectDeletionRecoveryFailure(ProjectDeletionRecoveryOperation.ParticipantCleanup,
+                    item.Participant.Id, item.Preparation.RecoveryId))).Distinct().ToArray();
+            throw new ProjectDeletionPartialCommitException(new(id, pending, DeleteOwnerReviewGuidance, true),
+                DeleteOwnerReviewGuidance, failureExceptions.Count == 0 ? failure : new AggregateException(failureExceptions.Append(failure)));
         }
 
-        await RecordDeletionWarningsAsync(id, warnings, cancellationToken);
-
-        if (failures.Count == 0)
-        {
-            return new ProjectDeletionResult(id, warnings);
-        }
-
-        var recovery = new ProjectDeletionRecovery(id, failures, DeleteRetryGuidance);
-        var innerException = failureExceptions.Count == 1
-            ? failureExceptions[0]
-            : new AggregateException(failureExceptions);
-        throw new ProjectDeletionPartialCommitException(
-            recovery,
-            $"Project '{id:D}' was deleted, but cleanup is incomplete. {DeleteRetryGuidance}",
-            innerException);
+        ProjectDeletionPartialCommitException OwnerCompletionFailure(
+            IEnumerable<(IProjectDeletionParticipant Participant, ProjectDeletionParticipantPreparation Preparation)> pending, Exception failure)
+            => new(new(id, pending.Select(item => new ProjectDeletionRecoveryFailure(
+                ProjectDeletionRecoveryOperation.ParticipantCleanup, item.Participant.Id, item.Preparation.RecoveryId)).ToArray(),
+                DeleteOwnerReviewGuidance, true), DeleteOwnerReviewGuidance, failure);
     }
 
     public async Task<IReadOnlyList<ProjectDeletionPendingCleanup>> ListPendingDeletionCleanupsAsync(

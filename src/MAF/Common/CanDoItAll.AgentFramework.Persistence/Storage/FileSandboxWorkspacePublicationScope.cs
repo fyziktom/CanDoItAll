@@ -1,0 +1,196 @@
+using System.Runtime.ExceptionServices;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure;
+
+namespace CanDoItAll.AgentFramework.Persistence;
+
+internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
+    private static readonly TimeSpan KeyAcquisitionTimeout = TimeSpan.FromMinutes(1);
+    private readonly SemaphoreSlim gate;
+    private readonly FileSandboxWorkspaceCrossProcessLock workspaceLock;
+    private readonly FileSandboxWorkspaceStorageLayout layout;
+    private readonly DurableFileWriter writer;
+    private readonly TimeProvider timeProvider;
+    private IAsyncDisposable? heldWorkspace;
+    private bool heldGate;
+    private bool disposed;
+    private Exception? operationFailure;
+    private FileSandboxWorkspaceWriteSet? heldWriteSet;
+    private readonly List<IAsyncDisposable> heldKeys = [];
+
+    private FileSandboxWorkspacePublicationScope(SemaphoreSlim gate, FileSandboxWorkspaceCrossProcessLock workspaceLock,
+        FileSandboxWorkspaceStorageLayout layout, DurableFileWriter writer, TimeProvider timeProvider) {
+        this.gate = gate;
+        this.workspaceLock = workspaceLock;
+        this.layout = layout;
+        this.writer = writer;
+        this.timeProvider = timeProvider;
+    }
+
+    internal static async Task<FileSandboxWorkspacePublicationScope> EnterAsync(SemaphoreSlim gate,
+        FileSandboxWorkspaceCrossProcessLock workspaceLock, FileSandboxWorkspaceStorageLayout layout,
+        DurableFileWriter writer, CancellationToken cancellationToken, TimeProvider? timeProvider = null) {
+        var scope = new FileSandboxWorkspacePublicationScope(gate, workspaceLock, layout, writer, timeProvider ?? TimeProvider.System);
+        await scope.EnterWorkspaceAsync(cancellationToken).ConfigureAwait(false);
+        return scope;
+    }
+
+    internal async Task<IAsyncDisposable> AcquireAsync(FileSandboxWorkspaceWriteSet writeSet,
+        FileSandboxWorkspaceMutationWitness witness, CancellationToken cancellationToken) {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (!heldGate || heldWorkspace is null) {
+            throw new InvalidOperationException("A prepared workspace publication requires the short workspace guard.");
+        }
+        if (heldWriteSet is not null) {
+            if (!heldWriteSet.Contains(writeSet)) {
+                throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
+            }
+            return EmptyLease.Instance;
+        }
+        await witness.RequireUnchangedAsync(cancellationToken).ConfigureAwait(false);
+        await ExitWorkspaceAsync().ConfigureAwait(false);
+        try {
+            var acquisitionStarted = timeProvider.GetTimestamp();
+            using (AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.publication.keys.wait")) {
+                foreach (var path in writeSet.LockPaths(layout)) {
+                    var remaining = RequireRemainingBudget();
+                    heldKeys.Add(await writer.AcquireCoordinationAsync(layout.RootPath, path, remaining,
+                        requirePrivateUnixMode: false, cancellationToken).ConfigureAwait(false));
+                    _ = RequireRemainingBudget();
+                }
+            }
+            using (AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.publication.workspace.reacquire")) {
+                await EnterWorkspaceAsync(cancellationToken).ConfigureAwait(false);
+            }
+            await witness.RequireUnchangedAsync(cancellationToken).ConfigureAwait(false);
+            heldWriteSet = writeSet;
+            return new PublicationLease(this);
+
+            TimeSpan RequireRemainingBudget() {
+                cancellationToken.ThrowIfCancellationRequested();
+                var elapsed = timeProvider.GetElapsedTime(acquisitionStarted);
+                if (elapsed < TimeSpan.Zero) {
+                    throw new InvalidOperationException("The workspace publication clock moved backwards.");
+                }
+                var remaining = KeyAcquisitionTimeout - elapsed;
+                if (remaining <= TimeSpan.Zero) {
+                    throw new TimeoutException("Timed out acquiring the complete workspace publication key set.");
+                }
+                return remaining;
+            }
+        } catch (Exception failure) {
+            RetainFailure(failure);
+            try {
+                await ReleaseKeysAsync().ConfigureAwait(false);
+            } catch (Exception cleanup) {
+                var combined = new AggregateException("Workspace publication admission and key release failed.", failure, cleanup);
+                RetainFailure(combined);
+                throw combined;
+            }
+            ExceptionDispatchInfo.Capture(failure).Throw();
+            throw;
+        }
+    }
+
+    internal void RetainFailure(Exception failure) => operationFailure = failure;
+
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        Exception? failure = null;
+        try {
+            await ExitWorkspaceAsync().ConfigureAwait(false);
+        } catch (Exception exception) {
+            failure = exception;
+        }
+        try {
+            await ReleaseKeysAsync().ConfigureAwait(false);
+        } catch (Exception cleanup) {
+            if (failure is not null) {
+                failure = new AggregateException("Workspace coordination release failed.", failure, cleanup);
+            } else {
+                failure = cleanup;
+            }
+        }
+        if (failure is not null) {
+            if (operationFailure is not null) {
+                throw new AggregateException("Workspace publication and coordination release failed.", operationFailure, failure);
+            }
+            ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+    }
+
+    private async Task EnterWorkspaceAsync(CancellationToken cancellationToken) {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        heldGate = true;
+        try {
+            heldWorkspace = await workspaceLock.AcquireAsync(cancellationToken).ConfigureAwait(false);
+        } catch {
+            heldGate = false;
+            gate.Release();
+            throw;
+        }
+    }
+
+    private async ValueTask ExitWorkspaceAsync() {
+        var acquired = heldWorkspace;
+        heldWorkspace = null;
+        try {
+            if (acquired is not null) {
+                await acquired.DisposeAsync().ConfigureAwait(false);
+            }
+        } finally {
+            if (heldGate) {
+                heldGate = false;
+                gate.Release();
+            }
+        }
+    }
+
+    private async ValueTask ReleaseKeysAsync() {
+        heldWriteSet = null;
+        List<Exception>? failures = null;
+        for (var index = heldKeys.Count - 1; index >= 0; index--) {
+            var acquired = heldKeys[index];
+            heldKeys.RemoveAt(index);
+            try {
+                await acquired.DisposeAsync().ConfigureAwait(false);
+            } catch (Exception failure) {
+                (failures ??= []).Add(failure);
+            }
+        }
+        if (failures is not null) {
+            throw new AggregateException("Workspace publication key release failed.", failures);
+        }
+    }
+
+    private sealed class PublicationLease(FileSandboxWorkspacePublicationScope scope) : IAsyncDisposable {
+        private FileSandboxWorkspacePublicationScope? owner = scope;
+
+        public async ValueTask DisposeAsync() {
+            var acquired = Interlocked.Exchange(ref owner, null);
+            if (acquired is null) {
+                return;
+            }
+            try {
+                await acquired.ReleaseKeysAsync().ConfigureAwait(false);
+            } catch (Exception cleanup) {
+                if (acquired.operationFailure is not null) {
+                    var combined = new AggregateException("Workspace publication and key release failed.", acquired.operationFailure, cleanup);
+                    acquired.RetainFailure(combined);
+                    throw combined;
+                }
+                acquired.RetainFailure(cleanup);
+                throw;
+            }
+        }
+    }
+
+    private sealed class EmptyLease : IAsyncDisposable {
+        internal static EmptyLease Instance { get; } = new();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+}

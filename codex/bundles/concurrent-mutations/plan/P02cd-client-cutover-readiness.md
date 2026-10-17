@@ -1,13 +1,16 @@
 # Native Workbench and SPA cutover: next ordered slice
 
-Read-only readiness review, 2026-10-16. No source, build, test, database or sibling
-SPA change was made. Existing proof is not proof of these remaining callers.
-Implement Workbench first; repair HTTP schemas before generating the SPA client.
+Readiness review, 2026-10-16. Sections 1–3 now have a source-only Workbench
+implementation in the managed continuation checkout; see the exact scope and
+unmet proof arrangements in [Workbench create validation](../validation/P02cd-workbench-create.md).
+The instructions below describe the intended cutover, not completed runtime proof.
+SPA generator/asset preparation is separately committed and validated; its writer
+cutover remains a plan. Repair and validate HTTP schemas before generating its client.
 
 ## 1. Reuse the protected native root-create contract
 
 `src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectCreation.cs`
-currently reserves an independent **root** (no parent argument), calls legacy
+previously reserved an independent **root** (no parent argument), called legacy
 `CreateEditorAsync`, then offers the created project for later hierarchy selection.
 There is no atomic create-and-attach guarantee to preserve. Use the existing
 `ProjectNativeDefinitionOperations` LocalWorkspace create path and take the
@@ -37,7 +40,7 @@ later typing. Reuse the Projects page as the full recovery inventory after close
 or restart, with a visible navigation action; do not duplicate its administration
 surface or introduce a generic Workbench transaction manager.
 
-Current defects this removes: `Acknowledge` precedes `outcome.Editor`, so a client
+Prior defects this removes: `Acknowledge` preceded `outcome.Editor`, so a client
 reconciliation exception loses known acceptance; seeds may begin after the modal
 closes because the current opening is checked only at publication. Use the shared
 session's known-acceptance and `CanSeed`/Begin/Complete/Refuse transitions. Seed only
@@ -76,8 +79,10 @@ Add focused arrangements in that file or a dedicated adjacent pending test file:
 Reuse `ComponentTestHarness`'s explicit pending-store registration and existing
 hierarchy/modal event seams. Add one real browser journey from Structure create
 through page reload to Projects recovery, with exact database effects and no
-automatic hierarchy link/seed. Counts beyond the existing two are planned proof
-groups, not fabricated discovered cases.
+automatic hierarchy link/seed. The implementation now contains 17 component cases
+(the existing two amended and 15 added) plus one browser case. These are
+source-derived expectations; the linked validation card identifies the
+arrangements still missing at the host boundary.
 
 ## 4. Finish actual HTTP schemas before SPA generation
 
@@ -103,9 +108,11 @@ Owner canonical codecs and default numeric epoch serialization remain unchanged.
 ## 5. Generate and package one maintained browser store
 
 In sibling `CanDoItAll.SPA`, use an explicit reviewed candidate OpenAPI input.
-The default generator fetches ordinary5032 and deletes its generated source tree;
-do not use that command as-is. Add deterministic input selection then run its
-existing prepare/TypeSpec/fix pipeline. Review generated models, serializers,
+The former default generator fetched ordinary5032 and deleted its generated
+source tree. SPA commit `2fe9e8ee1b6b7ce9e8777320b7daa19f895cfebb` replaces that
+entry with explicit local reviewed input/hash and protected-schema preflight.
+Use its documented process-scoped dependency-check guard, then the existing
+prepare/TypeSpec/fix pipeline. Review generated models, serializers,
 lookup query and response unions before changing Vue callers.
 
 Use the existing ES module `Web/wwwroot/js/projectPendingSubmissions.js` unchanged
@@ -119,7 +126,10 @@ HTTP epoch is a string. SPA must use a versioned, bounded HTTP-envelope adapter;
 never feed HTTP strings to the native codec or reproduce the owner digest.
 LocalWorkspace and HTTP caller bindings are distinct; same-origin global
 metadata inventory must remain body-free across these scopes. Reusing the store
-does not imply cross-client body interchangeability.
+does not imply cross-client body interchangeability. Exact asset bytes, the
+actual app build and a real Vite non-root URL check passed in the separate
+[SPA preparation proof](../validation/P02d-spa-preparation.md); no generated
+client or protected Vue writer has been enabled by that checkpoint.
 
 ## 6. Cut over the two SPA callers and prove transport behavior
 
@@ -136,10 +146,12 @@ Persist before dispatch; applied CAS only; quota/abort fails closed; no automati
 resume or fresh ID after uncertainty. Keep response timestamp strings exactly
 (generated Date conversion loses precision), validate complete accepted mapping,
 and exclude per-attempt `replayed` from stable retained acceptance. A restored
-stored result requires fresh authorized lookup. Installed SPA runtime dependencies
-are currently absent in this checkout, so default retry behavior was not verified;
-inspect pinned `@typespec/ts-http-runtime` 0.2.1 and explicitly configure/test zero
-automatic protected-write retries before enabling it.
+stored result requires fresh authorized lookup. The pinned
+`@typespec/ts-http-runtime` 0.2.1 review found default SDK retries and a separate
+browser redirect risk; see [transport cutover review](P02d-spa-client-cutover-review.md).
+Use a dedicated protected client with zero SDK retries and its supported HTTP
+client seam to reject redirects. Verify actual generated-client sends and the
+original owner identity/receipt behavior before enabling protected writes.
 
 Proof: generated shape/enum/null/epoch/timestamp round trips; all closed outcomes;
 transport 503/disconnect sends once; delayed typing/row edits and route fencing;

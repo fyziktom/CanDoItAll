@@ -8758,17 +8758,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             agent.Id,
             executionRunId,
             responseText,
-            RunOutcome.Failed);
-        if (signal == AgentTransientDurableSignal.ImmediateMetricToolCall)
-        {
-            executeResult = executeResult with
-            {
-                Metric = executeResult.Metric with
-                {
-                    ToolCalls = 1
-                }
-            };
-        }
+            RunOutcome.Failed,
+            toolCalls: signal == AgentTransientDurableSignal.ImmediateMetricToolCall ? 1 : 0);
 
         var workspace = new ThrowingWorkspaceService(
             agent,
@@ -13034,7 +13025,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Guid agentId,
         Guid executionRunId,
         string responseText,
-        RunOutcome outcome = RunOutcome.Succeeded)
+        RunOutcome outcome = RunOutcome.Succeeded,
+        int toolCalls = 0)
         => new(
             executionRunId,
             null,
@@ -13051,7 +13043,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                  1,
                  10,
                  2,
-                 0)
+                 toolCalls)
              {
                  ExecutionRunId = executionRunId
              });

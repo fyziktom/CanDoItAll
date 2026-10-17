@@ -8,7 +8,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Playwright;
 
-internal enum ProviderSandboxKind { Profiles, History, CapabilityAuthoring, Teams }
+internal enum ProviderSandboxKind { Profiles, History, CapabilityAuthoring, Teams, AgentChat }
 
 internal sealed class IndependentProviderSandboxHost(ProviderSandboxKind kind) : IAsyncDisposable {
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("provider-ui-sandbox");
@@ -17,6 +17,7 @@ internal sealed class IndependentProviderSandboxHost(ProviderSandboxKind kind) :
         kind switch {
             ProviderSandboxKind.History => "provider-history-pp3",
             ProviderSandboxKind.Profiles => "provider-profiles-pp1",
+            ProviderSandboxKind.AgentChat => "agent-chat-send-affordance",
             _ => "agent-authoring-ca1"
         }, "sandbox-hosts", Guid.NewGuid().ToString("N"));
     private Process? process;
@@ -29,12 +30,12 @@ internal sealed class IndependentProviderSandboxHost(ProviderSandboxKind kind) :
         publishedHost = published;
         var projectName = kind switch {
             ProviderSandboxKind.Profiles => "CanDoItAll.AgentFramework.Providers.UiSandbox",
-            ProviderSandboxKind.History or ProviderSandboxKind.Teams => "CanDoItAll.AgentFramework.UiSandbox",
+            ProviderSandboxKind.History or ProviderSandboxKind.Teams or ProviderSandboxKind.AgentChat => "CanDoItAll.AgentFramework.UiSandbox",
             ProviderSandboxKind.CapabilityAuthoring => "CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
         var root = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "src", "Sandboxes", projectName);
-        var sourceBinaryRoot = kind is ProviderSandboxKind.History or ProviderSandboxKind.Teams
+        var sourceBinaryRoot = kind is ProviderSandboxKind.History or ProviderSandboxKind.Teams or ProviderSandboxKind.AgentChat
             ? Path.Combine(root, "bin", "Parity", PlaywrightTestHostPaths.BuildConfiguration, "net10.0")
             : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0");
         var directory = published ? Path.Combine(environment.RootPath, "publish") : root;

@@ -242,9 +242,10 @@ public sealed partial class ProjectDefinitionOperationTests {
         if (invalid == InvalidContext.DrainingEpoch) {
             await using var database = await DatabaseAsync(services);
             await database.Database.ExecuteSqlInterpolatedAsync($"""
-                UPDATE "Projects_OperationEpochs" SET "OpenedAtUtc" = clock_timestamp() - interval '2 hours',
+                UPDATE "Infrastructure_FiniteOperationEpochs" SET "OpenedAtUtc" = clock_timestamp() - interval '2 hours',
                     "AdmissionClosesAtUtc" = clock_timestamp() - interval '1 hour'
-                WHERE "NamespaceId" = {issued.Namespace.Value} AND "Epoch" = {issued.Epoch.Value}
+                WHERE "NamespaceId" = {issued.Namespace.Value} AND "PoolId" = {ProjectFiniteOperationPool.Pool.Value}
+                    AND "Epoch" = {issued.Epoch.Value}
                 """);
         }
         var expectedCode = invalid switch {

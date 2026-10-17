@@ -57,6 +57,11 @@ public sealed class ApiUserAdministrationPanelTests {
         public List<ApiUserRecord> Users { get; } = [];
         public int SaveCalls { get; private set; }
 
+        public Task EnsureAuthorityFormatAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ApiUserStoreSnapshot> ReadSnapshotAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<ApiUserAuthorityObservation> ObserveAuthorityAsync(ApiUserAuthorityGeneration expected, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<IReadOnlyList<ApiUserRecord>> ReadAsync(CancellationToken cancellationToken = default) {
             if (failRead) {
                 failRead = false;

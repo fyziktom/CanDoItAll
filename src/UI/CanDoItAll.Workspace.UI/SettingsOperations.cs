@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Workspace;
 
 namespace CanDoItAll.Workspace.UI;
 
-public enum SettingsAction { SaveDefaults, SaveSecret, DeleteSecret, SaveFile, DeleteFile, UpdatePolicy, ShortenRetention }
+public enum SettingsAction { SaveDefaults, SaveSecret, DeleteSecret, SaveFile, DeleteFile, UpdatePolicy, ShortenRetention, SaveDefaultsWithPolicy }
 public enum SettingsEffect { Pending, Refused, Committed, CommittedWarning, Unknown }
 
 public sealed class SettingsReceipt(Guid origin, SettingsAction action, Guid? recordId = null, WorkspaceFileExtension? extension = null) {
@@ -13,6 +13,8 @@ public sealed class SettingsReceipt(Guid origin, SettingsAction action, Guid? re
     public WorkspaceFileExtension? Extension { get; } = extension;
     public SettingsEffect Effect { get; set; } = SettingsEffect.Pending;
     public SettingsDiagnostic Diagnostic { get; set; }
+    public WorkspaceSettingsSaveOutcome.Accepted? DefaultsAccepted { get; set; }
+    public WorkspaceSettingsSaveOutcomeV2.Accepted? DefaultsAcceptedV2 { get; set; }
     public long? PolicyVersion { get; set; }
     public bool IsReviewing { get; set; }
     public bool IsReconciling { get; set; }

@@ -19,6 +19,7 @@ public static class ProjectErrorCodes
     public const string DefinitionConflict = "projects.definition-conflict";
     public const string DefinitionTransactionConflict = "projects.definition-transaction-conflict";
     public const string DefinitionChildInvalid = "projects.definition-child-invalid";
+    public const string DefinitionSourceInvalid = "projects.definition-source-invalid";
     public const string DefinitionLimitExceeded = "projects.definition-limit-exceeded";
     public const string DefinitionOperationRequired = "projects.definition-operation-required";
     public const string DefinitionOperationMismatch = "projects.definition-operation-mismatch";
@@ -27,6 +28,9 @@ public static class ProjectErrorCodes
     public const string DefinitionOperationUnknown = "projects.definition-operation-unknown";
     public const string DefinitionDatasetChanged = "projects.definition-dataset-changed";
     public const string DefinitionCallerChanged = "projects.definition-caller-changed";
+    public const string DefinitionWriteDenied = "projects.definition-write-denied";
+    public const string DefinitionAuthorityChanged = "projects.definition-authority-changed";
+    public const string DefinitionAuthorityUnavailable = "projects.definition-authority-unavailable";
     public const string DefinitionVersionUnsupported = "projects.definition-version-unsupported";
     public const string DefinitionReceiptUnavailable = "projects.definition-receipt-unavailable";
 }

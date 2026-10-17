@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/ui_validation_architecture",
+  "sourceOnly": true,
+  "originalInventory": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\P04-C4-narrow-owner-source-inventory.json",
+    "bytes": 66043,
+    "sha256": "248A5931FAD90967463F49D7A09438B776A0C6C9BEFF23419BEEB815621530C6"
+  },
+  "originalSelection": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\P04-C4-narrow-owner-source-selection.json",
+    "bytes": 222807,
+    "sha256": "38A3F89D555C90BC28A084D9BFE7C3B3E30FA3D9041D794555A69EF2477619E3"
+  },
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source.ownership.json",
+    "bytes": 432,
+    "sha256": "DF44950E21159960E694830F11186BFCFC24C958E26C08CE1C6A5BF2A3C69474"
+  },
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.cs",
+      "bytes": 32097,
+      "sha256": "5A85FEE447B0631F2171F7DF794E7551ED879A270FECA737D2F34F4663BBA2D0",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspaceAdmissionReadScalingIntegrationTests.cs.before.txt",
+        "bytes": 32117,
+        "sha256": "3CB659CC5D20C8B54E96CA12AC3BB7836536BFB3234DBD133A2D5702885E06B4"
+      },
+      "mainPredecessorSha256": "3CB659CC5D20C8B54E96CA12AC3BB7836536BFB3234DBD133A2D5702885E06B4",
+      "line": 380,
+      "stablePrefix": "workspace-admission-read-scaling",
+      "selectedMethods": 8,
+      "selectedRows": 15,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+      "bytes": 25489,
+      "sha256": "4D5237590585F0C083D60E0DF556DFB6F24E9AB14E9246B3E62C6DCE9ABBABFE",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs.before.txt",
+        "bytes": 25509,
+        "sha256": "EADF11342EE9B6ACF5439A641A8F0BFBD3C42AB13D07599B590967616191D44F"
+      },
+      "mainPredecessorSha256": "EADF11342EE9B6ACF5439A641A8F0BFBD3C42AB13D07599B590967616191D44F",
+      "line": 422,
+      "stablePrefix": "run-detail-update-recovery",
+      "selectedMethods": 7,
+      "selectedRows": 15,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.cs",
+      "bytes": 14779,
+      "sha256": "803316802A42DAE1C26F585C13F654F9802FCCEA69793725504DF200AAE02B56",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests.cs.before.txt",
+        "bytes": 14799,
+        "sha256": "7F9FE18EC55B82EFBF1F5074C6D2EBEA18025831D3C5A35EF66F37BE76F9AB4B"
+      },
+      "mainPredecessorSha256": "7F9FE18EC55B82EFBF1F5074C6D2EBEA18025831D3C5A35EF66F37BE76F9AB4B",
+      "line": 186,
+      "stablePrefix": "generic-new-run-recovery",
+      "selectedMethods": 1,
+      "selectedRows": 6,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.cs",
+      "bytes": 22309,
+      "sha256": "BE6D0F5F798C5A7891755009D2A5FAB14A51BE949388D8B7787B5089A2F23BDD",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests.cs.before.txt",
+        "bytes": 22329,
+        "sha256": "EE0D86C24FF6C75D0538B7CC91B6A49E4B87DD95D9A2C112F6B167F4B5F191C1"
+      },
+      "mainPredecessorSha256": "EE0D86C24FF6C75D0538B7CC91B6A49E4B87DD95D9A2C112F6B167F4B5F191C1",
+      "line": 389,
+      "stablePrefix": "chat-run-commit-recovery",
+      "selectedMethods": 7,
+      "selectedRows": 12,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+      "bytes": 17962,
+      "sha256": "3AA01BEE454E4566640D23A4C98856EBA0ABD2C3830C9AC5EFF294D7AA2BC04F",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs.before.txt",
+        "bytes": 17982,
+        "sha256": "55E3A35EF240D806EB4C45E6EEF8868426AF10B3192C5333B6B4322D4B059953"
+      },
+      "mainPredecessorSha256": "55E3A35EF240D806EB4C45E6EEF8868426AF10B3192C5333B6B4322D4B059953",
+      "line": 213,
+      "stablePrefix": "prepared-commit-reads",
+      "selectedMethods": 4,
+      "selectedRows": 19,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedRunWitnessTests.cs",
+      "bytes": 13083,
+      "sha256": "AB40F4F18D4C9A28E60EB98CD217CFB77209718FD502AAEC66152426518FE849",
+      "predecessor": {
+        "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-fixture-prefix-source\\FileSandboxWorkspacePreparedRunWitnessTests.cs.before.txt",
+        "bytes": 13103,
+        "sha256": "8D1467C1A051705C847C0CD760D0DF0AD705B7E4A5DA17AAB659E73098852AF7"
+      },
+      "mainPredecessorSha256": "8D1467C1A051705C847C0CD760D0DF0AD705B7E4A5DA17AAB659E73098852AF7",
+      "line": 205,
+      "stablePrefix": "prepared-run-witness",
+      "selectedMethods": 6,
+      "selectedRows": 11,
+      "delta": "Remove only interpolated redundant outer GUID; TestFileSystem retains unique inner GUID."
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\tests\\Support\\CanDoItAll.Tests.Support\\TestFileSystem.cs",
+      "bytes": 1269,
+      "sha256": "7F44DE8B6FE1A1F6377DD88B022E25BF86B12157C0D136D53F443386EEBACD65"
+    },
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\tests\\Support\\CanDoItAll.Tests.Support\\CanDoItAllTestEnvironment.cs",
+      "bytes": 11871,
+      "sha256": "2F7216D71E79950988A9FBF7AFFD5319C352A0CE6DE85BCDF80F6B457C588CF4"
+    }
+  ],
+  "proof": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\validation\\P04-C4-fixture-prefix-source-overlay.md",
+    "bytes": 2527,
+    "sha256": "E7C5AFDCC12E8625B7E7EB8167855E91BB2FB5621E9DE277FA452FE4594A7FCA"
+  },
+  "ordinaryRows": 703,
+  "unitRows": 247,
+  "integrationRows": 456,
+  "methods": 487,
+  "selectedSourceFiles": 75,
+  "changedSourceFiles": 6,
+  "sourceRowsUnchanged": true,
+  "mainChanged": false,
+  "executionPerformed": false
+}

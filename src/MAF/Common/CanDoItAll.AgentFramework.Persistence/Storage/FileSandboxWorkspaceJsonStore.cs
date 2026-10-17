@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
@@ -13,7 +14,8 @@ internal enum FileSandboxWorkspaceJsonReadKind
 {
     Deserialization,
     RawText,
-    SnapshotValidation
+    SnapshotValidation,
+    PreparedRunValidation
 }
 
 internal readonly record struct FileSandboxWorkspacePhysicalJsonRead(
@@ -121,6 +123,41 @@ internal sealed class FileSandboxWorkspaceJsonStore
     public async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken)
         => await ReadJsonAsync<T>(fullPath, cancellationToken, readPolicy: null);
 
+    internal async Task<FileSandboxWorkspaceRunReadSnapshot?> ReadRunSnapshotAsync(
+        string fullPath, CancellationToken cancellationToken) {
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null;
+        var run = await ReadJsonAsync<ExecutionRunRecord>(fullPath, cancellationToken, readPolicy: null,
+            (decoded, digest) => {
+                snapshot = new(fullPath, decoded, digest);
+                return snapshot.Run;
+            });
+        return run is null ? null : snapshot;
+    }
+
+    internal async Task<bool> MatchesRunSnapshotAsync(string fullPath,
+        FileSandboxWorkspaceRunReadSnapshot snapshot, CancellationToken cancellationToken) {
+        const int maxTransientReadRetries = 3;
+        for (var attempt = 0; attempt <= maxTransientReadRetries; attempt++) {
+            cancellationToken.ThrowIfCancellationRequested();
+            try {
+                await using var stream = TryOpenSharedReadStream(fullPath);
+                if (stream is null) {
+                    return false;
+                }
+                using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.snapshot.validate");
+                activity?.SetTag("payload.bytes", stream.Length);
+                readDiagnostics?.Record(new(fullPath, typeof(ExecutionRunRecord),
+                    FileSandboxWorkspaceJsonReadKind.PreparedRunValidation, stream.Length));
+                return snapshot.MatchesDigest(await SHA256.HashDataAsync(stream, cancellationToken));
+            } catch (Exception exception) when (IsTransientJsonReadException(exception) && attempt < maxTransientReadRetries) {
+                await Task.Delay(GetSharedJsonReadRetryDelay(attempt), cancellationToken);
+            } catch (Exception exception) when (IsTransientJsonReadException(exception)) {
+                throw CreateWorkspaceJsonReadException<ExecutionRunRecord>(fullPath, exception);
+            }
+        }
+        throw CreateWorkspaceJsonReadException<ExecutionRunRecord>(fullPath, null);
+    }
+
     internal async Task<T?[]> ReadJsonBatchAsync<T>(IReadOnlyList<string> paths, CancellationToken cancellationToken) {
         const int maximumConcurrentReads = 4;
         cancellationToken.ThrowIfCancellationRequested();
@@ -138,33 +175,28 @@ internal sealed class FileSandboxWorkspaceJsonStore
     }
 
     private async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken,
-        IPhysicalFileSystemPathPolicy? readPolicy)
-    {
+        IPhysicalFileSystemPathPolicy? readPolicy,
+        Func<T, string, T>? captureSnapshot = null) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.read");
         activity?.SetTag("payload.type", typeof(T).Name);
-        if (string.IsNullOrWhiteSpace(fullPath))
-        {
+        if (string.IsNullOrWhiteSpace(fullPath)) {
             throw new ArgumentException("Workspace JSON path must be provided.", nameof(fullPath));
         }
 
         const int maxTransientReadRetries = 3;
-        for (var attempt = 0; attempt <= maxTransientReadRetries; attempt++)
-        {
+        for (var attempt = 0; attempt <= maxTransientReadRetries; attempt++) {
             cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
+            try {
                 var stream = TryOpenSharedReadStream(fullPath, readPolicy);
-                if (stream is null)
-                {
+                if (stream is null) {
                     snapshots.Remove<T>(fullPath);
                     return default;
                 }
 
-                await using (stream)
-                {
+                await using (stream) {
                     activity?.SetTag("payload.bytes", stream.Length);
                     if (FileSandboxWorkspaceSnapshotCache.Supports<T>(stream.Length)) {
-                        return await ReadSnapshotAsync<T>(fullPath, stream, cancellationToken);
+                        return await ReadSnapshotAsync<T>(fullPath, stream, cancellationToken, captureSnapshot);
                     }
                     readDiagnostics?.Record(
                         new FileSandboxWorkspacePhysicalJsonRead(
@@ -173,19 +205,24 @@ internal sealed class FileSandboxWorkspaceJsonStore
                             FileSandboxWorkspaceJsonReadKind.Deserialization,
                             stream.Length));
                     using var deserialization = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.deserialize");
+                    if (captureSnapshot is not null) {
+                        var length = stream.Length;
+                        using var observed = new FileSandboxWorkspaceRunHashingStream(stream);
+                        var value = await JsonSerializer.DeserializeAsync<T>(observed, SerializerOptions, cancellationToken);
+                        var digest = observed.Complete(length);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (value is null) {
+                            return default;
+                        }
+                        return captureSnapshot(value, digest);
+                    }
                     return await JsonSerializer.DeserializeAsync<T>(stream, SerializerOptions, cancellationToken);
                 }
-            }
-            catch (Exception exception) when (IsTransientJsonReadException(exception) && attempt < maxTransientReadRetries)
-            {
+            } catch (Exception exception) when (IsTransientJsonReadException(exception) && attempt < maxTransientReadRetries) {
                 await Task.Delay(GetSharedJsonReadRetryDelay(attempt), cancellationToken);
-            }
-            catch (Exception exception) when (IsTransientJsonReadException(exception))
-            {
+            } catch (Exception exception) when (IsTransientJsonReadException(exception)) {
                 throw CreateWorkspaceJsonReadException<T>(fullPath, exception);
-            }
-            catch (JsonException exception)
-            {
+            } catch (JsonException exception) {
                 throw CreateWorkspaceJsonReadException<T>(fullPath, exception);
             }
         }
@@ -193,7 +230,8 @@ internal sealed class FileSandboxWorkspaceJsonStore
         throw CreateWorkspaceJsonReadException<T>(fullPath, null);
     }
 
-    private async Task<T?> ReadSnapshotAsync<T>(string fullPath, Stream stream, CancellationToken cancellationToken) {
+    private async Task<T?> ReadSnapshotAsync<T>(string fullPath, Stream stream, CancellationToken cancellationToken,
+        Func<T, string, T>? captureSnapshot = null) {
         var length = stream.Length;
         if (length > FileSandboxWorkspaceSnapshotCache.MaximumPayloadBytes) {
             throw new IOException("The execution snapshot changed size while it was being read.");
@@ -207,7 +245,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
         if (snapshots.TryRead<T>(fullPath, bytes, out var cached)) {
             readDiagnostics?.Record(new(fullPath, typeof(T), FileSandboxWorkspaceJsonReadKind.SnapshotValidation, bytes.Length));
             using var hit = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.snapshot.hit");
-            return cached;
+            return CaptureSnapshot(cached);
         }
         readDiagnostics?.Record(new(fullPath, typeof(T), FileSandboxWorkspaceJsonReadKind.Deserialization, bytes.Length));
         using var deserialization = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.deserialize");
@@ -217,7 +255,14 @@ internal sealed class FileSandboxWorkspaceJsonStore
         }
         var value = JsonSerializer.Deserialize<T>(json, SerializerOptions);
         cancellationToken.ThrowIfCancellationRequested();
-        return value is null ? default : snapshots.Remember(fullPath, bytes, value);
+        return value is null ? default : CaptureSnapshot(snapshots.Remember(fullPath, bytes, value));
+
+        T? CaptureSnapshot(T? value) {
+            if (captureSnapshot is null || value is null) {
+                return value;
+            }
+            return captureSnapshot(value, Convert.ToHexString(SHA256.HashData(bytes)));
+        }
     }
 
     public async Task<string> ReadTextAsync(string fullPath, CancellationToken cancellationToken)
@@ -377,13 +422,17 @@ internal sealed class FileSandboxWorkspaceJsonStore
         return true;
     }
 
-    public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken)
-    {
-        await WriteObservedJsonAsync(
-            fullPath,
-            payload,
-            Serialize(payload),
-            cancellationToken);
+    public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken) {
+        if (payload is ProviderUsageObservation) {
+            await WriteObservedJsonAsync(fullPath, payload, Serialize(payload), cancellationToken);
+            return;
+        }
+        byte[] encoded;
+        using (var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.serialize")) {
+            activity?.SetTag("payload.type", typeof(T).Name);
+            encoded = JsonSerializer.SerializeToUtf8Bytes(payload, SerializerOptions);
+        }
+        await WriteEncodedJsonAtomicallyAsync(fullPath, encoded, cancellationToken);
     }
 
     private async Task WriteObservedJsonAsync<T>(string fullPath, T payload, string serialized, CancellationToken cancellationToken) {
@@ -447,16 +496,18 @@ internal sealed class FileSandboxWorkspaceJsonStore
             innerException);
     }
 
-    private async Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)
-    {
+    private Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)
+        => WriteEncodedJsonAtomicallyAsync(fullPath, Encoding.UTF8.GetBytes(serialized), cancellationToken);
+
+    private async Task WriteEncodedJsonAtomicallyAsync(string fullPath, ReadOnlyMemory<byte> encoded, CancellationToken cancellationToken) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.write");
-        activity?.SetTag("payload.bytes", Encoding.UTF8.GetByteCount(serialized));
+        activity?.SetTag("payload.bytes", encoded.Length);
         string directory = Path.GetDirectoryName(fullPath)
             ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
-        await durableFileWriter.WriteTextAsync(
+        await durableFileWriter.WriteBytesAsync(
             ResolveManagedRoot(directory),
             fullPath,
-            serialized,
+            encoded,
             cancellationToken: cancellationToken);
     }
 

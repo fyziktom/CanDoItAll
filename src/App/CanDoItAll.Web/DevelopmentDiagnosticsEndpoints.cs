@@ -800,7 +800,7 @@ internal static class DevelopmentDiagnosticsEndpoints
                     AutoApprovePendingToolCalls: autoApprove == true));
             agentProbe = new
             {
-                Succeeded = true,
+                Succeeded = executionResult.EffectContinuation is null,
                 PromptMode = effectivePromptMode,
                 PersistTranscript = persistTranscript,
                 AutoApprove = autoApprove == true,
@@ -812,14 +812,15 @@ internal static class DevelopmentDiagnosticsEndpoints
                 executionResult.ExecutionRunId,
                 executionResult.ChatSessionId,
                 ResponseCharacters = executionResult.ResponseText.Length,
-                Metric = new
+                executionResult.EffectContinuation,
+                Metric = executionResult.Metric is not { } metric ? null : new
                 {
-                    executionResult.Metric.ProviderName,
-                    executionResult.Metric.Model,
-                    executionResult.Metric.DurationMs,
-                    executionResult.Metric.InputTokens,
-                    executionResult.Metric.OutputTokens,
-                    executionResult.Metric.ToolCalls
+                    metric.ProviderName,
+                    metric.Model,
+                    metric.DurationMs,
+                    metric.InputTokens,
+                    metric.OutputTokens,
+                    metric.ToolCalls
                 }
             };
         }

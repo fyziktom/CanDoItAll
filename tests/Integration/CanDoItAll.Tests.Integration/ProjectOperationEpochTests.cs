@@ -7,7 +7,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
@@ -19,25 +19,25 @@ public sealed class ProjectOperationEpochTests {
     [Fact]
     public async Task Initialization_is_idempotent_and_existing_replay_promise_survives_tighter_options() {
         await using var fixture = await Fixture.CreateAsync();
-        var original = await fixture.Service.GetWriteContextAsync(fixture.Binding, Caller);
-        var tighter = fixture.CreateService(new() {
+        var original = await fixture.Service.ReadCurrentAsync(fixture.Binding, fixture.Pool, CancellationToken.None);
+        var tighter = ProjectFiniteOperationPool.Create(new() {
             AdmissionWindow = TimeSpan.FromHours(1),
             ReplayRetention = TimeSpan.FromHours(1),
             MutationDeadline = TimeSpan.FromSeconds(1),
             StatementDeadline = TimeSpan.FromSeconds(1),
             LockDeadline = TimeSpan.FromSeconds(1)
         });
-        await fixture.InitializeAsync(tighter);
+        await fixture.InitializeAsync(fixture.Service, tighter);
 
-        var current = await tighter.GetWriteContextAsync(fixture.Binding, Caller);
+        var current = await fixture.Service.ReadCurrentAsync(fixture.Binding, tighter, CancellationToken.None);
 
-        Assert.Equal(original.Namespace, current.Namespace);
+        Assert.Equal(original.Binding.Namespace, current.Binding.Namespace);
         Assert.Equal(original.Epoch, current.Epoch);
-        Assert.Equal(original.AdmissionDeadlineUtc, current.AdmissionDeadlineUtc);
+        Assert.Equal(original.AdmissionClosesAtUtc, current.AdmissionClosesAtUtc);
         Assert.Equal(original.ReplayUntilUtc, current.ReplayUntilUtc);
         await using var read = fixture.Context();
-        Assert.Equal(1, await read.Set<ProjectOperationEpochRecord>().CountAsync());
-        Assert.Equal(1, await read.Set<ProjectOperationStateRecord>().CountAsync());
+        Assert.Equal(1, await read.Set<FiniteOperationEpochRecord>().CountAsync());
+        Assert.Equal(1, await read.Set<FiniteOperationStateRecord>().CountAsync());
     }
 
     [Fact]
@@ -51,10 +51,10 @@ public sealed class ProjectOperationEpochTests {
         await using var transaction = await arriving.Database.BeginTransactionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 
-        var rejected = await Assert.ThrowsAsync<ProjectOperationAdmissionException>(() =>
-            fixture.Service.EnterAsync(arriving, fixture.Binding, fixture.Operation(), Caller, deadline.Token));
+        var rejected = await Assert.ThrowsAsync<FiniteOperationAdmissionException>(() =>
+            fixture.Service.EnterAsync(arriving, fixture.Binding, fixture.Pool, fixture.Operation().Epoch.Value, deadline.Token));
 
-        Assert.Equal(ProjectOperationAdmissionFailure.Expired, rejected.Failure);
+        Assert.Equal(FiniteOperationAdmissionFailure.AdmissionDeadlineElapsed, rejected.Failure);
         Assert.NotNull(held.Database.CurrentTransaction);
     }
 
@@ -72,8 +72,8 @@ public sealed class ProjectOperationEpochTests {
         await DatasetLifecycleStore.RequireActiveForMaintenanceAsync(held, fixture.Binding);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 
-        Assert.False(await fixture.Service.RotateExpiredAsync(fixture.Binding, deadline.Token));
-        Assert.Equal(1, await fixture.Service.PurgeRetiredBatchAsync(fixture.Binding, deadline.Token));
+        Assert.Equal(FiniteOperationRotationResult.Unchanged, await fixture.Service.RotateExpiredAsync(fixture.Binding, fixture.Pool, deadline.Token));
+        Assert.Equal(1, (await fixture.PurgeAsync(fixture.Binding, deadline.Token)).DeletedReceipts);
         Assert.Equal(1, await fixture.RetiredThroughAsync());
     }
 
@@ -84,21 +84,21 @@ public sealed class ProjectOperationEpochTests {
         await using var owner = fixture.Context();
         await using var transaction = await owner.Database.BeginTransactionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        var admitted = await fixture.Service.EnterAsync(owner, fixture.Binding, fixture.Operation(), Caller, deadline.Token);
+        var admitted = await fixture.Service.EnterAsync(owner, fixture.Binding, fixture.Pool, fixture.Operation().Epoch.Value, deadline.Token);
         await fixture.WaitForDeadlineAsync(admitted.AdmissionClosesAtUtc, deadline.Token);
 
-        Assert.False(await fixture.Service.RotateExpiredAsync(fixture.Binding, deadline.Token));
+        Assert.Equal(FiniteOperationRotationResult.Busy, await fixture.Service.RotateExpiredAsync(fixture.Binding, fixture.Pool, deadline.Token));
         await using (var read = fixture.Context()) {
-            Assert.Equal(ProjectOperationEpochState.Open, (await read.Set<ProjectOperationEpochRecord>().SingleAsync()).State);
+            Assert.Equal(FiniteOperationEpochState.Open, (await read.Set<FiniteOperationEpochRecord>().SingleAsync()).State);
         }
         await transaction.RollbackAsync(deadline.Token);
 
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding, deadline.Token));
+        Assert.Equal(FiniteOperationRotationResult.Rotated, await fixture.Service.RotateExpiredAsync(fixture.Binding, fixture.Pool, deadline.Token));
         await using var after = fixture.Context();
-        var epochs = await after.Set<ProjectOperationEpochRecord>().OrderBy(epoch => epoch.Epoch).ToArrayAsync();
-        Assert.Equal(ProjectOperationEpochState.Closed, epochs[0].State);
-        Assert.Equal(ProjectOperationEpochState.Open, epochs[1].State);
-        Assert.Equal(2, (await after.Set<ProjectOperationStateRecord>().SingleAsync()).CurrentEpoch);
+        var epochs = await after.Set<FiniteOperationEpochRecord>().OrderBy(epoch => epoch.Epoch).ToArrayAsync();
+        Assert.Equal(FiniteOperationEpochState.Closed, epochs[0].State);
+        Assert.Equal(FiniteOperationEpochState.Open, epochs[1].State);
+        Assert.Equal(2, (await after.Set<FiniteOperationStateRecord>().SingleAsync()).CurrentEpoch);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class ProjectOperationEpochTests {
         await using var owner = fixture.Context();
         await using var transaction = await owner.Database.BeginTransactionAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        var admitted = await fixture.Service.EnterAsync(owner, fixture.Binding, fixture.Operation(), Caller, deadline.Token);
+        var admitted = await fixture.Service.EnterAsync(owner, fixture.Binding, fixture.Pool, fixture.Operation().Epoch.Value, deadline.Token);
         var pid = await owner.Database.SqlQuery<int>($"SELECT pg_backend_pid() AS \"Value\"").SingleAsync(deadline.Token);
         var waiting = WaitForOwnerKeyAsync();
         Exception? failure = null;
@@ -123,12 +123,12 @@ public sealed class ProjectOperationEpochTests {
             failure = await Record.ExceptionAsync(() => waiting);
         }
 
-        var rejected = Assert.IsType<ProjectOperationAdmissionException>(failure);
-        Assert.Equal(ProjectOperationAdmissionFailure.Expired, rejected.Failure);
+        var rejected = Assert.IsType<FiniteOperationAdmissionException>(failure);
+        Assert.Equal(FiniteOperationAdmissionFailure.AdmissionDeadlineElapsed, rejected.Failure);
 
         async Task WaitForOwnerKeyAsync() {
             await owner.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({OwnerWaitKey})", deadline.Token);
-            await ProjectOperationEpochService.RequireOpenAsync(owner, admitted, deadline.Token);
+            await fixture.Service.RequireAdmissibleAsync(owner, admitted, deadline.Token);
         }
     }
 
@@ -139,17 +139,17 @@ public sealed class ProjectOperationEpochTests {
         var failure = new RotationFailure();
         var service = fixture.CreateService(interceptor: failure);
 
-        await Assert.ThrowsAsync<RotationInterrupted>(() => service.RotateExpiredAsync(fixture.Binding));
+        await Assert.ThrowsAsync<RotationInterrupted>(() => service.RotateExpiredAsync(fixture.Binding, fixture.Pool, CancellationToken.None));
 
         Assert.True(failure.ClosedEpochWasFlushed);
         await using var read = fixture.Context();
-        var epoch = await read.Set<ProjectOperationEpochRecord>().SingleAsync();
-        var state = await read.Set<ProjectOperationStateRecord>().SingleAsync();
-        Assert.Equal(ProjectOperationEpochState.Open, epoch.State);
+        var epoch = await read.Set<FiniteOperationEpochRecord>().SingleAsync();
+        var state = await read.Set<FiniteOperationStateRecord>().SingleAsync();
+        Assert.Equal(FiniteOperationEpochState.Open, epoch.State);
         Assert.Null(epoch.ClosedAtUtc);
         Assert.Equal(1, state.CurrentEpoch);
         Assert.Equal(0, state.RetiredThroughEpoch);
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding));
+        Assert.Equal(FiniteOperationRotationResult.Rotated, await fixture.Service.RotateExpiredAsync(fixture.Binding, fixture.Pool, CancellationToken.None));
     }
 
     [Fact]
@@ -162,26 +162,26 @@ public sealed class ProjectOperationEpochTests {
             Closed(fixture, 3, now.AddDays(-3), now.AddDays(-3).AddSeconds(1), 60)
         ], retiredThrough: 0);
 
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding));
+        await fixture.Service.AdvanceRetirementAsync(fixture.Binding, fixture.Pool, CancellationToken.None);
         Assert.Equal(1, await fixture.RetiredThroughAsync());
         await using (var edit = fixture.Context()) {
-            var blocked = await edit.Set<ProjectOperationEpochRecord>().SingleAsync(epoch => epoch.Epoch == 2);
+            var blocked = await edit.Set<FiniteOperationEpochRecord>().SingleAsync(epoch => epoch.Epoch == 2);
             blocked.AdmissionClosesAtUtc = now.AddDays(-2);
             blocked.OpenedAtUtc = now.AddDays(-2).AddHours(-1);
             blocked.ClosedAtUtc = now.AddSeconds(-1);
             await edit.SaveChangesAsync();
         }
-        await fixture.SetDeadlineAsync(TimeSpan.FromSeconds(-1));
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding));
+        await fixture.SetDeadlineAsync(TimeSpan.FromHours(1));
+        await fixture.Service.AdvanceRetirementAsync(fixture.Binding, fixture.Pool, CancellationToken.None);
         Assert.Equal(1, await fixture.RetiredThroughAsync());
 
         await using (var edit = fixture.Context()) {
-            var blocked = await edit.Set<ProjectOperationEpochRecord>().SingleAsync(epoch => epoch.Epoch == 2);
+            var blocked = await edit.Set<FiniteOperationEpochRecord>().SingleAsync(epoch => epoch.Epoch == 2);
             blocked.ClosedAtUtc = now.AddDays(-2).AddSeconds(1);
             await edit.SaveChangesAsync();
         }
-        await fixture.SetDeadlineAsync(TimeSpan.FromSeconds(-1));
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding));
+        await fixture.SetDeadlineAsync(TimeSpan.FromHours(1));
+        await fixture.Service.AdvanceRetirementAsync(fixture.Binding, fixture.Pool, CancellationToken.None);
         Assert.Equal(3, await fixture.RetiredThroughAsync());
     }
 
@@ -202,18 +202,19 @@ public sealed class ProjectOperationEpochTests {
         await fixture.SeedReceiptsAsync(epoch: 2, count: 1, payloadBytes: 1);
         Assert.Equal(1, await fixture.RetiredThroughAsync());
 
-        Assert.Equal(expected, await fixture.Service.PurgeRetiredBatchAsync(fixture.Binding));
+        Assert.Equal(expected, (await fixture.PurgeAsync(fixture.Binding)).DeletedReceipts);
 
         await using (var read = fixture.Context()) {
             Assert.Equal(2, await read.Set<ProjectDefinitionReceiptRecord>().CountAsync(receipt => receipt.Epoch == 1));
             Assert.Equal(1, await read.Set<ProjectDefinitionReceiptRecord>().CountAsync(receipt => receipt.Epoch == 2));
-            Assert.True(await read.Set<ProjectOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 1));
+            Assert.True(await read.Set<FiniteOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 1));
         }
         Assert.Equal(1, await fixture.RetiredThroughAsync());
-        Assert.Equal(2, await fixture.Service.PurgeRetiredBatchAsync(fixture.Binding));
+        Assert.Equal(2, (await fixture.PurgeAsync(fixture.Binding)).DeletedReceipts);
+        await fixture.CleanupMetadataAsync();
         await using var after = fixture.Context();
-        Assert.False(await after.Set<ProjectOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 1));
-        Assert.True(await after.Set<ProjectOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 2));
+        Assert.False(await after.Set<FiniteOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 1));
+        Assert.True(await after.Set<FiniteOperationEpochRecord>().AnyAsync(epoch => epoch.Epoch == 2));
         Assert.Equal(2, (await after.Set<ProjectDefinitionReceiptRecord>().SingleAsync()).Epoch);
         Assert.Equal(1, await fixture.RetiredThroughAsync());
     }
@@ -229,19 +230,19 @@ public sealed class ProjectOperationEpochTests {
 
         Assert.Equal(fixture.Binding, (await fixture.LifecycleStore.ReadAsync())!.Binding);
         await using (var rolledBack = fixture.Context()) {
-            Assert.Equal(ProjectOperationEpochState.Open, (await rolledBack.Set<ProjectOperationEpochRecord>().SingleAsync()).State);
-            Assert.Single(await rolledBack.Set<ProjectOperationStateRecord>().ToArrayAsync());
+            Assert.Equal(FiniteOperationEpochState.Open, (await rolledBack.Set<FiniteOperationEpochRecord>().SingleAsync()).State);
+            Assert.Single(await rolledBack.Set<FiniteOperationStateRecord>().ToArrayAsync());
         }
         await fixture.ReactivateAsync(replacement, commit: true);
         await fixture.ReactivateAsync(replacement, commit: true);
         Assert.Equal(replacement, (await fixture.LifecycleStore.ReadAsync())!.Binding);
-        var metadata = await fixture.Service.GetWriteContextAsync(replacement, Caller);
-        Assert.Equal(replacement.Namespace, metadata.Namespace);
-        Assert.Equal(1, metadata.Epoch.Value);
-        Assert.Equal(0, await fixture.Service.PurgeRetiredBatchAsync(replacement));
+        var metadata = await fixture.Service.ReadCurrentAsync(replacement, fixture.Pool, CancellationToken.None);
+        Assert.Equal(replacement.Namespace, metadata.Binding.Namespace);
+        Assert.Equal(1, metadata.Epoch);
+        Assert.Equal(0, (await fixture.PurgeAsync(replacement)).DeletedReceipts);
         await using var read = fixture.Context();
-        var original = await read.Set<ProjectOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == fixture.Binding.Namespace.Value);
-        Assert.Equal(ProjectOperationEpochState.Closed, original.State);
+        var original = await read.Set<FiniteOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == fixture.Binding.Namespace.Value);
+        Assert.Equal(FiniteOperationEpochState.Closed, original.State);
         Assert.NotNull(original.ClosedAtUtc);
         Assert.Single(await read.Set<ProjectDefinitionReceiptRecord>().ToArrayAsync());
     }
@@ -260,14 +261,14 @@ public sealed class ProjectOperationEpochTests {
             DatasetLifecycleRecord.CurrentSchemaVersion, DatasetGuardProtocol.SharedRows);
         await fixture.ReactivateAsync(replacement, commit: true);
 
-        await Assert.ThrowsAsync<DatasetActivationMismatchException>(() => fixture.Service.PurgeRetiredBatchAsync(fixture.Binding));
-        Assert.Equal(1, await fixture.Service.PurgeRetiredBatchAsync(replacement));
+        await Assert.ThrowsAsync<DatasetActivationMismatchException>(() => fixture.PurgeAsync(fixture.Binding));
+        Assert.Equal(1, (await fixture.PurgeAsync(replacement)).DeletedReceipts);
         await using (var read = fixture.Context()) {
             Assert.Equal(2, (await read.Set<ProjectDefinitionReceiptRecord>().SingleAsync()).Epoch);
-            Assert.Equal(2, await read.Set<ProjectOperationStateRecord>().CountAsync());
+            Assert.Equal(2, await read.Set<FiniteOperationStateRecord>().CountAsync());
         }
         await using (var edit = fixture.Context()) {
-            var retained = await edit.Set<ProjectOperationEpochRecord>()
+            var retained = await edit.Set<FiniteOperationEpochRecord>()
                 .Where(epoch => epoch.NamespaceId == fixture.Binding.Namespace.Value).ToArrayAsync();
             foreach (var epoch in retained) {
                 epoch.OpenedAtUtc = now.AddDays(-4);
@@ -277,17 +278,18 @@ public sealed class ProjectOperationEpochTests {
             }
             await edit.SaveChangesAsync();
         }
-        Assert.Equal(0, await fixture.Service.PurgeRetiredBatchAsync(replacement));
+        Assert.Equal(0, (await fixture.PurgeAsync(replacement)).DeletedReceipts);
         await using (var edit = fixture.Context()) {
-            await edit.Set<ProjectOperationEpochRecord>().Where(epoch => epoch.NamespaceId == fixture.Binding.Namespace.Value)
+            await edit.Set<FiniteOperationEpochRecord>().Where(epoch => epoch.NamespaceId == fixture.Binding.Namespace.Value)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(epoch => epoch.ClosedAtUtc, now.AddDays(-3).AddSeconds(1)));
         }
 
-        Assert.Equal(1, await fixture.Service.PurgeRetiredBatchAsync(replacement));
+        Assert.Equal(1, (await fixture.PurgeAsync(replacement)).DeletedReceipts);
+        await fixture.CleanupMetadataAsync(replacement);
         await using var after = fixture.Context();
         Assert.Empty(await after.Set<ProjectDefinitionReceiptRecord>().ToArrayAsync());
-        Assert.Equal(replacement.Namespace.Value, (await after.Set<ProjectOperationStateRecord>().SingleAsync()).NamespaceId);
-        Assert.Equal(replacement.Namespace.Value, (await after.Set<ProjectOperationEpochRecord>().SingleAsync()).NamespaceId);
+        Assert.Equal(replacement.Namespace.Value, (await after.Set<FiniteOperationStateRecord>().SingleAsync()).NamespaceId);
+        Assert.Equal(replacement.Namespace.Value, (await after.Set<FiniteOperationEpochRecord>().SingleAsync()).NamespaceId);
     }
 
     [Fact]
@@ -296,28 +298,29 @@ public sealed class ProjectOperationEpochTests {
         await fixture.SetDeadlineAsync(TimeSpan.FromSeconds(1));
         await using var old = fixture.Context();
         await using var transaction = await old.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        var snapshot = await old.Set<ProjectOperationEpochRecord>().AsNoTracking().SingleAsync();
+        var snapshot = await old.Set<FiniteOperationEpochRecord>().AsNoTracking().SingleAsync();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         await fixture.WaitForDeadlineAsync(snapshot.AdmissionClosesAtUtc, deadline.Token);
-        Assert.True(await fixture.Service.RotateExpiredAsync(fixture.Binding, deadline.Token));
+        Assert.Equal(FiniteOperationRotationResult.Rotated, await fixture.Service.RotateExpiredAsync(fixture.Binding, fixture.Pool, deadline.Token));
 
         var rejected = await Record.ExceptionAsync(() => fixture.Service.EnterAsync(old,
-            fixture.Binding, fixture.Operation(), Caller, deadline.Token));
+            fixture.Binding, fixture.Pool, fixture.Operation().Epoch.Value, deadline.Token));
 
-        Assert.True(rejected is ProjectOperationAdmissionException { Failure: ProjectOperationAdmissionFailure.Expired }
+        Assert.True(rejected is FiniteOperationAdmissionException { Failure: FiniteOperationAdmissionFailure.AdmissionDeadlineElapsed }
             or PostgresException { SqlState: PostgresErrorCodes.SerializationFailure }, rejected?.ToString());
         await using var read = fixture.Context();
-        Assert.Equal(2, (await read.Set<ProjectOperationStateRecord>().SingleAsync()).CurrentEpoch);
+        Assert.Equal(2, (await read.Set<FiniteOperationStateRecord>().SingleAsync()).CurrentEpoch);
         Assert.Empty(await read.Set<ProjectDefinitionReceiptRecord>().ToArrayAsync());
     }
 
     public enum PurgeBoundary { RowCount, PayloadBytes }
 
-    private static ProjectOperationEpochRecord Closed(Fixture fixture, long epoch, DateTimeOffset admission,
+    private static FiniteOperationEpochRecord Closed(Fixture fixture, long epoch, DateTimeOffset admission,
         DateTimeOffset closed, long retention, int mutationMilliseconds = 1000) => new() {
         NamespaceId = fixture.Binding.Namespace.Value,
+        PoolId = fixture.Pool.Pool.Value,
         Epoch = epoch,
-        State = ProjectOperationEpochState.Closed,
+        State = FiniteOperationEpochState.Closed,
         OpenedAtUtc = admission.AddHours(-1),
         AdmissionClosesAtUtc = admission,
         ClosedAtUtc = closed,
@@ -332,14 +335,14 @@ public sealed class ProjectOperationEpochTests {
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
             CancellationToken cancellationToken = default) {
-            ClosedEpochWasFlushed |= eventData.Context!.ChangeTracker.Entries<ProjectOperationEpochRecord>()
-                .Any(entry => entry.Entity.State == ProjectOperationEpochState.Closed);
+            ClosedEpochWasFlushed |= eventData.Context!.ChangeTracker.Entries<FiniteOperationEpochRecord>()
+                .Any(entry => entry.Entity.State == FiniteOperationEpochState.Closed);
             return ValueTask.FromResult(result);
         }
 
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
-            if (ClosedEpochWasFlushed && eventData.Context!.ChangeTracker.Entries<ProjectOperationEpochRecord>()
+            if (ClosedEpochWasFlushed && eventData.Context!.ChangeTracker.Entries<FiniteOperationEpochRecord>()
                     .Any(entry => entry.State == EntityState.Added && entry.Entity.Epoch > 1)) {
                 throw new RotationInterrupted();
             }
@@ -347,28 +350,58 @@ public sealed class ProjectOperationEpochTests {
         }
     }
 
-    private sealed class Fixture(PostgresTestDatabaseLease lease) : IAsyncDisposable {
+    internal sealed class Fixture(PostgresTestDatabaseLease lease) : IAsyncDisposable, IDbContextFactory<ProjectsDbContext>, ICanonicalRuntimeDatabase {
         private DbContextOptions<ProjectsDbContext> ContextOptions { get; } = new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseNpgsql(lease.ConnectionString).Options;
         private DbContextOptions<AppDbContext> CanonicalOptions => lease.CreateAppDbContextOptions();
         public DatasetActivationBinding Binding { get; } = new(new DatasetNamespaceId(Guid.NewGuid()), Guid.NewGuid(),
             DatasetLifecycleRecord.CurrentSchemaVersion, DatasetGuardProtocol.SharedRows);
-        private CoordinatedDatabaseTransaction Transactions { get; } = CoordinatedDatabaseTransaction.ForProfile(new(
+        public ResolvedDatabaseProfile Profile { get; } = new(
             new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.PostgreSql },
-            DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString));
-        public ProjectOperationEpochService Service => CreateService();
+            DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
+        public long Generation => 0;
+        private CoordinatedDatabaseTransaction? transactions;
+        internal CoordinatedDatabaseTransaction Transactions => transactions ??= CoordinatedDatabaseTransaction.ForProfile(Profile);
+        public FiniteOperationPoolRegistration Pool { get; } = ProjectFiniteOperationPool.Create(new());
+        public FiniteOperationEpochStore Service => CreateService();
         public DatasetLifecycleStore LifecycleStore => new(new DbContextOptionsBuilder<DatasetLifecycleDbContext>()
             .UseNpgsql(lease.ConnectionString).Options, Transactions);
-        public ProjectsDbContext Context() => new(ContextOptions);
+        public AppDbContext Context() => new(CanonicalOptions);
+        public ProjectsDbContext CreateDbContext() => new(ContextOptions);
         public ProjectDefinitionOperation Operation() => new(Binding.Namespace, new(1), Guid.NewGuid(), Caller.Bind(Binding.Namespace));
 
-        public ProjectOperationEpochService CreateService(ProjectDefinitionOperationOptions? options = null,
-            IInterceptor? interceptor = null) {
-            var configured = new DbContextOptionsBuilder<ProjectsDbContext>(ContextOptions);
+        public ProjectDefinitionReceiptReader CreateReceiptReader(DatasetActivationService activation)
+            => new(this, activation, new(this, ContextOptions, Transactions, this), NullLogger<ProjectDefinitionReceiptReader>.Instance);
+
+        public FiniteOperationEpochStore CreateService(IInterceptor? interceptor = null)
+            => new(CreateNeutralOptions(interceptor), Transactions);
+
+        public FiniteOperationReceiptMaintenance CreateMaintenance(IInterceptor? interceptor = null) {
+            var projects = new DbContextOptionsBuilder<ProjectsDbContext>(ContextOptions);
+            if (interceptor is not null) {
+                projects.AddInterceptors(interceptor);
+            }
+            return new(CreateNeutralOptions(interceptor), Transactions, [Pool],
+                [new ProjectDefinitionReceiptRetention(projects.Options, Transactions)]);
+        }
+
+        public FiniteOperationMaintenanceCycle CreateCycle() => new(Pool, new([Pool]));
+
+        public Task<FiniteReceiptPurgeObservation> PurgeAsync(DatasetActivationBinding? binding = null,
+            CancellationToken cancellationToken = default, IInterceptor? interceptor = null)
+            => CreateMaintenance(interceptor).PurgeRetiredBatchAsync(binding ?? Binding, Pool,
+                ProjectFiniteOperationPool.DefinitionFamily, cancellationToken);
+
+        public Task<FiniteMetadataCleanupResult> CleanupMetadataAsync(DatasetActivationBinding? binding = null,
+            CancellationToken cancellationToken = default)
+            => CreateMaintenance().CleanupMetadataAsync(binding ?? Binding, Pool, cancellationToken);
+
+        internal DbContextOptions<FiniteOperationDbContext> CreateNeutralOptions(IInterceptor? interceptor = null) {
+            var configured = new DbContextOptionsBuilder<FiniteOperationDbContext>().UseNpgsql(lease.ConnectionString);
             if (interceptor is not null) {
                 configured.AddInterceptors(interceptor);
             }
-            return new(configured.Options, Transactions, Options.Create(options ?? new()));
+            return configured.Options;
         }
 
         public static async Task<Fixture> CreateAsync() {
@@ -385,38 +418,40 @@ public sealed class ProjectOperationEpochTests {
             }
         }
 
-        public async Task InitializeAsync(ProjectOperationEpochService service) {
+        public async Task InitializeAsync(FiniteOperationEpochStore service, FiniteOperationPoolRegistration? pool = null) {
             await using var owner = Context();
             await using var transaction = await owner.Database.BeginTransactionAsync();
             using var participation = Transactions.Enter(owner);
             await LifecycleStore.StageActivationAsync(new(Guid.NewGuid(),
                 DatasetActivationKind.Bootstrap, Binding, null));
-            await service.InitializeForActivationAsync(Binding);
+            await service.InitializeNewNamespaceEnlistedAsync(Binding, pool ?? Pool, CancellationToken.None);
             await transaction.CommitAsync();
         }
 
-        public async Task ReactivateAsync(DatasetActivationBinding replacement, bool commit) {
+        public async Task ReactivateAsync(DatasetActivationBinding replacement, bool commit,
+            CancellationToken cancellationToken = default) {
             await using var owner = Context();
-            await using var transaction = await owner.Database.BeginTransactionAsync();
+            await using var transaction = await owner.Database.BeginTransactionAsync(cancellationToken);
             using var participation = Transactions.Enter(owner);
-            await LifecycleStore.StageActivationAsync(new(Guid.NewGuid(), DatasetActivationKind.Reactivate, replacement, Binding));
-            await Service.RetireForReactivationAsync(Binding, replacement);
-            await Service.InitializeForActivationAsync(replacement);
+            await LifecycleStore.StageActivationAsync(new(Guid.NewGuid(), DatasetActivationKind.Reactivate, replacement, Binding), cancellationToken);
+            await Service.CloseForReactivationEnlistedAsync(Binding, replacement, Pool, cancellationToken);
+            await Service.InitializeNewNamespaceEnlistedAsync(replacement, Pool, cancellationToken);
             if (commit) {
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(cancellationToken);
             }
         }
 
         public async Task<DateTimeOffset> NowAsync(CancellationToken cancellationToken = default) {
             await using var context = Context();
-            return await ProjectOperationEpochService.ReadTimeAsync(context, cancellationToken);
+            return await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken);
         }
 
         public async Task SetDeadlineAsync(TimeSpan offset) {
             await using var context = Context();
-            var state = await context.Set<ProjectOperationStateRecord>().SingleAsync();
-            var epoch = await context.Set<ProjectOperationEpochRecord>().SingleAsync(record => record.Epoch == state.CurrentEpoch);
-            var now = await ProjectOperationEpochService.ReadTimeAsync(context, CancellationToken.None);
+            var state = await context.Set<FiniteOperationStateRecord>().SingleAsync(record => record.NamespaceId == Binding.Namespace.Value && record.PoolId == Pool.Pool.Value);
+            var epoch = await context.Set<FiniteOperationEpochRecord>().SingleAsync(record => record.NamespaceId == Binding.Namespace.Value &&
+                record.PoolId == Pool.Pool.Value && record.Epoch == state.CurrentEpoch);
+            var now = await FiniteOperationEpochStore.ReadTimeAsync(context, CancellationToken.None);
             epoch.OpenedAtUtc = now.AddHours(-1);
             epoch.AdmissionClosesAtUtc = now.Add(offset);
             await context.SaveChangesAsync();
@@ -424,7 +459,7 @@ public sealed class ProjectOperationEpochTests {
 
         public async Task WaitForDeadlineAsync(DateTimeOffset deadline, CancellationToken cancellationToken) {
             await using var context = Context();
-            while (await ProjectOperationEpochService.ReadTimeAsync(context, cancellationToken) < deadline) {
+            while (await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken) < deadline) {
                 await Task.Delay(TimeSpan.FromMilliseconds(20), cancellationToken);
             }
         }
@@ -439,22 +474,24 @@ public sealed class ProjectOperationEpochTests {
 
         public async Task<long> RetiredThroughAsync() {
             await using var context = Context();
-            return await context.Set<ProjectOperationStateRecord>().Select(record => record.RetiredThroughEpoch).SingleAsync();
+            return await context.Set<FiniteOperationStateRecord>().Select(record => record.RetiredThroughEpoch).SingleAsync();
         }
 
-        public async Task SeedHistoryAsync(ProjectOperationEpochRecord[] closed, long retiredThrough) {
+        public async Task SeedHistoryAsync(FiniteOperationEpochRecord[] closed, long retiredThrough) {
             await using var context = Context();
             await using var transaction = await context.Database.BeginTransactionAsync();
-            await context.Set<ProjectOperationEpochRecord>().ExecuteDeleteAsync();
-            var state = await context.Set<ProjectOperationStateRecord>().SingleAsync();
+            await context.Set<FiniteOperationEpochRecord>().Where(epoch => epoch.NamespaceId == Binding.Namespace.Value && epoch.PoolId == Pool.Pool.Value)
+                .ExecuteDeleteAsync();
+            var state = await context.Set<FiniteOperationStateRecord>().SingleAsync(state => state.NamespaceId == Binding.Namespace.Value && state.PoolId == Pool.Pool.Value);
             state.CurrentEpoch = closed.Max(epoch => epoch.Epoch) + 1;
             state.RetiredThroughEpoch = retiredThrough;
-            var now = await ProjectOperationEpochService.ReadTimeAsync(context, CancellationToken.None);
+            var now = await FiniteOperationEpochStore.ReadTimeAsync(context, CancellationToken.None);
             context.AddRange(closed);
-            context.Add(new ProjectOperationEpochRecord {
+            context.Add(new FiniteOperationEpochRecord {
                 NamespaceId = Binding.Namespace.Value,
+                PoolId = Pool.Pool.Value,
                 Epoch = state.CurrentEpoch,
-                State = ProjectOperationEpochState.Open,
+                State = FiniteOperationEpochState.Open,
                 OpenedAtUtc = now.AddHours(-1),
                 AdmissionClosesAtUtc = now.AddMinutes(-1),
                 MutationDeadlineMilliseconds = 30000,

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Web.Api;
+using static CanDoItAll.Tests.Integration.Api.OpenApiSchemaAssertions;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
@@ -115,15 +116,5 @@ public sealed class ProjectOperationEpochHttpIntegrationTests {
         Assert.Equal(19, schema.GetProperty("maxLength").GetInt32());
         Assert.False(schema.TryGetProperty("format", out _));
         Assert.False(schema.TryGetProperty("properties", out var properties) && properties.EnumerateObject().Any());
-    }
-
-    private static JsonElement Resolve(JsonElement root, JsonElement schema) {
-        while (schema.TryGetProperty("$ref", out var reference)) {
-            schema = root;
-            foreach (var segment in reference.GetString()![2..].Split('/')) {
-                schema = schema.GetProperty(segment.Replace("~1", "/").Replace("~0", "~"));
-            }
-        }
-        return schema;
     }
 }

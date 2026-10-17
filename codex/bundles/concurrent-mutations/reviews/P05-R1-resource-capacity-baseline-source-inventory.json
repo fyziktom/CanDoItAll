@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "status": "FrozenSourceOnlyPeerReviewed",
+  "owner": "/root/persistence_architecture",
+  "productionChanges": 0,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Performance.cs",
+      "sha256": "8AA4FCF2ED476D3D3C463134C5485A16B67735763545EE19573C851C93832400",
+      "bytes": 65393,
+      "mainPredecessor": "Absent"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-capacity-baseline-source.md",
+      "sha256": "5F360877857A50A84A047833252A1A34A80B3D7A2A1968AD18E1AD6FAD1C6EB1",
+      "bytes": 10559,
+      "mainPredecessor": "Absent"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-capacity-baseline.ownership.json",
+      "sha256": "3E1B9369281A83D1B2149A7C26B83EC6AA03E6051AD6A68EB3ACADA11AA24AFF",
+      "bytes": 1864,
+      "mainPredecessor": "Absent"
+    }
+  ],
+  "unchangedDependencies": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "sha256": "AABF746AEFC7115CC6B7F86A5FE060CD3A7CD0316DEE23AAEA26CDBA78A59B45",
+      "bytes": 29790,
+      "mainSha256": "AABF746AEFC7115CC6B7F86A5FE060CD3A7CD0316DEE23AAEA26CDBA78A59B45"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "sha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9",
+      "bytes": 12627,
+      "mainSha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+      "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3",
+      "bytes": 2321,
+      "mainSha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "sha256": "9BE10D99122856FD86A5837EA2A6849E7592F92496A3579EC5525AEBE5AD841F",
+      "bytes": 6814,
+      "mainSha256": "9BE10D99122856FD86A5837EA2A6849E7592F92496A3579EC5525AEBE5AD841F"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/ResourceMetadataTestCommands.cs",
+      "sha256": "44481064B5425500045F58168E6C9358A0DEB4A633154FBEE3D06FFC7DB2671D",
+      "bytes": 1647,
+      "mainSha256": "44481064B5425500045F58168E6C9358A0DEB4A633154FBEE3D06FFC7DB2671D"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/OwnerPostcommitTestProbe.cs",
+      "sha256": "2CE57F72675DCF123F45A9958582F890506EBAD57A9A3E791B689F3DD83F3C4D",
+      "bytes": 10132,
+      "mainSha256": "2CE57F72675DCF123F45A9958582F890506EBAD57A9A3E791B689F3DD83F3C4D"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "sha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385",
+      "bytes": 21581,
+      "mainSha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "sha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6",
+      "bytes": 12881,
+      "mainSha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
+      "sha256": "D2F681114E8CCCC30E9B4398F4DDE7A2826436073EB1EB6869A760FC0DFEBBF9",
+      "bytes": 13156,
+      "mainSha256": "D2F681114E8CCCC30E9B4398F4DDE7A2826436073EB1EB6869A760FC0DFEBBF9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "sha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833",
+      "bytes": 10670,
+      "mainSha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceFileBrowseCoordinator.cs",
+      "sha256": "25007B7627C676D6C2BE3AFE7EE8595819635955DC99BF29012D5ECF7BE47D07",
+      "bytes": 3135,
+      "mainSha256": "25007B7627C676D6C2BE3AFE7EE8595819635955DC99BF29012D5ECF7BE47D07"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "sha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14",
+      "bytes": 18966,
+      "mainSha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Search/SearchIndexing.cs",
+      "sha256": "E62842810E79FC688799CC6340880D285FD8689A4950CB1A2E4AB07FF1B821D8",
+      "bytes": 8681,
+      "mainSha256": "E62842810E79FC688799CC6340880D285FD8689A4950CB1A2E4AB07FF1B821D8"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/SerializableMutationScope.cs",
+      "sha256": "00383CC7028C2F55E4A2C371AC1C1801465A839B19E75DCC31BC532827DA72B2",
+      "bytes": 8708,
+      "mainSha256": "00383CC7028C2F55E4A2C371AC1C1801465A839B19E75DCC31BC532827DA72B2"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs",
+      "sha256": "586A74B96FBA3980B150F3F24BFF3D3A39C7AD3B851C3FD2853D164F1C80C3C0",
+      "bytes": 7422,
+      "mainSha256": "586A74B96FBA3980B150F3F24BFF3D3A39C7AD3B851C3FD2853D164F1C80C3C0"
+    }
+  ],
+  "designs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P05-R1-stage3-entry-and-probe-readiness.md",
+      "sha256": "2FEC9D556FC4032F0DE12F9F403A0BC8059A71A09CC84EF1B12339C0871C8151",
+      "bytes": 10370
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P05-R1-resource-capacity-proof.md",
+      "sha256": "02185D6BBB5C6081DA3E1426D10A9F4006E2F1AD2AD665448F5916348D0BABB4",
+      "bytes": 17400
+    }
+  ],
+  "sourceCounts": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "facts": 12,
+      "methods": [
+        "Independent_original_replacements_have_one_acceptance_and_one_exact_Search_projection",
+        "Explicit_absence_does_not_overwrite_a_concurrent_creation",
+        "Accepted_normalization_and_noop_revision_are_exact_and_SQL_compares_original_revision",
+        "Stale_delete_and_original_binding_reject_after_rebind_without_removing_newer_Search",
+        "Reactivation_fences_original_namespace_even_with_unchanged_revision_and_values",
+        "Awaited_owner_creation_cannot_change_the_captured_proposal_or_target",
+        "Waiting_project_gate_reads_the_committed_new_revision_before_replacement",
+        "Enlisted_Search_failures_roll_back_both_owners_for_save_and_header_only_delete",
+        "Real_commit_lost_ack_and_conflicting_cleanup_remain_unconfirmed_without_receipt_inference",
+        "Acknowledged_commit_survives_cleanup_and_activity_failure_with_its_exact_snapshot",
+        "Writer_persists_curated_configuration_and_reuses_exact_metadata_per_project_object",
+        "Duplicate_governed_matches_refuse_without_repair_or_arbitrary_reuse"
+      ],
+      "syntaxDiagnostics": 0
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "facts": 6,
+      "methods": [
+        "Oversized_unbound_metadata_and_Search_body_can_be_deleted_without_payload_projection",
+        "Stored_unsupported_payloads_refuse_replacement_even_with_forged_valid_header_but_allow_metadata_deletion",
+        "Encoded_snapshot_limit_refuses_escape_expansion_without_changing_retained_row_or_Search",
+        "Profile_generation_changed_after_enlisted_Search_rolls_back_before_commit",
+        "Foreign_original_profile_and_nonrelational_factory_cannot_publish_any_Resource_effect",
+        "Early_cancellation_and_prepared_activation_cannot_open_or_mutate_the_owner"
+      ],
+      "syntaxDiagnostics": 0
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Performance.cs",
+      "facts": 1,
+      "methods": [
+        "Measure_bounded_resource_metadata_owner_capacity"
+      ],
+      "syntaxDiagnostics": 0
+    }
+  ],
+  "ordinaryRows": 18,
+  "newOptInRows": 1,
+  "optInFilter": "FullyQualifiedName=CanDoItAll.Tests.Integration.ResourceMetadataOwnerTests.Measure_bounded_resource_metadata_owner_capacity&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+  "matrix": {
+    "operations": 3,
+    "shapes": 2,
+    "samples": 3,
+    "cellWidths": [
+      1,
+      8,
+      8,
+      8,
+      32,
+      32,
+      32
+    ],
+    "batches": 126,
+    "calls": 2178,
+    "separatelyLabelledControls": 17,
+    "matrixSeedWrites": 996,
+    "oversizedControlSeedWrites": 1
+  },
+  "parentOrdinaryAcceptance": "E9FB5746062FF1BCC5A950B90DC5D75B86A28A6DF345C7BC67EEE5D44CC056F6",
+  "peerReview": {
+    "reviewer": "/root/ui_validation_architecture",
+    "verdict": "SourcePass",
+    "sourceSha256": "8AA4FCF2ED476D3D3C463134C5485A16B67735763545EE19573C851C93832400",
+    "scope": "Initial complete source and narrow successor: evidence/cleanup, timestamp reservation, exact provider tracing labels; not build/runtime/capacity proof"
+  },
+  "promotionDomain": {
+    "prefix": "resource-promotion:v1:",
+    "digest": "64 uppercase hexadecimal SHA-256 characters",
+    "baselineRequiredCount": 0,
+    "candidateExactCountGate": "Parent must bind admitted promotion G count to later reviewed production; test allows at most one and emits each count",
+    "mutableSchemaOrRevisionExcluded": true
+  },
+  "validation": {
+    "syntax": "Zero diagnostics in all three partials",
+    "build": "Not run",
+    "tests": "Not run",
+    "database": "Not run",
+    "portabilityStatic": "Parent-owned pending",
+    "runtimeCalibration": "Required before accepting measurements",
+    "capacity": "Unqualified",
+    "sharedLockImplementation": "Held",
+    "P03Implementation": "Held"
+  }
+}

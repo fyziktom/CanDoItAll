@@ -410,11 +410,15 @@ public sealed class ResourceFileBrowsePaneTests
 
     private sealed class BrowseOwner(IResourceFileSourceCatalog catalog, ResourceFileBrowseCoordinator browse,
         ResourceStorageObjectPromotionService promotion, IFileToolsBrowseItemActionService actions, IServiceProvider services) : IResourceBrowseOwner {
+        private ResourceMetadataContext context = new(Guid.NewGuid(), new(Guid.NewGuid()));
         public bool IsCurrent => true;
         public bool IsLocalLaunchAvailable => actions.IsLocalLaunchAvailable;
         public async Task<ResourceBrowseCatalog> LoadAsync(CancellationToken cancellationToken = default) {
             var snapshot = await catalog.LoadAsync(cancellationToken);
-            return new(snapshot.Sources.Select(Map).ToArray(), snapshot.Projects.Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray(), snapshot.Fingerprint);
+            if (snapshot.Projects.FirstOrDefault() is { } project) {
+                context = new(project.Admission.DatabaseProfileId, context.Namespace);
+            }
+            return new(snapshot.Sources.Select(Map).ToArray(), snapshot.Projects.Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray(), snapshot.Fingerprint, context);
         }
         public async ValueTask<ResourceBrowseLease> OpenAsync(ResourceFileSourceKey key, CancellationToken cancellationToken = default) {
             var gate = services.GetService<ControlledWorkspaceOpenGate>();
@@ -423,8 +427,14 @@ public sealed class ResourceFileBrowsePaneTests
         }
         public async ValueTask<ResourcePromotionObservation> PromoteAsync(ResourcePromotionRequest command) {
             var result = await promotion.PromoteAsync(new(command.Selection.Source.Key, command.Selection.Item.Key, command.Project.ProjectId,
-                command.Name, command.Project, command.Sensitivity));
-            return new(result.ResourceId, result.Created, result.Revision.Scope);
+                command.Name, command.Project, command.Context, command.ResourceId, command.Sensitivity));
+            return result.Outcome switch {
+                StorageObjectResourceWriteResult.Accepted { Created: true } accepted => new ResourcePromotionObservation.Created(accepted.Snapshot, result.Revision?.Scope, accepted.Diagnostic),
+                StorageObjectResourceWriteResult.Accepted accepted => new ResourcePromotionObservation.Reused(accepted.Snapshot, result.Revision?.Scope, accepted.Diagnostic),
+                StorageObjectResourceWriteResult.Rejected rejected => new ResourcePromotionObservation.Rejected(rejected.Reason),
+                StorageObjectResourceWriteResult.Unconfirmed => new ResourcePromotionObservation.Unconfirmed(command),
+                _ => throw new InvalidOperationException("Unsupported fixture promotion outcome.")
+            };
         }
         public ValueTask<ResourcePreviewLease> OpenResourceAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<FileToolsBrowseItemActionResult> LaunchAsync(ResourceFileSelection selection, FileToolsLocalFileAction action, CancellationToken cancellationToken = default) => actions.LaunchAsync(selection.Source.Scope, selection.Item.Key, action, cancellationToken);
@@ -606,7 +616,13 @@ public sealed class ResourceFileBrowsePaneTests
             CancellationToken cancellationToken = default)
         {
             SaveCount++;
-            return Task.FromResult(new StorageObjectResourceWriteResult(Guid.NewGuid(), true));
+            var expected = new ResourceMetadataExpectation.Existing(request.Context, request.ResourceId, new(Guid.NewGuid()),
+                new ResourceProjectBinding.Bound(request.ProjectId, request.ExpectedProjectAdmission.LifetimeId));
+            var snapshot = new ResourceMetadataSnapshot(expected,
+                new(null, null, null, request.Name, string.Empty, ResourceConnectorPluginKeys.StorageObject, "1",
+                    request.Config.Locator, System.Text.Json.JsonSerializer.Serialize(request.Config), "[]", ResourceValidationStatus.Unknown,
+                    request.Sensitivity, true, false), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+            return Task.FromResult<StorageObjectResourceWriteResult>(new StorageObjectResourceWriteResult.Accepted(snapshot, true));
         }
     }
 

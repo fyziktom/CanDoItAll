@@ -75,7 +75,9 @@ public static class ApiServiceCollectionExtensions
             options.AddSchemaTransformer(OpenApiAttributeDescriptions.TransformAsync);
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
             options.AddSchemaTransformer(ProjectOperationEpochHttpContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(AgentHistoricalReceiptOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(ProjectDefinitionOperationOpenApiSchemas.TransformSchemaAsync);
+            options.AddSchemaTransformer(WorkspaceSettingsOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
@@ -87,9 +89,12 @@ public static class ApiServiceCollectionExtensions
                 SharedProviderInferenceOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiFormParameterDescriptions.TransformOperationAsync);
             options.AddOperationTransformer(ProjectOperationEpochHttpContract.TransformOperationAsync);
+            options.AddOperationTransformer(ProjectDefinitionOpenApiOperations.TransformAsync);
+            options.AddOperationTransformer(WorkspaceSettingsOpenApiContract.TransformOperationAsync);
             options.AddOperationTransformer(OpenApiDuplicateParameters.TransformOperationAsync);
             options.AddDocumentTransformer(OpenApiDiscriminatorDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiAttributeDescriptions.TransformDocumentAsync);
+            options.AddDocumentTransformer(ProjectDefinitionOpenApiDescriptions.TransformDocumentAsync);
             options.AddDocumentTransformer(OpenApiDescriptionText.TransformDocumentAsync);
         });
         services.AddAuthorization(options =>

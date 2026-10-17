@@ -337,14 +337,35 @@ Agent/process adapters use the dedicated `GovernedExecution` mapping of real
 admitted execution/source identity when their integration slice ships, never model
 text. See 06 for the exact identity and current disclosure rules.
 
-Current write/source authorization remains checked at effect time through the
-existing authority protocol. Replay/lookup needs current read permission for the
+Governed source authorization is checked at effect time through the existing
+held source-authority protocol. The current HTTP adapter checks current read/write
+when resolving its invocation, but does not yet repeat current write observation
+after owner waits or before commit. HTTP effect-time authorization is therefore
+an open cutover gate, not a guarantee of the current implementation. The proposed
+[HTTP observation design](../../../codex/bundles/concurrent-mutations/plan/P02b-http-current-write-observation.md)
+uses a separate host-neutral observation boundary and bounded current credential
+reads; it must not masquerade as a source lease or change source-null isolation.
+Even after that design is implemented, independent credential persistence can
+change after the final observation: it does not promise atomic revocation
+exclusion through SQL commit. Its storage-readiness foundation and subsequent
+HTTP/client proof remain separately reviewable checkpoints.
+
+Replay/lookup needs current read permission for the
 historical accepted payload even when the original effect authority has expired.
 An HTTP lookup requires current `ReadProjects`; a retrying POST also obeys its
 route's `WriteProjects` policy. Returning an authorized
 prior result is different from executing the command again. The Projects module
 must not reference `WebCurrentPrincipalResolver`; the composition adapter owns
 that dependency. A caller value by itself is not an authorization proof.
+
+The planned observation distinguishes denied permission from unavailable current
+authority storage. A precommit storage failure is a typed service-unavailable
+no-effect rejection (for example HTTP 503 with a Rejected envelope); it is not
+403 and not an Unconfirmed commit. HTTP status alone cannot resolve that
+distinction: the eventual transport/schema/client change must preserve the
+discriminator. A later rejection remains scoped to that attempt and never
+settles an earlier ambiguous dispatch. This is a required future contract, not
+an assertion that the current 503 mapping already supports both cases.
 
 For P02b add typed overloads/protected methods taking the operation envelope and
 the explicit invocation. Convert native UI, HTTP and Workbench adapters to them.

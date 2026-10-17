@@ -1375,8 +1375,8 @@
             managerChatExecutionLog = runtimeSnapshot.ExecutionLog;
             ResolveManagerChatRunState();
             managerChatErrorMessage = null;
-            if (managerChatVoiceModeEnabled && !string.IsNullOrWhiteSpace(result.AssistantMessage.Content)) {
-                await SpeakManagerChatTextAsync(result.AssistantMessage.Content);
+            if (managerChatVoiceModeEnabled && result.AssistantMessage is { Content: var spokenContent } && !string.IsNullOrWhiteSpace(spokenContent)) {
+                await SpeakManagerChatTextAsync(spokenContent);
             }
         } catch (Exception exception) when (exception is not OperationCanceledException) {
             if (!IsCurrentManagerChatContext(operationContext)) {

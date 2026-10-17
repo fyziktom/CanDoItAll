@@ -1511,12 +1511,9 @@ public sealed partial class FileSandboxWorkspaceStore
         ExecutionReportIndexPreparation? prepared,
         CancellationToken cancellationToken)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock =
-                await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
             if (prepared is not null)
             {
@@ -1549,10 +1546,9 @@ public sealed partial class FileSandboxWorkspaceStore
                     return (published, Preparation: null);
                 }
             }
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 }

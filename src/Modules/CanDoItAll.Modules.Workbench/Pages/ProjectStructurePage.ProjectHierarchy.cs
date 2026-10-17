@@ -145,6 +145,7 @@ public partial class ProjectStructurePage
 
         var opening = new ProjectStructureAuthoringOpening(CaptureActionContext(), node);
         hierarchyOpening = opening;
+        RetireInactiveAuthoring();
         projectHierarchyDialog = new(mode, subjectProjectId, node.Title, currentParentProjectId,
             currentParentProjectTitle, [], null, string.Empty) { OpeningId = opening.Id, IsBusy = true };
         await RenderAuthoringOutcomeAsync();

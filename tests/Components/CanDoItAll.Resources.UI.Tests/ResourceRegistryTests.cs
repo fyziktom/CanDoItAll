@@ -24,17 +24,20 @@ public sealed class ResourceRegistryTests {
         Fill(controller);
         await controller.SaveAsync();
         var receipt = Assert.Single(controller.Receipts);
-        Assert.Null(receipt.ResourceId);
+        Assert.Equal(controller.Draft.Expected!.ResourceId, receipt.ResourceId);
         var id = Assert.Single(store.Writes).ResourceId;
         await controller.ReviewIdentityAsync(receipt, id);
-        Assert.Null(receipt.ResourceId);
+        Assert.Equal(id, receipt.ResourceId);
         Assert.Null(controller.Draft.Editor.Id);
         Assert.Equal(ResourceEffectState.Unknown, receipt.State);
-        Assert.Equal(id, receipt.ReviewedResource!.Id);
+        Assert.Equal(id, Assert.IsType<ResourceMetadataReadResult.Found>(receipt.Observation).Snapshot.Expected.ResourceId);
         await controller.SaveAsync();
         Assert.Single(store.Writes);
         await controller.SelectAsync(id);
         Assert.Equal(id, controller.Draft.Editor.Id);
+        Assert.True(controller.IsBusy);
+        await controller.SaveAsync();
+        Assert.Single(store.Writes);
     }
     [Fact]
     public async Task Save_captures_deep_command_and_preserves_later_raw_fields_and_edit_context() {
@@ -99,7 +102,7 @@ public sealed class ResourceRegistryTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Project_or_new_draft_lifetime_cannot_adopt_an_old_create(bool newDraft) {
+    public async Task Project_proposal_keeps_accepted_base_but_a_new_draft_cannot_adopt_an_old_create(bool newDraft) {
         var store = new ResourceScenarioStore();
         using var controller = new ResourceRegistryController(store);
         await controller.LoadRouteAsync(null, store.PrimaryProject.Id);
@@ -113,11 +116,16 @@ public sealed class ResourceRegistryTests {
         controller.Draft.Editor.Name = "successor";
         gate.Release();
         await pending;
-        Assert.Null(controller.Draft.Editor.Id);
+        if (newDraft) {
+            Assert.Null(controller.Draft.Editor.Id);
+        } else {
+            Assert.Equal(Assert.Single(store.Writes).ResourceId, controller.Draft.Editor.Id);
+            Assert.Equal(Assert.Single(controller.Receipts).AcceptedSnapshot!.Expected, controller.Draft.Expected);
+        }
         Assert.Equal(store.Projects[1].Admission, controller.Draft.Editor.ExpectedProjectAdmission);
         Assert.Equal("successor", controller.Draft.Editor.Name);
         Assert.Equal(store.PrimaryProject.Admission, Assert.Single(store.Writes).Command.ExpectedProjectAdmission);
-        Assert.NotNull(Assert.Single(controller.Receipts).ResourceId);
+        Assert.NotEqual(Guid.Empty, Assert.Single(controller.Receipts).ResourceId);
     }
 
     [Fact]
@@ -173,24 +181,22 @@ public sealed class ResourceRegistryTests {
     }
 
     [Fact]
-    public async Task Newer_save_readback_cannot_be_overwritten_by_earlier_normalization() {
+    public async Task Newer_save_acceptance_cannot_be_overwritten_by_earlier_reference_refresh() {
         var store = new ResourceScenarioStore();
         using var controller = await OpenAsync(store);
-        var oldSnapshot = controller.Draft.Editor.Capture();
-        var gate = store.HoldNext(ResourceScenarioLane.EditorRead);
+        var reads = store.ExactReadCount;
+        var gate = store.HoldNext(ResourceScenarioLane.RegistryRead);
         controller.Draft.Editor.Name = "old";
         var first = controller.SaveAsync();
         await gate.Entered.Task;
         controller.Draft.Editor.Name = "new";
         await controller.SaveAsync();
-        store.BeforeGet = id => {
-            store.Records[id] = oldSnapshot;
-            return Task.CompletedTask;
-        };
         gate.Release();
         await first;
         Assert.Equal("new", controller.Draft.Editor.Name);
         Assert.Equal(2, store.Writes.Count);
+        Assert.Equal(reads, store.ExactReadCount);
+        Assert.Equal(controller.Receipts.Last().AcceptedSnapshot!.Expected, controller.Draft.Expected);
     }
 
     [Fact]
@@ -237,7 +243,13 @@ public sealed class ResourceRegistryTests {
         Assert.Empty(store.Writes);
         Assert.Equal(original.ConnectorPluginKey, controller.Draft.Editor.ConnectorPluginKey);
         Assert.Equal(original.Configuration.ToJson(), controller.Draft.Editor.Configuration.ToJson());
-        Assert.NotEmpty(controller.Draft.EditContext.GetValidationMessages());
+        if (scenario == ResourceScenario.MissingConnector) {
+            Assert.Equal(ResourceMetadataReadOnlyReason.UnavailableConnector, controller.Draft.ReadOnlyReason);
+            Assert.False(controller.CanSave);
+            Assert.True(controller.CanDelete);
+        } else {
+            Assert.NotEmpty(controller.Draft.EditContext.GetValidationMessages());
+        }
     }
 
     [Fact]
@@ -272,7 +284,7 @@ public sealed class ResourceRegistryTests {
         gate.Release();
         await review;
         Assert.Same(draft, controller.Draft);
-        Assert.Equal(ResourceEffectState.Reviewed, receipt.State);
+        Assert.Equal(ResourceEffectState.Unknown, receipt.State);
         Assert.Null(draft.Editor.Id);
     }
 

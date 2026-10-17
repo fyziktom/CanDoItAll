@@ -238,11 +238,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
                     "test-provider", "test-model", new InvalidOperationException("api_key=provider-secret"),
                     terminalRun.ResultSummary, AgentProviderFailureCategory.ProviderError));
             } else {
-                var result = CreateRunResult(agent.Id, session.Id);
-                completion.SetResult(result with {
-                    ExecutionRunId = terminalRun.Id,
-                    Metric = result.Metric with { ExecutionRunId = terminalRun.Id }
-                });
+                completion.SetResult(CreateRunResult(agent.Id, session.Id, terminalRun.Id));
             }
             cut.WaitForAssertion(() => {
                 var panel = cut.FindComponent<ChatWorkspacePanel>().Instance;
@@ -275,11 +271,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
             var nextRun = terminalRun with { Id = Guid.NewGuid(), State = ExecutionState.Completed, Outcome = RunOutcome.Succeeded };
             workspace.InitialRunDetail = new(nextRun, session, [], []);
             workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, session, nextRun));
-            var nextResult = CreateRunResult(agent.Id, session.Id);
-            nextCompletion.SetResult(nextResult with {
-                ExecutionRunId = nextRun.Id,
-                Metric = nextResult.Metric with { ExecutionRunId = nextRun.Id }
-            });
+            nextCompletion.SetResult(CreateRunResult(agent.Id, session.Id, nextRun.Id));
             cut.WaitForAssertion(() => {
                 Assert.False(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
                 Assert.Equal(nextRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun!.Id);
@@ -400,7 +392,14 @@ public sealed partial class AgentChatPanelResponsivenessTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='agents-chat-restore-submission']").HasAttribute("disabled"));
+            var retained = Assert.Single(context.Services.GetRequiredService<AgentChatSubmissionRetention>().Snapshot());
+            Assert.Equal(AgentChatSubmissionState.Unconfirmed, retained.State);
+            Assert.Equal(agent.Id, retained.AgentId);
+            Assert.Equal(executionSession.Id, retained.SessionId);
+            Assert.Equal("Keep this failure scoped to its actual thread.", retained.Draft);
+            Assert.Equal("Keep this failure scoped to its actual thread.", retained.RequestPrompt);
             Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain(unrelatedSession.Title, cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain(unrelatedRun.ResultSummary, cut.Markup, StringComparison.Ordinal);
@@ -1064,6 +1063,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentChatSubmissionRetention>();
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddStubProviderRuntimeAdministration();
@@ -1313,10 +1313,9 @@ public sealed partial class AgentChatPanelResponsivenessTests
             PendingApprovals: []);
     }
 
-    internal static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId)
-    {
+    internal static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId, Guid? executionRunId = null) {
         var now = DateTimeOffset.UtcNow;
-        var runId = Guid.NewGuid();
+        var runId = executionRunId ?? Guid.NewGuid();
         return new AgentChatRunResult(
             sessionId,
             new ChatMessageRecord(
@@ -1553,7 +1552,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
 
         public List<(Guid AgentId, Guid SessionId, Guid RunId, AgentExecutionActivityStreamId StreamId)> RecoveryRequests { get; } = [];
-        public TaskCompletionSource<ExecutionRunResult> RecoveryCompletion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<ExecutionRunResult> RecoveryCompletion { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource RecoveryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)

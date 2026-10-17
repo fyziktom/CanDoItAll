@@ -87,6 +87,36 @@ public sealed class ProjectDeletionStatusSurfaceTests {
     }
 
     [Fact]
+    public async Task Owner_completion_review_blocks_retry_and_rechecks_queued_callbacks() {
+        using var context = Context();
+        var target = Notices(1)[0].Target;
+        var pending = new ProjectCleanupStatus(target, "Failed", true, null, "Retry this operation.");
+        var cut = Render(context, []);
+        var received = new List<ProjectCleanupTarget>();
+        cut.Render(p => p.Add(x => x.Pending, [pending])
+            .Add(x => x.Retry, value => received.Add(value))
+            .Add(x => x.Review, new(ProjectCleanupView.Pending)));
+        var queuedRetry = cut.FindComponents<Button>().Single(button => button.Instance.Text == "Retry cleanup").Instance.Click;
+        var blocked = pending with { RetryBlocked = true, CanRetryNow = false,
+            RetryGuidance = "The project was deleted. Operator review is required before retrying cleanup." };
+        cut.Render(p => p.Add(x => x.Pending, [blocked]));
+        Assert.True(cut.Find("[data-testid='project-deletion-retry']").HasAttribute("disabled"));
+        Assert.Contains("The project was deleted", cut.Find("[data-testid='project-cleanup-pending-item']").TextContent);
+        Assert.Contains("Operator review", cut.Markup);
+        Assert.Contains(target.RecoveryId.ToString("D"), cut.Markup);
+        await cut.InvokeAsync(() => queuedRetry.InvokeAsync(new()));
+        Assert.Empty(received);
+
+        cut.Render(p => p.Add(x => x.Pending, new[] { pending with { CanRetryNow = false } }));
+        Assert.False(cut.Find("[data-testid='project-deletion-retry']").HasAttribute("disabled"));
+        await Click(cut, "project-deletion-retry");
+        Assert.Equal(target, Assert.Single(received));
+        cut.Render(p => p.Add(x => x.Pending, Array.Empty<ProjectCleanupStatus>()));
+        await cut.InvokeAsync(() => queuedRetry.InvokeAsync(new()));
+        Assert.Single(received);
+    }
+
+    [Fact]
     public async Task Refresh_clamps_pages_and_never_rebinds_a_missing_selected_operation() {
         using var context = Context();
         var notices = Notices(12);

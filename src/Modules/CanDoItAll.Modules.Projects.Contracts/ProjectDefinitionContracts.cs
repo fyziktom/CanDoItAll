@@ -50,6 +50,17 @@ public sealed record ProjectDefinitionScalars(
     string CurrentPhase,
     DateTime? TargetDateUtc);
 
+public sealed record ProjectDefinitionScalarSnapshot {
+    public ProjectDefinitionScalarSnapshot(ProjectDefinitionExpectation expectation, ProjectDefinitionScalars scalars) {
+        ArgumentNullException.ThrowIfNull(expectation);
+        ArgumentNullException.ThrowIfNull(scalars);
+        Expectation = expectation;
+        Scalars = scalars;
+    }
+
+    public ProjectDefinitionExpectation Expectation { get; }
+    public ProjectDefinitionScalars Scalars { get; }
+}
 public sealed record ProjectDefinitionExternalIdentity(string Namespace, string Key);
 
 public sealed record ProjectDefinitionPhaseInput(

@@ -87,6 +87,9 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     private async Task<ExecutionRunAdmissionSnapshot> ReadVerifiedSnapshotAsync(AgentToolRunLease lease, bool reconciliationOnly,
         CancellationToken cancellationToken) {
         lease.RequireOwner(this);
+        if (!reconciliationOnly && lease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
+            return await ReadSavedEffectSnapshotAsync(lease, cancellationToken);
+        }
         RequireLeaseMode(lease, reconciliationOnly);
         var detail = await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken);
         var journal = RequireJournal(detail.Run);
@@ -130,6 +133,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         Guid segmentId, AgentToolProtocolEnvelope checkpoint, string serializedSessionStateJson,
         IReadOnlyList<PendingToolApprovalRecord> approvals, CancellationToken cancellationToken) {
         lease.RequireOwner(this);
+        RequireLeaseMode(lease, reconciliationOnly: false);
         IReadOnlyList<PendingToolApprovalRecord>? bound = null;
         if (lease.Session.BackgroundSource is not null) {
             await RequireBackgroundSourceAsync((await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken)).Run,
@@ -140,7 +144,8 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             RequireCurrent(journal.Session, new(detail.Run, detail.ChatSession));
             RequireLease(lease, journal);
             var segment = journal.Segments.Single(item => item.Id == segmentId);
-            if (segment.Ordinal != journal.Segments.Length - 1 || approvals.Count == 0) {
+            if (segment.CheckpointKind != AgentToolCheckpointKind.ProviderRestart ||
+                segment.Ordinal != journal.Segments.Length - 1 || approvals.Count == 0) {
                 throw Failure("Only the current SDK invocation can publish pending approvals.");
             }
 
@@ -174,7 +179,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     public Task<AgentToolJournalRecord> AdmitBatchAsync(AgentToolRunLease lease, AgentToolSemanticDigest requestDigest,
         AgentToolProtocolEnvelope response, IReadOnlyList<AgentToolPreparedCall> calls, CancellationToken cancellationToken)
         => MutateAsync(lease, true, journal => {
-            RequireRecoverable(journal);
+            RequireLiveEffectOrigin(lease, journal);
             if (journal.Segments.Length == 0 || journal.HasUnresolvedEffects) {
                 throw Failure("Restore and drain the saved tool batch before admitting another provider proposal.");
             }
@@ -196,6 +201,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             }
         }
         var journal = await MutateAsync(lease, true, current => {
+            RequireLiveEffectOrigin(lease, current);
             var batch = current.Batches.SingleOrDefault(item => item.Id == batchId)
                 ?? throw Failure("The current serial batch does not exist.");
             var proposal = batch.Proposals.SingleOrDefault(item => item.CallId == callId)
@@ -215,8 +221,8 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             }
 
             selected = proposal;
-            if (proposal.State is AgentToolProposalState.Rejected or AgentToolProposalState.Cancelled) {
-                throw Failure("A rejected or cancelled proposal cannot execute.");
+            if (proposal.State is AgentToolProposalState.Rejected or AgentToolProposalState.Cancelled or AgentToolProposalState.OwnerReceiptConfirmed) {
+                throw Failure("A rejected, cancelled or owner-confirmed proposal cannot execute.");
             }
 
             if (proposal.State == AgentToolProposalState.Completed) {
@@ -245,6 +251,14 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             return;
         }
 
+        if (claim.RunLease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
+            await RecordSavedEffectOutcomeAsync(claim, proposal => proposal with {
+                State = requiresOwnerReconciliation ? AgentToolProposalState.ReconciliationRequired : AgentToolProposalState.Completed,
+                Result = result, EffectState = effect, DisclosureEvidence = disclosureEvidence
+            }, cancellationToken);
+            return;
+        }
+
         await MutateAsync(claim.RunLease, true, journal => AgentToolJournalTransitions.Replace(journal, claim.Binding, proposal => {
             RequireClaim(claim, proposal);
             return proposal with {
@@ -259,6 +273,13 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     public async Task PreserveUncertainInvocationAsync(AgentToolInvocationClaim claim, CancellationToken cancellationToken) {
         claim.RequireOwner(this);
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
+            return;
+        }
+
+        if (claim.RunLease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
+            await RecordSavedEffectOutcomeAsync(claim, proposal => proposal with {
+                State = AgentToolProposalState.ReconciliationRequired
+            }, cancellationToken, preserveUncertainty: true);
             return;
         }
 
@@ -342,12 +363,14 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         return RequireJournal(detail.Run);
     }
 
-    private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunAdmissionSnapshot detail, bool reconciliationOnly = false) {
+    private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunAdmissionSnapshot detail, bool reconciliationOnly = false)
+        => RequireCurrent(session, detail, reconciliationOnly ? AgentToolRunLeaseMode.CancelledReceiptReconciliation : AgentToolRunLeaseMode.Dispatch);
+
+    private void RequireCurrent(AgentToolSessionAdmission session, ExecutionRunAdmissionSnapshot detail, AgentToolRunLeaseMode mode) {
         var run = detail.Run;
         if (session.Reference.BackgroundSource is { } background) {
             RequireBackgroundIdentity(session, run, background);
-            if (detail.ChatSession is not null || (reconciliationOnly ? run.Outcome != RunOutcome.Cancelled :
-                    run.State == ExecutionState.Completed || run.Outcome == RunOutcome.Cancelled)) {
+            if (detail.ChatSession is not null || !AllowsState(run, mode)) {
                 throw Failure("The background execution cannot dispatch in its current terminal or chat state.");
             }
             return;
@@ -357,21 +380,35 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         if (session.Profile != profile || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
             run.Id != session.Reference.ExecutionRunId || run.AgentId != session.AgentId ||
             run.ChatSessionId != session.Reference.ChatSessionId || chat is null || chat.Id != session.Reference.ChatSessionId ||
-            chat.AgentId != session.AgentId || !reconciliationOnly && chat.LatestExecutionRunId != run.Id ||
+            chat.AgentId != session.AgentId || (mode is AgentToolRunLeaseMode.Dispatch or AgentToolRunLeaseMode.SavedEffectDispatch) &&
+                chat.LatestExecutionRunId != run.Id ||
             authority is null || authority.AuthorityId != session.Reference.AuthorityId || authority.AgentId != session.AgentId ||
             authority.DatabaseProfileId != profile.ProfileId || authority.DatabaseProfileGeneration != profile.Generation ||
             !authority.ReadAllowed) {
             throw Failure("The saved execution, chat ownership, purpose, authority or profile no longer matches tool admission.");
         }
 
-        if (reconciliationOnly ? run.Outcome != RunOutcome.Cancelled : run.State == ExecutionState.Completed || run.Outcome == RunOutcome.Cancelled) {
+        if (!AllowsState(run, mode)) {
             throw Failure("A terminal execution cannot dispatch or disclose admitted tool data.");
         }
     }
 
+    private static bool AllowsState(ExecutionRunRecord run, AgentToolRunLeaseMode mode) => mode switch {
+        AgentToolRunLeaseMode.Dispatch => run.State != ExecutionState.Completed && run.Outcome != RunOutcome.Cancelled,
+        AgentToolRunLeaseMode.CancelledReceiptReconciliation => run.Outcome == RunOutcome.Cancelled,
+        AgentToolRunLeaseMode.SavedEffectDispatch => (run.State is ExecutionState.WaitingOnTool or ExecutionState.Running) && run.Outcome is null,
+        AgentToolRunLeaseMode.InterruptedEffectReconciliation => run.State switch {
+            ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting => run.Outcome is null,
+            ExecutionState.Failed => run.Outcome is null or RunOutcome.Failed,
+            _ => false
+        },
+        _ => false
+    };
+
     private static void RequireLeaseMode(AgentToolRunLease lease, bool reconciliationOnly) {
-        if (lease.ReconciliationOnly != reconciliationOnly) {
-            throw Failure("A cancellation reconciliation lease cannot authorize tool dispatch or ordinary session disclosure.");
+        var expected = reconciliationOnly ? AgentToolRunLeaseMode.CancelledReceiptReconciliation : AgentToolRunLeaseMode.Dispatch;
+        if (lease.Mode != expected) {
+            throw Failure("The active lease mode cannot authorize this dispatch, disclosure or reconciliation operation.");
         }
     }
 
@@ -379,7 +416,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         CancellationToken cancellationToken) {
         var handle = await leases.AcquireToolDispatchLeaseAsync(reference.ExecutionRunId, cancellationToken);
         try {
-            var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle, reconciliationOnly: true);
+            var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle, AgentToolRunLeaseMode.CancelledReceiptReconciliation);
             await MutateAsync(lease, false, journal => journal with {
                 Revision = checked(journal.Revision + 1), ActiveDispatchLeaseId = lease.Id
             }, cancellationToken, reconciliationOnly: true, backgroundCheck: BackgroundCheck.RecordOutcome);
@@ -393,6 +430,12 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     internal async ValueTask<AgentToolReceiptReconciliationAdmission> RequireReceiptReconciliationAsync(
         AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken) {
         claim.RequireOwner(this);
+        if (claim.Lease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
+            return await RequireSavedEffectReceiptAsync(claim, cancellationToken);
+        }
+        if (claim.Lease.Mode == AgentToolRunLeaseMode.InterruptedEffectReconciliation) {
+            return await RequireInterruptedReceiptAsync(claim, cancellationToken);
+        }
         var journal = await ReadVerifiedAsync(claim.Lease, reconciliationOnly: true, cancellationToken);
         if (journal.Session.Reference.BackgroundSource is not null &&
                 !await CanReadBackgroundResultAsync((await RequireSnapshotAsync(claim.Lease.Session.ExecutionRunId, cancellationToken)).Run, cancellationToken)) {
@@ -422,7 +465,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         var observedThisRequest = new HashSet<AgentToolBusinessIntentId>();
         foreach (var batch in saved.Batches) {
             foreach (var proposal in batch.Proposals) {
-                if (proposal.State is AgentToolProposalState.Completed or AgentToolProposalState.Rejected ||
+                if (proposal.State is AgentToolProposalState.Completed or AgentToolProposalState.Rejected or AgentToolProposalState.OwnerReceiptConfirmed ||
                     proposal.State == AgentToolProposalState.Cancelled &&
                         proposal.Cancellation?.Disposition != AgentToolCancellationDisposition.CancelledUnreconciled) {
                     continue;

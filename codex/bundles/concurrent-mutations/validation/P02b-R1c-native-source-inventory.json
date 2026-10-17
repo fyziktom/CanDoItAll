@@ -1,0 +1,82 @@
+{
+  "status": "source-only; no builds or tests executed",
+  "newComponentFacts": 4,
+  "fullResponsivenessClassRows": 48,
+  "inputs": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/FloatingAgentChatModels.cs",
+      "bytes": 36523,
+      "sha256": "02848C9853C45F8E2434353B3C3282F922BD589303C46B171F56416BD274BD28"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessSupport.cs",
+      "bytes": 20384,
+      "sha256": "F2B944520FFA0B2F550B795254F710245018873FAEA967D4259892EF2DDC7473"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "bytes": 88150,
+      "sha256": "CFC114756E448AC2061C77BE9CB03665B778EE85E31026E4F044B375CD83D511"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.EffectRecovery.cs",
+      "bytes": 7975,
+      "sha256": "71705A18D49FB02C67B02495AC8E16BE9927462F640D45A8AAEB595C61C2DA9A"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+      "bytes": 13019,
+      "sha256": "7AE249A098D8347E76B42D52F8A382C4D86FA016A7DB99958DC03A805CBA5759"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor.cs",
+      "bytes": 5542,
+      "sha256": "85547A57B9DA2ABC5BE915E8785C71216BD218DC73984B8F470CF16C637A26C2"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/FloatingAgentChatCoordinator.cs",
+      "bytes": 18624,
+      "sha256": "9239FB11E34846F7BACB6A355C6E6AE29E0A39FA929EBF47A833B4710E6DA3CA"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatActionState.cs",
+      "bytes": 925,
+      "sha256": "67D6FA70E3384397F6613105EFFE94BB480D03A9B4C323874D70EC0E9C321A0E"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatEffectRecovery.cs",
+      "bytes": 2925,
+      "sha256": "B29C90714D7277D7D17AFFAA36ECCE576A322FE06BA33A63B2FB59E61CBF937D"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentScenarioCompletionPresentation.cs",
+      "bytes": 1222,
+      "sha256": "253868E64190455277F11904EB7DC801E61914F2AB8883F7F051D5409B9F84FC"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "bytes": 3115,
+      "sha256": "7BFC2ABA9747D3E170DE2623F69B7EC29D8F713800F6A08B04ED6386FFA70BA8"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs",
+      "bytes": 79730,
+      "sha256": "B81739A0C8504C8A230F8099E9E83F4968F0656542A844DC0F12EC34A9B76261"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+      "bytes": 26758,
+      "sha256": "1C6C973A4DCD41BF9ADB807FA60E367322FF89B71B5EA01D0454E86BB9296F7A"
+    },
+    {
+      "path": "docs/architecture/components-decoupling-register.json",
+      "bytes": 2029093,
+      "sha256": "7FED4237825372C0F53CD65B0653826C2CB1F2924025797E6B41C6F0065BA549"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P02b-R1c-native-source.md",
+      "bytes": 11542,
+      "sha256": "E3CE435E6AECECFF116CD0617C7E023B7581C8C3751F88B2B312FF10A1A6CF4F"
+    }
+  ]
+}

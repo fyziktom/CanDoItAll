@@ -1,8 +1,12 @@
+using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
@@ -35,13 +39,17 @@ public sealed class ProjectsApiDeletionIntegrationTests
     }
 
     [Fact]
-    public async Task Delete_returns_conflict_and_exact_recovery_retry_completes_cleanup()
-    {
+    public async Task Delete_returns_conflict_and_exact_recovery_retry_completes_cleanup() {
         var participant = new FailOnceProjectDeletionParticipant();
+        var disposal = new OwnerDisposalFault();
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
-            configureServices: services =>
-                services.AddSingleton<IProjectDeletionParticipant>(participant));
+            configureServices: services => {
+                services.AddSingleton<IProjectDeletionParticipant>(participant);
+                services.AddSingleton<IDbContextFactory<ProjectsDbContext>>(provider => new OwnerFactory(
+                    new DbContextOptionsBuilder<ProjectsDbContext>(provider.GetRequiredService<DbContextOptions<ProjectsDbContext>>())
+                        .AddInterceptors(new OwnerSave(disposal), new OwnerDisposal(disposal)).Options));
+            });
         Guid projectId;
         await using (var scope = host.App.Services.CreateAsyncScope())
         {
@@ -64,6 +72,8 @@ public sealed class ProjectsApiDeletionIntegrationTests
 
         Assert.Equal(HttpStatusCode.Conflict, partialResponse.StatusCode);
         Assert.Contains("projects.delete-cleanup-pending", partialBody, StringComparison.Ordinal);
+        using var ordinaryBody = JsonDocument.Parse(partialBody);
+        Assert.False(ordinaryBody.RootElement.GetProperty("recovery").GetProperty("ownerCompletionUnconfirmed").GetBoolean());
         Assert.Equal(HttpStatusCode.OK, retryResponse.StatusCode);
         Assert.Equal(1, participant.PrepareCalls);
         Assert.Equal(2, participant.CompleteCalls);
@@ -71,6 +81,63 @@ public sealed class ProjectsApiDeletionIntegrationTests
         Assert.DoesNotContain(
             await verificationScope.ServiceProvider.GetRequiredService<ProjectsService>().ListAsync(),
             project => project.Id == projectId);
+
+        var verifiedProjects = verificationScope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var another = await verifiedProjects.SaveAsync(new() { Name = "API acknowledged deletion with failed owner disposal" });
+        Assert.True(another.IsSuccess);
+        disposal.Armed = true;
+        try {
+            using var ownerResponse = await host.Client.DeleteAsync($"/api/projects/{another.Value:D}");
+            Assert.Equal(HttpStatusCode.Conflict, ownerResponse.StatusCode);
+            using var ownerBody = JsonDocument.Parse(await ownerResponse.Content.ReadAsStringAsync());
+            Assert.Equal("projects.delete-cleanup-pending", ownerBody.RootElement.GetProperty("code").GetString());
+            var recovery = ownerBody.RootElement.GetProperty("recovery");
+            Assert.Equal(another.Value, recovery.GetProperty("projectId").GetGuid());
+            Assert.True(recovery.GetProperty("ownerCompletionUnconfirmed").GetBoolean());
+            Assert.Contains("operator review", ownerBody.RootElement.GetProperty("message").GetString(), StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(recovery.GetProperty("failures").EnumerateArray(), item =>
+                item.GetProperty("participantId").GetProperty("value").GetString() == participant.Id.Value &&
+                item.GetProperty("recoveryId").GetGuid() == participant.RecoveryId);
+            Assert.Equal(1, disposal.Failures);
+            Assert.Equal(2, participant.PrepareCalls);
+            Assert.Equal(2, participant.CompleteCalls);
+            Assert.DoesNotContain(await verifiedProjects.ListAsync(), project => project.Id == another.Value);
+            Assert.Contains(await verifiedProjects.ListPendingDeletionCleanupsAsync(), item =>
+                item.ProjectId == another.Value && item.ParticipantId == participant.Id && item.RecoveryId == participant.RecoveryId);
+        } finally {
+            disposal.Armed = false;
+        }
+    }
+
+    private sealed class OwnerDisposalFault {
+        public bool Armed;
+        public int Failures;
+        public ConcurrentDictionary<Guid, byte> Saved { get; } = new();
+    }
+
+    private sealed class OwnerFactory(DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext> {
+        public ProjectsDbContext CreateDbContext() => new(options);
+        public Task<ProjectsDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
+    }
+
+    private sealed class OwnerSave(OwnerDisposalFault fault) : SaveChangesInterceptor {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default) {
+            if (fault.Armed) {
+                fault.Saved.TryAdd(eventData.Context!.ContextId.InstanceId, 0);
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class OwnerDisposal(OwnerDisposalFault fault) : DbConnectionInterceptor {
+        public override Task ConnectionDisposedAsync(DbConnection connection, ConnectionEndEventData eventData) {
+            if (fault.Saved.TryRemove(eventData.Context!.ContextId.InstanceId, out _)) {
+                Interlocked.Increment(ref fault.Failures);
+                throw new IOException("The deletion owner was disposed, but cleanup acknowledgement failed.");
+            }
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FailOnceProjectDeletionParticipant : IProjectDeletionParticipant

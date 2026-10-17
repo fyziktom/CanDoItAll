@@ -57,8 +57,27 @@ public sealed record ApiTokenPage(
     [property: Description("Matching registered credentials in this page.")] IReadOnlyList<ApiTokenSummary> Items,
     [property: Description("Number of matching registered credentials before paging.")] int TotalCount);
 
+public abstract record ApiTokenCurrentObservation {
+    private ApiTokenCurrentObservation() { }
+
+    public sealed record Found : ApiTokenCurrentObservation {
+        public Found(ApiTokenRecord record) {
+            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(record.Scopes);
+            Record = record with { Scopes = Array.AsReadOnly(record.Scopes.ToArray()) };
+        }
+
+        public ApiTokenRecord Record { get; }
+    }
+
+    public sealed record Absent : ApiTokenCurrentObservation;
+    public sealed record Unavailable(ApiAuthorityReadFailure Failure) : ApiTokenCurrentObservation;
+}
+
 public interface IApiTokenRegistry {
     void Register(ApiTokenRecord token);
+    Task PrepareCurrentReadAsync(CancellationToken cancellationToken = default);
+    ValueTask<ApiTokenCurrentObservation> ObserveCurrentAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiTokenRecord?> FindAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiTokenPage> SearchAsync(ApiTokenQuery query, CancellationToken cancellationToken = default);
     Task RevokeAsync(Guid id, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken = default);

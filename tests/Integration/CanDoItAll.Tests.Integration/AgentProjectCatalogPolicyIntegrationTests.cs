@@ -107,7 +107,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
     }
 
     [Fact]
-    public async Task Many_catalog_agents_use_two_bulk_owner_reads_without_a_carried_database_transaction_and_profile_mismatch_is_denied() {
+    public async Task Many_catalog_agents_use_two_bulk_owner_reads_per_publication_phase_without_a_carried_transaction_and_profile_mismatch_is_denied() {
         await using var application = await TestApplication.CreateAsync();
         await using var environment = CanDoItAllTestEnvironment.Create("catalog-bulk-facts");
         await using var scope = application.Services.CreateAsyncScope();
@@ -123,19 +123,25 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var canonical = services.GetRequiredService<ICanonicalRuntimeDatabase>();
         var admissions = new ProjectWriteAdmissionService(new ProjectFactory(options), options,
             services.GetRequiredService<CoordinatedDatabaseTransaction>(), canonical);
-        var guarded = new FileSandboxWorkspaceStore(environment.RootPath, catalogMutationPolicy:
-            new AgentProjectAccessCatalogPolicy(admissions, canonical.Profile.Profile.Id));
+        var policy = new CatalogPolicyProbe(new AgentProjectAccessCatalogPolicy(admissions, canonical.Profile.Profile.Id), probe);
+        var guarded = new FileSandboxWorkspaceStore(environment.RootPath, catalogMutationPolicy: policy);
         var agentIds = agents.Select(agent => agent.Id).ToHashSet();
-        var saved = await guarded.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(agent => !agentIds.Contains(agent.Id)
-            ? agent : agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
-                new() { AllowedProjectIds = [projectId] }) }).ToArray() });
-        Assert.Equal(2, probe.Transactions.Count);
+        var callbacks = 0;
+        var saved = await guarded.UpdateCatalogAsync(catalog => {
+            callbacks++;
+            return catalog with { Agents = catalog.Agents.Select(agent => !agentIds.Contains(agent.Id)
+                ? agent : agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
+                    new() { AllowedProjectIds = [projectId] }) }).ToArray() };
+        });
+        Assert.Equal(1, callbacks);
+        Assert.Equal([2, 2], policy.ReadsPerPhase);
+        Assert.Equal(4, probe.Transactions.Count);
         Assert.All(probe.Transactions, transaction => Assert.Null(transaction));
         Assert.All(saved.Agents.Where(agent => agentIds.Contains(agent.Id)), agent =>
             Assert.Equal(projectId, Assert.Single(AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson).AllowedProjectLifetimes).ProjectId));
         var mismatched = new AgentProjectAccessCatalogPolicy(admissions, Guid.NewGuid());
         await Assert.ThrowsAsync<InvalidOperationException>(() => mismatched.ApplyAsync(saved, saved));
-        Assert.Equal(2, probe.Transactions.Count);
+        Assert.Equal(4, probe.Transactions.Count);
     }
 
     private static FileSandboxWorkspaceStore CreateGuardedStore(IServiceProvider services, string root) => new(root,
@@ -176,6 +182,18 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
             Transactions.Add(command.Transaction);
             return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class CatalogPolicyProbe(IAgentCatalogMutationPolicy inner, QueryProbe queries) : IAgentCatalogMutationPolicy {
+        public List<int> ReadsPerPhase { get; } = [];
+
+        public async Task<SandboxWorkspaceCatalog> ApplyAsync(SandboxWorkspaceCatalog before, SandboxWorkspaceCatalog after,
+            CancellationToken cancellationToken = default) {
+            var previousCount = queries.Transactions.Count;
+            var result = await inner.ApplyAsync(before, after, cancellationToken);
+            ReadsPerPhase.Add(queries.Transactions.Count - previousCount);
+            return result;
         }
     }
 }

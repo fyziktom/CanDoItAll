@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "source only; unbuilt/unexecuted; failure-preservation successor",
+  "createdAtUtc": "2026-10-17T05:49:23.2409689+00:00",
+  "predecessorInventory": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-source-inventory.json",
+  "predecessorInventorySha256": "D66784EA6DE40324EB687BDA0EFA26A58DE19CE3C53596B8368C6284E801E6ED",
+  "sourceFiles": 3,
+  "newFacts": 1,
+  "expectedRuntimeRows": 1,
+  "ordinaryStableRows": 0,
+  "exactFilter": "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_coarse_publication_guard_measures_unrelated_writers_during_actual_SQL_wait&Category=LongRunning",
+  "sourceDelta": "Only AgentPlanningPublicationCostFixture.cs: preserve original failures at result/cohort/cleanup evidence writes",
+  "sourcePredecessor": {
+    "path": ".artifacts/concurrent-mutations/candidates/c4-coarse-probe-predecessors/AgentPlanningPublicationCostFixture.before-evidence-preservation.cs.txt",
+    "sha256": "50B94A619541E255295D71C663C06AEF29E6F2CD72779ABE5F5EE3C75D46FA15",
+    "ownershipPath": ".artifacts/concurrent-mutations/candidates/c4-coarse-probe-predecessors/evidence-preservation.ownership.json",
+    "ownershipSha256": "2032262DE32D7FD3EB5EA7516BF4339318EEA182E42A8166D2E5FCC535D2A9B8"
+  },
+  "sharedFixturePredecessor": {
+    "path": ".artifacts/concurrent-mutations/candidates/c4-coarse-probe-predecessors/ProjectTaskPlanOperationFixture.cs.txt",
+    "sha256": "4B59BA27C56A0334925FA7BFC2F45B98126AF9A02734A3FEA4A5411F50D1EF3E",
+    "ownershipPath": ".artifacts/concurrent-mutations/candidates/c4-coarse-probe-predecessors.ownership.json",
+    "ownershipSha256": "A8734D4B854A231FB73DA8B13B03255362C7BF8A874DA944E721A743BD55DCCD"
+  },
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentPlanningPublicationCostTests.cs",
+      "sha256": "F5A0A6B9FD9497F0019B3F4181B9326E325FA85240F16FFBE31AE2B3B02E0270",
+      "bytes": 303,
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentPlanningPublicationCostFixture.cs",
+      "sha256": "306454EFDFE31C8D31AE7570F77122FE59792039AC42087ED3FC34C47E814F1E",
+      "bytes": 31505,
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+      "sha256": "0416DBD6CD9F199483B4742BA4D75701679DBC4279A50EE30F748648BA10C5C7",
+      "bytes": 14813,
+      "mainBaseSha256": "4B59BA27C56A0334925FA7BFC2F45B98126AF9A02734A3FEA4A5411F50D1EF3E"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-source.md",
+      "sha256": "103AA11E49C90A173DDE998CA8B0472B393B1DD434CA82CF41E20EA172EE551C",
+      "bytes": 10040,
+      "mainBaseSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-evidence-amendment.md",
+      "sha256": "5766EA45D50A1B03857ABC1F2DCD06DB306D51F5ACBAD73B23821BE5F973DC38",
+      "bytes": 2250,
+      "mainBaseSha256": null
+    }
+  ],
+  "readOnlyDependencies": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C4-coarse-publication-cost-probe.md",
+      "sha256": "9BBFD3488EC6C3EB90D1555C608EBEAF8FA0ACC73AFECCE3254D5187404F86B9",
+      "bytes": 13906
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C4-publication-writer-perimeter-and-ordering.md",
+      "sha256": "9FB56E2D9BE5AF11B73306C780A2B2B6A9E8DC48708ED8F1AE5562828FF94CF7",
+      "bytes": 23229
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C4-D1-policy-work-accounting-amendment.md",
+      "sha256": "712B72AA8A5EB1A68795FE35FD920553A196725ECDF83FB51D1BDD199BFABEC1",
+      "bytes": 32916
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationPerformanceTests.cs",
+      "sha256": "0796CE9A68F63525F3D3543CA7B79F1E83A5344ED11479EF50A7BD826F7363AB",
+      "bytes": 10476
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchFixture.cs",
+      "sha256": "A2279C80B00C73238BF962674378DD55D1D7D576749D957EE8A2AEA43F8E98AE",
+      "bytes": 7768
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+      "sha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+      "bytes": 12411
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+      "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3",
+      "bytes": 2321
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/TestHarnessOptions.cs",
+      "sha256": "A022CD8C504EC3488DE09D271FD3E7690070176C32A4AD033746A19EB206F2D0",
+      "bytes": 524
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/CanDoItAllTestEnvironment.cs",
+      "sha256": "2F7216D71E79950988A9FBF7AFFD5319C352A0CE6DE85BCDF80F6B457C588CF4",
+      "bytes": 11871
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublisher.cs",
+      "sha256": "59B1613121A02134D82469DF377AFA744EBAA0FA055E184AC2E80A5E9FBC74C9",
+      "bytes": 14242
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublicationAuthority.cs",
+      "sha256": "D0DC01C10CD167E32F4B2731FF302BC978FB32BF1265B8719BD6E12EDF8AD57E",
+      "bytes": 1441
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanBasis.cs",
+      "sha256": "505733E1088ED625A51EFF9B3DC1714D07B10F495475E09F9F3FA1D611CEA612",
+      "bytes": 6472
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanProposal.cs",
+      "sha256": "ABFEBA1F353A7866D4C4E1A668795BE25BAFD5DDDBC7B9836F4CB9B1C05D97EC",
+      "bytes": 3574
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.CatalogReadLease.cs",
+      "sha256": "FE4172FD15F6F0C1A4E1794BA221EDB81B8E09C233B003EB8518D81F810A9801",
+      "bytes": 4440
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+      "sha256": "01AF402E8D03F7B2BDC84991CC9209DD3D48D32C0D481D26DC82780A8B3B6A2F",
+      "bytes": 25137
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceSnapshotCache.cs",
+      "sha256": "7351B93624F59CF684C6AA2EE6AA636D9B2EC1CEC2AEE170CAD1A8D1BEA56895",
+      "bytes": 3439
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs",
+      "sha256": "03AD3538DB8DDCACAE6BCF5D5F800E1F38B12C0301DEF30B882E3C088A4BDA49",
+      "bytes": 20561
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProjectLifetimes.cs",
+      "sha256": "2FD7F5193C066CE72F9C413D071CD39E5E3D69F474C5E41D7AD3F34BE24184EB",
+      "bytes": 3671
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/AgentProjectAccessCatalogPolicy.cs",
+      "sha256": "FB487966B859AC8A2CA89630D965A3FAE55BDDA8A51CFB6E3A0A707D1BCC6505",
+      "bytes": 4779
+    }
+  ],
+  "requiredValidation": [
+    "C3 canonical schema/model and owning correctness proof",
+    "D1 six owner Facts",
+    "owning Release build and exact one-row discovery",
+    "complete portability-static review and no-write enforcement",
+    "parent-owned external process-tree deadline and manifest reconciliation",
+    "one opt-in workload with timing/effect/cleanup evidence"
+  ]
+}

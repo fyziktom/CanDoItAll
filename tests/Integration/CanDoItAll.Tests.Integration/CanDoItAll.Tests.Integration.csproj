@@ -23,6 +23,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Support\CanDoItAll.McpTestHost\CanDoItAll.McpTestHost.csproj" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+    <ProjectReference Include="../../Support/CanDoItAll.ProjectsMaintenance.TestHost/CanDoItAll.ProjectsMaintenance.TestHost.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../Support/CanDoItAll.HistoricalReceiptSeed.TestHost/CanDoItAll.HistoricalReceiptSeed.TestHost.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Persistence/CanDoItAll.AgentFramework.ProviderHistory.Persistence.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
@@ -62,6 +64,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="../../Support/CanDoItAll.ProjectsMaintenance.TestHost/MaintenanceHostProtocol.cs" Link="Maintenance/MaintenanceHostProtocol.cs" />
+    <Compile Include="../../Support/CanDoItAll.HistoricalReceiptSeed.TestHost/HistoricalReceiptSeedProtocol.cs" Link="HistoricalReceipts/HistoricalReceiptSeedProtocol.cs" />
     <None Include="../../Support/Fixtures/Maf120/Durable/*.json" Link="Fixtures/Maf120/Durable/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

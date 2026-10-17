@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Data;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -39,11 +40,30 @@ public sealed class ProjectMutationAuthorization {
 
 internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, SerializableMutationScope? mutation, IDbContextTransaction? transaction,
     IProjectMutationSourceLease? source, ImmutableArray<ProjectWriteAdmission> expectedProjects,
-    ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions) : IAsyncDisposable {
+    ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
+    Action? requireCurrentOwner = null) : IAsyncDisposable {
     private bool committed;
+    private bool commitAttempted;
     private int disposed;
+    private int sourceReleased;
 
     internal bool IsCommitted => committed;
+    internal bool CommitAttempted => commitAttempted;
+
+    internal static async Task<ProjectSourceMutationScope> BeginDeletionAsync(ProjectsDbContext context,
+        IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
+        IReadOnlyCollection<Guid> existingProjectIds, ProjectMutationAuthorization? authorization,
+        ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
+        DatasetActivationBinding binding, Action requireCurrentOwner, CancellationToken cancellationToken,
+        ProjectCreationReservation? reservation = null) {
+        ArgumentNullException.ThrowIfNull(binding);
+        ArgumentNullException.ThrowIfNull(requireCurrentOwner);
+        using var admission = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        admission.CancelAfter(TimeSpan.FromSeconds(5));
+        return await BeginCoreAsync(context, keys, purpose, projectId, existingProjectIds, authorization,
+            admissions, transactions, admission.Token, reservation, null, null, definitionWrite: false,
+            deletionBinding: binding, requireCurrentOwner: requireCurrentOwner);
+    }
 
     internal static Task<ProjectSourceMutationScope> BeginDefinitionAsync(ProjectsDbContext context,
         IReadOnlyCollection<string> keys, ProjectMutationPurpose purpose, Guid projectId,
@@ -70,7 +90,8 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions,
         CancellationToken cancellationToken, ProjectCreationReservation? reservation, Guid? requesterId,
         IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions, bool definitionWrite,
-        ProjectDefinitionOperationProtocol? protocol = null, ProjectDefinitionOperationAttempt? attempt = null) {
+        ProjectDefinitionOperationProtocol? protocol = null, ProjectDefinitionOperationAttempt? attempt = null,
+        DatasetActivationBinding? deletionBinding = null, Action? requireCurrentOwner = null) {
         IProjectMutationSourceLease? source = null;
         SerializableMutationScope? mutation = null;
         IDbContextTransaction? transaction = null;
@@ -98,7 +119,15 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
             }
             var orderedKeys = keys.Concat(required.Select(project => ProjectMutationScopeKeys.ForProject(project.ProjectId)))
                 .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
-            if ((source is not null || definitionWrite) && context.Database.IsNpgsql()) {
+            if (deletionBinding is not null) {
+                transactions.RequireOwnerProfile(context);
+                transaction = await ProjectDeletionTransactionEntry.BeginAsync(context, deletionBinding, orderedKeys, cancellationToken);
+                requireCurrentOwner!();
+                if (source is not null) {
+                    using var coordination = transactions.Enter(context);
+                    await source.RequireForMutationAsync(cancellationToken);
+                }
+            } else if ((source is not null || definitionWrite) && context.Database.IsNpgsql()) {
                 transaction = await context.Database.BeginTransactionAsync(source is null ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable, cancellationToken);
                 if (attempt is not null && await protocol!.EnterBeforeOwnerAdmissionAsync(context, attempt, cancellationToken)) {
                     return new(context, null, transaction, source, [], admissions, transactions);
@@ -109,7 +138,7 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
                 }
                 await SerializableMutationScope.AcquireRelationalScopeLocksAsync(context, orderedKeys, cancellationToken);
                 if (attempt is not null) {
-                    await ProjectOperationEpochService.RequireOpenAsync(context, attempt.Epoch, cancellationToken);
+                    await protocol!.RequireAdmissibleAsync(context, attempt, cancellationToken);
                 }
             } else {
                 if (attempt is not null) {
@@ -125,8 +154,10 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
                 using var coordination = transactions.Enter(context);
                 await admissions.RequireManyForMutationAsync(required, cancellationToken);
             }
-            return new(context, mutation, transaction, source, required, admissions, transactions);
-        } catch {
+            requireCurrentOwner?.Invoke();
+            return new(context, mutation, transaction, source, required, admissions, transactions, requireCurrentOwner);
+        } catch (Exception failure) {
+            var failures = new List<Exception> { failure };
             try {
                 if (transaction is not null) {
                     await transaction.DisposeAsync();
@@ -134,16 +165,29 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
                 if (mutation is not null) {
                     await mutation.DisposeAsync();
                 }
-            } finally {
+            } catch (Exception cleanupFailure) {
+                failures.Add(cleanupFailure);
+            }
+            try {
                 if (source is not null) {
                     await source.DisposeAsync();
                 }
+            } catch (Exception cleanupFailure) {
+                failures.Add(cleanupFailure);
+            }
+            if (failures.Count > 1) {
+                throw new AggregateException("Project admission and owner cleanup did not both complete.", failures);
             }
             throw;
         }
     }
 
-    internal async Task CommitAsync(CancellationToken cancellationToken) {
+    internal Task CommitAsync(CancellationToken cancellationToken) => CommitCoreAsync(null, cancellationToken);
+
+    internal Task CommitDefinitionAsync(ProjectDefinitionOperationAttempt attempt, CancellationToken cancellationToken)
+        => CommitCoreAsync(attempt, cancellationToken);
+
+    private async Task CommitCoreAsync(ProjectDefinitionOperationAttempt? attempt, CancellationToken cancellationToken) {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
         if (committed) {
             throw new InvalidOperationException("The project source mutation already committed.");
@@ -157,21 +201,29 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
                 await admissions.RequireManyForMutationAsync(expectedProjects, cancellationToken);
             }
         }
+        if (attempt is not null) {
+            await ProjectDefinitionCurrentWriteGuard.RequireAsync(attempt, cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        requireCurrentOwner?.Invoke();
+        commitAttempted = true;
+        if (attempt is not null) {
+            attempt.CommitAttempted = true;
+        }
         if (transaction is not null) {
             await transaction.CommitAsync(cancellationToken);
         } else {
             await mutation!.CommitAsync(cancellationToken);
         }
         committed = true;
-        if (source is not null) {
-            await source.DisposeAsync();
-        }
+        await ReleaseSourceAsync();
     }
 
     public async ValueTask DisposeAsync() {
         if (Interlocked.Exchange(ref disposed, 1) != 0) {
             return;
         }
+        Exception? failure = null;
         try {
             if (transaction is not null) {
                 await transaction.DisposeAsync();
@@ -179,10 +231,23 @@ internal sealed class ProjectSourceMutationScope(ProjectsDbContext context, Seri
             if (mutation is not null) {
                 await mutation.DisposeAsync();
             }
-        } finally {
-            if (source is not null) {
-                await source.DisposeAsync();
-            }
+        } catch (Exception cleanupFailure) {
+            failure = cleanupFailure;
         }
+        try {
+            await ReleaseSourceAsync();
+        } catch (Exception cleanupFailure) {
+            failure = failure is null ? cleanupFailure : new AggregateException(failure, cleanupFailure);
+        }
+        if (failure is not null) {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+    }
+
+    private async Task ReleaseSourceAsync() {
+        if (source is null || Interlocked.Exchange(ref sourceReleased, 1) != 0) {
+            return;
+        }
+        await source.DisposeAsync();
     }
 }

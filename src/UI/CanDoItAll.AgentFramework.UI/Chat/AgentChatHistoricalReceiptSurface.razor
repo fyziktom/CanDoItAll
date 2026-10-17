@@ -1,0 +1,45 @@
+@{
+    var rendered = State;
+    var origin = Origin;
+}
+<Alert AlertStyle="AlertStyle.Info" data-testid="agents-chat-historical-receipts">
+    <Stack GapScale="LayoutGap.Small">
+        <TextBlock Value="Saved receipt review" />
+        <TextBlock Value="@rendered.Status" />
+        <TextBlock Value="This read does not save a checkpoint, confirm cleanup or authorize continuation. It sends no new effect." />
+        @if (rendered.Error is { } error) {
+            <TextBlock Value="@error" data-testid="agents-chat-historical-read-error" />
+        }
+        @if (rendered.Page is { } page) {
+            @foreach (var observation in page.Observations) {
+                <TextBlock @key="observation.Binding.IntentId" Value="@AgentChatHistoricalReceiptState.Describe(observation.Knowledge)"
+                           data-testid="agents-chat-historical-observation" />
+            }
+        }
+        <Stack GapScale="LayoutGap.Small">
+            <Button Text="@(rendered.Reading ? "Reviewing saved receipts…" : rendered.Page is null ? "Review saved receipts" : "Review again from beginning")"
+                    Icon="history" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                    Disabled="@(rendered.Reading || !rendered.CanRead)"
+                    Click="@(() => Intent.InvokeAsync(ReadIntent(rendered, origin, nextPage: false)))"
+                    data-testid="agents-chat-review-saved-receipts" />
+            @if (rendered.Page?.NextCursor is not null) {
+                <Button Text="Read next saved receipt page" Icon="navigate_next" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                        Disabled="@(rendered.Reading || !rendered.CanRead)"
+                        Click="@(() => Intent.InvokeAsync(ReadIntent(rendered, origin, nextPage: true)))"
+                        data-testid="agents-chat-next-saved-receipts" />
+            }
+        </Stack>
+    </Stack>
+</Alert>
+
+@code {
+    [Parameter, EditorRequired] public AgentChatHistoricalReceiptState State { get; set; } = default!;
+    [Parameter, EditorRequired] public AgentChatActionOrigin Origin { get; set; } = default!;
+    [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
+
+    private static AgentChatActionIntent ReadIntent(AgentChatHistoricalReceiptState state, AgentChatActionOrigin origin, bool nextPage)
+        => new(origin, nextPage ? AgentChatAction.ReadNextSavedReceipts : AgentChatAction.ReviewSavedReceipts) {
+            HistoricalRequest = new(state.Target.ExecutionRunId, state.Target.ChatSessionId, state.Target.AgentId,
+                state.Target.ExecutionCreatedAtUtc, nextPage ? state.Page?.NextCursor : null)
+        };
+}

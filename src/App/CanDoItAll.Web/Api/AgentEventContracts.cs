@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Streaming;
@@ -166,4 +168,16 @@ public sealed record AgentCommandFailed(
     Guid? AgentId = null,
     Guid? ExecutionRunId = null,
     Guid? ChatSessionId = null,
-    AgentProviderFailureCategory? ProviderFailureCategory = null);
+    AgentProviderFailureCategory? ProviderFailureCategory = null) {
+    [Description("Bounded currently authorized effect knowledge after an unconfirmed checkpoint. It does not authorize another effect or contain a provider result.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; init; }
+
+    [Description("True when release of the original run coordination lease is unconfirmed. Preserve checkpoint knowledge and inspect cleanup before another slice.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EffectLeaseReleaseUnconfirmed { get; init; }
+
+    [Description("True when saved-effect activity publication or disposal failed. Preserve supplied effect knowledge; this is separate from file-lease uncertainty and does not authorize another effect.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EffectActivityFinalizationFailed { get; init; }
+}

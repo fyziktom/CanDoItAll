@@ -39,13 +39,13 @@ public sealed class WorkspaceDefaultProviderDatabaseTransferHandler(DatabaseTran
         if (!sourceProviderId.HasValue) {
             return new(Descriptor.Key, Descriptor.Label, false, "The source workspace has no default-provider preference.", 0);
         }
-        var targetSettings = await target.Set<WorkspaceSettings>().OrderByDescending(settings => settings.UpdatedAtUtc).FirstOrDefaultAsync(cancellationToken);
-        if (targetSettings is null) {
-            targetSettings = new WorkspaceSettings();
-            target.Add(targetSettings);
+        var targetSettings = await WorkspaceSettingsHeadStore.ReadAsync(target, tracking: true, cancellationToken);
+        if (targetSettings?.DefaultProviderProfileId == sourceProviderId) {
+            return new(Descriptor.Key, Descriptor.Label, true, "The workspace default-provider preference already matches.", 0);
         }
+        targetSettings ??= WorkspaceSettingsHeadStore.Create(target);
         targetSettings.DefaultProviderProfileId = sourceProviderId;
-        targetSettings.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        WorkspaceSettingsHeadStore.Advance(target, targetSettings, DateTimeOffset.UtcNow);
         await target.SaveChangesAsync(cancellationToken);
         return new(Descriptor.Key, Descriptor.Label, true, "Copied the workspace default-provider preference.", 1);
     }
@@ -61,7 +61,7 @@ public sealed class WorkspaceDefaultProviderDatabaseTransferHandler(DatabaseTran
         CancellationToken cancellationToken)
         => await dbContext.Set<WorkspaceSettings>()
             .AsNoTracking()
-            .OrderByDescending(settings => settings.UpdatedAtUtc)
+            .Where(settings => settings.IsCurrent)
             .Select(settings => settings.DefaultProviderProfileId)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
 }

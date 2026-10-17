@@ -26,8 +26,7 @@ public static class ProjectsModuleServiceCollectionExtensions
         services.AddScoped<ProjectDefinitionOperationProtocol>();
         services.AddSingleton<IProjectDefinitionRecoveryCodec, ProjectDefinitionRecoveryCodec>();
         services.AddScoped<Pages.ProjectNativeDefinitionOperations>();
-        services.AddScoped<ProjectOperationEpochService>();
-        services.AddHostedService<ProjectDefinitionOperationMaintenance>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectDefinitionReceiptRetention>());
         services.AddOptions<ProjectDefinitionOperationOptions>().Validate(options => options.IsValid(),
             "Projects definition operation limits and deadlines must remain within supported bounds.").ValidateOnStart();
         services.AddScoped<IProjectSummaryQueryService>(provider => provider.GetRequiredService<ProjectsService>());

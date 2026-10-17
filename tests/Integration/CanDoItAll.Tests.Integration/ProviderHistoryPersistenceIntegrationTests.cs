@@ -326,8 +326,11 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         Assert.Equal(import.SourceId, preservedImport.SourceId);
         Assert.Equal(import.RemoteRevision, preservedImport.RemoteRevision);
         Assert.Equal(import.RemoteCatalogSnapshotJson, preservedImport.RemoteCatalogSnapshotJson);
+        await targetDb.Database.MigrateAsync();
+        var activation = await target.ActivateDatasetAsync();
+        var providerHandler = CreateProviderTransferHandler(activation);
         var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateProviderTransferHandler().TransferAsync(context));
+            providerHandler.TransferAsync(context));
         Assert.Contains("transfer is blocked", blocked.Message);
         Assert.Empty(await targetDb.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().ToArrayAsync());
         var locator = new AgentHistoryLocator {
@@ -336,7 +339,7 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         };
         sourceDb.Add(locator);
         await sourceDb.SaveChangesAsync();
-        var result = await CreateTransferHandler().TransferAsync(context);
+        var result = await CreateTransferHandler(activation).TransferAsync(context);
         var copiedLocator = await targetDb.Set<AgentHistoryLocator>().SingleAsync();
         Assert.Equal(locator.EvidenceId, copiedLocator.EvidenceId);
         Assert.Equal(locator.OwnerId, copiedLocator.OwnerId);
@@ -378,8 +381,10 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         });
         await sourceDb.SaveChangesAsync();
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateTransferHandler().TransferAsync(context));
+        var activation = await target.ActivateDatasetAsync();
+        var handler = CreateTransferHandler(activation);
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
+        Assert.Equal("Transfer the owning projects before their canonical file history.", failure.Message);
         await using var verification = target.Factory.CreateDbContext();
         Assert.Equal(target.Partition, await new HistoryPartitionStore(target.HistoryFactory, target.HistoryOptions, target.Transactions).GetAsync(default));
         Assert.Empty(await verification.Set<AgentHistoryLocator>().ToListAsync());
@@ -394,23 +399,26 @@ public sealed class ProviderHistoryPersistenceIntegrationTests {
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
-        var handler = CreateTransferHandler(includeAgentHistory: false);
+        var activation = await target.ActivateDatasetAsync();
+        var handler = CreateTransferHandler(activation, includeAgentHistory: false);
         Assert.False((await handler.PreviewAsync(context)).IsAvailable);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(context));
+        Assert.Equal("History transfer cannot merge or replace retained target history.", failure.Message);
         Assert.Equal(start.EntryId.Value, (await targetDb.Set<HistoryEntryRow>().SingleAsync()).Id);
     }
 
-    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler() {
+    private static AiProvidersDatabaseTransferHandler CreateProviderTransferHandler(DatasetActivationService activation) {
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        return new(new SecretDatabaseTransferParticipant(sessions), sessions, DatabaseTransferTestSupport.Create(sessions), [new SharedProviderDatabaseTransferGuard()]);
+        return new(new SecretDatabaseTransferParticipant(sessions), sessions,
+            DatabaseTransferTestSupport.Create(sessions, activation: activation), [new SharedProviderDatabaseTransferGuard()]);
     }
 
-    private static HistoryDatabaseTransferHandler CreateTransferHandler(bool includeAgentHistory = true) {
+    private static HistoryDatabaseTransferHandler CreateTransferHandler(DatasetActivationService activation, bool includeAgentHistory = true) {
         var sessions = new DatabaseTransferOwnerSessionRunner();
         IHistoryTransferParticipant[] participants = includeAgentHistory
             ? [new AgentHistoryTransferParticipant(sessions, new CanDoItAll.Modules.Projects.ProjectTransferReferenceQuery(sessions))]
             : [];
-        return new(participants, sessions, DatabaseTransferTestSupport.Create(sessions));
+        return new(participants, sessions, DatabaseTransferTestSupport.Create(sessions, activation: activation));
     }
 
     [Fact]

@@ -69,7 +69,11 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
 
     [Fact]
     public async Task Empty_receipt_schema_can_be_reversed_and_reapplied_without_losing_saved_definitions() {
-        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-empty-rollback");
+        await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("receipt-empty-rollback");
+        await using (var subject = database.CreateDbContext()) {
+            await subject.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+            Assert.Equal(ReceiptMigration, (await subject.Database.GetAppliedMigrationsAsync()).Last());
+        }
         var definitionId = Guid.NewGuid();
         await using (var owner = database.CreateSimpleChatsDbContext()) {
             SeedDefinition(owner, definitionId, "Existing definition");
@@ -79,7 +83,11 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
         await using (var complete = database.CreateDbContext()) {
             await complete.GetService<IMigrator>().MigrateAsync(StartingMigration);
             Assert.DoesNotContain(ReceiptMigration, await complete.Database.GetAppliedMigrationsAsync());
+            Assert.Equal(StartingMigration, (await complete.Database.GetAppliedMigrationsAsync()).Last());
+            await complete.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+            Assert.Equal(ReceiptMigration, (await complete.Database.GetAppliedMigrationsAsync()).Last());
             await complete.Database.MigrateAsync();
+            Assert.False(complete.Database.HasPendingModelChanges());
         }
 
         await using var restarted = database.CreateSimpleChatsDbContext();
@@ -90,11 +98,16 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
 
     [Fact]
     public async Task Retained_receipt_blocks_schema_rollback_and_survives_restart() {
-        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("receipt-retained-rollback");
+        await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("receipt-retained-rollback");
+        await using (var subject = database.CreateDbContext()) {
+            await subject.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
+            Assert.Equal(ReceiptMigration, (await subject.Database.GetAppliedMigrationsAsync()).Last());
+        }
         var created = await CreateAsync(database);
         await using (var complete = database.CreateDbContext()) {
             var failure = await Assert.ThrowsAsync<PostgresException>(() => complete.GetService<IMigrator>().MigrateAsync(StartingMigration));
             Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+            Assert.Contains("Cannot remove retained Simple Chats creation receipts", failure.MessageText, StringComparison.Ordinal);
         }
 
         await using var restarted = database.CreateSimpleChatsDbContext();
@@ -103,6 +116,8 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
         Assert.Equal(created.Receipt.DefinitionId.Value, (await restarted.Set<LlmChatDefinitionRow>().SingleAsync()).Id);
         await using var schema = database.CreateDbContext();
         Assert.Contains(ReceiptMigration, await schema.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(ReceiptMigration, (await schema.Database.GetAppliedMigrationsAsync()).Last());
+        await schema.Database.MigrateAsync();
         Assert.False(schema.Database.HasPendingModelChanges());
     }
 
@@ -278,7 +293,7 @@ public sealed class LlmChatReceiptMigrationAndTransferIntegrationTests {
     private static async Task<LlmChatsDatabaseTransferHandler> CreateTransferHandlerAsync(CanDoItAllTestEnvironment environment,
         ResolvedDatabaseProfile target) {
         var activation = DatabaseTransferTestSupport.CreateActivationService(environment);
-        await new DatasetActivationCoordinator(activation, Options.Create(new ProjectDefinitionOperationOptions())).EnsureReadyAsync(target);
+        await new DatasetActivationCoordinator(activation, [ProjectFiniteOperationPool.Create(new())]).EnsureReadyAsync(target);
         var sessions = new DatabaseTransferOwnerSessionRunner();
         return new(new(), TimeProvider.System, DatabaseTransferTestSupport.Create(sessions, activation: activation), sessions);
     }

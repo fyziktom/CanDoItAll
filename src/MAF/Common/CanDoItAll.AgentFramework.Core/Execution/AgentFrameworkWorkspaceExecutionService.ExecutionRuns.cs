@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
@@ -397,6 +398,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             recoverAdmittedTools ? "Loading the original admitted execution for recovery." : "Loading the execution run awaiting approval.");
         var currentRun = await LoadExecutionRunAsync(executionRunId, cancellationToken);
         EnsureActivityRunBinding(activityOperation, currentRun);
+        if (AgentExecutionEffectReconciliation.Supports(currentRun)) {
+            if (!recoverAdmittedTools) {
+                throw new AgentToolAdmissionException("tool-admission.effect-dispatch-unavailable",
+                    "Saved effects-only approval dispatch is not enabled. Decisions and original effects remain unchanged.");
+            }
+            var reconciliation = new AgentExecutionEffectReconciliation(
+                toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."),
+                executionAuthorityResolver, activityWorkspaceIdentity, receiptReconciliationProviders?.ToArray() ?? []);
+            try {
+                return await reconciliation.ReconcileAsync(currentRun, cancellationToken);
+            } catch (AgentToolAdmissionException exception) {
+                throw exception.ForEffectReconciliation();
+            }
+        }
         if (recoverAdmittedTools) {
             if (currentRun.Outcome == RunOutcome.Cancelled) {
                 throw new AgentToolAdmissionException("tool-admission.cancelled-reconciliation-required",
@@ -1261,8 +1276,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        return EnrichProviderNativeMcpDetail(
-            await LoadExecutionRunDetailAsync(executionRunId, cancellationToken));
+        var detail = EnrichProviderNativeMcpDetail(await LoadExecutionRunDetailAsync(executionRunId, cancellationToken));
+        if (detail.Run.Outcome != RunOutcome.Cancelled && detail.Run.State != ExecutionState.Completed &&
+            AgentExecutionEffectReconciliation.Supports(detail.Run)) {
+            var reconciliation = new AgentExecutionEffectReconciliation(
+                toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."),
+                executionAuthorityResolver, activityWorkspaceIdentity, receiptReconciliationProviders?.ToArray() ?? []);
+            return detail with { EffectContinuation = await reconciliation.ReadContinuationAsync(detail, cancellationToken) };
+        }
+        return detail;
     }
 
     public async Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(
@@ -2067,6 +2089,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         try
         {
             var result = await executeAsync().ConfigureAwait(false);
+            if (AgentEffectActivityFinalization.Continuation(result) is { } continuation) {
+                var failure = AgentEffectActivityFinalization.Publish(activityOperation, continuation, null);
+                if (failure is not null) {
+                    ExceptionDispatchInfo.Capture(failure).Throw();
+                }
+                return result;
+            }
             if (!activityOperation.IsTerminal)
             {
                 activityOperation.Fail(
@@ -2080,6 +2109,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (AgentExecutionActivityPublicationException)
         {
+            throw;
+        }
+        catch (Exception exception) when (AgentEffectActivityFinalization.IsEffectFailure(exception)) {
+            ExceptionDispatchInfo.Capture(AgentEffectActivityFinalization.Publish(activityOperation, null, exception)!).Throw();
             throw;
         }
         catch (OperationCanceledException)

@@ -24,7 +24,7 @@ public sealed class ProviderSecretTransferOwnerTests {
         var missingSecretId = Guid.NewGuid();
         var profiles = new[] { Provider(selected.Id), Provider(selected.Id), Provider(missingSecretId) };
         var unrelated = Secret(Guid.NewGuid(), "unrelated target");
-        var preference = new WorkspaceSettings { WorkspaceName = "Target preference", DefaultProviderProfileId = Guid.NewGuid(), Notes = "Keep all settings." };
+        var preference = new WorkspaceSettings { IsCurrent = true, WorkspaceName = "Target preference", DefaultProviderProfileId = Guid.NewGuid(), Notes = "Keep all settings." };
         await using var sourceDb = source.Factory.CreateDbContext();
         await using var targetDb = target.Factory.CreateDbContext();
         sourceDb.Add(selected);

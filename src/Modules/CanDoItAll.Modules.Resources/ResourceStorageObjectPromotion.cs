@@ -1,10 +1,7 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.SharedKernel;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Runtime.ExceptionServices;
 
@@ -34,12 +31,11 @@ internal sealed record ResourceStorageObjectPromotionCommand(
     Guid TargetProjectId,
     string ResourceName,
     ProjectWriteAdmission ExpectedProjectAdmission,
+    ResourceMetadataContext Context,
+    Guid ResourceId,
     ResourceSensitivity Sensitivity = ResourceSensitivity.Normal);
 
-internal sealed record ResourceStorageObjectPromotionResult(
-    Guid ResourceId,
-    bool Created,
-    FileCatalogRevision Revision);
+internal sealed record ResourceStorageObjectPromotionResult(StorageObjectResourceWriteResult Outcome, FileCatalogRevision? Revision);
 
 public sealed record ResourceStorageObjectPromotionUiResult(
     string SourceKey,
@@ -52,81 +48,27 @@ internal sealed record StorageObjectResourceWriteRequest(
     string Name,
     ResourceSensitivity Sensitivity,
     StorageObjectResourceConfig Config,
-    ProjectWriteAdmission ExpectedProjectAdmission);
+    ProjectWriteAdmission ExpectedProjectAdmission,
+    ResourceMetadataContext Context,
+    Guid ResourceId);
 
-internal sealed record StorageObjectResourceWriteResult(Guid ResourceId, bool Created);
+internal abstract record StorageObjectResourceWriteResult {
+    private StorageObjectResourceWriteResult() {
+    }
 
-internal interface IStorageObjectResourceWriter
-{
-    Task<StorageObjectResourceWriteResult> SaveAsync(
-        StorageObjectResourceWriteRequest request,
-        CancellationToken cancellationToken = default);
+    internal sealed record Accepted(ResourceMetadataSnapshot Snapshot, bool Created,
+        ResourceMetadataSecondaryDiagnostic? Diagnostic = null) : StorageObjectResourceWriteResult;
+    internal sealed record Rejected(ResourceMetadataRejectionReason Reason) : StorageObjectResourceWriteResult;
+    internal sealed record Unconfirmed : StorageObjectResourceWriteResult;
 }
 
-internal sealed class StorageObjectResourceWriter(
-    IDbContextFactory<ResourcesDbContext> dbContextFactory,
-    ProjectWriteAdmissionService writeAdmissions,
-    CoordinatedDatabaseTransaction coordinatedTransaction,
-    IClock clock) : IStorageObjectResourceWriter {
-    public async Task<StorageObjectResourceWriteResult> SaveAsync(StorageObjectResourceWriteRequest request,
-        CancellationToken cancellationToken = default) {
-        ArgumentNullException.ThrowIfNull(request);
-        if (request.ProjectId == Guid.Empty || string.IsNullOrWhiteSpace(request.Name)) {
-            throw new ResourcePromotionException(ResourcePromotionFailureCode.InvalidRequest,
-                "Select a target project and provide a resource name.");
-        }
-        if (request.ExpectedProjectAdmission is null || request.ExpectedProjectAdmission.ProjectId != request.ProjectId) {
-            throw new ResourcePromotionException(ResourcePromotionFailureCode.TargetUnavailable,
-                "The selected project admission is unavailable. Refresh Resources before promoting.");
-        }
-        var name = request.Name.Trim();
-        if (name.Length > 200) {
-            throw new ResourcePromotionException(ResourcePromotionFailureCode.InvalidRequest, "The resource name is longer than 200 characters.");
-        }
-        var configJson = StorageObjectResourceConnectorPlugin.Serialize(request.Config);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext,
-            ProjectMutationScopeKeys.ForProject(request.ProjectId), cancellationToken);
-        StorageObjectResourceWriteResult result;
-        using (coordinatedTransaction.Enter(dbContext)) {
-            try {
-                await writeAdmissions.RequireForMutationAsync(request.ExpectedProjectAdmission, cancellationToken);
-            } catch (ProjectWriteAdmissionRejectedException exception) {
-                throw new ResourcePromotionException(ResourcePromotionFailureCode.TargetUnavailable,
-                    "The target project lifetime is no longer available. Refresh Resources before promoting.", exception);
-            }
-            var existing = await dbContext.Set<ProjectResource>().AsNoTracking().SingleOrDefaultAsync(resource =>
-                resource.ProjectId == request.ProjectId && resource.ProjectLifetimeId == request.ExpectedProjectAdmission.LifetimeId &&
-                resource.ConnectorPluginKey == StorageObjectResourceConnectorPlugin.PluginKey && resource.ConfigJson == configJson, cancellationToken);
-            if (existing is not null) {
-                result = new(existing.Id, false);
-            } else {
-                var now = clock.GetUtcNow();
-                var entity = new ProjectResource {
-                    ProjectId = request.ProjectId,
-                    ProjectLifetimeId = request.ExpectedProjectAdmission.LifetimeId,
-                    ResourceKind = null,
-                    Name = name,
-                    ConnectorPluginKey = StorageObjectResourceConnectorPlugin.PluginKey,
-                    ConfigSchemaVersion = StorageObjectResourceConnectorPlugin.SchemaVersion,
-                    LocationOrIdentifier = StorageObjectResourceConnectorPlugin.BuildStableLocation(request.Config),
-                    ConfigJson = configJson,
-                    LinkedSecretIdsJson = "[]",
-                    ValidationStatus = ResourceValidationStatus.Valid,
-                    Sensitivity = request.Sensitivity,
-                    SupportsPreview = true,
-                    SupportsIndexing = false,
-                    CreatedAtUtc = now,
-                    UpdatedAtUtc = now
-                };
-                dbContext.Add(entity);
-                await dbContext.SaveChangesAsync(cancellationToken);
-                result = new(entity.Id, true);
-            }
-        }
-        await mutation.CommitAsync(cancellationToken);
-        return result;
-    }
+internal interface IStorageObjectResourceWriter {
+    Task<StorageObjectResourceWriteResult> SaveAsync(StorageObjectResourceWriteRequest request, CancellationToken cancellationToken = default);
+}
+
+internal sealed class StorageObjectResourceWriter(ResourceMetadataWriter writer) : IStorageObjectResourceWriter {
+    public Task<StorageObjectResourceWriteResult> SaveAsync(StorageObjectResourceWriteRequest request, CancellationToken cancellationToken = default)
+        => writer.PromoteAsync(request, cancellationToken);
 }
 
 internal sealed class ResourceStorageObjectPromotionService(
@@ -222,7 +164,9 @@ internal sealed class ResourceStorageObjectPromotionService(
                         command.ResourceName,
                         command.Sensitivity,
                         config,
-                        command.ExpectedProjectAdmission),
+                        command.ExpectedProjectAdmission,
+                        command.Context,
+                        command.ResourceId),
                     cancellationToken);
             }
             catch (ResourcePromotionException)
@@ -241,47 +185,59 @@ internal sealed class ResourceStorageObjectPromotionService(
                     exception);
             }
 
-            revision = written.Created
-                ? catalogChanges.PublishScopeChanged(source.Scope, authorized.Storage.Id)
-                : catalogRevisions.Get(source.Scope, authorized.Storage.Id);
-            logger.LogInformation(
-                "Storage object promotion completed. ResourceId={ResourceId} ProjectId={ProjectId} SourceKey={SourceKey} StorageId={StorageId} ProviderKind={ProviderKind} Created={Created} ScopeRevision={ScopeRevision}.",
-                written.ResourceId,
-                command.TargetProjectId,
-                source.Key.Value,
-                authorized.Storage.Id,
-                authorized.Storage.ProviderKind,
-                written.Created,
-                revision.Value.Scope);
+            if (written is StorageObjectResourceWriteResult.Accepted accepted) {
+                try {
+                    revision = accepted.Created
+                        ? catalogChanges.PublishScopeChanged(source.Scope, authorized.Storage.Id)
+                        : catalogRevisions.Get(source.Scope, authorized.Storage.Id);
+                } catch (Exception exception) {
+                    written = accepted with { Diagnostic = accepted.Diagnostic ?? ResourceMetadataSecondaryDiagnostic.CatalogPublicationPending };
+                    failure = exception;
+                }
+                try {
+                    logger.LogInformation(
+                        "Storage object promotion completed. ResourceId={ResourceId} ProjectId={ProjectId} StorageId={StorageId} Created={Created} ScopeRevision={ScopeRevision}.",
+                        accepted.Snapshot.Expected.ResourceId, command.TargetProjectId, authorized.Storage.Id, accepted.Created, revision?.Scope);
+                } catch (Exception exception) {
+                    var current = (StorageObjectResourceWriteResult.Accepted)written;
+                    if (current.Diagnostic != ResourceMetadataSecondaryDiagnostic.CleanupPending) {
+                        written = current with { Diagnostic = ResourceMetadataSecondaryDiagnostic.LoggingPending };
+                    }
+                    failure = failure is null ? exception : new AggregateException(failure, exception);
+                }
+            }
         } catch (Exception exception) {
             failure = exception;
         }
         try {
             await authorizationCoordinator.RevokeAsync(activation.Request.File, CancellationToken.None);
         } catch (Exception exception) {
-            if (failure is null) {
-                failure = exception;
-            } else {
-                failure.Data[nameof(IStorageFileAccessAuthorizationCoordinator.RevokeAsync)] = exception.GetType().FullName;
+            failure = failure is null ? exception : new AggregateException(failure, exception);
+            if (written is StorageObjectResourceWriteResult.Accepted accepted) {
+                written = accepted with { Diagnostic = ResourceMetadataSecondaryDiagnostic.CleanupPending };
             }
-            ResourceMutationDiagnostics.PreservePrimary(failure, () => logger.LogError(
-                    "Storage-object promotion handle cleanup failed. SourceKey={SourceKey} FailureType={FailureType}.",
-                    source.Key.Value,
-                    exception.GetType().Name));
         }
         if (failure is not null) {
-            if (written is not null) {
-                throw new ResourcePromotionCommittedException(written.ResourceId, written.Created, revision, failure);
+            try {
+                logger.LogWarning("Resource promotion needs review. ResourceId={ResourceId} ProfileId={ProfileId} FailureType={FailureType}.",
+                    command.ResourceId, command.Context.DatabaseProfileId, failure.GetType().Name);
+            } catch (Exception) {
+                if (written is StorageObjectResourceWriteResult.Accepted accepted &&
+                    accepted.Diagnostic != ResourceMetadataSecondaryDiagnostic.CleanupPending) {
+                    written = accepted with { Diagnostic = ResourceMetadataSecondaryDiagnostic.LoggingPending };
+                }
             }
-            ExceptionDispatchInfo.Capture(failure).Throw();
+            if (written is not StorageObjectResourceWriteResult.Accepted and not StorageObjectResourceWriteResult.Unconfirmed) {
+                ExceptionDispatchInfo.Throw(failure);
+            }
         }
-        return new ResourceStorageObjectPromotionResult(written!.ResourceId, written.Created, revision!.Value);
+        return new(written ?? throw new InvalidOperationException("Resource promotion produced no outcome."), revision);
     }
 
     private static void ValidateCommand(ResourceStorageObjectPromotionCommand command)
     {
         if (string.IsNullOrWhiteSpace(command.SourceKey.Value) ||
-            command.TargetProjectId == Guid.Empty ||
+            command.TargetProjectId == Guid.Empty || command.ResourceId == Guid.Empty || command.Context is null ||
             command.ExpectedProjectAdmission is null || command.ExpectedProjectAdmission.ProjectId != command.TargetProjectId ||
             string.IsNullOrWhiteSpace(command.ResourceName) ||
             !Enum.IsDefined(command.Sensitivity))

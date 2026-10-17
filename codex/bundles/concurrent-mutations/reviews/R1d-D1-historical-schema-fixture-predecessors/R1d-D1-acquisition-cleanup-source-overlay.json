@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen source-only; root review PASS; unbuilt/unexecuted",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-dormant-source-inventory.json",
+    "sha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07",
+    "bytes": 8673
+  },
+  "independentFixtureOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-fixture-prefix-source-overlay.json",
+    "sha256": "175F8B7C8CEE0B404595F920B8805D201F5CD71B8C1809B06BF0F0F8350CA1C9",
+    "bytes": 2552
+  },
+  "sourceOverlay": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs",
+    "sha256": "B5E53D3531138CED165F2C312FE101E3C4AC27C6335A486A91E94275583B333E",
+    "bytes": 29941
+  },
+  "predecessorSha256": "61FEC6FA4F46504729C0FADCE19F94BE504A62434BB023F520AEA03103D00EC1",
+  "mainPredecessorSha256": null,
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-acquisition-cleanup-amendment.md",
+    "sha256": "8919774705E364453551BE2016B31DA682F92A3AFDE6BA004B824C2B8949AECB",
+    "bytes": 1743
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-acquisition-cleanup-ownership.json",
+      "sha256": "C59856EA406052AAF9D66E4FC92F1DCD29842609294A7936FF1F28D8E818A74A",
+      "bytes": 519
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-acquisition-cleanup-predecessors/AgentSavedEffectDispatchTests.cs.txt",
+      "sha256": "61FEC6FA4F46504729C0FADCE19F94BE504A62434BB023F520AEA03103D00EC1",
+      "bytes": 28120
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-acquisition-cleanup-predecessors/R1d-D1-dormant-source-inventory.json",
+      "sha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07",
+      "bytes": 8673
+    }
+  ],
+  "counts": {
+    "facts": 6,
+    "newFacts": 0,
+    "fullD1": 247
+  },
+  "productionChanged": false,
+  "mainChanged": false,
+  "originalInventoryUnchanged": true
+}

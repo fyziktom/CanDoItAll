@@ -34,7 +34,7 @@ internal static class ProjectsApi
             .WithSummary("Read a coherent project definition and its original edit expectation.")
             .WithDescription("Returns normalized definition scalars, ordered phases/options and the matching expectation from one database snapshot. Retain that expectation unchanged for a conditional update. A missing project returns 404; this read never returns a creation template. Uses the current Projects read permission when API authorization is enabled.")
             .Produces<ProjectDefinitionReadApiResponse>()
-            .ProducesApiErrors(StatusCodes.Status404NotFound);
+            .ProducesApiErrors(StatusCodes.Status403Forbidden, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         projects.MapGet("/by-external-key/{externalNamespace}/{externalKey}", ResolveExternalIdentityAsync)
             .WithName("ResolveProjectExternalIdentity")
@@ -233,10 +233,7 @@ internal static class ProjectsApi
     ///
     /// - 200: the project is deleted and every participant finished. <c>warnings</c> lists objects that were kept, such
     /// as managed media retained by a storage provider, with remediation text.
-    /// - 409 with <c>projects.delete-cleanup-pending</c>: the project is deleted, but at least one participant did not
-    /// finish. The deletion is not rolled back. Retry each entry of <c>recovery.failures</c> with
-    /// <c>POST /api/projects/{projectId}/deletion-cleanups/{participantId}/{recoveryId}/retry</c>, using its exact
-    /// <c>participantId.value</c> and <c>recoveryId</c>; do not delete the project again to finish the cleanup.
+    /// - 409 with <c>projects.delete-cleanup-pending</c>: the project is deleted.
     ///
     /// Deleting an identifier that has no project still runs the participant cleanups for it and returns the same
     /// outcomes.
@@ -248,8 +245,7 @@ internal static class ProjectsApi
     /// The project is deleted (or did not exist) and all cleanup finished; <c>warnings</c> lists retained objects.
     /// </response>
     /// <response code="409">
-    /// The project is deleted but cleanup is incomplete (<c>projects.delete-cleanup-pending</c>); <c>recovery</c> lists
-    /// the participant cleanups to retry.
+    /// The project is deleted but cleanup is incomplete (<c>projects.delete-cleanup-pending</c>).
     /// </response>
     internal static async Task<IResult> DeleteProjectAsync(
         Guid projectId,
@@ -267,7 +263,9 @@ internal static class ProjectsApi
             return Results.Json(
                 new ProjectDeletionCleanupPendingApiResponse(
                     "projects.delete-cleanup-pending",
-                    "The project was deleted, but one or more cleanup steps remain.",
+                    exception.Recovery.OwnerCompletionUnconfirmed
+                        ? "The project deletion committed, but owner completion is unconfirmed. Cleanup retry requires operator review."
+                        : "The project was deleted, but one or more cleanup steps remain.",
                     exception.Recovery),
                 statusCode: StatusCodes.Status409Conflict);
         }
@@ -281,10 +279,6 @@ internal static class ProjectsApi
     /// for Project Structure nodes and managed media and <c>agent-project-structure-access</c> for agents' access to
     /// the project). This read returns one item for each participant cleanup that has not finished, across all
     /// projects, ordered by project, participant and recovery identifier.
-    ///
-    /// Retry an item with <c>POST /api/projects/{projectId}/deletion-cleanups/{participantId}/{recoveryId}/retry</c>,
-    /// using its <c>projectId</c>, <c>participantId.value</c> and <c>recoveryId</c>. When <c>canRetryNow</c> is false,
-    /// another attempt is running and holds the cleanup until <c>retryAvailableAtUtc</c>.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy.
     /// </remarks>
@@ -340,8 +334,7 @@ internal static class ProjectsApi
     /// (<c>projects.delete-cleanup-not-found</c>).
     /// </response>
     /// <response code="409">
-    /// The cleanup is still incomplete (<c>projects.delete-cleanup-pending</c>); the project stays deleted. Retry later
-    /// with the identifiers in <c>recovery.failures</c>.
+    /// The cleanup is still incomplete (<c>projects.delete-cleanup-pending</c>); the project stays deleted.
     /// </response>
     internal static async Task<IResult> RetryDeletionCleanupAsync(
         Guid projectId,

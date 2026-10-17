@@ -2814,7 +2814,8 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
                 nameof(ISandboxWorkspaceCatalogStore.LoadCatalogSnapshotAsync) => StartupMilestone.CatalogSnapshotLoad,
                 nameof(ISandboxWorkspaceChatQueryStore.GetChatSessionAsync) => StartupMilestone.ChatSessionGet,
                 nameof(ISandboxWorkspaceChatQueryStore.ListChatRunSummariesAsync) => StartupMilestone.ChatRunSummariesList,
-                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunAsync) => StartupMilestone.AtomicChatRunStart,
+                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunAsync) or
+                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunWithAdmissionKnowledgeAsync) => StartupMilestone.AtomicChatRunStart,
                 nameof(ISandboxWorkspaceExecutionRunStore.GetExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailGet,
                 nameof(ISandboxWorkspaceExecutionRunStore.SaveExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailSave,
                 nameof(ISandboxWorkspaceExecutionRunMutationStore.UpdateExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailUpdate,

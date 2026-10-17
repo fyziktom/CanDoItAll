@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/ui_validation_architecture",
+  "sourceOnly": true,
+  "paths": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "sha256": "51E482110950BC203546D1194FBD4A9FF9D33885CE697347B80405B23D4EC8C4"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "sha256": "DAD0FDE32F3111DC9FA94452173029C5A63D4B43A92BBE5654BC7C9BCC402B22"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceRegistryWorkspace.cs",
+      "sha256": "70A6684F8A0EAC3D24E71F57CD0467CB31F48DB1B27136C5F0E34A01E3BC0CE6"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "sha256": "2C9FCA9A29797728B79AE0D3AF4F399C104776E7C4945555B6A3B4EA980A6BC7"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+      "sha256": "9F9E0D09B4BAAD54A8BC510D2ABF941007BEC3D9BD019DB92E8DDE5A192BC15B"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+      "sha256": "24910E3B8918D8C26C20AC051E69979F4A9D9F20A9565B344053EB28FCEA0F4E"
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+      "sha256": "D320F398F3DA134997F0150DAD8A9A1CC525A1CAD177E6A1048489C2E679E3A5"
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "sha256": "48F7D64404D243CE3AA0C37A8566A32539E2F4131B2FF8E02072B2EB1454FF3E"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesExactEditorHostTests.cs",
+      "sha256": "436E375B54CB69C6683E7535C6472124877D68DD84A863BEE930EF5EFA59D0F5"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourceFileBrowsePaneTests.cs",
+      "sha256": "570B1762E4B729DBF4642717E1BC96D20CA4CEF5979DC7905F4B8E809EB38804"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/OwnerPostcommitPageTests.cs",
+      "sha256": "0B9E9E8397EE466C4495BD0B69EF3EF6563F8AF72F51EC705082AAD240CCE411"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesPageUrlStateTests.cs",
+      "sha256": "929AF54240B9EF775FC53EEFF07F24259515A69B40D4CBB90002A7CEE29CD593"
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ResourcesBrowserTests.cs",
+      "sha256": "CBA620334146700AE51075E2E2FA023C19D59BFB929A4C1CF44282841FB66C01"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceBoundaryTests.cs",
+      "sha256": "CB024C14115A3D787756EBAB4EEECC118121F512DBCF01A8AF5194C546272A94"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceBrowseTests.cs",
+      "sha256": "8F8DFC4D3F2E9878EC1DEFDCA5D4E5DA044CE4B37F7F9FB4F139D501A5B728E2"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceContractCompatibilityTests.cs",
+      "sha256": "0C890087FBB864EAC428C6D8094354D7815F5F3BDE414D1B7DB6E513C1EABB93"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceEditorReadinessTests.cs",
+      "sha256": "6F0B6F7DA5FE91D06A5D9FA7E714AD8A142AB3EB87B6E25E4A2092CCD680AE5C"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceRegistryTests.cs",
+      "sha256": "0DF73A913E8E0D19853E749B5C512A5E7ACFA541BAC4486636DF47541301A303"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourcesPageLoadGenerationTests.cs",
+      "sha256": "896B0797B4CCF220B1B55031B94D70422848733C4E1FCE323C5168603B7F8C0D"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceSurfaceTabTests.cs",
+      "sha256": "2608E386719A4BA99470C07316887C1211D3ED2375AD3A1082B1BAE98AF0AA55"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceSurfaceTests.cs",
+      "sha256": "DB921B990167B93D9BF1FCE14F32A5EC06AC5D2CA90E90AB6FFC5E45CDA29661"
+    }
+  ]
+}

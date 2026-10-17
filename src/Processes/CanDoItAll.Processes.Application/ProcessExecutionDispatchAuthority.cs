@@ -31,6 +31,10 @@ public interface IProcessSourceAuthorityObservationPolicy {
 
 public interface IProcessExecutionDispatchAuthorityReader {
     Task<ProcessExecutionDispatchAuthorityResult> ReadAsync(Guid executionRunId, CancellationToken cancellationToken = default);
+
+    Task<ProcessExecutionDispatchAuthorityResult> ObserveOriginalForReceiptReadAsync(ProcessExecutionClaimEvidence original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This Process owner does not provide original-evidence receipt observations.");
 }
 
 public interface IProcessExecutionMutationGuard {

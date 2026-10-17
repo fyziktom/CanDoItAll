@@ -97,6 +97,7 @@ internal sealed class MafRuntimeAgentFactory
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
+        MafToolRunContext.RequireSupportedAdmission(runtimeOptions.ToolAdmissionSupport);
         if (runtimeOptions.Handoff is not null)
         {
             return await CreateHandoffRuntimeBuildAsync(

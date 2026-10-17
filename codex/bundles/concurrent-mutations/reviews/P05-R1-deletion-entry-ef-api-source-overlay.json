@@ -1,0 +1,61 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen minimal source correction; root independently confirmed installed API; unbuilt/unexecuted",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-source-inventory-v2.json",
+    "sha256": "A0A82B58F8BB33E363A2CD1E85A563C18D9DF15B3E351BE7830F5F4BEA95EF7D",
+    "bytes": 60335
+  },
+  "sourceOverlay": {
+    "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletionTransactionEntry.cs",
+    "sha256": "26D5389037AFEBDACC56A199CD23881E467C5F0DD2E21B2E5740820262184316",
+    "bytes": 8203
+  },
+  "predecessorSha256": "01401B70D6FBCFE4ECB6629A0967AA5AA6196DE6EDBC2FE8C942F09726BD95B8",
+  "mainPredecessorSha256": "01401B70D6FBCFE4ECB6629A0967AA5AA6196DE6EDBC2FE8C942F09726BD95B8",
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-entry-ef-api-amendment.md",
+    "sha256": "364C07DBED37659714E18AAEB98EA1EB990CA2B8E592D1775A0866E6BB048E32",
+    "bytes": 2078
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-entry-ef-api-ownership.json",
+      "sha256": "3DA77E52516566DD98DF203EA748FA62904008B91D45D4F5E4407B33DA4DFA36",
+      "bytes": 663
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-entry-ef-api-predecessors/ProjectDeletionTransactionEntry.cs.txt",
+      "sha256": "01401B70D6FBCFE4ECB6629A0967AA5AA6196DE6EDBC2FE8C942F09726BD95B8",
+      "bytes": 8134
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-entry-ef-api-predecessors/P05-R1-deletion-handoff-source-inventory-v2.json",
+      "sha256": "A0A82B58F8BB33E363A2CD1E85A563C18D9DF15B3E351BE7830F5F4BEA95EF7D",
+      "bytes": 60335
+    }
+  ],
+  "installedApi": [
+    {
+      "path": "C:\\Users\\lucys\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.4\\lib\\net10.0\\Microsoft.EntityFrameworkCore.xml",
+      "sha256": "266B8DE2A4EDC0EAD858FA8241E3225C189BCE7A426E9455CDEF339C9F950B79",
+      "bytes": 8517379
+    },
+    {
+      "path": "C:\\Users\\lucys\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.4\\lib\\net10.0\\Microsoft.EntityFrameworkCore.dll",
+      "sha256": "F90D2AAC4E9923FDEB518D70D8143B3A45F5D44BC9B6F2EFEB06F98376BC715F",
+      "bytes": 2825760
+    }
+  ],
+  "method": "System.Transactions.TransactionsDatabaseFacadeExtensions.GetEnlistedTransaction(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade)",
+  "counts": {
+    "newCases": 0,
+    "combinedOrdinary": 346,
+    "separateBrowser": 4,
+    "stage1First": 14
+  },
+  "productionChanged": true,
+  "mainChanged": false,
+  "originalInventoryUnchanged": true
+}

@@ -16,7 +16,8 @@ public enum ProjectEditorMutationState {
     AdmissionRefused,
     Conflict,
     PendingRecovery,
-    LocalRecoveryDiscarded
+    LocalRecoveryDiscarded,
+    AcceptedReadOnly
 }
 
 public enum ProjectEditorConflictReadState { NotRequested, Loading, Ready, Failed }

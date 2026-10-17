@@ -20,6 +20,7 @@ internal static class AgentsApi
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents");
         agents.MapUsage();
+        agents.MapAgentHistoricalReceiptsApi();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")
@@ -2025,6 +2026,9 @@ internal static class AgentsApi
         {
             return AgentActivityApiResults.FromAdmissionException(context, exception, executionRunId: executionRunId);
         }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
         catch (AgentToolAdmissionException exception)
         {
             return ApiEndpointResults.AgentValidationFailure(
@@ -2226,6 +2230,12 @@ internal static class AgentsApi
                 context,
                 exception,
                 executionRunId: executionRunId);
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+        catch (AgentToolAdmissionException exception) {
+            return ApiEndpointResults.AgentValidationFailure(context, exception.Message, exception.Code, executionRunId: executionRunId);
         }
         catch (AgentApprovalDecisionMismatchException exception)
         {
@@ -2497,12 +2507,15 @@ internal static class AgentsApi
     /// Identifier of the agent execution run, as returned by a run command or a run search.
     /// </param>
     /// <response code="200">The run and its evidence.</response>
-    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(
-        Guid executionRunId,
-        IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
-            await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(Guid executionRunId, HttpContext context,
+        IAgentFrameworkWorkspaceService workspaceService, CancellationToken cancellationToken) {
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
+                await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+        } catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+    }
 
     /// <summary>
     /// Read an execution run of a given agent with its log, metrics, approvals, artifacts, checkpoints, tool receipts

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
@@ -114,7 +116,7 @@ public sealed class ProjectsEditorMutationTests {
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.Null((await projects.GetAsync(id)).Id);
         await cut.InvokeAsync(() => editor.Instance.Close.InvokeAsync());
-        await NewAsync(cut, "Successor B");
+        await NewAsync(cut, "Successor B", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         controls.Release.TrySetResult();
         await pending;
@@ -139,7 +141,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var cut = RenderProjectsPage(harness);
-        await NewAsync(cut, "Submitted project");
+        await NewAsync(cut, "Submitted project", controls);
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         await cut.InvokeAsync(() => {
             draft.Model.Phases.Add(new() { Name = "First phase" });
@@ -190,7 +192,7 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls { FailReadAfterSeed = !unknownSeed, LoseSeedAcknowledgement = unknownSeed };
         await using var harness = await Harness(controls);
         var cut = RenderProjectsPage(harness);
-        await NewAsync(cut, "Committed with separate seed");
+        await NewAsync(cut, "Committed with separate seed", controls);
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "Native batch note" });
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
@@ -221,7 +223,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var harness = await Harness(controls);
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
         var cut = RenderProjectsPage(harness);
-        await NewAsync(cut, "Original seed lifetime");
+        await NewAsync(cut, "Original seed lifetime", controls);
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "Must not enter successor" });
         Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
@@ -356,14 +358,14 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
         var cut = RenderProjectsPage(harness);
-        await NewAsync(cut, "Retiring project");
+        await NewAsync(cut, "Retiring project", controls);
         var oldDraft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         oldDraft.StarterObjects.Add(new() { Title = "Original plan" });
         Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-open-button']").ClickAsync(new()));
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
-        await NewAsync(cut, "Successor unsaved draft");
+        await NewAsync(cut, "Successor unsaved draft", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         var newPlan = new StarterObjectDraft { Title = "Successor plan" };
         successor.StarterObjects.Add(newPlan);
@@ -385,7 +387,7 @@ public sealed class ProjectsEditorMutationTests {
         var controls = new Controls { HoldSeed = true };
         await using var harness = await Harness(controls);
         var cut = RenderProjectsPage(harness);
-        await NewAsync(cut, "Pending same target");
+        await NewAsync(cut, "Pending same target", controls);
         var draft = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         draft.StarterObjects.Add(new() { Title = "One seed" });
         Task pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
@@ -510,7 +512,7 @@ public sealed class ProjectsEditorMutationTests {
         await using var operation = new PendingOperation(pending, controls);
         await controls.Started.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-modal-close-button']").ClickAsync(new()));
-        await NewAsync(cut, "Successor draft");
+        await NewAsync(cut, "Successor draft", controls);
         var successor = cut.FindComponent<ProjectModalHost>().Instance.Draft;
         controls.Release.TrySetResult();
         await pending;
@@ -523,6 +525,7 @@ public sealed class ProjectsEditorMutationTests {
     }
 
     private static Task<ComponentTestHarness> Harness(Controls controls, IProjectDeletionParticipant? participant = null) => ComponentTestHarness.CreateAsync(services => {
+        services.AddSingleton<ILogger<ProjectsPage>>(controls);
         if (participant is not null) {
             services.AddSingleton(participant);
         }
@@ -547,10 +550,28 @@ public sealed class ProjectsEditorMutationTests {
         return harness.Context.Render<ProjectsPage>();
     }
 
-    private static async Task NewAsync(IRenderedComponent<ProjectsPage> cut, string name) {
+    private static async Task NewAsync(IRenderedComponent<ProjectsPage> cut, string name, Controls controls) {
+        var previous = cut.FindComponent<ProjectModalHost>().Instance.Draft;
+        int failuresBefore = controls.PageFailures.Count;
         await cut.InvokeAsync(() => cut.Find("[data-testid='projects-new-button']").ClickAsync(new()));
-        cut.WaitForElement("[data-testid='project-name-input']");
+        var modal = cut.FindComponent<ProjectModalHost>().Instance;
+        int nameInputs = cut.FindAll("[data-testid='project-name-input']").Count;
+        bool acquired = !ReferenceEquals(previous, modal.Draft);
+        string readErrors = string.Join(" | ", cut.FindAll("[data-testid='projects-read-error']").Select(element => element.TextContent.Trim()));
+        string failures = string.Join(" | ", controls.PageFailures.Skip(failuresBefore).Select(DescribeFailure));
+        Assert.True(acquired && modal.IsOpen && modal.IsEditorMode && modal.Editor.Id is null && modal.Draft.Scope is not null && modal.WizardStep == 0 && nameInputs == 1,
+            $"Awaited new-project acquisition: NewDraft={acquired}; IsOpen={modal.IsOpen}; IsEditorMode={modal.IsEditorMode}; ProjectId={modal.Editor.Id}; " +
+            $"HasScope={modal.Draft.Scope is not null}; WizardStep={modal.WizardStep}; Mutation={modal.Draft.Mutation}; SubmissionReady={modal.SubmissionReady}; " +
+            $"NameInputs={nameInputs}; ReadErrors=[{readErrors}]; PageExceptions=[{failures}].");
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-name-input']").InputAsync(new() { Value = name }));
+    }
+
+    private static string DescribeFailure(Exception exception) {
+        var messages = new List<string>();
+        for (Exception? current = exception; current is not null; current = current.InnerException) {
+            messages.Add($"{current.GetType().FullName}: {current.Message}");
+        }
+        return string.Join(" -> ", messages);
     }
 
     private static async Task<ProjectObjectRecord[]> ObjectsAsync(ComponentTestHarness harness, Guid id) {
@@ -558,7 +579,8 @@ public sealed class ProjectsEditorMutationTests {
         return await context.Set<ProjectObjectRecord>().AsNoTracking().Where(row => row.ProjectId == id && !row.IsSystemManaged).ToArrayAsync();
     }
 
-    private sealed class Controls {
+    private sealed class Controls : ILogger<ProjectsPage> {
+        public ConcurrentQueue<Exception> PageFailures { get; } = new();
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool HoldActivity { get; set; }
@@ -571,6 +593,14 @@ public sealed class ProjectsEditorMutationTests {
         public int SeedCalls { get; set; }
         public int ProjectActivities { get; set; }
         public Exception? SeedFailure { get; set; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel level) => level >= LogLevel.Error;
+        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {
+            if (level >= LogLevel.Error && exception is not null) {
+                PageFailures.Enqueue(exception);
+            }
+        }
     }
 
     private sealed class PendingOperation(Task pending, Controls controls) : IAsyncDisposable {

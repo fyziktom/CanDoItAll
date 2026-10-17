@@ -1,11 +1,33 @@
 @namespace CanDoItAll.Workspace.UI
 @implements IDisposable
+@using CanDoItAll.SharedKernel
 <Stack GapScale="LayoutGap.Medium">
     <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="defaults-refresh" />
     @if (State.Error is { } error) {
         <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
     }
-    <EditForm EditContext="State.Draft.EditContext" OnSubmit="State.SaveAsync">
+    @if (State.Rejection is not null || State.Receipts.Any(receipt => receipt.Effect is SettingsEffect.Unknown or SettingsEffect.CommittedWarning)) {
+        <Stack GapScale="LayoutGap.Small">
+            <Button Text="Read current defaults" ButtonStyle="ButtonStyle.Light" Click="State.ReadCurrentAsync" data-testid="defaults-read-current" />
+            <TextBlock Value="Reading current values does not establish the result of an unconfirmed save. Your original draft remains unchanged." />
+        </Stack>
+    }
+    @if (State.CurrentSnapshot is { } current) {
+        <Stack GapScale="LayoutGap.Medium" data-testid="defaults-current-comparison">
+            <WorkspaceDefaultsComparison Title="Current saved values" Values="current.Values" Providers="State.Providers" Policy="current.DecisionDataPolicy" PolicyKnown="true" />
+            <Button Text="Discard draft and reload these values" ButtonStyle="ButtonStyle.Light" Click="State.ReloadCurrent" Disabled="@(!State.CanRecover)" data-testid="defaults-reload" />
+            <Button Text="Keep draft for comparison and start reconciliation" ButtonStyle="ButtonStyle.Light" Click="State.BeginReconciliation"
+                    Disabled="@(!State.CanRecover || State.PreviousDraft is not null)" data-testid="defaults-reconcile" />
+        </Stack>
+    }
+    @if (State.PreviousDraft is { } previous) {
+        <Stack GapScale="LayoutGap.Medium" data-testid="defaults-previous-comparison">
+            <WorkspaceDefaultsComparison Title="Previous local draft" Values="WorkspaceSettingsValues.Capture(previous.Model)" Providers="State.Providers" PolicyDraft="previous.Policy" PolicyKnown="previous.HasPolicyBaseline" />
+            <TextBlock Value="The editor starts from the saved values you inspected. Copy only the changes you still want from this retained draft. Discard this comparison explicitly before preserving another draft." />
+            <Button Text="Discard previous draft comparison" ButtonStyle="ButtonStyle.Light" Click="State.DiscardPreviousDraft" />
+        </Stack>
+    }
+    <EditForm @key="State.Draft.Origin" EditContext="State.Draft.EditContext" OnSubmit="State.SaveAsync">
         <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
             <FormSection Title="Workspace defaults"
                          Icon="settings"
@@ -24,7 +46,7 @@
                         <InputSelect @bind-Value="State.Draft.Model.DefaultProviderProfileId" @bind-Value:after="() => State.Draft.Edited(DefaultsField.Provider)" data-testid="defaults-provider" class="cda-input">
                             <option value="">None</option>
                             @if (State.Draft.Model.DefaultProviderProfileId is { } missing && !State.Providers.Any(item => item.Id == missing)) {
-                                <option value="@missing">Unavailable provider (@missing)</option>
+                                <option value="@missing">Unavailable provider</option>
                             }
                             @foreach (var provider in State.Providers) {
                                 <option value="@provider.Id" disabled="@(!provider.IsEnabled)">@provider.Name @(!provider.IsEnabled ? "(disabled)" : "")</option>
@@ -53,9 +75,62 @@
                 </div>
             </FormSection>
 
+            <FormSection Title="Decision data policy" Icon="rule"
+                         Description="Choose which saved data automated work should use and what should happen when it changes. Automatic use of this policy is not enabled yet; saving it does not change work already in progress.">
+                @if (!State.Draft.HasPolicyBaseline) {
+                    <TextBlock Value="The saved policy has not been read. No policy is assumed." />
+                } else if (State.Draft.PolicyBaseline is null) {
+                    <TextBlock Value="No Workspace policy is configured. Choose every setting below to save a complete policy; no values are filled in automatically." />
+                }
+                <FormRow Split="true">
+                    <FormField Text="Data snapshot">
+                        <InputSelect TValue="ReadBasisMode?" @bind-Value="State.Draft.Policy.ReadBasisMode" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyReadBasis)" class="cda-input" data-testid="defaults-policy-read">
+                            <option value="">Choose when to capture data</option>
+                            <option value="@ReadBasisMode.RunSnapshot">Run snapshot</option>
+                            <option value="@ReadBasisMode.StepSnapshot">Step snapshot</option>
+                        </InputSelect>
+                        <TextBlock Value="Run snapshot keeps the same starting data throughout a run. Step snapshot captures data again at the start of each new step." />
+                    </FormField>
+                    <FormField Text="Before applying a result">
+                        <InputSelect TValue="PublicationFreshness?" @bind-Value="State.Draft.Policy.PublicationFreshness" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyFreshness)" class="cda-input" data-testid="defaults-policy-freshness">
+                            <option value="">Choose whether the data must still match</option>
+                            <option value="@PublicationFreshness.PinnedObservation">Pinned observation</option>
+                            <option value="@PublicationFreshness.RequireCurrent">Require current basis</option>
+                        </InputSelect>
+                        <TextBlock Value="Pinned observation allows a result to use the captured data even if it later changes. Require current basis checks that the relevant data still matches before applying the result; a mismatch uses the response selected below." />
+                    </FormField>
+                </FormRow>
+                <FormRow Split="true">
+                    <FormField Text="When the captured data no longer matches">
+                        <InputSelect TValue="OnBasisChange?" @bind-Value="State.Draft.Policy.OnBasisChange" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyOnChange)" class="cda-input" data-testid="defaults-policy-change">
+                            <option value="">Choose a response</option>
+                            <option value="@OnBasisChange.Fail">Fail</option>
+                            <option value="@OnBasisChange.PauseForReview">Pause for review</option>
+                            <option value="@OnBasisChange.Replan">Replan</option>
+                        </InputSelect>
+                        <TextBlock Value="Fail stops the affected work. Pause for review waits for a person to decide. Replan makes a new plan from fresh data, up to the limit below; it does not undo effects already completed." />
+                    </FormField>
+                    <FormField Text="Maximum replans (zero unless Replan is selected)">
+                        <PolicyNumber TValue="int?" @bind-Value="State.Draft.Policy.MaximumReplans" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyReplans)" class="cda-input" data-testid="defaults-policy-replans" />
+                    </FormField>
+                </FormRow>
+                <FormRow Split="true">
+                    <FormField Text="Maximum work duration">
+                        <TextBox Immediate="true" @bind-Value="State.Draft.Policy.MaximumWorkDuration" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyWorkDuration)" class="cda-input" data-testid="defaults-policy-work" />
+                    </FormField>
+                    <FormField Text="Maximum basis age">
+                        <TextBox Immediate="true" @bind-Value="State.Draft.Policy.MaximumBasisAge" @bind-Value:after="() => State.Draft.Edited(DefaultsField.PolicyBasisAge)" class="cda-input" data-testid="defaults-policy-age" />
+                    </FormField>
+                </FormRow>
+                <TextBlock Value="Work duration limits active work time. Basis age limits how old the captured data may be. Enter hours:minutes:seconds, such as 00:05:00; an optional days. prefix and fractional seconds preserve longer or more precise durations." />
+                <TextBlock Value="@(State.Draft.PolicyEditing ? "Saving updates the defaults and the complete policy together. If someone else saved changes first, your draft is kept for review." : "Saving defaults preserves the stored policy.")" />
+                <TextBlock Value="The work using this policy must support every selected choice. An unsupported choice must be reported before work starts; it must not be silently replaced." />
+                <ValidationSummary />
+            </FormSection>
+
             <StickyActionFooter StatusLabel="Workspace defaults">
                 <PrimaryActions>
-                    <Button Text="Save defaults" Disabled="@(!State.CanSave)" data-testid="defaults-save" Icon="save" Type="submit" />
+                    <Button Text="@(State.Draft.PolicyEditing ? "Save defaults and policy" : "Save defaults")" Disabled="@(!State.CanSave)" data-testid="defaults-save" Icon="save" Type="submit" />
                 </PrimaryActions>
             </StickyActionFooter>
         </Stack>

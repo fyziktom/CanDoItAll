@@ -27,7 +27,12 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
         WriteReadCounts(scenario);
         foreach (var kind in Enum.GetValues<PayloadKind>()) {
             var reads = scenario.ReadsFor(kind);
-            Assert.Single(reads, read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation);
+            if (kind == PayloadKind.Run) {
+                Assert.Single(reads, read => read.Kind == FileSandboxWorkspaceJsonReadKind.PreparedRunValidation);
+                Assert.DoesNotContain(reads, read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation);
+            } else {
+                Assert.Single(reads, read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation);
+            }
             Assert.Empty(reads.Where(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText));
         }
 
@@ -172,7 +177,7 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
         foreach (var kind in Enum.GetValues<PayloadKind>()) {
             var reads = scenario.ReadsFor(kind);
             output.WriteLine(
-                $"{kind}: validation={reads.Count(read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation)}, comparison={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText)}");
+                $"{kind}: validation={reads.Count(read => read.Kind is FileSandboxWorkspaceJsonReadKind.Deserialization or FileSandboxWorkspaceJsonReadKind.SnapshotValidation or FileSandboxWorkspaceJsonReadKind.PreparedRunValidation)}, prepared-hash={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.PreparedRunValidation)}, comparison={reads.Count(read => read.Kind == FileSandboxWorkspaceJsonReadKind.RawText)}");
         }
     }
 
@@ -205,7 +210,7 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
     }
 
     private static async Task<CommitScenario> CreateScenarioAsync(int logCount = 1) {
-        var environment = CanDoItAllTestEnvironment.Create($"prepared-commit-reads-{Guid.NewGuid():N}");
+        var environment = CanDoItAllTestEnvironment.Create("prepared-commit-reads");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
             var scope = WorkspaceScopeDescriptor.Sandbox;

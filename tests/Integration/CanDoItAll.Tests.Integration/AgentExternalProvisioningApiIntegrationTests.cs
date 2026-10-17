@@ -29,15 +29,32 @@ public sealed class AgentExternalProvisioningApiIntegrationTests
         var firstBody = await firstResponse.Content.ReadAsStringAsync();
         var secondBody = await secondResponse.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
-        var receipts = new[]
-        {
-            Deserialize<AgentExternalProvisioningReceipt>(firstBody),
-            Deserialize<AgentExternalProvisioningReceipt>(secondBody)
-        };
+        var receipts = new List<AgentExternalProvisioningReceipt>();
+        foreach (var (response, body) in new[] { (firstResponse, firstBody), (secondResponse, secondBody) }) {
+            if (response.StatusCode == HttpStatusCode.Conflict) {
+                Assert.Contains("agents.external-key-publication-conflict", body, StringComparison.Ordinal);
+                continue;
+            }
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            receipts.Add(Deserialize<AgentExternalProvisioningReceipt>(body));
+        }
         var created = Assert.Single(receipts, receipt => !receipt.Replayed);
-        var replayed = Assert.Single(receipts, receipt => receipt.Replayed);
+        var originalCatalog = await LoadCatalogAsync(host);
+        var originalOperation = Assert.Single(originalCatalog.AgentExternalProvisioningOperations,
+            operation => operation.IdempotencyKey == idempotencyKey);
+        Assert.Equal(JsonSerializer.Serialize(created, JsonOptions), JsonSerializer.Serialize(originalOperation.Receipt, JsonOptions));
+        Assert.Single(originalCatalog.AgentExternalBindings,
+            binding => binding.Namespace == ExternalNamespace && binding.Key == ExternalKey && binding.AgentId == created.AgentId);
+        Assert.Single(originalCatalog.Agents, agent => agent.Id == created.AgentId);
+
+        using var replayResponse = await PutAsync(host.Client, "Partner-System", "Review-Agent", editor, idempotencyKey);
+        Assert.Equal(HttpStatusCode.Created, replayResponse.StatusCode);
+        var replayed = Deserialize<AgentExternalProvisioningReceipt>(await replayResponse.Content.ReadAsStringAsync());
+        Assert.True(replayed.Replayed);
+        Assert.All(receipts.Where(receipt => receipt.Replayed), receipt => {
+            Assert.Equal(replayed.AgentId, receipt.AgentId);
+            Assert.Equal(replayed.ConfigurationVersion, receipt.ConfigurationVersion);
+        });
         Assert.True(created.Created);
         Assert.Equal(ExternalNamespace, created.Namespace);
         Assert.Equal(ExternalKey, created.Key);

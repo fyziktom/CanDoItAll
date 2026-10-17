@@ -1,17 +1,16 @@
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Resources;
 
 public sealed class ProjectResource
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid Revision { get; set; } = Guid.NewGuid();
 
     public Guid ProjectId { get; set; }
 
@@ -54,8 +53,11 @@ internal sealed class ProjectResourceConfiguration : IEntityTypeConfiguration<Pr
 {
     public void Configure(EntityTypeBuilder<ProjectResource> builder)
     {
-        builder.ToTable("Resources_ProjectResources");
+        builder.ToTable("Resources_ProjectResources", table => table.HasCheckConstraint(
+            "CK_Resources_ProjectResources_Revision", "\"Revision\" <> '00000000-0000-0000-0000-000000000000'::uuid"));
         builder.HasKey(resource => resource.Id);
+        builder.Property(resource => resource.Revision).IsConcurrencyToken().ValueGeneratedNever();
+        builder.HasIndex(resource => new { resource.ProjectId, resource.ProjectLifetimeId, resource.ConnectorPluginKey });
         builder.Property(resource => resource.Name).HasMaxLength(200).IsRequired();
         builder.Property(resource => resource.Description).HasColumnType("TEXT");
         builder.Property(resource => resource.ConnectorPluginKey).HasMaxLength(160).IsRequired();
@@ -69,14 +71,12 @@ internal sealed class ProjectResourceConfiguration : IEntityTypeConfiguration<Pr
 public sealed class ResourcesService(
     IDbContextFactory<ResourcesDbContext> dbContextFactory,
     Projects.IProjectRecordQueryService projectQueries,
-    IClock clock,
-    IActivityStream activityStream,
-    ISearchIndexService searchIndexService,
     ResourceConnectorPluginRegistry resourceConnectorPluginRegistry,
     DbContextOptions<ResourcesDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectWriteAdmissionService writeAdmissions,
-    ILogger<ResourcesService>? logger = null)
+    ResourceMetadataWriter metadata,
+    ResourceMetadataPreparation preparation)
 {
     public async Task<IReadOnlyList<ResourceProjectionFact>> ListProjectProjectionFactsAsync(
         Guid projectId, CancellationToken cancellationToken = default) {
@@ -156,7 +156,20 @@ public sealed class ResourcesService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var resources = await dbContext.Set<ProjectResource>()
+            .AsNoTracking()
             .OrderBy(resource => resource.Name)
+            .Select(resource => new ProjectResource {
+                Id = resource.Id,
+                ProjectId = resource.ProjectId,
+                ProjectLifetimeId = resource.ProjectLifetimeId,
+                ResourceKind = resource.ResourceKind,
+                ConnectorPluginKey = resource.ConnectorPluginKey,
+                ConfigSchemaVersion = resource.ConfigSchemaVersion,
+                Name = resource.Name,
+                LocationOrIdentifier = resource.LocationOrIdentifier,
+                ValidationStatus = resource.ValidationStatus,
+                Sensitivity = resource.Sensitivity
+            })
             .ToListAsync(cancellationToken);
 
         var projectIds = resources.Select(resource => resource.ProjectId)
@@ -179,215 +192,19 @@ public sealed class ResourcesService(
             .ToList();
     }
 
-    public async Task<ResourceEditorModel> GetAsync(Guid? id, CancellationToken cancellationToken = default)
-    {
-        if (!id.HasValue)
-        {
-            return new ResourceEditorModel();
-        }
+    public Task<ResourceMetadataContext> ReadContextAsync(CancellationToken cancellationToken = default)
+        => metadata.ReadContextAsync(cancellationToken);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var resource = await dbContext.Set<ProjectResource>().FirstOrDefaultAsync(item => item.Id == id.Value, cancellationToken);
-        if (resource is null)
-        {
-            return new ResourceEditorModel();
-        }
+    public Task<ResourceMetadataReadResult> ReadAsync(Guid id, CancellationToken cancellationToken = default)
+        => metadata.ReadAsync(id, cancellationToken);
 
-        var editor = new ResourceEditorModel
-        {
-            Id = resource.Id,
-            ProjectId = resource.ProjectId,
-            ExpectedProjectAdmission = resource.ProjectLifetimeId is { } lifetimeId && resource.ProjectId != Guid.Empty
-                ? new(writeAdmissions.DatabaseProfileId, resource.ProjectId, lifetimeId) : null,
-            OwnerPartyId = resource.OwnerPartyId,
-            MaintainerPartyId = resource.MaintainerPartyId,
-            Name = resource.Name,
-            Description = resource.Description,
-            ConfigSchemaVersion = resource.ConfigSchemaVersion,
-            LocationOrIdentifier = resource.LocationOrIdentifier,
-            ConfigJson = resource.ConfigJson,
-            Configuration = ConnectorConfigState.FromJson(resource.ConfigJson),
-            LinkedSecretId = ParseLinkedSecret(resource.LinkedSecretIdsJson),
-            ValidationStatus = resource.ValidationStatus,
-            Sensitivity = resource.Sensitivity,
-            SupportsPreview = resource.SupportsPreview,
-            SupportsIndexing = resource.SupportsIndexing
-        };
+    public ResourceEditorModel CreateEditor(ResourceMetadataSnapshot snapshot) => preparation.CreateEditor(snapshot);
 
-        if (resourceConnectorPluginRegistry.TryResolve(resource, out var connectorPlugin)) {
-            editor.ConnectorPluginKey = connectorPlugin!.Manifest.PluginKey;
-            connectorPlugin.ApplyConfig(editor, resource.ConfigJson);
-        } else {
-            editor.ConnectorPluginKey = resource.ConnectorPluginKey;
-        }
-        return editor;
-    }
+    public Task<ResourceMetadataSaveOutcome> SaveAsync(ReplaceResourceMetadataCommand command, CancellationToken cancellationToken = default)
+        => metadata.ReplaceAsync(command, cancellationToken);
 
-    public async Task<Result<Guid>> SaveAsync(ResourceEditorModel model, CancellationToken cancellationToken = default) {
-        if (!model.ProjectId.HasValue || model.ProjectId == Guid.Empty) {
-            return Result<Guid>.Failure(Error.Validation("Select a project before saving a resource."));
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Name)) {
-            return Result<Guid>.Failure(Error.Validation("Resource name is required."));
-        }
-
-        var connectorPlugin = resourceConnectorPluginRegistry.Resolve(ResolveRequestedConnectorPluginKey(model));
-        if (string.Equals(
-            connectorPlugin.Manifest.PluginKey,
-            StorageObjectResourceConnectorPlugin.PluginKey,
-            StringComparison.OrdinalIgnoreCase)) {
-            return Result<Guid>.Failure(Error.Validation(
-                "Storage-object resources can only be created through an authorized Resources browse promotion."));
-        }
-
-        var configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
-            ? connectorPlugin.Manifest.ConfigurationSchema.Version
-            : model.ConfigSchemaVersion.Trim();
-        if (!string.Equals(configSchemaVersion, connectorPlugin.Manifest.ConfigurationSchema.Version, StringComparison.Ordinal)) {
-            return Result<Guid>.Failure(Error.Validation(
-                $"Resource connector '{connectorPlugin.Manifest.PluginKey}' requires config schema version '{connectorPlugin.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied."));
-        }
-
-        HydrateLegacyConfigIfNeeded(model, connectorPlugin);
-
-        var requiresSecret = connectorPlugin.Manifest.SecretRequirements.Any(requirement => requirement.IsRequired);
-        if (requiresSecret && !model.LinkedSecretId.HasValue) {
-            return Result<Guid>.Failure(Error.Validation(
-                $"{connectorPlugin.Manifest.DisplayName} requires a linked secret reference."));
-        }
-
-        var validationError = connectorPlugin.ValidateEditor(model);
-        if (validationError is not null) {
-            return Result<Guid>.Failure(validationError);
-        }
-
-        var admission = model.ExpectedProjectAdmission;
-        if (admission is null || admission.ProjectId != model.ProjectId.Value) {
-            return Result<Guid>.Failure(Error.Validation("Select a current project before saving this resource."));
-        }
-        var location = connectorPlugin.BuildLocation(model);
-        var configJson = connectorPlugin.SerializeConfig(model);
-        var editing = model.Id.HasValue;
-        var entityId = model.Id ?? Guid.NewGuid();
-        ProjectResource entity;
-        var committed = false;
-        try {
-            await using (var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)) {
-                var previous = await dbContext.Set<ProjectResource>().AsNoTracking()
-                    .Where(item => item.Id == entityId).Select(item => new { item.ProjectId, item.ProjectLifetimeId })
-                    .SingleOrDefaultAsync(cancellationToken);
-                if (editing && previous is null) {
-                    return Result<Guid>.Failure(Error.Validation("The resource no longer exists. Reload Resources before saving."));
-                }
-                var keys = BuildMutationKeys(entityId, previous?.ProjectId, admission.ProjectId);
-                await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, keys, cancellationToken);
-                using (coordinatedTransaction.Enter(dbContext)) {
-                    await writeAdmissions.RequireForMutationAsync(admission, cancellationToken);
-                    var stored = await dbContext.Set<ProjectResource>().SingleOrDefaultAsync(item => item.Id == entityId, cancellationToken);
-                    if (previous is not null && (stored is null || stored.ProjectId != previous.ProjectId || stored.ProjectLifetimeId != previous.ProjectLifetimeId)) {
-                        throw new InvalidOperationException("The resource project binding changed. Reload Resources before saving.");
-                    }
-                    entity = stored ?? new ProjectResource { Id = entityId, CreatedAtUtc = clock.GetUtcNow() };
-                    if (previous is null) {
-                        dbContext.Add(entity);
-                    }
-                    entity.ProjectId = admission.ProjectId;
-                    entity.ProjectLifetimeId = admission.LifetimeId;
-                    entity.OwnerPartyId = model.OwnerPartyId;
-                    entity.MaintainerPartyId = model.MaintainerPartyId;
-                    entity.ResourceKind = connectorPlugin.LegacyResourceKind;
-                    entity.Name = model.Name.Trim();
-                    entity.Description = model.Description?.Trim() ?? string.Empty;
-                    entity.ConnectorPluginKey = connectorPlugin.Manifest.PluginKey;
-                    entity.ConfigSchemaVersion = configSchemaVersion;
-                    entity.LocationOrIdentifier = location;
-                    entity.ConfigJson = configJson;
-                    entity.LinkedSecretIdsJson = model.LinkedSecretId.HasValue ? $"[\"{model.LinkedSecretId.Value}\"]" : "[]";
-                    entity.ValidationStatus = model.ValidationStatus;
-                    entity.Sensitivity = model.Sensitivity;
-                    entity.SupportsPreview = model.SupportsPreview;
-                    entity.SupportsIndexing = model.SupportsIndexing;
-                    entity.UpdatedAtUtc = clock.GetUtcNow();
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                }
-                await mutation.CommitAsync(cancellationToken);
-                committed = true;
-                model.Id = entity.Id;
-            }
-            await UpsertSearchAsync(admission, new SearchDocumentInput(
-                "resource", entity.Id.ToString(), "Resources", entity.Name, entity.Description,
-                $"{entity.LocationOrIdentifier}\nConnector: {connectorPlugin.Manifest.DisplayName}\nSensitivity: {entity.Sensitivity}\nValidation: {entity.ValidationStatus}",
-                $"/resources?resourceId={entity.Id}", entity.ProjectId), cancellationToken);
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "resources", editing ? "update" : "create", $"{(editing ? "Updated" : "Created")} resource",
-                entity.Name, ProjectId: entity.ProjectId, ArtifactKind: "resource", ArtifactId: entity.Id,
-                Route: $"/resources?resourceId={entity.Id}"), cancellationToken);
-            return Result<Guid>.Success(entity.Id);
-        } catch (Exception exception) when (committed) {
-            ResourceMutationDiagnostics.PreservePrimary(exception, () => logger?.LogError("Resource {ResourceId} was saved in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
-                entityId, writeAdmissions.DatabaseProfileId, exception.GetType().FullName));
-            throw new ResourceCommittedMutationException(entityId, ResourceMutationKind.Save, exception);
-        }
-    }
-
-    public async Task DeleteAsync(Guid id, ProjectWriteAdmission? expectedProjectAdmission, CancellationToken cancellationToken = default) {
-        ProjectResource resource;
-        var committed = false;
-        try {
-            await using (var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken)) {
-                var previous = await dbContext.Set<ProjectResource>().AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
-                if (previous is null) {
-                    return;
-                }
-                await using var mutation = await SerializableMutationScope.BeginAsync(dbContext,
-                    BuildMutationKeys(id, previous.ProjectId), cancellationToken);
-                resource = await dbContext.Set<ProjectResource>().SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
-                    ?? throw new InvalidOperationException("The resource changed before deletion. Reload Resources.");
-                if (resource.ProjectId != previous.ProjectId || resource.ProjectLifetimeId != previous.ProjectLifetimeId ||
-                    resource.ProjectLifetimeId is { } lifetimeId && (expectedProjectAdmission is null ||
-                        expectedProjectAdmission.DatabaseProfileId != writeAdmissions.DatabaseProfileId ||
-                        expectedProjectAdmission.ProjectId != resource.ProjectId || expectedProjectAdmission.LifetimeId != lifetimeId) ||
-                    resource.ProjectLifetimeId is null && expectedProjectAdmission is not null) {
-                    throw new ResourceActionRefusedException("The resource project binding changed. Reload Resources before deletion.");
-                }
-                dbContext.Remove(resource);
-                await dbContext.SaveChangesAsync(cancellationToken);
-                await mutation.CommitAsync(cancellationToken);
-                committed = true;
-            }
-            await searchIndexService.DeleteAsync("resource", id.ToString(), cancellationToken);
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "resources", "delete", "Deleted resource", resource.Name, ProjectId: resource.ProjectId,
-                ArtifactKind: "resource", ArtifactId: resource.Id, Route: "/resources"), cancellationToken);
-        } catch (Exception exception) when (committed) {
-            ResourceMutationDiagnostics.PreservePrimary(exception, () => logger?.LogError("Resource {ResourceId} was deleted in profile {ProfileId}; a subsequent operation failed with {FailureType}.",
-                id, writeAdmissions.DatabaseProfileId, exception.GetType().FullName));
-            throw new ResourceCommittedMutationException(id, ResourceMutationKind.Delete, exception);
-        }
-    }
-
-    private async Task UpsertSearchAsync(ProjectWriteAdmission admission, SearchDocumentInput input, CancellationToken cancellationToken) {
-        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutation = await SerializableMutationScope.BeginAsync(context,
-            ProjectMutationScopeKeys.ForProject(admission.ProjectId), cancellationToken);
-        using (coordinatedTransaction.Enter(context)) {
-            await writeAdmissions.RequireForMutationAsync(admission, cancellationToken);
-            await searchIndexService.UpsertForMutationAsync(input, cancellationToken);
-        }
-        await mutation.CommitAsync(cancellationToken);
-    }
-
-    private static string[] BuildMutationKeys(Guid resourceId, params Guid?[] projectIds)
-        => projectIds.Where(id => id.HasValue && id != Guid.Empty).Select(id => ProjectMutationScopeKeys.ForProject(id!.Value))
-            .Append($"resource:{resourceId:D}").Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
-
-    private static Guid? ParseLinkedSecret(string json)
-    {
-        var trimmed = json.Trim('[', ']', '"');
-        return Guid.TryParse(trimmed, out var parsed) ? parsed : null;
-    }
-
+    public Task<ResourceMetadataDeleteOutcome> DeleteAsync(DeleteResourceMetadataCommand command, CancellationToken cancellationToken = default)
+        => metadata.DeleteAsync(command, cancellationToken);
     private static string ResolveRequestedConnectorPluginKey(ResourceEditorModel model)
     {
         var connectorPluginKey = model.ConnectorPluginKey?.Trim();
@@ -398,24 +215,4 @@ public sealed class ResourcesService(
         return connectorPluginKey;
     }
 
-    private static void HydrateLegacyConfigIfNeeded(ResourceEditorModel model, IResourceConnectorPlugin connectorPlugin)
-    {
-        if (string.IsNullOrWhiteSpace(model.ConfigJson) ||
-            string.Equals(model.ConfigJson.Trim(), "{}", StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (!string.Equals(connectorPlugin.Manifest.PluginKey, WebhookResourceConnectorPlugin.PluginKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.Configuration.GetText(ResourceConnectorFieldKeys.EndpointUrl)))
-        {
-            return;
-        }
-
-        connectorPlugin.ApplyConfig(model, model.ConfigJson);
-    }
 }

@@ -1,14 +1,21 @@
 # Retention capacity and maintenance amendment
 
-Status: narrow maintenance implementation approved by the
-[retention review](../reviews/P02b-retention-capacity-review.md), with implementation and
-focused proof still pending. The [complete protected baseline and matched canonical-length
+Status: the narrow maintenance candidate is implemented in the isolated continuation
+worktree and source-reviewed; focused execution remains pending. See the
+[implementation review and exact test expectations](../reviews/P02b-retention-implementation-review.md)
+and the approving [retention review](../reviews/P02b-retention-capacity-review.md).
+The [complete protected baseline and matched canonical-length
 comparison](../validation/P02bc-protected-performance-baseline.md) are now recorded;
 neither establishes sustained capacity. The [foundation readiness review](../reviews/P02b-foundation-checkpoint-readiness.md)
 keeps capacity, latency, runtime coverage and cutover gates open. This amendment does not
 change issued recovery promises or select a new production cadence.
 
-## Evidence and bottlenecks
+## Frozen foundation evidence and bottlenecks
+
+The following describes the measured foundation before the maintenance candidate.
+The candidate retains the one-minute default and adds the bounded scheduling,
+standalone retirement and observability described below. It has no measured capacity
+result yet.
 
 `ProjectDefinitionOperationOptions` currently fixes one cycle/minute, a two-second cycle
 budget, at most 64 batches, 128 receipt candidates and 16 MiB accepted payload/batch.
@@ -251,4 +258,6 @@ The following focused cases are still valuable before final maintenance closure:
   tests cover the opposite writer-first direction. Include Search and receipts in the
   transfer lock set so the original owner/table inversion remains exercised.
 
-No new source, test execution or database inspection was performed for this amendment.
+The original amendment was an analysis-only review. Its continuation candidate adds
+source and focused tests as recorded in the implementation review; no build, test,
+benchmark, database access or static scan was run by that implementation lane.

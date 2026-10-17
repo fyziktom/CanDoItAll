@@ -1,7 +1,9 @@
 # P04/P07: governed decision data and runtime policy
 
-Status: implementation plan, source-inspected 2026-10-16. No production changes,
-build, test discovery, test execution or performance result is claimed here. This
+Status: implementation plan, source-inspected 2026-10-16. Dormant Card A policy and
+Card B1 capture candidates are source-prepared in the continuation checkout; their
+separate validation records retain the exact scope and counts. Neither has been
+built or executed. No runtime policy activation or performance result is claimed. This
 refines architecture 02 and the owner inventory 05; it does not close either phase.
 Paths are repository-relative. The archived architect documents remain design input.
 
@@ -110,13 +112,15 @@ Existing `Workbench/ProjectStructureGraphState.cs:19`, `:51`, `:61` captures edi
 node content/parent/link originals and checks a selected graph under a Workbench context.
 It is useful evidence of graph preconditions, not a cheap task-set revision. It includes
 unrelated editable graph facts, can be large, and cannot prove a task query's complete
-material membership merely by listing the IDs returned by a page. Prefer a Workbench
-task-planning collection revision advanced atomically by every material writer, plus
-owner-defined row/lifetime witnesses where needed. Persist it per project/lifetime and
-named planning scope; never one global workspace revision. A bounded exact-set witness
-is acceptable only if its full membership and all participating writer exclusion are
-proved and measured. Decide between these representations in card B, not incidentally
-inside the tool.
+material membership merely by listing the IDs returned by a page. [Card B's source-evidence
+refinement](P04-card-B-material-task-witness.md) selects a bounded typed exact-set witness
+for the first flat, append-only, unassigned and unestimated manual task plan. It compares
+current material state, not intervening change history. Dataset/project lifetime and
+persisted occurrence identities protect replacement ABA; identical restored material
+state is explicitly equal. The exact field/exclusion list, existing writer fences,
+fresh post-wait capture/publication sequence, candidate bounds and measurement gates are specified there.
+A collection revision is deferred until a larger or history-sensitive scope justifies
+updating every writer; no global workspace revision or hidden save hook is introduced.
 
 Before freezing the witness, enumerate native/API/tool/background/import/recovery
 writers of `ProjectObjectRecord`, task metadata, parent/link relationships and any
@@ -153,10 +157,10 @@ not a shared database transaction across those calls. Therefore a loop over
 batch publisher using context-level canonical task validation/mutation primitives;
 reuse/extract those primitives without copying canonical task rules or adding methods
 to a growing execution partial. Commit all bounded task rows, required relationships,
-material revision advancement and exact result receipt together. If existing task
+the exact Workbench result receipt together. If existing task
 semantics require a cross-module/external operation, the initial batch must reject that
-proposal shape until its owner transaction contract exists. Manual unassigned tasks
-may be the first supported shape; this restriction must be explicit in tool schema/UI,
+proposal shape until its owner transaction contract exists. Flat unassigned and unestimated manual tasks are the selected first shape in Card B;
+this restriction must be explicit in tool schema/UI,
 not silently discard requested assignments or authoritative pricing.
 
 The transaction sequence is current source/claim admission, ordered owner locks,
@@ -213,6 +217,52 @@ needs explicit reconciliation. `OutcomeUnknown` enters receipt reconciliation an
 cannot spend a replan budget while an effect may already exist.
 
 Bound budgets durably by lineage across restarts, nested calls and engine adapters.
+The pure policy resolver's enclosing budgets constrain numeric allowances only;
+they do not prove that a nested execution reused its parent's business facts.
+Cards E/F/G must enforce that separately at the actual persisted admission seam.
+For a delegated operation within an already admitted material scope, pass the
+original basis reference and decision generation, and reject a child setting that
+would refresh that scope independently. A parent RunSnapshot must not become a
+fresh StepSnapshot merely because it launches an Agent or Workflow. A parent
+StepSnapshot delegates the current logical step's exact basis; retry or child
+restart does not create a new parent step. An additional material scope requires
+an explicit supported admission, not a hidden read that expands an existing
+RunSnapshot. The initial bounded task-plan operation can reject that expansion.
+
+RunSnapshot means one immutable basis per admitted decision generation, including
+all enrolled steps. An authorized semantic replan may explicitly supersede that
+generation only after the blocked proposal is proved not dispatched or definitively
+not committed. Reconcile potentially accepted effects of every affected enrolled
+child, not only the child that detected the change. Previously committed effects
+remain history and are never included in the regenerated effect set. Persist the old generation,
+reason, spent budget and exact successor reference before further reasoning. This
+is a new decision within the original lineage, not a refreshed retry, a new engine
+run identity or an implicit switch to StepSnapshot. Children still holding the old
+generation cannot publish after the parent supersedes it. The selected runtime
+owner must fence this with its existing claim/admission transaction or lease;
+a generation field carried in client JSON alone is not sufficient. Existing Process
+claim guards and Workflow occurrence/disclosure evidence do not yet read this
+decision generation. The Agent file journal and SQL publication also do not form
+an atomic generation coordinator. Until a real held owner lease or enlisted guard
+can linearize supersession against every affected child, reject that delegated
+scope before provider execution. The exact remaining integration points are recorded
+in [the nested-decision review](../reviews/P04-P07-nested-decision-review.md).
+
+Settings and review UI must distinguish these choices in ordinary language:
+"Keep the facts captured for this decision" versus "Read current facts at the
+next step." Neither promises that an outdated plan can overwrite current data.
+When publication detects changed facts, show the captured basis and a sanitized
+change reason, retain the proposal, and offer only the host's supported fail,
+review or explicitly authorized new-plan actions. Approving the old proposal does
+not authorize replacement of its basis or bypass the owner's currentness check.
+
+Required admission proof includes a RunSnapshot Process delegating to an Agent
+after an independent edit, a StepSnapshot child retry after restart, rejection of
+an incompatible child refresh, and a superseded generation racing publication.
+Each must assert the actual provider input and persisted basis identity, as well
+as zero stale effects. These are refinements of the prospective Agent/Process/
+Workflow nested-execution cases below, not additional authored or discovered tests.
+
 Executor retry counters are separate. Work duration excludes deliberate human wait;
 absolute basis/operation expiry does not stop while waiting. Automatic replan is zero
 by default. Architecture02's 100 intents, 64 fact dependencies plus one task set,
@@ -235,7 +285,7 @@ resolver, digest, claim or membership perimeter invalidates all dependent proofs
 | Card | Outcome and exact boundary | Prerequisites / progression gate |
 | --- | --- | --- |
 | A — neutral policy | Add minimal validated vocabulary/resolver in existing SharedKernel, versioned canonical policy serialization, typed capability rejection. Pure unit tests; no services/EF/runtime dependencies. | Confirm actual project graph and two-mode decision. Review no new universal coordinator/registry. Independent of P02b; production default not enabled yet. |
-| B — material witness | Workbench task-set descriptor/revision and writer inventory; Projects enlisted definition guard; bounded coherent basis capture in Workbench. Close same-project lock order, deletion/transfer/ABA, scope completeness and all material writers. | Projects snapshot/CAS P02a plus current05 Workbench/Projects ownership evidence. Source inventory and deterministic interleaving tests must pass before claiming RequireCurrent. Wider CRM/resource sources remain explicit P05 prerequisites. |
+| B — material witness | [Bounded typed exact-set descriptor and writer inventory](P04-card-B-material-task-witness.md); Projects enlisted definition guard; bounded coherent basis capture in Workbench. Close same-project lock order, deletion/transfer/ABA, scope completeness and all material writers. | Projects snapshot/CAS P02a plus current05 Workbench/Projects ownership evidence. Source inventory and deterministic interleaving tests must pass before claiming RequireCurrent. Wider CRM/resource sources remain explicit P05 prerequisites. |
 | C — atomic publisher | Context-level canonical task primitives and bounded all-or-none plan publisher, typed result/error, original target conditions, exact owner receipt and lookup, measured limits/indexes. | B and P02b/lifecycle06 receipts. Prove no external calls in transaction, lost reply exact recovery, no partial task/attachment/order effects, disjoint-project concurrency and known-commit result truth. No automatic SQL retry of a semantic proposal. |
 | D — owner settings | Workspace default, Agent definition override, Process definition/step override, Workflow definition/node override; typed transport/editor/copy/hash paths. Use existing owner concurrency and close its missing-expectation holes where present. | A; each owner save perimeter closure from05. These subcards can proceed independently with non-overlapping owners. Persisted settings can be present but unsupported launch combinations must reject until E/F/G. No editable raw JSON as the only product surface. |
 | E — durable decision admission | Independent small admission/change-response services at runtime boundaries; typed attempt/ref carried by existing execution records, immutable policy/basis, CAS budget, replay/replan distinction, versioned serializers. Workbench prepare/propose tool registration is a dedicated provider. | A/B; C before publication enabled. Binding/digest review against actual journal and original-source authority. Prove provider inputs come from the admitted basis. No new partial file on execution service. |

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuiltUnexecuted",
+  "newComponentFacts": 2,
+  "responsiveClassPriorRows": 48,
+  "responsiveClassCandidateRows": 50,
+  "renderingMerge": "Only the five entries in the included patch; managed whole register is not a transfer input.",
+  "inputs": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+      "mainBaseSha256": "7AE249A098D8347E76B42D52F8A382C4D86FA016A7DB99958DC03A805CBA5759",
+      "sha256": "AFD9FF7A1E5E6665E244F6488353C232AFBF36E4FF76E7592B723D2FE252BA66",
+      "bytes": 13899
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.HistoricalReview.cs",
+      "mainBaseSha256": null,
+      "sha256": "C3712177CFC58A8CE04C6518D7CBCB46FFBD432A83D46BF98B0DE31604BAFD0C",
+      "bytes": 4605
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "mainBaseSha256": "CFC114756E448AC2061C77BE9CB03665B778EE85E31026E4F044B375CD83D511",
+      "sha256": "C5A83F07AA80759B33396ED5D954DB18BCA4C07BCE88D62E4983D0F2C45B6ADA",
+      "bytes": 88580
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatActionState.cs",
+      "mainBaseSha256": "67D6FA70E3384397F6613105EFFE94BB480D03A9B4C323874D70EC0E9C321A0E",
+      "sha256": "6220A8306596BC80BF81DCAA1C04874D8E6E84EA38096F0A4F5FFCD2B015CF63",
+      "bytes": 1171
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptState.cs",
+      "mainBaseSha256": null,
+      "sha256": "35C58E206E18693D24D41E8C7200AD07046A02F486C8FD34566E38ACD48A6216",
+      "bytes": 2892
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptSurface.razor",
+      "mainBaseSha256": null,
+      "sha256": "CDB3561851558F3865C32F877E8720484A526FF2D3083F0D4EE880EF75A58DC8",
+      "bytes": 2708
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "mainBaseSha256": "7BFC2ABA9747D3E170DE2623F69B7EC29D8F713800F6A08B04ED6386FFA70BA8",
+      "sha256": "BB8E26901DA9CF7E39050C5801BAE7B7CD2557F40EF578BE9ADC4EC2B9D09A5D",
+      "bytes": 3305
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor",
+      "mainBaseSha256": null,
+      "sha256": "2F0CA262699339A35BFF0667D1F7C57B8457A33530EC460DA687213896B3326B",
+      "bytes": 4224
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.HistoricalReview.cs",
+      "mainBaseSha256": null,
+      "sha256": "87BFEC56E20AB195676094B4D0B215C98219913ABC404FF27909642F943CB3E2",
+      "bytes": 17299
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-native-source.md",
+      "mainBaseSha256": null,
+      "sha256": "709192A504AC659F41D90FA30B0F6A59276F127F7B44F9C2F38648FA5BD0F8BF",
+      "bytes": 6541
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-native-rendering-entries.json",
+      "mainBaseSha256": null,
+      "sha256": "15A674C3B640520A2046819C3CDE91CD1AD4552E2A53FE1C850F339194768350",
+      "bytes": 6730
+    }
+  ]
+}

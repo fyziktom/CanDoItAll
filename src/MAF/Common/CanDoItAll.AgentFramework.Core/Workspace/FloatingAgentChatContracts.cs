@@ -70,6 +70,10 @@ public interface IFloatingAgentChatSettingsService
 
 public interface IAgentChatExecutionOrchestrator
 {
+    Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This chat host does not support historical receipt review.");
+
     AgentChatOperationHandle StartSendMessage(
         AgentChatSendRequest request,
         CancellationToken cancellationToken = default);

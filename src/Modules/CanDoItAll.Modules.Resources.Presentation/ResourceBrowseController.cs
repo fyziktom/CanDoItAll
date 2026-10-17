@@ -159,7 +159,7 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
     }
 
     public async Task ActivateAsync(FileBrowserItemInvokedEventArgs args, bool internallySupported) {
-        if (!Current || Workspace is null || args.Item.IsContainer) {
+        if (!Current || Workspace is null || Catalog is null || args.Item.IsContainer) {
             return;
         }
         if (args.Kind == FileBrowserInvocationKind.PointerDoubleClick && !internallySupported && SupportsLocal(args.Item)) {
@@ -167,12 +167,12 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
             return;
         }
         var selection = Capture(args.Item);
-        if (promotions.Any(r => SameTarget(r.Command.Selection, selection) && r.State is ResourceEffectState.Pending or ResourceEffectState.Unknown)) {
+        if (promotions.Any(r => r.Command.Context == Catalog.Context && SameTarget(r.Command.Selection, selection) && r.State is ResourceEffectState.Pending or ResourceEffectState.Unknown)) {
             SourceError = "This object already has a pending or unacknowledged promotion. Review its original receipt.";
             Notify();
             return;
         }
-        Promotion = new(selection, Catalog?.Projects ?? []);
+        Promotion = new(selection, Catalog.Projects, Catalog.Context);
         Notify();
     }
 
@@ -191,8 +191,15 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
             Notify();
             return;
         }
-        var command = new ResourcePromotionRequest(draft.Selection, project.Admission, draft.Name, draft.Sensitivity);
-        if (promotions.Any(r => SameTarget(r.Command.Selection, command.Selection) && r.State is ResourceEffectState.Pending or ResourceEffectState.Unknown)) {
+        ResourcePromotionRequest command;
+        try {
+            command = new(draft.Selection, project.Admission, draft.Name, draft.Sensitivity, draft.Context, draft.ResourceId);
+        } catch (ArgumentException) {
+            draft.Error = "The promotion fields exceed the supported bounds or do not belong to the original owner context.";
+            Notify();
+            return;
+        }
+        if (promotions.Any(r => r.Command.Context == command.Context && SameTarget(r.Command.Selection, command.Selection) && r.State is ResourceEffectState.Pending or ResourceEffectState.Unknown)) {
             return;
         }
         if (!MakeRoom(promotions, r => r.State is not (ResourceEffectState.Pending or ResourceEffectState.Unknown) && !r.IsReviewing)) {
@@ -206,28 +213,49 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
         draft.Error = null;
         Notify();
         try {
-            receipt.Observation = await owner.PromoteAsync(command);
-            receipt.State = receipt.Observation.Warning is null ? ResourceEffectState.Committed : ResourceEffectState.CommittedWarning;
-            receipt.Message = receipt.Observation.Warning ?? (receipt.Observation.Created ? "Storage object saved." : "This object was already registered in the selected project.");
+            var outcome = await owner.PromoteAsync(command);
+            if (outcome is ResourcePromotionObservation.Rejected rejected) {
+                receipt.State = ResourceEffectState.Refused;
+                receipt.Message = rejected.Message ?? $"Promotion was refused ({rejected.Reason}).";
+                return;
+            }
+            if (outcome is ResourcePromotionObservation.Unconfirmed) {
+                receipt.State = ResourceEffectState.Unknown;
+                receipt.Message = "No final acknowledgement was received. The original promotion remains blocked; current reads cannot prove its outcome.";
+                return;
+            }
+            receipt.Observation = outcome;
+            var diagnostic = outcome switch {
+                ResourcePromotionObservation.Created created => created.Diagnostic,
+                ResourcePromotionObservation.Reused reused => reused.Diagnostic,
+                _ => throw new InvalidOperationException("The promotion owner returned an unsupported result.")
+            };
+            var resourceId = receipt.Snapshot!.Expected.ResourceId;
+            receipt.State = diagnostic is null ? ResourceEffectState.Committed : ResourceEffectState.CommittedWarning;
+            receipt.Message = outcome is ResourcePromotionObservation.Created ? "Storage object saved."
+                : "This object was already registered. Its exact existing metadata is retained; the requested name and sensitivity were not applied.";
+            if (diagnostic is not null) {
+                receipt.Message += " The owner reported incomplete follow-up work; its accepted result is retained.";
+            }
             var currentDialog = Current && ReferenceEquals(Promotion, draft);
             if (currentDialog) {
                 Promotion = null;
             }
             if (Current && Promoted is { } callback) {
-                await callback(receipt.Observation.ResourceId);
+                await callback(resourceId);
             }
             if (currentDialog && IsSelection(selection) && Promotion is null) {
                 await OpenSourceAsync(command.Selection.Source.Key);
                 if (IsSelection(selection + 1) && Workspace is { } current && current.Source.Scope == command.Selection.Source.Scope) {
-                    promotedSelection = (receipt.Observation.ResourceId, new(current.Source, current.Revision, command.Selection.Item));
+                    promotedSelection = (resourceId, new(current.Source, current.Revision, command.Selection.Item));
                 }
             }
-        } catch (ResourceActionRefusedException exception) {
+        } catch (ResourceActionRefusedException exception) when (receipt.Snapshot is null) {
             receipt.State = ResourceEffectState.Refused;
             receipt.Message = exception.Message;
         } catch (Exception) {
-            receipt.State = receipt.Observation is null ? ResourceEffectState.Unknown : ResourceEffectState.CommittedWarning;
-            receipt.Message = receipt.Observation is null
+            receipt.State = receipt.Snapshot is null ? ResourceEffectState.Unknown : ResourceEffectState.CommittedWarning;
+            receipt.Message = receipt.Snapshot is null
                 ? "No final acknowledgement was received. Do not repeat promotion; review an exact stored identity."
                 : "Storage object saved; follow-up notification failed. Its confirmed identity is retained.";
         } finally {
@@ -239,7 +267,7 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
     }
 
     public async Task ReviewPromotionAsync(ResourcePromotionReceipt receipt, Guid resourceId) {
-        if (!Current || !promotions.Contains(receipt) || receipt.State != ResourceEffectState.Unknown || receipt.IsReviewing || resourceId == Guid.Empty) {
+        if (!Current || !promotions.Contains(receipt) || receipt.State != ResourceEffectState.Unknown || receipt.IsReviewing || resourceId != receipt.Command.ResourceId) {
             return;
         }
         receipt.IsReviewing = true;
@@ -281,7 +309,7 @@ public sealed class ResourceBrowseController(IResourceBrowseOwner owner, FileToo
             }
             Preview = acquired;
             acquired = null;
-            var receipt = promotions.LastOrDefault(r => r.Observation?.ResourceId == resourceId);
+            var receipt = promotions.LastOrDefault(r => r.Snapshot?.Expected.ResourceId == resourceId);
             previewSelection = promotedSelection is { } promoted && promoted.Id == resourceId && Matches(promoted.Selection)
                 ? promoted.Selection : receipt is not null && Matches(receipt.Command.Selection) ? receipt.Command.Selection : null;
         } catch (Exception) {

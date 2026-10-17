@@ -5,6 +5,15 @@ repairs WSC-R1 by separating the Files destination revision from later path edit
 also extracts the previously deferred API leaf without changing the Core graph. The
 counts and closure below describe the original Core checkpoint, not that later proof.
 
+The concurrent-mutations follow-up adds typed original settings expectations and complete
+decision policy through Workspace.Contracts. Its renderer closure now explicitly permits
+`CanDoItAll.SharedKernel`, which contains the shared dataset identity and provider-neutral
+policy values and has no package or project dependencies. The boundary test continues
+traversing that assembly and rejects a synthetic SharedKernel-to-Infrastructure edge;
+it still rejects unresolved dependencies and injected owner services. This allowance
+does not permit persistence or runtime providers in the renderer. Current validation is
+tracked in the [policy checkpoint](../../codex/bundles/concurrent-mutations/validation/P07-policy-owner-integration.md).
+
 Completed `CanDoItAll_Workspace_Settings_Core_UI_Decoupling` on the current checkout.
 Entry: `components-decoupling` at `ba6192b7982383b49a042291f8c47833b79c98e4`, clean tree.
 The only change since the reviewed Resources implementation is the sealed input package.

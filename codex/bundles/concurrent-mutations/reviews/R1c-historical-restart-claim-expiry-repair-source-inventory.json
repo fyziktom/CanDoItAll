@@ -1,0 +1,19 @@
+{
+  "status": "source-only; unbuilt; unexecuted",
+  "owner": "/root/agent_process_architecture",
+  "predecessorInventorySha256": "8964A5B63540206E119228754CED9970A91576FCC0A543B4DFC4FA3DCE539BDE",
+  "testRows": 2,
+  "source": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartFixture.cs",
+      "predecessorPath": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-restart-claim-expiry-predecessors\\AgentHistoricalReceiptRestartFixture.cs.txt",
+      "predecessorSha256": "F3FF5399A05BBE09BF487211FFD6837EB267CAB0D05DB2F8CC9FB88AEC99608F",
+      "sha256": "717A6A7237B04176EF4913F88D4D7B4326635256F81B5B5DDB9DFAA5EB077681"
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-restart-claim-expiry-repair.md",
+    "sha256": "C027AE233BA8AD13A7E0A3964B3D36BF7BF3484C6CC4D0DA772225E58B9B17E0"
+  },
+  "preserved": "All production conditions, true historical read semantics, exact original execution identity and timestamp validity; seed routing successor unchanged"
+}

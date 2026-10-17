@@ -1,6 +1,11 @@
 # P03: original state for project deletion and hierarchy
 
 Status: source-reviewed design refinement; no P03 production changes or test executions.
+The ordered implementation and durable recovery decisions are in
+[P03 durable lifecycle checkpoints](P03-durable-lifecycle-checkpoints.md). That card
+supersedes the former suggestion to add recovery after exposing these new intents:
+each externally callable intent must ship with its exact durable acknowledgement and
+recovery adapter in the same cutover.
 The implementation scope stays with existing operations. There is no demonstrated need
 to add a generic field patch language, phase-by-phase mutation API, or whole-hierarchy
 replacement command to finish this slice.
@@ -46,8 +51,10 @@ states current postcondition; it is not proof that a lost previous request commi
 
 **Remove link:** carry the originally observed edge `Id`, endpoint pair and both
 lifetimes in the original namespace. An endpoint-matching replacement edge with a
-different `Id` is a conflict and survives. Define a genuine already-absent result
-separately from a replaced-edge conflict; current absence is not an operation receipt.
+different `Id` is a conflict and survives. Preserve the existing missing-edge refusal
+for a new remove command; do not introduce a new already-absent success. An exact
+accepted replay succeeds from its receipt even when the edge is now absent. Current
+absence alone is not an operation receipt.
 
 **Reconnect:** carry the original source edge identity and original lifetimes for
 child, old parent and new parent. Validate them atomically under all current sorted
@@ -100,10 +107,10 @@ typed payloads and reject excessive capture before copies/serialization. The com
 above are small; no unbounded graph payload is accepted. Reuse existing owner helpers
 and extract only the responsibility that actually outgrows `ProjectsService`.
 
-Operation recovery is an explicit follow-up within this owner wave. The current
+Operation recovery is part of each caller cutover within this owner wave. The current
 `ProjectDefinitionOperation` kind/schema/digest/receipt cannot certify hierarchy or
 external deletion cleanup. Add only the necessary owner-local command codecs and
-exact acknowledgements once each intent is implemented; do not introduce a generic
+exact acknowledgements with each intent; do not introduce a generic
 mutation coordinator or broaden the definition codec by silently accepting other
 effects. Until durable recovery is supplied, an uncertain hierarchy/deletion dispatch
 cannot be auto-retried with a fresh ID, and current state is not receipt evidence.

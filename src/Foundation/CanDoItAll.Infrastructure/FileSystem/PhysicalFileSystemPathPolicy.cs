@@ -6,6 +6,13 @@ public sealed class PhysicalFileSystemPathPolicyFactory : IPhysicalFileSystemPat
 {
     public IPhysicalFileSystemPathPolicy Create(string managedRoot)
         => new PhysicalFileSystemPathPolicy(managedRoot);
+
+    public IPhysicalFileSystemPathPolicy Create(string managedRoot, PhysicalFileSystemCaseSensitivity caseSensitivity) {
+        if (!Enum.IsDefined(caseSensitivity) || caseSensitivity == PhysicalFileSystemCaseSensitivity.Unknown) {
+            throw new ArgumentOutOfRangeException(nameof(caseSensitivity));
+        }
+        return new PhysicalFileSystemPathPolicy(managedRoot, caseSensitivity);
+    }
 }
 
 internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPolicy

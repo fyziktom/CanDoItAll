@@ -500,6 +500,7 @@
                                             Click="Delete"
                                             Disabled="@(!Draft.CanMutate)" data-testid="project-delete-button" />
                                 }
+                                @AdditionalEditorActions
                             </Cluster>
                         </Split>
                     </section>
@@ -601,6 +602,9 @@
 
     [Parameter]
     public bool SubmissionReady { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? AdditionalEditorActions { get; set; }
 
     [Parameter]
     public EventCallback<ProjectEditorSubmission> SaveAndOpenStructure { get; set; }

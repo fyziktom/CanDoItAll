@@ -218,11 +218,17 @@ public sealed class ProjectDefinitionHttpIntegrationTests {
         }
         using (var denied = await host.Client.PostAsJsonAsync("/api/projects/definitions", request, Json)) {
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+            var body = await denied.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEmpty(body.GetProperty("errors").EnumerateArray());
+            Assert.False(body.TryGetProperty("status", out _));
         }
         var writeOnly = issuer.IssueToken(new() { Subject = subject, Scopes = [ApiAccessScopeNames.WriteProjects] });
         SetToken(host.Client, writeOnly);
         using (var denied = await host.Client.PostAsJsonAsync("/api/projects/definitions", request, Json)) {
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+            var body = await denied.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEmpty(body.GetProperty("errors").EnumerateArray());
+            Assert.False(body.TryGetProperty("status", out _));
         }
 
         SetToken(host.Client, renewed);

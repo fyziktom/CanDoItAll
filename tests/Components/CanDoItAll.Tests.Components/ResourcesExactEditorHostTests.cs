@@ -32,10 +32,10 @@ public sealed class ResourcesExactEditorHostTests {
             ConfigSchemaVersion = resources.ListConnectorManifests().Single(m => m.PluginKey == ResourceConnectorPluginKeys.WebLink).ConfigurationSchema.Version
         };
         model.Configuration.SetText(ResourceConnectorFieldKeys.WebUrl, "https://fixture.test/");
-        var result = await resources.SaveAsync(model);
-        Assert.True(result.IsSuccess);
+        var expected = new ResourceMetadataExpectation.Absent(await resources.ReadContextAsync(), Guid.NewGuid());
+        var result = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await resources.SaveAsync(new(expected, project, ResourceMetadataValues.Capture(model))));
         var navigation = services.GetRequiredService<NavigationManager>();
-        navigation.NavigateTo($"http://localhost/resources?resourceId={result.Value:D}");
+        navigation.NavigateTo($"http://localhost/resources?resourceId={result.Snapshot.Expected.ResourceId:D}");
         var cut = harness.Context.Render<ResourcesPage>();
         var owner = Assert.IsType<HeldEditorOwner>(held);
         await owner.Entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -62,20 +62,22 @@ public sealed class ResourcesExactEditorHostTests {
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int ExactReads { get; private set; }
         public bool IsCurrent => inner.IsCurrent;
-        public async Task<ResourceEditorModel> GetAsync(Guid id, CancellationToken cancellationToken = default) {
+        public async Task<ResourceMetadataReadResult> ReadAsync(Guid id, CancellationToken cancellationToken = default) {
             if (++ExactReads == 1) {
                 Entered.TrySetResult();
                 await Release.Task;
             }
-            return await inner.GetAsync(id, cancellationToken);
+            return await inner.ReadAsync(id, cancellationToken);
         }
+        public Task<ResourceMetadataContext> ReadContextAsync(CancellationToken cancellationToken = default) => inner.ReadContextAsync(cancellationToken);
+        public ResourceEditorModel CreateEditor(ResourceMetadataSnapshot snapshot) => inner.CreateEditor(snapshot);
         public IReadOnlyList<ConnectorPluginManifest> ListManifests() => inner.ListManifests();
         public string BuildLocationPreview(ResourceEditorModel editor) => inner.BuildLocationPreview(editor);
         public Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
         public Task<IReadOnlyList<ResourceProjectOption>> ListProjectsAsync(CancellationToken cancellationToken = default) => inner.ListProjectsAsync(cancellationToken);
         public Task<IReadOnlyList<ResourceReferenceOption>> ListSecretsAsync(CancellationToken cancellationToken = default) => inner.ListSecretsAsync(cancellationToken);
         public Task<IReadOnlyList<ResourceReferenceOption>> ListPartiesAsync(Guid? projectId, IReadOnlyList<Guid> retainedIds, CancellationToken cancellationToken = default) => inner.ListPartiesAsync(projectId, retainedIds, cancellationToken);
-        public Task<Result<Guid>> SaveAsync(ResourceEditorModel command) => inner.SaveAsync(command);
-        public Task DeleteAsync(Guid id, ProjectWriteAdmission? admission) => inner.DeleteAsync(id, admission);
+        public Task<ResourceMetadataSaveOutcome> SaveAsync(ReplaceResourceMetadataCommand command, CancellationToken cancellationToken = default) => inner.SaveAsync(command, cancellationToken);
+        public Task<ResourceMetadataDeleteOutcome> DeleteAsync(DeleteResourceMetadataCommand command, CancellationToken cancellationToken = default) => inner.DeleteAsync(command, cancellationToken);
     }
 }

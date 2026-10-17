@@ -167,7 +167,8 @@ public enum AgentExecutionActivityPhase
     PersistingResult,
     Completed,
     Failed,
-    Cancelled
+    Cancelled,
+    AwaitingContinuation
 }
 
 public enum AgentExecutionActivityTerminalOutcome
@@ -311,7 +312,7 @@ public sealed record AgentExecutionActivity
             AgentExecutionActivityTerminalOutcome.Succeeded => AgentExecutionActivityPhase.Completed,
             AgentExecutionActivityTerminalOutcome.Failed => AgentExecutionActivityPhase.Failed,
             AgentExecutionActivityTerminalOutcome.Cancelled => AgentExecutionActivityPhase.Cancelled,
-            AgentExecutionActivityTerminalOutcome.Suspended => AgentExecutionActivityPhase.AwaitingApproval,
+            AgentExecutionActivityTerminalOutcome.Suspended => Phase == AgentExecutionActivityPhase.AwaitingContinuation ? Phase : AgentExecutionActivityPhase.AwaitingApproval,
             null => (AgentExecutionActivityPhase?)null,
             _ => throw new ArgumentOutOfRangeException(nameof(TerminalOutcome))
         };

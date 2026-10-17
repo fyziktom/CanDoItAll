@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Projects;
@@ -254,7 +255,10 @@ public sealed record ProjectDeletionRecoveryFailure(
 public sealed record ProjectDeletionRecovery(
     Guid ProjectId,
     IReadOnlyList<ProjectDeletionRecoveryFailure> Failures,
-    string RetryGuidance);
+    string RetryGuidance,
+    bool OwnerCompletionUnconfirmed = false) {
+    public IReadOnlyList<ProjectDeletionRecoveryFailure> Failures { get; init; } = Failures.ToImmutableArray();
+}
 
 public sealed class ProjectDeletionPartialCommitException : Exception
 {

@@ -25,11 +25,11 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             await using var scope = application.Services.CreateAsyncScope();
             var services = scope.ServiceProvider;
             original = await CreateProjectAsync(services, projectId);
-            var resource = await services.GetRequiredService<ResourcesService>().SaveAsync(ResourceEditor(original));
+            var initialResources = services.GetRequiredService<ResourcesService>();
+            var resource = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await initialResources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(initialResources, ResourceEditor(original))));
             var plan = await services.GetRequiredService<TestLabService>().SaveAsync(PlanEditor(original));
-            Assert.True(resource.IsSuccess);
             Assert.True(plan.IsSuccess);
-            resourceId = resource.Value;
+            resourceId = resource.Snapshot.Expected.ResourceId;
             planId = plan.Value;
             await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
             Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
@@ -39,7 +39,8 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         var current = restartedScope.ServiceProvider;
         var resources = current.GetRequiredService<ResourcesService>();
         var plans = current.GetRequiredService<TestLabService>();
-        var resourceEditor = await resources.GetAsync(resourceId);
+        var resourceSnapshot = await ResourceMetadataTestCommands.FoundAsync(resources, resourceId);
+        var resourceEditor = resources.CreateEditor(resourceSnapshot);
         var planEditor = await plans.GetAsync(planId);
         Assert.Equal(original, resourceEditor.ExpectedProjectAdmission);
         Assert.Equal(original, planEditor.ExpectedProjectAdmission);
@@ -50,7 +51,8 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         Assert.Equal(original.LifetimeId, resourceSummary.ProjectLifetimeId);
         Assert.Equal(planId, planSummary.Id);
         Assert.Equal(original.LifetimeId, planSummary.ProjectLifetimeId);
-        await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => resources.SaveAsync(resourceEditor));
+        Assert.Equal(ResourceMetadataRejectionReason.ProjectUnavailable, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(
+            await resources.SaveAsync(ResourceMetadataTestCommands.Replace(resourceSnapshot, resourceEditor))).Reason);
         await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => plans.SaveAsync(planEditor));
         Assert.Empty(await resources.ListProjectProjectionFactsAsync(projectId));
         Assert.Empty(await plans.ListProjectProjectionFactsAsync(projectId));
@@ -68,9 +70,10 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
     [InlineData(false, 2)]
     [InlineData(true, 1)]
     [InlineData(true, 2)]
-    public async Task Delayed_owner_save_and_postcommit_search_keep_the_captured_lifetime_across_restart(bool testPlan, int pauseAt) {
+    public async Task Delayed_owner_save_and_search_keep_the_captured_lifetime_across_restart(bool testPlan, int pauseAt) {
         await using var environment = CanDoItAllTestEnvironment.Create("resource-testlab-delayed-lifetime");
-        var harness = new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = environment.CreatePostgreSqlProfile("owner") };
+        var probe = new OwnerPostcommitTestProbe();
+        var harness = new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = environment.CreatePostgreSqlProfile("owner"), ConfigureServices = probe.ConfigureServices };
         var projectId = Guid.NewGuid();
         ProjectWriteAdmission original;
         var committedId = Guid.Empty;
@@ -78,36 +81,79 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             await using var scope = application.Services.CreateAsyncScope();
             var services = scope.ServiceProvider;
             original = await CreateProjectAsync(services, projectId);
-            var resourceFactory = new PausingFactory<ResourcesDbContext>(services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>(), pauseAt);
-            var planFactory = new PausingFactory<TestLabDbContext>(services.GetRequiredService<IDbContextFactory<TestLabDbContext>>(), pauseAt);
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-            var pending = testPlan
-                ? PlanService(services, planFactory).SaveAsync(PlanEditor(original), cancellation.Token)
-                : ResourceService(services, resourceFactory).SaveAsync(ResourceEditor(original), cancellation.Token);
-            var paused = testPlan ? planFactory.Paused : resourceFactory.Paused;
-            var resume = testPlan ? planFactory.Resume : resourceFactory.Resume;
-            await paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            try {
-                await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
-                Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
-            } finally {
-                resume.TrySetResult();
-            }
-            if (pauseAt == 1) {
-                await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => pending);
-            } else if (testPlan) {
-                var failure = await Assert.ThrowsAsync<TestPlanCommittedSaveException>(() => pending);
-                committedId = failure.TestPlanId;
-                Assert.IsType<ProjectWriteAdmissionRejectedException>(failure.InnerException);
+            if (testPlan) {
+                var factory = new PausingFactory<TestLabDbContext>(services.GetRequiredService<IDbContextFactory<TestLabDbContext>>(), pauseAt);
+                var pending = PlanService(services, factory).SaveAsync(PlanEditor(original), cancellation.Token);
+                await factory.Paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
+                try {
+                    await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+                    Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
+                } finally {
+                    factory.Resume.TrySetResult();
+                }
+                if (pauseAt == 1) {
+                    await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => pending);
+                } else {
+                    var failure = await Assert.ThrowsAsync<TestPlanCommittedSaveException>(() => pending);
+                    committedId = failure.TestPlanId;
+                    Assert.IsType<ProjectWriteAdmissionRejectedException>(failure.InnerException);
+                }
             } else {
-                var failure = await Assert.ThrowsAsync<ResourceCommittedMutationException>(() => pending);
-                committedId = failure.ResourceId;
-                Assert.Equal(ResourceMutationKind.Save, failure.MutationKind);
-                Assert.IsType<ProjectWriteAdmissionRejectedException>(failure.InnerException);
+                var ordinary = services.GetRequiredService<ResourcesService>();
+                var command = await ResourceMetadataTestCommands.NewAsync(ordinary, ResourceEditor(original));
+                var factory = new PausingFactory<ResourcesDbContext>(services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>(), pauseAt == 1 ? 1 : int.MaxValue);
+                var enteredSearch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var resumeSearch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                if (pauseAt == 2) {
+                    probe.AfterSearch = async (owner, _, _, token) => {
+                        Assert.Equal(PostcommitOwner.Resource, owner);
+                        enteredSearch.TrySetResult();
+                        await resumeSearch.Task.WaitAsync(token);
+                    };
+                }
+                var pending = ResourceService(services, factory).SaveAsync(command, cancellation.Token);
+                Task? retirement = null;
+                try {
+                    if (pauseAt == 1) {
+                        await factory.Paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
+                        await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+                    } else {
+                        await enteredSearch.Task.WaitAsync(TimeSpan.FromSeconds(20));
+                        var holderPid = ((Npgsql.NpgsqlConnection)factory.LastContext!.Database.GetDbConnection()).ProcessID;
+                        var deletionFactory = new PausingFactory<ProjectsDbContext>(
+                            services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>(), int.MaxValue);
+                        var deletion = ActivatorUtilities.CreateInstance<ProjectsService>(services, deletionFactory);
+                        retirement = deletion.DeleteAsync(projectId, cancellation.Token);
+                        while (deletionFactory.LastContext?.Database.GetDbConnection().State != System.Data.ConnectionState.Open) {
+                            await Task.Delay(10, cancellation.Token);
+                        }
+                        var deletionPid = ((Npgsql.NpgsqlConnection)deletionFactory.LastContext.Database.GetDbConnection()).ProcessID;
+                        await WaitForBlockedByAsync(services, holderPid, deletionPid, cancellation.Token);
+                        Assert.False(retirement.IsCompleted);
+                    }
+                } finally {
+                    factory.Resume.TrySetResult();
+                    resumeSearch.TrySetResult();
+                    await Task.WhenAll(pending, retirement ?? Task.CompletedTask);
+                }
+                var outcome = await pending;
+                if (pauseAt == 1) {
+                    Assert.Equal(ResourceMetadataRejectionReason.ProjectUnavailable, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(outcome).Reason);
+                } else {
+                    committedId = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(outcome).Snapshot.Expected.ResourceId;
+                    await retirement!;
+                    await using var deleted = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
+                    Assert.False(await deleted.Set<Project>().AnyAsync(row => row.Id == projectId));
+                    Assert.True(await deleted.Set<ProjectRetirementRecord>().AnyAsync(row => row.ProjectId == projectId && row.LifetimeId == original.LifetimeId));
+                    await using var removedSearch = await services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
+                    Assert.False(await removedSearch.Set<SearchDocument>().AnyAsync(row => row.ProjectId == projectId));
+                }
+                Assert.NotEqual(original.LifetimeId, (await CreateProjectAsync(services, projectId)).LifetimeId);
             }
             await using var search = await services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
             Assert.False(await search.Set<SearchDocument>().AnyAsync(document => document.ProjectId == projectId &&
-                (document.SourceType == "resource" || document.SourceType == "test-plan")));
+                (document.SourceType == SearchDocument.ResourceSourceType || document.SourceType == "test-plan")));
         }
         await using var restarted = await TestApplication.CreateAsync(harness);
         await using var restartedScope = restarted.Services.CreateAsyncScope();
@@ -117,7 +163,6 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             var saved = await owner.Set<TestPlan>().ToArrayAsync();
             Assert.Equal(pauseAt == 2 ? 1 : 0, saved.Length);
             if (pauseAt == 2) {
-                Assert.NotEqual(Guid.Empty, committedId);
                 Assert.Equal(committedId, Assert.Single(saved).Id);
                 Assert.Equal(original.LifetimeId, Assert.Single(saved).ProjectLifetimeId);
                 Assert.Equal(original, (await current.GetRequiredService<TestLabService>().GetAsync(saved[0].Id)).ExpectedProjectAdmission);
@@ -127,14 +172,13 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
             var saved = await owner.Set<ProjectResource>().ToArrayAsync();
             Assert.Equal(pauseAt == 2 ? 1 : 0, saved.Length);
             if (pauseAt == 2) {
-                Assert.NotEqual(Guid.Empty, committedId);
                 Assert.Equal(committedId, Assert.Single(saved).Id);
                 Assert.Equal(original.LifetimeId, Assert.Single(saved).ProjectLifetimeId);
-                Assert.Equal(original, (await current.GetRequiredService<ResourcesService>().GetAsync(saved[0].Id)).ExpectedProjectAdmission);
+                var resources = current.GetRequiredService<ResourcesService>();
+                Assert.Equal(original, resources.CreateEditor(await ResourceMetadataTestCommands.FoundAsync(resources, committedId)).ExpectedProjectAdmission);
             }
         }
     }
-
     [Fact]
     public async Task Promotion_rejects_a_retired_selection_and_does_not_reuse_its_retained_resource_for_a_new_lifetime() {
         await using var application = await TestApplication.CreateAsync();
@@ -146,23 +190,25 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         var config = new StorageObjectResourceConfig(ResourceFileSourceKey.ForStorage(storageId).Value, storageId,
             StorageProviderKind.FileSystem, StorageLocatorKind.RelativePath, "retained.txt", "retained.txt", "text/plain", 12);
         var writer = services.GetRequiredService<IStorageObjectResourceWriter>();
-        var request = new StorageObjectResourceWriteRequest(projectId, "Original resource", ResourceSensitivity.Normal, config, original);
-        var first = await writer.SaveAsync(request);
+        var request = new StorageObjectResourceWriteRequest(projectId, "Original resource", ResourceSensitivity.Normal, config, original,
+            await services.GetRequiredService<ResourcesService>().ReadContextAsync(), Guid.NewGuid());
+        var first = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(request));
         await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
         var replacement = await CreateProjectAsync(services, projectId);
 
-        var denied = await Assert.ThrowsAsync<ResourcePromotionException>(() => writer.SaveAsync(request));
+        var denied = Assert.IsType<StorageObjectResourceWriteResult.Rejected>(await writer.SaveAsync(request));
 
-        Assert.Equal(ResourcePromotionFailureCode.TargetUnavailable, denied.Code);
-        var current = await writer.SaveAsync(request with { ExpectedProjectAdmission = replacement });
-        var repeat = await writer.SaveAsync(request with { ExpectedProjectAdmission = replacement });
+        Assert.Equal(ResourceMetadataRejectionReason.ProjectUnavailable, denied.Reason);
+        var currentRequest = request with { ExpectedProjectAdmission = replacement, ResourceId = Guid.NewGuid() };
+        var current = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(currentRequest));
+        var repeat = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(currentRequest with { ResourceId = Guid.NewGuid() }));
         Assert.True(current.Created);
-        Assert.NotEqual(first.ResourceId, current.ResourceId);
+        Assert.NotEqual(first.Snapshot.Expected.ResourceId, current.Snapshot.Expected.ResourceId);
         Assert.False(repeat.Created);
-        Assert.Equal(current.ResourceId, repeat.ResourceId);
+        Assert.Equal(current.Snapshot.Expected.ResourceId, repeat.Snapshot.Expected.ResourceId);
         await using var owner = await services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
-        Assert.Equal(original.LifetimeId, (await owner.Set<ProjectResource>().SingleAsync(row => row.Id == first.ResourceId)).ProjectLifetimeId);
-        Assert.Equal(replacement.LifetimeId, (await owner.Set<ProjectResource>().SingleAsync(row => row.Id == current.ResourceId)).ProjectLifetimeId);
+        Assert.Equal(original.LifetimeId, (await owner.Set<ProjectResource>().SingleAsync(row => row.Id == first.Snapshot.Expected.ResourceId)).ProjectLifetimeId);
+        Assert.Equal(replacement.LifetimeId, (await owner.Set<ProjectResource>().SingleAsync(row => row.Id == current.Snapshot.Expected.ResourceId)).ProjectLifetimeId);
     }
 
     [Fact]
@@ -185,11 +231,12 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         await CreateProjectAsync(services, missingId);
         var resources = services.GetRequiredService<ResourcesService>();
         var plans = services.GetRequiredService<TestLabService>();
-        var resourceEditor = await resources.GetAsync(resource.Id);
+        var resourceSnapshot = await ResourceMetadataTestCommands.FoundAsync(resources, resource.Id);
+        var resourceEditor = resources.CreateEditor(resourceSnapshot);
         var planEditor = await plans.GetAsync(plan.Id);
         Assert.Null(resourceEditor.ExpectedProjectAdmission);
         Assert.Null(planEditor.ExpectedProjectAdmission);
-        Assert.True((await resources.SaveAsync(resourceEditor)).IsFailure);
+        Assert.Throws<ArgumentNullException>(() => new ReplaceResourceMetadataCommand(resourceSnapshot.Expected, resourceEditor.ExpectedProjectAdmission!, ResourceMetadataValues.Capture(resourceEditor)));
         Assert.True((await plans.SaveAsync(planEditor)).IsFailure);
         var global = await plans.SaveAsync(new() { Title = "Independent global plan" });
         Assert.True(global.IsSuccess);
@@ -198,8 +245,8 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         Assert.Null(loaded.ExpectedProjectAdmission);
         loaded.Title = "Edited global plan";
         Assert.True((await plans.SaveAsync(loaded)).IsSuccess);
-        await resources.DeleteAsync(resource.Id, expectedProjectAdmission: null);
-        Assert.Null((await resources.GetAsync(resource.Id)).Id);
+        Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await resources.DeleteAsync(new(resourceSnapshot.Expected)));
+        Assert.IsType<ResourceMetadataReadResult.Missing>(await resources.ReadAsync(resource.Id));
         Assert.Equal(plan.Id, (await plans.GetAsync(plan.Id)).Id);
     }
 
@@ -210,13 +257,17 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         var services = scope.ServiceProvider;
         var selected = await CreateProjectAsync(services, Guid.NewGuid());
         var foreign = new ProjectWriteAdmission(Guid.NewGuid(), selected.ProjectId, selected.LifetimeId);
-        await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => services.GetRequiredService<ResourcesService>().SaveAsync(ResourceEditor(foreign)));
+        var resources = services.GetRequiredService<ResourcesService>();
+        var context = await resources.ReadContextAsync();
+        Assert.Throws<ArgumentException>(() => new ReplaceResourceMetadataCommand(new ResourceMetadataExpectation.Absent(context, Guid.NewGuid()), foreign, ResourceMetadataValues.Capture(ResourceEditor(foreign))));
         await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => services.GetRequiredService<TestLabService>().SaveAsync(PlanEditor(foreign)));
         var resource = ResourceEditor(selected);
         resource.Id = Guid.NewGuid();
         var plan = PlanEditor(selected);
         plan.Id = Guid.NewGuid();
-        Assert.True((await services.GetRequiredService<ResourcesService>().SaveAsync(resource)).IsFailure);
+        var stale = new ResourceMetadataExpectation.Existing(context, resource.Id.Value, new(Guid.NewGuid()), new ResourceProjectBinding.Bound(selected.ProjectId, selected.LifetimeId));
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceMissing, Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(
+            await resources.SaveAsync(new(stale, selected, ResourceMetadataValues.Capture(resource)))).Reason);
         Assert.True((await services.GetRequiredService<TestLabService>().SaveAsync(plan)).IsFailure);
         Assert.Equal(selected, Assert.Single(await services.GetRequiredService<ProjectWriteSelectionQuery>().ListAsync()).Admission);
     }
@@ -235,28 +286,38 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         var resource = ResourceEditor(original);
         var plan = PlanEditor(original);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-        var pending = testPlan
-            ? PlanService(services, planFactory).SaveAsync(plan, cancellation.Token)
-            : ResourceService(services, resourceFactory).SaveAsync(resource, cancellation.Token);
+        var resourceCommand = await ResourceMetadataTestCommands.NewAsync(services.GetRequiredService<ResourcesService>(), resource);
+        Task<Result<Guid>>? planPending = testPlan ? PlanService(services, planFactory).SaveAsync(plan, cancellation.Token) : null;
+        Task<ResourceMetadataSaveOutcome>? resourcePending = testPlan ? null : ResourceService(services, resourceFactory).SaveAsync(resourceCommand, cancellation.Token);
         var paused = testPlan ? planFactory.Paused : resourceFactory.Paused;
         var resume = testPlan ? planFactory.Resume : resourceFactory.Resume;
-        await paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
-        resource.ProjectId = later.ProjectId;
-        resource.ExpectedProjectAdmission = later;
-        plan.ProjectId = later.ProjectId;
-        plan.ExpectedProjectAdmission = later;
-        resume.TrySetResult();
+        try {
+            await paused.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            resource.ProjectId = later.ProjectId;
+            resource.ExpectedProjectAdmission = later;
+            plan.ProjectId = later.ProjectId;
+            plan.ExpectedProjectAdmission = later;
+        } finally {
+            resume.TrySetResult();
+            await (testPlan ? (Task)planPending! : resourcePending!);
+        }
 
-        var saved = await pending;
-
-        Assert.True(saved.IsSuccess);
-        var actual = testPlan
-            ? (await services.GetRequiredService<TestLabService>().GetAsync(saved.Value)).ExpectedProjectAdmission
-            : (await services.GetRequiredService<ResourcesService>().GetAsync(saved.Value)).ExpectedProjectAdmission;
+        Guid savedId;
+        ProjectWriteAdmission? actual;
+        if (testPlan) {
+            var saved = await planPending!;
+            Assert.True(saved.IsSuccess);
+            savedId = saved.Value;
+            actual = (await services.GetRequiredService<TestLabService>().GetAsync(savedId)).ExpectedProjectAdmission;
+        } else {
+            var saved = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await resourcePending!);
+            savedId = saved.Snapshot.Expected.ResourceId;
+            actual = services.GetRequiredService<ResourcesService>().CreateEditor(saved.Snapshot).ExpectedProjectAdmission;
+        }
         Assert.Equal(original, actual);
         await using var search = await services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
         var sourceType = testPlan ? "test-plan" : "resource";
-        var document = await search.Set<SearchDocument>().SingleAsync(row => row.SourceType == sourceType && row.SourceKey == saved.Value.ToString());
+        var document = await search.Set<SearchDocument>().SingleAsync(row => row.SourceType == sourceType && row.SourceKey == savedId.ToString());
         Assert.Equal(original.ProjectId, document.ProjectId);
     }
 
@@ -275,12 +336,16 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
         ProjectId = admission.ProjectId, ExpectedProjectAdmission = admission, Title = "Admitted plan"
     };
 
-    private static ResourcesService ResourceService(IServiceProvider services, IDbContextFactory<ResourcesDbContext> factory) => new(
-        factory, services.GetRequiredService<IProjectRecordQueryService>(), services.GetRequiredService<IClock>(),
-        services.GetRequiredService<IActivityStream>(), services.GetRequiredService<ISearchIndexService>(),
-        services.GetRequiredService<ResourceConnectorPluginRegistry>(), services.GetRequiredService<DbContextOptions<ResourcesDbContext>>(),
-        services.GetRequiredService<CoordinatedDatabaseTransaction>(), services.GetRequiredService<ProjectWriteAdmissionService>());
+    private static ResourcesService ResourceService(IServiceProvider services, IDbContextFactory<ResourcesDbContext> factory)
+        => ActivatorUtilities.CreateInstance<ResourcesService>(services, factory,
+            ActivatorUtilities.CreateInstance<ResourceMetadataWriter>(services, factory));
 
+    private static async Task WaitForBlockedByAsync(IServiceProvider services, int holderPid, int waiterPid, CancellationToken cancellationToken) {
+        await using var observer = await services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync(cancellationToken);
+        while (!await observer.Database.SqlQuery<bool>($"SELECT {holderPid} = ANY(pg_blocking_pids({waiterPid})) AS \"Value\"").SingleAsync(cancellationToken)) {
+            await Task.Delay(10, cancellationToken);
+        }
+    }
     private static TestLabService PlanService(IServiceProvider services, IDbContextFactory<TestLabDbContext> factory) => new(
         factory, services.GetRequiredService<IClock>(), services.GetRequiredService<IActivityStream>(),
         services.GetRequiredService<ISearchIndexService>(), services.GetRequiredService<DbContextOptions<TestLabDbContext>>(),
@@ -288,6 +353,7 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
 
     private sealed class PausingFactory<TContext>(IDbContextFactory<TContext> inner, int pauseAt) : IDbContextFactory<TContext> where TContext : DbContext {
         private int creationCount;
+        public TContext? LastContext { get; private set; }
         public TaskCompletionSource Paused { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Resume { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TContext CreateDbContext() => throw new NotSupportedException("This fixture only uses asynchronous owner context creation.");
@@ -296,7 +362,8 @@ public sealed class ResourceTestLabAdmissionIntegrationTests {
                 Paused.TrySetResult();
                 await Resume.Task.WaitAsync(cancellationToken);
             }
-            return await inner.CreateDbContextAsync(cancellationToken);
+            LastContext = await inner.CreateDbContextAsync(cancellationToken);
+            return LastContext;
         }
     }
 }

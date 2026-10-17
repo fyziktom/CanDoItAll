@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -7,12 +8,18 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectsWorkbenchDbContextTests {
     [Fact]
-    public void Projects_model_contains_exactly_the_six_owner_records() {
+    public void Projects_model_contains_only_its_definition_lifetime_and_operation_records() {
         using var context = new ProjectsDbContext(new DbContextOptionsBuilder<ProjectsDbContext>()
             .UseInMemoryDatabase($"projects-model-{Guid.NewGuid():N}").Options);
-        Assert.Equal(new[] { typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink), typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord) }
+        Assert.Equal(new[] {
+            typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink),
+            typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord),
+            typeof(ProjectDefinitionReceiptRecord)
+        }
             .OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
-        Assert.DoesNotContain(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
+        var revision = Assert.Single(context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()), property => property.IsConcurrencyToken);
+        Assert.Equal(nameof(Project.ConcurrencyToken), revision.Name);
+        Assert.Equal(typeof(Project), revision.DeclaringType.ClrType);
         Assert.Throws<InvalidOperationException>(() => context.Set<CrmAccountConnectionProjectLink>().ToList());
         Assert.Throws<InvalidOperationException>(() => context.Set<ProjectObjectRecord>().ToList());
     }

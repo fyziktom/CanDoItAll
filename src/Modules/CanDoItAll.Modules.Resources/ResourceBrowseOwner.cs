@@ -7,15 +7,21 @@ namespace CanDoItAll.Modules.Resources;
 
 internal sealed class ResourceBrowseOwner(IResourceFileSourceCatalog sources, ResourceFileBrowseCoordinator browse,
     ResourceStorageObjectPromotionService promotion, ResourceStorageObjectInteractionService interaction,
-    IFileToolsBrowseSessionFactory sessions, IFileToolsBrowseItemActionService actions, ICanonicalRuntimeDatabase canonical) : IResourceBrowseOwner {
+    IFileToolsBrowseSessionFactory sessions, IFileToolsBrowseItemActionService actions, ICanonicalRuntimeDatabase canonical,
+    ResourceMetadataWriter metadata) : IResourceBrowseOwner {
     private readonly Guid profile = canonical.Profile.Profile.Id;
     private readonly long generation = canonical.Generation;
     public bool IsCurrent => canonical.Profile.Profile.Id == profile && canonical.Generation == generation;
     public bool IsLocalLaunchAvailable => actions.IsLocalLaunchAvailable;
     public async Task<ResourceBrowseCatalog> LoadAsync(CancellationToken cancellationToken = default) {
         RequireCurrent();
+        var context = await metadata.ReadContextAsync(cancellationToken);
         var catalog = await sources.LoadAsync(cancellationToken);
-        return new(catalog.Sources.Select(Project).ToArray(), catalog.Projects.Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray(), catalog.Fingerprint);
+        RequireCurrent();
+        if (await metadata.ReadContextAsync(cancellationToken) != context) {
+            throw new ResourceActionRefusedException("The dataset changed while opening Resources browse.");
+        }
+        return new(catalog.Sources.Select(Project).ToArray(), catalog.Projects.Select(p => new ResourceProjectOption(p.Id, p.Name, p.Admission)).ToArray(), catalog.Fingerprint, context);
     }
     public async ValueTask<ResourceBrowseLease> OpenAsync(ResourceFileSourceKey key, CancellationToken cancellationToken = default) {
         RequireCurrent();
@@ -28,13 +34,21 @@ internal sealed class ResourceBrowseOwner(IResourceFileSourceCatalog sources, Re
         return new(opened.ResourceId, opened.Request, opened.Session.ContentSource, opened.DisposeAsync);
     }
     public async ValueTask<ResourcePromotionObservation> PromoteAsync(ResourcePromotionRequest command) {
+        ArgumentNullException.ThrowIfNull(command);
+        if (!IsCurrent || command.Context.DatabaseProfileId != profile) {
+            return new ResourcePromotionObservation.Rejected(ResourceMetadataRejectionReason.OwnerRetired);
+        }
         await RequireSelectionAsync(command.Selection, CancellationToken.None);
         try {
             var result = await promotion.PromoteAsync(new(command.Selection.Source.Key, command.Selection.Item.Key,
-                command.Project.ProjectId, command.Name, command.Project, command.Sensitivity));
-            return new(result.ResourceId, result.Created, result.Revision.Scope);
-        } catch (ResourcePromotionCommittedException exception) {
-            return new(exception.ResourceId, exception.Created, exception.Revision?.Scope, exception.Message);
+                command.Project.ProjectId, command.Name, command.Project, command.Context, command.ResourceId, command.Sensitivity));
+            return result.Outcome switch {
+                StorageObjectResourceWriteResult.Accepted { Created: true } accepted => new ResourcePromotionObservation.Created(accepted.Snapshot, result.Revision?.Scope, accepted.Diagnostic),
+                StorageObjectResourceWriteResult.Accepted accepted => new ResourcePromotionObservation.Reused(accepted.Snapshot, result.Revision?.Scope, accepted.Diagnostic),
+                StorageObjectResourceWriteResult.Rejected rejected => new ResourcePromotionObservation.Rejected(rejected.Reason),
+                StorageObjectResourceWriteResult.Unconfirmed => new ResourcePromotionObservation.Unconfirmed(command),
+                _ => throw new InvalidOperationException("Resource promotion returned an unsupported outcome.")
+            };
         } catch (ResourcePromotionException exception) when (exception.Code != ResourcePromotionFailureCode.PersistenceFailed) {
             throw new ResourceActionRefusedException(exception.Message);
         }

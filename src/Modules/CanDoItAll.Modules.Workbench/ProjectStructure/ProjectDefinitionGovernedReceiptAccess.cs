@@ -22,12 +22,14 @@ internal sealed class ProjectDefinitionAgentReceiptAccess(ProjectAgentMutationAd
 
 internal sealed class ProjectDefinitionProcessReceiptAccess(ProjectProcessMutationAdmission original,
     ProjectProcessExecutionMutationService processes, IAgentCatalogReadLeaseStore catalog,
-    ProjectWriteAdmissionService projects) : IProjectDefinitionReceiptAccess {
+    ProjectWriteAdmissionService projects, AgentToolReceiptReconciliationClaim? pinnedClaim = null) : IProjectDefinitionReceiptAccess {
     public async Task<bool> CanReadAsync(ProjectWriteAdmission target, CancellationToken cancellationToken) {
         if (target.DatabaseProfileId != projects.DatabaseProfileId) {
             return false;
         }
-        var current = await processes.ReadAccessAsync(original.Dispatch.Evidence.ExecutionRunId, cancellationToken);
+        var current = pinnedClaim is null
+            ? await processes.ReadAccessAsync(original.Dispatch.Evidence.ExecutionRunId, cancellationToken)
+            : await processes.ReadReceiptAccessAsync(original, pinnedClaim, cancellationToken);
         if (!ProjectDefinitionGovernedReadPolicy.ProcessCanRead(original, current, target)) {
             return false;
         }

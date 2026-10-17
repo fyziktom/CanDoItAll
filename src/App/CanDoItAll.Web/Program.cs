@@ -167,6 +167,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
     await bootstrapper.EnsureCurrentProfileReadyAsync();
+    await ApiAuthorityReadiness.PrepareAsync(scope.ServiceProvider);
 
     readiness.MarkReady(app.Environment.EnvironmentName, urls: app.Urls.Count > 0 ? app.Urls : ["https://localhost"]);
 }

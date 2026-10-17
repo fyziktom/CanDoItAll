@@ -34,7 +34,7 @@ internal static class DatabaseTransferImportScope {
                     $"SELECT pg_advisory_lock(hashtextextended({key}, 0))", cancellationToken);
             }
             transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-            await DatabaseTransferLifecycleGuard.AcquireExclusionBeforeSnapshotAsync(context, cancellationToken);
+            await DatabaseTransferLifecycleGuard.AcquireImportExclusionBeforeSnapshotAsync(context, cancellationToken);
             var tableLockCommand = $"LOCK TABLE {string.Join(", ", tableNames)} IN ACCESS EXCLUSIVE MODE NOWAIT";
             await context.Database.ExecuteSqlRawAsync(tableLockCommand, cancellationToken);
             await DatasetLifecycleStore.RequireActiveForMaintenanceAsync(context, binding, cancellationToken);

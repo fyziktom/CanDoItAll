@@ -317,8 +317,8 @@ public sealed class ProjectTransferOwnerInspectionTests {
             [typeof(SearchDbContext)] = 1, [typeof(StorageDbContext)] = 3,
             [typeof(WorkflowDbContext)] = 17, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
             [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 22,
-            [typeof(ProjectsDbContext)] = 9, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
-            [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 15,
+            [typeof(ProjectsDbContext)] = 7, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
+            [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 16,
             [typeof(WorkspaceConnectorCommandDbContext)] = 2
         };
         var observed = probe.Commands.Select(command => (command.ContextType, command.EntityCount)).Distinct()

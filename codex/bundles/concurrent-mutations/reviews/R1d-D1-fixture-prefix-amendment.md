@@ -1,0 +1,13 @@
+# D1 fixture prefix cleanup amendment
+
+Parent approved a test-only two-literal correction after the source resource audit found that `TestFileSystem.CreateTemporaryRoot(prefix)` adds an inner GUID but deletes only that inner root. Supplying an already unique outer prefix therefore left one empty directory per fixture.
+
+`AgentToolAdmissionJournalFixture.CreateAsync` now supplies `tool-admission`; `RestoreRetainedAsync` supplies `retained-tool-admission`. Each actual environment remains isolated at `<temp>/<stable-prefix>/<unique-GUID>`, with the same inner-root disposal and all existing profile/workspace semantics. The optional `ownedParentRoot` branch is unchanged. No old residual is deleted, and the two stable parent directories are shared containers that must not be recursively deleted as one run's property.
+
+The exact old3280D4F2 source image was copied before editing under the separately owned ignored predecessor directory. Source comparison verifies exactly the two string-literal substitutions, with no other text/line-ending changes. Main remains at the predecessor pending parent integration. A repository test-source search found no assertion depending on either old GUID-bearing outer prefix.
+
+The original D1 inventory695F remains immutable and all12 inputs still match; this additional shared test-fixture overlay is separate. Its six new Facts and the seven-lane247 selection are unchanged. No new test mirrors this low-impact helper-path correction. Parent must overlay this fixture only after current C3 closure, retain the main predecessor guard, run the ordinary Release/static/discovery/execution procedure, and verify actual new inner directories disappear. The original runner V2 and its resource note remain historical evidence; a separate guarded selection successor pins the new helper.
+
+The small C4 probe's frozen source inputs remain unchanged. Its read-only AgentToolAdmissionJournalFixture dependency must use this successor explicitly after the D1 transfer; the original9DB83 inventory remains historical. C4 still requires D1 six passing and separate parent authorization/execution. No C4 production activation, source/build/test execution, database work or main source edit is claimed.
+
+The separate22-row performance harness uses its `ownedParentRoot` branch, whose behavior is unchanged. Any future performance source freeze must nevertheless record the helper's actual hash; do not claim old complete-source manifest equality after this edit.

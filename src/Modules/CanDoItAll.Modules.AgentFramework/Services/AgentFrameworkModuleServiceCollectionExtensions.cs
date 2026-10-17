@@ -1,3 +1,6 @@
+using CanDoItAll.Infrastructure.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -289,6 +292,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             WorkflowsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
+        services.AddScoped<IAgentHistoricalReceiptReviewService>(provider => {
+            var state = provider.GetRequiredService<IDatabaseRuntimeState>();
+            AgentHistoricalReceiptReviewService.RequireInitialized(state);
+            var canonical = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new AgentHistoricalReceiptReviewService(canonical.Profile, state,
+                provider.GetRequiredService<IOptions<StorageOptions>>(), provider.GetRequiredService<IHostEnvironment>(),
+                provider.GetServices<IAgentHistoricalReceiptSourceAuthorityProvider>(),
+                provider.GetRequiredService<Func<AgentHistoricalCatalogBasis, AgentHistoricalReceiptReadParticipants>>());
+        });
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
         services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();

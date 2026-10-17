@@ -13,6 +13,9 @@ public interface IWorkspacePathResolver
 {
     string ResolveWorkspaceRoot();
 
+    string ResolveWorkspaceRootForRead()
+        => throw new NotSupportedException("This workspace resolver does not support read-only path observation.");
+
     string ResolveManagedFilesRoot();
 
     string ResolveExportsRoot();
@@ -63,16 +66,19 @@ public sealed class WorkspacePathResolver(
 {
     private readonly StorageOptions _options = options.Value;
 
-    public string ResolveWorkspaceRoot()
-    {
+    public string ResolveWorkspaceRoot() {
+        var root = ResolveWorkspaceRootForRead();
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    public string ResolveWorkspaceRootForRead() {
         var activeProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
         var configuredRoot = string.IsNullOrWhiteSpace(activeProfile.Profile.Storage.WorkspaceRoot)
             ? ResolveConfiguredWorkspaceRoot()
             : activeProfile.Profile.Storage.WorkspaceRoot;
         PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(configuredRoot, "workspace root");
-        var root = Path.GetFullPath(configuredRoot);
-        Directory.CreateDirectory(root);
-        return root;
+        return Path.GetFullPath(configuredRoot);
     }
 
     public string ResolveManagedFilesRoot() => EnsureDirectory(_options.ManagedFilesFolder);

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuilt",
+  "owner": "/root/agent_process_architecture",
+  "expectedNewIntegrationFacts": 2,
+  "existingPGFactsUnchanged": 4,
+  "historicalPGInventorySha256": "7E8BD5632A7516EC9B96B105EA9F8B0435F09364F1F9D75A37FCFF926F8E5721",
+  "predecessorBackup": ".artifacts/concurrent-mutations/historical-http-source/HistoricalBasisFixture.31545F66.cs.txt",
+  "buildsTestsDatabaseOrHostsRun": false,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.HistoricalHttp.cs",
+      "sha256": "01D97000A3647388910252CFBACC15A58C362502E18456BF4DD894B6DCDEB28D",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.HistoricalBasisFixture.cs",
+      "sha256": "690773C8B2C0F4BB92B01957B65EA2561DA79E94871ECA1DE709151218F7AA0D",
+      "mainBaseSha256": null,
+      "predecessorSha256": "31545F666A3A4AA69C7EDE5B105CA02C891C1BA5DD0FADCE8DEB426963770E3A"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-http-source.md",
+      "sha256": "D64F3041E8C6A4FE371B1B2A59CA9F63332D547FA3EE1D4049E8DCD0045B8422",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-historical-http-restart-proof.md",
+      "sha256": "17E8323F740DDF5050C7EF54BC8DCC43AE4E83185E31ABC01C72C5FBEB7A9B70",
+      "mainBaseSha256": null,
+      "predecessorSha256": "17F9B8CC1D22190BA1E13C7E9BF220F3AF6F3C4368C201DE1957F5C6349FC6F2"
+    }
+  ]
+}

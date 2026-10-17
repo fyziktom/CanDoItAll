@@ -233,7 +233,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? throw new InvalidOperationException("Chat-backed execution runs must return a chat session id."),
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed execution runs must produce an assistant message."),
-            Metric: result.Metric)
+            Metric: result.Metric ?? throw new InvalidOperationException("Provider-backed chat requires its actual run metric."))
         {
             ExecutionRunId = result.ExecutionRunId,
             State = result.State,
@@ -309,12 +309,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         return ToAgentChatRunResult(result, chatSessionId);
     }
 
-    private static AgentChatRunResult ToAgentChatRunResult(ExecutionRunResult result, Guid chatSessionId)
-    {
+    internal static AgentChatRunResult ToAgentChatRunResult(ExecutionRunResult result, Guid chatSessionId) {
+        if (result.EffectContinuation is { } continuation) {
+            if (continuation.ChatSessionId != chatSessionId) {
+                throw new InvalidOperationException("Receipt continuation cannot change the original chat.");
+            }
+            return AgentChatRunResult.ForEffectContinuation(continuation);
+        }
         return new AgentChatRunResult(
             ChatSessionId: result.ChatSessionId ?? chatSessionId,
             AssistantMessage: result.AssistantMessage ?? throw new InvalidOperationException("Chat-backed approval continuations must produce an assistant message."),
-            Metric: result.Metric)
+            Metric: result.Metric ?? throw new InvalidOperationException("Provider-backed chat requires its actual run metric."))
         {
             ExecutionRunId = result.ExecutionRunId,
             State = result.State,

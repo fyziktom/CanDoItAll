@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,13 @@ public sealed class DatasetActivationCommandProcessTests {
     public async Task Offline_command_processes_bootstrap_resume_and_reactivate_only_the_owned_profile_without_starting_the_web_host() {
         await using var fixture = await Fixture.CreateAsync();
         Assert.Null(await fixture.ReadFileAsync());
+        var invalidOptions = await fixture.RunAsync("bootstrap", succeeds: false, taskPlanAdmissionWindow: TimeSpan.Zero);
+        Assert.Contains("Microsoft.Extensions.Options.OptionsValidationException", invalidOptions, StringComparison.Ordinal);
+        Assert.Null(await fixture.ReadFileAsync());
+        await using (var untouched = fixture.Projects()) {
+            Assert.False(await untouched.Database.SqlQueryRaw<bool>(
+                "SELECT to_regclass('\"__EFMigrationsHistory\"') IS NOT NULL AS \"Value\"").SingleAsync());
+        }
         await fixture.RunAsync("bootstrap");
         var originalFile = (await fixture.ReadFileAsync())!;
         var original = await fixture.ReadSqlAsync();
@@ -27,10 +35,7 @@ public sealed class DatasetActivationCommandProcessTests {
         Assert.Equal(originalFile.Plan.Binding.Namespace.Value, original.Namespace);
         Assert.Equal(originalFile.Plan.Binding.MaintenanceId, original.Maintenance);
         Assert.Equal(DatasetLifecycleState.Active, original.State);
-        var firstEpoch = Assert.Single(original.Epochs);
-        Assert.Equal(original.Namespace, firstEpoch.Namespace);
-        Assert.Equal(1, firstEpoch.Epoch);
-        Assert.Equal(ProjectOperationEpochState.Open, firstEpoch.State);
+        AssertCurrentPools(original);
 
         await fixture.RunAsync("resume");
         Assert.Equal(originalFile, await fixture.ReadFileAsync());
@@ -43,14 +48,17 @@ public sealed class DatasetActivationCommandProcessTests {
         Assert.Equal(maintenance, activated.Maintenance);
         Assert.Equal(activated.Namespace, activatedFile.Plan.Binding.Namespace.Value);
         Assert.Equal(originalFile.Plan.Binding, activatedFile.Plan.ExpectedPreviousSqlBinding);
-        var closed = Assert.Single(activated.Epochs, epoch => epoch.Namespace == original.Namespace);
-        Assert.Equal(ProjectOperationEpochState.Closed, closed.State);
-        Assert.NotNull(closed.ClosedAt);
-        Assert.Equal(firstEpoch.OpenedAt, closed.OpenedAt);
-        Assert.Equal(firstEpoch.AdmissionClosesAt, closed.AdmissionClosesAt);
-        var current = Assert.Single(activated.Epochs, epoch => epoch.Namespace == activated.Namespace);
-        Assert.Equal(1, current.Epoch);
-        Assert.Equal(ProjectOperationEpochState.Open, current.State);
+        AssertCurrentPools(activated);
+        Assert.Equal(4, activated.Epochs.Length);
+        Assert.Equal(4, activated.OwnerStates.Length);
+        foreach (var firstEpoch in original.Epochs) {
+            var closed = Assert.Single(activated.Epochs, epoch => epoch.Namespace == original.Namespace && epoch.Pool == firstEpoch.Pool);
+            Assert.Equal(FiniteOperationEpochState.Closed, closed.State);
+            Assert.NotNull(closed.ClosedAt);
+            Assert.Equal(firstEpoch with { State = FiniteOperationEpochState.Closed, ClosedAt = closed.ClosedAt }, closed);
+            Assert.Equal(Assert.Single(original.OwnerStates, state => state.Pool == firstEpoch.Pool),
+                Assert.Single(activated.OwnerStates, state => state.Namespace == original.Namespace && state.Pool == firstEpoch.Pool));
+        }
         await fixture.RunAsync("resume");
         AssertSqlEqual(activated, await fixture.ReadSqlAsync());
         await fixture.RunAsync("reactivate", succeeds: false,
@@ -67,7 +75,7 @@ public sealed class DatasetActivationCommandProcessTests {
             await schema.Database.ExecuteSqlRawAsync("""
                 CREATE FUNCTION activation_cli_reject_epoch() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN RAISE EXCEPTION 'Synthetic CLI epoch initialization interruption'; END $$;
-                CREATE TRIGGER activation_cli_reject_epoch BEFORE INSERT ON "Projects_OperationEpochs"
+                CREATE TRIGGER activation_cli_reject_epoch BEFORE INSERT ON "Infrastructure_FiniteOperationEpochs"
                 FOR EACH ROW EXECUTE FUNCTION activation_cli_reject_epoch();
                 """);
         }
@@ -77,9 +85,9 @@ public sealed class DatasetActivationCommandProcessTests {
         var prepared = Assert.IsType<DatasetActivationFileRecord>(preparedFile);
         Assert.Equal(DatasetActivationFileState.Prepared, prepared.State);
         await using (var owner = fixture.Projects()) {
-            Assert.Empty(await owner.Set<ProjectOperationStateRecord>().ToArrayAsync());
-            Assert.Empty(await owner.Set<ProjectOperationEpochRecord>().ToArrayAsync());
-            await owner.Database.ExecuteSqlRawAsync("DROP TRIGGER activation_cli_reject_epoch ON \"Projects_OperationEpochs\"");
+            Assert.Empty(await owner.Set<FiniteOperationStateRecord>().ToArrayAsync());
+            Assert.Empty(await owner.Set<FiniteOperationEpochRecord>().ToArrayAsync());
+            await owner.Database.ExecuteSqlRawAsync("DROP TRIGGER activation_cli_reject_epoch ON \"Infrastructure_FiniteOperationEpochs\"");
         }
         await fixture.RunAsync("resume");
         var completed = (await fixture.ReadFileAsync())!;
@@ -88,8 +96,7 @@ public sealed class DatasetActivationCommandProcessTests {
         var sql = await fixture.ReadSqlAsync();
         Assert.Equal(prepared.Plan.Binding.Namespace.Value, sql.Namespace);
         Assert.Equal(prepared.Plan.Binding.MaintenanceId, sql.Maintenance);
-        Assert.Single(sql.Epochs);
-        Assert.Equal(1, Assert.Single(sql.OwnerStates).CurrentEpoch);
+        AssertCurrentPools(sql);
         await fixture.RunAsync("resume");
         AssertSqlEqual(sql, await fixture.ReadSqlAsync());
     }
@@ -102,9 +109,30 @@ public sealed class DatasetActivationCommandProcessTests {
         Assert.Equal(expected.OwnerStates, actual.OwnerStates);
     }
 
-    private sealed record EpochObservation(Guid Namespace, long Epoch, ProjectOperationEpochState State, DateTimeOffset OpenedAt,
-        DateTimeOffset AdmissionClosesAt, DateTimeOffset? ClosedAt);
-    private sealed record OwnerState(Guid Namespace, long CurrentEpoch, long RetiredThrough);
+    private static void AssertCurrentPools(SqlSnapshot snapshot) {
+        Guid[] expected = [ProjectFiniteOperationPool.Pool.Value, WorkbenchTaskPlanFiniteOperations.Pool.Value];
+        var currentEpochs = snapshot.Epochs.Where(epoch => epoch.Namespace == snapshot.Namespace).ToArray();
+        var currentStates = snapshot.OwnerStates.Where(state => state.Namespace == snapshot.Namespace).ToArray();
+        Assert.Equal(expected.Order(), currentEpochs.Select(epoch => epoch.Pool).Order());
+        Assert.Equal(expected.Order(), currentStates.Select(state => state.Pool).Order());
+        Assert.All(currentEpochs, epoch => {
+            Assert.Equal(1, epoch.Epoch);
+            Assert.Equal(FiniteOperationEpochState.Open, epoch.State);
+            Assert.Null(epoch.ClosedAt);
+            Assert.Equal(TimeSpan.FromDays(1), epoch.AdmissionClosesAt - epoch.OpenedAt);
+            Assert.Equal(30000, epoch.MutationDeadlineMilliseconds);
+            Assert.Equal(604800, epoch.ReplayRetentionSeconds);
+        });
+        Assert.All(currentStates, state => {
+            Assert.Equal(1, state.ProtocolVersion);
+            Assert.Equal(1, state.CurrentEpoch);
+            Assert.Equal(0, state.RetiredThrough);
+        });
+    }
+
+    private sealed record EpochObservation(Guid Namespace, Guid Pool, long Epoch, FiniteOperationEpochState State, DateTimeOffset OpenedAt,
+        DateTimeOffset AdmissionClosesAt, DateTimeOffset? ClosedAt, int MutationDeadlineMilliseconds, long ReplayRetentionSeconds);
+    private sealed record OwnerState(Guid Namespace, Guid Pool, int ProtocolVersion, long CurrentEpoch, long RetiredThrough);
     private sealed record SqlSnapshot(Guid Namespace, Guid Maintenance, DatasetLifecycleState State, EpochObservation[] Epochs, OwnerState[] OwnerStates);
 
     private sealed class Fixture(CanDoItAllTestEnvironment environment, TestDatabaseProfile profile,
@@ -144,8 +172,8 @@ public sealed class DatasetActivationCommandProcessTests {
             }
         }
 
-        internal ProjectsDbContext Projects() {
-            var builder = new DbContextOptionsBuilder<ProjectsDbContext>();
+        internal AppDbContext Projects() {
+            var builder = new DbContextOptionsBuilder<AppDbContext>();
             AppDbContextOptionsConfigurator.Configure(builder, resolved);
             return new(builder.Options);
         }
@@ -161,21 +189,24 @@ public sealed class DatasetActivationCommandProcessTests {
             await using var lifecycle = new DatasetLifecycleDbContext(builder.Options);
             var active = await lifecycle.Set<DatasetLifecycleRecord>().AsNoTracking().SingleAsync();
             await using var owner = Projects();
-            var epochs = await owner.Set<ProjectOperationEpochRecord>().AsNoTracking().OrderBy(row => row.NamespaceId).ThenBy(row => row.Epoch)
-                .Select(row => new EpochObservation(row.NamespaceId, row.Epoch, row.State, row.OpenedAtUtc, row.AdmissionClosesAtUtc, row.ClosedAtUtc)).ToArrayAsync();
-            var states = await owner.Set<ProjectOperationStateRecord>().AsNoTracking().OrderBy(row => row.NamespaceId)
-                .Select(row => new OwnerState(row.NamespaceId, row.CurrentEpoch, row.RetiredThroughEpoch)).ToArrayAsync();
+            var epochs = await owner.Set<FiniteOperationEpochRecord>().AsNoTracking().OrderBy(row => row.NamespaceId)
+                .ThenBy(row => row.PoolId).ThenBy(row => row.Epoch)
+                .Select(row => new EpochObservation(row.NamespaceId, row.PoolId, row.Epoch, row.State, row.OpenedAtUtc,
+                    row.AdmissionClosesAtUtc, row.ClosedAtUtc, row.MutationDeadlineMilliseconds, row.ReplayRetentionSeconds)).ToArrayAsync();
+            var states = await owner.Set<FiniteOperationStateRecord>().AsNoTracking().OrderBy(row => row.NamespaceId).ThenBy(row => row.PoolId)
+                .Select(row => new OwnerState(row.NamespaceId, row.PoolId, row.RetentionProtocolVersion, row.CurrentEpoch, row.RetiredThroughEpoch)).ToArrayAsync();
             return new(active.NamespaceId, active.MaintenanceId, active.State, epochs, states);
         }
 
-        internal async Task<string> RunAsync(string action, bool succeeds = true, string[]? extra = null) {
+        internal async Task<string> RunAsync(string action, bool succeeds = true, string[]? extra = null,
+            TimeSpan? taskPlanAdmissionWindow = null) {
             var assembly = IntegrationTestPaths.ResolveProjectOutputAssembly(Path.Combine("App", "CanDoItAll.Web"), "CanDoItAll.Web.dll");
             var endpoint = $"http://127.0.0.1:{((IPEndPoint)blockedPort.LocalEndpoint).Port}";
             var start = new ProcessStartInfo("dotnet") {
                 WorkingDirectory = environment.RootPath, UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true
             };
-            foreach (var key in start.Environment.Keys.Where(key => new[] { "Database__", "ControlPlane__", "Storage__", "SecretVault__", "DataProtection__", "Kestrel__" }
+            foreach (var key in start.Environment.Keys.Where(key => new[] { "Database__", "ControlPlane__", "Storage__", "SecretVault__", "DataProtection__", "Kestrel__", "Projects__DefinitionOperations__", "Workbench__TaskPlanOperations__" }
                     .Any(prefix => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))).ToArray()) {
                 start.Environment.Remove(key);
             }
@@ -188,6 +219,9 @@ public sealed class DatasetActivationCommandProcessTests {
             start.Environment["ASPNETCORE_URLS"] = endpoint;
             start.Environment["ASPNETCORE_HTTP_PORTS"] = string.Empty;
             start.Environment["ASPNETCORE_HTTPS_PORTS"] = string.Empty;
+            if (taskPlanAdmissionWindow is { } admissionWindow) {
+                start.Environment["Workbench__TaskPlanOperations__AdmissionWindow"] = admissionWindow.ToString("c", System.Globalization.CultureInfo.InvariantCulture);
+            }
             start.ArgumentList.Add(assembly);
             start.ArgumentList.Add("dataset-activation");
             start.ArgumentList.Add(action);

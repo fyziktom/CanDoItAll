@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Integration;
 
-public sealed class DatasetActivationCoordinatorTests {
+public sealed partial class DatasetActivationCoordinatorTests {
     [Fact]
     public async Task Bootstrap_restart_and_explicit_alias_preserve_SQL_identity_and_existing_epoch_deadline() {
         await using var fixture = await Fixture.CreateAsync();
@@ -24,18 +24,19 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(initial, await alias.AttachAsync(fixture.Profile));
         Assert.Equal(initial, (await fixture.Lifecycle.ReadAsync())!.Binding);
         await using (var context = fixture.Projects()) {
-            Assert.Single(await context.Set<ProjectOperationStateRecord>().ToArrayAsync());
-            Assert.Single(await context.Set<ProjectOperationEpochRecord>().ToArrayAsync());
+            Assert.Single(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
+            Assert.Single(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
             await context.Database.ExecuteSqlRawAsync("""
-                UPDATE "Projects_OperationEpochs" SET "OpenedAtUtc" = clock_timestamp() - interval '2 hours',
+                UPDATE "Infrastructure_FiniteOperationEpochs" SET "OpenedAtUtc" = clock_timestamp() - interval '2 hours',
                     "AdmissionClosesAtUtc" = clock_timestamp() - interval '1 hour'
                 """);
         }
 
         Assert.Equal(initial, await alias.EnsureReadyAsync(fixture.Profile));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Epochs.GetWriteContextAsync(initial, ProjectMutationCallerScope.LocalWorkspace));
-        Assert.True(await fixture.Epochs.RotateExpiredAsync(initial));
-        Assert.Equal(2, (await fixture.Epochs.GetWriteContextAsync(initial, ProjectMutationCallerScope.LocalWorkspace)).Epoch.Value);
+        var expired = await fixture.Epochs.ReadCurrentAsync(initial, fixture.Pool, CancellationToken.None);
+        Assert.True(expired.AdmissionClosesAtUtc <= expired.ObservedAtUtc);
+        Assert.Equal(FiniteOperationRotationResult.Rotated, await fixture.Epochs.RotateExpiredAsync(initial, fixture.Pool, CancellationToken.None));
+        Assert.Equal(2, (await fixture.Epochs.ReadCurrentAsync(initial, fixture.Pool, CancellationToken.None)).Epoch);
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public sealed class DatasetActivationCoordinatorTests {
             await context.Database.ExecuteSqlRawAsync("""
                 CREATE FUNCTION activation_test_reject_epoch() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN RAISE EXCEPTION 'Synthetic epoch initialization interruption'; END $$;
-                CREATE TRIGGER activation_test_reject_epoch BEFORE INSERT ON "Projects_OperationEpochs"
+                CREATE TRIGGER activation_test_reject_epoch BEFORE INSERT ON "Infrastructure_FiniteOperationEpochs"
                 FOR EACH ROW EXECUTE FUNCTION activation_test_reject_epoch();
                 """);
         }
@@ -56,9 +57,9 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(DatasetActivationFileState.Prepared, prepared.State);
         Assert.Null(await fixture.Lifecycle.ReadAsync());
         await using (var context = fixture.Projects()) {
-            Assert.Empty(await context.Set<ProjectOperationEpochRecord>().ToArrayAsync());
-            Assert.Empty(await context.Set<ProjectOperationStateRecord>().ToArrayAsync());
-            await context.Database.ExecuteSqlRawAsync("DROP TRIGGER activation_test_reject_epoch ON \"Projects_OperationEpochs\"");
+            Assert.Empty(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
+            Assert.Empty(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
+            await context.Database.ExecuteSqlRawAsync("DROP TRIGGER activation_test_reject_epoch ON \"Infrastructure_FiniteOperationEpochs\"");
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Coordinator.EnsureReadyAsync(fixture.Profile));
 
@@ -70,8 +71,8 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(DatasetActivationFileState.Active, active.State);
         Assert.Equal(resumed, (await fixture.Lifecycle.ReadAsync())!.Binding);
         await using var final = fixture.Projects();
-        Assert.Single(await final.Set<ProjectOperationStateRecord>().ToArrayAsync());
-        Assert.Single(await final.Set<ProjectOperationEpochRecord>().ToArrayAsync());
+        Assert.Single(await final.Set<FiniteOperationStateRecord>().ToArrayAsync());
+        Assert.Single(await final.Set<FiniteOperationEpochRecord>().ToArrayAsync());
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(DatasetActivationFileState.Prepared, prepared.State);
         Assert.Equal(prepared.Plan.Binding, (await fixture.Lifecycle.ReadAsync())!.Binding);
         await using (var read = fixture.Projects()) {
-            Assert.Single(await read.Set<ProjectOperationEpochRecord>().ToArrayAsync());
+            Assert.Single(await read.Set<FiniteOperationEpochRecord>().ToArrayAsync());
         }
         Assert.Equal(prepared.Plan.Binding, await fixture.Coordinator.ResumeAsync(fixture.Profile));
         Assert.Equal(prepared.Plan, (await fixture.ReadFileAsync()).Plan);
@@ -157,7 +158,7 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(winner, recovered.Plan.Binding);
         Assert.Equal(winner, await second.ResumeAsync(fixture.Profile));
         await using var read = fixture.Projects();
-        Assert.Single(await read.Set<ProjectOperationStateRecord>().ToArrayAsync());
+        Assert.Single(await read.Set<FiniteOperationStateRecord>().ToArrayAsync());
     }
 
     [Fact]
@@ -174,10 +175,10 @@ public sealed class DatasetActivationCoordinatorTests {
         Assert.Equal(current, (await fixture.Lifecycle.ReadAsync())!.Binding);
         Assert.Equal(original, (await fixture.ReadFileAsync()).Plan.ExpectedPreviousSqlBinding);
         await using var read = fixture.Projects();
-        Assert.Equal(ProjectOperationEpochState.Closed,
-            (await read.Set<ProjectOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == original.Namespace.Value)).State);
-        Assert.Equal(ProjectOperationEpochState.Open,
-            (await read.Set<ProjectOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == current.Namespace.Value)).State);
+        Assert.Equal(FiniteOperationEpochState.Closed,
+            (await read.Set<FiniteOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == original.Namespace.Value)).State);
+        Assert.Equal(FiniteOperationEpochState.Open,
+            (await read.Set<FiniteOperationEpochRecord>().SingleAsync(epoch => epoch.NamespaceId == current.Namespace.Value)).State);
 
         var subsequent = new DatasetActivationPlan(Guid.NewGuid(), DatasetActivationKind.Reactivate,
             new(new(Guid.NewGuid()), Guid.NewGuid(), DatasetLifecycleRecord.CurrentSchemaVersion, DatasetGuardProtocol.SharedRows), current);
@@ -212,19 +213,22 @@ public sealed class DatasetActivationCoordinatorTests {
             Id = Guid.NewGuid(),
             ProviderKind = DatabaseProviderKind.PostgreSql
         }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
-        private DbContextOptions<ProjectsDbContext> ProjectOptions { get; } = new DbContextOptionsBuilder<ProjectsDbContext>()
+        private DbContextOptions<FiniteOperationDbContext> EpochOptions { get; } = new DbContextOptionsBuilder<FiniteOperationDbContext>()
             .UseNpgsql(lease.ConnectionString).Options;
         private DbContextOptions<AppDbContext> CanonicalOptions => lease.CreateAppDbContextOptions();
         public DatasetActivationCoordinator Coordinator => CoordinatorFor(Environment);
         public DatasetLifecycleStore Lifecycle => new(new DbContextOptionsBuilder<DatasetLifecycleDbContext>()
             .UseNpgsql(lease.ConnectionString).Options, CoordinatedDatabaseTransaction.ForProfile(Profile));
-        public ProjectOperationEpochService Epochs => new(ProjectOptions, CoordinatedDatabaseTransaction.ForProfile(Profile),
-            Options.Create(new ProjectDefinitionOperationOptions()));
-        public ProjectsDbContext Projects() => new(ProjectOptions);
+        public FiniteOperationPoolRegistration Pool { get; } = ProjectFiniteOperationPool.Create(new());
+        public FiniteOperationEpochStore Epochs => EpochsFor(CoordinatedDatabaseTransaction.ForProfile(Profile));
+
+        public FiniteOperationEpochStore EpochsFor(CoordinatedDatabaseTransaction transactions) => new(EpochOptions, transactions);
+        public AppDbContext Projects() => new(CanonicalOptions);
         public DatasetActivationService Files() => FilesFor(Environment);
 
-        public DatasetActivationCoordinator CoordinatorFor(CanDoItAllTestEnvironment host, DurableFileWriter? writer = null)
-            => new(FilesFor(host, writer), Options.Create(new ProjectDefinitionOperationOptions()));
+        public DatasetActivationCoordinator CoordinatorFor(CanDoItAllTestEnvironment host, DurableFileWriter? writer = null,
+            IReadOnlyCollection<FiniteOperationPoolRegistration>? registrations = null)
+            => new(FilesFor(host, writer), registrations ?? [Pool]);
 
         public async Task<DatasetActivationFileRecord> ReadFileAsync(CanDoItAllTestEnvironment? host = null) {
             using var file = FilesFor(host ?? Environment).Acquire(Profile.Profile.Id);

@@ -370,15 +370,74 @@ public static class AgentTeamIconCatalog
 /// </param>
 public sealed record AgentExportResult(string PackagePath, string Summary);
 
-public sealed record AgentChatRunResult(
-    Guid ChatSessionId,
-    ChatMessageRecord AssistantMessage,
-    AgentRunMetric Metric)
-{
-    public Guid ExecutionRunId { get; init; }
+public sealed record AgentChatRunResult {
+    private Guid executionRunId;
+    private ExecutionState state;
+    private AgentChatExecutionCompleted? contextCompletionNotification;
 
-    public ExecutionState State { get; init; }
+    public AgentChatRunResult(Guid ChatSessionId, ChatMessageRecord AssistantMessage, AgentRunMetric Metric)
+        : this(ChatSessionId, AssistantMessage, Metric, null) {
+    }
+
+    [JsonConstructor]
+    public AgentChatRunResult(Guid ChatSessionId, ChatMessageRecord? AssistantMessage, AgentRunMetric? Metric,
+        AgentEffectContinuation? EffectContinuation) {
+        if (EffectContinuation is null) {
+            ArgumentNullException.ThrowIfNull(AssistantMessage);
+            ArgumentNullException.ThrowIfNull(Metric);
+        } else if (EffectContinuation.Persistence != AgentEffectCheckpointPersistence.Confirmed || EffectContinuation.Stop == AgentEffectReconciliationStop.SnapshotRead ||
+            EffectContinuation.ChatSessionId != ChatSessionId || Metric is not null || AssistantMessage is not null) {
+            throw new ArgumentException("Effect continuation requires its original chat and no provider output.", nameof(EffectContinuation));
+        }
+        this.ChatSessionId = ChatSessionId;
+        this.AssistantMessage = AssistantMessage;
+        this.Metric = Metric;
+        this.EffectContinuation = EffectContinuation;
+        executionRunId = EffectContinuation?.ExecutionRunId ?? default;
+        state = EffectContinuation is null ? default : ExecutionState.WaitingOnTool;
+    }
+
+    public Guid ChatSessionId { get; }
+    public ChatMessageRecord? AssistantMessage { get; }
+    public AgentRunMetric? Metric { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentEffectContinuation? EffectContinuation { get; }
+
+    public Guid ExecutionRunId {
+        get => executionRunId;
+        init {
+            if (EffectContinuation is not null && value != EffectContinuation.ExecutionRunId) {
+                throw new ArgumentException("An effect continuation retains its original execution identity.", nameof(value));
+            }
+            executionRunId = value;
+        }
+    }
+
+    public ExecutionState State {
+        get => state;
+        init {
+            if (EffectContinuation is not null && value != ExecutionState.WaitingOnTool) {
+                throw new ArgumentException("An effect continuation cannot be represented as a completed provider run.", nameof(value));
+            }
+            state = value;
+        }
+    }
 
     [JsonIgnore]
-    public AgentChatExecutionCompleted? ContextCompletionNotification { get; init; }
+    public AgentChatExecutionCompleted? ContextCompletionNotification {
+        get => contextCompletionNotification;
+        init {
+            if (EffectContinuation is not null && value is not null) {
+                throw new ArgumentException("Receipt reconciliation cannot publish task completion.", nameof(value));
+            }
+            contextCompletionNotification = value;
+        }
+    }
+
+    public static AgentChatRunResult ForEffectContinuation(AgentEffectContinuation continuation) {
+        ArgumentNullException.ThrowIfNull(continuation);
+        return new(continuation.ChatSessionId ?? throw new ArgumentException("The continuation has no original chat.", nameof(continuation)),
+            null, null, continuation);
+    }
 }

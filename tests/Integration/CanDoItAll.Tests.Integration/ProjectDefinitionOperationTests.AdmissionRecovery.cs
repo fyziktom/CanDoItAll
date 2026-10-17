@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.Persistence;
 using System.Data.Common;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
@@ -73,8 +74,9 @@ public sealed partial class ProjectDefinitionOperationTests {
                 await services.GetRequiredService<ProjectDefinitionWriter>().CreateAsync(request, invocation, deadline.Token));
             await using var database = await DatabaseAsync(services);
             Assert.Equal(1, await database.Database.ExecuteSqlInterpolatedAsync($"""
-                UPDATE "Projects_OperationEpochs" SET "State" = {(int)ProjectOperationEpochState.Closed}, "ClosedAtUtc" = clock_timestamp()
-                WHERE "NamespaceId" = {request.Operation.Namespace.Value} AND "Epoch" = {request.Operation.Epoch.Value}
+                UPDATE "Infrastructure_FiniteOperationEpochs" SET "State" = {(int)FiniteOperationEpochState.Closed}, "ClosedAtUtc" = clock_timestamp()
+                WHERE "NamespaceId" = {request.Operation.Namespace.Value} AND "PoolId" = {ProjectFiniteOperationPool.Pool.Value}
+                    AND "Epoch" = {request.Operation.Epoch.Value}
                 """, deadline.Token));
             access.Allowed = recovery != AdmissionRecovery.ReadRevoked;
         } finally {
@@ -113,7 +115,7 @@ public sealed partial class ProjectDefinitionOperationTests {
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
-            if (FailuresRemaining > 0 && command.CommandText.Contains("AS \"ActiveNamespaceId\"", StringComparison.Ordinal)) {
+            if (FailuresRemaining > 0 && IsReceiptObservation(command)) {
                 FailuresRemaining--;
                 FailuresObserved++;
                 throw new TimeoutException("Owned initial or recovery receipt observation outage for an accepted operation.");
@@ -133,7 +135,7 @@ public sealed partial class ProjectDefinitionOperationTests {
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
-            if (failRecovery && Release.Task.IsCompleted && command.CommandText.Contains("AS \"ActiveNamespaceId\"", StringComparison.Ordinal)) {
+            if (failRecovery && Release.Task.IsCompleted && IsReceiptObservation(command)) {
                 RecoveryBlocked = true;
                 throw new TimeoutException("Owned receipt observation outage after epoch admission refusal.");
             }
@@ -142,7 +144,7 @@ public sealed partial class ProjectDefinitionOperationTests {
 
         public override async ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData,
             DbDataReader result, CancellationToken cancellationToken = default) {
-            if (command.CommandText.Contains("AS \"ActiveNamespaceId\"", StringComparison.Ordinal)) {
+            if (IsReceiptObservation(command)) {
                 if (Armed) {
                     Armed = false;
                     delayedContext = eventData.Context!.ContextId.InstanceId;
@@ -154,11 +156,15 @@ public sealed partial class ProjectDefinitionOperationTests {
                 }
             }
             if (Release.Task.IsCompleted && command.Transaction is not null &&
-                command.CommandText.Contains("FROM \"Projects_OperationEpochs\"", StringComparison.Ordinal) &&
+                command.CommandText.Contains("JOIN \"Infrastructure_FiniteOperationEpochs\" AS e", StringComparison.Ordinal) &&
+                !IsReceiptObservation(command) &&
                 eventData.Context!.ContextId.InstanceId != delayedContext) {
                 ClosedEpochWasRead = true;
             }
             return result;
         }
     }
+
+    private static bool IsReceiptObservation(DbCommand command)
+        => command.CommandText.Contains("LEFT JOIN \"Projects_DefinitionReceipts\" AS r", StringComparison.Ordinal);
 }

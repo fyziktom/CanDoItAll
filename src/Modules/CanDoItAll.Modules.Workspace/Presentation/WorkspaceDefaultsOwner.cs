@@ -7,18 +7,23 @@ public sealed class WorkspaceDefaultsOwner(WorkspaceService workspace, IWorkspac
     private readonly Guid profile = canonical.Profile.Profile.Id;
     private readonly long generation = canonical.Generation;
     public bool IsCurrent => canonical.Profile.Profile.Id == profile && canonical.Generation == generation;
-    public Task<WorkspaceSettingsModel> ReadAsync(CancellationToken cancellationToken) => workspace.GetSettingsAsync(cancellationToken);
+    public Task<WorkspaceSettingsSnapshot> ReadAsync(CancellationToken cancellationToken) => workspace.ReadSettingsSnapshotAsync(cancellationToken);
+    public Task<WorkspaceSettingsSnapshotV2> ReadV2Async(CancellationToken cancellationToken) => workspace.ReadSettingsSnapshotV2Async(cancellationToken);
     public Task<IReadOnlyList<WorkspaceProviderOption>> ProvidersAsync(CancellationToken cancellationToken) => providers.ListAsync(cancellationToken);
 
-    public async Task<SettingsWriteResult<WorkspaceSettingsModel>> SaveAsync(WorkspaceSettingsModel command, CancellationToken cancellationToken) {
-        var captured = command.Copy();
+    public Task<WorkspaceSettingsSaveOutcome> SaveAsync(ReplaceWorkspaceSettingsCommand command, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(command);
         if (!IsCurrent) {
-            return new(SettingsWriteState.Refused, captured, SettingsDiagnostic.Retired);
+            return Task.FromResult<WorkspaceSettingsSaveOutcome>(new WorkspaceSettingsSaveOutcome.Rejected(WorkspaceSettingsRejectionReason.OwnerRetired));
         }
-        try {
-            return new(SettingsWriteState.Committed, await workspace.SaveSettingsAsync(captured, cancellationToken));
-        } catch (WorkspaceSettingsCommittedException committed) {
-            return new(SettingsWriteState.CommittedWarning, committed.Saved, committed.Diagnostic);
+        return workspace.SaveSettingsAsync(command, cancellationToken);
+    }
+
+    public Task<WorkspaceSettingsSaveOutcomeV2> SaveV2Async(ReplaceWorkspaceSettingsV2Command command, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(command);
+        if (!IsCurrent) {
+            return Task.FromResult<WorkspaceSettingsSaveOutcomeV2>(new WorkspaceSettingsSaveOutcomeV2.Rejected(WorkspaceSettingsRejectionReason.OwnerRetired));
         }
+        return workspace.SaveSettingsV2Async(command, cancellationToken);
     }
 }

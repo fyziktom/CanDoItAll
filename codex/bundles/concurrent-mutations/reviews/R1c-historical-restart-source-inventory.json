@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuilt",
+  "owner": "/root/agent_process_architecture",
+  "independentReviewer": "/root/ui_validation_architecture",
+  "expectedNewLiveProcessFacts": 2,
+  "traits": [
+    "Category=LiveProcess",
+    "Category=HostPlatform"
+  ],
+  "expectedStableRows": 0,
+  "helperAddsTestAssembly": false,
+  "expectedChildLaunches": {
+    "Interactive": 2,
+    "Process": 3
+  },
+  "requiresExternalOwnedTreeDeadlineSeconds": 600,
+  "historicalHttpInventorySha256": "AA6A956A88EB1D011C8DC514F2F217C25E1E7FB7558E93C7614C40252F42CF83",
+  "productionFilesChanged": 0,
+  "buildsTestsDatabaseOrHostsRun": false,
+  "mainTrackedFilesChanged": false,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartTests.cs",
+      "sha256": "903755EE8697A7BA7D1CCC0764BBF3C874BA679FD40D4D75A27166C4EE999182",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartFixture.cs",
+      "sha256": "131A7CF909FAAC22C13926F201FDFCAE17FDAD1CAD167769003AD7F04D3F4D1D",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "sha256": "9BE10D99122856FD86A5837EA2A6849E7592F92496A3579EC5525AEBE5AD841F",
+      "mainBaseSha256": "E91274D1FE8F39F31847AA684D1A9950B3C3BD13E87488EAF52526D2679B3809",
+      "predecessorSha256": "E91274D1FE8F39F31847AA684D1A9950B3C3BD13E87488EAF52526D2679B3809"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/CanDoItAll.HistoricalReceiptSeed.TestHost.csproj",
+      "sha256": "3710F632EF0CA30F27D070058DBC8FF4F17EF5036EAB2F431109EC0AB2E7264C",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/Program.cs",
+      "sha256": "0F2D4D0473E980C0AC7D0EF958E60AD54F2363EBBDD00E3DF1C6AE834C12CDCC",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/HistoricalReceiptSeedScenario.cs",
+      "sha256": "58B71046810752B029A3C0CAF92E88530A573CB23A915753C531A161AAF16979",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/HistoricalReceiptSeedProtocol.cs",
+      "sha256": "B8121B5FABBFF2BA7FFCEA5DDB376CA621F81E390BB0C49BF854A02D36A01E7F",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/README.md",
+      "sha256": "162354BEA52F09AA065CC6695E8E5A80E60DFF457DBC637044BF75800192CDC8",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-historical-http-restart-proof.md",
+      "sha256": "403D8337EEB5FE22FCCF7CA2ECAA763040ADEC817F4F6AEAC83652A24A28D9E8",
+      "mainBaseSha256": null,
+      "predecessorSha256": "17E8323F740DDF5050C7EF54BC8DCC43AE4E83185E31ABC01C72C5FBEB7A9B70"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-restart-source.md",
+      "sha256": "A8CEF0F5764330229A980074CFCB36A8BA042AF1CD26202B723B18106F894A8E",
+      "mainBaseSha256": null,
+      "predecessorSha256": null
+    }
+  ]
+}

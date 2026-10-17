@@ -375,6 +375,12 @@ admissions report unavailable/expired; an ordinary save never manufactures a suc
 or silently replaces its submitted epoch. Scheduling and batch-size values belong in
 the L3 implementation card, with a bounded catch-up path after downtime.
 
+The committed `702d0a93` foundation uses the following conservative scheduling rule.
+Its rotation-only retirement lag is being replaced by the bounded standalone metadata
+advance in the [retention amendment](../../../codex/bundles/concurrent-mutations/plan/P02b-retention-capacity-amendment.md).
+That candidate is source-reviewed but unbuilt; the changed state-before-epoch lock
+order and sustained capacity proof must pass before treating it as qualified behavior.
+
 Before requesting its exclusive state guard, maintenance checks database time without
 a shared guard and skips rotation while the current epoch is still open. Advance the
 eligible retired watermark only within expired-current-epoch rotation, before

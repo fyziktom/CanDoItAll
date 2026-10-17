@@ -10,6 +10,7 @@ using Microsoft.Extensions.AI;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class MafToolRunContext {
+    internal const string EffectOnlyUnavailableCode = "tool-admission.effect-only-unavailable";
     private static readonly AsyncLocal<MafToolRunContext?> Ambient = new();
     private readonly AgentToolAdmissionJournal journal;
     private readonly AgentToolPolicyCatalog toolPolicies;
@@ -46,9 +47,30 @@ internal sealed class MafToolRunContext {
     internal bool HasActiveProviderDispatch { get; private set; }
 
     internal static bool RequiresApprovalContinuationContract(AgentToolJournalRecord saved) {
+        RequireSupportedAdmission(saved.Support);
+        RequireProviderResults(saved);
         var latest = saved.Segments.LastOrDefault();
         return latest is not null && (latest.ApprovalCheckpoint is not null ||
-            MafToolProtocolCodec.Decode<RestartCheckpoint>(latest.RestartCheckpoint).IsApprovalContinuation);
+            MafToolProtocolCodec.Decode<RestartCheckpoint>(RequireProviderCheckpoint(latest)).IsApprovalContinuation);
+    }
+
+    internal static void RequireSupportedAdmission(AgentToolAdmissionSupport support) {
+        if (support is not (AgentToolAdmissionSupport.Recoverable or AgentToolAdmissionSupport.RequestScopedInput)) {
+            throw new AgentToolAdmissionException(EffectOnlyUnavailableCode,
+                "Effects-only execution requires the saved-effect continuation path, which is not available in this runtime.");
+        }
+    }
+
+    private static AgentToolProtocolEnvelope RequireProviderCheckpoint(AgentToolInvocationSegment segment)
+        => segment.CheckpointKind == AgentToolCheckpointKind.ProviderRestart && segment.RestartCheckpoint is { } checkpoint
+            ? checkpoint
+            : throw Denied("An effects-only invocation cannot be decoded as a provider restart checkpoint.");
+
+    private static void RequireProviderResults(AgentToolJournalRecord saved) {
+        if (saved.SchemaVersion == AgentToolJournalRecord.EffectJournalSchemaVersion &&
+            saved.Batches.Any(batch => batch.Proposals.Any(proposal => proposal.State == AgentToolProposalState.OwnerReceiptConfirmed))) {
+            throw Denied("An owner receipt confirms an effect and cannot be restored as a successful provider result.");
+        }
     }
 
     internal IDisposable Bind() {
@@ -64,6 +86,8 @@ internal sealed class MafToolRunContext {
         IMafRuntimeSessionPersistenceDriver persistence, bool isApprovalContinuation,
         Func<ExecutionState, string, string, Task> progress, CancellationToken cancellationToken) {
         var saved = await journal.ReadAsync(lease, cancellationToken);
+        RequireSupportedAdmission(saved.Support);
+        RequireProviderResults(saved);
         var latest = saved.Segments.LastOrDefault();
         Guid? continuesSegmentId = null;
         if (latest?.ApprovalCheckpoint is not null) {
@@ -99,7 +123,7 @@ internal sealed class MafToolRunContext {
         AgentToolInvocationSegment segment;
         if (latest is not null && latest.ApprovalCheckpoint is null) {
             segment = latest;
-            var checkpoint = MafToolProtocolCodec.Decode<RestartCheckpoint>(segment.RestartCheckpoint);
+            var checkpoint = MafToolProtocolCodec.Decode<RestartCheckpoint>(RequireProviderCheckpoint(segment));
             var restartChat = chat with { Compatibility = ChatSessionRuntimeCompatibilityRecord.Create(
                 chat.Compatibility?.RuntimeSessionKey, checkpoint.SerializedSessionStateJson,
                 checkpoint.PendingApprovals, autoApprovePendingToolCalls: false) };

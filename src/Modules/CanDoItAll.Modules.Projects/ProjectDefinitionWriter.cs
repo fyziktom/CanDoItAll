@@ -96,14 +96,13 @@ public sealed class ProjectDefinitionWriter(
             return AcceptedResult<TAcknowledgement>(attempt);
         } catch (ProjectDefinitionProtocolRejectedException exception) {
             return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, [exception.Error]);
-        } catch (ProjectOperationAdmissionException exception) {
+        } catch (FiniteOperationAdmissionException exception) {
             if (attempt is not null && await RecoverOutcomeAsync<TAcknowledgement>(attempt) is { } recovered) {
                 return recovered;
             }
             var code = exception.Failure switch {
-                ProjectOperationAdmissionFailure.DatasetChanged => ProjectErrorCodes.DefinitionDatasetChanged,
-                ProjectOperationAdmissionFailure.CallerChanged => ProjectErrorCodes.DefinitionCallerChanged,
-                ProjectOperationAdmissionFailure.UnknownEpoch => ProjectErrorCodes.DefinitionOperationUnknown,
+                FiniteOperationAdmissionFailure.UnknownFutureEpoch => ProjectErrorCodes.DefinitionOperationUnknown,
+                FiniteOperationAdmissionFailure.RetiredEpoch => ProjectErrorCodes.DefinitionOperationExpired,
                 _ => ProjectErrorCodes.DefinitionOperationClosed
             };
             return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation, [Error.Failure(exception.Message, code)]);
@@ -116,6 +115,12 @@ public sealed class ProjectDefinitionWriter(
             if (attempt is { Committed: true } or { Replayed: true }) {
                 logger.LogError(exception, "Project operation {OperationId} is accepted but its completion processing failed.", request.Operation.Id);
                 return AcceptedResult<TAcknowledgement>(attempt);
+            }
+            if (attempt is { CommitAttempted: false, CurrentWriteRefusal: { } refusal }) {
+                logger.LogWarning("Project operation {OperationId} was refused before commit; cleanup also failed with {FailureType}.",
+                    request.Operation.Id, exception.GetType().Name);
+                return new ProjectDefinitionOutcome<TAcknowledgement>.Rejected(request.Operation,
+                    [ProjectDefinitionCurrentWriteGuard.ToError(refusal)]);
             }
             if (attempt is not null && await RecoverOutcomeAsync<TAcknowledgement>(attempt) is { } recovered) {
                 return recovered;
@@ -135,7 +140,11 @@ public sealed class ProjectDefinitionWriter(
             return await operationProtocol.TryReadAcceptedAsync(attempt, recoveryDeadline.Token)
                 ? AcceptedResult<T>(attempt) : null;
         } catch (ProjectDefinitionProtocolRejectedException exception) {
-            return new ProjectDefinitionOutcome<T>.Rejected(attempt.Operation, [exception.Error]);
+            return attempt.CommitAttempted
+                ? new ProjectDefinitionOutcome<T>.Unconfirmed(attempt.Operation, ProjectDefinitionRecoveryReason.CommitUnconfirmed)
+                : new ProjectDefinitionOutcome<T>.Rejected(attempt.Operation, [exception.Error]);
+        } catch (FiniteOperationProtocolException) when (!attempt.CommitAttempted) {
+            return null;
         } catch (Exception exception) {
             logger.LogError(exception, "Projects operation {OperationId} could not reconcile its original outcome after dispatch failed.", attempt.Operation.Id);
             return new ProjectDefinitionOutcome<T>.Unconfirmed(attempt.Operation, ProjectDefinitionRecoveryReason.CommitUnconfirmed);
@@ -270,6 +279,9 @@ public sealed class ProjectDefinitionWriter(
             if (write.Attempt is { ReplayObserved: true } replay) {
                 return Result<DefinitionOutcome>.Success(FromReplay(replay, write.Creation));
             }
+            if (write.Attempt is { } current) {
+                await ProjectDefinitionCurrentWriteGuard.RequireAsync(current, cancellationToken);
+            }
             var entity = await context.Set<Project>().SingleOrDefaultAsync(project => project.Id == targetId, cancellationToken);
             if (write.Expected is { } expected) {
                 if (entity is null) {
@@ -359,10 +371,13 @@ public sealed class ProjectDefinitionWriter(
                 } else {
                     await operationProtocol.RecordAcceptedAsync(context, operation, ToEditor(accepted), receipt?.Fingerprint, cancellationToken);
                 }
-                operation.CommitAttempted = true;
             }
             try {
-                await scope.CommitAsync(cancellationToken);
+                if (write.Attempt is { } committing) {
+                    await scope.CommitDefinitionAsync(committing, cancellationToken);
+                } else {
+                    await scope.CommitAsync(cancellationToken);
+                }
             } catch (Exception exception) when (scope.IsCommitted) {
                 LogPostCommit(exception, targetId, "source-cleanup");
             }

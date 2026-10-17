@@ -1,7 +1,8 @@
 # Workspace defaults: first owner cutover refinement
 
-Status: source-reviewed implementation preparation on 2026-10-16. No Workspace source,
-build, discovery or execution changes. This refines W1 in `P05-owner-waves.md`; it does
+Status: source-reviewed implementation preparation on 2026-10-16. W1a's dormant
+contracts and 15 source-counted test rows are prepared separately and remain unbuilt.
+W1b's persistence, migration and caller changes have not started. This refines W1 in `P05-owner-waves.md`; it does
 not expand W1 into provider, secret, file-preference or workflow-settings ownership.
 
 ## Scope and source evidence
@@ -59,11 +60,16 @@ universal settings writer. The original storage/secret methods stay with their c
 owners. The native IWorkspaceDefaultsOwner switches to the typed snapshot/command.
 
 A read returns the namespace and current head from one coherent database observation,
-including the explicit empty result. A single SQL projection joining the active
-lifecycle row and optional current settings row is sufficient; an independently read
-namespace followed by a normal settings query is not. Check the captured active profile
-binding against that observation. The reader copies values and releases its connection;
-it does not retain a transaction for an editing session.
+including the explicit empty result. Reuse the existing lifecycle guard in a short
+Read Committed transaction: validate the captured active binding under lifecycle
+SHARE, read the single current settings head, copy values, then commit/release. This
+keeps the namespace stable through the one settings query without copying lifecycle
+SQL into Workspace or taking the settings writer lock. Settings reads remain compatible
+with an ordinary settings writer; transfer/activation must wait for the short lifecycle
+lease. An independently read namespace followed by an unguarded settings query is not
+sufficient. Do not retain the transaction for an editing session. Read-only existing
+consumers that need values rather than an edit expectation may retain their narrow
+return type, but every edit acquisition uses this coherent snapshot boundary.
 
 The existing common SettingsWriteResult/ledger also serves secrets and file preferences.
 Do not broaden those protocols accidentally. Translate the new defaults outcome in the
@@ -116,6 +122,16 @@ transaction still owns provider + preference atomicity. The Workspace participan
 takes the settings table lock before reading its head. Keep the existing providerExists
 callback a same-transaction database read, not an external provider call.
 
+The composition sequence was checked directly: `AppDatabaseBootstrapper.EnsureProfileReadyAsync`
+runs relational migrations and `DatasetActivationCoordinator.EnsureReadyAsync` before
+provider/default bootstrap. The required binding therefore exists on a newly initialized
+PostgreSQL database. Its separate nonrelational test branch uses EnsureCreated and no
+dataset activation. Preserve that explicit InMemory fixture path; it is not relational
+guard proof. The Provider bootstrap constructor can receive DatasetActivationService
+through existing DI. Bootstrap disposal must release its owner context even if its
+transaction disposal throws; do not introduce a second unowned transaction or swallow
+the primary failure.
+
 The separate preceding secret-bootstrap effect is not made atomic by this change and
 must not be advertised as part of Workspace's accepted result. Provider health/config
 writers remain separate P05 owners.
@@ -136,6 +152,21 @@ where the captured field versions still match. On conflict preserve the draft an
 original/current values with explicit reload/reapply. Never refresh the expectation and
 silently resubmit the same six-field replacement. Unknown freezes further saves; a
 current settings read cannot establish whether that prior command committed.
+
+The SPA has an existing writer at
+`packages/app/src/pages/settings/SettingsWorkspacePage.vue`, calling generated
+`getApiSettingsWorkspace` / `putApiSettingsWorkspace`. It currently submits the live
+mutable model, replaces it with the response, and hides the entire form on any error;
+its Try again action reloads values. Include this screen in W1b's complete caller
+cutover. Keep original expectation separate, capture submitted values and per-field
+versions before awaits, preserve later input on acceptance, retain the form/draft on
+conflict and uncertainty, and separate retrying a read from saving. Apply the reviewed
+single-send transport policy to this conditional write too: the shared SDK client's
+default retry policy must not turn a lost successful response into a later stale-head
+rejection. W1b has no durable receipt, so a dispatch failure remains Unconfirmed until
+W1c supplies exact recovery. Do not reuse Projects pending-store records for Workspace.
+Regenerate the actual GET/PUT DTOs from the reviewed local OpenAPI artifact and update
+this existing caller; no compatibility overload may invent the missing expectation.
 
 Controller `SaveAsync` currently wraps acknowledgement, reconciliation and RefreshAsync
 in one catch that marks the receipt Unknown. Separate those phases: after Accepted,
@@ -169,8 +200,9 @@ fresh data during an executor retry or themselves implement durable pause/replan
    all inactive rows. Owner/canonical model parity must remain exact.
 2. Cut native/API/sandbox/generated client callers over before enabling the new writer.
    No compatibility overload may reread a current revision to fill a missing original.
-   Check the sibling API client's generated GET/PUT contracts rather than inventing a
-   new SPA settings screen.
+   Include the existing SPA Workspace settings screen identified above and check its
+   actual generated GET/PUT contracts. A successful backend-only build does not close
+   this wire change.
 3. Real PostgreSQL barriers prove two readers/one accepted save, two Empty readers/one
    created head, bootstrap versus human provider selection, bootstrap waiting behind
    transfer before any provider read, and transfer versus ordinary save in both orders.
@@ -184,6 +216,14 @@ fresh data during an executor retry or themselves implement durable pause/replan
    WorkspaceSettingsHttpOutcomeTests, ApiSectionPermissionsTests and Workspace UI draft/
    receipt tests. Direct provider fixtures must mark their seeded current head explicitly.
    Use existing leased PostgreSQL and standard serialized build outputs; no new fixture.
+
+Before authoring W1b, build and validate W1a, freeze the changed-project graph, and
+record the exact new/changed test inventory. W1b's indivisible enablement perimeter is
+the entity/migration, all three persistence paths, native/API/sandbox and SPA callers.
+An HTTP read/write authorization check at request admission is not proof of revocation
+fencing after a lock wait. Review the actual WebCurrentPrincipalResolver and owner
+invocation seams before claiming a final-current-authority guarantee; do not invent
+an atomic security lease over the token registry's independent persistence.
 
 Measure small singleton save under 8/32 writers for bounded refusal/lock time and compare
 read latency during a held writer. High write concurrency to this one aggregate is

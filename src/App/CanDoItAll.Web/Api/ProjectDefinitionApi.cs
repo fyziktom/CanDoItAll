@@ -29,7 +29,8 @@ internal static class ProjectDefinitionApi {
             .Produces<ProjectDefinitionLookupApiResponse>(StatusCodes.Status404NotFound)
             .Produces<ProjectDefinitionLookupApiResponse>(StatusCodes.Status409Conflict)
             .Produces<ProjectDefinitionLookupApiResponse>(StatusCodes.Status410Gone)
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest)
+            .AddOpenApiOperationTransformer(ProjectDefinitionOperationOpenApiSchemas.AddAccessDeniedResponseAsync);
     }
 
     private static RouteHandlerBuilder DescribeWrite<TCommand, TAcknowledgement>(RouteHandlerBuilder endpoint)
@@ -39,22 +40,25 @@ internal static class ProjectDefinitionApi {
             .WithDescription("Requires current Projects read and write permission. Retain the full operation address and original command before dispatch. Exact retries return the historical receipt. A different payload under the same identity rejects. Unconfirmed (503), timeout or disconnect requires lookup or exact retry; never refresh only the operation identity. Scalar writes preserve all children. Replacement requires explicit complete phase and option arrays.")
             .Produces<ProjectDefinitionAcceptedApiResponse<TAcknowledgement>>()
             .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status404NotFound)
             .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status409Conflict)
             .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status410Gone)
             .Produces<ProjectDefinitionRejectedApiResponse>(StatusCodes.Status413PayloadTooLarge)
+            .Produces<ApiErrorResponse>(StatusCodes.Status415UnsupportedMediaType)
             .Produces<ProjectDefinitionUnconfirmedApiResponse>(StatusCodes.Status503ServiceUnavailable)
-            .ProducesApiErrors(StatusCodes.Status403Forbidden, StatusCodes.Status415UnsupportedMediaType);
+            .AddOpenApiOperationTransformer(ProjectDefinitionOperationOpenApiSchemas.AddUnavailableWriteResponseAsync)
+            .AddOpenApiOperationTransformer(ProjectDefinitionOperationOpenApiSchemas.AddAccessDeniedResponseAsync);
 
     internal static Task<IResult> GetWriteContextAsync(ProjectDefinitionHttpAccess access, ProjectDefinitionOperationProtocol protocol,
         CancellationToken cancellationToken) => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: false, cancellationToken);
+            var invocation = await access.ResolveReadAsync(cancellationToken);
             return Results.Ok(await protocol.GetWriteContextAsync(invocation.Caller, cancellationToken));
         });
 
     internal static Task<IResult> ReadAsync(Guid projectId, ProjectDefinitionHttpAccess access, ProjectDefinitionOperationProtocol protocol,
         ProjectsService projects, CancellationToken cancellationToken) => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: false, cancellationToken);
+            var invocation = await access.ResolveReadAsync(cancellationToken);
             var before = await protocol.GetWriteContextAsync(invocation.Caller, cancellationToken);
             var definition = await projects.GetDefinitionAsync(projectId, cancellationToken);
             if (definition.IsFailure) {
@@ -71,7 +75,7 @@ internal static class ProjectDefinitionApi {
 
     internal static Task<IResult> CreateAsync(HttpRequest request, ProjectDefinitionHttpAccess access, ProjectDefinitionWriter writer,
         IOptions<JsonOptions> json, CancellationToken cancellationToken) => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: true, cancellationToken);
+            var invocation = await access.ResolveWriteAsync(cancellationToken);
             var command = await ProjectDefinitionHttpBody.ReadAsync<CreateProjectDefinitionCommand>(request, json.Value.SerializerOptions, cancellationToken);
             var outcome = await writer.CreateAsync(command, invocation, cancellationToken);
             if (outcome is ProjectDefinitionOutcome<ProjectEditorAcknowledgement>.Accepted { Replayed: false } accepted) {
@@ -83,7 +87,7 @@ internal static class ProjectDefinitionApi {
 
     internal static Task<IResult> ReplaceAsync(Guid projectId, HttpRequest request, ProjectDefinitionHttpAccess access,
         ProjectDefinitionWriter writer, IOptions<JsonOptions> json, CancellationToken cancellationToken) => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: true, cancellationToken);
+            var invocation = await access.ResolveWriteAsync(cancellationToken);
             var command = await ProjectDefinitionHttpBody.ReadAsync<ReplaceProjectDefinitionCommand>(request, json.Value.SerializerOptions, cancellationToken);
             if (command.Command.Expected.Project.ProjectId != projectId) {
                 return InvalidTarget(command.Operation);
@@ -93,7 +97,7 @@ internal static class ProjectDefinitionApi {
 
     internal static Task<IResult> UpdateScalarsAsync(Guid projectId, HttpRequest request, ProjectDefinitionHttpAccess access,
         ProjectDefinitionWriter writer, IOptions<JsonOptions> json, CancellationToken cancellationToken) => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: true, cancellationToken);
+            var invocation = await access.ResolveWriteAsync(cancellationToken);
             var command = await ProjectDefinitionHttpBody.ReadAsync<UpdateProjectDefinitionScalarsCommand>(request, json.Value.SerializerOptions, cancellationToken);
             if (command.Command.Expected.Project.ProjectId != projectId) {
                 return InvalidTarget(command.Operation);
@@ -104,7 +108,7 @@ internal static class ProjectDefinitionApi {
     internal static Task<IResult> LookupAsync(Guid namespaceId, string epoch, Guid operationId, string callerBinding,
         ProjectDefinitionHttpAccess access, ProjectDefinitionReceiptReader receipts, CancellationToken cancellationToken)
         => GuardAsync(async () => {
-            var invocation = await access.ResolveAsync(writing: false, cancellationToken);
+            var invocation = await access.ResolveReadAsync(cancellationToken);
             ProjectDefinitionOperation operation;
             try {
                 if (!ProjectOperationEpochHttpContract.TryParse(epoch, out var parsedEpoch)) {
@@ -134,7 +138,7 @@ internal static class ProjectDefinitionApi {
             return Results.Json(result.Response, statusCode: result.Status);
         });
 
-    private static IResult Result<T>(ProjectDefinitionOutcome<T> outcome) where T : class => outcome switch {
+    internal static IResult Result<T>(ProjectDefinitionOutcome<T> outcome) where T : class => outcome switch {
         ProjectDefinitionOutcome<T>.Accepted value => Results.Ok(new ProjectDefinitionAcceptedApiResponse<T>(value.Result, value.Replayed)),
         ProjectDefinitionOutcome<T>.Rejected value => Results.Json(new ProjectDefinitionRejectedApiResponse(value.Operation, value.Errors),
             statusCode: RejectionStatus(value.Errors)),
@@ -148,10 +152,12 @@ internal static class ProjectDefinitionApi {
         ProjectErrorCodes.NotFound => StatusCodes.Status404NotFound,
         ProjectErrorCodes.DefinitionOperationExpired => StatusCodes.Status410Gone,
         ProjectErrorCodes.DefinitionReceiptUnavailable => StatusCodes.Status403Forbidden,
+        ProjectErrorCodes.DefinitionWriteDenied => StatusCodes.Status403Forbidden,
+        ProjectErrorCodes.DefinitionAuthorityUnavailable => StatusCodes.Status503ServiceUnavailable,
         ProjectErrorCodes.DefinitionConflict or ProjectErrorCodes.DefinitionTransactionConflict or ProjectErrorCodes.LifetimeChanged or
             ProjectErrorCodes.ExternalIdentityConflict or ProjectErrorCodes.ExternalIdentityImmutable or ProjectErrorCodes.DefinitionOperationMismatch or
             ProjectErrorCodes.DefinitionOperationClosed or ProjectErrorCodes.DefinitionDatasetChanged or ProjectErrorCodes.DefinitionCallerChanged or
-            ProjectErrorCodes.DefinitionOperationUnknown => StatusCodes.Status409Conflict,
+            ProjectErrorCodes.DefinitionOperationUnknown or ProjectErrorCodes.DefinitionAuthorityChanged => StatusCodes.Status409Conflict,
         _ => StatusCodes.Status400BadRequest
     };
 

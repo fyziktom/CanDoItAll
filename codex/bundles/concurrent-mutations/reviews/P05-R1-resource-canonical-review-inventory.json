@@ -1,0 +1,258 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Independent bounded source/model/emitted-SQL review PASS; actual database/runtime gates pending",
+  "migrationId": "20261017082009_AddResourceMetadataRevisions",
+  "review": {
+    "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-canonical-generation-review.md",
+    "bytes": 5128,
+    "sha256": "62546AA74B9EFA7EC79AA1C5D3C2B99836B5513D8AD5976A63D53FB4B632FCCF"
+  },
+  "mainRoot": "C:\\repositories\\CanDoItAll",
+  "mainSources": [
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.cs",
+      "bytes": 11841,
+      "sha256": "D60CDAB823C3A544DA5C23D7E4BEDFBCA1E69A278FC108C7230A4A8C295BCD51"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017082009_AddResourceMetadataRevisions.Designer.cs",
+      "bytes": 395239,
+      "sha256": "FCC8C6A47BF8827A9143BA68FFB308F14C34452DC3389B117B28B641E9F20563"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+      "bytes": 395135,
+      "sha256": "CB50D5C6AEF13F6D05169FEFD2AAF0C24526AB4F28D3F04D1FCEC3D3453F3C6E"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.cs",
+      "bytes": 32702,
+      "sha256": "207226CED8E8DF29CEB9782B1CAD070A5CC399C9FA8EE19A9380D3EDE2C3A861"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "bytes": 10670,
+      "sha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Persistence/ResourcesDbContext.cs",
+      "bytes": 389,
+      "sha256": "71FC60D3B778A7ACBA6772CD0910EFE53F8665EBF95AC90D323AFB78229C8878"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataMigrationTests.cs",
+      "bytes": 22914,
+      "sha256": "F91A42B47EFEE72B0E193C26D8B6D29DD93062A9EB7D15DD06F7AF9D6FEA3075"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletionTransactionEntry.cs",
+      "bytes": 8203,
+      "sha256": "26D5389037AFEBDACC56A199CD23881E467C5F0DD2E21B2E5740820262184316"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-body.sql.txt",
+      "bytes": 9701,
+      "sha256": "D7973F1856772809ACC4E86E40861C71FD03A70623C9E35543D64730C7971D8D"
+    }
+  ],
+  "parentEvidence": [
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/snapshot.before.cs.txt",
+      "bytes": 394720,
+      "sha256": "338896028E3206C613D34978C1F250963EC40037976E7EF5A6AD1DBFCFB2D79B"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/snapshot.generated.cs.txt",
+      "bytes": 409298,
+      "sha256": "275AD6A75608183967297F3C05D36A24D0E27F7EF44C1F9238A1ACDA6A61E6F2"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/20261017082009_AddResourceMetadataRevisions.generated.cs.txt",
+      "bytes": 1818,
+      "sha256": "C4CCBAEEF0828F34FDA4C61A24C1046CE97B5E803FF02023FEDEA0C73B74D1B2"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/20261017082009_AddResourceMetadataRevisions.generated.Designer.cs.txt",
+      "bytes": 409432,
+      "sha256": "6D7169FBF348C99BCD90AA99A6B9500364809B97C01D9A3FECFDD19EC2B88C76"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/generation-intent.json",
+      "bytes": 401,
+      "sha256": "4C5F5954BA843191EF95ECB2289D0B25E820F218237210E0944E54AA53C4EAF5"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/generate.json",
+      "bytes": 234,
+      "sha256": "2EB75C0CDBEAE161DA83ADD5F35CEB721997AD6453F8CB48FC5A116C406CD1A6"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/generate.log",
+      "bytes": 3257,
+      "sha256": "339875AFB7CDF35CF830B3059BFFE571930C86DBEEFC0A5FC8787FAD2DA0AF9E"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/predecessor-body-recheck.json",
+      "bytes": 469,
+      "sha256": "6C16A7DE26A1F63384E28B3C202ED569874179FD6B4FA1A6E3A7807598E927E0"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/guarded-source.json",
+      "bytes": 1183,
+      "sha256": "EBF7A501370C8E7512F3092EEC683AACE155A59EFDB9C4EA1981283B809717F8"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/build-guarded-migration.json",
+      "bytes": 152,
+      "sha256": "5DFF23939C93E10A6C3B9071DCADA8523399F0EF81A17D4AFE15B67B0BA2419B"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/build-guarded-migration.log",
+      "bytes": 140927,
+      "sha256": "665D8EEFF18E0E9D1E6A6047C22FA6CF082086D7E44D211EBB2E2293AE0B400C"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/pending-model.json",
+      "bytes": 157,
+      "sha256": "8905772A9E2EC99593C2A64467DAD7D32E49FF90C865CF615844D3ED49B2F9D9"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/pending-model.log",
+      "bytes": 3268,
+      "sha256": "6964C2FE1ABD1F31B98484A33B1E6C7E8CC9F782C627D22E33165211AEC6B56F"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-up-idempotent.json",
+      "bytes": 164,
+      "sha256": "D07B3AD40C88210C356CD1245BE30E19B126A436088B01CBF5902088D7CBC42E"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-up-idempotent.log",
+      "bytes": 3202,
+      "sha256": "D8D5215B5174B246AB0E434B958EA4CDCE66D700B4D526E9C4AA35DCD5F01278"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/resource-up-idempotent.sql",
+      "bytes": 10138,
+      "sha256": "11F7374810BBF5AAD9945B283CEED2D7A9CF7D023E98C27C75A6608FA01657C1"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-up.json",
+      "bytes": 153,
+      "sha256": "C1C8D7C4FC8FC49EEF3F5FB0791D0E4F7F3A1B5D5F0B41F6BB9034AB2CFAEC20"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-up.log",
+      "bytes": 3202,
+      "sha256": "D8D5215B5174B246AB0E434B958EA4CDCE66D700B4D526E9C4AA35DCD5F01278"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/resource-up.sql",
+      "bytes": 9173,
+      "sha256": "9B3A8F95863AB2E0C1F91FC2CF7AC5C4E45B6043DA78271283185BD9E10747A8"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-down.json",
+      "bytes": 155,
+      "sha256": "6A8E48C7D5032C0B52BFD98A267D9844C466956B05C49C683CC2A20908E81EA9"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/script-down.log",
+      "bytes": 3202,
+      "sha256": "D8D5215B5174B246AB0E434B958EA4CDCE66D700B4D526E9C4AA35DCD5F01278"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-canonical-migration/resource-down.sql",
+      "bytes": 426,
+      "sha256": "43CB9E481317BCF5847CAAC3E585AE99BB809349EC3021B10323562BF2B55D8C"
+    }
+  ],
+  "managedProvenance": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-generation-plan.md",
+      "bytes": 10498,
+      "sha256": "6178AE05FC51A2179A1530A750B3B02F0ECD12CC6ECE26F0E2FB2D947D4603D1"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-source-inventory.json",
+      "bytes": 4386,
+      "sha256": "117DC7FCF0A8F76F210DC064C8CA48503185A1DF43A92D430D5A91D5AE9F3813"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-cleanup-source-overlay.json",
+      "bytes": 2147,
+      "sha256": "479661E47D0D68FBBBF5C5115865655BE5C2AEBCE949CF3C4DDAA038E7F449E6"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-entry-ef-api-source-overlay.json",
+      "bytes": 2777,
+      "sha256": "CBF1CA49981DC7FFFA712F5CF31DD170D7E8427430D706D24BC463089362DCB1"
+    }
+  ],
+  "ordinaryV2": [
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-deletion-runner-v2-source/resource-deletion-runner-v2-source-inventory.json",
+      "bytes": 8146,
+      "sha256": "3FC8393F2FA407161B48B958DB58326F50DFE80A3E0855E5D028EC74F7661AA0"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/resource-deletion-runner-v2-source/resource-deletion-selections-v2.json",
+      "bytes": 245208,
+      "sha256": "7BD204015A34B4DDA59B5822BF95FED45BD926C9D3472EE93590532BDC90D7ED"
+    }
+  ],
+  "findings": {
+    "sourceBlockers": 0,
+    "canonicalEntities": 169,
+    "resourceEntities": 1,
+    "workbenchEntities": 16,
+    "modelBlocksBefore": 219,
+    "modelBlocksAfter": 219,
+    "onlyChangedModelBlock": "CanDoItAll.Modules.Resources.ProjectResource#1",
+    "finalModelEqualsRaw": true,
+    "guardedUpEqualsReviewedProposalPlusApprovedDdl": true,
+    "downEqualsApprovedPermanentRefusal": true,
+    "emittedBodiesEqualGuardedSource": true,
+    "historicalC3BodyRechecked": true,
+    "initialGenerationBodyHashGuardWasInert": true,
+    "expectedIndex": "IX_Resources_ProjectResources_ProjectId_ProjectLifetimeId_Conn~",
+    "indexUtf8Bytes": 63
+  },
+  "parentResults": {
+    "generationExitCode": 0,
+    "guardedReleaseBuildExitCode": 0,
+    "guardedBuildWarnings": 178,
+    "guardedBuildErrors": 0,
+    "pendingModelExitCode": 0,
+    "scriptExitCodes": [
+      0,
+      0,
+      0
+    ],
+    "databaseSqlExecuted": false
+  },
+  "counts": {
+    "ordinary": 346,
+    "methods": 254,
+    "browserSeparate": 4,
+    "migrationFactsIncluded": 3,
+    "stage1First": 14
+  },
+  "performedByReviewer": {
+    "sourceRead": true,
+    "scriptComparison": true,
+    "modelComparison": true,
+    "sourceEditsInMain": false,
+    "build": false,
+    "test": false,
+    "database": false
+  },
+  "remainingGates": [
+    "Actual PostgreSQL18 migration proof",
+    "Final affected builds/static/rendering enforcement and complete source/runtime freeze",
+    "Exact346 ordinary and4browser execution with stage1 fourteen first",
+    "Physical resource reconciliation",
+    "Stage3/P03 release and capacity remain separate"
+  ]
+}

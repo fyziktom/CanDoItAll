@@ -1,0 +1,9 @@
+{
+  "owner": "/root/agent_process_architecture",
+  "root": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\R1d-D1-historical-schema-fixture-predecessors",
+  "state": "PreparedBeforeCreate",
+  "createdUtc": "2026-10-17T07:16:30.1562842+00:00",
+  "reason": "Preserve exact D1 B5E53 test and 52FF cleanup overlay before legacy schema3 fixture repair",
+  "mainChanges": false,
+  "execution": false
+}

@@ -13,6 +13,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProjectLifetimeMigrationIntegrationTests {
     private const string StartingMigration = "20260830104752_AddProviderHistoryExternalReference";
     private const string PreviousMigration = "20260910163827_AddLlmChatDefinitionCreateReceipts";
+    private const string LifetimeMigration = "20260910183745_AddProjectLifetimes";
     private static readonly DateTimeOffset SavedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
     [Fact]
@@ -100,11 +101,13 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("project-lifetime-empty-down");
         await using var provider = CreateProvider(environment.CreatePostgreSqlProfile("downgrade"));
         await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(LifetimeMigration);
+        Assert.Equal(LifetimeMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         await InsertLegacyProjectAsync(context, Guid.NewGuid(), "Preserved project");
         var before = await ReadProjectPayloadsAsync(context);
         var oldLifetime = await context.Set<Project>().Select(project => project.LifetimeId).SingleAsync();
         await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+        Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Equal(before, await ReadProjectPayloadsAsync(context));
         await context.Database.MigrateAsync();
         Assert.Equal(before, await ReadProjectPayloadsAsync(context));
@@ -122,9 +125,13 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
         var lifetimeId = Guid.NewGuid();
         await using (var provider = CreateProvider(profile)) {
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-            await context.Database.MigrateAsync();
+            await context.GetService<IMigrator>().MigrateAsync(LifetimeMigration);
+            Assert.Equal(LifetimeMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
             if (retirement) {
-                context.Add(new ProjectRetirementRecord { ProjectId = projectId, LifetimeId = lifetimeId, RetiredAtUtc = SavedAt });
+                await context.Database.ExecuteSqlInterpolatedAsync($"""
+                    INSERT INTO "Projects_ProjectRetirements" ("ProjectId", "LifetimeId", "RetiredAtUtc")
+                    VALUES ({projectId}, {lifetimeId}, {SavedAt})
+                    """);
             } else {
                 context.Add(new AgentProjectStructureAccessRevocationRecord {
                     Id = Guid.NewGuid(), ProjectId = projectId, DatabaseProfileId = Guid.NewGuid(), ProjectLifetimeId = lifetimeId,
@@ -134,9 +141,14 @@ public sealed class ProjectLifetimeMigrationIntegrationTests {
             await context.SaveChangesAsync();
             var failure = await Assert.ThrowsAsync<PostgresException>(() => context.GetService<IMigrator>().MigrateAsync(PreviousMigration));
             Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+            Assert.Contains("Cannot remove retained project lifetime or access-recovery evidence", failure.MessageText, StringComparison.Ordinal);
         }
         await using var restarted = CreateProvider(profile);
         await using var readback = await restarted.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+        Assert.Equal(LifetimeMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
+        Assert.Equal(retirement ? 1 : 0, await readback.Set<ProjectRetirementRecord>().CountAsync());
+        Assert.Equal(retirement ? 0 : 1, await readback.Set<AgentProjectStructureAccessRevocationRecord>().CountAsync());
+        await readback.Database.MigrateAsync();
         Assert.False(readback.Database.HasPendingModelChanges());
         Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Equal(retirement ? 1 : 0, await readback.Set<ProjectRetirementRecord>().CountAsync());

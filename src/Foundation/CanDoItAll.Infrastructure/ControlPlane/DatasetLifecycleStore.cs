@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Infrastructure.ControlPlane;
 
+public enum DatasetActivationStageResult { Staged, AlreadyApplied }
+
 public sealed class DatasetLifecycleStore(
     DbContextOptions<DatasetLifecycleDbContext> options,
     CoordinatedDatabaseTransaction transactions) {
@@ -37,7 +39,18 @@ public sealed class DatasetLifecycleStore(
         CancellationToken cancellationToken = default)
         => RequireActiveAsync(owner, capturedBinding, exclusive: true, cancellationToken);
 
-    public async Task StageActivationAsync(DatasetActivationPlan plan, CancellationToken cancellationToken = default) {
+    public static async Task RequireActiveForDeletionHandoffAsync(DbContext owner, DatasetActivationBinding capturedBinding,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(capturedBinding);
+        RequirePostgreSqlTransaction(owner);
+        await owner.Database.ExecuteSqlRawAsync("LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN ROW SHARE MODE NOWAIT", cancellationToken);
+        var current = await ReadGuardedAsync(owner, exclusive: false, cancellationToken, noWait: true);
+        if (current is not { State: DatasetLifecycleState.Active } || current.Binding != capturedBinding) {
+            throw new DatasetActivationMismatchException(capturedBinding);
+        }
+    }
+
+    public async Task<DatasetActivationStageResult> StageActivationAsync(DatasetActivationPlan plan, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(plan);
         await using var context = await CreateEnlistedAsync(cancellationToken);
         RequirePostgreSqlTransaction(context);
@@ -45,7 +58,7 @@ public sealed class DatasetLifecycleStore(
             $"SELECT pg_advisory_xact_lock(hashtextextended({ActivationScopeKey}, 0))", cancellationToken);
         var current = await ReadGuardedAsync(context, exclusive: true, cancellationToken);
         if (current is { State: DatasetLifecycleState.Active } && current.Binding == plan.Binding) {
-            return;
+            return DatasetActivationStageResult.AlreadyApplied;
         }
         if (plan.Kind == DatasetActivationKind.Attach || current?.Binding != plan.ExpectedPreviousSqlBinding ||
                 current is { State: not DatasetLifecycleState.Active }) {
@@ -62,6 +75,7 @@ public sealed class DatasetLifecycleStore(
         record.GuardProtocol = plan.Binding.GuardProtocol;
         record.State = DatasetLifecycleState.Active;
         await context.SaveChangesAsync(cancellationToken);
+        return DatasetActivationStageResult.Staged;
     }
 
     private Task<DatasetLifecycleDbContext> CreateEnlistedAsync(CancellationToken cancellationToken)
@@ -77,12 +91,13 @@ public sealed class DatasetLifecycleStore(
     }
 
     private static async Task<DatasetLifecycleSnapshot?> ReadGuardedAsync(DbContext owner, bool exclusive,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, bool noWait = false) {
         RequirePostgreSqlTransaction(owner);
         await using var command = owner.Database.GetDbConnection().CreateCommand();
         command.Transaction = owner.Database.CurrentTransaction!.GetDbTransaction();
         command.CommandText = "SELECT \"Id\", \"NamespaceId\", \"MaintenanceId\", \"SchemaVersion\", \"GuardProtocol\", \"State\" " +
-            "FROM \"Infrastructure_DatasetLifecycle\" WHERE \"Id\" = 1 FOR " + (exclusive ? "UPDATE" : "SHARE");
+            "FROM \"Infrastructure_DatasetLifecycle\" WHERE \"Id\" = 1 FOR " + (exclusive ? "UPDATE" : "SHARE") +
+            (noWait ? " NOWAIT" : string.Empty);
         if (owner.Database.GetCommandTimeout() is { } timeout) {
             command.CommandTimeout = timeout;
         }

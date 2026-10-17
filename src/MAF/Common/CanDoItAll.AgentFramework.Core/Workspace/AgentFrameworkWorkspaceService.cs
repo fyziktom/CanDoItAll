@@ -18,6 +18,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
     private readonly AgentPackageImportService packageImportService;
     private readonly AgentExternalProvisioningService externalProvisioningService;
+    private readonly AgentDecisionDataPolicyOwner policyOwner;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
     private readonly ILogger<AgentFrameworkWorkspaceService> logger;
     private readonly IAgentExecutionActivityCoordinator activityCoordinator;
@@ -78,6 +79,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
         this.activityWorkspaceIdentity = activityWorkspaceIdentity;
+        policyOwner = new AgentDecisionDataPolicyOwner(store, activityWorkspaceIdentity, executionProfileGenerationSource);
         this.ownedWorkspaceBundle = ownedWorkspaceBundle;
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 

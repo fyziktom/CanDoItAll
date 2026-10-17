@@ -1,0 +1,40 @@
+{
+  "kind": "Historical no-write observer bounded setup-drain successor",
+  "parentBaseSha256": "6386FA46CDF68CAD49A8C1784B6CF450B60B4864653789287167506403312DCF",
+  "sourceSha256": "221BE113A31B30FFC48B9BAB57F58BA7B73769740654EE9DED563207E76437AF",
+  "ordinaryHistoricalRows": 133,
+  "addedTestRows": 0,
+  "unchangedWatcherArrangements": 6,
+  "productBuildOrTestsExecuted": false,
+  "isolatedNonproductControlsExecuted": true,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalFileObservation.cs",
+      "sha256": "221BE113A31B30FFC48B9BAB57F58BA7B73769740654EE9DED563207E76437AF",
+      "bytes": 7706
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/HistoricalFileObservation.before-setup-drain.cs.txt",
+      "sha256": "6386FA46CDF68CAD49A8C1784B6CF450B60B4864653789287167506403312DCF",
+      "bytes": 4458
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-observer-setup-drain.md",
+      "sha256": "ACCBF30500655D5CED944773A5A42EC97581633C7B391A21AC233F87C678852D",
+      "bytes": 3699
+    }
+  ],
+  "externalDiagnosticInventory": {
+    "path": "C:/repositories/CanDoItAll/.artifacts/concurrent-mutations/validation/historical-watcher-control/inventory.json",
+    "sha256": "CB836524C4169ABD966CE9963704E9E92DA4FAF249C9E6EC2B96F822613A4960",
+    "v5ResultSha256": "B5D0C6A8AB40F56323A8955C633D5818B4E5795C41C9667D2564209CED8467D0",
+    "v5CleanupSha256": "024C1BE133F9CCF5D3B1FE29BF74CF7D36879875C474A0F2216DE4A2099CDFE0"
+  },
+  "peerReview": "Runtime peer PASS at exact source hash; asynchronous watcher evidence remains supplementary and application runtime rerun remains required.",
+  "checks": [
+    "Roslyn syntax0",
+    "git diff whitespace clean",
+    "V1-V5 retained",
+    "all owned control case roots absent"
+  ]
+}

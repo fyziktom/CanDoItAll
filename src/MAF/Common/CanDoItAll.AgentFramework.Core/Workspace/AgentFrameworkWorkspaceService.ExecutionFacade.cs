@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -332,6 +333,12 @@ public sealed partial class AgentFrameworkWorkspaceService
         {
             completion = dispatch(operation);
         }
+        catch (Exception exception) when (AgentEffectActivityFinalization.IsEffectFailure(exception)) {
+            var failure = AgentEffectActivityFinalization.Publish(operation, null, exception);
+            failure = AgentEffectActivityFinalization.Dispose(operation, null, failure);
+            ExceptionDispatchInfo.Capture(failure!).Throw();
+            throw;
+        }
         catch (OperationCanceledException)
         {
             TerminalizeOwnedCancellation(operation);
@@ -354,9 +361,27 @@ public sealed partial class AgentFrameworkWorkspaceService
         IAgentExecutionActivityOperationLease operation,
         Task<TResult> completion)
     {
+        TResult result = default!;
+        Exception? primary = null;
+        try {
+            result = await completion.ConfigureAwait(false);
+        } catch (Exception exception) {
+            primary = exception;
+        }
+        var continuation = AgentEffectActivityFinalization.Continuation(result);
+        if (continuation is not null || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
+            primary = AgentEffectActivityFinalization.Publish(operation, continuation, primary);
+            primary = AgentEffectActivityFinalization.Dispose(operation, continuation, primary);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
+            return result;
+        }
         try
         {
-            var result = await completion.ConfigureAwait(false);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
             if (!operation.IsTerminal)
             {
                 TerminalizeOwnedFailure(operation);

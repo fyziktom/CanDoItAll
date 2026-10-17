@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -41,7 +42,20 @@ public sealed record AgentToolProtocolEnvelope {
 
 public enum AgentToolAdmissionSupport {
     Recoverable,
-    RequestScopedInput
+    RequestScopedInput,
+    EffectJournalOnly
+}
+
+public enum AgentToolCheckpointKind {
+    ProviderRestart,
+    EffectsOnly
+}
+
+[Description("Continuation requirement: 0 None, 1 ProviderInputRequired, 2 EffectReconciliationRequired. This classification grants no authority to dispatch prepared effects.")]
+public enum AgentToolContinuationRequirement {
+    None,
+    ProviderInputRequired,
+    EffectReconciliationRequired
 }
 
 public sealed record AgentToolOriginalInput(Guid MessageId, string Content);
@@ -52,8 +66,11 @@ public enum AgentToolProposalState {
     Completed,
     Rejected,
     ReconciliationRequired,
-    Cancelled
+    Cancelled,
+    OwnerReceiptConfirmed
 }
+
+public sealed record AgentToolOwnerReceipt(AgentToolCommittedEffect Effect, AgentToolProtocolEnvelope Receipt);
 
 /// <summary>
 /// How the cancellation of an agent execution run resolved one admitted tool call, as a JSON integer: 0 NotDispatched
@@ -102,11 +119,18 @@ public sealed record AgentToolRunCancellationReconciliation(
         ProviderDispatches?.Any(dispatch => dispatch.State != AgentToolProviderDispatchState.ResponseAdmitted) == true;
 }
 
+[Description("Immutable identity and semantic binding of one original saved tool proposal; it is not approval or dispatch authority.")]
 public sealed record AgentToolApprovalBinding(
+    [property: Description("Original saved tool batch identity.")] AgentToolBatchId BatchId,
+    [property: Description("Original business intent identity within the saved batch.")] AgentToolBusinessIntentId IntentId,
+    [property: Description("Positive version of the proposal's semantic interpretation.")] int SemanticVersion,
+    [property: Description("Digest binding the exact original proposal semantics.")] AgentToolSemanticDigest Digest);
+
+public sealed record AgentToolReceiptReconciliationCursor(
     AgentToolBatchId BatchId,
     AgentToolBusinessIntentId IntentId,
-    int SemanticVersion,
-    AgentToolSemanticDigest Digest);
+    int BatchOrdinal,
+    int ProposalOrdinal);
 
 public sealed record AgentToolPreparedCall(
     string CallId,
@@ -130,7 +154,9 @@ public sealed record AgentToolProposalRecord(
     AgentToolCancellationResolution? Cancellation = null,
     AgentToolProviderCallBinding? ProviderCall = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    AgentToolProtocolEnvelope? DisclosureEvidence = null);
+    AgentToolProtocolEnvelope? DisclosureEvidence = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    AgentToolOwnerReceipt? OwnerReceipt = null);
 
 public sealed record AgentToolBatchRecord(
     AgentToolBatchId Id,
@@ -144,10 +170,15 @@ public sealed record AgentToolInvocationSegment(
     Guid Id,
     int Ordinal,
     int FirstBatchOrdinal,
-    AgentToolProtocolEnvelope RestartCheckpoint,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    AgentToolProtocolEnvelope? RestartCheckpoint,
     Guid? ContinuesSegmentId = null,
     AgentToolProtocolEnvelope? ApprovalCheckpoint = null,
-    ImmutableArray<PendingToolApprovalRecord> PendingApprovals = default);
+    ImmutableArray<PendingToolApprovalRecord> PendingApprovals = default,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    AgentToolCheckpointKind CheckpointKind = AgentToolCheckpointKind.ProviderRestart,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    Guid? OriginDispatchLeaseId = null);
 
 public sealed record AgentToolJournalRecord(
     int SchemaVersion,
@@ -161,11 +192,16 @@ public sealed record AgentToolJournalRecord(
     AgentToolAdmittedRuntimeContext? RuntimeContext = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AgentToolBackgroundInput? BackgroundInput = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    ImmutableArray<AgentToolProviderDispatchRecord> ProviderDispatches = default) {
+    ImmutableArray<AgentToolProviderDispatchRecord> ProviderDispatches = default,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    AgentToolContinuationRequirement ToolContinuationRequirement = AgentToolContinuationRequirement.None,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    AgentToolReceiptReconciliationCursor? ReceiptReconciliationCursor = null) {
     public const int CurrentSchemaVersion = 1;
     public const int BackgroundSchemaVersion = 2;
     public const int ProviderDispatchSchemaVersion = 3;
     public const int TypedContextSchemaVersion = 4;
+    public const int EffectJournalSchemaVersion = 5;
     public const int MaximumBatches = 512;
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
@@ -188,17 +224,22 @@ public sealed record AgentToolJournalRecord(
     });
 
     private void ValidateCore() {
-        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion) || Revision < 1 || !Enum.IsDefined(Support) ||
+        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion or EffectJournalSchemaVersion) ||
+            Revision < 1 || !Enum.IsDefined(Support) || !Enum.IsDefined(ToolContinuationRequirement) ||
+            Support == AgentToolAdmissionSupport.EffectJournalOnly && SchemaVersion != EffectJournalSchemaVersion ||
+            ToolContinuationRequirement != AgentToolContinuationRequirement.None &&
+                (SchemaVersion != EffectJournalSchemaVersion || Support != AgentToolAdmissionSupport.EffectJournalOnly) ||
             Batches.IsDefault || Segments.IsDefault || Batches.Length > MaximumBatches || Segments.Length > MaximumSegments ||
-            Support != AgentToolAdmissionSupport.Recoverable && (Batches.Length != 0 || Segments.Length != 0) || Batches.Length != 0 && Segments.Length == 0) {
+            Support == AgentToolAdmissionSupport.RequestScopedInput && (Batches.Length != 0 || Segments.Length != 0) ||
+            Batches.Length != 0 && Segments.Length == 0) {
             throw new InvalidDataException("The tool admission journal version, revision or batch count is unsupported.");
         }
 
         ArgumentNullException.ThrowIfNull(Session);
         ArgumentNullException.ThrowIfNull(Session.Reference);
         ArgumentNullException.ThrowIfNull(Session.Profile);
-        if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion) || BackgroundInput is not null :
-                SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
+        if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion or EffectJournalSchemaVersion) || BackgroundInput is not null :
+                SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion or EffectJournalSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
                 BackgroundInput is null || string.IsNullOrWhiteSpace(BackgroundInput.Content) ||
                 Encoding.UTF8.GetByteCount(BackgroundInput.Content) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
             throw new InvalidDataException("The admitted tool input does not match its interactive or background source.");
@@ -208,12 +249,24 @@ public sealed record AgentToolJournalRecord(
             throw new InvalidDataException("The admitted original input or typed context attachments cannot be recovered safely.");
         }
 
-        if ((SchemaVersion == TypedContextSchemaVersion) != (RuntimeContext is { Attachments.IsDefaultOrEmpty: false }) ||
-            SchemaVersion == TypedContextSchemaVersion && Support != AgentToolAdmissionSupport.Recoverable) {
+        var hasAttachments = RuntimeContext is { Attachments.IsDefaultOrEmpty: false };
+        if (SchemaVersion != EffectJournalSchemaVersion &&
+                ((SchemaVersion == TypedContextSchemaVersion) != hasAttachments ||
+                    SchemaVersion == TypedContextSchemaVersion && Support != AgentToolAdmissionSupport.Recoverable) ||
+            SchemaVersion == EffectJournalSchemaVersion && hasAttachments &&
+                (Support != AgentToolAdmissionSupport.Recoverable || Session.Reference.BackgroundSource is not null)) {
             throw new InvalidDataException("Saved typed context requires its supported recoverable journal version.");
         }
         RuntimeContext?.Validate();
         AgentToolProviderJournalValidation.Validate(this);
+        if (ReceiptReconciliationCursor is { } cursor &&
+            (SchemaVersion != EffectJournalSchemaVersion || Support != AgentToolAdmissionSupport.EffectJournalOnly ||
+                cursor.BatchOrdinal < 0 || cursor.BatchOrdinal >= Batches.Length ||
+                Batches[cursor.BatchOrdinal].Id != cursor.BatchId || cursor.ProposalOrdinal < 0 ||
+                cursor.ProposalOrdinal >= Batches[cursor.BatchOrdinal].Proposals.Length ||
+                Batches[cursor.BatchOrdinal].Proposals[cursor.ProposalOrdinal].IntentId != cursor.IntentId)) {
+            throw new InvalidDataException("The receipt reconciliation cursor must identify an original effects-only proposal.");
+        }
 
         var bytes = 0L;
         var segmentIds = new HashSet<Guid>();
@@ -225,11 +278,24 @@ public sealed record AgentToolJournalRecord(
                 index > 0 && (segment.ContinuesSegmentId != Segments[index - 1].Id ||
                     segment.FirstBatchOrdinal < Segments[index - 1].FirstBatchOrdinal) ||
                 segment.PendingApprovals.IsDefault || segment.PendingApprovals.Length > MaximumCallsPerBatch ||
-                (segment.ApprovalCheckpoint is null) != (segment.PendingApprovals.Length == 0)) {
+                !Enum.IsDefined(segment.CheckpointKind)) {
                 throw new InvalidDataException("The SDK invocation checkpoint sequence is invalid.");
             }
 
-            bytes += Encoding.UTF8.GetByteCount(segment.RestartCheckpoint.PayloadJson);
+            if (segment.CheckpointKind == AgentToolCheckpointKind.EffectsOnly) {
+                if (SchemaVersion != EffectJournalSchemaVersion || Support != AgentToolAdmissionSupport.EffectJournalOnly ||
+                    segment.RestartCheckpoint is not null || segment.ApprovalCheckpoint is not null ||
+                    segment.OriginDispatchLeaseId is null || segment.OriginDispatchLeaseId == Guid.Empty) {
+                    throw new InvalidDataException("An effects-only segment requires its original live lease and cannot contain provider checkpoints.");
+                }
+                ValidateEffectApprovals(segment, index);
+            } else if (Support == AgentToolAdmissionSupport.EffectJournalOnly || segment.RestartCheckpoint is null ||
+                segment.OriginDispatchLeaseId is not null ||
+                (segment.ApprovalCheckpoint is null) != (segment.PendingApprovals.Length == 0)) {
+                throw new InvalidDataException("A provider-restart segment requires its original checkpoint and approval pairing.");
+            }
+
+            bytes += segment.RestartCheckpoint is null ? 0L : Encoding.UTF8.GetByteCount(segment.RestartCheckpoint.PayloadJson);
             bytes += segment.ApprovalCheckpoint is null ? 0L : Encoding.UTF8.GetByteCount(segment.ApprovalCheckpoint.PayloadJson);
         }
         var batchIds = new HashSet<Guid>();
@@ -260,6 +326,20 @@ public sealed record AgentToolJournalRecord(
                     throw new InvalidDataException("Disclosure evidence must accompany the original dispatched result checkpoint.");
                 }
 
+                if ((proposal.State == AgentToolProposalState.OwnerReceiptConfirmed) != (proposal.OwnerReceipt is not null) ||
+                    proposal.OwnerReceipt is { } ownerReceipt &&
+                        (SchemaVersion != EffectJournalSchemaVersion ||
+                            proposal.ApprovalStatus != ExecutionApprovalStatus.Approved || proposal.ApprovedDigest != proposal.Payload.Digest ||
+                            proposal.DispatchClaimId is null || proposal.DispatchClaimId == Guid.Empty ||
+                            proposal.Payload.Effect != AgentToolProposalEffect.Mutation ||
+                            proposal.Payload.Recovery != AgentToolProposalRecovery.OwnerReceipt || proposal.ProviderCall is not null ||
+                            proposal.EffectState != AgentToolEffectState.Committed || proposal.Cancellation is not null ||
+                            ownerReceipt.Effect is null || ownerReceipt.Receipt is null ||
+                            string.IsNullOrWhiteSpace(ownerReceipt.Effect.SourceKind) || ownerReceipt.Effect.SourceKind != ownerReceipt.Effect.SourceKind.Trim() ||
+                            string.IsNullOrWhiteSpace(ownerReceipt.Effect.SourceId) || ownerReceipt.Effect.SourceId != ownerReceipt.Effect.SourceId.Trim())) {
+                    throw new InvalidDataException("Owner receipt confirmation requires an approved dispatched effect and complete owner evidence.");
+                }
+
                 if ((proposal.State == AgentToolProposalState.Cancelled) != (proposal.Cancellation is not null) ||
                     proposal.Cancellation is { } resolution && (!Enum.IsDefined(resolution.Disposition) || !Enum.IsDefined(resolution.Reason) ||
                         (resolution.Disposition == AgentToolCancellationDisposition.ReceiptCommitted) !=
@@ -284,14 +364,42 @@ public sealed record AgentToolJournalRecord(
                 }
 
                 bytes += Encoding.UTF8.GetByteCount(proposal.Payload.ArgumentsJson);
+                if (SchemaVersion == EffectJournalSchemaVersion && proposal.Payload.SourcePreparation is { } source) {
+                    bytes += Encoding.UTF8.GetByteCount(source.PayloadJson);
+                }
                 bytes += proposal.Result is null ? 0L : Encoding.UTF8.GetByteCount(proposal.Result.PayloadJson);
                 bytes += proposal.DisclosureEvidence is { } evidence ? Encoding.UTF8.GetByteCount(evidence.PayloadJson) : 0L;
                 bytes += proposal.Cancellation?.Receipt is { } receipt ? Encoding.UTF8.GetByteCount(receipt.PayloadJson) : 0L;
+                if (proposal.OwnerReceipt is { } owner) {
+                    bytes += Encoding.UTF8.GetByteCount(owner.Receipt.PayloadJson);
+                    bytes += Encoding.UTF8.GetByteCount(owner.Effect.SourceKind);
+                    bytes += Encoding.UTF8.GetByteCount(owner.Effect.SourceId);
+                }
             }
         }
 
-        if (bytes > MaximumUtf8Bytes || System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(this).Length > MaximumUtf8Bytes) {
+        if (bytes > MaximumUtf8Bytes || AgentToolJournalJsonSize.Count(this) > MaximumUtf8Bytes) {
             throw new InvalidDataException("The tool admission journal exceeds its supported serialized payload bound.");
+        }
+    }
+
+    private void ValidateEffectApprovals(AgentToolInvocationSegment segment, int index) {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var intents = new HashSet<AgentToolBusinessIntentId>();
+        foreach (var approval in segment.PendingApprovals) {
+            var binding = approval.ToolAdmission;
+            var batch = binding is null ? null : Batches.FirstOrDefault(batch => batch.Id == binding.BatchId);
+            var proposal = batch?.Proposals.FirstOrDefault(proposal => proposal.IntentId == binding!.IntentId);
+            if (binding is null || batch is null || proposal is null || string.IsNullOrWhiteSpace(approval.ApprovalId) ||
+                !ids.Add(approval.ApprovalId) || !intents.Add(binding.IntentId) ||
+                batch.Ordinal < segment.FirstBatchOrdinal ||
+                index + 1 < Segments.Length && batch.Ordinal >= Segments[index + 1].FirstBatchOrdinal ||
+                !proposal.RequiresApproval || proposal.ApprovalId != approval.ApprovalId ||
+                proposal.CallId != approval.CallId || proposal.Payload.ToolName != approval.ToolName ||
+                proposal.Payload.ArgumentsJson != approval.ArgumentsJson ||
+                proposal.Payload.SemanticVersion != binding.SemanticVersion || proposal.Payload.Digest != binding.Digest) {
+                throw new InvalidDataException("An effects-only approval must bind its exact saved proposal.");
+            }
         }
     }
 

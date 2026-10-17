@@ -112,6 +112,40 @@ public sealed class AgentPackageImportServiceTests
         Assert.Empty(store.Document.ExecutionRuns);
     }
 
+    [Fact]
+    public async Task Prepared_import_receipt_does_not_escape_refusal_or_uncertain_cleanup_and_package_is_read_once() {
+        Exception[] failures = [
+            new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged),
+            new SandboxWorkspaceConcurrencyException(4, 5),
+            new AggregateException(new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.PendingRecoveryChanged),
+                new IOException("Fixture key release failed."))
+        ];
+        foreach (var failure in failures) {
+            var original = SandboxWorkspaceDocument.Empty;
+            var store = new InMemoryWorkspaceStore(original) { PublicationFailure = failure };
+            var package = new StubAgentPackageService(CreateImportResult(CreateAgent()));
+            var service = CreateService(store, package);
+            AgentPackageImportReceipt? accepted = null;
+            var observed = await Record.ExceptionAsync(async () => accepted = await service.ImportAsync(Stream.Null,
+                new(AgentPackageImportMode.Create, "prepared-import", "publication-proof")));
+            Assert.Null(accepted);
+            if (failure is AggregateException) {
+                Assert.Same(failure, observed);
+            } else {
+                var conflict = Assert.IsType<AgentPackageImportException>(observed);
+                Assert.Equal(AgentPackageImportFailureKind.Conflict, conflict.Kind);
+                Assert.Equal("agent-package.publication-conflict", conflict.Code);
+                Assert.Same(failure, conflict.InnerException);
+            }
+            Assert.Equal(1, package.ImportCallCount);
+            Assert.Equal(1, store.Preparations);
+            Assert.Single(store.PreparedDocument!.AgentPackageImportOperations);
+            Assert.Same(original, store.Document);
+            Assert.Empty(store.Document.AgentPackageImportOperations);
+            Assert.Empty(store.Document.Agents);
+        }
+    }
+
     private static AgentPackageImportService CreateService(
         ISandboxWorkspaceStore store,
         IAgentPackageService packageService)
@@ -197,6 +231,9 @@ public sealed class AgentPackageImportServiceTests
         : ISandboxWorkspaceStore
     {
         public SandboxWorkspaceDocument Document { get; private set; } = initialDocument;
+        public SandboxWorkspaceDocument? PreparedDocument { get; private set; }
+        public Exception? PublicationFailure { get; set; }
+        public int Preparations { get; private set; }
 
         public Task<AgentExecutionReportPage> QueryExecutionReportAsync(
             AgentExecutionReportQuery query,
@@ -227,7 +264,12 @@ public sealed class AgentPackageImportServiceTests
             Func<SandboxWorkspaceDocument, SandboxWorkspaceDocument> update,
             CancellationToken cancellationToken = default)
         {
-            Document = update(Document);
+            Preparations++;
+            PreparedDocument = update(Document);
+            if (PublicationFailure is { } failure) {
+                throw failure;
+            }
+            Document = PreparedDocument;
             return Task.FromResult(Document);
         }
 

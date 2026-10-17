@@ -17,6 +17,7 @@ public sealed class WorkspaceBoundaryTests {
     [Fact]
     public void Traversal_rejects_forbidden_transitive_and_unresolved_edges() {
         Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.UI", name => name == "CanDoItAll.Workspace.UI" ? ["CanDoItAll.Components.BaseLib"] : ["CanDoItAll.Infrastructure"]));
+        Assert.Throws<InvalidOperationException>(() => Visit("CanDoItAll.Workspace.UI", name => name == "CanDoItAll.Workspace.UI" ? ["CanDoItAll.SharedKernel"] : ["CanDoItAll.Infrastructure"]));
         Assert.Throws<FileNotFoundException>(() => Visit("CanDoItAll.Workspace.UI", _ => throw new FileNotFoundException("Missing dependency")));
     }
 
@@ -71,7 +72,7 @@ public sealed class WorkspaceBoundaryTests {
     private static bool Allowed(string name) => Framework(name) || AllowedFeatureAssemblies.Contains(name);
     private static readonly HashSet<string> AllowedFeatureAssemblies = [
         "CanDoItAll.Workspace.UI", "CanDoItAll.Workspace.UiSandbox", "CanDoItAll.Modules.Workspace.Contracts", "CanDoItAll.Modules.Workspace.Presentation",
-        "CanDoItAll.Security.Abstractions", "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
+        "CanDoItAll.Security.Abstractions", "CanDoItAll.SharedKernel", "CanDoItAll.AgentFramework.ProviderHistory.Abstractions",
         "CanDoItAll.Components.BaseLib", "CanDoItAll.Components.Common"
     ];
 }

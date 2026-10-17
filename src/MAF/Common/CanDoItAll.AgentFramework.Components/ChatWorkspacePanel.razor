@@ -59,6 +59,9 @@
     public bool IsBusy { get; set; }
 
     [Parameter]
+    public bool IsSendBlocked { get; set; }
+
+    [Parameter]
     public int ComposerKey { get; set; }
 
     [Parameter]
@@ -508,6 +511,7 @@
             DraftPrompt = DraftPrompt,
             ComposerKey = ComposerKey,
             IsBusy = IsBusy,
+            IsSendBlocked = IsSendBlocked,
             AutoApproval = IsAutoApprovalActive(),
             ComposerGuidance = ResolveComposerGuidance(),
             Attachments = DraftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray(),

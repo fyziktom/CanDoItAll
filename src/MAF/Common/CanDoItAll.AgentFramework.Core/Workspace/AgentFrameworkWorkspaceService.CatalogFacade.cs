@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -7,6 +8,32 @@ public sealed partial class AgentFrameworkWorkspaceService
     public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
         var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
         return new(activityWorkspaceIdentity, snapshot);
+    }
+
+    public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default) => policyOwner.ReadAsync(agentId, cancellationToken);
+
+    public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
+        var outcome = await policyOwner.ReplaceAsync(command, cancellationToken);
+        if (outcome.Failure is { } failure) {
+            try {
+                logger.LogWarning("Agent policy operation {OperationId} for Agent {AgentId} in profile {ProfileId} generation {Generation} returned {Outcome} at {FailureStage}; failure types {FailureTypes}; truncated {Truncated}.",
+                    command.OperationId, command.Expectation.AgentId, command.Expectation.Workspace.DatabaseProfileId,
+                    command.Expectation.Workspace.DatabaseProfileGeneration, outcome.GetType().Name,
+                    failure.Stage, string.Join(", ", failure.ExceptionTypes), failure.Truncated);
+            } catch (Exception diagnosticFailure) {
+                var diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.Diagnostics,
+                    diagnosticFailure, failure);
+                return outcome switch {
+                    AgentDecisionDataPolicySaveOutcome.Accepted accepted => new AgentDecisionDataPolicySaveOutcome.Accepted(
+                        accepted.Command, accepted.Snapshot, followupRequired: true, diagnostic),
+                    AgentDecisionDataPolicySaveOutcome.Rejected rejected => new AgentDecisionDataPolicySaveOutcome.Rejected(rejected.Reason, diagnostic),
+                    _ => new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command, diagnostic)
+                };
+            }
+        }
+        return outcome;
     }
 
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(

@@ -1,6 +1,25 @@
 @using CanDoItAll.Modules.Prompts.Components
 @using CanDoItAll.AgentFramework.UI.Chat
 <AgentChatRecoverySurface State="ActionPresentation" Intent="HandleActionIntentAsync" />
+@if (submissionNotificationFailure is not null) {
+    <Alert AlertStyle="AlertStyle.Warning">The retained submission list could not be refreshed or logged. Its copies remain available in this session.</Alert>
+}
+@foreach (var submission in Submissions.Snapshot().Where(item => item.State != AgentChatSubmissionState.Pending)) {
+    <Alert @key="submission.Id" AlertStyle="AlertStyle.Warning" data-testid="agents-chat-retained-submission">
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="@(submission.State == AgentChatSubmissionState.NotSent ? "Prompt not sent" : "Submission outcome unconfirmed")" />
+            <TextBlock Value="@($"Original Agent: {submission.AgentId:D}; thread: {submission.SessionId?.ToString("D") ?? "new thread"}; profile generation: {submission.ProfileGeneration.Value}.")" />
+            <TextBlock Value="@submission.RequestPrompt" data-testid="agents-chat-retained-content" />
+            <TextBlock Value="This copy is retained only for this session. Restoring text does not resend it or reuse its execution permissions." />
+            <Button Text="Restore draft" Icon="restore" ButtonStyle="ButtonStyle.Secondary"
+                    Disabled="@(!CanRestoreSubmission(submission))" Click="@(() => RestoreSubmission(submission))"
+                    data-testid="agents-chat-restore-submission" />
+            <Button Text="Discard retained copy" Icon="close" ButtonStyle="ButtonStyle.Light"
+                    Click="@(() => Submissions.Discard(submission))" data-testid="agents-chat-discard-submission" />
+        </Stack>
+    </Alert>
+}
+
         <ChatWorkspacePanel Navigation="@NavigationPresentation" NavigationIntent="HandleNavigationIntentAsync" SelectionGeneration="@chatSession.Generation" Agent="@selectedAgent"
                             Session="@workspace?.SelectedSession"
                             ActiveRun="@workspace?.SelectedRun"
@@ -8,6 +27,7 @@
                             DraftPrompt="@draftPrompt"
                             DraftPromptChanged="HandleDraftPromptChangedAsync"
                             IsBusy="@IsChatInteractionBusy"
+                            IsSendBlocked="@BlocksNewMessage"
                             ComposerKey="@composerKey"
                             RunStateText="@runStateText"
                             RunStateTone="@runStateTone"

@@ -108,7 +108,7 @@ internal sealed class HistoryPersistenceTestDatabase : IAsyncDisposable, ICanoni
         }
         activationEnvironment ??= CanDoItAllTestEnvironment.Create("transfer-dataset-activation");
         var candidate = DatabaseTransferTestSupport.CreateActivationService(activationEnvironment);
-        await new DatasetActivationCoordinator(candidate, Options.Create(new ProjectDefinitionOperationOptions()))
+        await new DatasetActivationCoordinator(candidate, [ProjectFiniteOperationPool.Create(new())])
             .EnsureReadyAsync(Profile);
         activation = candidate;
         return candidate;

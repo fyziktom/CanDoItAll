@@ -36,8 +36,16 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddPooledDbContextFactory<WorkbenchDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });
+        var taskPlanOptions = services.AddOptions<ProjectTaskPlanOperationOptions>();
+        if (configuration is not null) {
+            taskPlanOptions.Bind(configuration.GetSection(ProjectTaskPlanOperationOptions.SectionName));
+        }
+        taskPlanOptions.Validate(static options => options.IsValid(), "Task-plan operation timing is invalid.").ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectTaskPlanReceiptRetention>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
+            ProjectStructureExecutionAuthorityProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentHistoricalReceiptSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAgentChatContextAttachmentCodec,
             ProjectStructure.ProjectStructureInvocationSnapshotCodec>());

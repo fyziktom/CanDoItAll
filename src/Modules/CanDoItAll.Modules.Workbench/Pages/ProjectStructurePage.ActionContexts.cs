@@ -131,6 +131,7 @@ public partial class ProjectStructurePage {
             CloseSubprojectTransferDialog();
         }
         if (projectCreateOpening is { } creation && (!IsCurrentAction(creation.Context) || !ReferenceEquals(projectCreateParentOpening, hierarchyOpening))) {
+            RetireProjectCreateSession();
             projectCreateOpening = null;
             projectHierarchyDialogBeforeCreate = null;
             showProjectCreateModal = false;

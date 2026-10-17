@@ -146,13 +146,63 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
     public async Task CreateChatSessionAsync_ConcurrentAdmissionThroughAnotherStore_PreservesUsage() {
         await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
         var otherStore = new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope);
-        var createSession = otherStore.CreateChatSessionAsync(CreateEmptySession(scenario));
-        var admission = scenario.Store.BeginChatBackedRunAsync(scenario.CreateRequest(),
-            context => CreateAdmissionMutation(context, "concurrent admission"));
+        var emptySession = CreateEmptySession(scenario);
+        ChatSessionRecord? acceptedSession = null;
+        ChatBackedRunStartResult? acceptedAdmission = null;
+        ChatBackedRunStartMutation? preparedAdmission = null;
+        var admissionCalls = 0;
+        var key = FileSandboxWorkspaceWriteSet.Session(null, emptySession).LockPaths(scenario.Layout)[0];
+        var outcomes = await PreparedPublicationCompetition.RunAsync(scenario.Layout, key,
+            async cancellationToken => acceptedSession = await otherStore.CreateChatSessionAsync(emptySession, cancellationToken),
+            async cancellationToken => acceptedAdmission = await scenario.Store.BeginChatBackedRunAsync(
+                scenario.CreateRequest(), context => {
+                    admissionCalls++;
+                    return preparedAdmission = CreateAdmissionMutation(context, "concurrent admission");
+                }, cancellationToken));
 
-        await Task.WhenAll(createSession, admission);
+        Assert.Equal(1, admissionCalls);
+        Assert.Single(outcomes, outcome => outcome is null);
+        var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(Assert.Single(outcomes.OfType<Exception>()));
+        Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        var admissionWon = acceptedAdmission is not null;
+        Assert.Equal(admissionWon, acceptedSession is null);
+        Assert.Equal(!admissionWon, File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
+        Assert.NotNull(preparedAdmission);
+        Assert.Equal(admissionWon, Directory.Exists(scenario.Layout.RunRoot(preparedAdmission.Detail.Run.Id)));
+        Assert.Equal(admissionWon, File.Exists(scenario.Layout.SessionPath(preparedAdmission.Detail.ChatSession!.Id)));
+        var observedProjection = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, observedProjection.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.UsageObservationCount + (admissionWon ? 1 : 0), observedProjection.UsageObservationCount);
+        Assert.Equal(scenario.InitialUsageProjection.TotalTokens + (admissionWon ? AdmissionInputTokens + AdmissionOutputTokens : 0), observedProjection.TotalTokens);
+        Assert.Equal(scenario.InitialUsageProjection.KnownCostUsd + (admissionWon ? AdmissionCostUsd : 0), observedProjection.KnownCostUsd);
+        var observedCatalog = await otherStore.LoadCatalogSnapshotAsync();
+        Assert.Equal(scenario.CatalogRevision, observedCatalog.Revision);
 
-        Assert.IsType<ChatBackedRunStarted>(await admission);
+        if (admissionWon) {
+            Assert.IsType<ChatBackedRunStarted>(acceptedAdmission);
+            var laterSession = await otherStore.CreateChatSessionAsync(CreateEmptySession(scenario));
+            Assert.NotEqual(emptySession.Id, laterSession.Id);
+            Assert.False(File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
+        } else {
+            Assert.Equal(emptySession.Id, acceptedSession!.Id);
+            Assert.Equal(emptySession.AgentId, acceptedSession.AgentId);
+            Assert.Empty(acceptedSession.Messages);
+            Assert.Null(acceptedSession.LatestExecutionRunId);
+            var laterCalls = 0;
+            var later = Assert.IsType<ChatBackedRunStarted>(await scenario.Store.BeginChatBackedRunAsync(
+                new ChatBackedRunStartRequest(scenario.Agent.Id, scenario.Agent.ProviderProfileId!.Value,
+                    observedCatalog.Revision, null), context => {
+                        laterCalls++;
+                        return CreateAdmissionMutation(context, "concurrent admission");
+                    }));
+            Assert.Equal(1, laterCalls);
+            Assert.NotEqual(preparedAdmission.Detail.Run.Id, later.Detail.Run.Id);
+            Assert.NotEqual(preparedAdmission.Detail.ChatSession.Id, later.Detail.ChatSession!.Id);
+            Assert.False(Directory.Exists(scenario.Layout.RunRoot(preparedAdmission.Detail.Run.Id)));
+            Assert.False(File.Exists(scenario.Layout.SessionPath(preparedAdmission.Detail.ChatSession.Id)));
+        }
+
+        Assert.Equal(1, admissionCalls);
         var projection = await scenario.Store.LoadUsageProjectionAsync();
         Assert.Equal(scenario.InitialUsageProjection.Revision + 2, projection.Revision);
         await AssertUsageAfterAdmissionAsync(scenario);
@@ -377,7 +427,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         }
 
         var environment = CanDoItAllTestEnvironment.Create(
-            $"workspace-admission-read-scaling-{Guid.NewGuid():N}");
+            "workspace-admission-read-scaling");
         try
         {
             var profile = environment.CreateInMemoryProfile("primary");

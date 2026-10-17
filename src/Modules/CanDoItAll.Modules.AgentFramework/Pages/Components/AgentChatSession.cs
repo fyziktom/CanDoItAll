@@ -26,6 +26,8 @@ public sealed class AgentChatSession(
     public Guid? DesiredSessionId { get; private set; }
     public AgentDefinition? Agent { get; private set; }
     public ChatAgentWorkspaceSnapshot? Workspace { get; private set; }
+    public AgentEffectContinuation? EffectContinuation { get; private set; }
+    public AgentHistoricalReceiptReviewRequest? HistoricalReceiptReference { get; private set; }
     public ImmutableArray<AgentDefinition> Agents { get; private set; } = [];
     public ImmutableArray<ProviderProfile> Providers { get; private set; } = [];
     public ImmutableHashSet<Guid> PrivateAgentIds { get; private set; } = [];
@@ -60,6 +62,7 @@ public sealed class AgentChatSession(
         DesiredSessionId = sessionId;
         Focused = focused;
         ErrorMessage = "";
+        HistoricalReceiptReference = null;
         if (selectionChanged) {
             ClearWorkspace(clearAgent: agentChanged);
         }
@@ -102,6 +105,11 @@ public sealed class AgentChatSession(
             }
             ExecutionRunDetail? detail = null;
             var selectedRunId = runId ?? nextWorkspace.SelectedRun?.Id;
+            if (nextWorkspace.SelectedRun is { } original && original.Id == selectedRunId &&
+                    original.AgentId == nextAgent.Id && original.ChatSessionId == nextWorkspace.SelectedSessionId &&
+                    original.CreatedAtUtc != default) {
+                HistoricalReceiptReference = new(original.Id, original.ChatSessionId, original.AgentId, original.CreatedAtUtc);
+            }
             if (selectedRunId.HasValue) {
                 detail = await workspaceService.GetExecutionRunDetailAsync(selectedRunId.Value, request.Token);
                 if (!IsCurrent(generation)) {
@@ -112,6 +120,7 @@ public sealed class AgentChatSession(
                     || nextWorkspace.SelectedSessionId.HasValue && detail.ChatSession is null
                     || detail.ChatSession is { } runSession && (runSession.Id != nextWorkspace.SelectedSessionId || runSession.AgentId != nextAgent.Id)) {
                     ErrorMessage = "The requested run is not available for this thread.";
+                    HistoricalReceiptReference = null;
                     Revision++;
                     return false;
                 }
@@ -119,9 +128,11 @@ public sealed class AgentChatSession(
                     SelectedRun = detail.Run,
                     SelectedSession = detail.ChatSession
                 });
+                HistoricalReceiptReference = new(detail.Run.Id, detail.Run.ChatSessionId, detail.Run.AgentId, detail.Run.CreatedAtUtc);
             }
             AcceptAgent(nextAgent);
             Workspace = nextWorkspace;
+            EffectContinuation = detail?.EffectContinuation;
             ExecutionLog = detail?.ExecutionLog.ToImmutableArray() ?? [];
             Metrics = detail?.Metrics.ToImmutableArray() ?? [];
             Revision++;
@@ -181,6 +192,7 @@ public sealed class AgentChatSession(
                 AcceptAgent(Agents.FirstOrDefault(agent => agent.Id == current.Id));
                 if (Agent is null) {
                     Workspace = null;
+                    HistoricalReceiptReference = null;
                     ExecutionLog = [];
                     Metrics = [];
                     ErrorMessage = "The requested agent is not available.";
@@ -232,6 +244,8 @@ public sealed class AgentChatSession(
             AcceptAgent(null);
         }
         Workspace = null;
+        EffectContinuation = null;
+        HistoricalReceiptReference = null;
         ExecutionLog = [];
         Metrics = [];
     }
@@ -266,6 +280,7 @@ public sealed class AgentChatSession(
             return;
         }
         disposed = true;
+        HistoricalReceiptReference = null;
         Generation++;
         targetLifetime.Cancel();
         targetLifetime.Dispose();

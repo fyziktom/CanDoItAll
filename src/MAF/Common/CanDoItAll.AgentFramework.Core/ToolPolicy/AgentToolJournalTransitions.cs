@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -18,6 +17,9 @@ public static class AgentToolJournalTransitions {
             proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||
             proposed.RuntimeContext?.WorkspaceScope != current.RuntimeContext?.WorkspaceScope || proposed.Revision < current.Revision ||
             !HasSameContextAttachments(current.RuntimeContext, proposed.RuntimeContext) ||
+            current.ReceiptReconciliationCursor is not null && proposed.ReceiptReconciliationCursor is null ||
+            current.ReceiptReconciliationCursor != proposed.ReceiptReconciliationCursor &&
+                (proposed.ActiveDispatchLeaseId is null || proposed.ActiveDispatchLeaseId != current.ActiveDispatchLeaseId) ||
             proposed.Batches.Length < current.Batches.Length || proposed.Segments.Length < current.Segments.Length) {
             throw Conflict("A run update cannot remove or replace its current tool admission journal.");
         }
@@ -33,9 +35,17 @@ public static class AgentToolJournalTransitions {
             var next = proposed.Segments[index];
             if (previous.Id != next.Id || previous.Ordinal != next.Ordinal ||
                 previous.FirstBatchOrdinal != next.FirstBatchOrdinal || previous.RestartCheckpoint != next.RestartCheckpoint ||
+                previous.CheckpointKind != next.CheckpointKind || previous.OriginDispatchLeaseId != next.OriginDispatchLeaseId ||
                 previous.ContinuesSegmentId != next.ContinuesSegmentId ||
-                previous.ApprovalCheckpoint is not null && (next.ApprovalCheckpoint != previous.ApprovalCheckpoint ||
-                    !next.PendingApprovals.SequenceEqual(previous.PendingApprovals))) {
+                previous.CheckpointKind == AgentToolCheckpointKind.ProviderRestart &&
+                    (previous.ApprovalCheckpoint is not null || !previous.PendingApprovals.IsEmpty) &&
+                    (next.ApprovalCheckpoint != previous.ApprovalCheckpoint ||
+                    !next.PendingApprovals.SequenceEqual(previous.PendingApprovals)) ||
+                previous.CheckpointKind == AgentToolCheckpointKind.EffectsOnly &&
+                    (next.PendingApprovals.Length < previous.PendingApprovals.Length ||
+                        !next.PendingApprovals.Take(previous.PendingApprovals.Length).SequenceEqual(previous.PendingApprovals) ||
+                        next.PendingApprovals.Length > previous.PendingApprovals.Length && previous.PendingApprovals.Any(approval =>
+                            RequireProposal(current, approval.ToolAdmission!).ApprovalStatus == ExecutionApprovalStatus.Pending))) {
                 throw Conflict("A saved SDK invocation or approval checkpoint is immutable.");
             }
         }
@@ -52,6 +62,14 @@ public static class AgentToolJournalTransitions {
             for (var ordinal = 0; ordinal < previous.Proposals.Length; ordinal++) {
                 var prior = previous.Proposals[ordinal];
                 var target = next.Proposals[ordinal];
+                if (target.State == AgentToolProposalState.OwnerReceiptConfirmed &&
+                    (prior.State is not (AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired or AgentToolProposalState.OwnerReceiptConfirmed) ||
+                        prior.ApprovalStatus != ExecutionApprovalStatus.Approved || prior.ApprovedDigest != prior.Payload.Digest ||
+                        target.Result != prior.Result || target.DisclosureEvidence != prior.DisclosureEvidence ||
+                        target.DispatchClaimId != prior.DispatchClaimId) ||
+                    prior.State == AgentToolProposalState.OwnerReceiptConfirmed && target != prior) {
+                    throw Conflict("An owner-confirmed effect preserves its original dispatch and SDK evidence and cannot execute again.");
+                }
                 if ((prior.Result is not null || prior.DisclosureEvidence is not null) &&
                     target.DisclosureEvidence != prior.DisclosureEvidence) {
                     throw Conflict("A saved result cannot change or acquire disclosure evidence after its original checkpoint.");
@@ -246,7 +264,7 @@ public static class AgentToolJournalTransitions {
     }
 
     private static bool Equivalent(AgentToolJournalRecord left, AgentToolJournalRecord right)
-        => JsonSerializer.Serialize(left) == JsonSerializer.Serialize(right);
+        => ReferenceEquals(left, right) || AgentToolJournalWireEquality.AreEqual(left, right);
 
     private static AgentToolAdmissionException Conflict(string message)
         => new("tool-admission.conflict", message);

@@ -17,7 +17,7 @@ public sealed class ApiAdministrationOutcomeTests {
     public async Task Issuance_captures_every_field_and_scope_before_permission_yields() {
         await using var environment = CanDoItAllTestEnvironment.Create("api-capture");
         var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
-        var registry = new FileApiTokenRegistry(Paths(environment, writer), writer);
+        var registry = new FileApiTokenRegistry(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         var access = new HeldAccess();
         var issuer = new CapturingIssuer();
         var service = new ApiTokenAdministrationService(issuer, registry, access, new SystemClock());
@@ -44,7 +44,7 @@ public sealed class ApiAdministrationOutcomeTests {
     public async Task A_logger_fault_after_durable_write_does_not_lose_the_known_result(AccountWrite action) {
         await using var environment = CanDoItAllTestEnvironment.Create("api-log-outcome");
         var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
-        var store = new FileApiUserStore(Paths(environment, writer), writer);
+        var store = new FileApiUserStore(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         var logger = new FaultLogger();
         var service = new ApiUserAdministrationService(store, new ApiPasswordService(), new AllowedAccess(), Options.Create(new ApiAccessOptions()), new SystemClock(), logger);
         var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
@@ -70,7 +70,7 @@ public sealed class ApiAdministrationOutcomeTests {
                     break;
             }
         });
-        var reopened = new FileApiUserStore(Paths(environment, writer), writer);
+        var reopened = new FileApiUserStore(Paths(environment, writer), writer, new PhysicalFileSystemPathPolicyFactory());
         if (action == AccountWrite.Delete) {
             Assert.Empty(await reopened.ReadAsync());
         } else {

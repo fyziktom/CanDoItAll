@@ -3,27 +3,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Projects;
 
-public enum ProjectOperationEpochState { Open = 1, Closed = 2 }
-
-public sealed class ProjectOperationStateRecord {
-    public const string TableName = "Projects_OperationState";
-    public Guid NamespaceId { get; set; }
-    public long CurrentEpoch { get; set; }
-    public long RetiredThroughEpoch { get; set; }
-}
-
-public sealed class ProjectOperationEpochRecord {
-    public const string TableName = "Projects_OperationEpochs";
-    public Guid NamespaceId { get; set; }
-    public long Epoch { get; set; }
-    public ProjectOperationEpochState State { get; set; }
-    public DateTimeOffset OpenedAtUtc { get; set; }
-    public DateTimeOffset AdmissionClosesAtUtc { get; set; }
-    public DateTimeOffset? ClosedAtUtc { get; set; }
-    public int MutationDeadlineMilliseconds { get; set; }
-    public long ReplayRetentionSeconds { get; set; }
-}
-
 public sealed class ProjectDefinitionReceiptRecord {
     public const string TableName = "Projects_DefinitionReceipts";
     public const int MaximumPayloadBytes = 2 * 1024 * 1024;
@@ -43,32 +22,6 @@ public sealed class ProjectDefinitionReceiptRecord {
     public DateTimeOffset AcceptedAtUtc { get; set; }
     public byte[] AcceptedPayload { get; set; } = [];
     public string? CreationFingerprint { get; set; }
-}
-
-internal sealed class ProjectOperationStateRecordConfiguration : IEntityTypeConfiguration<ProjectOperationStateRecord> {
-    public void Configure(EntityTypeBuilder<ProjectOperationStateRecord> builder) {
-        builder.ToTable(ProjectOperationStateRecord.TableName, table => {
-            table.HasCheckConstraint("CK_Projects_OperationState_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
-            table.HasCheckConstraint("CK_Projects_OperationState_Epoch", "\"CurrentEpoch\" > 0 AND \"RetiredThroughEpoch\" >= 0 AND \"RetiredThroughEpoch\" < \"CurrentEpoch\"");
-        });
-        builder.HasKey(record => record.NamespaceId);
-        builder.Property(record => record.NamespaceId).ValueGeneratedNever();
-    }
-}
-
-internal sealed class ProjectOperationEpochRecordConfiguration : IEntityTypeConfiguration<ProjectOperationEpochRecord> {
-    public void Configure(EntityTypeBuilder<ProjectOperationEpochRecord> builder) {
-        builder.ToTable(ProjectOperationEpochRecord.TableName, table => {
-            table.HasCheckConstraint("CK_Projects_OperationEpoch_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
-            table.HasCheckConstraint("CK_Projects_OperationEpoch_Number", "\"Epoch\" > 0");
-            table.HasCheckConstraint("CK_Projects_OperationEpoch_Deadline", "\"MutationDeadlineMilliseconds\" > 0 AND \"ReplayRetentionSeconds\" > 0 AND \"AdmissionClosesAtUtc\" > \"OpenedAtUtc\"");
-            table.HasCheckConstraint("CK_Projects_OperationEpoch_State", "(\"State\" = 1 AND \"ClosedAtUtc\" IS NULL) OR (\"State\" = 2 AND \"ClosedAtUtc\" IS NOT NULL AND \"ClosedAtUtc\" >= \"OpenedAtUtc\")");
-        });
-        builder.HasKey(record => new { record.NamespaceId, record.Epoch });
-        builder.Property(record => record.State).HasConversion<int>();
-        builder.HasIndex(record => record.NamespaceId).IsUnique()
-            .HasFilter($"\"State\" = {(int)ProjectOperationEpochState.Open}");
-    }
 }
 
 internal sealed class ProjectDefinitionReceiptRecordConfiguration : IEntityTypeConfiguration<ProjectDefinitionReceiptRecord> {

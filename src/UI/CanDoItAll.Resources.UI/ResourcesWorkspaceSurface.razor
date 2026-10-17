@@ -144,6 +144,9 @@
                     <Alert AlertStyle="AlertStyle.Warning">The loaded project lifetime is unavailable. Its admission is retained until you explicitly select a current project.</Alert>
                 }
                 <ResourceMutationHistory Workspace="Registry" />
+                @if (Registry.Draft.Expected is ResourceMetadataExpectation.Existing) {
+                    <Button Text="Reload stored metadata" ButtonStyle="ButtonStyle.Light" Disabled="@Registry.IsBusy" Click="Registry.ReloadAsync" />
+                }
                 @if (IsGovernedStorageObject) {
                     <Stack Class="min-h-full" GapScale="LayoutGap.XLarge">
                         <Alert AlertStyle="AlertStyle.Info" data-testid="resource-governed-storage-object">
@@ -176,8 +179,24 @@
                             </SecondaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                                 }
+                            </DangerActions>
+                        </StickyActionFooter>
+                    </Stack>
+                }
+                else if (Registry.Draft.ReadOnlyReason is not null || Registry.Draft.EditorUnavailable) {
+                    <Stack GapScale="LayoutGap.Medium">
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="resource-metadata-readonly">
+                            This Resource's stored metadata cannot be edited with the available connector or supported metadata limits.
+                            Its original identity and revision are retained; deletion does not require a current project or configuration decoding.
+                            @if (Registry.Draft.ReadOnlyReason == ResourceMetadataReadOnlyReason.UnavailableConnector) {
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@($"Unavailable connector: {editor.ConnectorPluginKey}")" />
+                            }
+                        </Alert>
+                        <StickyActionFooter StatusLabel="Stored Resource metadata">
+                            <DangerActions>
+                                <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                             </DangerActions>
                         </StickyActionFooter>
                     </Stack>
@@ -319,11 +338,11 @@
                                 <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
-                                <Button Text="Save resource" Type="submit" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" data-testid="resource-save-button" />
+                                <Button Text="Save resource" Type="submit" Disabled="@(!Registry.CanSave)" data-testid="resource-save-button" />
                             </PrimaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@(!Registry.CanMutate || Registry.IsBusy)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>

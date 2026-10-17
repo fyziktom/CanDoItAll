@@ -217,14 +217,8 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IAiTechnicalAgentBridge technicalAgentBridge,
         IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator,
-        IServiceProvider serviceProvider)
-    {
-        var implementationType = typeof(AgentFrameworkModuleServiceCollectionExtensions).Assembly.GetType(
-            "CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService",
-            throwOnError: true)!;
-        var loggerType = typeof(ILogger<>).MakeGenericType(implementationType);
-        var logger = serviceProvider.GetRequiredService(loggerType);
-        var constructor = Assert.Single(implementationType.GetConstructors());
+        IServiceProvider serviceProvider) {
+        var logger = serviceProvider.GetRequiredService<ILogger<CurrentProfileAgentFrameworkWorkspaceService>>();
         var timeProvider = TimeProvider.System;
         var coordinator = new AgentExecutionActivityCoordinator(
             new PartitionedSequencedStream<
@@ -234,18 +228,16 @@ public sealed class CurrentProfileAgentFrameworkWorkspaceServiceTests
                 timeProvider),
             timeProvider);
 
-        return Assert.IsAssignableFrom<IAgentFrameworkWorkspaceService>(constructor.Invoke(
-            [
-                workspaceFactory,
-                technicalAgentBridge,
-                referenceDataCacheInvalidator,
-                new StubDatabaseProfileRuntimeAccessor(),
-                new DatabaseSwitchNotificationService(),
-                coordinator,
-                new FixedAgentExecutionProfileGenerationSource(
-                    new DatabaseProfileGeneration(0)),
-                logger
-            ]));
+        return new CurrentProfileAgentFrameworkWorkspaceService(
+            workspaceFactory,
+            technicalAgentBridge,
+            referenceDataCacheInvalidator,
+            new StubDatabaseProfileRuntimeAccessor(),
+            new DatabaseSwitchNotificationService(),
+            coordinator,
+            new FixedAgentExecutionProfileGenerationSource(
+                new DatabaseProfileGeneration(0)),
+            logger);
     }
 
     private static async Task ExecuteDirectoryProjectionMutationAsync(

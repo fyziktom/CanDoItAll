@@ -1,8 +1,45 @@
 # Concurrent mutations architecture
 
-Status: architecture direction reviewed; P01a cleanup validated and committed; P02a
-definition protection is in progress. This document specifies the target and does
-not claim that the engine already provides every guarantee below. Implementation and
+Current implementation handoff: [2026-10-17 checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-17-checkpoint-handoff.md).
+Work stopped at the user's request to conserve credits. The final C4 correctness
+candidate passed 706/706; the additional native chat browser proof remains unresolved.
+Persisted policy editing does not yet enforce snapshot/refresh/replan across execution.
+Lifecycle, remaining owners, measured performance gaps and cleanup still block E2E closure.
+
+Status: architecture direction reviewed; P01a cleanup and Projects original-state,
+durable-operation and native recovery foundations are committed through `702d0a93`.
+Complete producer cutover, other owners, capacity and runtime policy remain open.
+Broad Stable ended incomplete (16,199 executed, 17 failed, 2,444 unexecuted).
+A subsequent focused checkpoint executed 404 cases (395 passed, nine failed),
+with its browser and final portability checks passing. Targeted repairs and the
+next reviewed source then ran 361 cases (347 passed, 14 failed). The repaired candidate
+passed all 178 selected cases and final portability enforcement. Later C2/Workspace/R1b
+checkpoints executed 482 cases (468 passed) and 330 cases (321 passed, nine failed,
+zero skipped); all three browser cases in each passed. R1c activity-knowledge changes
+and reviewed fixture repairs passed builds/static validation and executed 400 cases:
+386 passed, 14 failed, zero skipped. The remaining native fixture and API description
+repairs then executed 80 cases (78 passed, two failed). Send-state and enum-description
+corrections subsequently passed all 80 and final static gates. All 22 performance
+attempts failed before measurement in cold probe initialization; cleanup was verified.
+The source-name repair passed build/static gates; all 22 fresh-host rows then executed
+with 10 passed, 12 failed and verified cleanup. Its startup trace did not finalize and
+was refused. The narrow direct UTF-8
+candidate passed all 62 compatibility cases and executed the matched 22 performance rows,
+with 10 passed and 12 failed. Exact identities and cleanup are verified, but maximum journal
+allocation/latency remains an activation gate. Controlled explicit collection now supplies
+an accepted allocation trace and three verified refusal arrangements. The subsequent
+prepared run-read candidate passed 112 correctness cases and final portability enforcement;
+its unchanged 22-row performance matrix finished with 11 passed and 11 failed. All
+identities and cleanup are verified, but mixed measured latency and failed large-case
+gates leave capacity unqualified. Journal byte-counting then passed 135 correctness
+cases and final portability enforcement; its 22 performance rows finished with 12
+passed and 10 failed. Large detail allocation improves but core cold allocation
+regresses. The independent wire-comparison change then passed 161 correctness cases
+and final static enforcement; its 22 performance rows produced 11 passed and 11
+failed. Both changes remain provisional. Whole-journal publication cost and capacity
+remain open while historical/currentness and actual restart proof proceed separately.
+This document specifies the target and does not claim that the engine already provides
+every guarantee below. Implementation and
 proof are tracked in the [execution bundle](../../../codex/bundles/concurrent-mutations/README.md).
 
 ## Outcome and scope
@@ -18,7 +55,7 @@ revision on every row, global write queue, mandatory realtime subscription, or l
 held during human/model work. Existing owner-specific versions and expected-state
 contracts remain valid where their complete write perimeter is proven.
 
-The initial closed vertical is Projects definition editing: scalars, ordered phases
+The first vertical to close is Projects definition editing: scalars, ordered phases
 and technology options. Workbench structure, canonical tasks, CRM/HR, definitions,
 settings and runtime transitions follow their own owner contracts. Existing protections
 are retained and regression-tested; missing protections remain explicit work, never
@@ -30,7 +67,7 @@ their actual driver/provider protocols.
 Initial source: CanDoItAll `ead988abeb4cfb3e12341e618362bfa3dde5df29`, branch
 `concurrent-mutations`, clean before this task. The architect's v0.1 ZIP is preserved
 as reference input with its original proposed decisions. It is not a runnable work
-order. Current source has materially evolved since that package:
+order. The initial inspection found these changes and gaps relative to that package:
 
 - Projects UI is extracted and already preserves submission identity, row identity,
   typing after dispatch, and owner generations. Extend that seam.
@@ -38,12 +75,15 @@ order. Current source has materially evolved since that package:
   admissions. Replacing these with a root project revision would create false conflicts.
 - Process claims, source authority, prepared tool identity and immutable execution
   definitions already exist. A freshness policy must compose with them.
-- Projects whole-aggregate saves still lack an original content precondition.
-- The scalar-only agent project adapter uses a whole-replacement save, risking removal
-  of phases/options. A token alone does not repair an incorrectly shaped command.
-- Project search updates occur after commit and can publish an older payload later.
-- SerializableMutationScope can leak its process semaphore when transaction disposal
-  throws. Cleanup must release acquired locks even when another cleanup step fails.
+- Projects whole-aggregate saves lacked an original content precondition. The new owner
+  command requires it; the remaining legacy producer inventory still gates closure.
+- The scalar-only agent adapter used whole replacement, risking removal of phases/options.
+  Its protected scalar command now preserves them; complete runtime journal/producer
+  cutover is separate. A token alone cannot repair an incorrectly shaped command.
+- Project search updates occurred after commit and could publish an older payload later.
+  The protected writer now enlists search with the definition and accepted receipt.
+- SerializableMutationScope could leak its process semaphore when transaction disposal
+  threw. P01a corrected cleanup and proved release under injected disposal failures.
 
 CodeAnalytics snapshot `snap-20261016142537-4d8bda80` loaded four projects and 224
 documents (Projects, Infrastructure, Infrastructure.Abstractions, SharedKernel). Its
@@ -60,6 +100,7 @@ Detailed design:
 - [Owner coverage and remaining write perimeters](05-owner-coverage.md)
 - [Caller, dataset and operation-retention lifecycle](06-operation-lifecycle-contract.md)
 - [Exact Projects contracts and caller cutover](07-projects-contract-cutover.md)
+- [File publication and explicit recovery](08-file-publication-recovery.md)
 
 ## Invariants
 

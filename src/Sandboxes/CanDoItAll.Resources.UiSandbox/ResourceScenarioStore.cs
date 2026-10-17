@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -10,8 +11,8 @@ using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Resources.UiSandbox;
 
-public enum ResourceScenario { Representative, Empty, Large, UnavailableReferences, RetiredProject, MissingConnector, InvalidFields, FailedReads, RefusedWrite, UnknownWrite, CommittedWarning, DeniedActions, UnavailableActions }
-public enum ResourceScenarioLane { RegistryRead, EditorRead, References, Parties, Catalog, Source, Preview, Save, Delete, Promotion, FileAction, Download, SourceRelease, PreviewRelease }
+public enum ResourceScenario { Representative, Empty, Large, UnavailableReferences, RetiredProject, MissingConnector, InvalidFields, FailedReads, RefusedWrite, UnknownWrite, CommittedWarning, DeniedActions, UnavailableActions, MetadataOnlyUnbound }
+public enum ResourceScenarioLane { RegistryRead, EditorRead, References, Parties, Catalog, Source, Preview, Save, Delete, Promotion, FileAction, Download, SourceRelease, PreviewRelease, Context }
 
 public sealed class ResourceScenarioGate {
     private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -35,19 +36,25 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
     private readonly List<ResourceScenarioGate> active = [];
     private readonly Dictionary<Guid, ResourceFileSelection> storedFiles = [];
     private readonly Dictionary<ResourceFileSourceKey, ResourceFixtureProvider> providers = [];
-    private int nextId = 1000;
+    private readonly Dictionary<Guid, ResourceMetadataRevision> metadataRevisions = [];
     private int revision;
     public ResourceScenario Scenario { get; }
     public Dictionary<Guid, ResourceEditorModel> Records { get; } = [];
     public List<ResourceProjectOption> Projects { get; } = [];
     public List<ResourceBrowseSource> Sources { get; } = [];
     public List<ResourceRegistryDispatch> Writes { get; } = [];
+    public List<ReplaceResourceMetadataCommand> SaveCommands { get; } = [];
+    public List<DeleteResourceMetadataCommand> DeleteCommands { get; } = [];
     public List<ResourcePromotionRequest> PromotionCommands { get; } = [];
     public List<(ResourceFileSelection Selection, FileToolsLocalFileAction Action)> Launches { get; } = [];
     public int ReleaseCount { get; private set; }
     public int ContentReleaseCount { get; private set; }
     public int DownloadReleaseCount { get; private set; }
     public int ReadCount { get; private set; }
+    public int ExactReadCount { get; private set; }
+    public int ProjectionCount { get; private set; }
+    public bool FailNextEditorProjection { get; set; }
+    public ResourceMetadataContext Context { get; set; } = new(FixtureId(2), new DatasetNamespaceId(FixtureId(6)));
     public int PendingCount => active.Count;
     public bool IsCurrent { get; set; } = true;
     public bool FailNextRead { get; set; }
@@ -72,6 +79,7 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
             var record = CreateEditor($"Sample resource {i + 1}");
             record.Id = FixtureId(100 + i);
             Records.Add(record.Id.Value, record);
+            metadataRevisions.Add(record.Id.Value, new(FixtureId(2000 + i)));
         }
         foreach (var sourceClass in Enum.GetValues<ResourceFileSourceClass>()) {
             var id = FixtureId(20 + (int)sourceClass);
@@ -101,6 +109,14 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
             first.Configuration.SetText(NumberField, "1e-");
             first.Configuration.SetText(JsonField, "{\"unfinished\":");
         }
+        foreach (var record in Records.Values) {
+            record.ConfigJson = record.Configuration.ToJson();
+        }
+        if (scenario == ResourceScenario.MetadataOnlyUnbound) {
+            first.ProjectId = null;
+            first.ExpectedProjectAdmission = null;
+            first.ConfigJson = new string('x', ResourceMetadataLimits.ConfigJsonBytes + 1);
+        }
     }
 
     public ResourceEditorModel CreateEditor(string name) {
@@ -121,16 +137,97 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
     public string BuildLocationPreview(ResourceEditorModel editor) => editor.Configuration.GetText(ResourceConnectorFieldKeys.WebUrl);
     public async Task<IReadOnlyList<ResourceSummary>> ListAsync(CancellationToken cancellationToken = default) {
         await ReadAsync(ResourceScenarioLane.RegistryRead);
-        return Records.Values.Select(r => new ResourceSummary(r.Id!.Value, r.ProjectId!.Value, Projects.FirstOrDefault(p => p.Id == r.ProjectId)?.Name ?? "Unavailable project",
+        return Records.Values.Select(r => new ResourceSummary(r.Id!.Value, r.ProjectId ?? Guid.Empty, Projects.FirstOrDefault(p => p.Id == r.ProjectId)?.Name ?? "Unavailable project",
             null, r.ConnectorPluginKey, ListManifests().FirstOrDefault(m => m.PluginKey == r.ConnectorPluginKey)?.DisplayName ?? "Unavailable connector", r.Name,
             r.LocationOrIdentifier, r.ValidationStatus, r.Sensitivity) { ProjectLifetimeId = r.ExpectedProjectAdmission?.LifetimeId }).ToArray();
     }
-    public async Task<ResourceEditorModel> GetAsync(Guid id, CancellationToken cancellationToken = default) {
+    public async Task<ResourceMetadataContext> ReadContextAsync(CancellationToken cancellationToken = default) {
+        await ReadAsync(ResourceScenarioLane.Context);
+        return Context;
+    }
+    public async Task<ResourceMetadataReadResult> ReadAsync(Guid id, CancellationToken cancellationToken = default) {
+        ExactReadCount++;
         await ReadAsync(ResourceScenarioLane.EditorRead);
         if (BeforeGet is { } before) {
             await before(id);
         }
-        return Records.TryGetValue(id, out var record) ? record.Capture() : new();
+        if (!Records.TryGetValue(id, out var record)) {
+            return new ResourceMetadataReadResult.Missing(Context, id);
+        }
+        if (Encoding.UTF8.GetByteCount(record.ConfigJson) > ResourceMetadataLimits.ConfigJsonBytes) {
+            return new ResourceMetadataReadResult.MetadataOnly(Expectation(id),
+                new(record.Name.Length, record.Description.Length, record.ConnectorPluginKey.Length, record.ConfigSchemaVersion.Length,
+                    record.LocationOrIdentifier.Length, Encoding.UTF8.GetByteCount(record.ConfigJson), 2), ResourceMetadataReadOnlyReason.TooLarge);
+        }
+        var readOnly = record.ConnectorPluginKey == ResourceConnectorPluginKeys.StorageObject ? ResourceMetadataReadOnlyReason.GovernedStorageObject
+            : ListManifests().All(manifest => manifest.PluginKey != record.ConnectorPluginKey) ? ResourceMetadataReadOnlyReason.UnavailableConnector
+            : (ResourceMetadataReadOnlyReason?)null;
+        return new ResourceMetadataReadResult.Found(Snapshot(id), readOnly);
+    }
+    public ResourceEditorModel CreateEditor(ResourceMetadataSnapshot snapshot) {
+        ProjectionCount++;
+        if (FailNextEditorProjection) {
+            FailNextEditorProjection = false;
+            throw new ResourceActionRefusedException("Synthetic local projection failure after owner acknowledgement.");
+        }
+        var values = snapshot.Values;
+        var projectId = snapshot.Expected.Project switch {
+            ResourceProjectBinding.Bound bound => (Guid?)bound.ProjectId,
+            ResourceProjectBinding.RetainedProject retained => retained.ProjectId,
+            ResourceProjectBinding.RetainedUnbound => null,
+            _ => throw new InvalidOperationException("Unsupported fixture binding.")
+        };
+        return new() {
+            Id = snapshot.Expected.ResourceId,
+            ProjectId = projectId,
+            ExpectedProjectAdmission = snapshot.Expected.Project is ResourceProjectBinding.Bound project
+                ? new(snapshot.Expected.Context.DatabaseProfileId, project.ProjectId, project.LifetimeId) : null,
+            Name = values.Name,
+            Description = values.Description,
+            ConnectorPluginKey = values.ConnectorPluginKey,
+            ConfigSchemaVersion = values.ConfigSchemaVersion,
+            LocationOrIdentifier = values.LocationOrIdentifier,
+            ConfigJson = values.ConfigJson,
+            Configuration = ConnectorConfigState.FromJson(values.ConfigJson),
+            OwnerPartyId = values.OwnerPartyId,
+            MaintainerPartyId = values.MaintainerPartyId,
+            LinkedSecretId = JsonSerializer.Deserialize<Guid[]>(values.LinkedSecretIdsJson)!.Select(id => (Guid?)id).SingleOrDefault(),
+            ValidationStatus = values.ValidationStatus,
+            Sensitivity = values.Sensitivity,
+            SupportsPreview = values.SupportsPreview,
+            SupportsIndexing = values.SupportsIndexing
+        };
+    }
+    public ResourceMetadataSnapshot Snapshot(Guid id) {
+        var record = Records[id];
+        return new(Expectation(id), new(null, record.OwnerPartyId, record.MaintainerPartyId, record.Name, record.Description,
+            record.ConnectorPluginKey, record.ConfigSchemaVersion, record.LocationOrIdentifier, record.ConfigJson,
+            record.LinkedSecretId is { } secret ? JsonSerializer.Serialize(new[] { secret }) : "[]",
+            record.ValidationStatus, record.Sensitivity, record.SupportsPreview, record.SupportsIndexing),
+            DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
+    }
+    private ResourceMetadataExpectation.Existing Expectation(Guid id) {
+        var record = Records[id];
+        ResourceProjectBinding binding = record.ExpectedProjectAdmission is { } admitted ? new ResourceProjectBinding.Bound(admitted.ProjectId, admitted.LifetimeId)
+            : record.ProjectId is { } project && project != Guid.Empty ? new ResourceProjectBinding.RetainedProject(project) : new ResourceProjectBinding.RetainedUnbound();
+        return new(Context, id, metadataRevisions[id], binding);
+    }
+    public void AdvanceRevision(Guid id) => metadataRevisions[id] = new(Guid.NewGuid());
+    private ResourceMetadataRejectionReason? Reject(ResourceMetadataExpectation expected) {
+        if (!IsCurrent) {
+            return ResourceMetadataRejectionReason.OwnerRetired;
+        }
+        if (expected.Context != Context) {
+            return ResourceMetadataRejectionReason.DatasetChanged;
+        }
+        if (Scenario == ResourceScenario.RefusedWrite) {
+            return ResourceMetadataRejectionReason.TransactionConflict;
+        }
+        if (expected is ResourceMetadataExpectation.Existing existing) {
+            return !Records.ContainsKey(existing.ResourceId) ? ResourceMetadataRejectionReason.ResourceMissing
+                : Expectation(existing.ResourceId) != existing ? ResourceMetadataRejectionReason.ResourceChanged : null;
+        }
+        return Records.ContainsKey(expected.ResourceId) ? ResourceMetadataRejectionReason.ResourceChanged : null;
     }
     public async Task<IReadOnlyList<ResourceProjectOption>> ListProjectsAsync(CancellationToken cancellationToken = default) {
         await ReadAsync(ResourceScenarioLane.References);
@@ -141,53 +238,66 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
         await ReadAsync(ResourceScenarioLane.Parties);
         return [new(FixtureId(11), "Sample owner")];
     }
-    public async Task<Result<Guid>> SaveAsync(ResourceEditorModel command) {
+    public async Task<ResourceMetadataSaveOutcome> SaveAsync(ReplaceResourceMetadataCommand command, CancellationToken cancellationToken = default) {
         await PauseAsync(ResourceScenarioLane.Save);
-        RequireAdmission(command.ExpectedProjectAdmission);
+        SaveCommands.Add(command);
+        if (Reject(command.Expected) is { } rejected) {
+            return new ResourceMetadataSaveOutcome.Rejected(rejected);
+        }
+        if (!Projects.Any(project => project.Admission == command.TargetProject)) {
+            return new ResourceMetadataSaveOutcome.Rejected(ResourceMetadataRejectionReason.ProjectUnavailable);
+        }
+        if (command.Values.ConnectorPluginKey == ResourceConnectorPluginKeys.StorageObject ||
+            Records.TryGetValue(command.Expected.ResourceId, out var original) && original.ConnectorPluginKey == ResourceConnectorPluginKeys.StorageObject) {
+            return new ResourceMetadataSaveOutcome.Rejected(ResourceMetadataRejectionReason.GovernedResource);
+        }
+        var submitted = command.Values.ToEditorModel();
+        submitted.Id = command.Expected is ResourceMetadataExpectation.Existing ? command.Expected.ResourceId : null;
+        submitted.ProjectId = command.TargetProject.ProjectId;
+        submitted.ExpectedProjectAdmission = command.TargetProject;
         if (BeforeSave is { } before) {
-            await before(command);
+            await before(submitted);
         }
-        var captured = command.Capture();
-        if (captured.Id is { } existing && !Records.ContainsKey(existing)) {
-            throw new ResourceActionRefusedException("The exact resource no longer exists.");
+        if (Reject(command.Expected) is { } changed) {
+            return new ResourceMetadataSaveOutcome.Rejected(changed);
         }
-        captured.Id ??= FixtureId(nextId++);
+        var captured = submitted.Capture();
+        captured.Id = command.Expected.ResourceId;
         captured.Name = captured.Name.Trim();
         captured.LocationOrIdentifier = BuildLocationPreview(captured);
         captured.ConfigJson = captured.Configuration.ToJson();
         Records[captured.Id.Value] = captured;
-        Writes.Add(new(ResourceMutationKind.Save, command.Capture(), captured.Id.Value));
+        AdvanceRevision(captured.Id.Value);
+        var snapshot = Snapshot(captured.Id.Value);
+        Writes.Add(new(ResourceMutationKind.Save, submitted, captured.Id.Value));
         if (AfterSave is { } after) {
             await after(captured.Id.Value);
         }
-        ReportWrite(captured.Id.Value, ResourceMutationKind.Save);
-        return Result<Guid>.Success(captured.Id.Value);
+        return Scenario == ResourceScenario.UnknownWrite ? new ResourceMetadataSaveOutcome.Unconfirmed(command)
+            : new ResourceMetadataSaveOutcome.Accepted(snapshot, Scenario == ResourceScenario.CommittedWarning ? ResourceMetadataSecondaryDiagnostic.LoggingPending : null);
     }
-    public async Task DeleteAsync(Guid id, ProjectWriteAdmission? admission) {
+    public async Task<ResourceMetadataDeleteOutcome> DeleteAsync(DeleteResourceMetadataCommand command, CancellationToken cancellationToken = default) {
         await PauseAsync(ResourceScenarioLane.Delete);
-        if (Scenario == ResourceScenario.RefusedWrite || !Records.TryGetValue(id, out var record) || record.ExpectedProjectAdmission != admission) {
-            throw new ResourceActionRefusedException("The exact deletion admission was refused.");
+        DeleteCommands.Add(command);
+        if (Reject(command.Expected) is { } rejected) {
+            return new ResourceMetadataDeleteOutcome.Rejected(rejected);
         }
+        var id = command.Expected.ResourceId;
+        var name = Records[id].Name;
         Records.Remove(id);
-        Writes.Add(new(ResourceMutationKind.Delete, record.Capture(), id));
-        ReportWrite(id, ResourceMutationKind.Delete);
+        metadataRevisions.Remove(id);
+        Writes.Add(new(ResourceMutationKind.Delete, new() { Id = id, Name = name }, id));
+        return Scenario == ResourceScenario.UnknownWrite ? new ResourceMetadataDeleteOutcome.Unconfirmed(command)
+            : new ResourceMetadataDeleteOutcome.Accepted(command.Expected, Scenario == ResourceScenario.CommittedWarning ? ResourceMetadataSecondaryDiagnostic.LoggingPending : null);
     }
     private void RequireAdmission(ProjectWriteAdmission? admission) {
         if (Scenario == ResourceScenario.RefusedWrite || !Projects.Any(p => p.Admission == admission)) {
             throw new ResourceActionRefusedException("The current project lifetime refused this command.");
         }
     }
-    private void ReportWrite(Guid id, ResourceMutationKind kind) {
-        if (Scenario == ResourceScenario.UnknownWrite) {
-            throw new IOException("Synthetic acknowledgement loss after storage.");
-        }
-        if (Scenario == ResourceScenario.CommittedWarning) {
-            throw new ResourceCommittedMutationException(id, kind, new IOException("Synthetic postcommit read failure."));
-        }
-    }
     public async Task<ResourceBrowseCatalog> LoadAsync(CancellationToken cancellationToken = default) {
         await ReadAsync(ResourceScenarioLane.Catalog);
-        return new(Sources.ToArray(), Projects.ToArray(), revision.ToString(CultureInfo.InvariantCulture));
+        return new(Sources.ToArray(), Projects.ToArray(), revision.ToString(CultureInfo.InvariantCulture), Context);
     }
     public async ValueTask<ResourceBrowseLease> OpenAsync(ResourceFileSourceKey key, CancellationToken cancellationToken = default) {
         await ReadAsync(ResourceScenarioLane.Source);
@@ -208,6 +318,9 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
     public ResourceFileSelection Selection(ResourceFileSourceKey key, int index = 0) => new(Sources.Single(s => s.Key == key), revision.ToString(CultureInfo.InvariantCulture), providers[key].Files[index]);
     public async ValueTask<ResourcePromotionObservation> PromoteAsync(ResourcePromotionRequest command) {
         await PauseAsync(ResourceScenarioLane.Promotion);
+        if (command.Context != Context) {
+            return new ResourcePromotionObservation.Rejected(ResourceMetadataRejectionReason.DatasetChanged);
+        }
         RequireAdmission(command.Project);
         RequireSelection(command.Selection);
         PromotionCommands.Add(command);
@@ -215,7 +328,7 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
         var id = existing.Key;
         var created = id == Guid.Empty;
         if (created) {
-            id = FixtureId(nextId++);
+            id = command.ResourceId;
             var editor = CreateEditor(command.Name);
             editor.Id = id;
             editor.ProjectId = command.Project.ProjectId;
@@ -224,14 +337,17 @@ public sealed class ResourceScenarioStore : IResourceRegistryOwner, IResourceBro
             editor.Sensitivity = command.Sensitivity;
             editor.LocationOrIdentifier = $"Synthetic stable object {command.Selection.Item.Name}";
             Records.Add(id, editor);
+            AdvanceRevision(id);
             storedFiles.Add(id, command.Selection);
+            revision++;
         }
-        revision++;
         if (Scenario == ResourceScenario.UnknownWrite) {
-            throw new IOException("Synthetic promotion acknowledgement loss.");
+            return new ResourcePromotionObservation.Unconfirmed(command);
         }
-        return new(id, created, Scenario == ResourceScenario.CommittedWarning ? null : revision,
-            Scenario == ResourceScenario.CommittedWarning ? "Stored object saved; synthetic revision publication failed." : null);
+        var diagnostic = Scenario == ResourceScenario.CommittedWarning ? ResourceMetadataSecondaryDiagnostic.CatalogPublicationPending : (ResourceMetadataSecondaryDiagnostic?)null;
+        var scopeRevision = Scenario == ResourceScenario.CommittedWarning ? (long?)null : revision;
+        return created ? new ResourcePromotionObservation.Created(Snapshot(id), scopeRevision, diagnostic)
+            : new ResourcePromotionObservation.Reused(Snapshot(id), scopeRevision, diagnostic);
     }
     public async ValueTask<ResourcePreviewLease> OpenResourceAsync(Guid resourceId, CancellationToken cancellationToken = default) {
         await ReadAsync(ResourceScenarioLane.Preview);

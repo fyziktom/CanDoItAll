@@ -130,7 +130,10 @@ public sealed class DataSourcesOwnerTests {
         await bootstrap.EnsureProfileReadyAsync(accessor.ResolveProfile(a.Value));
         await bootstrap.EnsureProfileReadyAsync(accessor.ResolveProfile(b.Value));
         await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<WorkspaceService>().SaveSettingsAsync(new() { DefaultProviderProfileId = Guid.NewGuid() });
+        var workspace = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        var defaults = await workspace.ReadSettingsSnapshotAsync();
+        Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await workspace.SaveSettingsAsync(new(defaults.Expectation,
+            WorkspaceSettingsValues.Capture(new() { DefaultProviderProfileId = Guid.NewGuid() }))));
         var real = Owner(scope.ServiceProvider);
         var options = new DbContextOptionsBuilder<WorkspaceSettingsDbContext>();
         AppDbContextOptionsConfigurator.Configure(options, accessor.ResolveProfile(b.Value));

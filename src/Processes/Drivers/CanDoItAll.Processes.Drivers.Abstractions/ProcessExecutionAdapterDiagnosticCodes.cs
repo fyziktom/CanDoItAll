@@ -6,6 +6,7 @@ public static class ProcessExecutionAdapterDiagnosticCodes
     public const string AgentToolPermissionDenied = "process.adapter.agent_tool_permission_denied";
     public const string AgentToolLaunchFailed = "process.adapter.agent_tool_launch_failed";
     public const string AgentExecutionFailed = "process.adapter.agent_execution_failed";
+    public const string AgentEffectContinuationRequired = "process.adapter.agent_effect_continuation_required";
     public const string AgentExecutionCancelled = "process.adapter.agent_execution_cancelled";
 
     public const string SubprocessChildBlocked = "process.adapter.subprocess_child_blocked";

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "Source-only fixture warning repair; parent build/static/execution pending",
+  "sourceOnly": true,
+  "originalInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-evidence-amended-source-inventory.json",
+    "sha256": "9DB83BD3E86889746F9B2CDE3F8FD3E081BED852BD969EE39120E5A55290021A"
+  },
+  "files": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentPlanningPublicationCostFixture.cs",
+      "predecessorSha256": "306454EFDFE31C8D31AE7570F77122FE59792039AC42087ED3FC34C47E814F1E",
+      "predecessorBytes": 31505,
+      "preservedSource": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-capture-repair-source\\AgentPlanningPublicationCostFixture.before-capture-repair.cs.txt",
+      "sha256": "8620CB46F726A4B2816D52B07C9657C05397509F11D85493903F9BB3D090C227",
+      "bytes": 31503,
+      "change": "CanReadAsync reads the existing readonly runtime field instead of capturing the identical canonical primary-constructor parameter."
+    }
+  ],
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-capture-repair-source.ownership.json",
+    "sha256": "8046A35FD8314F80AC17D54D23CF0C95AF245023B81EAE48A54823F05E0A30D8"
+  },
+  "expectedFacts": 1,
+  "longRunningRows": 1,
+  "workloadChanged": false,
+  "productionChanged": false,
+  "buildsPerformed": false,
+  "testsPerformed": false,
+  "staticPerformed": false,
+  "mainMaintainedEdits": false
+}

@@ -44,7 +44,7 @@ internal sealed class ProjectsOperationPerformanceProbe : DbCommandInterceptor {
         var kind = sql.Contains("pg_advisory", StringComparison.Ordinal) ? CommandKind.Advisory
             : sql.Contains("Infrastructure_SearchDocuments", StringComparison.Ordinal) ? CommandKind.Search
             : sql.Contains("Projects_DefinitionReceipts", StringComparison.Ordinal) ? CommandKind.Receipt
-            : sql.Contains("Projects_Operation", StringComparison.Ordinal) ? CommandKind.Epoch
+            : sql.Contains("Infrastructure_FiniteOperation", StringComparison.Ordinal) ? CommandKind.Epoch
             : sql.Contains("Projects_ProjectPhases", StringComparison.Ordinal) || sql.Contains("Projects_ProjectOptionSelections", StringComparison.Ordinal) ? CommandKind.Children
             : sql.Contains("Projects_Projects", StringComparison.Ordinal) ? CommandKind.Root
             : CommandKind.Other;

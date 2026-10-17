@@ -4,6 +4,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public interface ISandboxWorkspaceCatalogStore
 {
+    Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, Action validateCurrentContext,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<AgentDecisionDataPolicySaveOutcome>(
+            new AgentDecisionDataPolicySaveOutcome.Rejected(AgentDecisionDataPolicyRejection.Unsupported));
     Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
         CancellationToken cancellationToken = default);
@@ -13,6 +18,11 @@ public interface ISandboxWorkspaceCatalogStore
     Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
+        Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
+        Action<SandboxWorkspaceCatalog> validatePublication,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog owner does not support final prepared-publication validation.");
     Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         long expectedRevision,
@@ -75,6 +85,12 @@ public interface ISandboxWorkspaceChatRunStartStore
         ChatBackedRunStartRequest request,
         Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
         CancellationToken cancellationToken = default);
+
+    Task<ChatBackedRunStartResult> BeginChatBackedRunWithAdmissionKnowledgeAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        CancellationToken cancellationToken = default)
+        => BeginChatBackedRunAsync(request, create, cancellationToken);
 }
 
 public sealed record ChatBackedRunStartRequest
@@ -461,6 +477,10 @@ public interface IAgentExecutionHistoryReader
 {
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default);
     Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default);
+
+    Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support historical receipt review.");
     Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
@@ -479,6 +499,13 @@ public interface IAgentFrameworkWorkspaceService :
     Task<ModelUsageDetailSnapshot> GetModelUsageDetailsAsync(CancellationToken cancellationToken = default);
     Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not expose coherent catalog snapshots.");
+
+    Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not expose Agent policy authoring.");
+    Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support dedicated Agent policy replacement.");
 
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);

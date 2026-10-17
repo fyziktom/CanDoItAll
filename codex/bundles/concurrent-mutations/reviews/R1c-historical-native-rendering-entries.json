@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceReviewOnly",
+  "merge": "Upsert only these exact identities; do not replace the newer main register with the managed whole file.",
+  "entries": [
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "sha256_lf": "c5a83f07aa80759b33396ed5d954db18bca4c07bce88d62e4983d0f2c45b6ada",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
+      ],
+      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "visual_owner": "No reusable rendering body",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host. The native owner reconciles the first live run into its selected transcript and runtime detail; older execution entries cannot replace current activity."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "sha256_lf": "bb8e26901da9cf7e39050c5801bae7b7cd2557f40ef578be9adc4ec2b9d09a5d",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Chat.AgentChatRecoverySurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor"
+      ],
+      "native_owner": "Callers above own effects and authority",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [
+        "AgentChatHistoricalReceiptSurface"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.HistoricalReview.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.HistoricalReview.cs",
+      "sha256_lf": "c3712177cfc58a8ce04c6518d7cbcb46ffbd432a83d46bf98b0de31604bafd0c",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
+      ],
+      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "visual_owner": "AgentChatHistoricalReceiptSurface",
+      "descendants": [
+        "AgentChatHistoricalReceiptSurface"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Native explicit read session retains original selected identity separately from current view/profile fencing. It replaces bounded pages and never mutates continuation, journal, lease or activity state."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptSurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptSurface.razor",
+      "sha256_lf": "cdb3561851558f3865c32f877e8720484a526ff2d3083f0d4ee880ef75a58dc8",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Chat.AgentChatHistoricalReceiptSurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor"
+      ],
+      "native_owner": "Callers above own effects and authority",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor",
+      "evidence": "Source-only two host Facts in AgentChatPanelResponsivenessTests.HistoricalReview.cs; runtime and visual proof pending.",
+      "rationale": "Immutable sanitized page values plus origin-bound read intents. Existing Alert, Stack, TextBlock and Button contracts; no injected service, CSS or authority dependency."
+    },
+    {
+      "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor",
+      "sha256_lf": "2f0ca262699339a35bff0667d1f7c57b8457a33530ec460da687213896b3326b",
+      "kind": "RAZOR",
+      "role": "SCENARIO",
+      "type": "CanDoItAll.AgentFramework.UiSandbox.Components.HistoricalReceiptSpecimen",
+      "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "/historical-receipts"
+      ],
+      "native_owner": "Deterministic scenario host only",
+      "visual_owner": "CanDoItAll.AgentFramework.UiSandbox",
+      "descendants": [
+        "AgentChatRecoverySurface"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UiSandbox",
+      "scenario": "CanDoItAll.AgentFramework.UiSandbox",
+      "evidence": "Source-only specimen; browser/layout proof pending.",
+      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+    }
+  ]
+}

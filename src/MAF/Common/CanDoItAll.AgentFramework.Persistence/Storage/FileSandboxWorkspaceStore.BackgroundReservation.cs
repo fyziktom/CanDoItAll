@@ -10,6 +10,7 @@ public sealed partial class FileSandboxWorkspaceStore {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(reservation);
+        candidate = FileSandboxWorkspacePreparedValues.Freeze(candidate);
         var journal = candidate.Run.ToolAdmission ?? throw new InvalidOperationException("The candidate has no durable background admission.");
         journal.Validate();
         if (!source.RequiresBackgroundAdmission || !source.Matches(candidate.Run) || candidate.Run.ChatSessionId is not null ||
@@ -20,47 +21,91 @@ public sealed partial class FileSandboxWorkspaceStore {
             throw new InvalidOperationException("The background reservation has no matching source, profile, input or current owner binding.");
         }
         var acknowledged = reservation.AcknowledgedExecutionRunIds.ToHashSet();
-        await gate.WaitAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
         try {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
-            var prior = (await executionSliceStore.ListRunsAsync(cancellationToken))
-                .Where(source.MatchesBackgroundLineage).OrderBy(run => run.Id).ToArray();
-            var sameClaim = prior.Where(run => run.ToolAdmission is { } saved &&
-                saved.Session.Reference.BackgroundSource?.OwnerFingerprint == reservation.OwnerFingerprint &&
-                saved.Session.Profile == reservation.Profile).ToArray();
-            if (sameClaim.Length > 1) {
-                throw new AgentToolAdmissionException("tool-admission.duplicate-source-admission",
-                    "Multiple executions already share this owner claim. Reconcile their exact journals before another dispatch.");
-            }
-            foreach (var previous in prior.Where(run => sameClaim.Length == 0 || run.Id != sameClaim[0].Id)) {
-                previous.ToolAdmission?.Validate();
-                if (previous.ToolAdmission is null && acknowledged.Contains(previous.Id) && previous.ChatSessionId is null &&
-                        previous.State == ExecutionState.Completed && previous.Outcome == RunOutcome.Succeeded && previous.PendingApprovals.Count == 0) {
-                    continue;
-                }
-                if (!acknowledged.Contains(previous.Id) || previous.State is not (ExecutionState.Completed or ExecutionState.Failed) ||
-                        previous.ToolAdmission is not { Support: AgentToolAdmissionSupport.Recoverable } saved ||
-                        saved.Session.Profile != reservation.Profile || saved.Session.Reference.BackgroundSource is null ||
-                        saved.HasUnresolvedEffects) {
-                    return new(ExecutionRunSourceDisposition.SourceReconciliationRequired, previous);
-                }
-            }
-            if (sameClaim is [var existing]) {
-                existing.ToolAdmission!.Validate();
-                var disposition = existing.State switch {
-                    ExecutionState.Completed when existing.Outcome == RunOutcome.Succeeded => ExecutionRunSourceDisposition.ReusedCompleted,
-                    ExecutionState.Completed or ExecutionState.Failed => ExecutionRunSourceDisposition.ExistingAdmittedFailure,
-                    _ => ExecutionRunSourceDisposition.ExistingActive
-                };
-                return new(disposition, existing);
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            var existing = await FindBackgroundReservationAsync(source, reservation, acknowledged, cancellationToken);
+            if (existing is not null) {
+                return existing;
             }
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
             ValidateExecutionRunDetail(catalog, candidate);
-            var persisted = await SaveExecutionRunDetailCoreAsync(null, candidate, catalog, cancellationToken);
-            return new(ExecutionRunSourceDisposition.Created, persisted.Run);
-        } finally {
-            gate.Release();
+            var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.RunRoot(candidate.Run.Id)]);
+            IAsyncDisposable publication;
+            try {
+                publication = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(null, candidate.Run, readsAgent: true),
+                    witness, cancellationToken);
+            } catch (SandboxWorkspaceConcurrencyException conflict) {
+                try {
+                    await RequireCompletedBackgroundPublicationAsync(null, cancellationToken);
+                    var replay = await FindBackgroundReservationAsync(source, reservation, acknowledged, cancellationToken);
+                    if (replay is { Disposition: ExecutionRunSourceDisposition.ExistingActive or
+                            ExecutionRunSourceDisposition.ExistingAdmittedFailure or ExecutionRunSourceDisposition.ReusedCompleted }) {
+                        await RequireCompletedBackgroundPublicationAsync(replay.Run.Id, cancellationToken);
+                        return replay;
+                    }
+                } catch (Exception lookupFailure) {
+                    throw new AggregateException("Background reservation admission and original-claim lookup failed.", conflict, lookupFailure);
+                }
+                throw;
+            }
+            await using (publication) {
+                var persisted = await SaveExecutionRunDetailCoreAsync(operation, null, candidate, catalog, cancellationToken);
+                return new(ExecutionRunSourceDisposition.Created, persisted.Run);
+            }
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
+    }
+
+    private async Task<ExecutionRunSourceReservationResult?> FindBackgroundReservationAsync(ExecutionRunSourceKey source,
+        AgentToolBackgroundReservation reservation, IReadOnlySet<Guid> acknowledged, CancellationToken cancellationToken) {
+        var prior = (await executionSliceStore.ListRunsAsync(cancellationToken))
+            .Where(source.MatchesBackgroundLineage).OrderBy(run => run.Id).ToArray();
+        var sameClaim = prior.Where(run => run.ToolAdmission is { } saved &&
+            saved.Session.Reference.BackgroundSource?.OwnerFingerprint == reservation.OwnerFingerprint &&
+            saved.Session.Profile == reservation.Profile).ToArray();
+        if (sameClaim.Length > 1) {
+            throw new AgentToolAdmissionException("tool-admission.duplicate-source-admission",
+                "Multiple executions already share this owner claim. Reconcile their exact journals before another dispatch.");
+        }
+        foreach (var previous in prior.Where(run => sameClaim.Length == 0 || run.Id != sameClaim[0].Id)) {
+            previous.ToolAdmission?.Validate();
+            if (previous.ToolAdmission is null && acknowledged.Contains(previous.Id) && previous.ChatSessionId is null &&
+                    previous.State == ExecutionState.Completed && previous.Outcome == RunOutcome.Succeeded && previous.PendingApprovals.Count == 0) {
+                continue;
+            }
+            if (!acknowledged.Contains(previous.Id) || previous.State is not (ExecutionState.Completed or ExecutionState.Failed) ||
+                    previous.ToolAdmission is not { Support: AgentToolAdmissionSupport.Recoverable } saved ||
+                    saved.Session.Profile != reservation.Profile || saved.Session.Reference.BackgroundSource is null ||
+                    saved.HasUnresolvedEffects) {
+                return new(ExecutionRunSourceDisposition.SourceReconciliationRequired, previous);
+            }
+        }
+        if (sameClaim is [var existing]) {
+            existing.ToolAdmission!.Validate();
+            var disposition = existing.State switch {
+                ExecutionState.Completed when existing.Outcome == RunOutcome.Succeeded => ExecutionRunSourceDisposition.ReusedCompleted,
+                ExecutionState.Completed or ExecutionState.Failed => ExecutionRunSourceDisposition.ExistingAdmittedFailure,
+                _ => ExecutionRunSourceDisposition.ExistingActive
+            };
+            return new(disposition, existing);
+        }
+        return null;
+    }
+
+    private async Task RequireCompletedBackgroundPublicationAsync(Guid? executionRunId, CancellationToken cancellationToken) {
+        var policy = physicalPathPolicyFactory.Create(layout.RootPath);
+        foreach (var path in PendingCommitJournalPaths) {
+            cancellationToken.ThrowIfCancellationRequested();
+            policy.EnsureSafePath(path, allowMissingLeaf: true);
+            if (File.Exists(path)) {
+                throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.PendingRecoveryChanged);
+            }
+        }
+        _ = await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout, [],
+            executionRunId is { } runId ? [layout.RunRoot(runId)] : [], [], physicalPathPolicyFactory, cancellationToken,
+            pendingPublicationTargets: SharedPublicationPaths);
     }
 }

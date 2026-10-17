@@ -183,7 +183,7 @@ public sealed class FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTe
         Action<GenericNewRunCommitStage> commitBoundary)
     {
         var environment = CanDoItAllTestEnvironment.Create(
-            $"generic-new-run-recovery-{Guid.NewGuid():N}");
+            "generic-new-run-recovery");
         try
         {
             var profile =

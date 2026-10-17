@@ -21,34 +21,28 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
             throw new ArgumentException("A catalog read lease requires one or two distinct nonempty Agent identifiers.", nameof(agentIds));
         }
         var selectedIds = agentIds.ToImmutableArray();
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        IAsyncDisposable? workspaceLock = null;
+        var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout,
+            runLeaseWriter, cancellationToken).ConfigureAwait(false);
         try {
-            workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            await EnsureCatalogReadCoreAsync(cancellationToken).ConfigureAwait(false);
-            var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken).ConfigureAwait(false);
+            var catalog = await LoadNormalizedCatalogCoreAsync(operation, cancellationToken).ConfigureAwait(false);
             var agents = selectedIds.Select(id => catalog.Agents.SingleOrDefault(item => item.Id == id))
                 .OfType<AgentDefinition>().Select(agent => agent with {
                     Permissions = agent.Permissions with { AllowedSecrets = agent.Permissions.NormalizedAllowedSecrets.ToImmutableArray() },
                     Capabilities = agent.Capabilities.ToImmutableArray(),
                     Tags = agent.Tags.ToImmutableArray()
                 }).ToImmutableArray();
-            return new AgentCatalogReadLease(gate, workspaceLock, layout.Scope, catalog.CatalogDataRevision,
+            return new AgentCatalogReadLease(operation, layout.Scope, catalog.CatalogDataRevision,
                 agents.SingleOrDefault(agent => agent.Id == selectedIds[0]), agents,
                 catalog.Capabilities.Select(item => item with { Tags = item.Tags.ToImmutableArray() }).ToImmutableArray());
-        } catch {
-            try {
-                if (workspaceLock is not null) {
-                    await workspaceLock.DisposeAsync().ConfigureAwait(false);
-                }
-            } finally {
-                gate.Release();
-            }
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            await operation.DisposeAsync().ConfigureAwait(false);
             throw;
         }
     }
 
-    private sealed class AgentCatalogReadLease(SemaphoreSlim gate, IAsyncDisposable workspaceLock,
+    private sealed class AgentCatalogReadLease(IAsyncDisposable workspaceLock,
         WorkspaceScopeDescriptor scope, CatalogDataRevision revision, AgentDefinition? agent,
         ImmutableArray<AgentDefinition> agents, ImmutableArray<CapabilityCatalogItem> capabilities) : IAgentCatalogReadLease {
         private IAsyncDisposable? heldLock = workspaceLock;
@@ -93,11 +87,7 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
             if (acquired is null) {
                 return;
             }
-            try {
-                await acquired.DisposeAsync().ConfigureAwait(false);
-            } finally {
-                gate.Release();
-            }
+            await acquired.DisposeAsync().ConfigureAwait(false);
         }
 
         private void RequireActive() => ObjectDisposedException.ThrowIf(Volatile.Read(ref heldLock) is null, this);

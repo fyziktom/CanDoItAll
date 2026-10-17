@@ -1,0 +1,11 @@
+# Historical receipt seed test host
+
+This opt-in Integration support executable seeds one owned PostgreSQL/file-workspace scenario through public bootstrap, canonical authority, Process owners and registered Project Structure tools. It does not start hosted workers or a web listener. Four real accepted tool results are saved; a fifth actual owner commit deliberately remains without journal completion. After all scopes, the real dispatch lease and service provider are disposed, the child writes one bounded identity/receipt-hash result and exits.
+
+The parent owns its output root, environment, database lease, credentials, process deadline and cleanup. The only supported arguments are the typed scenario (`Interactive` or `Process`), nonce, expected profile ID and a new result path directly under the recorded output root. Configuration and credentials arrive through environment variables; failure output contains exception type only. This is fixture-only effects-journal setup, not activation of production effect-only producers.
+
+The Process seed invokes the real prepared-launch and commit owners, then explicitly arranges persisted RuntimeState, RuntimeStep and DispatchClaim rows through the existing EF fixture pattern. Historical reads exercise real source/claim authorization against those rows. This does not exercise the dispatcher claim-acquisition algorithm, dispatch execution or provider invocation.
+
+Build with the repository's standard Debug or Release configuration via the Integration build-only reference. This executable is not a test assembly and does not add a Broad Stable member. Run only through the reviewed live-process fixture and parent-owned deadline runner.
+
+The parent also sets the existing Processes:RuntimeDispatchQueue:EnableRecovery option to false for this controlled historical observer fixture, and asserts the effective option through the normal parent composition. The same configuration is propagated to seed A and actual Web B/B2. The MCP tool-host lane alone does not suppress automatic Process dispatch/claim recovery. Persisted Process-state equality remains strict; this scenario does not prove read isolation while ordinary background Process recovery is enabled. That activation/concurrency proof remains separate.

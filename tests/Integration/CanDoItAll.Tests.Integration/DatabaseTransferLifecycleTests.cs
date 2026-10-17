@@ -4,6 +4,7 @@ using System.Data.Common;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -15,6 +16,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class DatabaseTransferLifecycleTests {
     private const string ImportGate = "transfer-lifecycle-test:import";
     private const string LifecycleLock = "LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE";
+    private const string ImportLifecycleLock = LifecycleLock + " NOWAIT";
 
     [Theory]
     [InlineData(false)]
@@ -46,7 +48,7 @@ public sealed class DatabaseTransferLifecycleTests {
             Assert.True(await owner.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, token));
             return new("projects", "Projects", false, "Retained project and receipt prevent replacement.", 0);
         }
-        Task<DatabaseTransferItemResult> run = import
+        Task<DatabaseTransferItemResult> StartAsync() => import
             ? operations.RunExclusiveImportAsync(target.Profile, [ImportGate], [typeof(Project), typeof(ProjectDefinitionReceiptRecord)],
                 async (session, token) => {
                     await using var owner = await operations.CreateOwnerAsync<ProjectsDbContext>(session, static options => new(options), token);
@@ -56,22 +58,43 @@ public sealed class DatabaseTransferLifecycleTests {
                 await using var owner = await owners.CreateTargetAsync<ProjectsDbContext>(request, static options => new(options), token);
                 return await InspectAsync(owner, token);
             }, cancellationToken: deadline.Token);
+        var run = StartAsync();
         try {
             var processId = await probe.Started.Task.WaitAsync(deadline.Token);
             await using var observer = target.Factory.CreateDbContext();
-            await WaitForLifecycleWaiterAsync(observer, processId, deadline.Token);
+            if (import) {
+                var failure = await Assert.ThrowsAsync<PostgresException>(() => run.WaitAsync(deadline.Token));
+                Assert.Equal(PostgresErrorCodes.LockNotAvailable, failure.SqlState);
+                await RequireFreeGateAsync(observer, ImportGate, deadline.Token);
+                Assert.False(await observer.Set<Project>().AnyAsync(row => row.Id == project.Id, deadline.Token));
+                Assert.False(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, deadline.Token));
+            } else {
+                await WaitForLifecycleWaiterAsync(observer, processId, deadline.Token);
+            }
             Assert.False(entered);
-            var beforeLock = probe.Commands.TakeWhile(command => command.Sql != LifecycleLock).ToArray();
+            var lockCommand = import ? ImportLifecycleLock : LifecycleLock;
+            var beforeLock = probe.Commands.TakeWhile(command => command.Sql != lockCommand).ToArray();
             Assert.All(beforeLock.Where(command => command.HasTransaction),
                 command => Assert.Equal("SET LOCAL lock_timeout = '5s'", command.Sql));
             await transaction.CommitAsync(deadline.Token);
+            if (import) {
+                run = StartAsync();
+            }
             Assert.False((await run.WaitAsync(deadline.Token)).Success);
             Assert.True(entered);
             Assert.True(await observer.Set<Project>().AnyAsync(row => row.Id == project.Id, deadline.Token));
-            Assert.True(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(row => row.OperationId == receipt.OperationId, deadline.Token));
+            var retained = await observer.Set<ProjectDefinitionReceiptRecord>().AsNoTracking()
+                .SingleAsync(row => row.OperationId == receipt.OperationId, deadline.Token);
+            Assert.Equal(receipt.AcceptedPayload, retained.AcceptedPayload);
+            Assert.Equal(receipt.AcceptedRevision, retained.AcceptedRevision);
+            Assert.Equal(receipt.LifetimeId, retained.LifetimeId);
         } finally {
-            await transaction.DisposeAsync();
-            await run.WaitAsync(deadline.Token);
+            await deadline.CancelAsync();
+            try {
+                await transaction.DisposeAsync();
+            } finally {
+                await DrainAsync(run);
+            }
         }
     }
 
@@ -129,12 +152,80 @@ public sealed class DatabaseTransferLifecycleTests {
         var failure = await Assert.ThrowsAsync<PostgresException>(() => run.WaitAsync(TimeSpan.FromSeconds(15)));
         Assert.Equal(PostgresErrorCodes.LockNotAvailable, failure.SqlState);
         Assert.False(invoked);
+        Assert.Same(transaction, blocker.Database.CurrentTransaction);
         await using var verify = target.Factory.CreateDbContext();
-        await using var verification = await verify.Database.BeginTransactionAsync();
-        Assert.True(await verify.Database.SqlQuery<bool>(
-            $"SELECT pg_try_advisory_xact_lock(hashtextextended({ImportGate}, 0)) AS \"Value\"").SingleAsync());
+        await RequireFreeGateAsync(verify, ImportGate, default);
         Assert.False(await verify.Set<Project>().AnyAsync());
         await transaction.RollbackAsync();
+    }
+
+    [Fact]
+    public async Task Import_refusal_breaks_the_three_owner_lifecycle_project_binding_wait_chain() {
+        await using var target = await HistoryPersistenceTestDatabase.CreateAsync();
+        var activation = await target.ActivateDatasetAsync();
+        var binding = await activation.ReadActiveBindingAsync(target.Profile.Profile.Id);
+        var projectKey = ProjectMutationScopeKeys.ForProject(Guid.NewGuid());
+        const string bindingKey = ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey;
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var proceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var probe = new EntryProbe(proceed.Task);
+        await using var importContext = target.Factory.WithInterceptor(probe).CreateDbContext();
+        var operations = DatabaseTransferTestSupport.ForProfile(target.Profile, importContext, activation: activation);
+        await using var structuralOwner = target.Factory.CreateDbContext();
+        await using var preludeOwner = target.Factory.CreateDbContext();
+        await using var observer = target.Factory.CreateDbContext();
+        await structuralOwner.Database.OpenConnectionAsync(deadline.Token);
+        await preludeOwner.Database.OpenConnectionAsync(deadline.Token);
+        var structuralPid = ((NpgsqlConnection)structuralOwner.Database.GetDbConnection()).ProcessID;
+        var preludePid = ((NpgsqlConnection)preludeOwner.Database.GetDbConnection()).ProcessID;
+        var invoked = false;
+        Task? structural = null;
+        Task? prelude = null;
+        var import = operations.RunExclusiveImportAsync(target.Profile, [bindingKey], [typeof(Project)], (session, token) => {
+            invoked = true;
+            return Task.FromResult(new DatabaseTransferItemResult("projects", "Projects", true, "Unexpected admission.", 0));
+        }, deadline.Token);
+        try {
+            var importPid = await probe.Started.Task.WaitAsync(deadline.Token);
+            structural = RunStructuralOwnerAsync();
+            await WaitForBlockerAsync(observer, structuralPid, importPid, deadline.Token);
+            prelude = RunDeletionPreludeAsync();
+            await WaitForBlockerAsync(observer, preludePid, structuralPid, deadline.Token);
+            Assert.False(import.IsCompleted);
+            Assert.False(structural.IsCompleted);
+            Assert.False(prelude.IsCompleted);
+            proceed.TrySetResult();
+            var failure = await Assert.ThrowsAsync<PostgresException>(() => import.WaitAsync(deadline.Token));
+            Assert.Equal(PostgresErrorCodes.LockNotAvailable, failure.SqlState);
+            Assert.False(invoked);
+            await Task.WhenAll(structural, prelude).WaitAsync(deadline.Token);
+            await RequireFreeGateAsync(observer, bindingKey, deadline.Token);
+            await RequireFreeGateAsync(observer, projectKey, deadline.Token);
+            Assert.False(await observer.Set<Project>().AnyAsync(deadline.Token));
+            Assert.False(await observer.Set<ProjectDefinitionReceiptRecord>().AnyAsync(deadline.Token));
+            var lifecycle = await observer.Set<DatasetLifecycleRecord>().AsNoTracking().SingleAsync(deadline.Token);
+            Assert.Equal(binding.Namespace.Value, lifecycle.NamespaceId);
+            Assert.Equal(binding.MaintenanceId, lifecycle.MaintenanceId);
+            Assert.Equal(binding.SchemaVersion, lifecycle.SchemaVersion);
+            Assert.Equal(binding.GuardProtocol, lifecycle.GuardProtocol);
+            Assert.Equal(DatasetLifecycleState.Active, lifecycle.State);
+        } finally {
+            proceed.TrySetResult();
+            await deadline.CancelAsync();
+            await DrainAsync(import, structural, prelude);
+        }
+
+        async Task RunStructuralOwnerAsync() {
+            await using var scope = await SerializableMutationScope.BeginAsync(structuralOwner, [projectKey, bindingKey], deadline.Token);
+            await scope.CommitAsync(deadline.Token);
+        }
+
+        async Task RunDeletionPreludeAsync() {
+            await using var transaction = await preludeOwner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, deadline.Token);
+            await DatasetLifecycleStore.RequireActiveForMutationAsync(preludeOwner, binding, deadline.Token);
+            await SerializableMutationScope.AcquireRelationalScopeLocksAsync(preludeOwner, [projectKey], deadline.Token);
+            await transaction.CommitAsync(deadline.Token);
+        }
     }
 
     [Fact]
@@ -143,8 +234,8 @@ public sealed class DatabaseTransferLifecycleTests {
         var activation = await target.ActivateDatasetAsync();
         var binding = await activation.ReadActiveBindingAsync(target.Profile.Profile.Id);
         await using var context = target.Factory.CreateDbContext();
-        Assert.Single(await context.Set<ProjectOperationStateRecord>().ToArrayAsync());
-        Assert.Single(await context.Set<ProjectOperationEpochRecord>().ToArrayAsync());
+        Assert.Single(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
+        Assert.Single(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
         var inspections = new ProjectTransferTargetInspectionRunner();
         var participant = new ProjectsProjectTransferTargetStateParticipant(inspections);
         using (inspections.Begin(target.Profile, context, ProjectTransferTargetInspectionMode.Independent, out var request)) {
@@ -159,8 +250,8 @@ public sealed class DatabaseTransferLifecycleTests {
             Assert.False(residue.BlocksSourceTransfer);
         }
         Assert.Contains(typeof(ProjectDefinitionReceiptRecord), participant.EntityTypesToLock);
-        Assert.DoesNotContain(typeof(ProjectOperationEpochRecord), participant.EntityTypesToLock);
-        Assert.DoesNotContain(typeof(ProjectOperationStateRecord), participant.EntityTypesToLock);
+        Assert.DoesNotContain(typeof(FiniteOperationEpochRecord), participant.EntityTypesToLock);
+        Assert.DoesNotContain(typeof(FiniteOperationStateRecord), participant.EntityTypesToLock);
         var operations = DatabaseTransferTestSupport.ForProfile(target.Profile, context, activation: activation);
         var data = new ProjectsProfileTransferStore(operations);
         var exported = await operations.RunIndependentAsync(target.Profile, data.LoadAsync);
@@ -172,8 +263,8 @@ public sealed class DatabaseTransferLifecycleTests {
             }));
         await using var restarted = target.Factory.CreateDbContext();
         Assert.Single(await restarted.Set<ProjectDefinitionReceiptRecord>().ToArrayAsync());
-        Assert.Single(await restarted.Set<ProjectOperationEpochRecord>().ToArrayAsync());
-        Assert.Single(await restarted.Set<ProjectOperationStateRecord>().ToArrayAsync());
+        Assert.Single(await restarted.Set<FiniteOperationEpochRecord>().ToArrayAsync());
+        Assert.Single(await restarted.Set<FiniteOperationStateRecord>().ToArrayAsync());
     }
 
     internal static ProjectDefinitionReceiptRecord Receipt(DatasetActivationBinding binding, Project project) => new() {
@@ -202,14 +293,39 @@ public sealed class DatabaseTransferLifecycleTests {
         }
     }
 
-    private sealed class EntryProbe : DbCommandInterceptor {
+    private static async Task WaitForBlockerAsync(DbContext observer, int waiter, int blocker, CancellationToken cancellationToken) {
+        while (!await observer.Database.SqlQuery<bool>(
+                $"SELECT {blocker} = ANY(pg_blocking_pids({waiter})) AS \"Value\"").SingleAsync(cancellationToken)) {
+            await Task.Delay(TimeSpan.FromMilliseconds(20), cancellationToken);
+        }
+    }
+
+    private static async Task RequireFreeGateAsync(DbContext observer, string key, CancellationToken cancellationToken) {
+        await using var transaction = await observer.Database.BeginTransactionAsync(cancellationToken);
+        Assert.True(await observer.Database.SqlQuery<bool>(
+            $"SELECT pg_try_advisory_xact_lock(hashtextextended({key}, 0)) AS \"Value\"").SingleAsync(cancellationToken));
+        await transaction.RollbackAsync(cancellationToken);
+    }
+
+    private static async Task DrainAsync(params Task?[] operations) {
+        var tasks = operations.OfType<Task>().ToArray();
+        try {
+            await Task.WhenAll(tasks);
+        } catch when (tasks.All(task => task.IsCompleted)) {
+        }
+    }
+
+    private sealed class EntryProbe(Task? proceed = null) : DbCommandInterceptor {
         public ConcurrentQueue<(string Sql, bool HasTransaction)> Commands { get; } = new();
         public TaskCompletionSource<int> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default) {
             Observe(command);
-            return ValueTask.FromResult(result);
+            if (command.CommandText == ImportLifecycleLock && proceed is not null) {
+                await proceed.WaitAsync(cancellationToken);
+            }
+            return result;
         }
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
@@ -220,7 +336,7 @@ public sealed class DatabaseTransferLifecycleTests {
 
         private void Observe(DbCommand command) {
             Commands.Enqueue((command.CommandText, command.Transaction is not null));
-            if (command.CommandText == LifecycleLock) {
+            if (command.CommandText is LifecycleLock or ImportLifecycleLock) {
                 Started.TrySetResult(((NpgsqlConnection)command.Connection!).ProcessID);
             }
         }

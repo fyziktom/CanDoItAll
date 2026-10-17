@@ -32,7 +32,8 @@ public sealed class WorkbenchOwnerPersistenceTests {
             typeof(ProjectStructureProjectionLayoutRecord), typeof(ProjectStructureOperationAnalyticsRecord), typeof(ProjectStructureLeaseRecord),
             typeof(ProjectNodeBindingRecord), typeof(ProjectNodeReferenceRecord), typeof(ProjectNodeLifecycleEventRecord),
             typeof(ProjectCrossModuleMutationRecord), typeof(ProjectWorkflowContributionRecord), typeof(ProjectWorkflowAdmissionRecord),
-            typeof(ProjectWorkAssignmentRecord), typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord)];
+            typeof(ProjectWorkAssignmentRecord), typeof(ProjectProcessAssetContributionRecord), typeof(ProjectWorkAssignmentHistoryRecord),
+            typeof(ProjectTaskPlanReceiptRecord)];
         var entities = owner.GetService<IDesignTimeModel>().Model.GetEntityTypes().ToArray();
         Assert.Equal(expected.OrderBy(type => type.FullName), entities.Select(entity => entity.ClrType).OrderBy(type => type.FullName));
         foreach (var entity in entities) {

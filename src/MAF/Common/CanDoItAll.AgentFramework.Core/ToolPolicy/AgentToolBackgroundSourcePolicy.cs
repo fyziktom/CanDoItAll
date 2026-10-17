@@ -22,4 +22,5 @@ public interface IAgentToolBackgroundSourcePolicy {
     string SourceKind { get; }
     ValueTask<AgentToolBackgroundSourceObservation> ObserveAsync(ExecutionRunRecord execution,
         AgentToolProfileBinding profile, CancellationToken cancellationToken = default);
+
 }

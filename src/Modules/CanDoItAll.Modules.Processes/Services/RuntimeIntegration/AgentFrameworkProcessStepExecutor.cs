@@ -355,7 +355,13 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                     cancellationToken, id => admittedExecutionRunId = id)
                 .ConfigureAwait(false);
             executionStage = ProcessAgentExecutionStage.AgentOutputValidation;
-            if (result.Metric.Outcome == RunOutcome.Cancelled) {
+            if (result.EffectContinuation is { } continuation) {
+                var issue = EffectContinuationIssue(assignment, continuation);
+                return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                    ComputeHash(issue.Evidence), issue) with { ExecutionRunId = new ProcessExecutionRunId(result.ExecutionRunId) });
+            }
+            var metric = result.Metric ?? throw new InvalidOperationException("A provider execution result requires its actual metric.");
+            if (metric.Outcome == RunOutcome.Cancelled) {
                 return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
                     ProcessAgentFailureKind.Canceled, result.ExecutionRunId, result.ExecutionRunId.ToString("D")));
             }
@@ -375,8 +381,8 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                         assignment,
                         workspaceService,
                         result.ExecutionRunId,
-                        result.Metric,
-                        $"executionRunId={result.ExecutionRunId:D}; outcome={result.Metric.Outcome}; provider={result.Metric.ProviderName}; model={result.Metric.Model}; detail={result.ResponseText}",
+                        metric,
+                        $"executionRunId={result.ExecutionRunId:D}; outcome={metric.Outcome}; provider={metric.ProviderName}; model={metric.Model}; detail={result.ResponseText}",
                         cancellationToken)
                     .ConfigureAwait(false);
                 return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(
@@ -386,17 +392,17 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
                         ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
                         StringComparison.Ordinal)
                         ? ComputeHash(transientExecutionIssue.Evidence)
-                        : ComputeHash($"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"),
+                        : ComputeHash($"{result.ExecutionRunId:D}:{metric.Outcome}:{result.ResponseText}"),
                     transientExecutionIssue) with
                 {
                     ExecutionRunId = new ProcessExecutionRunId(result.ExecutionRunId)
                 });
             }
 
-            if (result.Metric.Outcome == RunOutcome.Failed) {
+            if (metric.Outcome == RunOutcome.Failed) {
                 return CompleteWithDispatchHostEvidence(TerminalAgentFailure(
                     ProcessRuntimeFailureClassifier.Classify(result.ResponseText), result.ExecutionRunId,
-                    $"{result.ExecutionRunId:D}:{result.Metric.Outcome}:{result.ResponseText}"));
+                    $"{result.ExecutionRunId:D}:{metric.Outcome}:{result.ResponseText}"));
             }
 
             var validation = AgentOutputJson.DeserializeAndValidate(
@@ -480,6 +486,28 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
         }
         catch (ProcessRuntimeDispatchInProgressException) {
             throw;
+        }
+        catch (AgentExecutionActivityPublicationException exception) when (exception.HasEffectOutcome) {
+            var originalExecution = exception.EffectContinuation is { } continuation
+                ? new ProcessExecutionRunId(continuation.ExecutionRunId) : admittedExecutionRunId;
+            var issue = EffectActivityFinalizationIssue(assignment, exception, originalExecution);
+            return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                ComputeHash(issue.Evidence), issue) with { ExecutionRunId = originalExecution });
+        }
+        catch (AgentEffectReconciliationIncompleteException exception) {
+            var issue = EffectContinuationIssue(assignment, exception.Continuation);
+            return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                ComputeHash(issue.Evidence), issue) with { ExecutionRunId = new ProcessExecutionRunId(exception.Continuation.ExecutionRunId) });
+        }
+        catch (AgentEffectReconciliationCleanupException exception) {
+            var issue = EffectContinuationIssue(assignment, exception.Continuation);
+            return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                ComputeHash(issue.Evidence), issue) with { ExecutionRunId = new ProcessExecutionRunId(exception.Continuation.ExecutionRunId) });
+        }
+        catch (AgentEffectReconciliationLeaseException exception) {
+            var issue = EffectLeaseReleaseIssue(assignment, exception, admittedExecutionRunId);
+            return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,
+                ComputeHash(issue.Evidence), issue) with { ExecutionRunId = admittedExecutionRunId });
         }
         catch (ProcessSourceExecutionReconciliationException exception) {
             return CompleteWithDispatchHostEvidence(NeedsManagerForCompletionIssue(assignment,

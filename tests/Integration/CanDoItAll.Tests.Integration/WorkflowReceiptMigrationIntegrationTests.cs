@@ -1,6 +1,7 @@
 using CanDoItAll.SharedKernel;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
@@ -18,6 +19,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class WorkflowReceiptMigrationIntegrationTests {
     private const string PreviousMigration = "20260910213323_AddCrmTechnicalProjectionProvenance";
     private const string ReceiptMigration = "20260910225242_AddWorkflowStructureReceipts";
+    private const string SeedMigration = "20261016163615_AddProjectDefinitionOperationLifecycle";
     private static readonly DateTimeOffset SavedAt = new(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
     private const string OriginalJson = "{\"original\":true,\"unknownExtension\":{\"revision\":7}}";
 
@@ -36,13 +38,14 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             Assert.Equal(original, await NativePayloadsAsync(context));
             await AssertEmptyReceiptSchemaAsync(context);
         }
+        Guid? retainedDefinitionRevision = null;
         for (var restart = 0; restart < 2; restart++) {
             await using var provider = CreateProvider(profile);
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.Database.MigrateAsync();
             Assert.Equal(original, await NativePayloadsAsync(context));
+            retainedDefinitionRevision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context, retainedDefinitionRevision);
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(164, context.Model.GetEntityTypes().Count());
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertEmptyReceiptSchemaAsync(context);
         }
@@ -63,7 +66,8 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
         Assert.Equal(original, await NativePayloadsAsync(context));
         await AssertEmptyReceiptSchemaAsync(context);
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+        Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Equal(original, await NativePayloadsAsync(context));
         await AssertEmptyReceiptSchemaAsync(context);
         await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
@@ -72,7 +76,9 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         await context.Database.MigrateAsync();
         Assert.Equal(original, await NativePayloadsAsync(context));
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(164, context.Model.GetEntityTypes().Count());
+        var revision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context);
+        await context.Database.MigrateAsync();
+        await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context, revision);
         Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
         await AssertEmptyReceiptSchemaAsync(context);
     }
@@ -91,7 +97,8 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
         string[] currentMigrations;
         await using (var provider = CreateProvider(profile)) {
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-            await context.Database.MigrateAsync();
+            await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+            Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
             var id = Guid.NewGuid();
             var path = new string('A', 64);
             switch (owner) {
@@ -119,7 +126,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
             }
             await context.SaveChangesAsync();
             current = await EvidencePayloadAsync(context, owner);
-            currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+            currentMigrations = context.Database.GetMigrations().ToArray();
             await context.GetService<IMigrator>().MigrateAsync(ReceiptMigration);
             Assert.Equal(ReceiptMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
             original = await EvidencePayloadAsync(context, owner);
@@ -203,7 +210,7 @@ public sealed class WorkflowReceiptMigrationIntegrationTests {
     }
 
     private static Task<string[]> NativePayloadsAsync(AppDbContext context) => context.Database.SqlQueryRaw<string>("""
-        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || to_jsonb(row))::text AS "Value"
+        SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || (to_jsonb(row) - 'ConcurrencyToken'))::text AS "Value"
             FROM "Projects_Projects" row
         UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
         UNION ALL SELECT 'binding:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectNodeBindings" row

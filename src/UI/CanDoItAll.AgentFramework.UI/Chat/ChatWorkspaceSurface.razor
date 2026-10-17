@@ -142,7 +142,7 @@
                               DraftPromptChanged="@(value => EmitAsync(ChatWorkspaceAction.DraftChanged, value))"
                               SendRequested="@(() => EmitAsync(ChatWorkspaceAction.Send))"
                               IsBusy="@IsBusy"
-                              IsSendDisabled="@(IsBusy || HasPendingApprovals)"
+                              IsSendDisabled="@(Presentation.IsSendBlocked || IsBusy || HasPendingApprovals)"
                               ComposerKey="@ComposerKey">
             <LeadingActions>
                     @ComposerActions

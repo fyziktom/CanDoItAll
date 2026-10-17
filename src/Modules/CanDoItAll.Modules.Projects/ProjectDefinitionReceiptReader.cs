@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +20,35 @@ public sealed class ProjectDefinitionReceiptReader(
         return (await ObserveAsync(binding, operation, invocation, cancellationToken)).Lookup;
     }
 
+    public async Task<ProjectDefinitionLookup> LookupHistoricalAsync(ProjectDefinitionOperation operation,
+        ProjectDefinitionReceiptInvocation invocation, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(invocation);
+        var before = await activation.ObserveActiveBindingAsync(admissions.DatabaseProfileId, cancellationToken);
+        var observed = await ObserveAsync(before.Record.Plan.Binding, operation, invocation, cancellationToken);
+        var lookup = observed.Lookup;
+        if (lookup is ProjectDefinitionLookup.FoundFull or ProjectDefinitionLookup.FoundScalars) {
+            var evidence = observed.Evidence ?? throw new InvalidDataException("A historical accepted receipt has no owner observation.");
+            await using var context = await factory.CreateDbContextAsync(cancellationToken);
+            var final = await context.Database.SqlQuery<ProjectDefinitionHistoricalTargetObservation>($"""
+                SELECT d."NamespaceId", d."MaintenanceId", d."SchemaVersion", d."GuardProtocol", d."State",
+                       EXISTS (SELECT 1 FROM "Projects_Projects" AS p
+                           WHERE p."Id" = {evidence.ProjectId} AND p."LifetimeId" = {evidence.LifetimeId}
+                           AND NOT EXISTS (SELECT 1 FROM "Projects_ProjectRetirements" AS r WHERE r."LifetimeId" = p."LifetimeId")) AS "TargetAvailable"
+                FROM "Infrastructure_DatasetLifecycle" AS d WHERE d."Id" = 1
+                """).SingleOrDefaultAsync(cancellationToken);
+            var binding = before.Record.Plan.Binding;
+            if (final is null || final.NamespaceId != binding.Namespace.Value || final.MaintenanceId != binding.MaintenanceId ||
+                final.SchemaVersion != binding.SchemaVersion || final.GuardProtocol != (int)binding.GuardProtocol ||
+                final.State != (int)DatasetLifecycleState.Active) {
+                lookup = new ProjectDefinitionLookup.DatasetChanged(operation);
+            } else if (!final.TargetAvailable) {
+                lookup = new ProjectDefinitionLookup.DetailUnavailable(operation, ProjectDefinitionDetailUnavailableReason.TargetUnavailable);
+            }
+        }
+        var after = await activation.ObserveActiveBindingAsync(admissions.DatabaseProfileId, cancellationToken);
+        return before == after ? lookup : new ProjectDefinitionLookup.DatasetChanged(operation);
+    }
     internal Task<ProjectDefinitionObservedOperation> ObserveAsync(DatasetActivationBinding binding,
         ProjectDefinitionOperation operation, ProjectDefinitionInvocation invocation, CancellationToken cancellationToken)
         => ObserveAsync(binding, operation, new ProjectDefinitionReceiptInvocation(invocation.Caller, invocation.ReceiptAccess), cancellationToken);
@@ -41,8 +71,14 @@ public sealed class ProjectDefinitionReceiptReader(
                 observed.DatasetState != (int)DatasetLifecycleState.Active) {
             return new(new ProjectDefinitionLookup.DatasetChanged(operation), null);
         }
-        if (observed.CurrentEpoch is null || observed.RetiredThroughEpoch is null) {
-            throw new InvalidOperationException("Projects operation state has not been initialized for the active dataset.");
+        if (observed.RetentionProtocolVersion is null) {
+            throw Protocol(FiniteOperationProtocolFailure.MissingState);
+        }
+        if (observed.RetentionProtocolVersion != ProjectFiniteOperationPool.ProtocolVersion) {
+            throw Protocol(FiniteOperationProtocolFailure.UnsupportedProtocol);
+        }
+        if (observed.CurrentEpoch is not > 0 || observed.RetiredThroughEpoch is not >= 0 || observed.RetiredThroughEpoch >= observed.CurrentEpoch) {
+            throw Protocol(FiniteOperationProtocolFailure.InconsistentMetadata);
         }
         if (operation.Epoch.Value <= observed.RetiredThroughEpoch) {
             return new(new ProjectDefinitionLookup.Expired(operation), observed);
@@ -52,24 +88,27 @@ public sealed class ProjectDefinitionReceiptReader(
         }
         if (observed.EpochState is null || observed.AdmissionClosesAtUtc is null || observed.ReplayRetentionSeconds is null ||
                 observed.MutationDeadlineMilliseconds is null) {
-            throw new InvalidOperationException("Retained Projects epoch evidence is missing or invalid.");
+            throw Protocol(FiniteOperationProtocolFailure.MissingRetainedEpoch);
         }
         if (observed.AcceptedPayload is not null) {
             return new(await ReadAcceptedAsync(operation, invocation, observed, cancellationToken), observed);
         }
-        if (observed.EpochState == (int)ProjectOperationEpochState.Closed && observed.ClosedAtUtc is { } closed) {
+        if (observed.EpochState == (int)FiniteOperationEpochState.Closed && observed.ClosedAtUtc is { } closed) {
             var promised = observed.AdmissionClosesAtUtc.Value.AddMilliseconds(observed.MutationDeadlineMilliseconds.Value)
                 .AddSeconds(observed.ReplayRetentionSeconds.Value);
             var retained = closed.AddSeconds(observed.ReplayRetentionSeconds.Value);
             return new(new ProjectDefinitionLookup.ClosedAbsent(operation, closed, observed.ObservedAtUtc,
                 promised > retained ? promised : retained), observed);
         }
-        if (observed.EpochState != (int)ProjectOperationEpochState.Open || operation.Epoch.Value != observed.CurrentEpoch) {
-            throw new InvalidOperationException("The retained Projects epoch has an inconsistent lifecycle state.");
+        if (observed.EpochState != (int)FiniteOperationEpochState.Open || operation.Epoch.Value != observed.CurrentEpoch) {
+            throw Protocol(FiniteOperationProtocolFailure.InconsistentMetadata);
         }
         return new(new ProjectDefinitionLookup.NotObserved(operation,
             observed.AdmissionClosesAtUtc > observed.ObservedAtUtc ? ProjectOperationObservationState.Open : ProjectOperationObservationState.Draining), observed);
     }
+
+    private static FiniteOperationProtocolException Protocol(FiniteOperationProtocolFailure failure)
+        => new(failure, ProjectFiniteOperationPool.Pool, ProjectFiniteOperationPool.ProtocolVersion);
 
     private async Task<ProjectDefinitionLookup> ReadAcceptedAsync(ProjectDefinitionOperation operation,
         ProjectDefinitionReceiptInvocation invocation, ProjectDefinitionReceiptObservation observed, CancellationToken cancellationToken) {
@@ -115,3 +154,12 @@ public sealed class ProjectDefinitionReceiptReader(
 }
 
 internal sealed record ProjectDefinitionObservedOperation(ProjectDefinitionLookup Lookup, ProjectDefinitionReceiptObservation? Evidence);
+
+internal sealed class ProjectDefinitionHistoricalTargetObservation {
+    public Guid NamespaceId { get; set; }
+    public Guid MaintenanceId { get; set; }
+    public int SchemaVersion { get; set; }
+    public int GuardProtocol { get; set; }
+    public int State { get; set; }
+    public bool TargetAvailable { get; set; }
+}

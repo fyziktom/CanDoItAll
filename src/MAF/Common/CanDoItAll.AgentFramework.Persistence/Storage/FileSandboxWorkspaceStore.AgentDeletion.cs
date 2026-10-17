@@ -16,12 +16,13 @@ public sealed partial class FileSandboxWorkspaceStore
             throw new ArgumentException("An agent identifier is required.", nameof(agentId));
         }
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
-            var currentCatalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            var currentCatalog = FileSandboxWorkspacePreparedValues.Freeze(
+                await LoadNormalizedCatalogCoreAsync(operation, cancellationToken));
+            var sourceWitness = await FileSandboxWorkspaceMutationWitness.CaptureAgentDeletionSourceAsync(layout,
+                SharedPublicationPaths, PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken);
             var agent = currentCatalog.Agents.FirstOrDefault(item => item.Id == agentId);
             if (agent is null)
             {
@@ -38,19 +39,23 @@ public sealed partial class FileSandboxWorkspaceStore
             var currentChatIndex = await chatProjectionStore.LoadCurrentIndexAsync(
                 currentExecutionIndex,
                 cancellationToken);
+            var currentUsageProjection = await executionSliceStore.LoadUsageProjectionAsync(cancellationToken);
+            var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.ExecutionStorageRoot]);
+            await sourceWitness.RequireUnchangedAsync(cancellationToken);
             var executionPlan = await executionSliceStore.PrepareAgentDeletionAsync(
                 agentId,
                 currentExecutionIndex,
                 currentChatIndex,
+                currentUsageProjection,
                 deletedAtUtc,
                 cancellationToken);
             var targetChatIndex = CreateTargetChatIndex(
                 currentChatIndex,
                 executionPlan);
-            var targetCatalog = CreateTargetCatalog(
+            var targetCatalog = FileSandboxWorkspacePreparedValues.Freeze(CreateTargetCatalog(
                 currentCatalog,
                 agentId,
-                deletedAtUtc);
+                deletedAtUtc));
             if (targetCatalog.Agents.Any(item => item.Id == agentId))
             {
                 throw new AgentDeletionConflictException(
@@ -76,28 +81,38 @@ public sealed partial class FileSandboxWorkspaceStore
                 targetWorkspaceIndex);
             ValidateAgentDeletionCommitJournal(journal);
             agentDeletionCommitBoundary?.Invoke(AgentDeletionCommitStage.Prepared);
-            jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
-            await jsonStore.WriteJsonAtomicallyAsync(
-                PendingAgentDeletionCommitJournalPath,
-                journal,
+            await using var publication = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Deletion(journal), witness,
                 cancellationToken);
-            agentDeletionCommitBoundary?.Invoke(AgentDeletionCommitStage.JournalPersisted);
-            await PersistAgentDeletionJournalAsync(
-                journal,
-                CancellationToken.None);
+            try {
+                var finalCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists: true, targetCatalog, cancellationToken);
+                if (!HasSamePayload(finalCatalog.Catalog, targetCatalog)) {
+                    throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
+                }
+                jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
+                await jsonStore.WriteJsonAtomicallyAsync(
+                    PendingAgentDeletionCommitJournalPath,
+                    journal,
+                    cancellationToken);
+                agentDeletionCommitBoundary?.Invoke(AgentDeletionCommitStage.JournalPersisted);
+                await PersistAgentDeletionJournalAsync(operation,
+                    journal,
+                    CancellationToken.None);
 
-            return new AgentWorkspaceDeletionResult(
-                Deleted: true,
-                DeletedChatSessionCount: executionPlan.SessionIds.Count,
-                DeletedExecutionRunCount: executionPlan.RunIds.Count);
-        }
-        finally
-        {
-            gate.Release();
+                return new AgentWorkspaceDeletionResult(
+                    Deleted: true,
+                    DeletedChatSessionCount: executionPlan.SessionIds.Count,
+                    DeletedExecutionRunCount: executionPlan.RunIds.Count);
+            } catch (Exception failure) {
+                operation.RetainFailure(failure);
+                throw;
+            }
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
-    private async Task PersistAgentDeletionJournalAsync(
+    private async Task PersistAgentDeletionJournalAsync(FileSandboxWorkspacePublicationScope operation,
         AgentDeletionCommitJournal journal,
         CancellationToken cancellationToken)
     {
@@ -115,7 +130,7 @@ public sealed partial class FileSandboxWorkspaceStore
         agentDeletionCommitBoundary?.Invoke(
             AgentDeletionCommitStage.ExecutionSlicesPersisted);
 
-        await SaveCatalogCoreAsync(journal.TargetCatalog, cancellationToken);
+        await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, journal.TargetCatalog, cancellationToken);
         agentDeletionCommitBoundary?.Invoke(
             AgentDeletionCommitStage.CatalogPersisted);
         await SaveWorkspaceIndexCoreAsync(
@@ -126,7 +141,7 @@ public sealed partial class FileSandboxWorkspaceStore
         await jsonStore.DeleteFileAsync(PendingAgentDeletionCommitJournalPath, cancellationToken);
     }
 
-    private async Task RecoverPendingAgentDeletionAsync(
+    private async Task RecoverPendingAgentDeletionAsync(FileSandboxWorkspacePublicationScope operation,
         CancellationToken cancellationToken)
     {
         if (!HasPendingAgentDeletionCommit)
@@ -199,7 +214,7 @@ public sealed partial class FileSandboxWorkspaceStore
                 $"Pending agent deletion '{journal.AgentId:N}' found an unexpected catalog.");
         }
 
-        await PersistAgentDeletionJournalAsync(
+        await PersistAgentDeletionJournalAsync(operation,
             journal,
             CancellationToken.None);
     }

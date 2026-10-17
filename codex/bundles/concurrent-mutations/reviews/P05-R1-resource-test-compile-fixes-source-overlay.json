@@ -1,0 +1,76 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen parent-authored fixture compile corrections; source-only correspondence verified",
+  "baseBindings": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-unit-command-source-overlay.json",
+      "bytes": 2558,
+      "sha256": "05E45FA7EA6CA3266D328F9DC6D0850F0BE2FC7E1F3828E438F4B1FF38E840F1"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-source-inventory-v2.json",
+      "bytes": 60335,
+      "sha256": "A0A82B58F8BB33E363A2CD1E85A563C18D9DF15B3E351BE7830F5F4BEA95EF7D"
+    }
+  ],
+  "sourceOverlays": [
+    {
+      "source": {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+        "bytes": 17149,
+        "sha256": "44AB450DE9762AC0BA5C13F5CA68A3EEF182C5791D1689C15E3F459FF23418F5"
+      },
+      "predecessorSha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD",
+      "delta": "One explicit ReplaceResourceMetadataCommand constructor type; unchanged assertions and 10 rows"
+    },
+    {
+      "source": {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+        "bytes": 26224,
+        "sha256": "EEFB00E0521BCBC75EAE8E6CEE2838D3AD87D3FF3B3B01B74BC3C7653E6EA7ED"
+      },
+      "predecessorSha256": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895",
+      "delta": "Initial inner local and two uses renamed initialResources; unchanged assertions and 10 rows"
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-test-compile-fixes-amendment.md",
+    "bytes": 1905,
+    "sha256": "08605538D04F001C631A2E166E9DC69A63786F3CAF3021F222C5CEDB265362F1"
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-test-compile-ownership.json",
+      "bytes": 933,
+      "sha256": "8927901F1564B161076CBCFC9132E1A3DA73CABF4B18A498450BE03E3321741A"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-test-compile-predecessors/ResourceTestLabAdmissionIntegrationTests.cs.txt",
+      "bytes": 26203,
+      "sha256": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-test-compile-predecessors/P05-R1-deletion-handoff-source-inventory-v2.json",
+      "bytes": 60335,
+      "sha256": "A0A82B58F8BB33E363A2CD1E85A563C18D9DF15B3E351BE7830F5F4BEA95EF7D"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-test-compile-predecessors/parent-initial-resources-local-fix.json",
+      "bytes": 480,
+      "sha256": "FA48ABB7EB09E9FA446003FB2B93663FCC1230E0AAAC11A77E44EED7B5BC01FE"
+    }
+  ],
+  "counts": {
+    "ordinary": 346,
+    "browserSeparate": 4,
+    "methods": 254,
+    "stage1First": 14,
+    "newRows": 0,
+    "unitFileRows": 10,
+    "integrationFileRows": 10
+  },
+  "productionChanged": false,
+  "mainChangedByThisAgent": false,
+  "originalInventoriesUnchanged": true
+}

@@ -50,6 +50,11 @@ public sealed record AgentExecutionAuthorityRevalidation(
 /// </summary>
 public interface IAgentExecutionAuthorityResolver
 {
+    ValueTask<AgentHistoricalReceiptReadPolicy> ObserveHistoricalReceiptReadAsync(
+        AgentToolSessionObservation original, AgentHistoricalReceiptReadFence currentFence,
+        CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(AgentHistoricalReceiptReadPolicy.Unsupported);
+
     ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
         AgentExecutionAuthorityResolutionRequest request,
         CancellationToken cancellationToken = default);

@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -42,18 +46,89 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
     }
 
     [Fact]
-    public async Task Independent_workspace_instances_reserve_exactly_one_execution_for_the_same_claim() {
-        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+    public Task Independent_workspace_instances_reserve_exactly_one_execution_for_the_same_claim() => RunReservationRaceAsync(async race => {
+        var source = race.Source;
         var policy = new SourcePolicy(source);
         var first = await PrepareReservationAsync(source, policy);
         var second = await PrepareReservationAsync(source, policy);
-        var results = await Task.WhenAll(
-            source.NewStore().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), first.Detail, first.Reservation),
-            source.NewStore().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), second.Detail, second.Reservation));
-        Assert.Single(results, result => result.Disposition == ExecutionRunSourceDisposition.Created);
-        Assert.Single(results, result => result.Disposition == ExecutionRunSourceDisposition.ExistingActive);
-        Assert.Equal(results[0].Run.Id, results[1].Run.Id);
-        Assert.Single(await source.NewStore().ListExecutionRunsAsync(), BackgroundKey(policy).MatchesBackgroundLineage);
+        await race.HoldAsync(first.Detail.Run);
+        using var wait = new ReservationPublicationWait(2);
+        var committed = 0;
+        FileSandboxWorkspaceStore Store() => new(source.WorkspaceRoot, source.StorageScope,
+            chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: null,
+            genericNewRunCommitBoundary: stage => {
+                if (stage == GenericNewRunCommitStage.JournalPersisted) {
+                    Interlocked.Increment(ref committed);
+                }
+            }, jsonReadDiagnostics: null);
+        var left = race.Track(Store().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), first.Detail, first.Reservation, race.Token));
+        var right = race.Track(Store().ReserveBackgroundExecutionRunAsync(BackgroundKey(policy), second.Detail, second.Reservation, race.Token));
+        await wait.Entered.Task.WaitAsync(race.Token);
+        Assert.False(left.IsCompleted);
+        Assert.False(right.IsCompleted);
+        Assert.Equal(0, Volatile.Read(ref committed));
+        await race.RequireWorkspaceAvailableAsync();
+        Assert.False(File.Exists(race.Layout.RunPath(first.Detail.Run.Id)));
+        Assert.False(File.Exists(race.Layout.RunPath(second.Detail.Run.Id)));
+        await race.ReleaseAsync();
+        var results = new[] { await race.ObserveAsync(left), await race.ObserveAsync(right) };
+        var created = Assert.Single(results, result => result.Disposition == ExecutionRunSourceDisposition.Created);
+        var replay = Assert.Single(results, result => result.Disposition == ExecutionRunSourceDisposition.ExistingActive);
+        Assert.Equal(1, Volatile.Read(ref committed));
+        Assert.Equal(created.Run.Id, replay.Run.Id);
+        Assert.Equal(created.Run.ToolAdmission!.Session, replay.Run.ToolAdmission!.Session);
+        Assert.Equal(created.Run.ToolAdmission.BackgroundInput, replay.Run.ToolAdmission.BackgroundInput);
+        Assert.Equal(policy.OwnerFingerprint, replay.Run.ToolAdmission.Session.Reference.BackgroundSource!.OwnerFingerprint);
+        replay.Run.ToolAdmission.Validate();
+        var winner = created.Run.Id == first.Detail.Run.Id ? first.Detail.Run : second.Detail.Run;
+        var loser = created.Run.Id == first.Detail.Run.Id ? second.Detail.Run : first.Detail.Run;
+        Assert.Equal(winner.ToolAdmission!.Session, replay.Run.ToolAdmission.Session);
+        Assert.False(File.Exists(race.Layout.RunPath(loser.Id)));
+        Assert.Single(await source.NewStore().ListExecutionRunsAsync(race.Token), BackgroundKey(policy).MatchesBackgroundLineage);
+        await race.RequireKeysAvailableAsync(first.Detail.Run, second.Detail.Run);
+    });
+
+    [Fact]
+    public async Task Reservation_conflict_without_a_complete_original_claim_does_not_retry_or_recover() {
+        foreach (var evidence in Enum.GetValues<ReservationConflictEvidence>()) {
+            await RunReservationRaceAsync(async race => {
+                var policy = new SourcePolicy(race.Source);
+                var candidate = await PrepareReservationAsync(race.Source, policy);
+                await race.HoldAsync(candidate.Detail.Run);
+                using var wait = new ReservationPublicationWait(1);
+                var pending = race.Track(race.Source.NewStore().ReserveBackgroundExecutionRunAsync(
+                    BackgroundKey(policy), candidate.Detail, candidate.Reservation, race.Token));
+                await wait.Entered.Task.WaitAsync(race.Token);
+                Assert.False(pending.IsCompleted);
+                await race.RequireWorkspaceAvailableAsync();
+                var checkpoint = await race.Source.NewStore().UpdateExecutionRunDetailAsync(race.Source.Detail.Run.Id,
+                    current => current with { Run = current.Run with {
+                        ResultSummary = "Independent checkpoint while reservation keys wait.", Revision = current.Run.Revision + 1
+                    } }, race.Token);
+                var catalog = await File.ReadAllBytesAsync(race.Layout.CatalogPath, race.Token);
+                var index = await File.ReadAllBytesAsync(race.Layout.WorkspaceIndexPath, race.Token);
+                var checkpointBytes = await File.ReadAllBytesAsync(race.Layout.RunPath(checkpoint.Run.Id), race.Token);
+                var retained = "Unresolved publication evidence must remain untouched."u8.ToArray();
+                var marker = race.Marker(evidence, candidate.Detail.Run.Id);
+                if (marker is not null) {
+                    Directory.CreateDirectory(Path.GetDirectoryName(marker)!);
+                    await File.WriteAllBytesAsync(marker, retained, race.Token);
+                }
+                await race.ReleaseAsync();
+                var failure = await Record.ExceptionAsync(() => race.ObserveAsync(pending));
+                if (evidence == ReservationConflictEvidence.UnrelatedCheckpoint) {
+                    Assert.IsType<SandboxWorkspaceConcurrencyException>(failure);
+                } else {
+                    Assert.IsType<SandboxWorkspacePublicationConflictException>(failure);
+                    Assert.Equal(retained, await File.ReadAllBytesAsync(marker!, race.Token));
+                }
+                Assert.False(File.Exists(race.Layout.RunPath(candidate.Detail.Run.Id)));
+                Assert.Equal(catalog, await File.ReadAllBytesAsync(race.Layout.CatalogPath, race.Token));
+                Assert.Equal(index, await File.ReadAllBytesAsync(race.Layout.WorkspaceIndexPath, race.Token));
+                Assert.Equal(checkpointBytes, await File.ReadAllBytesAsync(race.Layout.RunPath(checkpoint.Run.Id), race.Token));
+                await race.RequireKeysAvailableAsync(candidate.Detail.Run);
+            });
+        }
     }
 
     [Theory]
@@ -285,6 +360,158 @@ public sealed partial class AgentToolBackgroundJournalIntegrationTests {
         Assert.Equal(AgentToolEffectState.Unknown, completed.EffectState);
         Assert.False(prior.HasUnresolvedEffects);
         Assert.Equal(binding.IntentId, completed.IntentId);
+    }
+
+    private static async Task RunReservationRaceAsync(Func<ReservationRace, Task> action) {
+        var source = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true);
+        var race = new ReservationRace(source);
+        var failures = new List<Exception>();
+        try {
+            await action(race);
+        } catch (Exception failure) {
+            failures.Add(failure);
+        } finally {
+            await race.CleanupAsync(failures);
+        }
+        if (failures.Count == 1) {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+        if (failures.Count > 1) {
+            throw new AggregateException("Background reservation proof and terminal cleanup failed.", failures);
+        }
+    }
+
+    private enum ReservationConflictEvidence {
+        UnrelatedCheckpoint,
+        ChatRunJournal,
+        NewRunJournal,
+        RunUpdateJournal,
+        AgentDeletionJournal,
+        WorkspacePending,
+        RunPending
+    }
+
+    private sealed class ReservationRace(AgentToolAdmissionJournalFixture source) {
+        private readonly CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
+        private readonly DurableFileWriter writer = new(new PhysicalFileSystemPathPolicyFactory());
+        private readonly List<Task> pending = [];
+        private readonly HashSet<Task> observed = [];
+        private IAsyncDisposable? blocker;
+        public AgentToolAdmissionJournalFixture Source { get; } = source;
+        public FileSandboxWorkspaceStorageLayout Layout { get; } = new(source.WorkspaceRoot, source.StorageScope);
+        public CancellationToken Token => deadline.Token;
+
+        public async Task HoldAsync(ExecutionRunRecord run) {
+            var keys = FileSandboxWorkspaceWriteSet.Run(null, run, readsAgent: true).LockPaths(Layout);
+            blocker = await writer.AcquireCoordinationAsync(Layout.RootPath, keys[0], TimeSpan.FromSeconds(5), false, Token);
+        }
+
+        public async Task ReleaseAsync() {
+            var owned = blocker;
+            blocker = null;
+            if (owned is not null) {
+                await owned.DisposeAsync();
+            }
+        }
+
+        public Task<T> Track<T>(Task<T> task) {
+            pending.Add(task);
+            return task;
+        }
+
+        public async Task<T> ObserveAsync<T>(Task<T> task) {
+            try {
+                var result = await task;
+                observed.Add(task);
+                return result;
+            } catch {
+                if (task.IsCompleted) {
+                    observed.Add(task);
+                }
+                throw;
+            }
+        }
+
+        public async Task RequireWorkspaceAvailableAsync() {
+            await using var available = await writer.AcquireCoordinationAsync(Layout.RootPath, Layout.WorkspaceLockPath,
+                TimeSpan.FromSeconds(5), false, Token);
+            Assert.NotNull(available);
+        }
+
+        public async Task RequireKeysAvailableAsync(params ExecutionRunRecord[] runs) {
+            foreach (var path in runs.SelectMany(run => FileSandboxWorkspaceWriteSet.Run(null, run, readsAgent: true).LockPaths(Layout))
+                    .Append(Layout.WorkspaceLockPath).Distinct()) {
+                await using var available = await writer.AcquireCoordinationAsync(Layout.RootPath, path, TimeSpan.FromSeconds(5), false, Token);
+                Assert.NotNull(available);
+            }
+        }
+
+        public string? Marker(ReservationConflictEvidence evidence, Guid runId) => evidence switch {
+            ReservationConflictEvidence.UnrelatedCheckpoint => null,
+            ReservationConflictEvidence.ChatRunJournal => Path.Combine(Layout.ExecutionStorageRoot, "pending-chat-run-start.json"),
+            ReservationConflictEvidence.NewRunJournal => Path.Combine(Layout.ExecutionStorageRoot, "pending-run-start.json"),
+            ReservationConflictEvidence.RunUpdateJournal => Path.Combine(Layout.ExecutionStorageRoot, "pending-run-detail-update.json"),
+            ReservationConflictEvidence.AgentDeletionJournal => Path.Combine(Layout.ExecutionStorageRoot, "pending-agent-deletion.json"),
+            ReservationConflictEvidence.WorkspacePending => Path.Combine(Layout.DataRoot, $".workspace.index.json.{Guid.NewGuid():N}.pending"),
+            ReservationConflictEvidence.RunPending => Path.Combine(Layout.RunRoot(runId), $".run.json.{Guid.NewGuid():N}.pending"),
+            _ => throw new ArgumentOutOfRangeException(nameof(evidence))
+        };
+
+        public async Task CleanupAsync(List<Exception> failures) {
+            try {
+                await deadline.CancelAsync();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            try {
+                await ReleaseAsync();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+            foreach (var task in pending) {
+                try {
+                    await task;
+                } catch (OperationCanceledException) when (deadline.IsCancellationRequested) {
+                } catch (Exception failure) {
+                    if (!observed.Contains(task) && !failures.Contains(failure)) {
+                        failures.Add(failure);
+                    }
+                }
+            }
+            try {
+                await Source.DisposeAsync();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            } finally {
+                deadline.Dispose();
+            }
+        }
+    }
+
+    private sealed class ReservationPublicationWait : IDisposable {
+        private readonly Activity root = new Activity("background-reservation-publication").SetIdFormat(ActivityIdFormat.W3C).Start();
+        private readonly ActivityListener listener;
+        private int arrivals;
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ReservationPublicationWait(int expected) {
+            listener = new() {
+                ShouldListenTo = source => source.Name == AgentFrameworkTelemetry.SourceName,
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+                ActivityStarted = activity => {
+                    if (activity.TraceId == root.TraceId && activity.OperationName == "workspace.publication.keys.wait" &&
+                            Interlocked.Increment(ref arrivals) == expected) {
+                        Entered.TrySetResult();
+                    }
+                }
+            };
+            ActivitySource.AddActivityListener(listener);
+        }
+
+        public void Dispose() {
+            listener.Dispose();
+            root.Dispose();
+        }
     }
 
     private static ExecutionRunRequest BackgroundRequest(AgentToolAdmissionJournalFixture source, SourcePolicy policy, string prompt)

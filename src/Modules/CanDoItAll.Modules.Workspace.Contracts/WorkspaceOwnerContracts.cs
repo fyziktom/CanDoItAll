@@ -10,9 +10,11 @@ public sealed record SettingsWriteResult<T>(SettingsWriteState State, T Value, S
 
 public interface IWorkspaceDefaultsOwner {
     bool IsCurrent { get; }
-    Task<WorkspaceSettingsModel> ReadAsync(CancellationToken cancellationToken);
+    Task<WorkspaceSettingsSnapshot> ReadAsync(CancellationToken cancellationToken);
+    Task<WorkspaceSettingsSnapshotV2> ReadV2Async(CancellationToken cancellationToken);
     Task<IReadOnlyList<WorkspaceProviderOption>> ProvidersAsync(CancellationToken cancellationToken);
-    Task<SettingsWriteResult<WorkspaceSettingsModel>> SaveAsync(WorkspaceSettingsModel command, CancellationToken cancellationToken);
+    Task<WorkspaceSettingsSaveOutcome> SaveAsync(ReplaceWorkspaceSettingsCommand command, CancellationToken cancellationToken);
+    Task<WorkspaceSettingsSaveOutcomeV2> SaveV2Async(ReplaceWorkspaceSettingsV2Command command, CancellationToken cancellationToken);
 }
 
 public interface IWorkspaceSecretsOwner {
@@ -32,10 +34,4 @@ public interface IWorkspaceFilesOwner {
     Task<IReadOnlyList<WorkspaceFilePreference>> ListAsync(CancellationToken cancellationToken);
     Task<SettingsWriteResult<WorkspaceFileExtension>> SaveAsync(WorkspaceFileCommand command, CancellationToken cancellationToken);
     Task<SettingsWriteResult<WorkspaceFileExtension>> DeleteAsync(WorkspaceFileExtension extension, CancellationToken cancellationToken);
-}
-
-public sealed class WorkspaceSettingsCommittedException(WorkspaceSettingsModel saved, SettingsDiagnostic diagnostic)
-    : Exception("Workspace defaults were committed; a secondary action needs attention.") {
-    public WorkspaceSettingsModel Saved { get; } = saved;
-    public SettingsDiagnostic Diagnostic { get; } = diagnostic;
 }

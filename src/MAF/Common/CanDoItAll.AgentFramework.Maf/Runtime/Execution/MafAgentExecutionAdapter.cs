@@ -59,6 +59,7 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        MafToolRunContext.RequireSupportedAdmission(request.ExecutionOptions?.ToolAdmissionSupport ?? AgentToolAdmissionSupport.Recoverable);
 
         var model = MafModelParametersBuilder.ResolveRuntimeModel(request.Agent, request.Provider);
         try
@@ -107,10 +108,14 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
         }
 
         using var admissionLeaseScope = admissionLease?.Bind();
+        var savedAdmission = admissionLease is null ? null : await toolAdmissionJournal!.ReadAsync(admissionLease, cancellationToken);
+        if (savedAdmission is not null) {
+            MafToolRunContext.RequireSupportedAdmission(savedAdmission.Support);
+        }
         var supportsToolRecovery = admissionLease is not null &&
             runtimeOptions.ToolAdmissionSupport == AgentToolAdmissionSupport.Recoverable;
         if (supportsToolRecovery && MafToolRunContext.RequiresApprovalContinuationContract(
-                await toolAdmissionJournal!.ReadAsync(admissionLease!, cancellationToken))) {
+                savedAdmission!)) {
             suppressApprovalRequirements = false;
         }
         var preparedInput = await inputAttachmentPreparer.PrepareAsync(
