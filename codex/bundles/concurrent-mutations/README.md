@@ -36,7 +36,10 @@ now commit with runtime state under the root fence. Nested owner settlement, gen
 fencing and governed execution remain open.
 The [generation lifecycle checkpoint](validation/2026-10-19-process-decision-generations.md)
 passes 29/29 isolated cases for bounded generations, immutable children, review and
-quiescence. Durable fencing and real child-owner integration remain the next work.
+quiescence. The [atomic generation checkpoint](validation/2026-10-19-process-generation-persistence.md)
+passes 101/101 selected cases for normalized history/children, atomic runtime/accounting
+changes, replay, restart, rollback and bounded reconciliation. Actual child-owner and
+effect-fence integration, material inheritance and governed execution remain open.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,

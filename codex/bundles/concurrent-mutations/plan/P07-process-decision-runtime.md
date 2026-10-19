@@ -7,10 +7,12 @@ the admission foundation is implemented, but no Process/Workflow activation is c
 The preliminary [unsupported-policy authority correction](../validation/2026-10-19-process-policy-authority.md)
 is now implemented and validated. [Local Process budget persistence](P07-process-budget-persistence.md)
 also has [41 passing cases](../validation/2026-10-19-process-budget-persistence.md).
-Generation, inherited allocation and actual governed runtime work below remain prospective.
 The [generation lifecycle refinement](P07-process-decision-generations.md) now has
-[29 passing pure cases](../validation/2026-10-19-process-decision-generations.md); durable
-generation fences and actual owner integration remain prospective.
+[29 passing pure cases](../validation/2026-10-19-process-decision-generations.md), and
+[atomic generation storage](P07-process-generation-persistence.md) has
+[101 passing selected cases](../validation/2026-10-19-process-generation-persistence.md).
+Actual effect-generation fences, inherited allocation and governed runtime work remain
+prospective; storage does not authorize effects through the existing owner refusals.
 
 ## Source facts and rejected shortcuts
 

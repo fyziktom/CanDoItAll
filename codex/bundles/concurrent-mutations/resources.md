@@ -528,3 +528,14 @@ remaining observed process or new database delta; three unattributed TEMP entrie
 preserved. Earlier cleanup denials were not retried. The existing isolated fixture remains
 needed for durable generation integration. See the
 [validation record](validation/2026-10-19-process-decision-generations.md).
+
+## 2026-10-19 Atomic Process generation persistence
+
+`c4-process-generation-persistence` recorded ownership before creation and reused the
+same isolated PostgreSQL18 fixture and standard Release outputs. The restart fixture's
+exact TEMP family and the earlier budget restart family are now explicitly inventoried.
+All 101 selected cases passed, with complete-command observation. Complete source/runtime
+identities were reverified before release; reconciliation found no remaining observed
+process or database-name delta. Seventeen unattributed TEMP entries remain preserved.
+No earlier cleanup-review denial was retried or bypassed. See the
+[storage validation record](validation/2026-10-19-process-generation-persistence.md).

@@ -31,6 +31,15 @@ assignments have no budget; missing historical accounting is never reconstructed
 current settings. Child-owner settlement verification, generation fencing and enclosing
 allocation enrollment remain required before governed execution can be enabled.
 
+Decision heads, generation history and enrolled children use separate indexed tables.
+The runtime UOW stages their changes with state, accounting and a strict original-command
+receipt. Enrollment requires its reservation; closure requires settlement of the same
+child allocation and owner revision. Capture allocations cannot be reused by children or
+successor generations. Review/quiescence/terminal transitions must update the runtime step
+and release its dispatch claim in that transaction. Terminal transitions verify the full
+bounded child set. Actual Agent/Workflow journal authority, source occurrence integration
+and effect publication guards remain required before governed execution activation.
+
 The three nullable admission columns retain existing rows without inventing an actor,
 permission or lifetime. A complete tuple is immutable, including on replay and child
 run creation. Subsequent state transitions can still cancel or observe a run after its

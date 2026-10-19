@@ -8515,6 +8515,125 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         });
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionChildEntity", b => {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcceptedReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Owner")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("OwnerRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DecisionId", "Generation", "ChildId");
+
+                    b.HasIndex("BudgetId", "AllocationId")
+                        .IsUnique();
+
+                    b.HasIndex("DecisionId", "ChildId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_children", null, t => {
+                            t.HasCheckConstraint("CK_process_decision_children_closure", "\"Owner\" BETWEEN 0 AND 1\nAND ((\"OwnerRevision\" IS NULL AND \"Outcome\" IS NULL AND \"AcceptedReceiptId\" IS NULL)\nOR (\"OwnerRevision\" IS NOT NULL AND \"OwnerRevision\" > 0 AND \"Outcome\" IS NOT NULL\nAND ((\"Outcome\" = 0 AND \"AcceptedReceiptId\" IS NOT NULL) OR (\"Outcome\" = 1 AND \"AcceptedReceiptId\" IS NULL))))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", b => {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CaptureAllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChildCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UnclosedChildCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("DecisionId", "Generation");
+
+                    b.HasIndex("BudgetId", "CaptureAllocationId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_generations", null, t => {
+                            t.HasCheckConstraint("CK_process_decision_generations_state", "\"Generation\" BETWEEN 1 AND 32 AND \"Revision\" >= 2 * \"Generation\" - 1\nAND \"Phase\" BETWEEN 0 AND 5 AND \"ChildCount\" BETWEEN 0 AND 64\nAND \"UnclosedChildCount\" BETWEEN 0 AND \"ChildCount\" AND \"Revision\" >= 1 + 2 * \"ChildCount\" - \"UnclosedChildCount\"\nAND (\"Phase\" < 3 OR \"UnclosedChildCount\" = 0)\nAND (\"Phase\" <> 5 OR \"Generation\" < 32)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", b => {
+                    b.Property<Guid>("DecisionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DecisionId");
+
+                    b.HasIndex("BudgetId")
+                        .IsUnique();
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("RunId", "StepInstanceId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_heads", null, t => {
+                            t.HasCheckConstraint("CK_process_decision_heads_version", "\"CurrentGeneration\" BETWEEN 1 AND 32 AND \"Revision\" >= 2 * \"CurrentGeneration\" - 1");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b => {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
@@ -9274,6 +9393,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<string>("DecisionBudgetReceiptJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("DecisionReceiptJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -9282,6 +9404,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasKey("RunId", "CommandId");
 
                     b.ToTable("process_runtime_idempotency_keys", null, t => {
+                            t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision", "\"DecisionReceiptJson\" IS NULL OR octet_length(\"DecisionReceiptJson\") BETWEEN 1 AND 16384");
+
                             t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision_budget", "\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND 8192");
                         });
                 });
@@ -10080,6 +10204,48 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionChildEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "Generation")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "CaptureAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
                         .WithMany()
                         .HasForeignKey("RunId", "StepInstanceId")

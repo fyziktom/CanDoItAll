@@ -29,7 +29,10 @@ The [pure budget foundation](validation/2026-10-19-process-decision-budget.md) a
 passing Unit cases; it does not yet provide durable concurrent allocation or close R5.
 The [generation lifecycle foundation](validation/2026-10-19-process-decision-generations.md)
 adds 29 passing isolated cases for immutable children, quiescence and bounded successors.
-Durable generation fencing and actual Process/Workflow owners remain open.
+The [atomic generation owner](validation/2026-10-19-process-generation-persistence.md)
+now passes 101/101 selected cases. Generation/child records, accounting and runtime state
+commit together with original receipts. Actual child journals, effect-generation fencing,
+producer settings, inherited basis and Process/Workflow continuation remain open.
 
 The [external Agent checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases and closes its cached-binding version and delayed-input

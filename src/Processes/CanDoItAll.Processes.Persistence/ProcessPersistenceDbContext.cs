@@ -40,6 +40,12 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessDecisionBudgetAllocationEntity> DecisionBudgetAllocations => Set<ProcessDecisionBudgetAllocationEntity>();
 
+    public DbSet<ProcessDecisionHeadEntity> DecisionHeads => Set<ProcessDecisionHeadEntity>();
+
+    public DbSet<ProcessDecisionGenerationEntity> DecisionGenerations => Set<ProcessDecisionGenerationEntity>();
+
+    public DbSet<ProcessDecisionChildEntity> DecisionChildren => Set<ProcessDecisionChildEntity>();
+
     public DbSet<ProcessProjectionSnapshotEntity> ProjectionSnapshots => Set<ProcessProjectionSnapshotEntity>();
 
     public DbSet<ProcessProjectionHistoryEntity> ProjectionHistory => Set<ProcessProjectionHistoryEntity>();

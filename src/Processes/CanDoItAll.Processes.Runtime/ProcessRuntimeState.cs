@@ -345,6 +345,9 @@ public sealed record ProcessRuntimeCommitRequest(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionBudgetCommand? DecisionBudget { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionCommand? Decision { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(
@@ -359,6 +362,9 @@ public sealed record ProcessRuntimeCommitResult(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionBudgetReceipt? DecisionBudget { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionReceipt? Decision { get; init; }
 
     public static ProcessRuntimeCommitResult FromMutation(ProcessRuntimeMutation mutation)
     {

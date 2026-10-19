@@ -6,13 +6,15 @@ owner refusals remain until actual producer, material, child journal, publicatio
 manager-continuation integration is proven.
 
 The pure lifecycle now has [29 passing isolated cases](../validation/2026-10-19-process-decision-generations.md).
-Durable generation/child storage and the remaining integration sequence below are still
-prospective; the tests do not claim cross-store atomicity or actual owner authorization.
+[Durable generation/child storage](P07-process-generation-persistence.md) now has
+[101 passing selected cases](../validation/2026-10-19-process-generation-persistence.md).
+Actual child-owner and effect integration below remains prospective; neither proof claims
+atomicity between file journals and SQL or authorization from caller-supplied evidence.
 
 ## Responsibility and dependency decision
 
-Process Runtime owns the pure state machine for one logical decision. Persistence will
-apply its changes under the existing root transaction and retain exact command receipts.
+Process Runtime owns the pure state machine for one logical decision. Persistence
+applies its changes under the existing root transaction and retains exact command receipts.
 Application verifies manager authority and child-owner evidence outside that transaction.
 The Process module adapts Agent and Workflow owners; neither engine receives a reference
 to Process Runtime. The business owner retains material and effect receipts. No new

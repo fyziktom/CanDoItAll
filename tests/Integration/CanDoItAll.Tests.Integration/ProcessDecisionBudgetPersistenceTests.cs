@@ -329,7 +329,9 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
 
     private static async Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade) {
         var migration = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionBudgets();
-        var operations = downgrade ? migration.DownOperations : migration.UpOperations;
+        var generations = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations();
+        var operations = downgrade ? generations.DownOperations.Concat(migration.DownOperations).ToArray()
+            : migration.UpOperations.Concat(generations.UpOperations).ToArray();
         var commands = context.GetService<IMigrationsSqlGenerator>().Generate(operations, context.Model);
         await using var transaction = await context.Database.BeginTransactionAsync();
         foreach (var command in commands) {
