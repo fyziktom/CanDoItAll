@@ -22,6 +22,9 @@ adds 58 passing distinct selected behaviors across its exact repair bridge. Unsu
 policies now also block Agent reservation and mapped Workflow admission/continuation
 at the owner fence while historical reads remain available. The
 [decision runtime design](plan/P07-process-decision-runtime.md) specifies the next work.
+The [pure allocation foundation](validation/2026-10-19-process-decision-budget.md)
+passes 28 Unit cases for shared allowances, exact replay, settlement and recorded
+overruns. Durable budget storage, decision fences and actual runtime wiring remain open.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,

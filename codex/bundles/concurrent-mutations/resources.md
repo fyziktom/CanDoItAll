@@ -1,5 +1,14 @@
 # Resource ownership and cleanup
 
+## Process decision arithmetic checkpoint (2026-10-19)
+
+Owned `c4-process-decision-budget` built standard Release outputs and passed all 28 pure
+Unit cases. No test database or application host was required. Its complete command was
+observed; source/runtime inventories were verified and the freeze released. Reconciliation
+found zero remaining observed processes and zero database delta, preserving three
+unattributed TEMP entries. Existing shared fixture/cleanup blockers remain unchanged.
+See [the validation record](validation/2026-10-19-process-decision-budget.md).
+
 ## Process policy authority checkpoint (2026-10-19)
 
 Owned `c4-process-policy-authority` and `c4-process-policy-authority-ready` reused the

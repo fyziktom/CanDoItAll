@@ -24,6 +24,8 @@ The [authority checkpoint](validation/2026-10-19-process-policy-authority.md) no
 58 distinct passing selected behaviors, closing unsupported-policy dispatch and
 continuation at the persistence boundary without denying historical reads. It does
 not close the governed-execution or generation-lifecycle requirements.
+The [pure budget foundation](validation/2026-10-19-process-decision-budget.md) adds 28
+passing Unit cases; it does not yet provide durable concurrent allocation or close R5.
 
 The [external Agent checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases and closes its cached-binding version and delayed-input

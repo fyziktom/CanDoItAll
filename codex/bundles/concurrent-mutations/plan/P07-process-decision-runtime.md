@@ -110,6 +110,8 @@ allocations charged/reserved. Resume, worker restart and claim rotation never re
 ledger. Preparation, provider work and publication count under the admitted rules;
 waiting for a human releases active work but retains its consumed total. Clock reversal,
 overflow, exhausted allowance and missing settlements fail explicitly.
+The [allocation arithmetic foundation](P07-process-decision-budget.md) now has isolated
+Unit proof. It has no durable owner or runtime wiring yet; those gates are unchanged.
 
 Allocations reserve a child-specific allowance rather than copying the parent's entire
 remaining budget into every child. Full reservation can limit parallelism, so the
