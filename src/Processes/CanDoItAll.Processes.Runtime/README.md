@@ -18,6 +18,13 @@ the existing root fence. Receipts preserve the original accounting result separa
 from current state. Actual child-owner settlement verification, generation fencing and
 inherited allocations remain required before runtime activation.
 
+The pure decision-generation lifecycle separates active dispatch, manager review and
+quiescence. It compares exact generation/revision expectations, retains immutable child
+bindings and closed-owner receipt references, and requires every child to close before
+supersession or cancellation. Heads and children are separate bounded values; refreshing
+material preserves the decision and budget identity. These calculations neither verify
+owner evidence nor replace the required durable transaction and effect fences.
+
 ```powershell
 dotnet build .\src\Processes\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj
 ```

@@ -518,3 +518,13 @@ in [the validation record](validation/2026-10-19-agent-policy-deleted-recovery.m
 read-only Components MCP query children also exited; no installation was changed.
 No prior cleanup-review denial was retried or bypassed. The shared fixture remains needed
 for continuing Process/Workflow work; this is not complete bundle cleanup.
+
+## 2026-10-19 Process generation lifecycle
+
+`c4-process-decision-generations` recorded ownership before creation and reused standard
+Release outputs. Its 29 isolated cases passed with full-command observation. Complete
+source/runtime identities were verified before freeze release. Reconciliation found no
+remaining observed process or new database delta; three unattributed TEMP entries were
+preserved. Earlier cleanup denials were not retried. The existing isolated fixture remains
+needed for durable generation integration. See the
+[validation record](validation/2026-10-19-process-decision-generations.md).

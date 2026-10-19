@@ -34,6 +34,9 @@ The [durable accounting checkpoint](validation/2026-10-19-process-budget-persist
 passes 41/41 cases. Local step budgets, allocations and original accounting receipts
 now commit with runtime state under the root fence. Nested owner settlement, generation
 fencing and governed execution remain open.
+The [generation lifecycle checkpoint](validation/2026-10-19-process-decision-generations.md)
+passes 29/29 isolated cases for bounded generations, immutable children, review and
+quiescence. Durable fencing and real child-owner integration remain the next work.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
