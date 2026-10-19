@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-19T11:02:02.868286+00:00",
+  "generated_utc": "2026-10-19T13:13:52.720306+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -6268,6 +6268,12 @@
     {
       "path": "src/App/CanDoItAll.Web/Api/AgentApiRequestValidation.cs",
       "category": "case-policy",
+      "source_fingerprint": "6523802ca6ec04fba7f4ae495403221cf97fab0de1f7eaf1668c9a7edc1d985a",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentApiRequestValidation.cs",
+      "category": "case-policy",
       "source_fingerprint": "d724897e15b0e68d4938b4f5897c38dc4a7993589879ad11c16829d5f3caddc0",
       "count": 1
     },
@@ -6305,12 +6311,6 @@
       "path": "src/App/CanDoItAll.Web/Api/AgentHistoricalReceiptOpenApiContract.cs",
       "category": "windows-path",
       "source_fingerprint": "20a0e4928200fed2f843dd9a677f95bcd3211dc38950a0a580726d4bcc0cfbf5",
-      "count": 1
-    },
-    {
-      "path": "src/App/CanDoItAll.Web/Api/AgentPlanningActionsApi.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2e8cbabb7f7834a91b433968e0ed480e8e2e7fca38f435037b138cf082889d6d",
       "count": 1
     },
     {

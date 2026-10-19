@@ -76,6 +76,7 @@ public static class ApiServiceCollectionExtensions
             options.AddSchemaTransformer(SharedProviderOpenApiSchemas.TransformSchemaAsync);
             options.AddSchemaTransformer(ProjectOperationEpochHttpContract.TransformSchemaAsync);
             options.AddSchemaTransformer(AgentHistoricalReceiptOpenApiContract.TransformSchemaAsync);
+            options.AddSchemaTransformer(AgentDecisionPolicyOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(ProjectDefinitionOperationOpenApiSchemas.TransformSchemaAsync);
             options.AddSchemaTransformer(WorkspaceSettingsOpenApiContract.TransformSchemaAsync);
             options.AddSchemaTransformer(OpenApiExternalSchemaDescriptions.TransformAsync);

@@ -125,6 +125,7 @@
             AgentCatalogIntent.SelectTeamMember select => $"Selected team member {select.AgentId}.",
             AgentCatalogIntent.SelectTeam select => $"Selected team {select.TeamId}.",
             AgentCatalogIntent.OpenAgent open => $"Open agent editor: {open.AgentId?.ToString() ?? "New"}.",
+            AgentCatalogIntent.OpenDataPolicy open => $"Open independent data policy editor: {open.AgentId}.",
             AgentCatalogIntent.OpenTeam open => $"Open team editor: {open.TeamId?.ToString() ?? "New"}.",
             AgentCatalogIntent.EditMembers edit => $"Edit team members: {edit.TeamId}.",
             AgentCatalogIntent.DeleteTeam delete => $"Delete team: {delete.TeamId}.",

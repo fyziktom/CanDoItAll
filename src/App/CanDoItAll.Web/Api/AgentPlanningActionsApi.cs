@@ -47,7 +47,7 @@ internal static class AgentPlanningActionsApi {
                 return Invalid(StatusCodes.Status413PayloadTooLarge);
             }
             using var document = JsonDocument.Parse(bytes.AsMemory(0, length), new() { MaxDepth = 16 });
-            RequireUniqueMembers(document.RootElement);
+            AgentApiRequestValidation.RequireUniqueMembers(document.RootElement);
             var json = new JsonSerializerOptions(options.Value.SerializerOptions) {
                 PropertyNameCaseInsensitive = false, MaxDepth = 16, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
                 RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true
@@ -94,19 +94,4 @@ internal static class AgentPlanningActionsApi {
     private static IResult Invalid(int status) => ApiAccessEndpoints.Error(status,
         "The planning action request is invalid; no action was dispatched.", InvalidRequestCode);
 
-    private static void RequireUniqueMembers(JsonElement value) {
-        if (value.ValueKind == JsonValueKind.Object) {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var property in value.EnumerateObject()) {
-                if (!names.Add(property.Name)) {
-                    throw new JsonException("Planning action members must be unique.");
-                }
-                RequireUniqueMembers(property.Value);
-            }
-        } else if (value.ValueKind == JsonValueKind.Array) {
-            foreach (var item in value.EnumerateArray()) {
-                RequireUniqueMembers(item);
-            }
-        }
-    }
 }

@@ -1,0 +1,96 @@
+@using CanDoItAll.SharedKernel
+@using Microsoft.AspNetCore.Components.Forms
+
+<Dialog IsOpen="true" Title="Agent data policy" Subtitle="@AgentName" Size="ModalSize.Wide"
+        DenseChrome="true" CloseOnBackdrop="false" TestId="agent-policy-dialog"
+        OnClose="@(() => SendAsync(AgentDecisionPolicyIntent.Close))">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="Choose when supported planning work reads its data and what happens when that data changes. Blank fields inherit the workspace policy. Existing work keeps the policy it started with." />
+            @if (State.Message is { } message) {
+                <Alert AlertStyle="@(State.NeedsReview ? AlertStyle.Warning : AlertStyle.Info)" data-testid="agent-policy-status">@message</Alert>
+            }
+            @if (State.Unconfirmed is { } unconfirmed) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="agent-policy-unconfirmed">
+                    <TextBlock Value="@($"Unconfirmed operation: {unconfirmed.OperationId:D}")" />
+                    <TextBlock Value="@($"Submitted: {Describe(unconfirmed.Policy)}")" />
+                </Alert>
+            }
+            @if (State.Original is not null) {
+                <EditForm Model="State.Draft" OnValidSubmit="@(() => SendAsync(AgentDecisionPolicyIntent.Save))" id="@FormId">
+                    <FormStack>
+                        <FormRow Split="true">
+                            <FormField Text="When to read data">
+                                <InputSelect TValue="ReadBasisMode?" @bind-Value="State.Draft.ReadBasisMode" class="cda-input" aria-label="When to read data" data-testid="agent-policy-read">
+                                    <option value="">Inherit workspace choice</option>
+                                    <option value="@ReadBasisMode.RunSnapshot">Keep the starting run snapshot</option>
+                                    <option value="@ReadBasisMode.StepSnapshot">Read again for each logical step</option>
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="When captured data changes">
+                                <InputSelect TValue="OnBasisChange?" @bind-Value="State.Draft.OnBasisChange" class="cda-input" aria-label="When captured data changes" data-testid="agent-policy-change">
+                                    <option value="">Inherit workspace choice</option>
+                                    <option value="@OnBasisChange.PauseForReview">Pause for review</option>
+                                    <option value="@OnBasisChange.Fail">Stop the decision</option>
+                                    <option value="@OnBasisChange.Replan">Prepare a new plan within its allowance</option>
+                                </InputSelect>
+                            </FormField>
+                        </FormRow>
+                        <FormRow Split="true">
+                            <FormField Text="Publishing results">
+                                <InputSelect TValue="PublicationFreshness?" @bind-Value="State.Draft.PublicationFreshness" class="cda-input" aria-label="Publishing results" data-testid="agent-policy-freshness">
+                                    <option value="">Inherit workspace choice</option>
+                                    <option value="@PublicationFreshness.RequireCurrent">Require current data</option>
+                                    <option value="@PublicationFreshness.PinnedObservation">Historical observation, where supported</option>
+                                </InputSelect>
+                            </FormField>
+                            <FormField Text="Maximum automatic replans">
+                                <InputNumber TValue="int?" @bind-Value="State.Draft.MaximumReplans" class="cda-input" min="0" aria-label="Maximum automatic replans" data-testid="agent-policy-replans" />
+                            </FormField>
+                        </FormRow>
+                        <FormRow Split="true">
+                            <FormField Text="Maximum work duration">
+                                <TextBox Immediate="true" @bind-Value="State.Draft.MaximumWorkDuration" Placeholder="Inherit, or 00:05:00" maxlength="32" data-testid="agent-policy-work" />
+                            </FormField>
+                            <FormField Text="Maximum age of captured data">
+                                <TextBox Immediate="true" @bind-Value="State.Draft.MaximumBasisAge" Placeholder="Inherit, or 00:10:00" maxlength="32" data-testid="agent-policy-age" />
+                            </FormField>
+                        </FormRow>
+                        <TextBlock Value="Use hours:minutes:seconds for durations; an optional days. prefix and fractional seconds are supported. Zero automatic replans disables automatic replanning. Each operation must support the selected choices and still checks current access and publication rules." />
+                        <ValidationSummary />
+                    </FormStack>
+                </EditForm>
+            }
+            @if (State.Current is { } current) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="agent-policy-comparison">
+                    <TextBlock Value="@($"Original policy: {Describe(State.Original?.Policy)}")" />
+                    <TextBlock Value="@($"Current policy: {Describe(current.Policy)}")" />
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <Button Text="Use current values" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanAdopt)"
+                                Click="@(() => SendAsync(AgentDecisionPolicyIntent.UseCurrentValues))" data-testid="agent-policy-use-current" />
+                        <Button Text="Keep my draft against this version" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanAdopt)"
+                                Click="@(() => SendAsync(AgentDecisionPolicyIntent.KeepDraft))" data-testid="agent-policy-keep-draft" />
+                    </Cluster>
+                </Alert>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <Button Text="Save policy" Type="submit" form="@FormId" Disabled="@(!State.CanSave)" IsBusy="@State.Busy" data-testid="agent-policy-save" />
+            <Button Text="Read current policy" ButtonStyle="ButtonStyle.Light" Disabled="@(State.Busy || State.Retired)"
+                    Click="@(() => SendAsync(AgentDecisionPolicyIntent.ReadCurrent))" data-testid="agent-policy-read-current" />
+            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => SendAsync(AgentDecisionPolicyIntent.Close))" data-testid="agent-policy-close" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public AgentDecisionPolicyEditorState State { get; set; } = default!;
+    [Parameter] public string AgentName { get; set; } = string.Empty;
+    [Parameter] public EventCallback<AgentDecisionPolicyIntent> Intent { get; set; }
+    private string FormId => $"agent-policy-form-{State.AgentId:N}";
+    private Task SendAsync(AgentDecisionPolicyIntent intent) => Intent.InvokeAsync(intent);
+    private static string Describe(DecisionDataPolicyOverride? value) => value is null ? "Inherit all workspace choices"
+        : $"Read: {value.ReadBasisMode?.ToString() ?? "inherit"}; publish: {value.PublicationFreshness?.ToString() ?? "inherit"}; change: {value.OnBasisChange?.ToString() ?? "inherit"}; replans: {value.MaximumReplans?.ToString() ?? "inherit"}; work: {value.MaximumWorkDuration?.ToString("c") ?? "inherit"}; age: {value.MaximumBasisAge?.ToString("c") ?? "inherit"}.";
+}

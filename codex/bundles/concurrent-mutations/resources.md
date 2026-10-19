@@ -392,3 +392,25 @@ directory: 113 files, 1,583,323 bytes, inventory
 `80F0B05601EF13B530005069432598949762D6EAB55A26EC5544F8D015AAE756`.
 This prevents later managed authoring from changing the admitted historical candidate.
 The exact restart runner source is retained separately; no restart test has run yet.
+
+## 2026-10-19 Agent policy validation
+
+The three policy candidates reuse the registered PostgreSQL18 fixture and standard
+Release outputs. Their ownership records precede directory creation. The repaired
+candidate passed 63/63; the final visual correction passed all six affected cases,
+with source/runtime identity verified and the freezes released. The final observer
+covers both commands, with zero remaining observed processes and zero new database
+delta; seven unattributed TEMP deltas are preserved. The full record is
+[Agent policy access](validation/2026-10-19-agent-policy-access.md).
+
+The parent prematurely interrupted the initial component command and left one
+attributed fixture. Automatic approval review rejected its guarded cleanup before
+execution with `blocked by policy`; neither deletion ran and no alternate deletion
+was attempted. Remaining database: `cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e`.
+Remaining directory:
+`C:/Users/lucys/AppData/Local/Temp/candoitall-component-tests/e701d324735d408aa351ef96a6011b02`.
+Its derived profile is `0a7200a7-d75f-4d95-e4fb-611c843977a8` and activation namespace
+is `b2da6e8f-72e4-4bed-aa47-7bd1aabaa150`. Zero clients and zero observed processes
+were confirmed before the denied attempt. Later baselines include this residue;
+zero later deltas do not close this or any earlier cleanup blocker. The initial
+observer omitted this existing component TEMP family; successors include it explicitly.

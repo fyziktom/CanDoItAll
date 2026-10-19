@@ -1,0 +1,123 @@
+@using System.Text.Json
+@using CanDoItAll.AgentFramework.UI.Catalog
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IAgentFrameworkWorkspaceService Workspace
+@inject ILogger<AgentDecisionPolicyDialog> Logger
+
+<AgentDecisionPolicySurface State="State" AgentName="@AgentName" Intent="HandleAsync" />
+
+@code {
+    [Parameter, EditorRequired] public AgentDecisionPolicyEditorState State { get; set; } = default!;
+    [Parameter] public string AgentName { get; set; } = string.Empty;
+    [Parameter] public CancellationToken OwnerLifetime { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback<Guid> Saved { get; set; }
+    private readonly CancellationTokenSource reads = new();
+    private bool disposed;
+
+    protected override async Task OnInitializedAsync() {
+        State.Changed += Changed;
+        if (State.Original is null) {
+            await ReadAsync();
+        }
+    }
+
+    private async Task HandleAsync(AgentDecisionPolicyIntent intent) {
+        if (disposed) {
+            return;
+        }
+        switch (intent) {
+            case AgentDecisionPolicyIntent.Save:
+                await SaveAsync();
+                break;
+            case AgentDecisionPolicyIntent.ReadCurrent:
+                await ReadAsync();
+                break;
+            case AgentDecisionPolicyIntent.UseCurrentValues:
+                State.AdoptCurrent(false);
+                break;
+            case AgentDecisionPolicyIntent.KeepDraft:
+                State.AdoptCurrent(true);
+                break;
+            case AgentDecisionPolicyIntent.Close:
+                await Closed.InvokeAsync();
+                break;
+        }
+    }
+
+    private async Task ReadAsync() {
+        var owner = State;
+        if (!owner.BeginRead()) {
+            return;
+        }
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(reads.Token, OwnerLifetime);
+        try {
+            owner.CompleteRead(await Workspace.ReadAgentDecisionDataPolicyAsync(owner.AgentId, cancellation.Token));
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            owner.ReadFailed();
+            Log(owner.AgentId, null, failure);
+        }
+    }
+
+    private async Task SaveAsync() {
+        var owner = State;
+        ReplaceAgentDecisionDataPolicyCommand? command;
+        try {
+            command = owner.BeginSave();
+        } catch (Exception failure) when (failure is ArgumentException or JsonException) {
+            owner.ValidationFailed();
+            return;
+        }
+        if (command is null) {
+            return;
+        }
+        AgentDecisionDataPolicySaveOutcome outcome;
+        try {
+            outcome = await Workspace.ReplaceAgentDecisionDataPolicyAsync(command, OwnerLifetime);
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            owner.CompleteSave(command, new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command));
+            Log(owner.AgentId, command.OperationId, failure);
+            return;
+        }
+        owner.CompleteSave(command, outcome);
+        if (outcome.Failure is { } diagnostic) {
+            Logger.LogWarning("Agent policy operation {OperationId} returned {OutcomeType}, stage {FailureStage}, diagnostic {FailureTypes}.",
+                command.OperationId, outcome.GetType().Name, diagnostic.Stage, string.Join(", ", diagnostic.ExceptionTypes));
+        }
+        if (outcome is AgentDecisionDataPolicySaveOutcome.Accepted && !owner.Retired && !OwnerLifetime.IsCancellationRequested) {
+            try {
+                await Saved.InvokeAsync(owner.AgentId);
+            } catch (Exception failure) when (failure is not OutOfMemoryException) {
+                owner.CatalogRefreshFailed();
+                Log(owner.AgentId, command.OperationId, failure);
+            }
+        }
+    }
+
+    private void Log(Guid agentId, Guid? operationId, Exception failure) => Logger.LogWarning(
+        "Agent policy editor for Agent {AgentId}, operation {OperationId}, failed with {FailureType}.",
+        agentId, operationId, failure.GetType().FullName);
+    private void Changed() {
+        if (!disposed) {
+            _ = RenderAsync();
+        }
+    }
+    private async Task RenderAsync() {
+        try {
+            await InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
+                }
+            });
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            Log(State.AgentId, State.Submitted?.OperationId, failure);
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        State.Changed -= Changed;
+        reads.Cancel();
+        reads.Dispose();
+    }
+}

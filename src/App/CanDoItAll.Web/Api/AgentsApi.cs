@@ -22,6 +22,7 @@ internal static class AgentsApi
         agents.MapUsage();
         agents.MapAgentHistoricalReceiptsApi();
         agents.MapAgentPlanningActionsApi();
+        agents.MapAgentDecisionPolicyApi();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")

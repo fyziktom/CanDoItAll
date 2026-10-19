@@ -16,6 +16,10 @@
                    IsLoading="@isLoading"
                    OpeningManagedAgentChatId="@openingManagedAgentChatId"
                    Intent="HandleIntentAsync" />
+@if (activePolicy is { } policy) {
+    <AgentDecisionPolicyDialog @key="policy" State="policy" AgentName="@(agents.FirstOrDefault(agent => agent.Id == policy.AgentId)?.Name ?? "Agent")"
+                               OwnerLifetime="lifetimeToken" Closed="@(() => activePolicy = null)" Saved="PolicySavedAsync" />
+}
 
 @code {
     [Parameter]
@@ -73,6 +77,8 @@
     public IAgentChatLauncher AgentChatLauncher { get; set; } = default!;
 
     private readonly Dictionary<Guid, AgentEditorTarget> editorTargets = [];
+    private readonly Dictionary<Guid, AgentDecisionPolicyEditorState> policyEditors = [];
+    private AgentDecisionPolicyEditorState? activePolicy;
     public IReadOnlyList<AgentEditorTarget> OpenEditorTargets => editorTargets.Values.ToArray();
 
     private readonly CancellationTokenSource lifetime = new();
@@ -90,6 +96,7 @@
             return;
         }
         isDisposed = true;
+        RetirePolicyEditors();
         ProfileChanges.Changed -= OnProfileChanged;
         lifetime.Cancel();
         lifetime.Dispose();
@@ -127,12 +134,40 @@
         AgentCatalogIntent.SelectTeamMember select => SelectTeamMemberAsync(select.AgentId),
         AgentCatalogIntent.SelectTeam select => SelectTeamAsync(select.TeamId),
         AgentCatalogIntent.OpenAgent open => QueueAgentDetailsDialogAsync(open.AgentId),
+        AgentCatalogIntent.OpenDataPolicy open => OpenPolicyAsync(open.AgentId),
         AgentCatalogIntent.OpenTeam open => QueueTeamDetailsDialogAsync(open.TeamId),
         AgentCatalogIntent.OpenChat open => OpenManagedAgentChatAsync(agents.First(agent => agent.Id == open.AgentId)),
         AgentCatalogIntent.EditMembers edit when edit.TeamId == selectedTeamId => OpenSelectedTeamMembersDialogAsync(),
         AgentCatalogIntent.DeleteTeam delete when delete.TeamId == selectedTeamId => DeleteSelectedTeamAsync(),
         _ => throw new InvalidOperationException("The catalog intent does not match the current selection.")
     };
+
+    private Task OpenPolicyAsync(Guid agentId) {
+        if (!lifetimeToken.IsCancellationRequested && agents.Any(agent => agent.Id == agentId)) {
+            if (!policyEditors.TryGetValue(agentId, out var editor)) {
+                editor = new(agentId);
+                policyEditors.Add(agentId, editor);
+            }
+            activePolicy = editor;
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task PolicySavedAsync(Guid agentId) {
+        if (!isDisposed && !lifetimeToken.IsCancellationRequested && policyEditors.ContainsKey(agentId)) {
+            if (!await ReloadCatalogAsync()) {
+                throw new InvalidOperationException("The saved Agent policy could not refresh the catalog.");
+            }
+        }
+    }
+
+    private void RetirePolicyEditors() {
+        foreach (var editor in policyEditors.Values) {
+            editor.Retire();
+        }
+        activePolicy = null;
+        policyEditors.Clear();
+    }
 
     private async Task SelectTeamAsync(Guid? teamId) {
         if (selectedTeamId != teamId) {
@@ -659,6 +694,7 @@
         lifetime.Cancel();
         _ = InvokeAsync(() => {
             if (!isDisposed) {
+                RetirePolicyEditors();
                 snapshot = AgentCatalogSnapshot.Empty;
                 teamRecovery = null;
                 StateHasChanged();

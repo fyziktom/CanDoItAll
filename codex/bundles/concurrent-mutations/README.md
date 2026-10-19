@@ -45,9 +45,15 @@ The real native browser journey now also passes after capture-purpose and source
 repairs: another actor pauses the old plan, refresh produces generation two, publication
 occurs once and the canvas updates while later typing survives. The final repair passes
 26/26; broader focused proof and failed predecessors are retained in that record.
-First review took about 6.1 seconds, leaving latency qualification open. Agent policy
-editing/API and Process/Workflow integration remain next. The signed review/API checkpoint
-is `59b6f1dd4`; SPA remains isolated on its existing branch.
+First review took about 6.1 seconds, leaving latency qualification open. The signed
+native planning checkpoint is `bd89b5254`; SPA remains isolated on its existing branch.
+
+The [Agent policy editor and HTTP checkpoint](validation/2026-10-19-agent-policy-access.md)
+passes 63 focused cases, followed by all six affected native/component browser cases
+after a subtitle binding correction. It preserves original versions and drafts,
+requires explicit conflict reconciliation, and blocks uncertain policy saves. Durable
+policy-operation recovery across navigation/restart, external-Agent target preconditions
+and Process/Workflow integration remain open, along with the wider bundle gates.
 
 P03 now includes the lifecycle owner/migration, native and HTTP retained operations,
 creation cleanup and governed Agent/Process hierarchy and definition editing. Six

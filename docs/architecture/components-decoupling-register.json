@@ -9718,7 +9718,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "f739fa450c9de37f1176fb75c4cb27570bd8658a970b987a7564491128dcddcd",
+      "sha256_lf": "a33a4b2f7217a039d2421e2e1324834e2dcde9b4488c3a441ccf88f6a035e596",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9727,10 +9727,11 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
-      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders",
-      "visual_owner": "AgentCatalogPanel; Alert; Button",
+      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime",
+      "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog",
       "descendants": [
-        "AgentCatalogPanel"
+        "AgentCatalogPanel",
+        "AgentDecisionPolicyDialog"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
@@ -16456,7 +16457,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor",
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor",
-      "sha256_lf": "1d26c22b5873ed9a2d9e894ad4d931963201322b3e135aaad37f18b26e9a53e1",
+      "sha256_lf": "862d6b276a2fc1571c0d815089e8ba3800b1c7921ef9a4bd88d9ca9941a0c307",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.AgentFramework.UiSandbox.Components.CatalogSpecimen",
@@ -25375,7 +25376,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
-      "sha256_lf": "2a189de9979714d7e5a9b1888eaaf6e8255b1a81360f2b45abf6ff89b5921897",
+      "sha256_lf": "06aff886be56675297ece74c50da3c0ac15b97dfd4b75baf1ef9d547c671703f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -35336,6 +35337,80 @@
       "scenario": "CanDoItAll.Plugin.Office365",
       "evidence": "CanDoItAll.Plugin.Office365",
       "rationale": "Evaluated build/import input; no rendering body. Dependency evaluation is recorded separately."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
+      "sha256_lf": "dbcf31dd56eacf19ae7536466fa74812b822931d702db3495e381baffcf919f0",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDecisionPolicyDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
+      ],
+      "native_owner": "Original policy read/write, exact command outcome and profile/opening lifetime",
+      "visual_owner": "AgentDecisionPolicySurface",
+      "descendants": [
+        "AgentDecisionPolicySurface"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Independent policy host with no ordinary Agent draft mutation; saved outcomes retain exact identity and do not recapture authority.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "AgentDecisionPolicyDialog",
+          "lines": [
+            6
+          ],
+          "reason": "Typed ILogger injection references the owning component, not a child."
+        }
+      ]
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicySurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicySurface.razor",
+      "sha256_lf": "439361d73a0e73ffdae923c9b7b82c0fae9949d7428568ce84b7ff3c52e3224d",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentDecisionPolicySurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentPolicySpecimen.razor"
+      ],
+      "native_owner": "Native host owns reads/writes; pure state retains original expectation and draft",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Typed optional policy fields, explicit comparison intents and bounded shared dialog; no services or backend dependencies."
+    },
+    {
+      "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentPolicySpecimen.razor",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentPolicySpecimen.razor",
+      "sha256_lf": "4b38837f449a1d1fd6b43e4aa4570ec939c2f2856f4ee021434a17a1e88ff795",
+      "kind": "RAZOR",
+      "role": "SCENARIO",
+      "type": "CanDoItAll.AgentFramework.UiSandbox.Components.AgentPolicySpecimen",
+      "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "/agent-policy"
+      ],
+      "native_owner": "Deterministic scenario host only",
+      "visual_owner": "AgentDecisionPolicySurface",
+      "descendants": [
+        "AgentDecisionPolicySurface"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UiSandbox",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Backend-free inherited, invalid, conflict and unknown policy states."
     }
   ],
   "evaluation_summary": {

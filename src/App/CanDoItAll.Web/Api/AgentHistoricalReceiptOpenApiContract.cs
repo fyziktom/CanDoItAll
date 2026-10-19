@@ -28,8 +28,11 @@ internal static class AgentHistoricalReceiptOpenApiContract {
         return Task.CompletedTask;
     }
 
-    private static string CreateRevisionPattern() {
+    internal static string CreateRevisionPattern(bool includeZero = false) {
         List<string> alternatives = ["[1-9][0-9]{0,17}"];
+        if (includeZero) {
+            alternatives.Add("0");
+        }
         for (var index = 0; index < MaximumRevision.Length; index++) {
             var minimum = index == 0 ? '1' : '0';
             var upper = MaximumRevision[index];
