@@ -492,3 +492,13 @@ released. Complete-command observation shows zero remaining observed processes a
 zero new database delta for each candidate. Twelve, six and four unattributed TEMP
 entries respectively are preserved. No older blocked cleanup was retried or bypassed.
 See [the native recovery record](validation/2026-10-19-agent-policy-native-recovery.md).
+
+## 2026-10-19 Process budget persistence
+
+`c4-process-budget-persistence` has a pre-creation ownership record and reuses the
+existing isolated PostgreSQL18 fixture and standard Release outputs. All 41 selected
+cases pass. Complete source/runtime identity was verified before freeze release;
+observation covers all three entire test commands. Reconciliation found zero remaining
+observed processes and zero database-name delta. Twelve unattributed TEMP entries remain
+preserved. No earlier blocked cleanup was retried or bypassed. See the
+[accounting validation record](validation/2026-10-19-process-budget-persistence.md).

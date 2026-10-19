@@ -36,6 +36,10 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessRuntimeIdempotencyEntity> IdempotencyKeys => Set<ProcessRuntimeIdempotencyEntity>();
 
+    public DbSet<ProcessDecisionBudgetEntity> DecisionBudgets => Set<ProcessDecisionBudgetEntity>();
+
+    public DbSet<ProcessDecisionBudgetAllocationEntity> DecisionBudgetAllocations => Set<ProcessDecisionBudgetAllocationEntity>();
+
     public DbSet<ProcessProjectionSnapshotEntity> ProjectionSnapshots => Set<ProcessProjectionSnapshotEntity>();
 
     public DbSet<ProcessProjectionHistoryEntity> ProjectionHistory => Set<ProcessProjectionHistoryEntity>();

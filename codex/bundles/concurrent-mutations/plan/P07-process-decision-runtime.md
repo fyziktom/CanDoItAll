@@ -5,8 +5,9 @@ Design refinement after signed native recovery checkpoint `14f830e92`. This foll
 [nested source review](../reviews/P04-P07-nested-decision-review.md). It is prospective:
 the admission foundation is implemented, but no Process/Workflow activation is claimed.
 The preliminary [unsupported-policy authority correction](../validation/2026-10-19-process-policy-authority.md)
-is now implemented and validated. The generation, budget and runtime design below is
-still prospective.
+is now implemented and validated. [Local Process budget persistence](P07-process-budget-persistence.md)
+also has [41 passing cases](../validation/2026-10-19-process-budget-persistence.md).
+Generation, inherited allocation and actual governed runtime work below remain prospective.
 
 ## Source facts and rejected shortcuts
 
@@ -112,7 +113,8 @@ ledger. Preparation, provider work and publication count under the admitted rule
 waiting for a human releases active work but retains its consumed total. Clock reversal,
 overflow, exhausted allowance and missing settlements fail explicitly.
 The [allocation arithmetic foundation](P07-process-decision-budget.md) now has isolated
-Unit proof. It has no durable owner or runtime wiring yet; those gates are unchanged.
+Unit proof. Its local Process ledger now commits with runtime state; actual child-owner
+verification and enclosing allocation wiring are still required.
 
 Allocations reserve a child-specific allowance rather than copying the parent's entire
 remaining budget into every child. Full reservation can limit parallelism, so the

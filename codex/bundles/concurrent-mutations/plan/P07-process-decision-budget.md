@@ -4,7 +4,9 @@ Prospective foundation after `77858d487`, subordinate to the
 [decision runtime design](P07-process-decision-runtime.md). No Process/Workflow policy
 activation is authorized by this foundation alone.
 The pure arithmetic now has [28 passing Unit cases](../validation/2026-10-19-process-decision-budget.md).
-Durable owner integration and actual producer proof remain prospective.
+The [local Process persistence increment](P07-process-budget-persistence.md) now has
+[41 passing cases](../validation/2026-10-19-process-budget-persistence.md). Actual child-owner
+settlement verification, nested allocation and governed producer proof remain prospective.
 The [shared-boundary refinement](P07-shared-decision-budget-boundary.md) moves these
 calculations into SharedKernel before any engine's durable-owner integration.
 

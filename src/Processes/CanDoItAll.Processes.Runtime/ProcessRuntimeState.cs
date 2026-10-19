@@ -342,6 +342,9 @@ public sealed record ProcessRuntimeCommitRequest(
     public IReadOnlyList<ProcessRuntimeStepAssignment>? InitialAssignments { get; init; }
 
     public ProcessLaunchAdmissionReference? InitialLaunchAdmission { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionBudgetCommand? DecisionBudget { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(
@@ -353,6 +356,9 @@ public sealed record ProcessRuntimeCommitResult(
     IReadOnlyList<ProcessValidationFailure> Diagnostics)
 {
     public bool Succeeded => Outcome is ProcessRuntimeTransitionOutcome.Applied or ProcessRuntimeTransitionOutcome.Duplicate;
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionBudgetReceipt? DecisionBudget { get; init; }
 
     public static ProcessRuntimeCommitResult FromMutation(ProcessRuntimeMutation mutation)
     {

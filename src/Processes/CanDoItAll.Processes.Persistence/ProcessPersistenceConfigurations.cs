@@ -249,9 +249,12 @@ internal sealed class ProcessRuntimeIdempotencyEntityConfiguration : IEntityType
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeIdempotencyEntity> builder)
     {
-        builder.ToTable("process_runtime_idempotency_keys");
+        builder.ToTable("process_runtime_idempotency_keys", table => table.HasCheckConstraint(
+            "CK_process_runtime_idempotency_keys_decision_budget",
+            $"\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND {ProcessDecisionBudgetReceiptCodec.MaximumUtf8Bytes}"));
         builder.HasKey(key => new { key.RunId, key.CommandId });
         builder.Property(key => key.Outcome).HasConversion<string>().HasMaxLength(64).IsRequired();
+        builder.Property(key => key.DecisionBudgetReceiptJson).HasColumnType("text");
     }
 }
 

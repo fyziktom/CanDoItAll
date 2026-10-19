@@ -24,10 +24,14 @@ at the owner fence while historical reads remain available. The
 [decision runtime design](plan/P07-process-decision-runtime.md) specifies the next work.
 The [pure allocation foundation](validation/2026-10-19-process-decision-budget.md)
 passes 28 Unit cases for shared allowances, exact replay, settlement and recorded
-overruns. Durable budget storage, decision fences and actual runtime wiring remain open.
+overruns. Decision fences and actual runtime wiring remain open.
 The [shared-boundary checkpoint](validation/2026-10-19-shared-decision-budget.md)
 moves the unchanged arithmetic to SharedKernel and repeats all 28 cases, preserving
 engine dependency direction before durable integration.
+The [durable accounting checkpoint](validation/2026-10-19-process-budget-persistence.md)
+passes 41/41 cases. Local step budgets, allocations and original accounting receipts
+now commit with runtime state under the root fence. Nested owner settlement, generation
+fencing and governed execution remain open.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,

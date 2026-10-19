@@ -24,6 +24,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
     IProcessIdempotencyStore
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+    private readonly EfProcessDecisionBudgetStore decisionBudgets = new(dbContext);
 
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
         ProcessRunId runId,
@@ -158,6 +159,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.DecisionBudget is not null && (request.InitialPlan is not null || request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
+            throw new InvalidOperationException("Process accounting must accompany an applied mutation of an existing runtime state.");
+        }
+
         if (request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)
         {
             return ProcessRuntimeCommitResult.FromMutation(request.Mutation);
@@ -231,6 +236,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             cancellationToken).ConfigureAwait(false);
         if (duplicate is not null)
         {
+            ProcessDecisionBudgetReceiptCodec.RequireSameCommand(request.DecisionBudget, duplicate.DecisionBudget);
             RequireSameProjectAdmission(duplicate.State.ProjectAdmission, request.Mutation.State.ProjectAdmission);
             RequireSameLaunchAdmission(duplicate.State.LaunchAdmissionId, request.Mutation.State.LaunchAdmissionId);
             if (preparedLaunch is not null && preparedLaunch.AcceptedAtUtc is null) {
@@ -288,6 +294,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             ReplaceState(existing, request.Mutation.State);
         }
 
+        var decisionBudget = await decisionBudgets.StageAsync(request.OriginalState, request.DecisionBudget, cancellationToken).ConfigureAwait(false);
         await AppendEventsAsync(request.Mutation.Events, cancellationToken).ConfigureAwait(false);
         AddOutboxMessages(request.Mutation.OutboxMessages, request.Mutation.State.UpdatedAtUtc);
         AddArtifactLedgerEvents(request.Mutation.ArtifactLedgerEvents);
@@ -297,7 +304,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
             RunId = request.Mutation.State.RunId.Value,
             CommandId = request.CommandId.Value,
             Outcome = request.Mutation.Outcome,
-            CompletedAtUtc = request.Mutation.State.UpdatedAtUtc
+            CompletedAtUtc = request.Mutation.State.UpdatedAtUtc,
+            DecisionBudgetReceiptJson = ProcessDecisionBudgetReceiptCodec.Write(decisionBudget)
         });
 
         if (preparedLaunch is not null) {
@@ -313,7 +321,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         dbContext.ChangeTracker.Clear();
         var persistedState = await LoadAsync(request.Mutation.State.RunId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
-        return ProcessRuntimeCommitResult.FromMutation(request.Mutation) with { State = persistedState };
+        return ProcessRuntimeCommitResult.FromMutation(request.Mutation) with { State = persistedState, DecisionBudget = decisionBudget };
     }
 
     private async Task<PreparedLaunchMutationAuthority> AcquirePreparedAuthorityLeaseAsync(ProcessRuntimeCommitRequest request,
@@ -479,6 +487,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
         dbContext.RuntimeStepAssignments.AddRange(
             assignments.Select(EfProcessRuntimeStepAssignmentStore.ToEntity));
+        decisionBudgets.StageInitial(request.Mutation.State.RootRunId, assignments);
     }
 
     private static void ValidateAssignmentParentLineage(
@@ -870,7 +879,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             [],
             [],
             [],
-            []);
+            []) { DecisionBudget = ProcessDecisionBudgetReceiptCodec.Read(key.DecisionBudgetReceiptJson) };
     }
 
     private async Task<ProcessRuntimeStateEntity?> LoadStateEntityAsync(

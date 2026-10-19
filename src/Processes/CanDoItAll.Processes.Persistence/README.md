@@ -22,11 +22,20 @@ The direct readers report them as non-current; reservation/mutation guards reche
 inside the existing root transaction fence. Deferred Workflow continuation checks both
 the observed and current policy explicitly, preserving valid released legacy claims.
 
+New policy-bearing assignments receive a durable budget in the same initial transaction.
+An explicit accounting command stages one indexed allocation and its balance beside the
+runtime mutation, under the existing root fence and state CAS. Exact command receipts
+retain the original accounting result across later state changes and acknowledgement
+loss. Settlements retain actual overruns and may finish after cancellation. Legacy
+assignments have no budget; missing historical accounting is never reconstructed from
+current settings. Child-owner settlement verification, generation fencing and enclosing
+allocation enrollment remain required before governed execution can be enabled.
+
 The three nullable admission columns retain existing rows without inventing an actor,
 permission or lifetime. A complete tuple is immutable, including on replay and child
 run creation. Subsequent state transitions can still cancel or observe a run after its
 project is retired; every new external effect needs its own current authority check.
-The nineteen-entity owner model also retains prepared launch payloads, their original
+The owner model also retains prepared launch payloads, their original
 caller intent and accepted run, continuation claims, and Structure link receipts.
 Initial run state and accepted admission commit together. Source catalog leases are
 acquired before SQL and held through the actual commit; postcommit artifact, provider

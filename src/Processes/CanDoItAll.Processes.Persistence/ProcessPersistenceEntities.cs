@@ -338,6 +338,8 @@ public sealed class ProcessRuntimeIdempotencyEntity
     public ProcessRuntimeTransitionOutcome Outcome { get; set; }
 
     public DateTimeOffset CompletedAtUtc { get; set; }
+
+    public string? DecisionBudgetReceiptJson { get; set; }
 }
 
 public sealed class ProcessProjectionSnapshotEntity

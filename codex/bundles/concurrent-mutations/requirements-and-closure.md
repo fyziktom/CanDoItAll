@@ -51,6 +51,12 @@ claim fencing and capacity gates are explicit; this does not close R1 or R6 engi
 
 ## Architect input coverage
 
+The [41-case Process accounting checkpoint](validation/2026-10-19-process-budget-persistence.md)
+adds durable local step balances, allocations and original-command receipts to R5/R6.
+They commit atomically with runtime state and survive rollback/restart tests. Nested
+owner settlement, generation fencing and actual Process/Workflow execution remain open;
+this checkpoint does not close R5 or the full end-to-end test requirement.
+
 Preserved package content is proposal evidence. Its stable mutation/test/risk IDs remain
 available without rewriting historical statuses. This map covers every narrative and
 phase; exact scenario closure is added when each implementation slice runs.

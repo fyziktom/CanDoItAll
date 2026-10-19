@@ -8429,6 +8429,92 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_authoring_receipts", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", b => {
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ConsumedReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("GrantedReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("GrantedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("OwnerWorkRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BudgetId", "AllocationId");
+
+                    b.ToTable("process_decision_budget_allocations", null, t => {
+                            t.HasCheckConstraint("CK_process_decision_budget_allocations_amounts", "\"GrantedWorkTicks\" >= 0 AND \"GrantedReplans\" >= 0 AND (\"GrantedWorkTicks\" > 0 OR \"GrantedReplans\" > 0)\nAND ((\"OwnerWorkRevision\" IS NULL AND \"ConsumedWorkTicks\" IS NULL AND \"ConsumedReplans\" IS NULL)\nOR (\"OwnerWorkRevision\" IS NOT NULL AND \"OwnerWorkRevision\" > 0 AND \"ConsumedWorkTicks\" IS NOT NULL AND \"ConsumedWorkTicks\" >= 0\nAND \"ConsumedReplans\" IS NOT NULL AND \"ConsumedReplans\" >= 0))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", b => {
+                    b.Property<Guid>("BudgetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AllocationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ConsumedReplans")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("MaximumBasisAgeTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("MaximumReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("MaximumWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("OverrunDetected")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("ReservedReplans")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReservedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("BudgetId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("RunId", "StepInstanceId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_budgets", null, t => {
+                            t.HasCheckConstraint("CK_process_decision_budgets_balance", "\"MaximumWorkTicks\" > 0 AND \"MaximumReplans\" >= 0 AND \"MaximumBasisAgeTicks\" > 0\nAND \"ConsumedWorkTicks\" >= 0 AND \"ReservedWorkTicks\" >= 0 AND \"ConsumedReplans\" >= 0 AND \"ReservedReplans\" >= 0\nAND \"AllocationCount\" BETWEEN 0 AND 256 AND \"Revision\" >= \"AllocationCount\" + 1\nAND (\"AllocationCount\" > 0 OR (\"ConsumedWorkTicks\" = 0 AND \"ReservedWorkTicks\" = 0 AND \"ConsumedReplans\" = 0 AND \"ReservedReplans\" = 0 AND NOT \"OverrunDetected\"))\nAND (\"OverrunDetected\" OR (\"ReservedWorkTicks\" <= \"MaximumWorkTicks\" AND \"ConsumedWorkTicks\" <= \"MaximumWorkTicks\" - \"ReservedWorkTicks\"\nAND \"ReservedReplans\" <= \"MaximumReplans\" AND \"ConsumedReplans\" <= \"MaximumReplans\" - \"ReservedReplans\"))");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b => {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
@@ -9185,6 +9271,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DecisionBudgetReceiptJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -9192,7 +9281,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("RunId", "CommandId");
 
-                    b.ToTable("process_runtime_idempotency_keys", (string)null);
+                    b.ToTable("process_runtime_idempotency_keys", null, t => {
+                            t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision_budget", "\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND 8192");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeInputArtifactEntity", b => {
@@ -9977,6 +10068,22 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .WithMany()
                         .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", b => {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
