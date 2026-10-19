@@ -44,6 +44,11 @@ internal sealed class WorkflowProcessStepExecutor(
         ArgumentNullException.ThrowIfNull(assignment);
         ArgumentNullException.ThrowIfNull(stepContract);
 
+        if (assignment.DecisionDataPolicy is not null) {
+            return Failed(ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported,
+                "This Workflow executor cannot execute an admitted decision-data policy.", assignment.StepInstanceId.ToString());
+        }
+
         if (!ProcessLaunchExecutorKinds.IsWorkflow(assignment.ExecutorKind))
         {
             return Failed(

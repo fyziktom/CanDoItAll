@@ -473,6 +473,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
         ValidateAssignmentParentLineage(request, assignments);
 
+        foreach (var assignment in assignments) {
+            assignment.DecisionDataPolicy?.RequireBinding(request.InitialPlan.Definition.VersionId, assignment.StepInstanceId);
+        }
+
         dbContext.RuntimeStepAssignments.AddRange(
             assignments.Select(EfProcessRuntimeStepAssignmentStore.ToEntity));
     }

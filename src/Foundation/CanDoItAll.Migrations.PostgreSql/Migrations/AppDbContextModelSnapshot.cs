@@ -9325,6 +9325,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DecisionDataPolicyJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ExecutorDisplayName")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -9409,7 +9412,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("WorkflowId", "WorkflowVersionId");
 
-                    b.ToTable("process_runtime_step_assignments", (string)null);
+                    b.ToTable("process_runtime_step_assignments", null, t => {
+                            t.HasCheckConstraint("CK_process_runtime_step_assignments_decision_policy", "\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND 32768");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b => {

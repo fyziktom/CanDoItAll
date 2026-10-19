@@ -6878,8 +6878,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
-    [Fact]
-    public async Task ExecuteAsync_rejects_oversized_runtime_tool_contract_before_workflow_launch()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_rejects_invalid_contract_or_unsupported_policy_before_workflow_launch(bool decisionPolicy)
     {
         var agent = NewAgent(
             "Workflow process sentinel",
@@ -6898,6 +6900,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 "process.adapter.workflow_must_not_launch",
                 "Workflow execution must remain behind bounded preflight.",
                 assignment.StepInstanceId.ToString()));
+        if (decisionPolicy) {
+            assignment = assignment with { DecisionDataPolicy = CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Create(
+                ProcessDefinitionVersionId.New(), assignment.StepInstanceId) };
+        }
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent path must not execute for a workflow assignment."));
@@ -6916,7 +6922,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     ProcessRuntimeToolPreflightContributionCatalog.Empty,
                     ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
-            var requiredTools = Enumerable.Range(0, 65)
+            var requiredTools = Enumerable.Range(0, decisionPolicy ? 0 : 65)
                 .Select(index => $"runtime_tool_{index:D2}")
                 .ToArray();
 
@@ -6929,11 +6935,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 [],
                 new ProcessStepExecutionContract([], [], requiredTools, "sha256:oversized-workflow-tools")));
 
-            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Equal(decisionPolicy ? StrategyOutcome.Failed : StrategyOutcome.NeedsManager, result.Outcome);
             Assert.Equal(0, workflowExecutor.ExecutionCount);
             Assert.False(workspace.ExecuteRunCalled);
             Assert.Equal(
-                "process.adapter.runtime_tool_preflight_failed",
+                decisionPolicy ? ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported : "process.adapter.runtime_tool_preflight_failed",
                 Assert.Single(result.Diagnostics).Code.Value);
         }
         finally

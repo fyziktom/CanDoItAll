@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
 
@@ -83,7 +84,9 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeStepAssignmentEntity> builder)
     {
-        builder.ToTable("process_runtime_step_assignments");
+        builder.ToTable("process_runtime_step_assignments", table => table.HasCheckConstraint(
+            "CK_process_runtime_step_assignments_decision_policy",
+            $"\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND {ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes}"));
         builder.HasKey(assignment => new { assignment.RunId, assignment.StepInstanceId });
         builder.Property(assignment => assignment.StepKey).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.RoleKey).HasMaxLength(256).IsRequired();
@@ -102,6 +105,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.OperationTargetScope).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.LaunchVariablesJson).IsRequired();
         builder.Property(assignment => assignment.CapabilityScopeJson).IsRequired();
+        builder.Property(assignment => assignment.DecisionDataPolicyJson).HasColumnType("text");
         builder.Property(assignment => assignment.BranchGateSourceStepKey).HasMaxLength(256);
         builder.Property(assignment => assignment.BranchGateRequiredOutcomeKey).HasMaxLength(256);
         builder.HasIndex(assignment => assignment.PlanId);

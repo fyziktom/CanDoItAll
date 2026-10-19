@@ -114,6 +114,11 @@ internal sealed class AgentFrameworkProcessStepExecutor : IAgentFrameworkProcess
             return Failed("process.adapter.assignment_missing", $"No runtime assignment exists for step '{stepId}'.", stepId.ToString());
         }
 
+        if (assignment.DecisionDataPolicy is not null) {
+            return Failed(ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported,
+                "This Process executor cannot execute an admitted decision-data policy.", stepId.ToString());
+        }
+
         if (!ProcessRequiredRuntimeToolNames.IsValidBoundedContract(
                 request.StepContract.RequiredRuntimeToolNames))
         {

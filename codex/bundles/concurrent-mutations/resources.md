@@ -1,5 +1,16 @@
 # Resource ownership and cleanup
 
+## Process policy admission checkpoint (2026-10-19)
+
+Owned candidates `c4-process-policy-admission` and `c4-process-policy-admission-ready`
+reused the existing PostgreSQL 18 server and standard Release outputs. Ownership was
+recorded before directory creation. The first retained 47 passing/21 failing cases;
+the corrected successor passed all 68. Both verified unchanged source/runtime, retained
+proof and released their freezes. Observers covered both entire commands and reconciled
+with zero remaining observed processes and zero new database delta; six unattributed
+TEMP deltas per candidate were preserved. Existing cleanup blockers were not retried or
+bypassed. See [the checkpoint](validation/2026-10-19-process-policy-admission.md).
+
 ## External Agent preconditions (2026-10-19)
 
 Owned validation directories `c4-external-agent-preconditions` and

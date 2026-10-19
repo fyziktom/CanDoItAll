@@ -108,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="../../Support/Fixtures/Maf122/**/*.json" Link="Fixtures/Maf122/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="../../Support/Fixtures/Concurrency/ProcessPreparedLaunchLegacy.json" LogicalName="ProcessPreparedLaunchLegacy.json" />
     <None Include="../../Support/Fixtures/Maf120/**/*.json" Link="Fixtures/Maf120/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

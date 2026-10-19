@@ -11,6 +11,12 @@ target/revision/context checks. Delayed request capture, catalog-only publicatio
 historical replay and pinned postcommit projection are covered. Other Agent writers,
 operation retention, restore and global profile-activation fences remain open.
 
+2026-10-19 Process update: [immutable policy admission](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-process-policy-admission.md)
+passes 68 focused cases. Prepared launch and assignment persistence retain bounded
+original policy evidence without rewriting legacy launches. Actual Agent/Workflow
+adapters reject this contract pending the governed executor and continuation work.
+This is storage/compatibility coverage, not an activated Process policy producer.
+
 ## Meaning of status
 
 - **Enforced path observed**: source checks the caller's original expectation at the

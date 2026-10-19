@@ -6,6 +6,12 @@ now compiled and passes its one case with three submissions; prior failures rema
 recorded. End-to-end implementation continues. SPA work must remain on
 `codex/concurrent-mutations` pending the user's consultation with its maintainer.
 
+The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
+passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
+compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch
+producer, governed Process/Workflow execution, generation fences and durable resume
+remain open; no settings activation or complete R5 closure is claimed.
+
 The [external Agent checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases and closes its cached-binding version and delayed-input
 defects. It preserves historical replay, pins postcommit projection to original context

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-19T13:13:52.720306+00:00",
+  "generated_utc": "2026-10-19T14:31:20.848773+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15611,
+  "allowance_count": 15615,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13619,6 +13619,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019014901_IndexLegacyProjectDeletionSubject.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "f69f5d302db98404b1b1ef824f6fa0680386e2408aa255b35413fe1fbc062fb0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019142619_AddProcessDecisionPolicyAdmission.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "18322cbefb17479a92c027fae9669f34936a69d230bcca9af21f7722faf4a28c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019142619_AddProcessDecisionPolicyAdmission.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "7a11eb7e680354ea7a93917e0846ad36dee7e8477b74d835d61fed27f9483757",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019142619_AddProcessDecisionPolicyAdmission.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "247cff46718dcfd9af921b858ba0820779810f699b91139fac0d358829dbba5b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019142619_AddProcessDecisionPolicyAdmission.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "a7e34dc2cb6ba264fe67bc2a6453c97f43cec14bcb6e23156ae09fd84c54d9eb",
       "count": 1
     },
     {

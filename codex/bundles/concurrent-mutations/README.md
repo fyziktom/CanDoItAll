@@ -4,6 +4,12 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
+The [Process policy admission foundation](validation/2026-10-19-process-policy-admission.md)
+passes 68/68 cases, preserving legacy launch fingerprints and storing immutable policy
+provenance with migration/restart proof. Actual Process/Workflow executors reject the
+new contract until governed execution and durable continuation are implemented.
+This foundation does not activate Process/Workflow policy settings.
+
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
 capture mutable requests before storage work and retain historical replay receipts.

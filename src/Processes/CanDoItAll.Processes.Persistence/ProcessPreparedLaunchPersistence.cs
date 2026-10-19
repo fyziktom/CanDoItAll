@@ -69,6 +69,7 @@ internal static class ProcessPreparedLaunchCodec {
     private const string ToolSourceHashDomain = "process-tool-source-v1\n";
     private const string ProjectMutationHashDomain = "process-project-mutations-v1\n";
     private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
+    private const string DecisionPolicyHashDomain = "process-decision-policy-v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -93,6 +94,7 @@ internal static class ProcessPreparedLaunchCodec {
                     .SequenceEqual(preparation.Review.Steps.Select(step => step.StepInstanceId).OrderBy(id => id.Value))) {
             throw new InvalidOperationException("The process launch review does not describe the immutable prepared plan.");
         }
+        RequireDecisionPolicyBindings(preparation);
         var payload = JsonSerializer.Serialize(preparation, Options);
         return new() {
             Id = preparation.AdmissionId.Value,
@@ -116,6 +118,7 @@ internal static class ProcessPreparedLaunchCodec {
         }
         preparation.Authority?.Validate();
         preparation.ToolSource?.RequirePreparation(preparation);
+        RequireDecisionPolicyBindings(preparation);
         if (preparation.AdmissionId.Value != entity.Id || preparation.InitialCommit.Mutation.State.RunId.Value != entity.RunId ||
                 preparation.InitialCommit.InitialPlan?.Header.PlanId.Value != entity.PlanId ||
                 preparation.RequestFingerprint != entity.RequestFingerprint || preparation.CallerIntentId?.Value != entity.CallerIntentId ||
@@ -151,7 +154,18 @@ internal static class ProcessPreparedLaunchCodec {
             preparation.ToolSource?.Execution.SourceAuthority?.ProjectMutations is not null ? ProjectMutationHashDomain : string.Empty;
         var lifetimeDomain = HasSourceLifetimeSchema(preparation.Authority) || HasSourceLifetimeSchema(preparation.ToolSource?.Execution.SourceAuthority)
             ? SourceLifetimeHashDomain : string.Empty;
-        return Hash(lifetimeDomain + projectDomain + sourceDomain + payload);
+        var decisionDomain = preparation.InitialCommit.InitialAssignments?.Any(assignment => assignment.DecisionDataPolicy is not null) == true
+            ? DecisionPolicyHashDomain : string.Empty;
+        return Hash(decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
+    }
+
+    private static void RequireDecisionPolicyBindings(ProcessPreparedLaunch preparation) {
+        if (preparation.InitialCommit.InitialPlan is not { } plan || preparation.InitialCommit.InitialAssignments is not { } assignments) {
+            throw new InvalidDataException("The prepared Process launch requires its original plan and assignments.");
+        }
+        foreach (var assignment in assignments) {
+            assignment.DecisionDataPolicy?.RequireBinding(plan.Definition.VersionId, assignment.StepInstanceId);
+        }
     }
 
     private static bool HasSourceLifetimeSchema(ProcessLaunchAuthority? authority)

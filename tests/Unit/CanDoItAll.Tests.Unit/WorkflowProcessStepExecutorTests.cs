@@ -19,6 +19,20 @@ public sealed partial class WorkflowProcessStepExecutorTests
     private static readonly DateTimeOffset Now = new(2026, 7, 12, 20, 30, 0, TimeSpan.Zero);
 
     [Fact]
+    public async Task ExecuteAsync_refuses_unactivated_decision_policy_before_child_launch() {
+        var assignment = CreateAssignment(new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid())));
+        assignment = assignment with { DecisionDataPolicy = CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Create(
+            ProcessDefinitionVersionId.New(), assignment.StepInstanceId) };
+        var launch = new RecordingWorkflowLaunchService();
+        var runtime = new RecordingWorkflowRuntimeManager();
+        var result = await CreateExecutor(launch, runtime, assignment).ExecuteAsync(assignment, ProcessStepExecutionContract.Empty,
+            dispatchClaimIdentity: new(ClaimToken));
+        Assert.Equal(StrategyOutcome.Failed, result.Outcome);
+        Assert.Equal(ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported, Assert.Single(result.Diagnostics).Code.Value);
+        Assert.Empty(launch.Intents);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_launches_exact_workflow_with_typed_process_origin_context_and_idempotency()
     {
         var workflowId = WorkflowId.New();

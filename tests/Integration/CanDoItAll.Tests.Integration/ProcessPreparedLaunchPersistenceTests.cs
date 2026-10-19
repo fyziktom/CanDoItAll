@@ -305,7 +305,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var target = saved.Preparation.LinkTarget!;
         var targetNodeKey = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(saved.Preparation.InitialCommit.Mutation.State.RunId.Value);
         if (deleteProject) {
-            await current.GetRequiredService<ProjectsService>().DeleteAsync(target.ProjectId);
+            await new ProjectLifecycleTestDriver(current).DeleteAsync(target.ProjectId);
         } else {
             Assert.True(await current.GetRequiredService<ProjectWorkbenchRelationService>().UnlinkObjectsAsync(
                 target.ProjectId, target.SourceNodeKey, targetNodeKey, ProjectObjectLinkKind.Uses,
@@ -333,7 +333,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         var saved = await CreateAcceptedProjectLaunchAsync(services);
-        await services.GetRequiredService<ProjectsService>().DeleteAsync(saved.Preparation.LinkTarget!.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(saved.Preparation.LinkTarget!.ProjectId);
         var delivery = Delivery(services, Coordinator(services));
         var result = await delivery.DeliverAsync(saved.Preparation.AdmissionId);
         Assert.Equal(ProcessLaunchLinkDeliveryState.Conflict, result.State);

@@ -76,7 +76,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             await CancelFileRunAsync(services, saved);
             oldScope = Assert.Single((await services.GetRequiredService<IProcessRunFileScopeProvider>().ResolveAsync(RunId(saved))).Scopes);
             var project = saved.Preparation.Authority!.ProjectAdmission!;
-            await services.GetRequiredService<ProjectsService>().DeleteAsync(project.ProjectId);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(project.ProjectId);
             if (recreate) {
                 Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(project.ProjectId,
                     new() { Name = "Different project lifetime" })).IsSuccess);
