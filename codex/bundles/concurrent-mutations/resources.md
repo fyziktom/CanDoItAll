@@ -449,3 +449,15 @@ is `b2da6e8f-72e4-4bed-aa47-7bd1aabaa150`. Zero clients and zero observed proces
 were confirmed before the denied attempt. Later baselines include this residue;
 zero later deltas do not close this or any earlier cleanup blocker. The initial
 observer omitted this existing component TEMP family; successors include it explicitly.
+
+## 2026-10-19 Native Agent policy recovery
+
+`c4-agent-policy-native`, `c4-agent-policy-native-ready` and
+`c4-agent-policy-native-navigation` have ownership records predating creation and reuse
+the existing isolated PostgreSQL18 fixture and standard Release outputs. The first
+candidate passed 38/39; two test-only repairs led to the passing exact native recovery
+case, with unchanged-production bridges. All source/runtime freezes were verified and
+released. Complete-command observation shows zero remaining observed processes and
+zero new database delta for each candidate. Twelve, six and four unattributed TEMP
+entries respectively are preserved. No older blocked cleanup was retried or bypassed.
+See [the native recovery record](validation/2026-10-19-agent-policy-native-recovery.md).

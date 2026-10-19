@@ -16,6 +16,19 @@
                     <TextBlock Value="@($"Submitted: {Describe(unconfirmed.Policy)}")" />
                 </Alert>
             }
+            @if (State.Pending?.Stage == AgentDecisionPolicyPendingStage.Prepared) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="agent-policy-prepared">
+                    <TextBlock Value="This submission is stored on this browser and has not been dispatched." />
+                    <Button Text="Discard unsent submission" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanDiscardPrepared)"
+                            Click="@(() => SendAsync(AgentDecisionPolicyIntent.DiscardPrepared))" data-testid="agent-policy-discard-prepared" />
+                </Alert>
+            }
+            @if (State.Historical is { } historical) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="agent-policy-historical">
+                    <TextBlock Value="The original save was accepted. These are its historical values, which may differ from the current policy." />
+                    <TextBlock Value="@Describe(historical.Policy)" />
+                </Alert>
+            }
             @if (State.Original is not null) {
                 <EditForm Model="State.Draft" OnValidSubmit="@(() => SendAsync(AgentDecisionPolicyIntent.Save))" id="@FormId">
                     <FormStack>
@@ -78,6 +91,10 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
             <Button Text="Save policy" Type="submit" form="@FormId" Disabled="@(!State.CanSave)" IsBusy="@State.Busy" data-testid="agent-policy-save" />
+            @if (!State.RecoveryReady || State.RecoveryBlocked || State.Pending is not null || State.Unconfirmed is not null) {
+                <Button Text="Check retained save" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanRecover)"
+                        Click="@(() => SendAsync(AgentDecisionPolicyIntent.Recover))" data-testid="agent-policy-recover" />
+            }
             <Button Text="Read current policy" ButtonStyle="ButtonStyle.Light" Disabled="@(State.Busy || State.Retired)"
                     Click="@(() => SendAsync(AgentDecisionPolicyIntent.ReadCurrent))" data-testid="agent-policy-read-current" />
             <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => SendAsync(AgentDecisionPolicyIntent.Close))" data-testid="agent-policy-close" />

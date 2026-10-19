@@ -12,8 +12,11 @@ refresh/replan, cancellation and reviewed publication. Native controls pass focu
 component/owner tests and the real browser journey, including a second actor's conflict,
 new-generation publication, preserved typing and automatic source refresh. Agent policy
 editing and HTTP access now have [focused proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-access.md),
-with explicit original-version reconciliation and blocked uncertain saves. Durable
-policy-operation recovery and Process/Workflow producer integration remain open. See the
+with explicit original-version reconciliation and blocked uncertain saves. [Native
+retained policy recovery](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md)
+covers browser reload, two tabs and historical lookup without resending. Native recovery
+entry after deletion, production-host restart and Process/Workflow producer integration
+remain open. See the
 [native planning proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-native-planning-review.md)
 for scoped counts and the measured 6.1-second first-review latency still requiring analysis.
 Lifecycle, remaining owners, measured performance gaps and cleanup still block E2E closure.

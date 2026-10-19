@@ -25,6 +25,7 @@
         state = new(Guid.NewGuid());
         state.BeginRead();
         state.CompleteRead(new(new(workspace, state.AgentId, new(4)), null));
+        state.CompleteRecovery(null);
         if (uncertain) {
             state.Draft.ReadBasisMode = ReadBasisMode.RunSnapshot;
             var command = state.BeginSave()!;

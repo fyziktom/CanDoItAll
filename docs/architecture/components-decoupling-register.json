@@ -6599,7 +6599,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Program.cs",
       "path": "src/App/CanDoItAll.Web/Program.cs",
-      "sha256_lf": "da8408b91f764883b83624431067394a7795f64ba80d89e43d1d491431b9026e",
+      "sha256_lf": "af45b0ba39a3359d598b11bde81cb26cd2620f138f449acdf43e127b49a93363",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.PostgreSqlDevDatabaseProfileRequest, CanDoItAll.Web.Program",
@@ -6614,7 +6614,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Native host composes module renderers and registers scoped Projects definition/lifecycle browser stores with explicit limits. Offline activation and deletion recovery dispatch exit before Web host startup. Their operational decisions remain in their owning modules; Program owns no reusable rendering body."
+      "rationale": "Native host composes module renderers and registers scoped Projects definition/lifecycle and Agent policy browser stores with explicit limits. Offline activation and deletion recovery dispatch exit before Web startup. Operational decisions remain in their owning modules; Program owns no reusable rendering body."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/app.css",
@@ -35341,7 +35341,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
-      "sha256_lf": "dbcf31dd56eacf19ae7536466fa74812b822931d702db3495e381baffcf919f0",
+      "sha256_lf": "56d1ef0bffa3ca81c823db826d5f16bd48bf24b5ceeb7ff4d676b5d84dd5505a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDecisionPolicyDialog",
@@ -35350,7 +35350,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
       ],
-      "native_owner": "Original policy read/write, exact command outcome and profile/opening lifetime",
+      "native_owner": "Module editor session owns retained submission, lookup and mutation; dialog owns rendering/cancellation lifetime",
       "visual_owner": "AgentDecisionPolicySurface",
       "descendants": [
         "AgentDecisionPolicySurface"
@@ -35358,12 +35358,12 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Independent policy host with no ordinary Agent draft mutation; saved outcomes retain exact identity and do not recapture authority.",
+      "rationale": "Interactive lifecycle delegates retention, exact one-time dispatch and receipt recovery to the module session. Dialog owns read cancellation and callbacks; surface remains the renderer.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "AgentDecisionPolicyDialog",
           "lines": [
-            6
+            7
           ],
           "reason": "Typed ILogger injection references the owning component, not a child."
         }
@@ -35372,7 +35372,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicySurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicySurface.razor",
-      "sha256_lf": "439361d73a0e73ffdae923c9b7b82c0fae9949d7428568ce84b7ff3c52e3224d",
+      "sha256_lf": "0d3147f68e1b0bbdc791e8320d853813375cadfd2184fcdb27b17ba81400cd7f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentDecisionPolicySurface",
@@ -35388,12 +35388,12 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Typed optional policy fields, explicit comparison intents and bounded shared dialog; no services or backend dependencies."
+      "rationale": "Existing wide shared Dialog renders typed retention and historical states with Alert/Button/Cluster and recovery intents; no browser or owner service calls."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentPolicySpecimen.razor",
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentPolicySpecimen.razor",
-      "sha256_lf": "4b38837f449a1d1fd6b43e4aa4570ec939c2f2856f4ee021434a17a1e88ff795",
+      "sha256_lf": "a55ff37fadd8c143318814c4cc05df1fad38e699ef3f076467b42cd532a56f3f",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.AgentFramework.UiSandbox.Components.AgentPolicySpecimen",
@@ -35410,7 +35410,27 @@
       "assets": "CanDoItAll.AgentFramework.UiSandbox",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Backend-free inherited, invalid, conflict and unknown policy states."
+      "rationale": "Backend-free sample explicitly initializes empty recovery state before policy editing; no browser persistence is claimed."
+    },
+    {
+      "identity": "src/App/CanDoItAll.Web/wwwroot/js/agentDecisionPolicyPending.js",
+      "path": "src/App/CanDoItAll.Web/wwwroot/js/agentDecisionPolicyPending.js",
+      "sha256_lf": "189fd0c56d8757eb49549b86ea6cc122131265a8236fb32b34c569382f01fd5c",
+      "kind": "ASSET",
+      "role": "PRODUCT",
+      "type": "Agent policy IndexedDB adapter",
+      "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "classification": "NON_RENDERING",
+      "caller": [
+        "BrowserAgentDecisionPolicyPendingStore"
+      ],
+      "native_owner": "Web browser adapter; module editor session",
+      "visual_owner": "AgentDecisionPolicySurface",
+      "descendants": [],
+      "assets": "CanDoItAll.Web",
+      "scenario": "CanDoItAll.Web",
+      "evidence": "CanDoItAll.Web",
+      "rationale": "Bounded strict-durability original-submission storage, exact CAS transitions and removal; no DOM rendering or backend requests."
     }
   ],
   "evaluation_summary": {

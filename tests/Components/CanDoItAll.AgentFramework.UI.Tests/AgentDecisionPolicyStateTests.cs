@@ -133,6 +133,7 @@ public sealed class AgentDecisionPolicyStateTests {
         var state = new AgentDecisionPolicyEditorState(Guid.NewGuid());
         Assert.True(state.BeginRead());
         state.CompleteRead(new(new(new(Guid.NewGuid(), WorkspaceScopeDescriptor.Sandbox, new(1)), state.AgentId, new(4)), null));
+        state.CompleteRecovery(null);
         return state;
     }
     private static AgentDecisionDataPolicySaveOutcome.Accepted Accepted(ReplaceAgentDecisionDataPolicyCommand command)

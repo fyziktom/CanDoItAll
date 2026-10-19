@@ -9,7 +9,10 @@ This inventory prevents the Projects pilot from being mistaken for engine-wide p
 pass 40 focused cases. The dedicated file owner atomically stores exact original
 acceptance, preserves it through ordinary writers/deletion, and supports read-only
 HTTP lookup under current context and read permission. It does not lock unrelated
-Agents for receipt-only changes. Native persisted recovery and wider owner closure remain open.
+Agents for receipt-only changes. [Native retained recovery](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md)
+now covers retained-before-dispatch, two tabs, browser reload and historical lookup with
+later typing preserved. Native deleted-Agent entry, production-host restart and wider
+owner closure remain open.
 
 2026-10-19 update: the [external Agent checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-external-agent-preconditions.md)
 passes 54 focused cases and replaces cached-binding preconditions with actual

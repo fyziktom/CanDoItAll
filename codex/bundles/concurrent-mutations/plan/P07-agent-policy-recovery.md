@@ -118,3 +118,79 @@ lookup and HTTP request/outcome contract. Legacy absence is explicitly round-tri
 No unfiltered gate is selected: the optional new field and reserved writer are bounded
 by this perimeter; full release/merge validation remains separately open. Native ticket
 lifetime changes will require their own editor/host/browser proof before activation.
+
+## Native retained submission design
+
+Backend prerequisite is signed `a2dd219b0`, with 40 passing cases. This increment owns
+the existing native Agent policy dialog and its browser adapter; SPA remains untouched.
+Keep the renderer in AgentFramework.UI, move nontrivial orchestration from the dialog
+to one module-owned editor session, and define the browser-storage port beside the
+typed editor contracts. Web implements the port with IndexedDB. No Projects pending
+types, generic mutation coordinator, new project reference or production partial.
+
+Persist one original submission per native caller/profile/scope/Agent. Caller binding
+comes from the current interactive authenticated identity, with its stable issuer/subject
+hashed before storage; profile generation is retained inside the original command but
+is not a browser address component, so restart can recover it. Recheck the caller around
+browser awaits. The browser record never supplies backend permission. Use the existing
+versioned Web submission wire contract, preserving decimal revision strings; JavaScript
+stores the bounded payload as opaque text. C# strictly decodes and verifies every key,
+operation, stage and outcome before exposing it to the editor.
+
+Use strict-durability IndexedDB transactions, with at most 128 records, an 8 KiB command
+and 4 KiB terminal result per record. No eviction or timer cleanup of unresolved work.
+The finite record/byte bounds avoid a scan or serialization of all records on each save.
+Same-key prepare is atomic across tabs. Stages are Prepared, Dispatching, Accepted and
+Rejected. Prepare stores the original command; a separate compare-and-transition to
+Dispatching grants exactly one live dispatch. A lost preparation/dispatch acknowledgement
+cannot authorize another write. Prepared records can be explicitly discarded atomically
+only while they remain Prepared. Dispatching records require read-only server lookup.
+
+Persist a known terminal outcome before clearing it. Both operations compare the complete
+original command, so a late acknowledgement cannot clear another tab's newer operation.
+A failure to record/clear acceptance preserves the known result and blocks another save
+until recovery; a rejected result cannot disappear into an unresolved placeholder.
+Browser storage failure before dispatch means no owner write. Never fall back to memory
+or silently start an unretained request. A crashed circuit may leave Dispatching even
+when no request arrived; NotObserved remains unresolved, as the server contract requires.
+
+Restore on the first interactive render, before enabling Save. Fresh editor restoration
+loads the submitted values; existing draft edits survive all later results and reads.
+Navigation may cancel reads, but never interprets cancellation as rejection of an
+already dispatched command. Profile changes retire the old editor. Historical acceptance
+clears uncertainty only for the original operation, retains its exact result and requires
+an explicit current read plus Use current/Keep draft before a new submission. It does
+not replace later typed text or perform a second PUT.
+
+Composition: retain the existing wide, dense BaseLib Dialog and six-field editor as
+the primary surface. Put pending/history feedback and its action in the existing Alert
+area, use shared Button/Cluster, keep footer actions visible and let the dialog body
+own overflow. No metrics, new nested overlay, custom CSS or small-screen redesign.
+Components MCP libraries, recommendation, Alert/Button contracts, real usages and proof
+routes were read through the existing installed server; queries and its clean exit are
+retained under `.artifacts/concurrent-mutations/ui-planning-components/agent-policy-recovery.*`.
+
+Entry proof scope: existing UI policy state and native dialog tests, focused browser
+adapter/protocol tests, the existing native conflict journey, and a new real-browser
+retention/recovery journey including two tabs, navigation/reload and later edits.
+Expected discovery will be frozen after the concrete test cases are written and before
+execution. Reuse the isolated PostgreSQL server and standard Release outputs. A browser
+store script alone cannot close this increment: prove the native producer retains before
+dispatch and invokes only historical lookup after restoration. Production-host restart
+with the same browser origin/data needs explicit evidence before claiming that variant.
+
+The native candidate selects 12 UI-state cases, 12 dialog/session cases, 11 Web adapter
+and strict-codec cases, and four browser cases (the existing native conflict and sandbox
+journeys, the native two-tab/reload recovery journey, and IndexedDB protocol/bounds).
+Expected total: 39, with discovery required before execution. The native fault is loss
+of terminal browser persistence after the actual owner accepts; reloading then requires
+the original server receipt, while a later writer's current state remains unchanged.
+The backend's separately frozen fault proof covers acknowledgement loss at atomic file
+replacement. The candidate does not claim production-host restart or recovery entry
+after the Agent has disappeared from the native catalog; the lookup API covers deletion,
+but native orphaned-ticket discovery remains open. Neither limitation permits resending.
+
+The bounded native increment now passes its [closure gate](../validation/2026-10-19-agent-policy-native-recovery.md).
+All 39 selected behaviors have passing evidence, with exact unchanged-production
+bridges over two repairs to the new browser test. Keep the two native lifecycle/entry
+variants above and wider Process/Workflow work open.

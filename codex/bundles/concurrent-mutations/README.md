@@ -7,8 +7,10 @@ The original end-to-end outcome remains active. SPA work stays on its own
 The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
 passes 40/40 cases. Policy and historical receipt commit together; read-only lookup
 recovers the original result after lost acknowledgement without replaying PUT.
-Receipt publication keeps only the affected Agent's lock. Retained browser submissions
-and native restart recovery are the next increment; wider E2E work remains active.
+Receipt publication keeps only the affected Agent's lock. [Native retained-save recovery](validation/2026-10-19-agent-policy-native-recovery.md)
+now has 39 passing selected behaviors, including actual two-tab dispatch exclusion,
+browser reload and historical recovery with later typing preserved. Production-host
+restart and native entry for deleted Agents remain open; wider E2E work continues.
 
 The [Process policy admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases, preserving legacy launch fingerprints and storing immutable policy

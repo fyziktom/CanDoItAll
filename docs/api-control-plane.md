@@ -98,8 +98,13 @@ bounded to 8 KiB; responses disable caching and omit private failure details.
 The file owner commits policy and receipt together, retains receipts for 30 days and
 refuses policy writes at 1,024 unexpired receipts per catalog. Ordinary Agent/catalog
 updates and deletion preserve this history. Deploy updated file writers together under
-maintenance exclusion; mixed old/new catalog writers are unsupported. Retained native
-editor recovery is tracked separately from this server contract.
+maintenance exclusion; mixed old/new catalog writers are unsupported.
+
+The native policy dialog retains the original submission in the current browser before
+dispatch. After reopening, Check retained save uses historical lookup without resending.
+Historical acceptance preserves later draft edits and requires an explicit current read
+and reconciliation before another save. An unsent Prepared record can be discarded;
+a dispatched unresolved record remains blocked. See [native recovery proof and limits](../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
 
 ## Shared providers and history
 

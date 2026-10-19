@@ -90,6 +90,7 @@ builder.Services.AddScoped<IProjectPendingSubmissionStore>(services => services.
 builder.Services.AddScoped<IProjectPendingReferenceStore>(services => services.GetRequiredService<BrowserProjectPendingSubmissionStore>());
 builder.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
 builder.Services.AddScoped<IProjectLifecyclePendingStore, BrowserProjectLifecyclePendingStore>();
+builder.Services.AddScoped<CanDoItAll.AgentFramework.UI.Catalog.IAgentDecisionPolicyPendingStore, BrowserAgentDecisionPolicyPendingStore>();
 builder.Services.AddSingleton(new ProjectLifecyclePendingStoreLimits(64, 2 * 1024 * 1024, 16));
 builder.Services.AddScoped<TuningCoordinator>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
