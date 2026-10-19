@@ -5,6 +5,12 @@ are claimed. Baseline is `ead988abeb4cfb3e12341e618362bfa3dde5df29`. Projects de
 coverage is detailed separately in [editor design](03-editor-and-validation-design.md).
 This inventory prevents the Projects pilot from being mistaken for engine-wide protection.
 
+2026-10-19 policy recovery update: [historical Agent policy receipts](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-receipts.md)
+pass 40 focused cases. The dedicated file owner atomically stores exact original
+acceptance, preserves it through ordinary writers/deletion, and supports read-only
+HTTP lookup under current context and read permission. It does not lock unrelated
+Agents for receipt-only changes. Native persisted recovery and wider owner closure remain open.
+
 2026-10-19 update: the [external Agent checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-external-agent-preconditions.md)
 passes 54 focused cases and replaces cached-binding preconditions with actual
 target/revision/context checks. Delayed request capture, catalog-only publication,

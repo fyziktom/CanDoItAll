@@ -59,6 +59,12 @@ internal sealed record AgentDecisionPolicyApiResult(AgentDecisionPolicyApiOutcom
     AgentDecisionPolicyApiSnapshot? Snapshot = null, AgentDecisionDataPolicyRejection? Rejection = null,
     bool FollowupRequired = false);
 
+[JsonConverter(typeof(JsonStringEnumConverter<AgentDecisionPolicyApiLookupOutcome>))]
+internal enum AgentDecisionPolicyApiLookupOutcome { HistoricalAccepted, NotObserved, Conflict, ContextChanged, Unavailable }
+
+internal sealed record AgentDecisionPolicyApiLookupResult(AgentDecisionPolicyApiLookupOutcome Outcome, Guid OperationId,
+    AgentDecisionPolicyApiSnapshot? HistoricalSnapshot = null, DateTimeOffset? AcceptedAtUtc = null);
+
 internal sealed class AgentDecisionPolicyApiOverrideConverter : JsonConverter<DecisionDataPolicyOverride> {
     public override DecisionDataPolicyOverride Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
         using var document = JsonDocument.ParseValue(ref reader);

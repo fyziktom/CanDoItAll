@@ -59,7 +59,8 @@ public enum AgentDecisionDataPolicyRejection {
     InvalidMetadata,
     Unsupported,
     Cancelled,
-    Unavailable
+    Unavailable,
+    ReceiptCapacityExceeded
 }
 
 public enum AgentDecisionDataPolicyFailureStage {

@@ -4,6 +4,12 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
+The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
+passes 40/40 cases. Policy and historical receipt commit together; read-only lookup
+recovers the original result after lost acknowledgement without replaying PUT.
+Receipt publication keeps only the affected Agent's lock. Retained browser submissions
+and native restart recovery are the next increment; wider E2E work remains active.
+
 The [Process policy admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases, preserving legacy launch fingerprints and storing immutable policy
 provenance with migration/restart proof. Actual Process/Workflow executors reject the

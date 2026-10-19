@@ -19,8 +19,8 @@ internal sealed class FileSandboxWorkspaceWriteSet {
     internal static FileSandboxWorkspaceWriteSet Catalog(SandboxWorkspaceCatalog before, SandboxWorkspaceCatalog after) {
         var prior = before.Agents.GroupBy(agent => agent.Id).ToDictionary(group => group.Key, group => group.ToImmutableArray());
         var target = after.Agents.GroupBy(agent => agent.Id).ToDictionary(group => group.Key, group => group.ToImmutableArray());
-        var sharedChanged = !Same(before with { Agents = [], CatalogDataRevision = CatalogDataRevision.Unassigned },
-            after with { Agents = [], CatalogDataRevision = CatalogDataRevision.Unassigned });
+        var sharedChanged = !Same(before with { Agents = [], CatalogDataRevision = CatalogDataRevision.Unassigned, AgentDecisionDataPolicyReceipts = null },
+            after with { Agents = [], CatalogDataRevision = CatalogDataRevision.Unassigned, AgentDecisionDataPolicyReceipts = null });
         return new(prior.Keys.Union(target.Keys).Where(id => sharedChanged || !prior.TryGetValue(id, out var left) ||
             !target.TryGetValue(id, out var right) || !Same(left, right)).Select(Agent));
     }

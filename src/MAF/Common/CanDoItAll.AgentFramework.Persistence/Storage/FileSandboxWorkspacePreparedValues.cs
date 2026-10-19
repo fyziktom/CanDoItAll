@@ -38,6 +38,7 @@ internal static class FileSandboxWorkspacePreparedValues {
             AgentPackageImportOperations = catalog.AgentPackageImportOperations,
             AgentExternalBindings = catalog.AgentExternalBindings,
             AgentExternalProvisioningOperations = catalog.AgentExternalProvisioningOperations,
+            AgentDecisionDataPolicyReceipts = catalog.AgentDecisionDataPolicyReceipts,
             ChatSessions = execution.ChatSessions,
             ExecutionLog = execution.ExecutionLog,
             Metrics = execution.Metrics,

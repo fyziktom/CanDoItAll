@@ -13,6 +13,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
         CancellationToken cancellationToken = default) => policyOwner.ReadAsync(agentId, cancellationToken);
 
+    public Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default) => policyOwner.LookupAsync(command, cancellationToken);
+
     public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
         ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
         var outcome = await policyOwner.ReplaceAsync(command, cancellationToken);

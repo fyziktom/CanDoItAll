@@ -1,5 +1,16 @@
 # Resource ownership and cleanup
 
+## Agent policy receipt checkpoint (2026-10-19)
+
+Owned `c4-agent-policy-receipts` and `c4-agent-policy-receipts-ready` reuse the existing
+PostgreSQL 18 server and standard Release outputs. Their ownership records precede
+creation. The first retains 35 passes/five failures; the repaired candidate passes all
+40. Both source/runtime inventories were verified, proof retained and freezes released.
+Both entire test commands were observed, with zero remaining observed processes and
+zero new database delta. Six/eight unattributed TEMP paths respectively were preserved;
+matching a family does not authorize deletion. Existing cleanup blockers remain open
+and were not retried. See [the checkpoint](validation/2026-10-19-agent-policy-receipts.md).
+
 ## Process policy admission checkpoint (2026-10-19)
 
 Owned candidates `c4-process-policy-admission` and `c4-process-policy-admission-ready`

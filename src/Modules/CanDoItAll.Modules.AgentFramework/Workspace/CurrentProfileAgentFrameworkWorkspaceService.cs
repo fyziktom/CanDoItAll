@@ -130,6 +130,10 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         CancellationToken cancellationToken = default)
         => ResolveService().ReadAgentDecisionDataPolicyAsync(agentId, cancellationToken);
 
+    public Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default)
+        => ResolveService().LookupAgentDecisionDataPolicyAsync(command, cancellationToken);
+
     public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
         ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
         var outcome = await ResolveService().ReplaceAgentDecisionDataPolicyAsync(command, cancellationToken);

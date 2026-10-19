@@ -6,6 +6,12 @@ now compiled and passes its one case with three submissions; prior failures rema
 recorded. End-to-end implementation continues. SPA work must remain on
 `codex/concurrent-mutations` pending the user's consultation with its maintainer.
 
+The [Agent policy receipt backend](validation/2026-10-19-agent-policy-receipts.md)
+passes 40/40 cases: atomic receipt publication, historical lookup after lost acknowledgement,
+bounded retention and actual HTTP permission/strict-input proof. The repaired lock set
+preserves unrelated Agent progress. Native retained submission recovery remains open;
+this does not close all of R5 or the Process/Workflow runtime requirements.
+
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
 compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch

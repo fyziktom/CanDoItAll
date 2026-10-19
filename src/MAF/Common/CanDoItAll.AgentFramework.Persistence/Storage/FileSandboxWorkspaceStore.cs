@@ -100,10 +100,11 @@ public sealed partial class FileSandboxWorkspaceStore :
         FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics,
         Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null,
         Action<FileHistoryCommitStage>? historyCommitBoundary = null,
-        IAgentCatalogMutationPolicy? catalogMutationPolicy = null) {
+        IAgentCatalogMutationPolicy? catalogMutationPolicy = null,
+        DurableFileWriter? fileWriter = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
         physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
-        var durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+        var durableFileWriter = fileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
         runLeaseWriter = durableFileWriter;
         jsonStore = new FileSandboxWorkspaceJsonStore(
             jsonReadDiagnostics,
@@ -211,7 +212,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(validateCurrentContext);
-        var publication = new AgentPolicyPublication(command);
+        var publication = new AgentPolicyPublication(command, DateTimeOffset.UtcNow);
         try {
             if (command.Expectation.Workspace.WorkspaceScope != layout.Scope) {
                 throw new AgentDecisionDataPolicyContextChangedException();
@@ -259,35 +260,13 @@ public sealed partial class FileSandboxWorkspaceStore :
                     => AgentDecisionDataPolicyRejection.Conflict,
                 KeyNotFoundException => AgentDecisionDataPolicyRejection.NotFound,
                 AgentDecisionDataPolicyMetadataException => AgentDecisionDataPolicyRejection.InvalidMetadata,
+                AgentDecisionDataPolicyReceiptCapacityException => AgentDecisionDataPolicyRejection.ReceiptCapacityExceeded,
+                AgentDecisionDataPolicyReceiptConflictException => AgentDecisionDataPolicyRejection.Conflict,
                 OperationCanceledException => AgentDecisionDataPolicyRejection.Cancelled,
                 _ => AgentDecisionDataPolicyRejection.Unavailable
             };
             return new AgentDecisionDataPolicySaveOutcome.Rejected(reason, diagnostic);
         }
-    }
-
-    private sealed class AgentPolicyPublication(ReplaceAgentDecisionDataPolicyCommand command) {
-        public bool WriteEntered { get; private set; }
-        public AgentDecisionDataPolicySaveOutcome.Accepted? Acknowledgement { get; private set; }
-
-        public SandboxWorkspaceCatalog Apply(SandboxWorkspaceCatalog catalog) => catalog with {
-            Agents = catalog.Agents.Select(agent => agent.Id == command.Expectation.AgentId
-                ? agent with { ConfigurationJson = AgentDecisionDataPolicyMetadata.Replace(agent.ConfigurationJson, command.Policy) }
-                : agent).ToArray()
-        };
-
-        private AgentDecisionDataPolicySaveOutcome.Accepted? preparedAcknowledgement;
-
-        public void EnterWrite(SandboxWorkspaceCatalog catalog) {
-            var agent = catalog.Agents.Single(candidate => candidate.Id == command.Expectation.AgentId);
-            var snapshot = new AgentDecisionDataPolicySnapshot(
-                new(command.Expectation.Workspace, agent.Id, catalog.CatalogDataRevision),
-                AgentDecisionDataPolicyMetadata.Read(agent.ConfigurationJson));
-            preparedAcknowledgement = new(command, snapshot);
-            WriteEntered = true;
-        }
-
-        public void Acknowledge() => Acknowledgement = preparedAcknowledgement;
     }
 
     private async Task<SandboxWorkspaceCatalog> SaveCatalogOnlyAsync(
@@ -1778,7 +1757,8 @@ public sealed partial class FileSandboxWorkspaceStore :
                 SandboxWorkspaceDocument.Combine(normalizedCatalog, SandboxWorkspaceExecutionState.Empty));
         }
         normalizedCatalog = normalizedCatalog with {
-            Agents = AgentDecisionDataPolicyMetadata.Preserve(currentCatalog.Agents, normalizedCatalog.Agents)
+            Agents = AgentDecisionDataPolicyMetadata.Preserve(currentCatalog.Agents, normalizedCatalog.Agents),
+            AgentDecisionDataPolicyReceipts = currentCatalog.AgentDecisionDataPolicyReceipts
         };
         if (policyPublication is not null) {
             normalizedCatalog = policyPublication.Apply(normalizedCatalog);

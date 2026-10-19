@@ -503,6 +503,9 @@ public interface IAgentFrameworkWorkspaceService :
     Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not expose Agent policy authoring.");
+    Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support historical Agent policy receipt lookup.");
     Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
         ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not support dedicated Agent policy replacement.");

@@ -50,15 +50,33 @@ public sealed class AgentDecisionPolicyHttpTests {
         Assert.Equal(HttpStatusCode.OK, inherited.StatusCode);
         Assert.Equal(new DecisionDataPolicyOverride(), (await inherited.Content.ReadFromJsonAsync<AgentDecisionPolicyApiResult>())!.Snapshot!.Policy);
         Assert.Equal(submission.Policy, accepted.Snapshot.Policy);
+        using var lookup = await host.Client.PostAsJsonAsync(Route(agent.Id) + "/lookup", submission);
+        Assert.Equal(HttpStatusCode.OK, lookup.StatusCode);
+        Assert.Equal("no-store", lookup.Headers.CacheControl?.ToString());
+        var historical = (await lookup.Content.ReadFromJsonAsync<AgentDecisionPolicyApiLookupResult>())!;
+        Assert.Equal(AgentDecisionPolicyApiLookupOutcome.HistoricalAccepted, historical.Outcome);
+        Assert.Equal(accepted.Snapshot, historical.HistoricalSnapshot);
+        Assert.NotNull(historical.AcceptedAtUtc);
+        Assert.Equal(submission.OperationId, historical.OperationId);
+        using var changed = await host.Client.PostAsJsonAsync(Route(agent.Id) + "/lookup", submission with { Policy = new() });
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        Assert.Equal(AgentDecisionPolicyApiLookupOutcome.Conflict, (await changed.Content.ReadFromJsonAsync<AgentDecisionPolicyApiLookupResult>())!.Outcome);
+        using var absent = await host.Client.PostAsJsonAsync(Route(agent.Id) + "/lookup", submission with { OperationId = Guid.NewGuid() });
+        Assert.Equal(HttpStatusCode.NotFound, absent.StatusCode);
+        Assert.Equal(AgentDecisionPolicyApiLookupOutcome.NotObserved, (await absent.Content.ReadFromJsonAsync<AgentDecisionPolicyApiLookupResult>())!.Outcome);
     }
 
-    [Fact]
-    public async Task Strict_body_refuses_malformed_and_streamed_oversized_input_without_dispatch() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Strict_body_refuses_malformed_and_streamed_oversized_input_without_dispatch(bool lookup) {
         var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, PolicyWorkspace>();
         var probe = (PolicyWorkspace)(object)workspace;
         await using var host = await HostAsync(workspace);
         var submission = new AgentDecisionPolicyApiSubmission(Guid.NewGuid(), probe.Snapshot.Expectation, Policy());
         var valid = JsonSerializer.Serialize(submission, JsonSerializerOptions.Web);
+        Task<HttpResponseMessage> SendAsync(Guid agentId, HttpContent content) => lookup
+            ? host.Client.PostAsync(Route(agentId) + "/lookup", content) : host.Client.PutAsync(Route(agentId), content);
         var bodies = new List<string> { "null", "{}", "[]" };
         foreach (var property in new[] { "operationId", "expectation", "policy" }) {
             var absent = JsonNode.Parse(valid)!.AsObject();
@@ -90,21 +108,23 @@ public sealed class AgentDecisionPolicyHttpTests {
         bodies.Add(valid.Replace(submission.OperationId.ToString(), Guid.Empty.ToString(), StringComparison.Ordinal));
         foreach (var body in bodies) {
             using var content = Content(body);
-            using var response = await host.Client.PutAsync(Route(probe.AgentId), content);
+            using var response = await SendAsync(probe.AgentId, content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
         foreach (var content in new HttpContent[] { Content(new string(' ', 8193)), new StreamingContent(new byte[8193]) }) {
             using (content) {
-                using var response = await host.Client.PutAsync(Route(probe.AgentId), content);
+                using var response = await SendAsync(probe.AgentId, content);
                 Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
             }
         }
         using var wrongMedia = new StringContent(valid, Encoding.UTF8, "text/plain");
-        using var unsupported = await host.Client.PutAsync(Route(probe.AgentId), wrongMedia);
+        using var unsupported = await SendAsync(probe.AgentId, wrongMedia);
         Assert.Equal(HttpStatusCode.UnsupportedMediaType, unsupported.StatusCode);
-        using var wrongRoute = await host.Client.PutAsJsonAsync(Route(Guid.NewGuid()), submission);
+        using var wrongRouteContent = Content(valid);
+        using var wrongRoute = await SendAsync(Guid.NewGuid(), wrongRouteContent);
         Assert.Equal(HttpStatusCode.BadRequest, wrongRoute.StatusCode);
         Assert.Equal(0, probe.Writes);
+        Assert.Equal(0, probe.Lookups);
     }
 
     [Fact]
@@ -134,9 +154,14 @@ public sealed class AgentDecisionPolicyHttpTests {
         await using var host = await HostAsync(workspace, true);
         using var anonymous = await host.Client.GetAsync(Route(probe.AgentId));
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        var submission = new AgentDecisionPolicyApiSubmission(Guid.NewGuid(), probe.Snapshot.Expectation, Policy());
+        using var anonymousLookup = await host.Client.PostAsJsonAsync(Route(probe.AgentId) + "/lookup", submission);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousLookup.StatusCode);
         UseToken(host, ApiAccessScopeNames.ReadAgents);
         Assert.Equal(probe.Snapshot, await host.Client.GetFromJsonAsync<AgentDecisionPolicyApiSnapshot>(Route(probe.AgentId)));
-        var submission = new AgentDecisionPolicyApiSubmission(Guid.NewGuid(), probe.Snapshot.Expectation, Policy());
+        using var lookup = await host.Client.PostAsJsonAsync(Route(probe.AgentId) + "/lookup", submission);
+        Assert.Equal(HttpStatusCode.NotFound, lookup.StatusCode);
+        Assert.Equal(1, probe.Lookups);
         using var denied = await host.Client.PutAsJsonAsync(Route(probe.AgentId), submission);
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
         Assert.Equal(0, probe.Writes);
@@ -144,6 +169,30 @@ public sealed class AgentDecisionPolicyHttpTests {
         using var accepted = await host.Client.PutAsJsonAsync(Route(probe.AgentId), submission);
         Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
         Assert.Equal(1, probe.Writes);
+    }
+
+    [Fact]
+    public async Task Lookup_failure_is_sanitized_and_mismatched_owner_receipt_is_never_returned_as_acceptance() {
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, PolicyWorkspace>();
+        var probe = (PolicyWorkspace)(object)workspace;
+        await using var host = await HostAsync(workspace);
+        var submission = new AgentDecisionPolicyApiSubmission(Guid.NewGuid(), probe.Snapshot.Expectation, Policy());
+        foreach (var lookup in new AgentDecisionDataPolicyLookup[] {
+            new AgentDecisionDataPolicyLookup.Unavailable(AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.OwnerDispatch,
+                new IOException(PolicyWorkspace.PrivateMarker))),
+            new AgentDecisionDataPolicyLookup.Accepted(new(new(Guid.NewGuid(), probe.Snapshot.Expectation.ToDomain(), Policy()), DateTimeOffset.UtcNow))
+        }) {
+            probe.LookupResult = lookup;
+            using var response = await host.Client.PostAsJsonAsync(Route(probe.AgentId) + "/lookup", submission);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            var text = await response.Content.ReadAsStringAsync();
+            Assert.DoesNotContain(PolicyWorkspace.PrivateMarker, text, StringComparison.Ordinal);
+            var result = JsonSerializer.Deserialize<AgentDecisionPolicyApiLookupResult>(text, JsonSerializerOptions.Web)!;
+            Assert.Equal(AgentDecisionPolicyApiLookupOutcome.Unavailable, result.Outcome);
+            Assert.Equal(submission.OperationId, result.OperationId);
+            Assert.Null(result.HistoricalSnapshot);
+        }
+        Assert.Equal(0, probe.Writes);
     }
 
     [Fact]
@@ -216,6 +265,9 @@ public sealed class AgentDecisionPolicyHttpTests {
         Assert.Contains("null inherits", policy.GetProperty("properties").GetProperty("readBasisMode").GetProperty("description").GetString(), StringComparison.Ordinal);
         Assert.False(submission.GetProperty("additionalProperties").GetBoolean());
         Assert.Equal(3, submission.GetProperty("required").GetArrayLength());
+        var lookup = document.RootElement.GetProperty("paths").GetProperty("/api/agents/{agentId}/decision-data-policy/lookup").GetProperty("post");
+        Assert.Equal("LookupAgentDecisionDataPolicyOperation", lookup.GetProperty("operationId").GetString());
+        Assert.Contains("30 days", lookup.GetProperty("description").GetString(), StringComparison.Ordinal);
     }
 
     private static DecisionDataPolicyOverride Policy() => new(ReadBasisMode.RunSnapshot, PublicationFreshness.RequireCurrent,
@@ -243,8 +295,14 @@ public sealed class AgentDecisionPolicyHttpTests {
         public Fault Fault { get; set; }
         public bool FailRead { get; set; }
         public int Writes { get; private set; }
+        public int Lookups { get; private set; }
+        public AgentDecisionDataPolicyLookup LookupResult { get; set; } = new AgentDecisionDataPolicyLookup.NotObserved();
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
+            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.LookupAgentDecisionDataPolicyAsync)) {
+                Lookups++;
+                return Task.FromResult(LookupResult);
+            }
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ReadAgentDecisionDataPolicyAsync)) {
                 return FailRead ? Task.FromException<AgentDecisionDataPolicySnapshot>(new IOException(PrivateMarker))
                     : Task.FromResult(new AgentDecisionDataPolicySnapshot(Snapshot.Expectation.ToDomain(), null));

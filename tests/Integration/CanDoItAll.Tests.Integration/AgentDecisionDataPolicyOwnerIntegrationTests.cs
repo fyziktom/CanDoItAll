@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 [Trait("Category", "HostPlatform")]
 [Trait("Category", "FileSystemPortability")]
-public sealed class AgentDecisionDataPolicyOwnerIntegrationTests {
+public sealed partial class AgentDecisionDataPolicyOwnerIntegrationTests {
     [Fact]
     public Task Dedicated_CAS_returns_exact_policy_and_next_revision_even_for_equal_explicit_submission() => RunAsync(async fixture => {
         var original = await fixture.Owner.ReadAsync(fixture.AgentId, fixture.Token);
