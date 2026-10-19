@@ -45,3 +45,12 @@ Agent/Workflow owner into preparation and immutable assignment storage. Unsuppor
 envelopes and contract mismatches fail explicitly. Contract identities belong to the
 business adapters; Runtime does not depend on their modules or SDKs. This declaration
 does not enable an executor or replace its source, material and publication checks.
+
+## Original inherited material
+
+`ProcessDecisionMaterial` retains an immutable profile/namespace/run-or-step scope,
+material generation, execution contract, original UTC capture and bounded UTF-8 JSON
+object. Its versioned fingerprint binds every field, and freshness uses only the original
+capture time. A child cannot restamp identical content to renew its age. The owner still
+validates the business payload schema; these pure values do not establish current scope
+membership, permission, canonical persistence or an effect publication fence.

@@ -22,6 +22,10 @@ identity/version/owner are immutable launch facts; declaration alone does not ac
 governed execution or close R5. Shared inherited material and actual child-owner wiring
 remain open.
 
+The [immutable material checkpoint](validation/2026-10-19-process-inherited-material-value.md)
+passes 44 selected cases for original scope/content integrity and capture age. It is a
+pure prerequisite; canonical parent storage, shared budget and runtime wiring remain open.
+
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
 compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch

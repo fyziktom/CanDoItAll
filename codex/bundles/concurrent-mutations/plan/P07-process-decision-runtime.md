@@ -22,6 +22,11 @@ The [versioned execution admission design](P07-process-execution-contract.md) bi
 exact adapter identity/version/owner while preserving schema 1 launch bytes, with
 [114 selected passing behaviours](../validation/2026-10-19-process-execution-contract.md).
 No executor activation follows from this declaration.
+The [inherited material and child runtime refinement](P07-inherited-material-and-child-runtime.md)
+records the remaining shared-scope, budget, exact reservation and journal-version work
+before actual producer activation.
+Its first [immutable material value checkpoint](../validation/2026-10-19-process-inherited-material-value.md)
+passes 44 selected cases for original capture age and exact scope/content integrity.
 
 ## Source facts and rejected shortcuts
 

@@ -53,6 +53,11 @@ schema 1 bytes, binds schema 2's exact contract into launch/assignment intent an
 the existing unsupported-execution guards. Actual inherited material and runtime wiring
 remain open.
 
+The [original material value checkpoint](validation/2026-10-19-process-inherited-material-value.md)
+passes 44 selected cases for scope/content integrity, original capture age and bounded
+Unicode payloads. Canonical parent storage, shared budget and child runtime wiring remain
+open; this pure contract does not activate delegated execution.
+
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
 capture mutable requests before storage work and retain historical replay receipts.

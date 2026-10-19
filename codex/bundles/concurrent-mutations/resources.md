@@ -561,3 +561,15 @@ passes. No observed process or database-name delta remained. Eleven unattributed
 entries from the first candidate were preserved; the repair observed none. Earlier
 cleanup denials remain unchanged. See the
 [validation record](validation/2026-10-19-process-execution-contract.md).
+
+## 2026-10-19 Original material value
+
+`c4-process-inherited-material-value` and its test-repair successor reused standard Release
+outputs and the existing fixture. Initial proof retained 41/44 passes and three test-only
+repairs. The final 44/44 pass had complete observation and source/runtime verification.
+A prior unobserved pass remains explicit: the full shared TEMP baseline exceeded 16,384
+entries. Read-only measurement justified a finite 32,768-entry baseline capacity, retaining
+the separate 16,384 new-delta bound. No TEMP entries were deleted or excluded. Final
+reconciliation found no observed process, database-name delta or new TEMP entry; three
+unattributed entries from the first candidate were preserved. Earlier denied cleanup
+remains unchanged. See the [material proof](validation/2026-10-19-process-inherited-material-value.md).
