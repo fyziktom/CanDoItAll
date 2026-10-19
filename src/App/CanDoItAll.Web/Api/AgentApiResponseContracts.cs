@@ -632,6 +632,10 @@ internal sealed record AgentExecutionRunDetailApiResponse(
     [Description("Current-read authorized bounded saved-effect summary, without owner receipts or provider output.")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentEffectContinuation? EffectContinuation { get; init; }
+
+    [Description("Current-read authorized original planning review. Available actions remain subject to exact revision and current authority checks.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AgentPlanningReview? PlanningReview { get; init; }
 }
 
 [Description("Result of a chat command. Typed effect continuation has no assistant message or new provider usage and does not complete the task.")]
@@ -818,7 +822,10 @@ internal static class AgentApiResponseMapper
             source.Artifacts.Select(ToArtifact).ToArray(),
             source.Checkpoints.Select(ToCheckpoint).ToArray(),
             ToToolReceipts(source.ToolReceipts),
-            ToProviderUsageTotals(source.UsageObservations)) { EffectContinuation = source.EffectContinuation };
+            ToProviderUsageTotals(source.UsageObservations)) {
+                EffectContinuation = source.EffectContinuation,
+                PlanningReview = source.PlanningReview
+            };
     }
 
     public static AgentChatRunApiResponse ToChatRunResult(AgentChatRunResult source)

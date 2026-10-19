@@ -134,6 +134,26 @@ internal sealed class AgentExecutionEffectReconciliation(
             (observation, token) => CanReadAsync(detail.Run, observation, token), cancellationToken);
     }
 
+    internal async Task RequirePlanningReadAsync(ExecutionRunDetail detail, CancellationToken cancellationToken) {
+        var original = detail.Run;
+        var admitted = RequireOriginal(original);
+        if (original.ToolAdmission?.PlanningDecision is null || admitted.Profile != journal.Profile ||
+            original.ChatSessionId is null || detail.ChatSession is not { } chat ||
+            chat.Id != original.ChatSessionId || chat.AgentId != original.AgentId) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        try {
+            if (!await CanReadAsync(original, AgentToolSessionObservation.From(original), cancellationToken)) {
+                throw new AgentToolReceiptAccessDeniedException();
+            }
+        } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        } catch (Exception exception) when (exception is not (AgentToolReceiptAccessDeniedException or
+                AgentToolReceiptReadUnavailableException or OutOfMemoryException)) {
+            throw new AgentToolReceiptReadUnavailableException(exception);
+        }
+    }
+
     private AgentToolSessionAdmission RequireOriginal(ExecutionRunRecord run) {
         if (!Supports(run)) {
             throw new AgentToolAdmissionException("tool-admission.effect-journal-required", "This operation requires the original validated effects-only journal.");

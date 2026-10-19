@@ -11,6 +11,8 @@ public interface IAgentPlanningParticipant {
     Task<AgentPlanningRunAdmission> PrepareRunAsync(AgentPlanningRunPreparation preparation, CancellationToken cancellationToken);
     Task<AgentToolProtocolEnvelope> CaptureBasisAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken);
     Task RequireCurrentReadAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken);
+    string DescribePublication(AgentToolSessionObservation original, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding)
+        => throw new NotSupportedException("This planning participant cannot describe its original publication for review.");
     AgentPlanningResponsePreparation PreparePublication(AgentPlanningDecisionRecord decision, AgentPlanningBasisRecord basis, string responseText);
     AgentPlanningPublicationAssessment ClassifyPublication(AgentToolSessionObservation original,
         AgentToolPreparedPayload payload, AgentSavedEffectDispatchResult result)

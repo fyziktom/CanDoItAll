@@ -21,6 +21,7 @@ internal static class AgentsApi
             .WithTags("Agents");
         agents.MapUsage();
         agents.MapAgentHistoricalReceiptsApi();
+        agents.MapAgentPlanningActionsApi();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")
@@ -2509,6 +2510,7 @@ internal static class AgentsApi
     /// <response code="200">The run and its evidence.</response>
     internal static async Task<IResult> GetAgentExecutionRunDetailAsync(Guid executionRunId, HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService, CancellationToken cancellationToken) {
+        context.Response.Headers.CacheControl = "no-store";
         try {
             return Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
                 await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
@@ -2545,14 +2547,11 @@ internal static class AgentsApi
     internal static async Task<IResult> GetAgentScopedExecutionRunDetailAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        await GetAgentExecutionRunPartAsync(
-            agentId,
-            executionRunId,
-            workspaceService,
-            AgentApiResponseMapper.ToExecutionRunDetail,
-            cancellationToken);
+        await GetAgentExecutionRunPartAsync(agentId, executionRunId, context, workspaceService,
+            AgentApiResponseMapper.ToExecutionRunDetail, cancellationToken);
 
     /// <summary>
     /// List the artifacts produced by an agent execution run.
@@ -2594,11 +2593,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionArtifactsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToArtifacts(detail.Artifacts),
             cancellationToken);
@@ -2645,11 +2646,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionCheckpointsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToCheckpoints(detail.Checkpoints),
             cancellationToken);
@@ -2698,11 +2701,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionToolReceiptsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToToolReceipts(detail.ToolReceipts),
             cancellationToken);
@@ -2726,11 +2731,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionLogAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionLog(detail.ExecutionLog),
             cancellationToken);
@@ -2755,11 +2762,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionMetricsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToMetrics(detail.Metrics),
             cancellationToken);
@@ -2783,11 +2792,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionApprovalsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionApprovals(detail.Approvals),
             cancellationToken);
@@ -2988,10 +2999,12 @@ internal static class AgentsApi
     private static async Task<IResult> GetAgentExecutionRunPartAsync<T>(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         Func<ExecutionRunDetail, T> select,
         CancellationToken cancellationToken)
     {
+        context.Response.Headers.CacheControl = "no-store";
         try
         {
             var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
@@ -3000,6 +3013,9 @@ internal static class AgentsApi
                 : ApiEndpointResults.NotFound(
                     "Agent execution run was not found.",
                     "agents.execution-run-not-found");
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
         }
         catch (InvalidOperationException)
         {

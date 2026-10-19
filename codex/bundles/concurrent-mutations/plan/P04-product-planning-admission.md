@@ -178,6 +178,29 @@ Refresh creates a distinct generation and requires renewed approval. A read-only
 action must remain available when publication cannot resume, subject to current reads.
 SPA work remains on `codex/concurrent-mutations` and is not merged into SPA main.
 
+The review is an ephemeral projection on execution detail, including completed and
+cancelled decisions. Before disclosure, Core checks the original profile/chat/authority
+and the participant checks current source/target read access. It contains the exact
+run/journal/decision expectation, saved policy, generation, basis timestamp, settled
+work and remaining budget. An open work interval exposes no estimated remaining budget
+and no mutation action. Available actions are advisory; the owner rechecks every action.
+Only Workbench interprets task content for a bounded plain-text publication review.
+Original source envelopes, private profile fingerprints and receipt payloads are absent.
+
+The HTTP planning-action endpoint requires WriteAgents and no-store responses. It reads
+at most 8 KiB before resolving the workspace owner, rejects unknown/duplicate members,
+checks route identity, and accepts positive Int64 revisions only as decimal strings.
+Approve carries the displayed original binding; Refresh/Cancel cannot carry approval.
+Unknown outcomes retain the original action/run identity and never advertise retry.
+Existing activity operation identity and admission handle duplicate HTTP requests.
+
+Keep the review projector in the existing Core coordinator, the task description in its
+Workbench participant, and transport in a focused Web API file. Add no project reference,
+service registration or execution-service partial. Reuse the existing revision codec and
+OpenAPI transformation. Test real registered detail reads before/after publication,
+permission revocation, unknown work, stale actions, HTTP authentication/body limits,
+lossless revisions and bounded dispatch. Native UI follows after this boundary passes.
+
 ## Proof and release order
 
 First prove the actual persisted Root Workspace/Agent preparation: missing/invalid

@@ -16,6 +16,17 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         await using var fixture = await EntryFixture.CreateAsync();
         var original = await StartAsync(fixture);
         var request = Action(original, AgentPlanningAction.Approve);
+        var review = Assert.IsType<AgentPlanningReview>(original.PlanningReview);
+        Assert.Null(original.EffectContinuation);
+        Assert.Equal(request.Expected, review.Expected);
+        Assert.Equal(original.Run.ToolAdmission!.PlanningDecision!.Policy, review.Policy);
+        Assert.Equal(new[] { AgentPlanningAction.Approve, AgentPlanningAction.Refresh, AgentPlanningAction.Cancel }, review.AvailableActions);
+        Assert.Equal(request.Binding, review.Publication!.Binding);
+        Assert.Contains("Review concurrent edits", review.Publication.Content, StringComparison.Ordinal);
+        Assert.Contains("Priority: 3", review.Publication.Content, StringComparison.Ordinal);
+        var serializedReview = JsonSerializer.Serialize(review, JsonSerializerOptions.Web);
+        Assert.DoesNotContain("originalTarget", serializedReview, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(original.Run.ToolAdmission.Session.Profile.Fingerprint, serializedReview, StringComparison.Ordinal);
         if (disableProvider) {
             var providers = fixture.Files.Sql.Services.GetRequiredService<IProviderProfileRegistry>();
             var editor = await providers.GetProviderEditorAsync(fixture.Files.Provider.Id);
@@ -24,6 +35,9 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         }
         var saved = await ApplyAsync(fixture, request);
         Assert.Equal(RunOutcome.Succeeded, saved.Run.Outcome);
+        Assert.Empty(saved.PlanningReview!.AvailableActions);
+        Assert.Null(saved.PlanningReview.Publication);
+        Assert.Equal(AgentPlanningGenerationState.Completed, saved.PlanningReview.State);
         Assert.Equal(AgentPlanningGenerationState.Completed, saved.Run.ToolAdmission!.PlanningDecision!.Current.State);
         Assert.Null(saved.Run.ToolAdmission.PlanningDecision.Work.Open);
         Assert.Empty(saved.Run.PendingApprovals);
@@ -48,6 +62,8 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         var decision = refreshed.Run.ToolAdmission!.PlanningDecision!;
         Assert.Equal(original.Run.Id, refreshed.Run.Id);
         Assert.Equal(2, decision.CurrentGeneration);
+        Assert.Equal(AgentPlanningDecisionExpectation.From(refreshed.Run), refreshed.PlanningReview!.Expected);
+        Assert.NotEqual(original.PlanningReview!.Publication!.Binding, refreshed.PlanningReview.Publication!.Binding);
         Assert.Equal(0, decision.AutomaticReplans);
         Assert.Equal(original.Run.ToolAdmission!.PlanningDecision!.Policy, decision.Policy);
         Assert.True(decision.Work.ClosedWorkTicks >= original.Run.ToolAdmission.PlanningDecision.Work.ClosedWorkTicks);
@@ -144,6 +160,10 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         var uncertain = (await fixture.Files.Store.GetExecutionRunDetailAsync(original.Run.Id))!;
         var work = uncertain.Run.ToolAdmission!.PlanningDecision!.Work;
         Assert.NotNull(work.Open);
+        var review = (await fixture.Workspace.GetExecutionRunDetailAsync(original.Run.Id)).PlanningReview!;
+        Assert.True(review.HasUnsettledWork);
+        Assert.Null(review.RemainingWork);
+        Assert.Empty(review.AvailableActions);
         Assert.Equal(AgentToolEffectState.Unknown,
             AgentToolJournalTransitions.RequireProposal(uncertain.Run.ToolAdmission, original.Run.PendingApprovals.Single().ToolAdmission!).EffectState);
         await Assert.ThrowsAsync<AgentPlanningAdmissionException>(() => ApplyAsync(fixture, Action(uncertain, AgentPlanningAction.Refresh)));
@@ -153,7 +173,7 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         await fixture.Files.Sql.VerifyAsync(1, 1);
     }
 
-    private static async Task<ExecutionRunDetail> StartAsync(EntryFixture fixture) {
+    internal static async Task<ExecutionRunDetail> StartAsync(EntryFixture fixture) {
         var result = await fixture.Workspace.ExecuteRunAsync(fixture.Request);
         Assert.True(result.State == ExecutionState.WaitingOnTool, result.ResponseText);
         return await fixture.Workspace.GetExecutionRunDetailAsync(result.ExecutionRunId);
@@ -162,7 +182,7 @@ public sealed class ProjectTaskPlanExecutionActionTests {
     private static Task<ExecutionRunDetail> ApplyAsync(EntryFixture fixture, AgentPlanningActionRequest request)
         => fixture.Workspace.ApplyPlanningActionAsync(request, AgentExecutionOperationId.New());
 
-    private static AgentPlanningActionRequest Action(ExecutionRunDetail detail, AgentPlanningAction action) {
+    internal static AgentPlanningActionRequest Action(ExecutionRunDetail detail, AgentPlanningAction action) {
         var pending = action == AgentPlanningAction.Approve ? Assert.Single(detail.Run.PendingApprovals) : null;
         return new(action, detail.Run.ChatSessionId!.Value, AgentPlanningDecisionExpectation.From(detail.Run),
             pending?.ToolAdmission, pending?.ApprovalId);

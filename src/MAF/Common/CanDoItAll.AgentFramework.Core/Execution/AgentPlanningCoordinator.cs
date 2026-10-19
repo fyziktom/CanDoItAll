@@ -95,6 +95,61 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
         => Enum.IsDefined(selection) && participants.TryGetValue(selection, out var participant) ? participant
             : throw new AgentToolAdmissionException(UnsupportedCode, "The selected planning participant is not registered.");
 
+    internal async Task<AgentPlanningReview> ReadReviewAsync(ExecutionRunDetail detail, CancellationToken cancellationToken) {
+        var run = detail.Run;
+        var expected = AgentPlanningDecisionExpectation.From(run);
+        var admitted = run.ToolAdmission!;
+        var decision = admitted.PlanningDecision!;
+        var participant = RequireParticipant(decision.Owner);
+        try {
+            await participant.RequireCurrentReadAsync(decision, cancellationToken);
+        } catch (UnauthorizedAccessException) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var now = journal.Clock.GetUtcNow();
+        if (now < decision.Work.LastObservedAtUtc) {
+            throw new AgentPlanningAdmissionException(decision.DecisionId, decision.CurrentGeneration, AgentPlanningAdmissionRefusal.ClockInvalid);
+        }
+        var basis = decision.Current.Bases.LastOrDefault();
+        var unsettled = decision.Work.Open is not null;
+        TimeSpan? remaining = unsettled ? null : TimeSpan.FromTicks(Math.Max(0,
+            decision.Policy.Budget.MaximumWorkDuration.Ticks - decision.Work.ClosedWorkTicks));
+        var reviewable = !unsettled && run.Outcome is null && detail.ChatSession?.LatestExecutionRunId == run.Id &&
+            decision.Current.State is AgentPlanningGenerationState.AwaitingApproval or AgentPlanningGenerationState.PausedBasisChanged &&
+            !admitted.HasUnresolvedProviderDispatch && !admitted.Batches.SelectMany(batch => batch.Proposals).Any(item =>
+                item.State is AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired ||
+                item.EffectState == AgentToolEffectState.Committed ||
+                item.EffectState == AgentToolEffectState.Unknown && item is not {
+                    State: AgentToolProposalState.Prepared, ApprovalStatus: ExecutionApprovalStatus.Pending,
+                    DispatchClaimId: null, Result: null, OwnerReceipt: null, ProviderCall: null } ||
+                item.State == AgentToolProposalState.Prepared && item.ApprovalStatus != ExecutionApprovalStatus.Pending);
+        List<AgentPlanningAction> actions = [];
+        AgentPlanningPublicationReview? publication = null;
+        if (decision.Current.State == AgentPlanningGenerationState.AwaitingApproval && run.PendingApprovals.SingleOrDefault() is { ToolAdmission: { } binding } pending) {
+            var selected = AgentToolJournalTransitions.RequireProposal(admitted, binding);
+            if (decision.Current.Steps[^1].Publications.SingleOrDefault()?.Proposal != binding) {
+                throw new AgentToolAdmissionException(UnsupportedCode, "The displayed publication differs from its original planning step.");
+            }
+            publication = new(binding, pending.ApprovalId, participant.DescribePublication(
+                AgentToolSessionObservation.From(run), selected.Payload, binding));
+            if (reviewable && remaining > TimeSpan.Zero && basis is not null && now >= basis.CapturedAtUtc &&
+                now - basis.CapturedAtUtc < decision.Policy.Budget.MaximumBasisAge) {
+                actions.Add(AgentPlanningAction.Approve);
+            }
+        }
+        if (reviewable) {
+            if (remaining > TimeSpan.Zero && decision.Generations.Length < AgentPlanningDecisionRecord.MaximumGenerations &&
+                decision.Generations.Sum(item => item.Steps.Length) < AgentPlanningDecisionRecord.MaximumSteps) {
+                actions.Add(AgentPlanningAction.Refresh);
+            }
+            actions.Add(AgentPlanningAction.Cancel);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(expected, run.ChatSessionId!.Value, decision.Owner, decision.Policy, decision.Current.State, now,
+            basis?.CapturedAtUtc, TimeSpan.FromTicks(decision.Work.ClosedWorkTicks), remaining, unsettled,
+            decision.AutomaticReplans, [.. actions], publication);
+    }
+
     internal async Task<AgentPlanningPublicationResult> ApproveAsync(ExecutionRunRecord original, AgentPlanningActionRequest request,
         IAgentContinuationRuntime continuation, CancellationToken cancellationToken) {
         var participant = RequireAction(original, request, AgentPlanningAction.Approve);

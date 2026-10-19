@@ -11,7 +11,8 @@ internal static class AgentHistoricalReceiptOpenApiContract {
     internal static Task TransformSchemaAsync(OpenApiSchema schema, OpenApiSchemaTransformerContext context,
         CancellationToken cancellationToken) {
         var type = context.JsonTypeInfo.Type;
-        if (type != typeof(AgentHistoricalReceiptCursor) && type != typeof(AgentHistoricalReceiptReview)) {
+        if (type != typeof(AgentHistoricalReceiptCursor) && type != typeof(AgentHistoricalReceiptReview) &&
+            type != typeof(AgentPlanningDecisionExpectation)) {
             return Task.CompletedTask;
         }
         schema.Properties ??= new Dictionary<string, IOpenApiSchema>();
@@ -21,7 +22,7 @@ internal static class AgentHistoricalReceiptOpenApiContract {
                 MinLength = 1,
                 MaxLength = MaximumRevision.Length,
                 Pattern = RevisionPattern,
-                Description = "Original positive Int64 revision as an exact decimal string from 1 through 9223372036854775807. Never convert to a JavaScript number or replace a saved cursor revision. Null in a refused review discloses no saved witness."
+                Description = "Original positive Int64 revision as an exact decimal string from 1 through 9223372036854775807. Never convert to a JavaScript number or replace a saved expectation or cursor revision. Null in a refused receipt review discloses no saved witness."
             };
         }
         return Task.CompletedTask;

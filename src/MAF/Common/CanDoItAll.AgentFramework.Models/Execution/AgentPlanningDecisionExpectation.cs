@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record AgentPlanningDecisionExpectation {
     public AgentPlanningDecisionExpectation(Guid executionRunId, long runRevision, long journalRevision,
         Guid decisionId, int generation) {
@@ -14,7 +17,9 @@ public sealed record AgentPlanningDecisionExpectation {
     }
 
     public Guid ExecutionRunId { get; }
+    [JsonConverter(typeof(AgentHistoricalReceiptRevisionJsonConverter))]
     public long RunRevision { get; }
+    [JsonConverter(typeof(AgentHistoricalReceiptRevisionJsonConverter))]
     public long JournalRevision { get; }
     public Guid DecisionId { get; }
     public int Generation { get; }

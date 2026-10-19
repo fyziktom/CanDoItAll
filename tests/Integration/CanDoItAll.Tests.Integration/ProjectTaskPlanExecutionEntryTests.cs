@@ -6,6 +6,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Integration.Runtime;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -157,13 +158,15 @@ public sealed class ProjectTaskPlanExecutionEntryTests {
         internal WorkspaceSettingsSnapshotV2 Policy => policy;
         internal IAgentFrameworkWorkspaceService Workspace => files.Sql.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
 
-        internal static async Task<EntryFixture> CreateAsync(DecisionDataPolicy? requestedPolicy = null) {
+        internal static async Task<EntryFixture> CreateAsync(DecisionDataPolicy? requestedPolicy = null,
+            CanDoItAllTestEnvironment? testEnvironment = null, TestDatabaseProfile? activeProfile = null) {
             var wire = new MafPlanningProviderFixture.Wire { ResponseText = ProjectTaskPlanAgentFixture.Draft };
             var client = new HttpClient(wire);
             wire.Client = client;
             ProjectTaskPlanAgentFixture? files = null;
             try {
-                files = await ProjectTaskPlanAgentFixture.CreateAsync(projectContext: true, configureServices: services => {
+                files = await ProjectTaskPlanAgentFixture.CreateAsync(projectContext: true, testEnvironment: testEnvironment,
+                    activeProfile: activeProfile, configureServices: services => {
                     services.RemoveAll<IMafProviderAgentFactory>();
                     services.AddSingleton<IMafProviderAgentFactory>(new MafProviderAgentFactory(wire,
                         NoOpMafProviderStreamingDispatchGate.Instance, wire, httpClientSelector: wire));

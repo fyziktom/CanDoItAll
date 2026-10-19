@@ -1340,12 +1340,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         CancellationToken cancellationToken = default)
     {
         var detail = EnrichProviderNativeMcpDetail(await LoadExecutionRunDetailAsync(executionRunId, cancellationToken));
-        if (detail.Run.Outcome != RunOutcome.Cancelled && detail.Run.State != ExecutionState.Completed &&
-            AgentExecutionEffectReconciliation.Supports(detail.Run)) {
+        if (AgentExecutionEffectReconciliation.Supports(detail.Run)) {
             var reconciliation = new AgentExecutionEffectReconciliation(
                 toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."),
                 executionAuthorityResolver, activityWorkspaceIdentity, receiptReconciliationProviders?.ToArray() ?? []);
-            return detail with { EffectContinuation = await reconciliation.ReadContinuationAsync(detail, cancellationToken) };
+            if (detail.Run.ToolAdmission!.PlanningDecision is not null) {
+                await reconciliation.RequirePlanningReadAsync(detail, cancellationToken);
+                return detail with { PlanningReview = await RequirePlanning().ReadReviewAsync(detail, cancellationToken) };
+            }
+            if (detail.Run.Outcome != RunOutcome.Cancelled && detail.Run.State != ExecutionState.Completed) {
+                return detail with { EffectContinuation = await reconciliation.ReadContinuationAsync(detail, cancellationToken) };
+            }
         }
         return detail;
     }

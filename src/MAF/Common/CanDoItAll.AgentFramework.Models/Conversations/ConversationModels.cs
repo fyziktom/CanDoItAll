@@ -1037,6 +1037,9 @@ public sealed record ExecutionRunDetail(
 
     [JsonIgnore]
     public AgentEffectContinuation? EffectContinuation { get; init; }
+
+    [JsonIgnore]
+    public AgentPlanningReview? PlanningReview { get; init; }
 }
 
 public sealed record ExecutionRunResult {

@@ -1,9 +1,11 @@
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
 public enum AgentPlanningAction { Approve = 1, Refresh, Cancel }
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record AgentPlanningActionRequest {
     public const int MaximumUtf8Bytes = 8 * 1024;
 

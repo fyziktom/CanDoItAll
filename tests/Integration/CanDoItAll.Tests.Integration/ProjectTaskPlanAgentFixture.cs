@@ -11,6 +11,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Integration.Runtime;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -54,8 +55,9 @@ internal sealed class ProjectTaskPlanAgentFixture : IAsyncDisposable {
     internal AgentToolSessionReference Session => Original.ToolAdmission!.Session.Reference;
 
     internal static async Task<ProjectTaskPlanAgentFixture> CreateAsync(ReadBasisMode mode = ReadBasisMode.StepSnapshot,
-        int replans = 0, bool projectContext = false, Action<IServiceCollection>? configureServices = null) {
-        var sql = await ProjectTaskPlanOperationFixture.CreateAsync(configureServices: configureServices);
+        int replans = 0, bool projectContext = false, Action<IServiceCollection>? configureServices = null,
+        CanDoItAllTestEnvironment? testEnvironment = null, TestDatabaseProfile? activeProfile = null) {
+        var sql = await ProjectTaskPlanOperationFixture.CreateAsync(testEnvironment, activeProfile, configureServices);
         try {
             var services = sql.Services;
             var database = services.GetRequiredService<ICanonicalRuntimeDatabase>();
