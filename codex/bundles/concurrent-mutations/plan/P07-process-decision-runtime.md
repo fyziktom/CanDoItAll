@@ -13,6 +13,11 @@ The [generation lifecycle refinement](P07-process-decision-generations.md) now h
 [101 passing selected cases](../validation/2026-10-19-process-generation-persistence.md).
 Actual effect-generation fences, inherited allocation and governed runtime work remain
 prospective; storage does not authorize effects through the existing owner refusals.
+The [child publication condition](P07-process-child-publication.md) now has
+[108 passing selected cases](../validation/2026-10-19-process-child-publication.md).
+It supplies stable occurrence identity, exact lookup and an enlisted root/generation
+check. Actual effect callers and source/manager authority still need to compose it;
+the existing policy guards remain closed.
 
 ## Source facts and rejected shortcuts
 

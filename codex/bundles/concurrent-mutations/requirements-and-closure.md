@@ -34,6 +34,12 @@ now passes 101/101 selected cases. Generation/child records, accounting and runt
 commit together with original receipts. Actual child journals, effect-generation fencing,
 producer settings, inherited basis and Process/Workflow continuation remain open.
 
+The [child publication condition](validation/2026-10-19-process-child-publication.md)
+passes 108/108 selected cases for deterministic occurrence identity, indexed canonical
+lookup and the enlisted root/generation check. Its effect/quiescence races pass, but
+actual child journal, source/manager authority and executor integration remain required
+before activation; R5 stays open.
+
 The [external Agent checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases and closes its cached-binding version and delayed-input
 defects. It preserves historical replay, pins postcommit projection to original context

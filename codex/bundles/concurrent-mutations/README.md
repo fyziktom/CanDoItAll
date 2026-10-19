@@ -41,6 +41,12 @@ passes 101/101 selected cases for normalized history/children, atomic runtime/ac
 changes, replay, restart, rollback and bounded reconciliation. Actual child-owner and
 effect-fence integration, material inheritance and governed execution remain open.
 
+The [child publication foundation](validation/2026-10-19-process-child-publication.md)
+passes 108/108 selected cases. Stable occurrence identity, one-query canonical lookup
+and the enlisted generation condition now have restart, rollback, race and unrelated-root
+proof. Actual Agent/Workflow publication must still compose this fence with original
+source/manager authority, inherited material and the supported execution contract.
+
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
 capture mutable requests before storage work and retain historical replay receipts.

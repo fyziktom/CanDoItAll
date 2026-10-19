@@ -2,6 +2,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using static CanDoItAll.Processes.Persistence.ProcessDecisionRows;
 
 namespace CanDoItAll.Processes.Persistence;
 
@@ -81,24 +82,6 @@ public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbC
             entity.ConsumedReplans = change.Allocation.Settlement?.Consumed.Replans;
         }
         return new(command, change);
-    }
-
-    private static DecisionBudgetBalance ReadBalance(ProcessDecisionBudgetEntity entity) {
-        var balance = new DecisionBudgetBalance(new(entity.BudgetId), entity.Revision,
-            new(entity.MaximumReplans, TimeSpan.FromTicks(entity.MaximumWorkTicks), TimeSpan.FromTicks(entity.MaximumBasisAgeTicks)),
-            entity.ConsumedWorkTicks, entity.ReservedWorkTicks, entity.ConsumedReplans, entity.ReservedReplans, entity.AllocationCount, entity.OverrunDetected);
-        balance.Validate();
-        return balance;
-    }
-
-    private static DecisionBudgetAllocation ReadAllocation(ProcessDecisionBudgetAllocationEntity entity) {
-        if (entity.OwnerWorkRevision.HasValue != entity.ConsumedWorkTicks.HasValue || entity.OwnerWorkRevision.HasValue != entity.ConsumedReplans.HasValue) {
-            throw new InvalidDataException("The retained Process settlement is incomplete.");
-        }
-        var allocation = new DecisionBudgetAllocation(new(entity.BudgetId), new(entity.AllocationId), new(entity.GrantedWorkTicks, entity.GrantedReplans),
-            entity.OwnerWorkRevision is { } revision ? new(revision, new(entity.ConsumedWorkTicks!.Value, entity.ConsumedReplans!.Value)) : null);
-        allocation.Validate();
-        return allocation;
     }
 
     private static void WriteBalance(ProcessDecisionBudgetEntity entity, DecisionBudgetBalance balance) {

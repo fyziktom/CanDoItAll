@@ -71,3 +71,13 @@ Workflow flush. Any original source catalog and Project lifetime checks remain w
 their owning policies. Normal reader factories stay independent, and this guard
 explicitly requires PostgreSQL. Dispatch-only Workflow admission does not grant the
 project mutation authority required by later native effects.
+
+## Canonical decision child lookup and publication
+
+`EfProcessDecisionChildQuery` addresses one enrolled child and its original allocation,
+including retained historical generations, without enumerating execution/event history.
+`EfProcessDecisionPublicationFence` enlists in the actual PostgreSQL ReadCommitted effect
+transaction and takes the same root advisory lock as runtime commits. It rereads the
+complete binding, current generation, runtime phase, closure and budget overrun before
+publication. The outer transaction retains the lock through effect commit or rollback.
+This condition does not supply source/manager authorization or enable a policy executor.

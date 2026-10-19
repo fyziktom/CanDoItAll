@@ -2,6 +2,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using static CanDoItAll.Processes.Persistence.ProcessDecisionRows;
 
 namespace CanDoItAll.Processes.Persistence;
 
@@ -269,32 +270,6 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
                     claim.Status is DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed))) {
             throw new InvalidOperationException("The decision transition must atomically update its runtime step and release its dispatch claim.");
         }
-    }
-
-    private static ProcessDecisionGeneration RequireHead(ProcessDecisionHeadEntity head, ProcessDecisionGenerationEntity entity) {
-        var generation = ReadGeneration(entity);
-        if (head.DecisionId != entity.DecisionId || head.CurrentGeneration != entity.Generation || head.Revision != entity.Revision || head.BudgetId != entity.BudgetId) {
-            throw new InvalidDataException("The current Process decision head and generation disagree.");
-        }
-        return generation;
-    }
-
-    private static ProcessDecisionGeneration ReadGeneration(ProcessDecisionGenerationEntity entity) {
-        var generation = new ProcessDecisionGeneration(new(new(entity.DecisionId), entity.Generation), entity.Revision, entity.Phase,
-            new(entity.MaterialId), new(entity.BudgetId), entity.ChildCount, entity.UnclosedChildCount);
-        generation.Validate();
-        return generation;
-    }
-
-    private static ProcessDecisionChild ReadChild(ProcessDecisionChildEntity entity) {
-        if (entity.OwnerRevision.HasValue != entity.Outcome.HasValue || entity.OwnerRevision is null && entity.AcceptedReceiptId is not null) {
-            throw new InvalidDataException("The retained Process child closure is incomplete.");
-        }
-        var child = new ProcessDecisionChild(new(new(entity.DecisionId), entity.Generation), new(entity.ChildId), entity.Owner, new(entity.AllocationId),
-            entity.OwnerRevision is { } revision ? new(revision, entity.Outcome!.Value,
-                entity.AcceptedReceiptId is { } receipt ? new ProcessDecisionEffectReceiptId(receipt) : null) : null);
-        child.Validate();
-        return child;
     }
 
     private void AddGeneration(ProcessDecisionGeneration generation, DecisionBudgetAllocationId capture) {

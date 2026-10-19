@@ -539,3 +539,13 @@ identities were reverified before release; reconciliation found no remaining obs
 process or database-name delta. Seventeen unattributed TEMP entries remain preserved.
 No earlier cleanup-review denial was retried or bypassed. See the
 [storage validation record](validation/2026-10-19-process-generation-persistence.md).
+
+## 2026-10-19 Process child publication condition
+
+`c4-process-child-publication` recorded ownership before creation and reused the isolated
+PostgreSQL18 fixture and standard Release outputs. All 108 selected cases passed with
+complete-command observation. The actual restart TEMP family is explicitly inventoried.
+Complete source/runtime identities were verified before releasing the freeze. Resource
+reconciliation found zero remaining observed processes and zero database-name delta;
+16 unattributed TEMP entries remain preserved. No earlier denied cleanup was retried.
+See the [publication validation record](validation/2026-10-19-process-child-publication.md).

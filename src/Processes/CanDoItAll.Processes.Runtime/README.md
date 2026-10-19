@@ -28,3 +28,11 @@ owner evidence nor replace the required durable transaction and effect fences.
 ```powershell
 dotnet build .\src\Processes\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj
 ```
+
+## Decision child occurrences
+
+`ProcessDecisionChildIdentity` derives a versioned child identity from the original
+decision, generation, owner and admitted logical ordinal. Retries preserve that ordinal;
+claim IDs and mutable inputs do not create new occurrences. `ProcessDecisionChildAdmission`
+binds the exact runtime address, material and allocated work. These values do not grant
+source permission or prove that an executor supports governed decisions.
