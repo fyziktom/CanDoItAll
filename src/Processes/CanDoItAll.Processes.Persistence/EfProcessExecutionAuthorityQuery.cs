@@ -118,7 +118,7 @@ public sealed class EfProcessExecutionAuthorityQuery(
             }
             projectId = project.ProjectId;
         }
-        var current = evidence.ExecutionMayDispatch && row.State.Status == ProcessRuntimeStatus.Active &&
+        var current = assignment.DecisionDataPolicy is null && evidence.ExecutionMayDispatch && row.State.Status == ProcessRuntimeStatus.Active &&
             row.Step.Status is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) &&
             row.Step.ActiveClaimToken == evidence.DispatchClaimToken && row.Step.AttemptNumber == row.Claim.AttemptNumber &&
             row.Claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) && row.Claim.ExpiresAtUtc > observedAt;

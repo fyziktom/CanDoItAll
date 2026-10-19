@@ -17,6 +17,11 @@ passes 68/68 cases, preserving legacy launch fingerprints and storing immutable 
 provenance with migration/restart proof. Actual Process/Workflow executors reject the
 new contract until governed execution and durable continuation are implemented.
 This foundation does not activate Process/Workflow policy settings.
+The [persistence authority checkpoint](validation/2026-10-19-process-policy-authority.md)
+adds 58 passing distinct selected behaviors across its exact repair bridge. Unsupported
+policies now also block Agent reservation and mapped Workflow admission/continuation
+at the owner fence while historical reads remain available. The
+[decision runtime design](plan/P07-process-decision-runtime.md) specifies the next work.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,

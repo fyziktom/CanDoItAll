@@ -83,6 +83,9 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
             WHERE "RunId" = {request.RunId.Value} AND "StepInstanceId" = {request.StepInstanceId.Value} FOR SHARE
             """).AsNoTracking().ToArrayAsync(cancellationToken);
         var current = await ReadContinuationCoreAsync(context, request, clock.GetUtcNow(), cancellationToken);
+        if (expected.Dispatch.Assignment.DecisionDataPolicy is not null || current.Dispatch.Assignment.DecisionDataPolicy is not null) {
+            throw Mismatch("The mapped Workflow continuation does not support the admitted Process decision policy.");
+        }
         if (current.OriginalClaimSequence != expected.OriginalClaimSequence || current.Dispatch.RootRunId != expected.Dispatch.RootRunId ||
                 current.Dispatch.OwnerFingerprint != expected.Dispatch.OwnerFingerprint ||
                 current.Dispatch.Request != expected.Dispatch.Request || current.ProjectAdmission != expected.ProjectAdmission) {
@@ -222,7 +225,7 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
             LaunchVariables = assignment.LaunchVariables.OrderBy(item => item.Key, StringComparer.Ordinal).ToArray(),
             PreparationFingerprint = saved?.PreparationFingerprint
         })))).ToLowerInvariant();
-        var current = state.Status == ProcessRuntimeStatus.Active && step.IsExecutable &&
+        var current = assignment.DecisionDataPolicy is null && state.Status == ProcessRuntimeStatus.Active && step.IsExecutable &&
             step.Status is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) && step.ActiveClaimToken == request.Claim.Value &&
             step.AttemptNumber == claim.AttemptNumber && claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) &&
             claim.CreatedAtUtc <= now && claim.ExpiresAtUtc > now;

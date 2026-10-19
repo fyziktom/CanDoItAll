@@ -1,5 +1,17 @@
 # Resource ownership and cleanup
 
+## Process policy authority checkpoint (2026-10-19)
+
+Owned `c4-process-policy-authority` and `c4-process-policy-authority-ready` reused the
+existing isolated PostgreSQL 18 fixture and standard Release outputs. Ownership records
+precede creation. The first retains 47/52 passes and five fixture failures; the successor
+passes all 27 repaired/related cases with an exact unchanged-production bridge retaining
+31 earlier cases. Both source/runtime inventories were verified and freezes released.
+Observers cover all six complete execution commands. Reconciliation found zero remaining
+observed processes and zero new database delta; 12/10 unattributed TEMP entries were
+preserved. Prior cleanup blockers were not retried. See
+[the validation record](validation/2026-10-19-process-policy-authority.md).
+
 ## Agent policy receipt checkpoint (2026-10-19)
 
 Owned `c4-agent-policy-receipts` and `c4-agent-policy-receipts-ready` reuse the existing

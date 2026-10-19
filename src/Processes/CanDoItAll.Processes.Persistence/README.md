@@ -16,6 +16,12 @@ explicit project admissions require a coordinator and the project admission poli
 missing configuration fails before writes. The optional InMemory test path requires
 an explicitly shared test store and does not provide PostgreSQL atomicity.
 
+Policy-bearing assignments are retained historical evidence, but current Agent and
+mapped Workflow authority remains closed until the governed decision runtime is supported.
+The direct readers report them as non-current; reservation/mutation guards recheck this
+inside the existing root transaction fence. Deferred Workflow continuation checks both
+the observed and current policy explicitly, preserving valid released legacy claims.
+
 The three nullable admission columns retain existing rows without inventing an actor,
 permission or lifetime. A complete tuple is immutable, including on replay and child
 run creation. Subsequent state transitions can still cancel or observe a run after its

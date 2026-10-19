@@ -25,6 +25,11 @@ passes 68 focused cases. Prepared launch and assignment persistence retain bound
 original policy evidence without rewriting legacy launches. Actual Agent/Workflow
 adapters reject this contract pending the governed executor and continuation work.
 This is storage/compatibility coverage, not an activated Process policy producer.
+The [authority checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-process-policy-authority.md)
+also closes unsupported-policy reservation, mutation and mapped continuation at the
+persistence owner fence. Historical reads remain bound; 58 distinct selected behaviors
+pass through the documented repair bridge. Decision generations and actual execution
+remain prospective in the [runtime design](../../../codex/bundles/concurrent-mutations/plan/P07-process-decision-runtime.md).
 
 ## Meaning of status
 

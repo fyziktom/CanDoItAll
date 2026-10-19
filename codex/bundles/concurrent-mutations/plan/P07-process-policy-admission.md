@@ -8,6 +8,8 @@ No Process or Workflow policy activation is claimed by this design.
 The first admission/storage foundation now passes [68 focused cases](../validation/2026-10-19-process-policy-admission.md).
 Both current module executors explicitly reject non-null admission before child work.
 The following governed-execution, producer and continuation requirements remain open.
+The [decision runtime refinement](P07-process-decision-runtime.md) specifies the next
+owner boundary, quiescence/fencing protocol, nested allocations and manager lifecycle.
 
 ## Concrete incompatibilities and responsibility split
 
