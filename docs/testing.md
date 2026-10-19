@@ -221,6 +221,13 @@ the editor is still loading. Await the selection's `ClickAsync()` task, then ver
 editor readiness; a heading-only assertion does not establish that readiness. The
 provider profile seam tests exercise both initial loading and a delayed selection.
 
+In browser tests, an already-selected row's `aria-pressed=true` is not an acknowledgement
+of another click. Skip redundant selection or wait for the actual resulting transition;
+otherwise its delayed handler can replace an input immediately after Playwright fills it.
+When releasing a controlled response while the user types, acknowledge the edit in the
+native owner before releasing it. The chat submission browser host observes that state
+on the renderer without changing it.
+
 ### Processes UI slice
 
 Build Processes.UI, the native Processes module and Web directly, followed by the

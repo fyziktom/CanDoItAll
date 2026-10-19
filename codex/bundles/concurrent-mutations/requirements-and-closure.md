@@ -1,9 +1,10 @@
 # Requirements and closure ledger
 
-Current stop: [2026-10-17 checkpoint and continuation](validation/2026-10-17-checkpoint-handoff.md).
-The user requested closure to conserve credits. C4's final successor passed 706/706;
-the additional browser proof failed twice and remains outside the compiled checkpoint.
-End-to-end completion and full resource closure are not claimed.
+Work resumed on 2026-10-18; see the [resumption record](validation/2026-10-18-resumption.md).
+C4's historical successor passed 706/706. The additional native chat browser proof is
+now compiled and passes its one case with three submissions; prior failures remain
+recorded. End-to-end implementation continues. SPA work must remain on
+`codex/concurrent-mutations` pending the user's consultation with its maintainer.
 
 | ID | Requirement | Owner / proof destination | Current closure |
 | --- | --- | --- | --- |

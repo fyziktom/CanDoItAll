@@ -1,6 +1,16 @@
 # Concurrent mutations implementation bundle
 
-Current handoff (2026-10-17): implementation stopped at the user's credit-saving
+Current work resumed on 2026-10-18 under the [resumption record](validation/2026-10-18-resumption.md).
+The original end-to-end outcome remains active. SPA work stays on its own
+`codex/concurrent-mutations` branch and must not be merged into SPA main.
+
+The resumed native chat browser proof now passes: one case covers three submissions,
+draft preservation, restore without resend and unknown outcomes across native navigation.
+Release build, portability enforcement and documentation/rendering checks pass; see the
+[resumption record](validation/2026-10-18-resumption.md). The remaining lifecycle,
+runtime-policy and capacity work is still active.
+
+Historical handoff (2026-10-17): implementation stopped at the user's credit-saving
 checkpoint. The final C4 successor passed **706/706**. A new native chat browser test
 failed twice and is preserved outside the compiled checkpoint; broader runtime policy,
 lifecycle cutover, capacity and cleanup remain open. See the
