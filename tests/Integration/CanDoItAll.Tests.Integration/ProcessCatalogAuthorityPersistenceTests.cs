@@ -331,7 +331,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
 
         private ProjectWriteAdmissionService Admissions()
             => new(new Factory<ProjectsDbContext>(ProjectOptions, static options => new(options)), ProjectOptions, Coordinator,
-                services.GetRequiredService<ICanonicalRuntimeDatabase>());
+                services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
 
         private DbContextOptions<T> Options<T>(params IInterceptor[] interceptors) where T : DbContext {
             var builder = new DbContextOptionsBuilder<T>();

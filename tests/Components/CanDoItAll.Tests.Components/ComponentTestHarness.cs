@@ -66,6 +66,11 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();
             context.Services.AddSingleton(services => (IProjectPendingReferenceStore)services.GetRequiredService<IProjectPendingSubmissionStore>());
             context.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
+            context.Services.AddSingleton<IProjectLifecyclePendingStore, ProjectLifecyclePendingTestStore>();
+            context.Services.AddSingleton(new ProjectLifecyclePendingStoreLimits(64, 2 * 1024 * 1024, 16));
+            context.Services.AddSingleton<IProjectLifecycleRecoveryCodec, ProjectLifecycleRecoveryCodec>();
+            context.Services.AddScoped<ProjectLifecycleHierarchyReader>();
+            context.Services.AddScoped<CanDoItAll.Modules.Projects.Pages.ProjectNativeLifecycleOperations>();
             configureServices?.Invoke(context.Services);
 
             if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&

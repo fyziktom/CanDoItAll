@@ -565,6 +565,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         {
             CancelPendingCanvasViewStatePersistence();
             pendingWorkbenchSelectionId = null;
+            var originalGeneration = ContentDatabase.Generation;
+            var originalScope = await NativeHierarchy.GetScopeAsync(deferredCompletionCts.Token);
             var loadStructureTask = ProjectWorkbenchService.TryGetStructureAsync(request.ProjectId);
             var loadStorageCatalogTask = WorkspaceService.ListStorageCatalogAsync();
             var loadDeletionRecoveriesTask =
@@ -625,6 +627,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                 storageCatalog = nextStorageCatalog;
                 unavailableState = loadResult.UnavailableState;
                 surface = null;
+                displayedLifecycleScope = null;
                 RetireInactiveAuthoring();
                 canvasSurface = null;
                 clipboardState = null;
@@ -700,6 +703,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             uiState.SelectedNodeIds = [.. nextSelectedNodeIds];
             graphAdapter.ExpandSelectionAncestors(reloadedSurface.Nodes, uiState, nextSelectedNodeIds);
             var nextSurface = reloadedSurface with { ViewStateJson = uiState.ToJson() };
+            if (originalGeneration != ContentDatabase.Generation ||
+                    originalScope != await NativeHierarchy.GetScopeAsync(deferredCompletionCts.Token) ||
+                    originalGeneration != ContentDatabase.Generation ||
+                    nextSurface.ExpectedProjectAdmission?.DatabaseProfileId != originalScope.DatabaseProfileId) {
+                throw new InvalidOperationException("The workspace changed while the project surface was loading. Reload the project.");
+            }
             if (!IsCurrentSurfaceReload(request))
             {
                 return;
@@ -722,6 +731,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             selectedNodeIds = nextSelectedNodeIds;
             pendingWorkbenchSelectionId = nextPendingWorkbenchSelectionId;
             surface = nextSurface;
+            displayedLifecycleScope = originalScope;
+            displayedRuntimeGeneration = originalGeneration;
             RetireInactiveAuthoring();
             currentViewStateJson = nextSurface.ViewStateJson;
             RefreshCanvasSurface();

@@ -1,9 +1,54 @@
 # Agent, process and workflow decision policies
 
-Status: architecture recommendation for the concurrency design freeze, 2026-10-16.
-No implementation, build, discovery or test execution is claimed by this document.
+Status: original architecture recommendation for the concurrency design freeze, 2026-10-16.
+The implementation note below records later changes; the remaining design is not a
+claim of complete runtime activation.
 The architect's September archive is reference material; its proposed decisions and test
 catalogue are not evidence that current production behavior already satisfies them.
+
+## Implementation note, 2026-10-19
+
+Typed Workspace and Agent policy settings are persisted. The shared policy mapper and
+explicit saved-effect MAF adapter have passing focused proof: the latter restores one
+original module effect under current authority without a provider continuation. See
+[runtime adapter validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-saved-effect-runtime.md).
+
+The implemented schema-six contract adds a planning decision to the existing
+tool journal. Models owns its strict bounded graph/codec; Core owns its transitions and
+central persistence checks. Original input, policy provenance, bases and publication
+origins are immutable. RunSnapshot reuses one basis per generation; StepSnapshot uses a
+distinct basis per logical step. Existing schemas 1–5 cannot acquire a fabricated decision.
+
+Work accounting retains one active interval and cumulative spent work. A new logical
+step settles/reopens at the same instant in one publication. Only an explicitly closed
+approval/review wait is excluded; refresh and automatic replan retain prior expenditure.
+Clock rollback and overflow refuse further activity. Cancellation preserves an open
+interval rather than inventing a settlement. The live owner now refuses a fresh start
+when a restart has lost that interval's monotonic anchor; copied persisted data is not
+execution authority. It records late responses after cancellation, invalid publication,
+budget exhaustion or clock rollback without creating new effects. Clock failure preserves
+the original accounting anchor and reports an explicit refusal. See [the source card](../../../codex/bundles/concurrent-mutations/plan/P04-planning-decision-journal.md)
+and [the 114-case live-owner proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-live-planning-owner.md).
+
+The configured MAF provider port now uses a fresh SDK session for each step and sends
+only the original request/target and selected basis. The actual transport boundary
+checks input identity, current read permission, capacity and remaining active work.
+Invalid output cannot become an effect; bounded late responses remain recorded.
+The [provider proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-planning-provider.md)
+covers real SDK/file owners and an intercepted configured HTTP transport. Product
+admission, saved actions and UI activation remain required.
+
+Workbench publication v2 now requires a typed guard on the held authority for active
+work. It checks before staging, after a project wait and immediately before commit;
+material currentness and basis age still apply. V1 receipts retain their original
+wall-time interpretation, and mixed versions are refused. The
+[47-case publication proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-active-work-publication.md)
+qualifies that perimeter. The saved-action owner now opens the approval continuation
+interval atomically, preserves work across Refresh/replan and checks the live capability
+against the held selected publication snapshot. See its
+[146-case proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-planning-saved-actions.md).
+The module participant and product admission still need their integrated
+provider-to-publication proof and user-facing activation.
 
 ## Decision
 

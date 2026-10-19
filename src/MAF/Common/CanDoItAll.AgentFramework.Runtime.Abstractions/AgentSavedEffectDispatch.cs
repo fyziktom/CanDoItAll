@@ -1,3 +1,4 @@
+using System.Text;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Runtime.Abstractions;
@@ -25,10 +26,13 @@ public sealed record AgentSavedEffectDispatchRequest {
 
 public sealed record AgentSavedEffectDispatchResult {
     public AgentSavedEffectDispatchResult(AgentToolApprovalBinding binding, AgentToolProposalState state,
-        AgentToolEffectState effectState, long runRevision, long journalRevision) {
+        AgentToolEffectState effectState, long runRevision, long journalRevision, AgentToolProtocolEnvelope? ownerResult = null) {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentOutOfRangeException.ThrowIfLessThan(runRevision, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(journalRevision, 1);
+        if (ownerResult is not null) {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(Encoding.UTF8.GetByteCount(ownerResult.PayloadJson), 65_536);
+        }
         if (binding.BatchId.Value == Guid.Empty || binding.IntentId.Value == Guid.Empty || binding.SemanticVersion < 1 ||
             string.IsNullOrWhiteSpace(binding.Digest.Value) || !Enum.IsDefined(effectState) ||
             state is not (AgentToolProposalState.Completed or AgentToolProposalState.Rejected or AgentToolProposalState.OwnerReceiptConfirmed) ||
@@ -42,6 +46,7 @@ public sealed record AgentSavedEffectDispatchResult {
         EffectState = effectState;
         RunRevision = runRevision;
         JournalRevision = journalRevision;
+        OwnerResult = ownerResult;
     }
 
     public AgentToolApprovalBinding Binding { get; }
@@ -49,4 +54,5 @@ public sealed record AgentSavedEffectDispatchResult {
     public AgentToolEffectState EffectState { get; }
     public long RunRevision { get; }
     public long JournalRevision { get; }
+    public AgentToolProtocolEnvelope? OwnerResult { get; }
 }

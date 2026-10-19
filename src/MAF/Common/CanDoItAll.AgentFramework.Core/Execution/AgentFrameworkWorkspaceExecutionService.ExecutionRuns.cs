@@ -58,6 +58,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         persistTranscript |= request.ChatSessionId.HasValue;
+        AgentPlanningCoordinator.RequireSupportedRequest(request, persistTranscript);
+        if (request.PlanningOwner is not null) {
+            _ = RequirePlanning();
+        }
         activityOperation.Report(
             AgentExecutionActivityPhase.PreparingInput,
             "Preparing input attachments.");
@@ -116,6 +120,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(request);
+        AgentPlanningCoordinator.RequireSupportedRequest(request, chatBacked: false);
         EnsureRequiredActivityOperationId(
             request.InitialActivityOperationId,
             nameof(request));
@@ -250,6 +255,64 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateActivityOperationScope(operation);
+        EnsureRequiredActivityOperationId(operation.StreamId.OperationId, nameof(operation));
+        return ExecuteWithinActivityBoundaryAsync(operation, async () => {
+            var original = await LoadExecutionRunAsync(request.Expected.ExecutionRunId, cancellationToken);
+            EnsureActivityRunBinding(operation, original);
+            if (request.Action == AgentPlanningAction.Refresh) {
+                return await RefreshPlanningAsync(operation, original, request, automatic: false, cancellationToken);
+            }
+            var planning = RequirePlanning();
+            ExecutionRunRecord saved;
+            string message;
+            if (request.Action == AgentPlanningAction.Cancel) {
+                saved = (await planning.CancelAsync(original, request, cancellationToken)).Run;
+                message = "The original planning decision was cancelled without publication.";
+            } else {
+                AgentPlanningPublicationResult published;
+                using (var registration = executionCancellationRegistry.Register(original, cancellationToken)) {
+                    operation.Report(AgentExecutionActivityPhase.UsingTool, "Publishing the exact reviewed planning proposal.");
+                    published = await planning.ApproveAsync(original, request, continuationRuntime, registration.Token);
+                }
+                saved = published.Run;
+                message = published.Assessment.Message;
+                if (AgentPlanningCoordinator.ShouldReplan(saved)) {
+                    return await RefreshPlanningAsync(operation, saved,
+                        new(AgentPlanningAction.Refresh, request.ChatSessionId, AgentPlanningDecisionExpectation.From(saved)),
+                        automatic: true, cancellationToken);
+                }
+            }
+            using var settlement = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            operation.Report(saved.State == ExecutionState.WaitingOnTool
+                ? AgentExecutionActivityPhase.AwaitingApproval
+                : AgentExecutionActivityPhase.PersistingResult, message);
+            await AppendExecutionLogAsync(saved.Id, saved.AgentId, saved.ChatSessionId, saved.State,
+                "Planning", message, settlement.Token);
+            TerminalizePersistedActivity(operation, saved.State, runOutcome: saved.Outcome);
+            return await GetExecutionRunDetailAsync(saved.Id, settlement.Token);
+        });
+    }
+
+    private async Task<ExecutionRunDetail> RefreshPlanningAsync(IAgentExecutionActivityOperationLease operation,
+        ExecutionRunRecord original, AgentPlanningActionRequest request, bool automatic, CancellationToken cancellationToken) {
+        var preparation = await AcquireExecutionPreparationAsync(operation, original.AgentId, atomicConsumer: true, cancellationToken);
+        var provider = await ResolveContinuationProviderLeaseAsync(original, preparation, cancellationToken);
+        var agent = CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider, original.Model);
+        EnsurePreparationCurrentForUse(preparation.Blueprint, await store.LoadCatalogSnapshotAsync(cancellationToken));
+        var refreshed = await RequirePlanning().RefreshAsync(agent, provider, original, request, automatic, cancellationToken);
+        var startup = new AgentExecutionStartupAggregate(preparation.Blueprint, preparation.CatalogSnapshot, agent,
+            provider, refreshed.ChatSession, refreshed.Run, UserMessage: null, InputAttachments: []);
+        var executionRequest = new ExecutionRunRequest(agent.Id, original.ToolAdmission!.OriginalInput.Content,
+            operation.StreamId.OperationId, original.ChatSessionId) { PlanningOwner = original.ToolAdmission.PlanningDecision!.Owner };
+        await CompletePreparedExecutionRunAsync(startup, executionRequest, cancellationToken, operation, refreshed.Approvals);
+        return await GetExecutionRunDetailAsync(original.Id, cancellationToken);
     }
 
     public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsWithinOperationAsync(
@@ -1347,6 +1410,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         inputAttachments,
                         request.TransientContext,
                         request.InitialActivityOperationId,
+                        request.PlanningOwner is { } selection ? await RequirePlanning().PrepareAsync(selection,
+                            CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider,
+                                ResolveEffectiveManagedSeedModel(preparation.Blueprint.Agent, provider)),
+                            provider, preparation.Blueprint.Request.Version.CatalogRevision, context, cancellationToken) : null,
                         cancellationToken);
                     break;
                 }
@@ -1428,7 +1495,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentExecutionStartupAggregate startup,
         ExecutionRunRequest request,
         CancellationToken cancellationToken,
-        IAgentExecutionActivityOperationLease activityOperation)
+        IAgentExecutionActivityOperationLease activityOperation,
+        IReadOnlyList<ExecutionApprovalRecord>? previousApprovals = null)
     {
         EnsureRequiredActivityOperationId(
             request.InitialActivityOperationId,
@@ -1440,6 +1508,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var agent = startup.Agent;
+        AgentPlanningExecutionResult? planningResult = null;
         var provider = startup.Provider;
         var catalog = startup.CatalogSnapshot.Catalog;
         var session = startup.Session;
@@ -1498,11 +1567,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 IsGovernedMachineCriticalRun(run)
                     ? []
                     : startup.Blueprint.Memory;
-            var handoffOptions = await ResolveHandoffExecutionOptionsAsync(
+            var handoffOptions = run.ToolAdmission?.PlanningDecision is null ? await ResolveHandoffExecutionOptionsAsync(
                 agent,
                 catalog,
                 run,
-                cancellationToken);
+                cancellationToken) : null;
             activityOperation.Report(
                 AgentExecutionActivityPhase.PreparingRuntime,
                 "Preparing the agent runtime.");
@@ -1533,7 +1602,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 run.ChatSessionId,
                 cancellationToken);
 
-            if (request.TransientContext is not null)
+            if (request.TransientContext is not null && run.ToolAdmission?.PlanningDecision is null)
             {
                 transientContextRegistry.Register(run, request.TransientContext);
             }
@@ -1557,34 +1626,41 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
                     "Waiting for the configured provider.");
-                runtimeResponse = TrackRuntimeResponse(await executionRuntime.ExecuteAsync(
-                    new AgentRuntimeExecutionRequest(
-                        runtimeAgent,
-                        provider,
-                        runtimeSession,
-                        attachedCapabilities,
-                        memory,
-                        prompt,
-                        string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
-                        (state, phase, message) => ReportRuntimeProgressAsync(
-                            activityOperation,
-                            run,
-                            agent.Id,
-                            state,
-                            phase,
-                            message,
-                            cancellationToken),
-                        SuppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
-                        StructuredOutput: request.StructuredOutput,
-                        ExecutionOptions: runtimeExecutionOptions),
-                    runtimeCancellationToken));
+                if (run.ToolAdmission?.PlanningDecision is not null) {
+                    planningResult = await RequirePlanning().RunAsync(runtimeAgent, provider, run, runtimeCancellationToken);
+                    runtimeResponse = TrackRuntimeResponse(planningResult.Refusal is { } refusal
+                        ? planningResult.Response with { ResponseText = $"The original planning decision stopped: {refusal}." }
+                        : planningResult.Response);
+                } else {
+                    runtimeResponse = TrackRuntimeResponse(await executionRuntime.ExecuteAsync(
+                        new AgentRuntimeExecutionRequest(
+                            runtimeAgent,
+                            provider,
+                            runtimeSession,
+                            attachedCapabilities,
+                            memory,
+                            prompt,
+                            string.IsNullOrWhiteSpace(run.RuntimeSessionKey) ? null : run.RuntimeSessionKey,
+                            (state, phase, message) => ReportRuntimeProgressAsync(
+                                activityOperation,
+                                run,
+                                agent.Id,
+                                state,
+                                phase,
+                                message,
+                                cancellationToken),
+                            SuppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                            StructuredOutput: request.StructuredOutput,
+                            ExecutionOptions: runtimeExecutionOptions),
+                        runtimeCancellationToken));
+                }
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
                 var totalToolCalls = runtimeResponse.ToolCalls;
 
-                if (runtimeResponse.PendingApprovals.Count > 0 && ShouldAutoApprovePendingToolCalls(agent, runtimeSession))
+                if (planningResult is null && runtimeResponse.PendingApprovals.Count > 0 && ShouldAutoApprovePendingToolCalls(agent, runtimeSession))
                 {
                     var continuation = await ContinueAutoApprovedRunAsync(
                         run,
@@ -1636,8 +1712,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     portableStructuredOutput is null ||
                     portableStructuredOutput.ValidationStatus ==
                         AgentJsonSchemaOutputValidationStatus.Valid);
-                var completionState = toolCompletionAssessment.State;
-                var completionOutcome = toolCompletionAssessment.Outcome;
+                var completionState = planningResult?.Run.State ?? toolCompletionAssessment.State;
+                var completionOutcome = planningResult is null ? toolCompletionAssessment.Outcome : planningResult.Run.Outcome;
 
                 var assistantMessage = session is null
                     ? null
@@ -1694,7 +1770,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 var toolInvocationTraceReceipts = CreateToolInvocationTraceReceipts(run, runtimeResponse, toolPolicies);
 
                 var approvalUpdate = ExecutionRunStateTransitions.SynchronizePendingApprovals(
-                    [],
+                    previousApprovals ?? [],
                     updatedRun,
                     runtimeResponse.PendingApprovals,
                     DateTimeOffset.UtcNow);
@@ -1765,14 +1841,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     completionState,
                     completionState switch
                     {
+                        ExecutionState.Completed when planningResult?.Run.Outcome == RunOutcome.Cancelled => "Cancelled",
                         ExecutionState.Completed => "Completed",
+                        ExecutionState.Failed when planningResult is not null => "Planning",
                         ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Tool execution",
                         ExecutionState.Failed => "Output validation",
                         _ => "Approval"
                     },
                     completionState switch
                     {
+                        ExecutionState.Completed when planningResult?.Run.Outcome == RunOutcome.Cancelled => "The original planning decision was cancelled.",
                         ExecutionState.Completed => "Execution run response persisted.",
+                        ExecutionState.Failed when planningResult is not null => runtimeResponse.ResponseText,
                         ExecutionState.Failed when toolCompletionAssessment.FailureKind == AgentToolCompletionFailureKind.RequiredMutation => "Execution run response and unresolved required mutation were persisted.",
                         ExecutionState.Failed => "Execution run response and portable JSON Schema validation failure were persisted.",
                         _ => "The execution run is waiting for an approval response before it can continue."
@@ -1782,7 +1862,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 TerminalizePersistedActivity(
                     activityOperation,
                     completionState,
-                    toolCompletionAssessment);
+                    toolCompletionAssessment,
+                    completionOutcome);
                 return new ExecutionRunResult(run.Id, run.ChatSessionId, runtimeResponse.ResponseText, assistantMessage, metric)
                 {
                     State = completionState,
@@ -2146,7 +2227,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     private static void TerminalizePersistedActivity(
         IAgentExecutionActivityOperationLease activityOperation,
         ExecutionState completionState,
-        AgentToolCompletionAssessment? completionAssessment = null)
+        AgentToolCompletionAssessment? completionAssessment = null,
+        RunOutcome? runOutcome = null)
     {
         if (activityOperation.IsTerminal)
         {
@@ -2155,6 +2237,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
         var terminalPhase = completionState switch
         {
+            ExecutionState.Completed when runOutcome == RunOutcome.Cancelled => AgentExecutionActivityPhase.Cancelled,
             ExecutionState.Completed => AgentExecutionActivityPhase.Completed,
             ExecutionState.Failed => AgentExecutionActivityPhase.Failed,
             ExecutionState.WaitingOnTool => AgentExecutionActivityPhase.AwaitingApproval,
@@ -2167,6 +2250,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             switch (completionState)
             {
+                case ExecutionState.Completed when runOutcome == RunOutcome.Cancelled:
+                    activityOperation.Cancel("The original agent operation was cancelled.");
+                    break;
                 case ExecutionState.Completed:
                     activityOperation.Complete("The agent operation completed.");
                     break;
@@ -2704,7 +2790,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ArgumentNullException.ThrowIfNull(run);
 
         jsonSchemaOutput ??= AgentJsonSchemaOutputContractProcessor.Restore(run);
-        var transientContext = ResolveAdmittedRuntimeContext(run);
+        var transientContext = run.ToolAdmission?.PlanningDecision is null ? ResolveAdmittedRuntimeContext(run) : null;
         return BuildRuntimeExecutionOptions(
             run,
             activityOperationId,
@@ -2728,7 +2814,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     {
         ArgumentNullException.ThrowIfNull(run);
         var transientWorkspaceScope = transientContext?.WorkspaceScope;
-        var recordedWorkspaceScope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
+        var recordedWorkspaceScope = run.ToolAdmission?.PlanningDecision is not null
+            ? AgentPlanningRunMetadata.ReadScope(run) : ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run);
         if (transientWorkspaceScope is not null &&
             recordedWorkspaceScope is not null &&
             transientWorkspaceScope != recordedWorkspaceScope)

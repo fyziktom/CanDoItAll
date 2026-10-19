@@ -211,10 +211,9 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
                        FileAccess.Write,
                        FileShare.Read | FileShare.Delete,
                        bufferSize: 1,
-                       FileOptions.WriteThrough))
+                       FileOptions.None))
             {
                 probeCreated = true;
-                stream.Flush(flushToDisk: true);
                 return File.Exists(alternateCasePath)
                     ? PhysicalFileSystemCaseSensitivity.Insensitive
                     : PhysicalFileSystemCaseSensitivity.Sensitive;

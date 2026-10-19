@@ -58,7 +58,7 @@ internal static class ProjectTaskPlanBasisCodec {
         return stream.ToArray();
     }
 
-    private static void RequireUniqueMembers(JsonElement element) {
+    internal static void RequireUniqueMembers(JsonElement element) {
         if (element.ValueKind == JsonValueKind.Object) {
             var names = new HashSet<string>(StringComparer.Ordinal);
             foreach (var property in element.EnumerateObject()) {

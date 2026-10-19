@@ -22,9 +22,9 @@ internal static class ProjectTaskPlanOperationProtocol {
         CallerKind = (int)caller.Kind,
         CallerKey = caller.Key.ToArray(),
         OperationId = accepted.Operation.Id,
-        SchemaVersion = 1,
+        SchemaVersion = accepted.Source.Version,
         NormalizationVersion = 1,
-        ResultVersion = ProjectTaskPlanOperationCodec.CurrentVersion,
+        ResultVersion = accepted.Source.Version,
         SemanticDigest = Convert.FromHexString(accepted.SemanticDigest),
         ProjectId = accepted.OriginalDefinition.Project.ProjectId,
         LifetimeId = accepted.OriginalDefinition.Project.LifetimeId,
@@ -40,7 +40,7 @@ internal static class ProjectTaskPlanOperationProtocol {
 
     internal static ProjectTaskPlanAccepted Decode(ProjectTaskPlanReceiptRecord receipt, ProjectTaskPlanOperation operation,
         ProjectTaskPlanCaller caller, DateTimeOffset replayUntilUtc) {
-        if (receipt.SchemaVersion != 1 || receipt.NormalizationVersion != 1 || receipt.ResultVersion != 1 || receipt.SourceVersion != 1) {
+        if (!SupportsInterpretation(receipt.SchemaVersion, receipt.NormalizationVersion, receipt.ResultVersion, receipt.SourceVersion)) {
             throw new ProjectTaskPlanReceiptDecodeException();
         }
         var accepted = ProjectTaskPlanOperationCodec.DecodeAccepted(receipt.AcceptedPayload);
@@ -59,4 +59,8 @@ internal static class ProjectTaskPlanOperationProtocol {
         }
         return accepted;
     }
+
+    internal static bool SupportsInterpretation(int? schemaVersion, int? normalizationVersion, int? resultVersion, int? sourceVersion)
+        => ProjectTaskPlanSource.SupportsVersion(schemaVersion) && normalizationVersion == 1 &&
+            resultVersion == schemaVersion && sourceVersion == schemaVersion;
 }

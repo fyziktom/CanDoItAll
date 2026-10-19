@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -261,7 +262,7 @@ public sealed class StorageObjectResourceConnectorTests
                 DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
             var coordinator = CoordinatedDatabaseTransaction.ForProfile(projectProfile);
             var admissions = new ProjectWriteAdmissionService(new PooledDbContextFactory<ProjectsDbContext>(projectOptions),
-                projectOptions, coordinator, new CanonicalDatabase(projectProfile));
+                projectOptions, coordinator, new CanonicalDatabase(projectProfile), DatabaseTransferTestSupport.UnconfiguredActivation());
             return new ResourcePersistenceFixture(factory, ownerFactory, admissions, coordinator, projectId);
         }
 

@@ -84,7 +84,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             new EfProcessExecutionMutationGuard(NativeOptions<ProcessPersistenceDbContext>(services), transactions, clock),
             NativeAuthority(services, clock), transactions);
         var recovery = new ProjectDefinitionToolReceiptRecovery(services.GetRequiredService<IAgentCatalogReadLeaseStore>(), processes,
-            services.GetRequiredService<ProjectWriteAdmissionService>(), services.GetRequiredService<ProjectDefinitionReceiptReader>());
+            services.GetRequiredService<ProjectWriteAdmissionService>(), services.GetRequiredService<ProjectDefinitionReceiptReader>(), services.GetRequiredService<ProjectCreatedTargetProvenance>());
         var restarted = NewJournal();
         var profile = NativeProfile(services);
         var identity = new AgentExecutionActivityWorkspaceIdentity(profile.ProfileId, WorkspaceScopeDescriptor.Sandbox, profile.Generation);

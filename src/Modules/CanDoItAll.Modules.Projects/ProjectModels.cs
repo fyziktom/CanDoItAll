@@ -1,9 +1,6 @@
 using System.Text.Json.Serialization;
-using System.Runtime.ExceptionServices;
-using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -166,19 +163,14 @@ public sealed partial class ProjectsService(
     IEnumerable<IProjectDeletionParticipant> deletionParticipants,
     ILogger<ProjectsService> logger,
     SearchIndexService searchMutationService,
-    StorageCatalogService storageCatalogService,
     CoordinatedDatabaseTransaction coordinatedTransaction,
     ProjectWriteAdmissionService writeAdmissionService,
     ProjectDefinitionWriter definitionWriter,
     ProjectDefinitionReader definitionReader,
-    ICanonicalRuntimeDatabase canonicalDatabase,
-    DatasetActivationService datasetActivation,
-    IProjectCreationCompensationGuard? creationCompensationGuard = null) : IProjectSummaryQueryService {
+    ProjectCreationCompensationOwner? creationCompensationOwner = null,
+    ProjectDeletionCompletionProjection? deletionCompletionProjection = null) : IProjectSummaryQueryService {
     private const string DeleteRetryGuidance =
         "Retry each exact participant and recovery id returned by the deletion recovery; do not create or select a newer project-deletion operation.";
-    private const string DeleteOwnerReviewGuidance =
-        "The project deletion committed, but owner release or completion is unconfirmed. Keep the exact recovery identifiers for operator review; do not retry cleanup or deletion until owner release is independently established. A pending-list read does not establish release.";
-
     private sealed record ProjectHierarchyMetrics(
         IReadOnlyDictionary<Guid, int> ParentCounts,
         IReadOnlyDictionary<Guid, int> ChildCounts,
@@ -277,223 +269,29 @@ public sealed partial class ProjectsService(
         return new ProjectHierarchySnapshot(projectId, parents, children);
     }
 
-    public async Task<Result> AddSubprojectAsync(
+    public Task<Result> AddSubprojectAsync(
         Guid parentProjectId,
         Guid childProjectId,
         CancellationToken cancellationToken = default,
         ProjectMutationAuthorization? authorization = null,
         IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
-    {
-        if (parentProjectId == childProjectId)
-        {
-            return Result.Failure(Error.Validation("A project cannot be attached as its own subproject."));
-        }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
-            dbContext,
-            BuildProjectHierarchyMutationScopeKeys(
-                parentProjectId,
-                childProjectId),
-            ProjectMutationPurpose.HierarchyWrite, childProjectId, [parentProjectId, childProjectId], authorization,
-            writeAdmissionService, coordinatedTransaction, cancellationToken, expectedProjectAdmissions: expectedProjectAdmissions);
-        var projects = await dbContext.Set<Project>()
-            .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
-            .ToDictionaryAsync(project => project.Id, cancellationToken);
-        if (!projects.TryGetValue(parentProjectId, out var parentProject))
-        {
-            return Result.Failure(Error.Validation("The selected parent project could not be found."));
-        }
-
-        if (!projects.TryGetValue(childProjectId, out var childProject))
-        {
-            return Result.Failure(Error.Validation("The selected subproject could not be found."));
-        }
-
-        var existingLink = await dbContext.Set<ProjectHierarchyLink>()
-            .FirstOrDefaultAsync(
-                link => link.ParentProjectId == parentProjectId && link.ChildProjectId == childProjectId,
-                cancellationToken);
-        if (existingLink is not null)
-        {
-            return Result.Success();
-        }
-
-        var cycleError = await ValidateHierarchyConnectionAsync(dbContext, parentProjectId, childProjectId, cancellationToken);
-        if (cycleError is not null)
-        {
-            return Result.Failure(cycleError);
-        }
-
-        await dbContext.Set<ProjectHierarchyLink>().AddAsync(
-            new ProjectHierarchyLink
-            {
-                ParentProjectId = parentProjectId,
-                ChildProjectId = childProjectId,
-                CreatedAtUtc = clock.GetUtcNow()
-            },
-            cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        await RunPostCommitActionAsync(
-            "activity-subproject-attach",
-            childProjectId,
-            () => activityStream.RecordAsync(new ActivityWriteRequest(
-                "projects",
-                "attach-subproject",
-                "Attached subproject",
-                $"{childProject.Name} is now under {parentProject.Name}.",
-                ProjectId: childProjectId,
-                ArtifactKind: "project",
-                ArtifactId: childProjectId,
-                Route: $"/projects?projectId={childProjectId}"),
-                cancellationToken));
-        return Result.Success();
-    }
-
-    public async Task<Result> RemoveSubprojectAsync(
+    public Task<Result> RemoveSubprojectAsync(
         Guid parentProjectId,
         Guid childProjectId,
         CancellationToken cancellationToken = default,
         ProjectMutationAuthorization? authorization = null)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
-            dbContext,
-            BuildProjectHierarchyMutationScopeKeys(
-                parentProjectId,
-                childProjectId),
-            ProjectMutationPurpose.HierarchyWrite, childProjectId, [parentProjectId, childProjectId], authorization,
-            writeAdmissionService, coordinatedTransaction, cancellationToken);
-        var link = await dbContext.Set<ProjectHierarchyLink>()
-            .FirstOrDefaultAsync(
-                item => item.ParentProjectId == parentProjectId && item.ChildProjectId == childProjectId,
-                cancellationToken);
-        if (link is null)
-        {
-            return Result.Failure(Error.Validation("The selected project relationship does not exist."));
-        }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
-        var projects = await dbContext.Set<Project>()
-            .Where(project => project.Id == parentProjectId || project.Id == childProjectId)
-            .ToDictionaryAsync(project => project.Id, cancellationToken);
-        if (!projects.TryGetValue(parentProjectId, out var parentProject) ||
-            !projects.TryGetValue(childProjectId, out var childProject))
-        {
-            return Result.Failure(Error.Validation("The selected project relationship is no longer valid."));
-        }
-
-        dbContext.Remove(link);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        await RunPostCommitActionAsync(
-            "activity-subproject-detach",
-            childProjectId,
-            () => activityStream.RecordAsync(new ActivityWriteRequest(
-                "projects",
-                "detach-subproject",
-                "Detached subproject",
-                $"{childProject.Name} was detached from {parentProject.Name}.",
-                ProjectId: childProjectId,
-                ArtifactKind: "project",
-                ArtifactId: childProjectId,
-                Route: $"/projects?projectId={childProjectId}"),
-                cancellationToken));
-        return Result.Success();
-    }
-
-    public async Task<Result> ReconnectSubprojectAsync(
+    public Task<Result> ReconnectSubprojectAsync(
         Guid childProjectId,
         Guid currentParentProjectId,
         Guid newParentProjectId,
         CancellationToken cancellationToken = default,
         ProjectMutationAuthorization? authorization = null,
         IReadOnlyCollection<ProjectWriteAdmission>? expectedProjectAdmissions = null)
-    {
-        if (currentParentProjectId == newParentProjectId)
-        {
-            return Result.Failure(Error.Validation("Choose a different project before reconnecting the subproject."));
-        }
-
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var mutationScope = await ProjectSourceMutationScope.BeginAsync(
-            dbContext,
-            BuildProjectHierarchyMutationScopeKeys(
-                childProjectId,
-                currentParentProjectId,
-                newParentProjectId),
-            ProjectMutationPurpose.HierarchyWrite, childProjectId, [childProjectId, currentParentProjectId, newParentProjectId], authorization,
-            writeAdmissionService, coordinatedTransaction, cancellationToken, expectedProjectAdmissions: expectedProjectAdmissions);
-        var currentLink = await dbContext.Set<ProjectHierarchyLink>()
-            .FirstOrDefaultAsync(
-                link => link.ParentProjectId == currentParentProjectId && link.ChildProjectId == childProjectId,
-                cancellationToken);
-        if (currentLink is null)
-        {
-            return Result.Failure(Error.Validation("The selected source parent is not connected to this subproject."));
-        }
-
-        var projects = await dbContext.Set<Project>()
-            .Where(project =>
-                project.Id == childProjectId ||
-                project.Id == currentParentProjectId ||
-                project.Id == newParentProjectId)
-            .ToDictionaryAsync(project => project.Id, cancellationToken);
-        if (!projects.TryGetValue(childProjectId, out var childProject))
-        {
-            return Result.Failure(Error.Validation("The selected subproject could not be found."));
-        }
-
-        if (!projects.TryGetValue(currentParentProjectId, out var currentParentProject))
-        {
-            return Result.Failure(Error.Validation("The selected source parent project could not be found."));
-        }
-
-        if (!projects.TryGetValue(newParentProjectId, out var newParentProject))
-        {
-            return Result.Failure(Error.Validation("The selected target parent project could not be found."));
-        }
-
-        var targetLink = await dbContext.Set<ProjectHierarchyLink>()
-            .FirstOrDefaultAsync(
-                link => link.ParentProjectId == newParentProjectId && link.ChildProjectId == childProjectId,
-                cancellationToken);
-        if (targetLink is null)
-        {
-            var cycleError = await ValidateHierarchyConnectionAsync(dbContext, newParentProjectId, childProjectId, cancellationToken);
-            if (cycleError is not null)
-            {
-                return Result.Failure(cycleError);
-            }
-
-            await dbContext.Set<ProjectHierarchyLink>().AddAsync(
-                new ProjectHierarchyLink
-                {
-                    ParentProjectId = newParentProjectId,
-                    ChildProjectId = childProjectId,
-                    CreatedAtUtc = clock.GetUtcNow()
-                },
-                cancellationToken);
-        }
-
-        dbContext.Remove(currentLink);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
-        await RunPostCommitActionAsync(
-            "activity-subproject-reconnect",
-            childProjectId,
-            () => activityStream.RecordAsync(new ActivityWriteRequest(
-                "projects",
-                "reconnect-subproject",
-                "Reconnected subproject",
-                $"{childProject.Name} moved from {currentParentProject.Name} to {newParentProject.Name}.",
-                ProjectId: childProjectId,
-                ArtifactKind: "project",
-                ArtifactId: childProjectId,
-                Route: $"/projects?projectId={childProjectId}"),
-                cancellationToken));
-        return Result.Success();
-    }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
     public Task<Result<ProjectDefinitionSnapshot>> GetDefinitionAsync(Guid id, CancellationToken cancellationToken = default)
         => definitionReader.ReadAsync(id, cancellationToken);
@@ -730,14 +528,6 @@ public sealed partial class ProjectsService(
             .ToArray();
     }
 
-    private static string[] BuildProjectHierarchyMutationScopeKeys(
-        params Guid?[] projectIds)
-        => BuildProjectMutationScopeKeys(projectIds)
-            .Append(ProjectMutationScopeKeys.Hierarchy)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-
     private async Task RunPostCommitActionAsync(
         string action,
         Guid projectId,
@@ -768,214 +558,9 @@ public sealed partial class ProjectsService(
         };
     }
 
-    public async Task<ProjectDeletionResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default,
+    public Task<ProjectDeletionResult> DeleteAsync(Guid id, CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null)
-        => await DeleteCoreAsync(id, cancellationToken, expectedProjectAdmission: expectedProjectAdmission)
-            ?? throw new InvalidOperationException("An ordinary project deletion returned a creation-compensation refusal.");
-
-    private async Task<ProjectDeletionResult?> DeleteCoreAsync(Guid id, CancellationToken cancellationToken,
-        ProjectCreationReceipt? creationReceipt = null, ProjectWriteAdmission? expectedProjectAdmission = null) {
-        ProjectsDbContext? dbContext = null;
-        ProjectSourceMutationScope? mutationScope = null;
-        Project? project = null;
-        Exception? ownerFailure = null;
-        var compensationRefused = false;
-        var preparedParticipants = new List<(IProjectDeletionParticipant Participant, ProjectDeletionParticipantPreparation Preparation)>();
-        try {
-            var profile = canonicalDatabase.Profile;
-            var generation = canonicalDatabase.Generation;
-            var binding = profile.Profile.ProviderKind == DatabaseProviderKind.PostgreSql
-                ? await datasetActivation.ReadActiveBindingAsync(profile.Profile.Id, cancellationToken)
-                : null;
-            dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            coordinatedTransaction.RequireOwnerProfile(dbContext);
-            CoordinatedDatabaseTransaction.ForProfile(profile).RequireOwnerProfile(dbContext);
-            void RequireCurrentOwner() {
-                if (canonicalDatabase.Profile != profile || canonicalDatabase.Generation != generation) {
-                    throw new InvalidOperationException("The original project deletion database owner is no longer current.");
-                }
-            }
-            RequireCurrentOwner();
-            var orderedParticipants = GetOrderedDeletionParticipants();
-            var mutationScopeKeys = ResolveDeletionPreparationScopeKeys(orderedParticipants)
-                .Append(ProjectMutationScopeKeys.ForProject(id))
-                .Append(ProjectMutationScopeKeys.Hierarchy)
-                .Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal)
-                .ToArray();
-            var purpose = creationReceipt?.Reservation?.ParentProjectId is not null ? ProjectMutationPurpose.CreateChild :
-                creationReceipt is not null ? ProjectMutationPurpose.CreateRoot : ProjectMutationPurpose.ExistingWrite;
-            var existingIds = creationReceipt?.Authorization?.ExpectedProjects.Select(item => item.ProjectId).ToArray() ?? [];
-            mutationScope = binding is not null
-                ? await ProjectSourceMutationScope.BeginDeletionAsync(dbContext, mutationScopeKeys, purpose, id, existingIds,
-                    creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, binding, RequireCurrentOwner,
-                    cancellationToken, creationReceipt?.Reservation)
-                : await ProjectSourceMutationScope.BeginAsync(dbContext, mutationScopeKeys, purpose, id, existingIds,
-                    creationReceipt?.Authorization, writeAdmissionService, coordinatedTransaction, cancellationToken, creationReceipt?.Reservation);
-            project = await dbContext.Set<Project>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-            if (expectedProjectAdmission is not null) {
-                ProjectAssignmentAdmission.Require(id, expectedProjectAdmission);
-                await writeAdmissionService.RequireAsync(dbContext, expectedProjectAdmission, cancellationToken);
-            }
-            if (creationReceipt is not null && !await CanCompensateCreationAsync(dbContext, creationReceipt, cancellationToken)) {
-                compensationRefused = true;
-            } else {
-                RequireCurrentOwner();
-                using (coordinatedTransaction.Enter(dbContext)) {
-                    foreach (var participant in orderedParticipants) {
-                        var preparation = await participant.PrepareAsync(id, cancellationToken);
-                        if (preparation is null) {
-                            continue;
-                        }
-
-                        if (preparation.RecoveryId == Guid.Empty) {
-                            throw new InvalidOperationException(
-                                $"Project deletion participant '{participant.Id}' returned an empty recovery id.");
-                        }
-
-                        if (preparation.ProjectId != id) {
-                            throw new InvalidOperationException(
-                                $"Project deletion participant '{participant.Id}' returned recovery state for another project.");
-                        }
-
-                        preparedParticipants.Add((participant, preparation));
-                    }
-
-                    if (creationReceipt?.Reservation is { } originalReservation) {
-                        await writeAdmissionService.CancelConsumedCreationForCompensationAsync(dbContext, originalReservation, cancellationToken);
-                    }
-                    await ProjectWriteAdmissionService.CancelCreationForDeletionAsync(dbContext, id, cancellationToken);
-                    if (project is not null) {
-                        var phases = await dbContext.Set<ProjectPhase>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-                        var options = await dbContext.Set<ProjectOptionSelection>().Where(item => item.ProjectId == id).ToListAsync(cancellationToken);
-                        var hierarchyLinks = await dbContext.Set<ProjectHierarchyLink>()
-                            .Where(item => item.ParentProjectId == id || item.ChildProjectId == id)
-                            .ToListAsync(cancellationToken);
-                        dbContext.RemoveRange(phases);
-                        dbContext.RemoveRange(options);
-                        dbContext.RemoveRange(hierarchyLinks);
-                        dbContext.Add(new ProjectRetirementRecord {
-                            ProjectId = project.Id, LifetimeId = project.LifetimeId, RetiredAtUtc = clock.GetUtcNow()
-                        });
-                        dbContext.Remove(project);
-                    }
-
-                    await searchMutationService.DeleteProjectSearchForMutationAsync(id, cancellationToken);
-                    await storageCatalogService.DeleteProjectRoutingForMutationAsync(id, cancellationToken);
-
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                }
-                await mutationScope.CommitAsync(cancellationToken);
-            }
-        } catch (Exception failure) {
-            ownerFailure = failure;
-        }
-        if (mutationScope is not null) {
-            try {
-                await mutationScope.DisposeAsync();
-            } catch (Exception failure) {
-                ownerFailure = ownerFailure is null ? failure : new AggregateException(ownerFailure, failure);
-            }
-        }
-        if (dbContext is not null) {
-            try {
-                await dbContext.DisposeAsync();
-            } catch (Exception failure) {
-                ownerFailure = ownerFailure is null ? failure : new AggregateException(ownerFailure, failure);
-            }
-        }
-        if (ownerFailure is not null) {
-            try {
-                logger.LogError("Project {ProjectId} deletion owner failed with {FailureType}. CommitAttempted={CommitAttempted}; CommitAcknowledged={CommitAcknowledged}.",
-                    id, ownerFailure.GetType().FullName, mutationScope?.CommitAttempted == true, mutationScope?.IsCommitted == true);
-            } catch (Exception loggingFailure) {
-                ownerFailure = new AggregateException(ownerFailure, loggingFailure);
-            }
-            if (mutationScope?.IsCommitted == true) {
-                throw OwnerCompletionFailure(preparedParticipants, ownerFailure);
-            }
-            ExceptionDispatchInfo.Capture(ownerFailure).Throw();
-        }
-        if (compensationRefused) {
-            return null;
-        }
-
-        var failures = new List<ProjectDeletionRecoveryFailure>();
-        var failureExceptions = new List<Exception>();
-        var warnings = new List<ProjectDeletionWarning>();
-        var completedParticipants = 0;
-        try {
-            if (project is not null) {
-                await RunPostCommitActionAsync(
-                    "activity-project-delete",
-                    id,
-                    () => activityStream.RecordAsync(new ActivityWriteRequest(
-                        "projects",
-                        "delete",
-                        "Deleted project",
-                        project.Name,
-                        ProjectId: id,
-                        ArtifactKind: "project",
-                        ArtifactId: id,
-                        Route: "/projects"), cancellationToken));
-            }
-
-            foreach (var (participant, preparation) in preparedParticipants) {
-                try {
-                    var completion = await participant.CompleteAsync(preparation, cancellationToken);
-                    ValidateParticipantCompletion(participant, preparation, completion);
-                    warnings.AddRange(completion.Warnings.Select(warning => new ProjectDeletionWarning(
-                        warning.Kind,
-                        participant.Id,
-                        completion.RecoveryId,
-                        warning.RetainedObject,
-                        warning.Message,
-                        warning.Remediation)));
-                } catch (Exception exception) {
-                    var failedRecoveryId = exception is ProjectDeletionParticipantCleanupException cleanupException
-                        ? cleanupException.RecoveryId
-                        : preparation.RecoveryId;
-                    failures.Add(new ProjectDeletionRecoveryFailure(
-                        ProjectDeletionRecoveryOperation.ParticipantCleanup,
-                        participant.Id,
-                        failedRecoveryId));
-                    failureExceptions.Add(exception);
-                    logger.LogError("Project {ProjectId} committed deletion; participant {Participant} cleanup for recovery {RecoveryId} failed with {FailureType}.",
-                        id, participant.Id, preparation.RecoveryId, exception.GetType().FullName);
-                }
-                completedParticipants++;
-            }
-
-            await RecordDeletionWarningsAsync(id, warnings, cancellationToken);
-
-            if (failures.Count == 0) {
-                return new ProjectDeletionResult(id, warnings);
-            }
-
-            var recovery = new ProjectDeletionRecovery(id, failures.ToArray(), DeleteRetryGuidance);
-            var innerException = failureExceptions.Count == 1
-                ? failureExceptions[0]
-                : new AggregateException(failureExceptions);
-            throw new ProjectDeletionPartialCommitException(
-                recovery,
-                $"Project '{id:D}' was deleted, but cleanup is incomplete. {DeleteRetryGuidance}",
-                innerException);
-        } catch (ProjectDeletionPartialCommitException) {
-            throw;
-        } catch (Exception failure) {
-            var pending = failures.Concat(preparedParticipants.Skip(completedParticipants).Select(item =>
-                new ProjectDeletionRecoveryFailure(ProjectDeletionRecoveryOperation.ParticipantCleanup,
-                    item.Participant.Id, item.Preparation.RecoveryId))).Distinct().ToArray();
-            throw new ProjectDeletionPartialCommitException(new(id, pending, DeleteOwnerReviewGuidance, true),
-                DeleteOwnerReviewGuidance, failureExceptions.Count == 0 ? failure : new AggregateException(failureExceptions.Append(failure)));
-        }
-
-        ProjectDeletionPartialCommitException OwnerCompletionFailure(
-            IEnumerable<(IProjectDeletionParticipant Participant, ProjectDeletionParticipantPreparation Preparation)> pending, Exception failure)
-            => new(new(id, pending.Select(item => new ProjectDeletionRecoveryFailure(
-                ProjectDeletionRecoveryOperation.ParticipantCleanup, item.Participant.Id, item.Preparation.RecoveryId)).ToArray(),
-                DeleteOwnerReviewGuidance, true), DeleteOwnerReviewGuidance, failure);
-    }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
     public async Task<IReadOnlyList<ProjectDeletionPendingCleanup>> ListPendingDeletionCleanupsAsync(
         CancellationToken cancellationToken = default)
@@ -1158,30 +743,6 @@ public sealed partial class ProjectsService(
         return orderedParticipants;
     }
 
-    private static IReadOnlyList<string> ResolveDeletionPreparationScopeKeys(
-        IReadOnlyCollection<IProjectDeletionParticipant> participants)
-    {
-        var scopeKeys = new List<string>();
-        foreach (var participant in participants)
-        {
-            var participantScopeKeys = participant.PreparationScopeKeys
-                ?? throw new InvalidOperationException(
-                    $"Project deletion participant '{participant.Id}' returned a null preparation scope-key collection.");
-            foreach (var scopeKey in participantScopeKeys)
-            {
-                if (string.IsNullOrWhiteSpace(scopeKey.Value))
-                {
-                    throw new InvalidOperationException(
-                        $"Project deletion participant '{participant.Id}' returned an empty preparation scope key.");
-                }
-
-                scopeKeys.Add(scopeKey.Value);
-            }
-        }
-
-        return scopeKeys;
-    }
-
     private static void ValidateParticipantCompletion(
         IProjectDeletionParticipant participant,
         ProjectDeletionParticipantPreparation preparation,
@@ -1303,56 +864,6 @@ public sealed partial class ProjectsService(
             parentCounts,
             childCounts,
             links.Select(link => new ProjectHierarchyLinkSummary(link.ParentProjectId, link.ChildProjectId, link.CreatedAtUtc)).ToList());
-    }
-
-    private static async Task<Error?> ValidateHierarchyConnectionAsync(
-        ProjectsDbContext dbContext,
-        Guid parentProjectId,
-        Guid childProjectId,
-        CancellationToken cancellationToken)
-    {
-        if (parentProjectId == childProjectId)
-        {
-            return Error.Validation("A project cannot be attached as its own subproject.");
-        }
-
-        var links = await dbContext.Set<ProjectHierarchyLink>()
-            .Select(link => new { link.ParentProjectId, link.ChildProjectId })
-            .ToListAsync(cancellationToken);
-        var childrenByParent = links
-            .GroupBy(link => link.ParentProjectId)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(link => link.ChildProjectId).ToList());
-        var visited = new HashSet<Guid>();
-        var queue = new Queue<Guid>();
-        queue.Enqueue(childProjectId);
-
-        while (queue.Count > 0)
-        {
-            var currentProjectId = queue.Dequeue();
-            if (!visited.Add(currentProjectId))
-            {
-                continue;
-            }
-
-            if (currentProjectId == parentProjectId)
-            {
-                return Error.Validation("Connecting these projects would create a cycle in the project hierarchy.");
-            }
-
-            if (!childrenByParent.TryGetValue(currentProjectId, out var descendantIds))
-            {
-                continue;
-            }
-
-            foreach (var descendantId in descendantIds)
-            {
-                queue.Enqueue(descendantId);
-            }
-        }
-
-        return null;
     }
 
     private static string BuildSlug(string input)

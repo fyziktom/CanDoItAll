@@ -1,8 +1,11 @@
 # Concurrent mutations architecture
 
-Current implementation handoff: [2026-10-17 checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-17-checkpoint-handoff.md).
-Work stopped at the user's request to conserve credits. The final C4 correctness
-candidate passed 706/706; the additional native chat browser proof remains unresolved.
+Current implementation: [2026-10-18 resumption](../../../codex/bundles/concurrent-mutations/validation/2026-10-18-resumption.md)
+and [lifecycle integration](../../../codex/bundles/concurrent-mutations/validation/2026-10-18-lifecycle-integration.md).
+Work has resumed. The historical C4 correctness candidate passed 706/706; the additional
+native chat browser proof now passes. Lifecycle owners and retained native/API operations
+are integrated, and six actual Agent/Process restart scenarios pass. SPA remains on its
+own branch named "codex/concurrent-mutations" pending consultation with its maintainer.
 Persisted policy editing does not yet enforce snapshot/refresh/replan across execution.
 Lifecycle, remaining owners, measured performance gaps and cleanup still block E2E closure.
 
@@ -101,6 +104,7 @@ Detailed design:
 - [Caller, dataset and operation-retention lifecycle](06-operation-lifecycle-contract.md)
 - [Exact Projects contracts and caller cutover](07-projects-contract-cutover.md)
 - [File publication and explicit recovery](08-file-publication-recovery.md)
+- [Offline deletion recovery operations](09-deletion-recovery-operations.md)
 
 ## Invariants
 

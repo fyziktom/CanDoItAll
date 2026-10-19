@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Infrastructure;
 
-public enum DatasetActivationCommandKind { Bootstrap, Attach, Reactivate, Resume, AttachSupersededBootstrap }
+public enum DatasetActivationCommandKind { Bootstrap, Attach, Reactivate, Resume, AttachSupersededBootstrap, RestorePrevious }
 
 public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind, Guid ProfileId,
     DatasetNamespaceId? ExpectedNamespace, Guid? MaintenanceId, Guid? ExpectedPlanId) {
@@ -37,6 +37,7 @@ public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind,
             "reactivate" => DatasetActivationCommandKind.Reactivate,
             "resume" => DatasetActivationCommandKind.Resume,
             "attach-superseded-bootstrap" => DatasetActivationCommandKind.AttachSupersededBootstrap,
+            "restore-previous" => DatasetActivationCommandKind.RestorePrevious,
             _ => throw new ArgumentException("Unsupported dataset activation action.")
         };
         var values = new Dictionary<string, Guid>(StringComparer.Ordinal);
@@ -61,7 +62,8 @@ public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind,
         }
         string[] required = kind switch {
             DatasetActivationCommandKind.Reactivate => [ProfileOption, NamespaceOption, MaintenanceOption],
-            DatasetActivationCommandKind.AttachSupersededBootstrap => [ProfileOption, NamespaceOption, PlanOption],
+            DatasetActivationCommandKind.AttachSupersededBootstrap or DatasetActivationCommandKind.RestorePrevious
+                => [ProfileOption, NamespaceOption, PlanOption],
             _ => [ProfileOption]
         };
         if (values.Count != required.Length || required.Any(option => !values.ContainsKey(option))) {
@@ -73,6 +75,10 @@ public sealed record DatasetActivationCommand(DatasetActivationCommandKind Kind,
     }
 
     public async Task RunAsync(CancellationToken cancellationToken = default) {
+        if (Kind == DatasetActivationCommandKind.RestorePrevious) {
+            Environment.ExitCode = await DatasetActivationRestorationCommand.RunAsync(this, cancellationToken);
+            return;
+        }
         var builder = WebApplication.CreateBuilder(Array.Empty<string>());
         DatabasePasswordFileConfiguration.Apply(builder.Configuration, builder.Environment.ContentRootPath);
         builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Composition.ModuleAssemblies.All);

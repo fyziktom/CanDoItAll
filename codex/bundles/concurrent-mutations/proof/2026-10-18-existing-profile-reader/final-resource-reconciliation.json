@@ -1,0 +1,36 @@
+{
+  "recordedUtc": "2026-10-18T22:24:30.3762019+00:00",
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-a04-key-ring-tests\\4695b917fec54d27a943c8b3609ea0f8",
+      "family": "candoitall-a04-key-ring-tests"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\f87fa2b3-27b6-4a0b-8116-535a0962b7ca.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\4h20nai1.j50",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\omrauwkl.srl",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\00af1b76-4732-45d4-a1d9-19dc3396cebe.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_3000_20261018_182337_945.log",
+      "family": "anonymous-and-package-temp-files"
+    }
+  ],
+  "databaseNameDelta": [],
+  "remainingObservedProcesses": [],
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "outcome": "Read-only profile and key repository plus native owner regressions passed."
+}

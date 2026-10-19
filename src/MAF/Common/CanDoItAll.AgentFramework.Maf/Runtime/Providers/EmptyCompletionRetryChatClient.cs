@@ -33,6 +33,10 @@ internal sealed class EmptyCompletionRetryChatClient(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (MafPlanningStepContext.Current is not null) {
+            Report(1, ProviderEmptyCompletionOutcome.SuppressedPlanning);
+            return firstResponse;
+        }
         if (allowBackgroundResponses)
         {
             Report(1, ProviderEmptyCompletionOutcome.SuppressedBackground);
@@ -294,6 +298,13 @@ internal sealed class EmptyCompletionRetryChatClient(
                     provider.Transport,
                     attempt,
                     MaximumProviderAttempts);
+                break;
+            case ProviderEmptyCompletionOutcome.SuppressedPlanning:
+                logger?.LogWarning(
+                    "Provider {ProviderName} model {Model} transport {Transport} returned an empty planning response; the admitted input cannot be changed by a provider retry.",
+                    provider.Name,
+                    model,
+                    provider.Transport);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown provider empty-completion outcome.");

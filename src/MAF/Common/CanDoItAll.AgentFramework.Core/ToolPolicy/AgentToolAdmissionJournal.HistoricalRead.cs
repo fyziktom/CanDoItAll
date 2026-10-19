@@ -44,13 +44,11 @@ public sealed partial class AgentToolAdmissionJournal {
             var run = original.Run;
             var journal = run.ToolAdmission!;
             journal.Validate();
-            if (journal.SchemaVersion != AgentToolJournalRecord.EffectJournalSchemaVersion ||
+            if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion) ||
                 journal.Support != AgentToolAdmissionSupport.EffectJournalOnly) {
                 return Refuse(AgentHistoricalReceiptReviewStop.Unsupported);
             }
-            var observation = new AgentToolSessionObservation(journal.Session,
-                AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson),
-                AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson));
+            var observation = AgentToolSessionObservation.From(run);
             async ValueTask RequireReadCoreAsync(CancellationToken token) {
                 var decision = await currentRead(observation, fence, token);
                 if (decision != AgentHistoricalReceiptReadPolicy.Allowed) {
@@ -129,11 +127,12 @@ public sealed partial class AgentToolAdmissionJournal {
                         continue;
                     }
                     var admission = new AgentToolHistoricalReceiptReadAdmission(request, journal.Session, binding, proposal.Payload,
-                        fence, run.Revision, journal.Revision);
+                        fence, run.Revision, journal.Revision) { Planning = observation.Planning };
                     var claim = new AgentToolHistoricalReceiptReadClaim(admission, (_, token) => {
                         basis.RequireCurrent(token);
                         return ValueTask.CompletedTask;
-                    });
+                    }, new(journal.Session, binding, run.Revision, journal.Revision,
+                        AgentToolPriorInvocationEvidence.Capture(journal, binding), null));
                     AgentToolHistoricalReceiptObservation observed;
                     try {
                         observed = await claim.ReadAsync(matches[0], budget.Token);

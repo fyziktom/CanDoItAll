@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -40,6 +41,8 @@ public sealed record AgentToolHistoricalReceiptReadAdmission {
     public AgentHistoricalReceiptReadFence CurrentFence { get; }
     public long RunRevision { get; }
     public long JournalRevision { get; }
+    [JsonIgnore]
+    public AgentPlanningDecisionObservation? Planning { get; internal init; }
 }
 
 public sealed record AgentToolHistoricalReceiptObservation {
@@ -66,15 +69,18 @@ public sealed class AgentToolHistoricalReceiptReadClaim {
     private enum ClaimState { Created, Active, Retired }
     private readonly AgentToolHistoricalReceiptReadAdmission admission;
     private readonly Func<AgentToolHistoricalReceiptReadAdmission, CancellationToken, ValueTask> validateCurrentRead;
+    private readonly AgentToolPriorReceiptObservation? priorInvocations;
     private CancellationToken readCancellation;
     private int state;
 
     internal AgentToolHistoricalReceiptReadClaim(AgentToolHistoricalReceiptReadAdmission admission,
-        Func<AgentToolHistoricalReceiptReadAdmission, CancellationToken, ValueTask> validateCurrentRead) {
+        Func<AgentToolHistoricalReceiptReadAdmission, CancellationToken, ValueTask> validateCurrentRead,
+        AgentToolPriorReceiptObservation? priorInvocations = null) {
         ArgumentNullException.ThrowIfNull(admission);
         ArgumentNullException.ThrowIfNull(validateCurrentRead);
         this.admission = admission;
         this.validateCurrentRead = validateCurrentRead;
+        this.priorInvocations = priorInvocations;
     }
 
     public async ValueTask<AgentToolHistoricalReceiptReadAdmission> RequireAsync(CancellationToken cancellationToken = default) {
@@ -87,6 +93,16 @@ public sealed class AgentToolHistoricalReceiptReadClaim {
         effective.ThrowIfCancellationRequested();
         RequireActive();
         return admission;
+    }
+
+    public async ValueTask<AgentToolPriorReceiptObservation> RequirePriorInvocationsAsync(CancellationToken cancellationToken = default) {
+        var original = await RequireAsync(cancellationToken);
+        if (priorInvocations is null || priorInvocations.Session != original.OriginalSession ||
+                priorInvocations.Current != original.Binding || priorInvocations.RunRevision != original.RunRevision ||
+                priorInvocations.JournalRevision != original.JournalRevision) {
+            throw new NotSupportedException("This historical claim has no original owner-verified invocation prefix.");
+        }
+        return priorInvocations;
     }
 
     internal async ValueTask<AgentToolHistoricalReceiptObservation> ReadAsync(IAgentToolHistoricalReceiptReadProvider provider,

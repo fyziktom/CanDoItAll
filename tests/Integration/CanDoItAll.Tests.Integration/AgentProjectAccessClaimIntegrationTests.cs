@@ -212,7 +212,7 @@ public sealed class AgentProjectAccessClaimIntegrationTests {
         workspace!, factory ?? services.GetRequiredService<IDbContextFactory<AgentProjectAccessDbContext>>(), timeProvider ?? TimeProvider.System,
         NullLogger<AgentProjectStructureAccessDeletionParticipant>.Instance, services.GetRequiredService<DbContextOptions<AgentProjectAccessDbContext>>(),
         services.GetRequiredService<CoordinatedDatabaseTransaction>(), options ?? AgentProjectAccessClaimOptions.Default,
-        services.GetRequiredService<ProjectWriteAdmissionService>());
+        services.GetRequiredService<ProjectWriteAdmissionService>(), services.GetRequiredService<IProjectDeletionCompletionQuery>());
 
     private static TestHarnessOptions Harness(AgentProjectAccessClaimOptions? options = null,
         CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null) => new() {

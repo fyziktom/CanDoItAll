@@ -12,18 +12,26 @@ internal static class ProjectDefinitionHttpBody {
     private static readonly ProjectDefinitionLimits Limits = ProjectDefinitionLimits.VersionOneMaximum;
 
     internal static async Task<ProjectDefinitionRequest<T>> ReadAsync<T>(HttpRequest request, JsonSerializerOptions configured,
+        CancellationToken cancellationToken) where T : class
+        => await ReadObjectAsync<ProjectDefinitionRequest<T>>(request, configured, Limits.MaxRawRequestBytes, cancellationToken);
+
+    internal static Task<ProjectLifecycleApiSubmission> ReadLifecycleAsync(HttpRequest request, JsonSerializerOptions configured,
+        CancellationToken cancellationToken)
+        => ReadObjectAsync<ProjectLifecycleApiSubmission>(request, configured, ProjectLifecycleAccepted.MaximumPayloadBytes, cancellationToken);
+
+    private static async Task<T> ReadObjectAsync<T>(HttpRequest request, JsonSerializerOptions configured, int maximumBytes,
         CancellationToken cancellationToken) where T : class {
         if (!request.HasJsonContentType()) {
             throw new BadHttpRequestException("A protected definition request requires JSON.", StatusCodes.Status415UnsupportedMediaType);
         }
-        if (request.ContentLength > Limits.MaxRawRequestBytes) {
+        if (request.ContentLength > maximumBytes) {
             throw TooLarge();
         }
         using var content = new MemoryStream();
         var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         try {
             while (true) {
-                var remaining = Limits.MaxRawRequestBytes - checked((int)content.Length);
+                var remaining = maximumBytes - checked((int)content.Length);
                 var read = await request.Body.ReadAsync(buffer.AsMemory(0, Math.Min(buffer.Length, remaining + 1)), cancellationToken);
                 if (read == 0) {
                     break;
@@ -44,7 +52,7 @@ internal static class ProjectDefinitionHttpBody {
             ReadCommentHandling = JsonCommentHandling.Disallow,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
         };
-        return JsonSerializer.Deserialize<ProjectDefinitionRequest<T>>(bytes, json)
+        return JsonSerializer.Deserialize<T>(bytes, json)
             ?? throw new JsonException("A definition request must be an object.");
     }
 

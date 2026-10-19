@@ -22,6 +22,7 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
     private readonly MafStreamingTurnExecutor streamingTurnExecutor;
     private readonly AgentToolAdmissionJournal? toolAdmissionJournal;
     private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
+    private readonly MafSavedEffectDispatcher? savedEffectDispatcher;
 
     public MafAgentContinuationAdapter(
         string workspaceRoot,
@@ -32,7 +33,8 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         IMafApprovalContinuationDriver approvalContinuationDriver,
         MafStreamingTurnExecutor streamingTurnExecutor,
         AgentToolAdmissionJournal? toolAdmissionJournal = null,
-        IMafRuntimeSessionPersistenceDriver? sessionPersistenceDriver = null)
+        IMafRuntimeSessionPersistenceDriver? sessionPersistenceDriver = null,
+        MafSavedEffectDispatcher? savedEffectDispatcher = null)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -52,7 +54,17 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
         this.streamingTurnExecutor = streamingTurnExecutor ?? throw new ArgumentNullException(nameof(streamingTurnExecutor));
         this.toolAdmissionJournal = toolAdmissionJournal;
         this.sessionPersistenceDriver = sessionPersistenceDriver ?? new MafRuntimeSessionPersistenceDriver();
+        this.savedEffectDispatcher = savedEffectDispatcher;
     }
+
+    public AgentSavedEffectDispatchSupport SavedEffectDispatchSupport => savedEffectDispatcher is null
+        ? AgentSavedEffectDispatchSupport.Unsupported
+        : AgentSavedEffectDispatchSupport.OriginalPreparedOwnerEffect;
+
+    public Task<AgentSavedEffectDispatchResult> DispatchSavedEffectAsync(AgentSavedEffectDispatchRequest request,
+        CancellationToken cancellationToken = default)
+        => (savedEffectDispatcher ?? throw new NotSupportedException("This runtime has no saved-effect journal and catalog composition."))
+            .DispatchAsync(request, cancellationToken);
 
     public async Task<AgentRuntimeResponse> ContinueAsync(
         AgentRuntimeContinuationRequest request,

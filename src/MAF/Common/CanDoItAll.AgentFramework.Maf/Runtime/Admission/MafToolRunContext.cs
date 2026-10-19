@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -383,7 +382,7 @@ internal sealed class MafToolRunContext {
         if (claim.Proposal.State == AgentToolProposalState.Completed) {
             await PauseForPendingNativeApprovalAsync(cancellationToken);
             await using var disclosure = await AuthorizeDisclosureAsync(claim.Proposal, cancellationToken);
-            return RestoreResult(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."), claim.Proposal.EffectState);
+            return MafToolResultCheckpointCodec.Restore(claim.Proposal.Result ?? throw Denied("The completed invocation has no saved result."), claim.Proposal.EffectState);
         }
 
         var invocationEnteredAfterAuthorization = false;
@@ -431,7 +430,7 @@ internal sealed class MafToolRunContext {
                     "A current denial cannot resolve the earlier dispatched effect. The original outcome evidence requires owner reconciliation.");
             }
 
-            var checkpoint = CaptureResult(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
+            var checkpoint = MafToolResultCheckpointCodec.Capture(result, effectScope.PreDispatchFailure, effectScope.CommittedEffect);
             var effect = effectScope.CommittedEffect is not null ? AgentToolEffectState.Committed :
                 MafRuntimeToolInvocationResultClassifier.Assess(call.Name,
                     toolPolicies.Classify(call.Name), result, effectScope.PreDispatchFailure, effectScope.RejectedBeforeEffect).EffectState;
@@ -442,7 +441,7 @@ internal sealed class MafToolRunContext {
                 completedInCurrentInvocation.Add(claim.Proposal.IntentId);
             }
             await PauseForPendingNativeApprovalAsync(cancellationToken);
-            return RestoreResult(checkpoint, effect);
+            return MafToolResultCheckpointCodec.Restore(checkpoint, effect);
         } catch {
             try {
                 await journal.PreserveUncertainInvocationAsync(claim, CancellationToken.None);
@@ -531,7 +530,7 @@ internal sealed class MafToolRunContext {
         if (allowFreshResult && completedInCurrentInvocation.Contains(proposal.IntentId)) {
             return ValueTask.FromResult<IAsyncDisposable?>(null);
         }
-        var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(proposal.Result
+        var result = MafToolResultCheckpointCodec.Decode(proposal.Result
             ?? throw Denied("The completed invocation has no saved result."));
         if (result.PreDispatchFailure is not null) {
             // A pre-dispatch denial (policy, argument binding or source authority) never reached its owner: the saved
@@ -545,7 +544,7 @@ internal sealed class MafToolRunContext {
             registration.ToolNames.Contains(proposal.Payload.ToolName, StringComparer.Ordinal))?.AuthorizeResultDisclosureAsync;
         if (authorize is not null) {
             return authorize(new(proposal.IntentId, proposal.Payload, proposal.EffectState, result.Value,
-                proposal.DisclosureEvidence) { IsTypedFailure = result.Kind == ResultKind.TypedFailureJson }, cancellationToken);
+                proposal.DisclosureEvidence) { IsTypedFailure = result.Kind == MafToolResultKind.TypedFailureJson }, cancellationToken);
         }
 
         if (completedInCurrentInvocation.Contains(proposal.IntentId)) {
@@ -579,118 +578,7 @@ internal sealed class MafToolRunContext {
         return binding.BatchId;
     }
 
-    private static AgentToolProtocolEnvelope CaptureResult(object? value, AgentToolPreDispatchFailure? failure = null,
-        AgentToolCommittedEffect? committedEffect = null) {
-        if (failure is not null && committedEffect is not null) {
-            throw Denied("A committed owner acknowledgement cannot contain pre-dispatch failure evidence.");
-        }
-        if (failure is not null) {
-            if (value is AgentToolFailureResult hostFailure) {
-                RequireHostFailure(hostFailure, failure);
-            } else if (value is not string) {
-                throw Denied("A pre-dispatch denial requires its original text or typed host failure.");
-            }
-        }
-        var kind = value switch {
-            string when failure is not null => ResultKind.PreDispatchDeniedText,
-            AgentToolFailureResult when failure is not null => ResultKind.PreDispatchDeniedJson,
-            AgentToolFailureResult => ResultKind.TypedFailureJson,
-            BrowserMcpToolResult => ResultKind.BrowserMcp,
-            null => ResultKind.Null,
-            string => ResultKind.Text,
-            AIContent => ResultKind.Content,
-            IEnumerable<AIContent> => ResultKind.Contents,
-            _ => ResultKind.Json
-        };
-        var element = kind switch {
-            ResultKind.BrowserMcp => JsonSerializer.SerializeToElement(new BrowserMcpCheckpoint(
-                (BrowserMcpToolResult)value!, ((BrowserMcpToolResult)value!).CanonicalResult), MafToolProtocolCodec.SerializationOptions),
-            ResultKind.Content => JsonSerializer.SerializeToElement((AIContent)value!, MafToolProtocolCodec.SerializationOptions),
-            ResultKind.Contents => JsonSerializer.SerializeToElement(((IEnumerable<AIContent>)value!).ToArray(), MafToolProtocolCodec.SerializationOptions),
-            _ => JsonSerializer.SerializeToElement(value, MafToolProtocolCodec.SerializationOptions)
-        };
-        return MafToolProtocolCodec.Encode(committedEffect is null
-            ? new ResultCheckpoint(kind, element) { PreDispatchFailure = failure }
-            : new ResultCheckpoint(ResultKind.CommittedOwnerResult, element) {
-                CommittedEffect = committedEffect,
-                CommittedResultKind = kind
-            });
-    }
-
-    private static object? RestoreResult(AgentToolProtocolEnvelope saved, AgentToolEffectState savedEffect) {
-        var result = MafToolProtocolCodec.Decode<ResultCheckpoint>(saved);
-        var hasCommittedEvidence = result.CommittedEffect is not null || result.CommittedResultKind is not null;
-        if ((result.Kind == ResultKind.CommittedOwnerResult) != hasCommittedEvidence) {
-            throw Denied("The saved owner acknowledgement has incompatible result evidence.");
-        }
-        if (result.Kind == ResultKind.CommittedOwnerResult) {
-            if (savedEffect != AgentToolEffectState.Committed || result.PreDispatchFailure is not null ||
-                    result.CommittedEffect is not { } committed ||
-                    string.IsNullOrWhiteSpace(committed.SourceKind) || committed.SourceKind != committed.SourceKind.Trim() ||
-                    string.IsNullOrWhiteSpace(committed.SourceId) || committed.SourceId != committed.SourceId.Trim() ||
-                    result.CommittedResultKind is not (ResultKind.Null or ResultKind.Text or ResultKind.Content or
-                        ResultKind.Contents or ResultKind.Json or ResultKind.TypedFailureJson)) {
-                throw Denied("The saved owner acknowledgement does not match its committed journal outcome.");
-            }
-            result = result with { Kind = result.CommittedResultKind.Value };
-        }
-        if ((result.Kind is ResultKind.PreDispatchDeniedText or ResultKind.PreDispatchDeniedJson) != (result.PreDispatchFailure is not null)) {
-            throw Denied("The saved pre-dispatch denial has incompatible outcome evidence.");
-        }
-        if (result.PreDispatchFailure is { } failure) {
-            if (savedEffect != AgentToolEffectState.NotCommitted) {
-                throw Denied("The saved pre-dispatch denial does not match its journal outcome.");
-            }
-            if (result.Kind == ResultKind.PreDispatchDeniedJson) {
-                var hostFailure = result.Value.Deserialize<AgentToolFailureResult>(MafToolProtocolCodec.SerializationOptions)
-                    ?? throw Denied("The saved pre-dispatch host failure is empty.");
-                RequireHostFailure(hostFailure, failure);
-            }
-            AgentToolInvocationEffectScope.RecordPreDispatchFailure(failure);
-        }
-        object? value = result.Kind switch {
-            ResultKind.BrowserMcp => RestoreBrowserMcp(result.Value),
-            ResultKind.Null => null,
-            ResultKind.Text or ResultKind.PreDispatchDeniedText => result.Value.GetString(),
-            ResultKind.Content => result.Value.Deserialize<AIContent>(MafToolProtocolCodec.SerializationOptions),
-            ResultKind.Contents => result.Value.Deserialize<AIContent[]>(MafToolProtocolCodec.SerializationOptions),
-            ResultKind.Json or ResultKind.PreDispatchDeniedJson => result.Value,
-            ResultKind.TypedFailureJson => result.Value.Deserialize<AgentToolFailureResult>(MafToolProtocolCodec.SerializationOptions)
-                ?? throw Denied("The saved typed tool failure is empty."),
-            _ => throw Denied("The saved tool result shape is unsupported.")
-        };
-        if (result.CommittedEffect is { } acknowledgement) {
-            AgentToolInvocationEffectScope.RecordCommitted(acknowledgement.SourceKind, acknowledgement.SourceId);
-        }
-        return value;
-    }
-
-    private static BrowserMcpToolResult RestoreBrowserMcp(JsonElement value) {
-        var saved = value.Deserialize<BrowserMcpCheckpoint>(MafToolProtocolCodec.SerializationOptions)
-            ?? throw Denied("The saved browser MCP evidence is empty.");
-        return saved.Projection with { CanonicalResult = saved.CanonicalResult };
-    }
-
-    private sealed record BrowserMcpCheckpoint(BrowserMcpToolResult Projection, JsonElement CanonicalResult);
-
-    private static void RequireHostFailure(AgentToolFailureResult hostFailure, AgentToolPreDispatchFailure captured) {
-        if (hostFailure.Succeeded || hostFailure.EffectState != AgentToolEffectState.NotCommitted ||
-                hostFailure.ErrorCode != captured.FailureCode || hostFailure.Message != captured.SafeMessage ||
-                hostFailure.CanRetryWithCorrectedInput != captured.CanRetryWithCorrectedInput) {
-            throw Denied("The saved pre-dispatch host failure differs from its trusted outcome evidence.");
-        }
-    }
-
     private static AgentToolAdmissionException Denied(string message) => new("tool-admission.runtime-denied", message);
-    private enum ResultKind { Null, Text, Content, Contents, Json, PreDispatchDeniedText, PreDispatchDeniedJson, TypedFailureJson, CommittedOwnerResult, BrowserMcp }
-    private sealed record ResultCheckpoint(ResultKind Kind, JsonElement Value) {
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AgentToolPreDispatchFailure? PreDispatchFailure { get; init; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AgentToolCommittedEffect? CommittedEffect { get; init; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ResultKind? CommittedResultKind { get; init; }
-    }
     private sealed record RestartCheckpoint(string SerializedSessionStateJson, List<ChatMessage> Input,
         bool IsApprovalContinuation, PendingToolApprovalRecord[] PendingApprovals);
     private sealed class RestoreScope(MafToolRunContext? previous) : IDisposable {

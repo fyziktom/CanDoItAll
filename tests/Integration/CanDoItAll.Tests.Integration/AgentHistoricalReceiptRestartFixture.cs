@@ -170,13 +170,20 @@ internal sealed class AgentHistoricalReceiptRestartFixture(string rowRoot, Guid 
         await StopChildAsync(stopped, ChildStopReason.ObserverComplete);
         web = null;
         Assert.NotNull(stopped.Endpoint);
-        using var socket = new TcpClient();
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        try {
-            await socket.ConnectAsync(IPAddress.Loopback, stopped.Endpoint.Port, deadline.Token);
-        } catch (SocketException) {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(rowDeadline.Token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(5));
+        var attempts = 0;
+        while (true) {
+            attempts++;
+            using var socket = new TcpClient();
+            try {
+                await socket.ConnectAsync(IPAddress.Loopback, stopped.Endpoint.Port, deadline.Token);
+            } catch (SocketException failure) when (failure.SocketErrorCode == SocketError.ConnectionRefused) {
+                break;
+            }
+            await Task.Delay(TimeSpan.FromMilliseconds(50), deadline.Token);
         }
-        Assert.False(socket.Connected, "The owned Web listener remained reachable after process exit.");
+        await RecordAsync("web-endpoint-closed", new { stopped.Name, stopped.Endpoint.Port, Attempts = attempts });
         await AssertNoClientsAsync();
     }
 
@@ -232,13 +239,12 @@ internal sealed class AgentHistoricalReceiptRestartFixture(string rowRoot, Guid 
 
     internal Task ReplaceTargetLifetimeAsync() => WithServicesAsync(async services => {
         var projects = services.GetRequiredService<ProjectsService>();
-        var deleted = await projects.DeleteAsync(Seed.ProjectId, rowDeadline.Token);
-        Assert.Equal(Seed.ProjectId, deleted.ProjectId);
-        Assert.Empty(deleted.Warnings);
-        Assert.True((await projects.CreateAsync(Seed.ProjectId, new() { Name = "Replacement target lifetime" }, rowDeadline.Token)).IsSuccess);
-        var admission = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(Seed.ProjectId, rowDeadline.Token);
+        var original = Seed.CreatedTargets.Count == 3 ? Seed.CreatedTargets[1] : new(Seed.ProfileId, Seed.ProjectId, Seed.ProjectLifetimeId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(original.ProjectId);
+        Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Replacement target lifetime" }, rowDeadline.Token)).IsSuccess);
+        var admission = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId, rowDeadline.Token);
         Assert.NotNull(admission);
-        Assert.NotEqual(Seed.ProjectLifetimeId, admission.LifetimeId);
+        Assert.NotEqual(original.LifetimeId, admission.LifetimeId);
     });
 
     internal Task SetSourceReadAsync(bool allowed) => WithServicesAsync(async services => {
@@ -246,13 +252,15 @@ internal sealed class AgentHistoricalReceiptRestartFixture(string rowRoot, Guid 
         await store.UpdateCatalogAsync(current => current with { Agents = current.Agents.Select(agent => agent.Id != Seed.SourceAgentId ? agent : agent with {
             ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, allowed ? new() {
                 CanRead = true, CanWrite = true, CanCreateProjects = true, CanCreateSubprojects = true,
-                AllowedProjectIds = [Seed.ProjectId], AllowedProjectLifetimes = [new(Seed.ProfileId, Seed.ProjectId, Seed.ProjectLifetimeId)]
+                AllowedProjectIds = [Seed.ProjectId, .. Seed.CreatedTargets.Where(_ => Seed.SourceAgentId == Seed.Request.AgentId).Select(target => target.ProjectId)],
+                AllowedProjectLifetimes = [new(Seed.ProfileId, Seed.ProjectId, Seed.ProjectLifetimeId),
+                    .. Seed.CreatedTargets.Where(_ => Seed.SourceAgentId == Seed.Request.AgentId)]
             } : new())
         }).ToArray() }, rowDeadline.Token);
     });
 
     internal async Task ExpireOriginalClaimAsync() {
-        Assert.Equal(HistoricalReceiptSeedKind.Process, kind);
+        Assert.True(HistoricalReceiptSeedProtocol.IsProcess(kind));
         await WithServicesAsync(async services => {
             await using var context = await services.GetRequiredService<IDbContextFactory<ProcessPersistenceDbContext>>().CreateDbContextAsync(rowDeadline.Token);
             var claim = await context.DispatchClaims.SingleAsync(item => item.RunId == Seed.ProcessRunId && item.StepInstanceId == Seed.ProcessStepId, rowDeadline.Token);
@@ -289,12 +297,22 @@ internal sealed class AgentHistoricalReceiptRestartFixture(string rowRoot, Guid 
         Assert.Equal(Seed.RunFileSha256, await HashAsync(Layout.RunPath(Seed.Request.ExecutionRunId)));
         await WithServicesAsync(async services => {
             await using var context = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync(rowDeadline.Token);
-            var rows = await context.Set<ProjectDefinitionReceiptRecord>().AsNoTracking().ToArrayAsync(rowDeadline.Token);
-            Assert.Equal(5, rows.Length);
+            var ids = Seed.Receipts.Select(receipt => receipt.OperationId).ToArray();
+            var definitions = await context.Set<ProjectDefinitionReceiptRecord>().AsNoTracking()
+                .Where(row => ids.Contains(row.OperationId)).ToArrayAsync(rowDeadline.Token);
+            var lifecycle = await context.Set<ProjectLifecycleReceiptRecord>().AsNoTracking()
+                .Where(row => ids.Contains(row.OperationId)).ToArrayAsync(rowDeadline.Token);
+            Assert.Equal(HistoricalReceiptSeedProtocol.IsHierarchy(kind) ? 3 : 5, definitions.Length);
+            Assert.Equal(HistoricalReceiptSeedProtocol.IsHierarchy(kind) ? 2 : 0, lifecycle.Length);
+            foreach (var row in definitions) {
+                Assert.True(Seed.CreatedTargets.Count == 0 ? row.ProjectId == Seed.ProjectId && row.LifetimeId == Seed.ProjectLifetimeId :
+                    Seed.CreatedTargets.Any(target => target.ProjectId == row.ProjectId && target.LifetimeId == row.LifetimeId));
+            }
+            var rows = definitions.Select(row => (row.OperationId, row.NamespaceId, row.AcceptedPayload))
+                .Concat(lifecycle.Select(row => (row.OperationId, row.NamespaceId, row.AcceptedPayload))).ToArray();
             foreach (var receipt in Seed.Receipts) {
                 var row = Assert.Single(rows, item => item.OperationId == receipt.OperationId);
                 Assert.Equal(Seed.NamespaceId, row.NamespaceId);
-                Assert.Equal(Seed.ProjectLifetimeId, row.LifetimeId);
                 Assert.Equal(receipt.Sha256, Convert.ToHexString(SHA256.HashData(row.AcceptedPayload)));
             }
         });

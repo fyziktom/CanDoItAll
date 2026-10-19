@@ -1,0 +1,14 @@
+{
+  "scope": "Existing-only workspace/control-plane exclusion, SQL NOWAIT recovery exclusion, original catalog plus execution-store source capture in real deletion completion",
+  "source": "8D9BCD28D9DC268F08461B9AD91C7081D758F881917B80EEFB0B94F5E2613678",
+  "passed": 44,
+  "recordedUtc": "2026-10-18T21:45:03.0299943+00:00",
+  "limits": [
+    "This proves exclusion prerequisites, not the unfinished offline command or legacy installation.",
+    "Owner fixture drives real governed source guards and SQL, with explicit fixture receipt/post-release observer; no registered project-delete tool is claimed.",
+    "Ordinary-operation caller exclusion evidence remains an identified next prerequisite.",
+    "Six unowned TEMP paths were preserved."
+  ],
+  "candidate": ".artifacts/concurrent-mutations/validation/p03-offline-exclusion-validation",
+  "runtime": "D0A32B436F3C59E605FBE1D62177D815F97F81CF06A239EB2548AB8CE85A0567"
+}

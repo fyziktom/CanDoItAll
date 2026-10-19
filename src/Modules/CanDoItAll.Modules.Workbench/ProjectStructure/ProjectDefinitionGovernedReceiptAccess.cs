@@ -33,13 +33,23 @@ internal sealed class ProjectDefinitionProcessReceiptAccess(ProjectProcessMutati
         if (!ProjectDefinitionGovernedReadPolicy.ProcessCanRead(original, current, target)) {
             return false;
         }
-        if (current!.Dispatch.SourceAuthority!.Principal is ProcessLaunchPrincipal.AgentExecution source) {
-            await using var held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
-            if (held.Scope != WorkspaceScopeDescriptor.Organization(target.DatabaseProfileId.ToString("N")) ||
-                !ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(source.Ceiling.AgentId, held.Agent, target)) {
+        var sourceId = (current!.Dispatch.SourceAuthority!.Principal as ProcessLaunchPrincipal.AgentExecution)?.Ceiling.AgentId;
+        var executorId = target != original.ProjectAdmission ? original.Dispatch.Evidence.ExecutorAgentId : (Guid?)null;
+        if (sourceId is null && executorId is null) {
+            return await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
+        }
+        await using var held = sourceId.HasValue && executorId.HasValue && sourceId != executorId
+            ? await catalog.AcquireAgentsReadLeaseAsync([sourceId.Value, executorId.Value], cancellationToken)
+            : await catalog.AcquireAgentReadLeaseAsync((sourceId ?? executorId)!.Value, cancellationToken);
+        if (held.Scope != WorkspaceScopeDescriptor.Organization(target.DatabaseProfileId.ToString("N")) ||
+                sourceId is { } initiator && !ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(initiator, held.Agent, original.ProjectAdmission)) {
+            return false;
+        }
+        if (executorId is { } executor) {
+            var agent = held.Agent?.Id == executor ? held.Agent : held.Agents.SingleOrDefault(item => item.Id == executor);
+            if (!ProjectDefinitionGovernedReadPolicy.CurrentExecutorCanUseCreatedProject(executor, agent, target)) {
                 return false;
             }
-            return await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
         }
         return await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
     }
@@ -51,7 +61,7 @@ internal static class ProjectDefinitionGovernedReadPolicy {
         if (!original.CanRead || !CurrentAgentCanRead(original.AgentId, current, target)) {
             return false;
         }
-        var reservation = original.CreatedProjectReservation;
+        var reservation = original.FindCreatedProject(target);
         var created = reservation is not null && reservation.RequesterId == original.AgentId &&
             reservation.ProjectId == target.ProjectId && reservation.LifetimeId == target.LifetimeId;
         var originalAllows = original.AllowAllProjects || original.ProjectIds.Contains(target.ProjectId) &&
@@ -83,6 +93,15 @@ internal static class ProjectDefinitionGovernedReadPolicy {
         var access = AgentProjectStructureAccessMetadata.Read(current.ConfigurationJson);
         return access.CanRead && (access.AllowAllProjects || access.AllowedProjectIds.Contains(target.ProjectId) &&
             access.AllowedProjectLifetimes.Contains(new(target.DatabaseProfileId, target.ProjectId, target.LifetimeId)));
+    }
+
+    internal static bool CurrentExecutorCanUseCreatedProject(Guid agentId, AgentDefinition? current, ProjectWriteAdmission target) {
+        if (current is null || current.Id != agentId || current.IsTemplate || current.Status != AgentLifecycleStatus.Active || !current.Permissions.CanUseTools) {
+            return false;
+        }
+        var access = AgentProjectStructureAccessMetadata.Read(current.ConfigurationJson);
+        return access.AllowAllProjects || access.AllowedProjectIds.Contains(target.ProjectId) &&
+            access.AllowedProjectLifetimes.Contains(new(target.DatabaseProfileId, target.ProjectId, target.LifetimeId));
     }
 
     internal static bool ProcessCanRead(ProjectProcessMutationAdmission original, ProjectProcessExecutionAccess? current,

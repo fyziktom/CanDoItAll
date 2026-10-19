@@ -1,10 +1,11 @@
 using CanDoItAll.SharedKernel;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Projects;
 
 public sealed class ProjectCreationReceipt {
-    internal ProjectCreationReceipt(ProjectWriteAdmission project, ProjectCreationReservation? reservation, string fingerprint, ProjectMutationAuthorization? authorization = null) {
+    internal ProjectCreationReceipt(ProjectWriteAdmission project, DatasetNamespaceId originalNamespace, ProjectCreationReservation? reservation, string fingerprint, ProjectMutationAuthorization? authorization = null) {
+        ArgumentNullException.ThrowIfNull(originalNamespace);
+        Namespace = originalNamespace;
         Project = project;
         Reservation = reservation;
         Fingerprint = fingerprint;
@@ -12,6 +13,7 @@ public sealed class ProjectCreationReceipt {
     }
 
     public ProjectWriteAdmission Project { get; }
+    public DatasetNamespaceId Namespace { get; }
     public ProjectCreationReservation? Reservation { get; }
     public string Fingerprint { get; }
     internal ProjectMutationAuthorization? Authorization { get; }
@@ -19,10 +21,16 @@ public sealed class ProjectCreationReceipt {
 
 public interface IProjectCreationCompensationGuard {
     Task<bool> CanCompensateForMutationAsync(ProjectWriteAdmission project, CancellationToken cancellationToken = default);
+    Task<bool> CanCancelReservationForMutationAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This compensation guard cannot inspect an original never-created reservation.");
 }
 
 public interface IProjectPartyDeletionStateQuery {
     Task<bool> HasProjectDeletionStateForMutationAsync(ProjectWriteAdmission project, CancellationToken cancellationToken = default);
+    Task<bool> HasReservationCancellationStateForMutationAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This party owner cannot inspect an original never-created reservation.");
 }
 
 public sealed partial class ProjectsService {
@@ -49,9 +57,26 @@ public sealed partial class ProjectsService {
         return CreationResult(result);
     }
 
-    public async Task<bool> TryCompensateCreationAsync(ProjectCreationReceipt receipt, CancellationToken cancellationToken = default) {
+    public Task<ProjectCreationCompensationOutcome> CompensateCreationAsync(ProjectCreationReceipt receipt, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(receipt);
-        return await DeleteCoreAsync(receipt.Project.ProjectId, cancellationToken, receipt) is not null;
+        var owner = creationCompensationOwner
+            ?? throw new InvalidOperationException("The durable creation compensation owner is not installed.");
+        return owner.CompensateAsync(ProjectCreationCompensationRequest.FromReceipt(receipt), cancellationToken);
+    }
+
+    public async Task<bool> TryCompensateCreationAsync(ProjectCreationReceipt receipt, CancellationToken cancellationToken = default) {
+        var outcome = await CompensateCreationAsync(receipt, cancellationToken);
+        if (outcome is ProjectCreationCompensationOutcome.Declined) {
+            return false;
+        }
+        if (outcome is ProjectCreationCompensationOutcome.Committed { CompletionIssue: null, DiagnosticsUnavailable: false } committed) {
+            var projection = deletionCompletionProjection
+                ?? throw new InvalidOperationException("Original compensation completion observation is not installed.");
+            if (await projection.ObserveAsync(committed.Completion, cancellationToken) is ProjectDeletionCompletionProjectionResult.Completed) {
+                return true;
+            }
+        }
+        throw new ProjectCreationCompensationRequiresObservationException(outcome);
     }
 
     private static Result<ProjectCreationReceipt> CreationResult(Result<ProjectSaveOutcome> result) {
@@ -60,30 +85,6 @@ public sealed partial class ProjectsService {
         }
         return Result<ProjectCreationReceipt>.Success(result.Value?.CreationReceipt
             ?? throw new InvalidOperationException("The owner creation completed without its original creation receipt."));
-    }
-
-    private async Task<bool> CanCompensateCreationAsync(ProjectsDbContext context, ProjectCreationReceipt receipt,
-        CancellationToken cancellationToken) {
-        if (receipt.Project.DatabaseProfileId != writeAdmissionService.DatabaseProfileId) {
-            throw new InvalidOperationException("The creation receipt belongs to another database profile.");
-        }
-        var current = await context.Set<Project>().AsNoTracking()
-            .SingleOrDefaultAsync(project => project.Id == receipt.Project.ProjectId, cancellationToken);
-        if (current is null || current.LifetimeId != receipt.Project.LifetimeId) {
-            return false;
-        }
-        await writeAdmissionService.RequireAsync(context, receipt.Project, cancellationToken);
-        if (receipt.Reservation is { } reservation && !await writeAdmissionService.IsConsumedCreationAsync(context, reservation, cancellationToken)) {
-            return false;
-        }
-        var fingerprint = await ProjectCreationFingerprint.ReadAsync(context, receipt.Project, cancellationToken);
-        if (!string.Equals(fingerprint, receipt.Fingerprint, StringComparison.Ordinal)) {
-            return false;
-        }
-        var guard = creationCompensationGuard
-            ?? throw new InvalidOperationException("Native project creation compensation evidence is not installed.");
-        using var coordination = coordinatedTransaction.Enter(context);
-        return await guard.CanCompensateForMutationAsync(receipt.Project, cancellationToken);
     }
 
 }

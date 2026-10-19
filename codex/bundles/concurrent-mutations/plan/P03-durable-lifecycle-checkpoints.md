@@ -1,10 +1,12 @@
 # P03: deletion and hierarchy implementation checkpoints
 
-Status: source-only design in the continuation worktree. No P03 implementation,
-migration, discovery or execution has occurred. This card follows
+Status: owner, migration, native/API intent and governed hierarchy implementations are
+integrated with focused proof, including four actual restart cases. Remaining cutover
+and capacity gates are tracked in [the lifecycle integration record](../validation/2026-10-18-lifecycle-integration.md).
+This card follows
 [original-state intents](P03-original-state-intents.md), the accepted P02 definition
 protocol and the separately reviewed retention candidate. It does not declare Projects
-deletion or hierarchy protected today.
+deletion or hierarchy completely closed across every producer.
 
 ## Decisions and the existing seams
 

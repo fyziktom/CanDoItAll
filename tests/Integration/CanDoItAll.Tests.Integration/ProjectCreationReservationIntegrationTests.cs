@@ -46,7 +46,7 @@ public sealed class ProjectCreationReservationIntegrationTests {
         Assert.Equal(ProjectCreationReservationState.Consumed, saved.State);
         Assert.NotNull(saved.ConsumedAtUtc);
         Assert.Null(saved.CancelledAtUtc);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => services.GetRequiredService<ProjectWriteAdmissionService>().CancelCreationAsync(captured));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => services.GetRequiredService<ProjectWriteAdmissionService>().CaptureReservationCancellationAsync(captured));
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class ProjectCreationReservationIntegrationTests {
     }
 
     [Fact]
-    public async Task Deleting_pending_id_cancels_reservation_and_exact_grant_while_new_public_id_lifetime_remains_supported() {
+    public async Task Original_reservation_cancellation_revokes_exact_grant_while_new_public_id_lifetime_remains_supported() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
@@ -92,7 +92,11 @@ public sealed class ProjectCreationReservationIntegrationTests {
         await workspace.GrantAgentProjectStructureLifetimeAsync(agent.Id, new(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId));
         var projects = services.GetRequiredService<ProjectsService>();
         Assert.True((await projects.CreateAsync(reservation.ProjectId, new() { Name = "Unreserved conflict" })).IsFailure);
-        await projects.DeleteAsync(reservation.ProjectId);
+        var cancelled = Assert.IsType<ProjectReservationCancellationOutcome.Committed>(await services
+            .GetRequiredService<ProjectReservationCancellationOwner>().CancelAsync(await admissions.CaptureReservationCancellationAsync(reservation)));
+        Assert.Null(cancelled.CompletionIssue);
+        Assert.IsType<ProjectDeletionCompletionProjectionResult.Completed>(await services
+            .GetRequiredService<ProjectDeletionCompletionProjection>().ObserveAsync(cancelled.Completion));
         Assert.Empty((await ReadAccessAsync(workspace, agent.Id)).AllowedProjectIds);
         await Assert.ThrowsAsync<InvalidOperationException>(() => admissions.RequireCreationGrantAsync(reservation));
         var denied = await projects.CreateAsync(reservation, new() { Name = "Stale reserved create" });
@@ -106,7 +110,7 @@ public sealed class ProjectCreationReservationIntegrationTests {
     }
 
     [Fact]
-    public async Task Parent_deletion_cancels_reserved_children_and_recreation_cannot_consume_the_old_parent_binding() {
+    public async Task Parent_deletion_requires_original_child_cancellation_before_retry_and_recreation_cannot_consume_old_binding() {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
@@ -114,8 +118,32 @@ public sealed class ProjectCreationReservationIntegrationTests {
         var parentId = Guid.NewGuid();
         Assert.True((await projects.CreateAsync(parentId, new() { Name = "First parent" })).IsSuccess);
         var admissions = services.GetRequiredService<ProjectWriteAdmissionService>();
-        var reservation = await admissions.ReserveCreationAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), parentId);
-        await projects.DeleteAsync(parentId);
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agent = await CreateAgentAsync(workspace);
+        var reservation = await admissions.ReserveCreationAsync(Guid.NewGuid(), agent.Id, Guid.NewGuid(), parentId);
+        var grant = new AgentProjectStructureLifetime(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId);
+        await workspace.GrantAgentProjectStructureLifetimeAsync(agent.Id, grant);
+        var lifecycle = new ProjectLifecycleTestDriver(services);
+        var deletion = await lifecycle.CaptureDeleteAsync(parentId);
+        var refused = Assert.IsType<ProjectLifecycleOutcome.Refused>(await lifecycle.SubmitAsync(deletion));
+        Assert.Equal(ProjectLifecycleRefusal.ActiveCreationReservation, refused.Reason);
+        Assert.Equal(deletion, refused.Original);
+        Assert.Equal(ProjectCreationReservationState.Reserved, await admissions.ReadCreationStateAsync(reservation));
+        Assert.Contains(grant, (await ReadAccessAsync(workspace, agent.Id)).AllowedProjectLifetimes);
+        await using (var unchanged = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync()) {
+            Assert.Empty(await unchanged.Set<ProjectDeletionCompletionRecord>().ToArrayAsync());
+            Assert.Empty(await unchanged.Set<ProjectRetirementRecord>().ToArrayAsync());
+            Assert.True(await unchanged.Set<Project>().AnyAsync(project => project.Id == parentId));
+        }
+        var cancelled = Assert.IsType<ProjectReservationCancellationOutcome.Committed>(await services
+            .GetRequiredService<ProjectReservationCancellationOwner>().CancelAsync(await admissions.CaptureReservationCancellationAsync(reservation)));
+        Assert.Null(cancelled.CompletionIssue);
+        Assert.IsType<ProjectDeletionCompletionProjectionResult.Completed>(await services
+            .GetRequiredService<ProjectDeletionCompletionProjection>().ObserveAsync(cancelled.Completion));
+        Assert.DoesNotContain(grant, (await ReadAccessAsync(workspace, agent.Id)).AllowedProjectLifetimes);
+        var absent = Assert.IsType<ProjectLifecycleLookup.NotObserved>(await lifecycle.LookupAsync(deletion));
+        Assert.Equal(ProjectOperationObservationState.Open, absent.State);
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(await lifecycle.SubmitAsync(deletion));
         Assert.True((await projects.CreateAsync(parentId, new() { Name = "Replacement parent" })).IsSuccess);
         Assert.NotEqual(reservation.ParentLifetimeId, (await admissions.CaptureAsync(parentId))!.LifetimeId);
         await Assert.ThrowsAsync<InvalidOperationException>(() => admissions.RequireCreationGrantAsync(reservation));
@@ -157,7 +185,9 @@ public sealed class ProjectCreationReservationIntegrationTests {
         var requester = Guid.NewGuid();
         var first = await admissions.ReserveCreationAsync(projectId, requester, Guid.NewGuid());
         await Assert.ThrowsAsync<InvalidOperationException>(() => admissions.ReserveCreationAsync(projectId, requester, Guid.NewGuid()));
-        await admissions.CancelCreationAsync(first);
+        var cancelled = Assert.IsType<ProjectReservationCancellationOutcome.Committed>(await scope.ServiceProvider
+            .GetRequiredService<ProjectReservationCancellationOwner>().CancelAsync(await admissions.CaptureReservationCancellationAsync(first)));
+        Assert.Null(cancelled.CompletionIssue);
         var second = await admissions.ReserveCreationAsync(projectId, requester, Guid.NewGuid());
         Assert.NotEqual(first.Id, second.Id);
         Assert.NotEqual(first.LifetimeId, second.LifetimeId);

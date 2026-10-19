@@ -50,13 +50,28 @@ public sealed class DatasetLifecycleStore(
         }
     }
 
+    public static async Task RequireActiveForDeletionRecoveryAsync(DbContext owner, DatasetActivationBinding capturedBinding,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(capturedBinding);
+        RequirePostgreSqlTransaction(owner);
+        await owner.Database.ExecuteSqlRawAsync("LOCK TABLE \"Infrastructure_DatasetLifecycle\" IN EXCLUSIVE MODE NOWAIT", cancellationToken);
+        var current = await ReadGuardedAsync(owner, exclusive: true, cancellationToken, noWait: true);
+        if (current is not { State: DatasetLifecycleState.Active } || current.Binding != capturedBinding) {
+            throw new DatasetActivationMismatchException(capturedBinding);
+        }
+    }
+
+    public static async Task<DatasetLifecycleSnapshot?> ReadForActivationAsync(DbContext owner, CancellationToken cancellationToken = default) {
+        RequirePostgreSqlTransaction(owner);
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({ActivationScopeKey}, 0))", cancellationToken);
+        return await ReadGuardedAsync(owner, exclusive: true, cancellationToken);
+    }
+
     public async Task<DatasetActivationStageResult> StageActivationAsync(DatasetActivationPlan plan, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(plan);
         await using var context = await CreateEnlistedAsync(cancellationToken);
-        RequirePostgreSqlTransaction(context);
-        await context.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({ActivationScopeKey}, 0))", cancellationToken);
-        var current = await ReadGuardedAsync(context, exclusive: true, cancellationToken);
+        var current = await ReadForActivationAsync(context, cancellationToken);
         if (current is { State: DatasetLifecycleState.Active } && current.Binding == plan.Binding) {
             return DatasetActivationStageResult.AlreadyApplied;
         }

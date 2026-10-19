@@ -1,0 +1,12 @@
+{
+  "recordedUtc": "2026-10-18T22:25:35.9393835+00:00",
+  "scope": "22 read-only explicit-profile/key cases and 10 native catalog/Data Protection regressions",
+  "candidate": ".artifacts/concurrent-mutations/validation/p03-existing-profile-reader-validation",
+  "passed": 32,
+  "limits": [
+    "An initial build failed on a missing namespace import, corrected before the successful Release build.",
+    "No offline recovery command or release coordinator is exposed yet.",
+    "Windows execution only; Unix checks reviewed statically.",
+    "Six unowned TEMP entries preserved."
+  ]
+}

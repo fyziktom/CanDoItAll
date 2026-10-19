@@ -74,7 +74,7 @@ public static class ProjectStructureAgentApi
                 StatusCodes.Status500InternalServerError);
 
         group.MapPost("/projects/{parentProjectId:guid}/subprojects", ChangeSubprojectAsync)
-            .Produces<ProjectStructureOkResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status428PreconditionRequired)
             .ProducesProjectStructureErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status404NotFound,
@@ -888,21 +888,7 @@ public static class ProjectStructureAgentApi
         ProjectStructureAgentService agentService,
         ProjectStructureAnalyticsService analyticsService,
         CancellationToken cancellationToken)
-        => ExecuteAsync(
-            httpContext,
-            analyticsService,
-            "projects.subproject-change",
-            request.ChildProjectId,
-            null,
-            ProjectStructureLeaseScopeKind.Project,
-            request.ChildProjectId.ToString(),
-            request,
-            async (agent, cancellationToken) =>
-            {
-                await agentService.ChangeSubprojectAsync(parentProjectId, request, agent, cancellationToken);
-                return new { Ok = true };
-            },
-            cancellationToken);
+        => Task.FromResult(ProjectLifecycleApi.OriginalIntentRequired());
 
     /// <summary>
     /// Read the nodes and links of a project structure, with optional filters and sections.

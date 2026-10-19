@@ -94,6 +94,14 @@ internal sealed class FileSandboxWorkspacePublicationScope : IAsyncDisposable {
 
     internal void RetainFailure(Exception failure) => operationFailure = failure;
 
+    internal ValueTask ReleaseWorkspaceForAuthoritySnapshotAsync() {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (heldWriteSet is null || !heldGate || heldWorkspace is null) {
+            throw new InvalidOperationException("An authorization snapshot requires its complete selected key set before releasing workspace coordination.");
+        }
+        return ExitWorkspaceAsync();
+    }
+
     public async ValueTask DisposeAsync() {
         if (disposed) {
             return;

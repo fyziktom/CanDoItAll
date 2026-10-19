@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal sealed class ProjectTaskPlanReceiptReader(IDbContextFactory<WorkbenchDbContext> contexts,
+public sealed class ProjectTaskPlanReceiptReader(IDbContextFactory<WorkbenchDbContext> contexts,
     DatasetActivationService activation, ProjectWriteAdmissionService admissions, ILogger<ProjectTaskPlanReceiptReader> logger) {
     internal async Task<ProjectTaskPlanLookup> LookupAsync(ProjectTaskPlanOperation operation,
         ProjectTaskPlanReceiptInvocation invocation, CancellationToken cancellationToken = default) {
@@ -56,7 +56,8 @@ internal sealed class ProjectTaskPlanReceiptReader(IDbContextFactory<WorkbenchDb
                 return new(ProjectTaskPlanLookupStatus.Unavailable);
             }
             if (observed.ReceiptPresent) {
-                if (observed.ResultVersion != 1 || observed.ReceiptSchemaVersion != 1 || observed.NormalizationVersion != 1 || observed.SourceVersion != 1) {
+                if (!ProjectTaskPlanOperationProtocol.SupportsInterpretation(observed.ReceiptSchemaVersion,
+                        observed.NormalizationVersion, observed.ResultVersion, observed.SourceVersion)) {
                     return new(ProjectTaskPlanLookupStatus.DetailUnavailable, DetailFailure: ProjectTaskPlanDetailFailure.UnsupportedVersion);
                 }
                 ProjectTaskPlanAccepted accepted;

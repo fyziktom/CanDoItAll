@@ -5135,13 +5135,37 @@ public sealed class ProjectPartyIntegrationService(
         ProjectPartyAssignmentKind.WorkItemAssignee
     ];
 
-    public async Task<bool> HasProjectDeletionStateForMutationAsync(ProjectWriteAdmission project, CancellationToken cancellationToken = default) {
-        await using var context = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
+    public Task<bool> HasProjectDeletionStateForMutationAsync(ProjectWriteAdmission project, CancellationToken cancellationToken = default)
+        => HasCreationCleanupStateAsync(project, () => admissions.RequireForMutationAsync(project, cancellationToken), cancellationToken);
+
+    public Task<bool> HasReservationCancellationStateForMutationAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        return HasCreationCleanupStateAsync(original.Target.Project,
+            () => admissions.RequireReservedCancellationForMutationAsync(original, cancellationToken), cancellationToken);
+    }
+
+    private async Task<bool> HasCreationCleanupStateAsync(ProjectWriteAdmission project, Func<Task> requireOriginal,
+        CancellationToken cancellationToken) {
+        var context = await coordinatedTransaction.CreateEnlistedAsync(contextOptions,
             static options => new CrmHrDbContext(options), cancellationToken);
-        await admissions.RequireForMutationAsync(project, cancellationToken);
-        return await context.Set<ProjectPartyAssignment>().AnyAsync(row => row.ProjectId == project.ProjectId &&
-                row.ProjectLifetimeId == project.LifetimeId, cancellationToken)
-            || await context.Set<CrmAccountConnectionProjectLink>().AnyAsync(row => row.ProjectId == project.ProjectId, cancellationToken);
+        Exception? primary = null;
+        try {
+            coordinatedTransaction.RequireOwnerProfile(context);
+            await requireOriginal();
+            return await context.Set<ProjectPartyAssignment>().AnyAsync(row => row.ProjectId == project.ProjectId &&
+                    row.ProjectLifetimeId == project.LifetimeId, cancellationToken)
+                || await context.Set<CrmAccountConnectionProjectLink>().AnyAsync(row => row.ProjectId == project.ProjectId, cancellationToken);
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            try {
+                await context.DisposeAsync();
+            } catch (Exception cleanup) when (primary is not null) {
+                throw new AggregateException("Project party cleanup observation and context release failed.", primary, cleanup);
+            }
+        }
     }
 
     public async Task<IReadOnlyList<ProjectPartyAssignmentSummaryModel>> ListAssignmentsAsync(Guid projectId, CancellationToken cancellationToken = default)

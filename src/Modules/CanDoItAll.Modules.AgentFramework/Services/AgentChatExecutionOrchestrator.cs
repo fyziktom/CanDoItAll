@@ -59,6 +59,7 @@ public sealed class AgentChatExecutionOrchestrator(
             request.AttachmentPaths?.ToArray(),
             request.Behavior,
             conversationKey,
+            request.PlanningOwner,
             cancellationToken);
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
@@ -171,6 +172,7 @@ public sealed class AgentChatExecutionOrchestrator(
         IReadOnlyList<string>? attachmentPaths,
         AgentChatExecutionBehavior behavior,
         AgentConversationKey? conversationKey,
+        AgentPlanningOwner? planningOwner,
         CancellationToken cancellationToken)
     {
         using (operation)
@@ -205,7 +207,7 @@ public sealed class AgentChatExecutionOrchestrator(
                     AgentExecutionActivityPhase.PreparingInput,
                     PreparingInputMessage);
                 var invocation = capture.Invocation;
-                var options = invocation.Options;
+                var options = invocation.Options with { PlanningOwner = planningOwner };
                 var result = await workspaceExecutionService
                     .SendMessageWithinOperationAsync(
                         operation,

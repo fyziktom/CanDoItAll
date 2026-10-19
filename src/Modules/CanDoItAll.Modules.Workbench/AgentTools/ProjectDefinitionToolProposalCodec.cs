@@ -28,6 +28,7 @@ internal sealed record ProjectDefinitionToolSource(AgentToolSessionAdmission Ses
             ProjectStructureToolPolicy.ProjectStructureProjectUpdate => ProjectAgentMutationDomain.NonTaskStructure,
             ProjectStructureToolPolicy.ProjectStructureProjectCreate => ProjectAgentMutationDomain.ProjectCreation,
             ProjectStructureToolPolicy.ProjectStructureSubprojectCreate => ProjectAgentMutationDomain.SubprojectCreation,
+            ProjectStructureToolPolicy.ProjectStructureSubprojectLink => ProjectAgentMutationDomain.Hierarchy,
             _ => throw ProjectDefinitionToolProposalCodec.Denied("The original definition tool is unsupported.")
         };
         return new(Session.AgentId, Session.Profile.ProfileId, original.Access, original.Governance, domain, tool, original.SourceProject);

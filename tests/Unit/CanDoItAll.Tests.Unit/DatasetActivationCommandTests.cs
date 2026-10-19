@@ -13,9 +13,10 @@ public sealed class DatasetActivationCommandTests {
     [InlineData("resume", DatasetActivationCommandKind.Resume)]
     [InlineData("reactivate", DatasetActivationCommandKind.Reactivate)]
     [InlineData("attach-superseded-bootstrap", DatasetActivationCommandKind.AttachSupersededBootstrap)]
+    [InlineData("restore-previous", DatasetActivationCommandKind.RestorePrevious)]
     public void Offline_commands_require_the_exact_typed_target_and_recovery_identity(string action, DatasetActivationCommandKind expected) {
         var args = new List<string> { "dataset-activation", action, "--profile-id", Profile, "--writers-stopped" };
-        if (expected is DatasetActivationCommandKind.Reactivate or DatasetActivationCommandKind.AttachSupersededBootstrap) {
+        if (expected is DatasetActivationCommandKind.Reactivate or DatasetActivationCommandKind.AttachSupersededBootstrap or DatasetActivationCommandKind.RestorePrevious) {
             args.AddRange(["--expected-namespace", Previous,
                 expected == DatasetActivationCommandKind.Reactivate ? "--maintenance-id" : "--expected-plan-id", Maintenance]);
         }
@@ -29,7 +30,7 @@ public sealed class DatasetActivationCommandTests {
             Assert.Equal(Guid.Parse(Previous), parsed.ExpectedNamespace!.Value);
             Assert.Equal(Guid.Parse(Maintenance), parsed.MaintenanceId);
             Assert.Null(parsed.ExpectedPlanId);
-        } else if (expected == DatasetActivationCommandKind.AttachSupersededBootstrap) {
+        } else if (expected is DatasetActivationCommandKind.AttachSupersededBootstrap or DatasetActivationCommandKind.RestorePrevious) {
             Assert.Equal(Guid.Parse(Previous), parsed.ExpectedNamespace!.Value);
             Assert.Equal(Guid.Parse(Maintenance), parsed.ExpectedPlanId);
             Assert.Null(parsed.MaintenanceId);
@@ -48,6 +49,9 @@ public sealed class DatasetActivationCommandTests {
     [InlineData("unknown --profile-id " + Profile + " --writers-stopped")]
     [InlineData("bootstrap --profile-id " + Profile + " --writers-stopped --maintenance-id " + Maintenance)]
     [InlineData("reactivate --profile-id " + Profile + " --writers-stopped --new-namespace " + Previous)]
+    [InlineData("restore-previous --profile-id " + Profile + " --writers-stopped")]
+    [InlineData("restore-previous --profile-id " + Profile + " --expected-namespace " + Previous + " --expected-plan-id " + Maintenance)]
+    [InlineData("restore-previous --profile-id " + Profile + " --writers-stopped --expected-namespace " + Previous + " --maintenance-id " + Maintenance)]
     public void Invalid_or_ambiguous_maintenance_arguments_cannot_start_an_activation(string arguments)
         => Assert.Throws<ArgumentException>(() => DatasetActivationCommand.Parse(
             ("dataset-activation " + arguments).Split(' ', StringSplitOptions.RemoveEmptyEntries)));

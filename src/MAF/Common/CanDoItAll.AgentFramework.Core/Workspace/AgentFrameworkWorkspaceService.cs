@@ -60,7 +60,9 @@ public sealed partial class AgentFrameworkWorkspaceService :
         AgentToolAdmissionJournal? toolAdmissionJournal = null,
         IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
         IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
-        AgentToolPolicyCatalog? toolPolicies = null) {
+        AgentToolPolicyCatalog? toolPolicies = null,
+        IAgentPlanningStepRuntime? planningRuntime = null,
+        IEnumerable<IAgentPlanningParticipant>? planningParticipants = null) {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(executionRuntime);
@@ -150,7 +152,9 @@ public sealed partial class AgentFrameworkWorkspaceService :
             toolAdmissionJournal,
             executionAuthorityResolver,
             receiptReconciliationProviders,
-            toolPolicies);
+            toolPolicies,
+            planningRuntime,
+            planningParticipants);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }

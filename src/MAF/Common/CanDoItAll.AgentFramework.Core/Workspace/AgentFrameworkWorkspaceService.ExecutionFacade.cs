@@ -134,6 +134,19 @@ public sealed partial class AgentFrameworkWorkspaceService
             autoApprovePendingToolCalls,
             cancellationToken);
 
+    public Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, request.ChatSessionId,
+            "Planning action accepted.", operation => executionService.ApplyPlanningActionWithinOperationAsync(
+                operation, request, cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default)
+        => executionService.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken);
+
     public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
         EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));

@@ -44,7 +44,7 @@ internal sealed class ProjectTaskPlanOperationFixture(TestApplication applicatio
         ceiling ?? new(0, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10)), NullLogger<ProjectTaskPlanPublisher>.Instance);
 
     internal static async Task<ProjectTaskPlanOperationFixture> CreateAsync(CanDoItAllTestEnvironment? testEnvironment = null,
-        TestDatabaseProfile? activeProfile = null) {
+        TestDatabaseProfile? activeProfile = null, Action<IServiceCollection>? configureServices = null) {
         if ((testEnvironment is null) != (activeProfile is null)) {
             throw new ArgumentException("An externally owned fixture requires both its environment and profile.");
         }
@@ -60,6 +60,7 @@ internal sealed class ProjectTaskPlanOperationFixture(TestApplication applicatio
                         item.ImplementationType == typeof(FiniteOperationMaintenance)).ToArray()) {
                     services.Remove(descriptor);
                 }
+                configureServices?.Invoke(services);
             }
         });
         var scope = application.Services.CreateAsyncScope();

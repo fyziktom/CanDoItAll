@@ -8,7 +8,7 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabase database,
-    IAgentCatalogReadLeaseStore catalog, IAgentExecutionProfileGenerationSource generations) {
+    IAgentCatalogReadLeaseStore catalog, IAgentExecutionProfileGenerationSource generations, ProjectWriteAdmissionService projects) {
     internal ProjectMutationAuthorization Bind(ProjectAgentMutationAdmission admission,
         IReadOnlyCollection<ProjectWriteAdmission> expectedProjects)
         => new(new BoundSource(this, admission), expectedProjects);
@@ -81,12 +81,20 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
         if (target.Purpose is ProjectMutationPurpose.CreateRoot or ProjectMutationPurpose.CreateChild) {
             expected = expected.Add(new(profileId, reservation!.ProjectId, reservation.LifetimeId));
         }
+        if (admission.SourceProject is { } sourceProject && !expected.Contains(sourceProject)) {
+            expected = expected.Add(sourceProject);
+        }
         foreach (var project in expected) {
             var lifetime = new AgentProjectStructureLifetime(project.DatabaseProfileId, project.ProjectId, project.LifetimeId);
-            var newlyCreated = reservation is not null && project.ProjectId == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId;
+            var created = admission.FindCreatedProject(project) ??
+                (reservation is not null && reservation.ProjectId == project.ProjectId && reservation.LifetimeId == project.LifetimeId
+                    ? reservation : null);
+            var newlyCreated = created is not null;
             var originalAllows = admission.AllowAllProjects || admission.ProjectIds.Contains(project.ProjectId) && admission.ProjectLifetimes.Contains(lifetime);
             if (newlyCreated) {
-                originalAllows |= reservation!.ParentProjectId.HasValue ? admission.CanCreateSubprojects : admission.CanCreateProjects;
+                originalAllows |= created!.ParentProjectId.HasValue
+                    ? admission.CanCreateSubprojects && current.CanCreateSubprojects
+                    : admission.CanCreateProjects && current.CanCreateProjects;
             }
             if (project.DatabaseProfileId != profileId || !originalAllows ||
                     !current.AllowAllProjects && (!current.AllowedProjectIds.Contains(project.ProjectId) || !current.AllowedProjectLifetimes.Contains(lifetime))) {
@@ -102,13 +110,14 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
         }
         var projectScopeAllowed = ceiling.WorkspaceScope.Kind == WorkspaceScopeKind.Project &&
             Guid.TryParse(ceiling.WorkspaceScope.Key, out var scopeId) &&
-            admission.SourceProject is { } sourceProject && sourceProject.DatabaseProfileId == profileId && sourceProject.ProjectId == scopeId &&
+            admission.SourceProject is { } scopedProject && scopedProject.DatabaseProfileId == profileId && scopedProject.ProjectId == scopeId &&
             (ceiling.SourceProjectLifetime is null || ceiling.SourceProjectLifetime ==
-                new AgentProjectStructureLifetime(sourceProject.DatabaseProfileId, sourceProject.ProjectId, sourceProject.LifetimeId)) &&
-            target.ExistingProjects.Contains(sourceProject) &&
+                new AgentProjectStructureLifetime(scopedProject.DatabaseProfileId, scopedProject.ProjectId, scopedProject.LifetimeId)) &&
             target.Purpose is not (ProjectMutationPurpose.ReserveRoot or ProjectMutationPurpose.CreateRoot) &&
+            (target.Purpose is not (ProjectMutationPurpose.ReserveChild or ProjectMutationPurpose.CreateChild) ||
+                target.ExistingProjects.Length == 1 && target.ExistingProjects[0] == scopedProject) &&
             expected.All(project => project.ProjectId == scopeId ||
-                reservation?.ParentProjectId == scopeId && project.ProjectId == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId);
+                admission.FindCreatedProject(project) is { } child && child.ParentProjectId == scopeId && child.ParentLifetimeId == scopedProject.LifetimeId);
         var organizationScopeAllowed = ceiling.WorkspaceScope.Kind == WorkspaceScopeKind.Organization &&
             Guid.TryParse(ceiling.WorkspaceScope.Key, out var authorityProfile) && authorityProfile == profileId;
         if (ceiling.AgentId != admission.AgentId || ceiling.DatabaseProfileId != profileId ||
@@ -121,6 +130,12 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
 
     private static ProjectStructureAgentException Denied(string message) => new(403, "ProjectMutationAuthorityDenied", message);
 
+    internal Task RequirePriorCreationsAsync(ProjectAgentMutationAdmission admission, ProjectMutationTarget target,
+        CancellationToken cancellationToken, ProjectWriteAdmission? retired = null)
+        => projects.RequireConsumedCreationsForMutationAsync(admission.PriorCreatedProjects.Where(reservation =>
+            target.ExistingProjects.Any(project => project != retired && project.DatabaseProfileId == reservation.DatabaseProfileId &&
+                project.ProjectId == reservation.ProjectId && project.LifetimeId == reservation.LifetimeId)).ToArray(), cancellationToken);
+
     private sealed class BoundSource(ProjectAgentSourceMutationAuthority owner, ProjectAgentMutationAdmission admission) : IProjectMutationSourceAuthority {
         public async Task<IProjectMutationSourceLease> AcquireAsync(ProjectMutationTarget target, CancellationToken cancellationToken = default)
             => await owner.AcquireAsync(admission, target, cancellationToken);
@@ -128,15 +143,45 @@ public sealed class ProjectAgentSourceMutationAuthority(ICanonicalRuntimeDatabas
 }
 
 internal sealed class ProjectAgentSourceMutationLease(ProjectAgentSourceMutationAuthority owner, ProjectAgentMutationAdmission admission,
-    ProjectMutationTarget target, IAgentCatalogReadLease held) : IProjectMutationSourceLease {
+    ProjectMutationTarget target, IAgentCatalogReadLease held) : IProjectMutationSourceLease, IProjectGovernedInvocationLease {
     private int disposed;
     internal bool RequiresTaskTargetGuard => owner.RequiresTaskTargetGuard(admission, held);
-    public IReadOnlyCollection<ProjectWriteAdmission> SourceProjects => [];
+    public IReadOnlyCollection<ProjectWriteAdmission> SourceProjects => admission.SourceProject is { } source ? [source] : [];
+    public ValueTask<AgentToolInvocationPublicationLease> AcquireInvocationAsync(AgentToolInvocationClaim claim, CancellationToken cancellationToken) {
+        RequireCurrent();
+        return claim.AcquirePublicationAsync(held, cancellationToken);
+    }
+
+    public ProjectDeletionSourceRecovery CaptureDeletionRecoverySource() {
+        RequireCurrent();
+        return held is IProjectDeletionSourceRecoveryLease source
+            ? source.CaptureDeletionRecoverySource()
+            : throw new NotSupportedException("The acquired Agent catalog has no original deletion recovery binding.");
+    }
 
     public Task RequireForMutationAsync(CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
         RequireCurrent();
-        return Task.CompletedTask;
+        return owner.RequirePriorCreationsAsync(admission, target, cancellationToken);
+    }
+
+    public Task RequireForDeletionCommitAsync(ProjectDeletionCommitTarget deletion, CancellationToken cancellationToken = default) {
+        deletion.RequireOriginalTarget(target);
+        if (admission.SourceProject?.ProjectId == deletion.Project.ProjectId) {
+            throw new InvalidOperationException("An Agent deletion cannot retire the project that supplies its original source authority.");
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        RequireCurrent();
+        return owner.RequirePriorCreationsAsync(admission, target, cancellationToken, deletion.Project);
+    }
+
+    public Task RequireForReservedCancellationCommitAsync(ProjectReservationCancellationTarget cancellation,
+        CancellationToken cancellationToken = default) {
+        target.RequireReservedCancellation(cancellation);
+        if (admission.SourceProject?.ProjectId == cancellation.Project.ProjectId) {
+            throw new InvalidOperationException("A never-created reservation cannot supply the Agent's live source authority.");
+        }
+        return RequireForMutationAsync(cancellationToken);
     }
 
     public void RequireCurrent() {

@@ -338,7 +338,7 @@ public sealed class ProjectsPageTests
         Guid rootId = await CreateProjectAsync(projectsService, "Shared Root");
         Guid childId = await CreateProjectAsync(projectsService, "Shared Child");
         Guid unrelatedId = await CreateProjectAsync(projectsService, "Shared Unrelated");
-        Assert.True((await projectsService.AddSubprojectAsync(rootId, childId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, rootId, childId);
         Assert.NotEqual(Guid.Empty, unrelatedId);
         await File.WriteAllTextAsync(
             Path.Combine(CreateProjectFilesDirectory(harness, rootId), "root.txt"),
@@ -348,11 +348,11 @@ public sealed class ProjectsPageTests
             "child");
         var cut = RenderProjectsPage(harness);
 
-        cut.Find("[data-testid='hierarchy-filter-project']").Change(rootId.ToString());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='hierarchy-filter-project']").ChangeAsync(new() { Value = rootId.ToString() }));
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='project-card']").Count));
-        cut.FindAll("button[role='tab']")
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']")
             .Single(tab => tab.TextContent.Contains("Files", StringComparison.Ordinal))
-            .Click();
+            .ClickAsync(new()));
 
         cut.WaitForAssertion(() =>
         {
@@ -360,16 +360,16 @@ public sealed class ProjectsPageTests
             Assert.Contains("2 project(s) · 2 source(s)", pane.TextContent);
         });
 
-        cut.Find("[data-testid='project-include-subprojects-filter']").Change(false);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-include-subprojects-filter']").ChangeAsync(new() { Value = false }));
 
         cut.WaitForAssertion(() =>
         {
             var pane = cut.Find("[data-testid='project-files-portfolio-pane']");
             Assert.Contains("1 project(s) · 1 source(s)", pane.TextContent);
         });
-        cut.FindAll("button[role='tab']")
+        await cut.InvokeAsync(() => cut.FindAll("button[role='tab']")
             .Single(tab => tab.TextContent.Contains("Cards", StringComparison.Ordinal))
-            .Click();
+            .ClickAsync(new()));
         cut.WaitForAssertion(() =>
         {
             var card = Assert.Single(cut.FindAll("[data-testid='project-card']"));
@@ -500,7 +500,7 @@ public sealed class ProjectsPageTests
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Edit name and details").Click();
         cut.WaitForElement("[data-testid='project-name-input']");
         cut.Find("[data-testid='project-name-input']").Change("Stale editor attempt");
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleFixture.DeleteSeededProjectAsync(harness.Context.Services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored current lifetime" })).IsSuccess);
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='project-save-button']").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-save-button']").ClickAsync(new()));
@@ -559,7 +559,10 @@ public sealed class ProjectsPageTests
             Assert.DoesNotContain(
                 cut.FindAll("[data-testid='project-card']"),
                 card => card.TextContent.Contains("Partial deletion project", StringComparison.Ordinal));
-            Assert.Contains("cleanup remains pending", cut.Find("[data-testid='project-deletion-notice']").TextContent);
+            Assert.Contains("Project deletion committed", cut.Find("[data-testid='project-deletion-notice']").TextContent);
+            var pending = Assert.Single(cut.FindComponent<ProjectDeletionStatusSurface>().Instance.Pending);
+            Assert.Equal(projectId, pending.Target.ProjectId);
+            Assert.Equal(participant.Id, pending.Target.ParticipantId);
             Assert.NotNull(cut.Find("[data-testid='project-cleanup-open']"));
         });
 
@@ -568,7 +571,7 @@ public sealed class ProjectsPageTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Project cleanup completed", cut.Find("[data-testid='project-deletion-notice']").TextContent);
+            Assert.Contains("Selected cleanup completed", cut.Find("[data-testid='project-deletion-notice']").TextContent);
             Assert.Empty(cut.FindAll("[data-testid='project-deletion-retry']"));
         });
         Assert.Equal(projectId, participant.LastProjectId);
@@ -584,7 +587,7 @@ public sealed class ProjectsPageTests
         var childProjectId = await CreateProjectAsync(projectsService, "Beta child");
         var unrelatedProjectId = await CreateProjectAsync(projectsService, "Gamma unrelated");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, parentProjectId, childProjectId);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
         var cut = RenderProjectsPage(harness);
@@ -610,7 +613,7 @@ public sealed class ProjectsPageTests
         var childProjectId = await CreateProjectAsync(projectsService, "Nested Beta");
         var unrelatedProjectId = await CreateProjectAsync(projectsService, "Main Gamma");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, parentProjectId, childProjectId);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
         var cut = RenderProjectsPage(harness);
@@ -639,8 +642,8 @@ public sealed class ProjectsPageTests
         var grandchildProjectId = await CreateProjectAsync(projectsService, "Scope Gamma");
         var unrelatedProjectId = await CreateProjectAsync(projectsService, "Scope Delta");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
-        Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, parentProjectId, childProjectId);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, childProjectId, grandchildProjectId);
         Assert.NotEqual(Guid.Empty, unrelatedProjectId);
 
         var cut = RenderProjectsPage(harness);
@@ -669,7 +672,7 @@ public sealed class ProjectsPageTests
         var parentProjectId = await CreateProjectAsync(projectsService, "Collapsible parent");
         var childProjectId = await CreateProjectAsync(projectsService, "Hidden child");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, parentProjectId, childProjectId);
 
         var cut = RenderProjectsPage(harness);
 
@@ -703,8 +706,8 @@ public sealed class ProjectsPageTests
         var childProjectId = await CreateProjectAsync(projectsService, "Nested child");
         var grandchildProjectId = await CreateProjectAsync(projectsService, "Nested grandchild");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
-        Assert.True((await projectsService.AddSubprojectAsync(childProjectId, grandchildProjectId)).IsSuccess);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, parentProjectId, childProjectId);
+        await ProjectLifecycleFixture.LinkSeededProjectsAsync(harness.Context.Services, childProjectId, grandchildProjectId);
 
         var cut = RenderProjectsPage(harness);
         cut.WaitForAssertion(() => Assert.Contains("Root project", cut.Markup));
@@ -908,7 +911,9 @@ public sealed class ProjectsPageTests
     // The router renders the page only at its own route, and the page applies and writes its URL state only there.
     private static IRenderedComponent<ProjectsPage> RenderProjectsPage(ComponentTestHarness harness) {
         harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/projects");
-        return harness.Context.Render<ProjectsPage>();
+        var cut = harness.Context.Render<ProjectsPage>();
+        cut.WaitForAssertion(() => Assert.True(cut.FindComponent<ProjectModalHost>().Instance.SubmissionReady));
+        return cut;
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
@@ -1051,8 +1056,26 @@ public sealed class ProjectsPageTests
     private sealed class FailOnceProjectDeletionParticipant : IProjectDeletionParticipant
     {
         private bool pending;
+        private ProjectDeletionPreparationContext? original;
+
+        public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectDeletionPreparationContext context,
+            CancellationToken cancellationToken = default) {
+            original = context;
+            return PrepareAsync(context.Project.ProjectId, cancellationToken);
+        }
+
+        public Task<ProjectDeletionParticipantObservation> ObserveCompletionAsync(ProjectDeletionPreparationContext context, Guid recoveryId,
+            CancellationToken cancellationToken = default) {
+            Assert.Equal(original, context);
+            Assert.Equal(RecoveryId, recoveryId);
+            return Task.FromResult<ProjectDeletionParticipantObservation>(pending
+                ? new ProjectDeletionParticipantObservation.Pending(ProjectDeletionRecoveryStatus.Failed)
+                : new ProjectDeletionParticipantObservation.Completed(ProjectDeletionParticipantCompletion.Empty(RecoveryId)));
+        }
 
         public ProjectDeletionParticipantId Id { get; } = new("component-test");
+
+        public int RecoveryProtocolVersion => 1;
 
         public IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; } = [];
 

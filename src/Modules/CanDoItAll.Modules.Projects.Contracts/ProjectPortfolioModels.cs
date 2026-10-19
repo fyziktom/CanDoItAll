@@ -145,7 +145,10 @@ public sealed record ProjectHierarchyLinkSummary(
 public sealed record ProjectHierarchySnapshot(
     Guid ProjectId,
     IReadOnlyList<ProjectSummary> ParentProjects,
-    IReadOnlyList<ProjectSummary> ChildProjects);
+    IReadOnlyList<ProjectSummary> ChildProjects) {
+    public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+    public IReadOnlyList<ProjectHierarchyEdgeExpectation> ObservedEdges { get; init; } = [];
+}
 
 /// <summary>
 /// A phase of a project in the project read and save. Phases are stored in array order.

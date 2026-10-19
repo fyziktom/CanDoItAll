@@ -9,6 +9,51 @@ using Npgsql;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class DatasetLifecyclePersistenceTests {
+    [Fact]
+    public async Task Offline_deletion_recovery_refuses_an_active_owner_without_waiting_and_holds_exclusion_until_rollback() {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = Bootstrap();
+        await fixture.ActivateAsync(original);
+        await using (var owner = fixture.Context()) {
+            await using var ownership = await owner.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            await DatasetLifecycleStore.RequireActiveForMutationAsync(owner, original.Binding);
+            await using var offline = fixture.Context();
+            await using var attempt = await offline.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            await offline.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '0'; SET LOCAL statement_timeout = '2s'");
+            var busy = await Assert.ThrowsAsync<PostgresException>(() =>
+                DatasetLifecycleStore.RequireActiveForDeletionRecoveryAsync(offline, original.Binding));
+            Assert.Equal(PostgresErrorCodes.LockNotAvailable, busy.SqlState);
+            Assert.Equal(original.Binding, (await fixture.Store.ReadAsync())!.Binding);
+        }
+        await using (var offline = fixture.Context()) {
+            await using var exclusion = await offline.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            await DatasetLifecycleStore.RequireActiveForDeletionRecoveryAsync(offline, original.Binding);
+            await using var writer = fixture.Context();
+            await using var write = await writer.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            await writer.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '100ms'");
+            var busy = await Assert.ThrowsAsync<PostgresException>(() =>
+                DatasetLifecycleStore.RequireActiveForMutationAsync(writer, original.Binding));
+            Assert.Equal(PostgresErrorCodes.LockNotAvailable, busy.SqlState);
+            await exclusion.RollbackAsync();
+        }
+        await using var successor = fixture.Context();
+        await using var current = await successor.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        await DatasetLifecycleStore.RequireActiveForMutationAsync(successor, original.Binding);
+    }
+
+    [Fact]
+    public async Task Offline_deletion_recovery_refuses_a_replaced_namespace_without_changing_the_current_binding() {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = Bootstrap();
+        await fixture.ActivateAsync(original);
+        await using var offline = fixture.Context();
+        await using var attempt = await offline.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        await Assert.ThrowsAsync<DatasetActivationMismatchException>(() =>
+            DatasetLifecycleStore.RequireActiveForDeletionRecoveryAsync(offline, Binding()));
+        await attempt.RollbackAsync();
+        Assert.Equal(original.Binding, (await fixture.Store.ReadAsync())!.Binding);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

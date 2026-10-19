@@ -68,7 +68,7 @@ public sealed class FiniteOperationMigrationTests(ITestOutputHelper output) {
             Assert.All(await migrated.Set<FiniteOperationStateRecord>().AsNoTracking()
                 .Where(state => state.PoolId == ProjectFiniteOperationPool.Pool.Value).ToArrayAsync(), state => {
                 Assert.Equal(ProjectFiniteOperationPool.Pool.Value, state.PoolId);
-                Assert.Equal(1, state.RetentionProtocolVersion);
+                Assert.Equal(ProjectFiniteOperationPool.ProtocolVersion, state.RetentionProtocolVersion);
             });
             Assert.All(await migrated.Set<FiniteOperationEpochRecord>().AsNoTracking()
                 .Where(epoch => epoch.PoolId == ProjectFiniteOperationPool.Pool.Value).ToArrayAsync(),
@@ -175,8 +175,10 @@ public sealed class FiniteOperationMigrationTests(ITestOutputHelper output) {
         await context.GetService<IMigrator>().MigrateAsync(SubjectMigration);
         Assert.Empty(await context.Set<FiniteOperationStateRecord>().ToArrayAsync());
         Assert.Empty(await context.Set<FiniteOperationEpochRecord>().ToArrayAsync());
-        await fixture.InitializeAsync(fixture.Service);
-        await fixture.InitializeAsync(fixture.Service);
+        var predecessorPool = new FiniteOperationPoolRegistration(fixture.Pool.Pool, 1, fixture.Pool.Timing,
+            [new(ProjectFiniteOperationPool.DefinitionFamily, ProjectDefinitionReceiptRecord.MaximumPayloadBytes)]);
+        await fixture.InitializeAsync(fixture.Service, predecessorPool);
+        await fixture.InitializeAsync(fixture.Service, predecessorPool);
         var before = await ReadRetainedAsync(context, upgraded: true);
         Assert.Equal(SubjectMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
 

@@ -62,7 +62,7 @@ internal static class HistoricalReceiptSeedScenario {
         ExecutionRunRecord run;
         ChatSessionRecord? chat = null;
         AgentDefinition executor;
-        if (kind == HistoricalReceiptSeedKind.Process) {
+        if (HistoricalReceiptSeedProtocol.IsProcess(kind)) {
             var launchAuthority = await services.GetRequiredService<ProjectProcessLaunchAuthorityService>().CaptureAgentAsync(
                 new(admission.DatabaseProfileId, projectId, admission.LifetimeId), governance,
                 ProcessLaunchAgentOperation.StructureStart, cancellationToken);
@@ -92,35 +92,43 @@ internal static class HistoricalReceiptSeedScenario {
             .Single(item => item.Descriptor?.ProviderKey == HistoricalReceiptSeedProtocol.ToolProviderKey);
         var json = services.GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
         List<Guid> operationIds = [];
+        IReadOnlyList<AgentProjectStructureLifetime> hierarchyTargets = [];
         using (WorkspaceExecutionAuditContext.BeginScope(run)) {
             await using var lease = await journal.AcquireRunAsync(run.ToolAdmission!.Session.Reference, cancellationToken);
             using var bound = lease.Bind();
             await journal.BeginEffectSegmentAsync(lease, cancellationToken);
             var tools = await toolProvider.CreateToolsAsync(context, cancellationToken);
-            var metadata = toolProvider.GetToolMetadata(context).Single(item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
-            var tool = tools.OfType<AIFunction>().Single(item => item.Name == metadata.ToolName);
-            for (var index = 0; index < 5; index++) {
-                var original = (await projects.GetDefinitionAsync(projectId, cancellationToken)).Value
-                    ?? throw new InvalidOperationException("The target definition is unavailable.");
-                var update = new ProjectStructureProjectSaveRequest($"Original accepted restart effect {index}", "", "", "") {
-                    ExpectedDefinition = original.Expectation
-                };
-                Dictionary<string, object?> arguments = new() { ["projectId"] = projectId, ["request"] = update };
-                var payload = (metadata.PrepareAdmission ?? throw new InvalidOperationException("The tool has no durable admission codec."))(
-                    JsonSerializer.SerializeToElement(arguments, json));
-                var callId = $"historical-restart-effect-{index}";
-                var prepared = await journal.AdmitBatchAsync(lease, payload.Digest, Envelope("{}"), [new(callId, payload, false)], cancellationToken);
-                var claim = await journal.ClaimInvocationAsync(lease, prepared.Batches[^1].Id, callId, payload, cancellationToken);
-                using var dispatch = claim.Bind();
-                using var effect = AgentToolInvocationEffectScope.Begin();
-                var result = await tool.InvokeAsync(new AIFunctionArguments(arguments), cancellationToken);
-                Require(result is JsonElement && effect.CommittedEffect?.SourceId == claim.Proposal.IntentId.Value.ToString("D"),
-                    "The actual tool did not acknowledge its original owner effect.");
-                if (index < 4) {
-                    await journal.CompleteInvocationAsync(claim, Envelope(((JsonElement)result!).GetRawText()),
-                        AgentToolEffectState.Committed, cancellationToken);
+            if (HistoricalReceiptSeedProtocol.HasCreatedTargets(kind)) {
+                var seededHierarchy = await HistoricalHierarchySeedScenario.CreateAsync(services, journal, lease, toolProvider, context, tools,
+                    admission, json, cancellationToken, HistoricalReceiptSeedProtocol.IsCreatedDefinition(kind));
+                operationIds.AddRange(seededHierarchy.OperationIds);
+                hierarchyTargets = seededHierarchy.Targets;
+            } else {
+                var metadata = toolProvider.GetToolMetadata(context).Single(item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
+                var tool = tools.OfType<AIFunction>().Single(item => item.Name == metadata.ToolName);
+                for (var index = 0; index < 5; index++) {
+                    var original = (await projects.GetDefinitionAsync(projectId, cancellationToken)).Value
+                        ?? throw new InvalidOperationException("The target definition is unavailable.");
+                    var update = new ProjectStructureProjectSaveRequest($"Original accepted restart effect {index}", "", "", "") {
+                        ExpectedDefinition = original.Expectation
+                    };
+                    Dictionary<string, object?> arguments = new() { ["projectId"] = projectId, ["request"] = update };
+                    var payload = (metadata.PrepareAdmission ?? throw new InvalidOperationException("The tool has no durable admission codec."))(
+                        JsonSerializer.SerializeToElement(arguments, json));
+                    var callId = $"historical-restart-effect-{index}";
+                    var prepared = await journal.AdmitBatchAsync(lease, payload.Digest, Envelope("{}"), [new(callId, payload, false)], cancellationToken);
+                    var claim = await journal.ClaimInvocationAsync(lease, prepared.Batches[^1].Id, callId, payload, cancellationToken);
+                    using var dispatch = claim.Bind();
+                    using var effect = AgentToolInvocationEffectScope.Begin();
+                    var result = await tool.InvokeAsync(new AIFunctionArguments(arguments), cancellationToken);
+                    Require(result is JsonElement && effect.CommittedEffect?.SourceId == claim.Proposal.IntentId.Value.ToString("D"),
+                        "The actual tool did not acknowledge its original owner effect.");
+                    if (index < 4) {
+                        await journal.CompleteInvocationAsync(claim, Envelope(((JsonElement)result!).GetRawText()),
+                            AgentToolEffectState.Committed, cancellationToken);
+                    }
+                    operationIds.Add(claim.Proposal.IntentId.Value);
                 }
-                operationIds.Add(claim.Proposal.IntentId.Value);
             }
         }
         var retained = await store.GetExecutionRunAsync(run.Id, cancellationToken)
@@ -132,10 +140,20 @@ internal static class HistoricalReceiptSeedScenario {
         await using var owner = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync(cancellationToken);
         var receipts = await owner.Set<ProjectDefinitionReceiptRecord>().AsNoTracking()
             .Where(item => operationIds.Contains(item.OperationId)).ToArrayAsync(cancellationToken);
-        Require(receipts.Length == 5 && receipts.All(item => item.ProjectId == projectId && item.LifetimeId == admission.LifetimeId),
-            "The owner did not retain five exact target-lifetime receipts.");
-        var dataset = receipts.Select(item => item.NamespaceId).Distinct().Single();
-        var byId = receipts.ToDictionary(item => item.OperationId);
+        var hierarchy = HistoricalReceiptSeedProtocol.IsHierarchy(kind);
+        Require(receipts.Length == (hierarchy ? 3 : 5) && receipts.All(item => HistoricalReceiptSeedProtocol.HasCreatedTargets(kind)
+            ? hierarchyTargets.Any(target => target.ProjectId == item.ProjectId && target.LifetimeId == item.LifetimeId)
+            : item.ProjectId == projectId && item.LifetimeId == admission.LifetimeId),
+            "The owner did not retain the exact original definition lifetimes.");
+        var ids = operationIds.ToArray();
+        var lifecycle = await owner.Database.SqlQuery<HistoricalSeedLifecycleRow>($"""
+            SELECT "OperationId", "NamespaceId", "AcceptedPayload" FROM "Projects_LifecycleReceipts"
+            WHERE "OperationId" = ANY({ids}) LIMIT 6
+            """).ToArrayAsync(cancellationToken);
+        Require(lifecycle.Length == (hierarchy ? 2 : 0), "The seed has an unexpected lifecycle receipt set.");
+        var dataset = receipts.Select(item => item.NamespaceId).Concat(lifecycle.Select(item => item.NamespaceId)).Distinct().Single();
+        var byId = receipts.Select(item => new HistoricalSeedLifecycleRow(item.OperationId, item.NamespaceId, item.AcceptedPayload))
+            .Concat(lifecycle).ToDictionary(item => item.OperationId);
         var historical = new FileSandboxWorkspaceHistoricalReadStore(database.Profile.Profile.Storage.WorkspaceRoot,
             WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")));
         var observed = await historical.ReadHistoricalRunAsync(run.Id, cancellationToken);
@@ -144,15 +162,15 @@ internal static class HistoricalReceiptSeedScenario {
         var runHash = observed.Snapshot!.FileDigest.Value.ToUpperInvariant();
         return new(HistoricalReceiptSeedProtocol.Version, nonce, Environment.ProcessId, processStarted, kind, profile.ProfileId,
             generation.Value, dataset, projectId, admission.LifetimeId, sourceAgent.Id,
-            kind == HistoricalReceiptSeedKind.Process ? Guid.Parse(retained.ProcessRunId!) : null,
-            kind == HistoricalReceiptSeedKind.Process ? Guid.Parse(retained.ProcessStepId!) : null,
+            HistoricalReceiptSeedProtocol.IsProcess(kind) ? Guid.Parse(retained.ProcessRunId!) : null,
+            HistoricalReceiptSeedProtocol.IsProcess(kind) ? Guid.Parse(retained.ProcessStepId!) : null,
             new(run.Id, run.ChatSessionId, run.AgentId, run.CreatedAtUtc), runHash,
-            operationIds.Select(id => new HistoricalReceiptDigest(id, Convert.ToHexString(SHA256.HashData(byId[id].AcceptedPayload)))).ToArray());
+            operationIds.Select(id => new HistoricalReceiptDigest(id, Convert.ToHexString(SHA256.HashData(byId[id].AcceptedPayload)))).ToArray(), hierarchyTargets);
     }
 
     private static AgentRuntimeToolProviderContext CreateContext(HistoricalReceiptSeedKind kind, AgentDefinition executor,
         ProviderProfile provider, ExecutionRunRecord run, Guid projectId) {
-        var process = kind == HistoricalReceiptSeedKind.Process;
+        var process = HistoricalReceiptSeedProtocol.IsProcess(kind);
         return new(executor, provider, [], false, process ? AgentRuntimeToolProviderPurpose.GovernedProcessAutomation :
             AgentRuntimeToolProviderPurpose.InteractiveChat, "historical-restart-seed", AgentRuntimeContextIntent.Empty with {
                 Purpose = process ? AgentRuntimeContextPurpose.GovernedProcessAutomation : AgentRuntimeContextPurpose.InteractiveChat,
@@ -203,6 +221,8 @@ internal static class HistoricalReceiptSeedScenario {
             "Retain five original owner effects.", "", "fixture", "fixture", ExecutionState.Preparing, null,
             now, now, now, null, "", null, [], ProcessRunId: assignment.RunId.ToString(), ProcessStepId: assignment.StepInstanceId.ToString()), executor);
     }
+
+    private sealed record HistoricalSeedLifecycleRow(Guid OperationId, Guid NamespaceId, byte[] AcceptedPayload);
 
     private static AgentToolProtocolEnvelope Envelope(string json) => AgentToolProtocolEnvelope.Create("historical-seed-sdk", 1, json);
 

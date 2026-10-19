@@ -47,8 +47,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 await crm.SaveChangesAsync();
                 laterRows = await ReadCompensationAssignmentsAsync(crm, projectId);
             } else if (edit == OpportunityCompensationEdit.RecreatedProject) {
-                var original = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId);
-                await projects.DeleteAsync(projectId, expectedProjectAdmission: original);
+                await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
                 replacement = (await projects.CreateWithReceiptAsync(projectId, new() { Name = "Recreated by a human" })).Value!.Project;
             }
         };

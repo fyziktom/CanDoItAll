@@ -337,7 +337,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorTests
             Assert.False(cancellationToken.IsCancellationRequested);
             Events.Add("create");
             TargetExists = true;
-            var receipt = new ProjectCreationReceipt(new(Guid.NewGuid(), targetProjectId, Guid.NewGuid()), null, "test-owner-receipt");
+            var receipt = new ProjectCreationReceipt(new(Guid.NewGuid(), targetProjectId, Guid.NewGuid()), new(Guid.NewGuid()), null, "test-owner-receipt");
             CreatedReceipt = receipt;
             return CreationFailure is null ? Task.FromResult(Result<ProjectCreationReceipt>.Success(receipt)) :
                 Task.FromException<Result<ProjectCreationReceipt>>(CreationFailure);

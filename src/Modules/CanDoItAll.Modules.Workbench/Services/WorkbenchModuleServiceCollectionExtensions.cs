@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Models;
@@ -42,6 +44,19 @@ public static class WorkbenchModuleServiceCollectionExtensions
         }
         taskPlanOptions.Validate(static options => options.IsValid(), "Task-plan operation timing is invalid.").ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectTaskPlanReceiptRetention>());
+        services.AddScoped<ProjectTaskPlanBasisCapture>();
+        services.AddScoped<ProjectTaskPlanReceiptReader>();
+        services.AddScoped(provider => new ProjectTaskPlanPublisher(
+            provider.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(), provider.GetRequiredService<DatasetActivationService>(),
+            provider.GetRequiredService<ProjectWriteAdmissionService>(), provider.GetRequiredService<CoordinatedDatabaseTransaction>(),
+            provider.GetRequiredService<FiniteOperationEpochStore>(), provider.GetRequiredService<IOptions<ProjectTaskPlanOperationOptions>>().Value,
+            provider.GetRequiredService<ProjectTaskPlanBasisCapture>(), provider.GetRequiredService<ProjectTaskPlanReceiptReader>(),
+            ProjectTaskPlanAgentParticipant.Capabilities.BudgetCeiling, provider.GetRequiredService<ILogger<ProjectTaskPlanPublisher>>()));
+        services.AddScoped<ProjectTaskPlanAgentParticipant>();
+        services.AddScoped<ProjectTaskPlanAgentAdmission>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentPlanningParticipant, ProjectTaskPlanAgentParticipant>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProjectTaskPlanAgentToolProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentToolReceiptReconciliationProvider, ProjectTaskPlanAgentToolProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,
             ProjectStructureExecutionAuthorityProvider>());

@@ -8,7 +8,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectDefinitionHistoricalReceiptRecovery(AgentHistoricalCatalogBasis basis,
     ProjectProcessHistoricalReadAuthority processes, ProjectWriteAdmissionService projects,
-    ProjectDefinitionReceiptReader receipts) : IAgentToolHistoricalReceiptReadProvider {
+    ProjectDefinitionReceiptReader receipts, ProjectCreatedTargetProvenance createdTargets) : IAgentToolHistoricalReceiptReadProvider {
     public bool Supports(string toolName) => ProjectDefinitionToolProposalCodec.Supports(toolName);
 
     public async ValueTask<AgentToolHistoricalReceiptObservation> ReadAsync(AgentToolHistoricalReceiptReadClaim claim,
@@ -16,7 +16,8 @@ public sealed class ProjectDefinitionHistoricalReceiptRecovery(AgentHistoricalCa
         var admitted = await claim.RequireAsync(cancellationToken);
         var (source, input) = ProjectDefinitionToolProposalCodec.Read(admitted.Payload);
         ProjectDefinitionToolReceiptRecovery.RequireSession(source, admitted.OriginalSession);
-        var lookup = await LookupAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input, claim, cancellationToken);
+        var (lookup, _) = await LookupOriginalAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input, claim,
+            cancellationToken, ResolveSourcesAsync);
         await claim.RequireAsync(cancellationToken);
         return lookup switch {
             ProjectDefinitionLookup.FoundFull found => new(AgentHistoricalReceiptKnowledge.Accepted, ProjectDefinitionToolReceiptRecovery.Receipt(found.Result)),
@@ -32,10 +33,20 @@ public sealed class ProjectDefinitionHistoricalReceiptRecovery(AgentHistoricalCa
             ProjectDefinitionLookup.InvalidContext => new(AgentHistoricalReceiptKnowledge.Unsupported),
             _ => throw new InvalidDataException("The original receipt owner returned an unknown historical lookup state.")
         };
+
+        async Task<ProjectGovernedSourceAdmissions> ResolveSourcesAsync(CancellationToken token) {
+            if (!ProjectCreatedTargetProvenance.NeedsDefinitionProof(source, admitted.Payload.ToolName, input)) {
+                return ProjectCreatedTargetProvenance.Original(source, admitted.Payload.ToolName);
+            }
+            return await createdTargets.ResolveDefinitionAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input,
+                await claim.RequirePriorInvocationsAsync(token),
+                (prior, intent, tool, arguments, currentToken) => LookupCreationAsync(prior, intent, tool, arguments, claim, currentToken), token);
+        }
     }
 
-    private async Task<ProjectDefinitionLookup> LookupAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,
-        string tool, ProjectDefinitionToolArguments input, AgentToolHistoricalReceiptReadClaim claim, CancellationToken cancellationToken) {
+    internal async Task<(ProjectDefinitionLookup Lookup, ProjectCreationReservation? Reservation)> LookupOriginalAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,
+        string tool, ProjectDefinitionToolArguments input, AgentToolHistoricalReceiptReadClaim claim, CancellationToken cancellationToken,
+        Func<CancellationToken, Task<ProjectGovernedSourceAdmissions>>? resolveSources = null) {
         ProjectCreationReservation? reservation = null;
         if (tool != ProjectStructureToolPolicy.ProjectStructureProjectUpdate) {
             reservation = await projects.FindCreationReservationAsync(intent.Value, source.Session.AgentId, cancellationToken);
@@ -43,18 +54,39 @@ public sealed class ProjectDefinitionHistoricalReceiptRecovery(AgentHistoricalCa
                 ProjectDefinitionToolReceiptRecovery.RequireReservation(source, intent, input, reservation);
             }
         }
-        IProjectDefinitionReceiptAccess access;
-        if (source.Process is { } dispatch) {
-            var original = new ProjectProcessMutationAdmission(dispatch);
-            access = new HistoricalProcessAccess(reservation is null ? original : original.WithCreatedProject(reservation),
-                processes, basis, projects, claim);
-        } else {
-            var original = source.AgentAdmission(tool);
-            access = new HistoricalAgentAccess(reservation is null ? original : original.WithCreatedProject(reservation),
-                basis, projects, claim);
+        var original = ProjectCreatedTargetProvenance.Original(source, tool);
+        if (reservation is not null) {
+            original = original.WithCreated(reservation);
         }
-        return await receipts.LookupHistoricalAsync(source.Operation(intent), new ProjectDefinitionReceiptInvocation(source.Caller, access), cancellationToken);
+        IProjectDefinitionReceiptAccess Bind(ProjectGovernedSourceAdmissions sources)
+            => sources.Process is { } process ? ForProcess(process, claim) : ForAgent(sources.Agent!, claim);
+        IProjectDefinitionReceiptAccess access = tool == ProjectStructureToolPolicy.ProjectStructureProjectUpdate && resolveSources is not null
+            ? new ProjectDeferredDefinitionReceiptAccess(resolveSources, Bind) : Bind(original);
+        return (await receipts.LookupHistoricalAsync(source.Operation(intent), new ProjectDefinitionReceiptInvocation(source.Caller, access), cancellationToken), reservation);
     }
+
+    internal async Task<(ProjectDefinitionLookup Lookup, ProjectCreationReservation? Reservation)> LookupCreationAsync(
+        ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent, string tool, ProjectDefinitionToolArguments input,
+        AgentToolHistoricalReceiptReadClaim claim, CancellationToken cancellationToken) {
+        if (tool is not (ProjectStructureToolPolicy.ProjectStructureProjectCreate or ProjectStructureToolPolicy.ProjectStructureSubprojectCreate)) {
+            throw ProjectDefinitionToolProposalCodec.Denied("Historical creation provenance cannot resolve another kind of operation.");
+        }
+        var result = await LookupOriginalAsync(source, intent, tool, input, claim, cancellationToken);
+        if (result.Lookup is ProjectDefinitionLookup.DetailUnavailable { Reason: ProjectDefinitionDetailUnavailableReason.AccessDenied }) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        if (result.Lookup is not ProjectDefinitionLookup.FoundFull) {
+            throw new AgentToolReceiptReadUnavailableException(new InvalidOperationException(
+                $"Original creation {intent.Value} cannot establish target provenance: {result.Lookup.GetType().Name}."));
+        }
+        return result;
+    }
+
+    internal IProjectDefinitionReceiptAccess ForAgent(ProjectAgentMutationAdmission original, AgentToolHistoricalReceiptReadClaim claim)
+        => new HistoricalAgentAccess(original, basis, projects, claim);
+
+    internal IProjectDefinitionReceiptAccess ForProcess(ProjectProcessMutationAdmission original, AgentToolHistoricalReceiptReadClaim claim)
+        => new HistoricalProcessAccess(original, processes, basis, projects, claim);
 
     private sealed class HistoricalAgentAccess(ProjectAgentMutationAdmission original,
         AgentHistoricalCatalogBasis basis, ProjectWriteAdmissionService projects,
@@ -86,17 +118,22 @@ public sealed class ProjectDefinitionHistoricalReceiptRecovery(AgentHistoricalCa
             if (!ProjectDefinitionGovernedReadPolicy.ProcessCanRead(original, current, target)) {
                 return false;
             }
-            if (current!.Dispatch.SourceAuthority!.Principal is ProcessLaunchPrincipal.AgentExecution source) {
-                var agent = basis.RequireSelected(source.Ceiling.AgentId, cancellationToken);
-                if (!ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(source.Ceiling.AgentId, agent, target)) {
+            bool Allows() {
+                if (current!.Dispatch.SourceAuthority!.Principal is ProcessLaunchPrincipal.AgentExecution source &&
+                        !ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(source.Ceiling.AgentId,
+                            basis.RequireSelected(source.Ceiling.AgentId, cancellationToken), original.ProjectAdmission)) {
                     return false;
                 }
-                var matches = await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
-                agent = basis.RequireSelected(source.Ceiling.AgentId, cancellationToken);
-                await claim.RequireAsync(cancellationToken);
-                return matches && ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(source.Ceiling.AgentId, agent, target);
+                var executor = original.Dispatch.Evidence.ExecutorAgentId;
+                return target == original.ProjectAdmission || ProjectDefinitionGovernedReadPolicy.CurrentExecutorCanUseCreatedProject(
+                    executor, basis.RequireSelected(executor, cancellationToken), target);
             }
-            return await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
+            if (!Allows()) {
+                return false;
+            }
+            var matches = await projects.CaptureAsync(target.ProjectId, cancellationToken) == target;
+            await claim.RequireAsync(cancellationToken);
+            return matches && Allows();
         }
     }
 }

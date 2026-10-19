@@ -7,8 +7,18 @@ namespace CanDoItAll.Web.Api;
 
 internal sealed class ProjectDefinitionCurrentWriteAccess(HttpContext context, ApiAuthenticationObservation? original,
     IApiTokenRegistry tokens, IApiUserStore users, ApiSessionService sessions, IOptions<ApiAccessOptions> options,
-    TimeProvider clock) : IProjectDefinitionCurrentWriteAccess {
+    TimeProvider clock) : IProjectDefinitionCurrentWriteAccess, IProjectLifecycleCurrentWriteAccess {
     internal static readonly TimeSpan ObservationBudget = TimeSpan.FromSeconds(1);
+
+    async ValueTask<ProjectLifecycleWriteAccessDecision> IProjectLifecycleCurrentWriteAccess.ObserveAsync(CancellationToken cancellationToken)
+        => (await ObserveAsync(cancellationToken)) switch {
+            ProjectDefinitionWriteAccessDecision.Allowed => ProjectLifecycleWriteAccessDecision.Allowed,
+            ProjectDefinitionWriteAccessDecision.Denied => ProjectLifecycleWriteAccessDecision.Denied,
+            ProjectDefinitionWriteAccessDecision.CallerChanged => ProjectLifecycleWriteAccessDecision.CallerChanged,
+            ProjectDefinitionWriteAccessDecision.AuthorityChanged => ProjectLifecycleWriteAccessDecision.AuthorityChanged,
+            ProjectDefinitionWriteAccessDecision.Unavailable => ProjectLifecycleWriteAccessDecision.Unavailable,
+            _ => throw new InvalidOperationException("The Projects authority observer returned an unsupported decision.")
+        };
 
     public async ValueTask<ProjectDefinitionWriteAccessDecision> ObserveAsync(CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();

@@ -112,6 +112,10 @@ public static class RuntimeHostServiceCollectionExtensions
         services.TryAddScoped<ProjectDefinitionToolAdmission>();
         services.TryAddScoped<ProjectDefinitionToolReceiptRecovery>();
         services.AddScoped<IAgentToolReceiptReconciliationProvider, ProjectDefinitionToolReceiptRecovery>();
+        services.TryAddScoped<ProjectLifecycleToolAdmission>();
+        services.TryAddScoped<ProjectCreatedTargetProvenance>();
+        services.TryAddScoped<ProjectLifecycleToolReceiptRecovery>();
+        services.AddScoped<IAgentToolReceiptReconciliationProvider, ProjectLifecycleToolReceiptRecovery>();
         services.TryAddScoped<Func<AgentHistoricalCatalogBasis, AgentHistoricalReceiptReadParticipants>>(provider => {
             var original = provider.GetRequiredService<IProcessOriginalReceiptAuthorityReader>();
             var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
@@ -120,11 +124,17 @@ public static class RuntimeHostServiceCollectionExtensions
             var options = provider.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>();
             var clock = provider.GetRequiredService<TimeProvider>();
             var receipts = provider.GetRequiredService<ProjectDefinitionReceiptReader>();
+            var lifecycleReceipts = provider.GetRequiredService<ProjectLifecycleReceiptReader>();
+            var planningReceipts = provider.GetRequiredService<ProjectTaskPlanReceiptReader>();
+            var lifecycleCodec = provider.GetRequiredService<IProjectLifecycleRecoveryCodec>();
+            var createdTargets = provider.GetRequiredService<ProjectCreatedTargetProvenance>();
             return basis => {
                 var processRead = new ProjectProcessHistoricalReadAuthority(original, database, generations, basis, admissions, options, clock);
+                var definitions = new ProjectDefinitionHistoricalReceiptRecovery(basis, processRead, admissions, receipts, createdTargets);
                 return new AgentHistoricalReceiptReadParticipants(
                     [new ProcessHistoricalReceiptSourcePolicy(original, database, generations, processRead)],
-                    [new ProjectDefinitionHistoricalReceiptRecovery(basis, processRead, admissions, receipts)]);
+                    [definitions, new ProjectLifecycleHistoricalReceiptRecovery(definitions, createdTargets, lifecycleReceipts, lifecycleCodec),
+                        new ProjectTaskPlanHistoricalReceiptRecovery(definitions, planningReceipts)]);
             };
         });
         services.TryAddScoped<Func<IAgentHistoricalReceiptReviewService>>(provider => () => provider.GetRequiredService<IAgentHistoricalReceiptReviewService>());

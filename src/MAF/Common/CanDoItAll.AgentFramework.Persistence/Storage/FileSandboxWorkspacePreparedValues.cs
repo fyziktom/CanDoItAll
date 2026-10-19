@@ -95,7 +95,7 @@ internal static class FileSandboxWorkspacePreparedValues {
         };
     }
 
-    private static AgentDefinition Freeze(AgentDefinition value) => value with {
+    internal static AgentDefinition Freeze(AgentDefinition value) => value with {
         Permissions = value.Permissions is null ? null! : value.Permissions with {
             AllowedSecrets = value.Permissions.AllowedSecrets is null ? null : Copy(value.Permissions.AllowedSecrets)
         },

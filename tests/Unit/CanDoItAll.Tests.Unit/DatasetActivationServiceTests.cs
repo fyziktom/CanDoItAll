@@ -10,6 +10,52 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class DatasetActivationServiceTests {
     [Fact]
+    public async Task Existing_restoration_refuses_missing_selection_without_recreating_it() {
+        await using var environment = CanDoItAllTestEnvironment.Create("dataset-activation-resume");
+        var service = Service(environment);
+        var profile = Guid.NewGuid();
+        var previous = Bootstrap();
+        var next = new DatasetActivationPlan(Guid.NewGuid(), DatasetActivationKind.Reactivate, Binding(), previous.Binding);
+        string directory = Path.Combine(environment.ControlPlaneRootPath, "database-profiles", "dataset-activations");
+        await Assert.ThrowsAsync<PhysicalPathValidationException>(() => service.AcquireRestorationAsync(profile, next.PlanId, previous.Binding.Namespace));
+        Assert.False(Directory.Exists(directory));
+        using (var setup = service.Acquire(profile)) {
+            await setup.WritePreparedAsync(previous);
+            await setup.MarkActiveAsync(previous);
+            await setup.WritePreparedAsync(next);
+        }
+        string path = Path.Combine(directory, $"{profile:D}.json");
+        File.Delete(path);
+        string[] before = Directory.GetFileSystemEntries(directory);
+        await Assert.ThrowsAsync<FileNotFoundException>(() => service.AcquireRestorationAsync(profile, next.PlanId, previous.Binding.Namespace));
+        Assert.False(File.Exists(path));
+        Assert.Equal(before, Directory.GetFileSystemEntries(directory));
+    }
+
+    [Fact]
+    public async Task Existing_activation_exclusion_refuses_missing_directories_and_preserves_the_original_active_record() {
+        await using var environment = CanDoItAllTestEnvironment.Create("dataset-activation-resume");
+        var service = Service(environment);
+        var profile = Guid.NewGuid();
+        var directory = Path.Combine(environment.ControlPlaneRootPath, "database-profiles", "dataset-activations");
+        await Assert.ThrowsAsync<PhysicalPathValidationException>(() => service.AcquireExistingExclusionAsync(profile).AsTask());
+        Assert.False(Directory.Exists(directory));
+        var plan = Bootstrap();
+        using (var setup = service.Acquire(profile)) {
+            await setup.WritePreparedAsync(plan);
+            await setup.MarkActiveAsync(plan);
+        }
+        var before = await service.ObserveActiveBindingAsync(profile);
+        await using var held = await service.AcquireExistingExclusionAsync(profile);
+        Assert.Equal(before, await service.ObserveActiveBindingAsync(profile));
+        using var cancelled = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        Assert.ThrowsAny<OperationCanceledException>(() => Service(environment).Acquire(profile, cancelled.Token));
+        await held.DisposeAsync();
+        using var next = Service(environment).Acquire(profile);
+        Assert.Equal(before.Record, await next.ReadAsync());
+    }
+
+    [Fact]
     public async Task Prepared_plan_survives_restart_and_only_exact_completion_can_activate_it() {
         await using var environment = CanDoItAllTestEnvironment.Create("dataset-activation-resume");
         var profileId = Guid.NewGuid();

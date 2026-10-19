@@ -19,8 +19,17 @@ internal static class ControlPlaneFileCoordination
         ControlPlaneCoordinationScope scope,
         CancellationToken cancellationToken = default)
     {
-        string lockPath = scope switch
-        {
+        return durableFileWriter.AcquireCoordination(controlPlaneRoot, GetLockPath(controlPlaneRoot, scope),
+            LockTimeout, requirePrivateUnixMode: true, cancellationToken);
+    }
+
+    internal static ValueTask<IAsyncDisposable> AcquireExistingAsync(DurableFileWriter files,
+        string controlPlaneRoot, ControlPlaneCoordinationScope scope, CancellationToken cancellationToken)
+        => files.AcquireExistingCoordinationAsync(controlPlaneRoot, GetLockPath(controlPlaneRoot, scope),
+            TimeSpan.FromSeconds(5), requirePrivateUnixMode: true, cancellationToken);
+
+    private static string GetLockPath(string controlPlaneRoot, ControlPlaneCoordinationScope scope)
+        => scope switch {
             ControlPlaneCoordinationScope.DatabaseProfiles => Path.Combine(
                 controlPlaneRoot,
                 "database-profiles",
@@ -35,12 +44,4 @@ internal static class ControlPlaneFileCoordination
                 ".activation.candoitall.lock"),
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unsupported control-plane lock scope.")
         };
-
-        return durableFileWriter.AcquireCoordination(
-            controlPlaneRoot,
-            lockPath,
-            LockTimeout,
-            requirePrivateUnixMode: true,
-            cancellationToken);
-    }
 }

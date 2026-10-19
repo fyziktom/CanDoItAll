@@ -360,7 +360,7 @@ public sealed partial class ProjectTransferHistoryPersistenceTests {
         var targetAdmissions = fixture.TargetServices.GetRequiredService<ProjectWriteAdmissionService>();
         var forgedCurrentProfile = reserved with { DatabaseProfileId = fixture.TargetProfile.Profile.Id };
         await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.RequireCreationGrantAsync(forgedCurrentProfile));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.CancelCreationAsync(forgedCurrentProfile));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.CaptureReservationCancellationAsync(forgedCurrentProfile));
         await Assert.ThrowsAsync<InvalidOperationException>(() => targetAdmissions.ReserveCreationAsync(reserved.ProjectId, reserved.RequesterId, reserved.Id));
         Assert.Empty((await targetAdmissions.ListAccessBindingFactsAsync([reserved.ProjectId])).Reservations);
         var rejected = await fixture.TargetServices.GetRequiredService<ProjectsService>().CreateAsync(forgedCurrentProfile, new() { Name = "Stale imported reservation" });

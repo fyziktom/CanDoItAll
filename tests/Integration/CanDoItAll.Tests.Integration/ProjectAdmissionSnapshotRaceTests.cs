@@ -27,7 +27,8 @@ public sealed class ProjectAdmissionSnapshotRaceTests {
         var projectOptions = new DbContextOptionsBuilder<ProjectsDbContext>();
         AppDbContextOptionsConfigurator.Configure(projectOptions, canonical.Profile);
         projectOptions.AddInterceptors(probe);
-        var admissions = new ProjectWriteAdmissionService(factory, projectOptions.Options, coordinator, canonical);
+        var admissions = new ProjectWriteAdmissionService(factory, projectOptions.Options, coordinator, canonical,
+            services.ServiceProvider.GetRequiredService<DatasetActivationService>());
         var project = new Project { Name = "Original lifetime" };
         await using var deletion = await factory.CreateDbContextAsync();
         deletion.Add(project);

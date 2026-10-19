@@ -1,3 +1,4 @@
+using Fixture = CanDoItAll.Tests.Integration.DatasetActivationTestFixture;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Configuration;
@@ -207,62 +208,4 @@ public sealed partial class DatasetActivationCoordinatorTests {
         public void Dispose() => Release.Dispose();
     }
 
-    private sealed class Fixture(PostgresTestDatabaseLease lease, CanDoItAllTestEnvironment environment) : IAsyncDisposable {
-        public CanDoItAllTestEnvironment Environment { get; } = environment;
-        public ResolvedDatabaseProfile Profile { get; } = new(new DatabaseProfileRecord {
-            Id = Guid.NewGuid(),
-            ProviderKind = DatabaseProviderKind.PostgreSql
-        }, DatabaseProfileResolutionSource.ExplicitOverride, lease.ConnectionString);
-        private DbContextOptions<FiniteOperationDbContext> EpochOptions { get; } = new DbContextOptionsBuilder<FiniteOperationDbContext>()
-            .UseNpgsql(lease.ConnectionString).Options;
-        private DbContextOptions<AppDbContext> CanonicalOptions => lease.CreateAppDbContextOptions();
-        public DatasetActivationCoordinator Coordinator => CoordinatorFor(Environment);
-        public DatasetLifecycleStore Lifecycle => new(new DbContextOptionsBuilder<DatasetLifecycleDbContext>()
-            .UseNpgsql(lease.ConnectionString).Options, CoordinatedDatabaseTransaction.ForProfile(Profile));
-        public FiniteOperationPoolRegistration Pool { get; } = ProjectFiniteOperationPool.Create(new());
-        public FiniteOperationEpochStore Epochs => EpochsFor(CoordinatedDatabaseTransaction.ForProfile(Profile));
-
-        public FiniteOperationEpochStore EpochsFor(CoordinatedDatabaseTransaction transactions) => new(EpochOptions, transactions);
-        public AppDbContext Projects() => new(CanonicalOptions);
-        public DatasetActivationService Files() => FilesFor(Environment);
-
-        public DatasetActivationCoordinator CoordinatorFor(CanDoItAllTestEnvironment host, DurableFileWriter? writer = null,
-            IReadOnlyCollection<FiniteOperationPoolRegistration>? registrations = null)
-            => new(FilesFor(host, writer), registrations ?? [Pool]);
-
-        public async Task<DatasetActivationFileRecord> ReadFileAsync(CanDoItAllTestEnvironment? host = null) {
-            using var file = FilesFor(host ?? Environment).Acquire(Profile.Profile.Id);
-            return (await file.ReadAsync())!;
-        }
-
-        private static DatasetActivationService FilesFor(CanDoItAllTestEnvironment host, DurableFileWriter? writer = null) {
-            var policies = new PhysicalFileSystemPathPolicyFactory();
-            writer ??= new(policies);
-            var paths = new ControlPlanePathResolver(Options.Create(new ControlPlaneOptions { RootPath = host.ControlPlaneRootPath }),
-                host.CreateHostEnvironment(nameof(DatasetActivationCoordinatorTests)), writer);
-            return new(paths, writer, policies);
-        }
-
-        public static async Task<Fixture> CreateAsync() {
-            AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
-            var fixture = new Fixture(PostgresTestDatabaseLease.Create("dataset-activation-coordinator"),
-                CanDoItAllTestEnvironment.Create("dataset-activation-coordinator"));
-            try {
-                await using var context = new AppDbContext(fixture.CanonicalOptions);
-                await context.Database.MigrateAsync();
-                return fixture;
-            } catch {
-                await fixture.DisposeAsync();
-                throw;
-            }
-        }
-
-        public async ValueTask DisposeAsync() {
-            try {
-                await lease.DisposeAsync();
-            } finally {
-                await Environment.DisposeAsync();
-            }
-        }
-    }
 }

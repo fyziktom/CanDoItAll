@@ -1,3 +1,4 @@
+using Fixture = CanDoItAll.Tests.Integration.DatasetActivationTestFixture;
 using System.Text.Json;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -15,14 +16,14 @@ public sealed partial class DatasetActivationCoordinatorTests {
         var binding = await fixture.Coordinator.EnsureReadyAsync(fixture.Profile);
         var added = AdditionalPool(fixture);
         await InstallPoolAsync(fixture, binding, added);
-        var before = await InstallationSnapshotAsync(fixture);
+        var before = await fixture.InstallationSnapshotAsync();
         var active = await fixture.ReadFileAsync();
 
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.Coordinator.EnsureReadyAsync(fixture.Profile));
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.Coordinator.AttachAsync(fixture.Profile));
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.Coordinator.ResumeAsync(fixture.Profile));
         Assert.Equal(active, await fixture.ReadFileAsync());
-        Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+        Assert.Equal(before, await fixture.InstallationSnapshotAsync());
         await using var aliasEnvironment = CanDoItAllTestEnvironment.Create("dataset-pool-fence-alias");
         var alias = fixture.CoordinatorFor(aliasEnvironment);
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => alias.AttachAsync(fixture.Profile));
@@ -32,12 +33,12 @@ public sealed partial class DatasetActivationCoordinatorTests {
         Assert.Equal(binding, prepared.Plan.Binding);
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => alias.ResumeAsync(fixture.Profile));
         Assert.Equal(prepared, await fixture.ReadFileAsync(aliasEnvironment));
-        Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+        Assert.Equal(before, await fixture.InstallationSnapshotAsync());
 
         await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.Coordinator.ReactivateAsync(
             fixture.Profile, binding.Namespace, Guid.NewGuid()));
 
-        Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+        Assert.Equal(before, await fixture.InstallationSnapshotAsync());
         Assert.Equal(binding, (await fixture.Lifecycle.ReadAsync())!.Binding);
         var refused = await fixture.ReadFileAsync();
         Assert.Equal(DatasetActivationFileState.Prepared, refused.State);
@@ -59,7 +60,7 @@ public sealed partial class DatasetActivationCoordinatorTests {
                         await context.Set<FiniteOperationStateRecord>().ExecuteDeleteAsync();
                         break;
                     case InstallationFault.UnsupportedVersion:
-                        await context.Set<FiniteOperationStateRecord>().ExecuteUpdateAsync(update => update.SetProperty(state => state.RetentionProtocolVersion, 2));
+                        await context.Set<FiniteOperationStateRecord>().ExecuteUpdateAsync(update => update.SetProperty(state => state.RetentionProtocolVersion, fixture.Pool.ProtocolVersion + 1));
                         break;
                     case InstallationFault.UnknownHistoricalState:
                         AddHistory(context, AdditionalPool(fixture), includeState: true, open: false);
@@ -104,7 +105,7 @@ public sealed partial class DatasetActivationCoordinatorTests {
                         break;
                 }
             }
-            var before = await InstallationSnapshotAsync(fixture);
+            var before = await fixture.InstallationSnapshotAsync();
             if (fault is InstallationFault.LostLifecycleWithOpenHistory or InstallationFault.LostLifecycleWithUnknownHistory) {
                 await using var newHost = CanDoItAllTestEnvironment.Create("dataset-pool-fence-lost-lifecycle");
                 await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.CoordinatorFor(newHost).EnsureReadyAsync(fixture.Profile));
@@ -115,11 +116,11 @@ public sealed partial class DatasetActivationCoordinatorTests {
                 Assert.Equal(binding, (await fixture.Lifecycle.ReadAsync())!.Binding);
                 Assert.Equal(DatasetActivationFileState.Active, (await fixture.ReadFileAsync()).State);
             }
-            Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+            Assert.Equal(before, await fixture.InstallationSnapshotAsync());
             if (fault is InstallationFault.MissingPreviousRetainedPrefix or InstallationFault.ClosedPreviousCurrentEpoch) {
                 await Assert.ThrowsAsync<FiniteOperationProtocolException>(() => fixture.Coordinator.ReactivateAsync(
                     fixture.Profile, binding.Namespace, Guid.NewGuid()));
-                Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+                Assert.Equal(before, await fixture.InstallationSnapshotAsync());
                 Assert.Equal(binding, (await fixture.Lifecycle.ReadAsync())!.Binding);
                 var prepared = await fixture.ReadFileAsync();
                 Assert.Equal(DatasetActivationFileState.Prepared, prepared.State);
@@ -165,7 +166,7 @@ public sealed partial class DatasetActivationCoordinatorTests {
             if (fault == ResumeMetadataFault.ExtraPool) {
                 await InstallPoolAsync(fixture, prepared.Plan.Binding, AdditionalPool(fixture));
             }
-            var before = await InstallationSnapshotAsync(fixture);
+            var before = await fixture.InstallationSnapshotAsync();
             if (fault == ResumeMetadataFault.None) {
                 Assert.Equal(prepared.Plan.Binding, await fixture.Coordinator.ResumeAsync(fixture.Profile));
                 Assert.Equal(prepared.Plan.Binding, await fixture.Coordinator.ResumeAsync(fixture.Profile));
@@ -175,7 +176,7 @@ public sealed partial class DatasetActivationCoordinatorTests {
                 Assert.Equal(DatasetActivationFileState.Prepared, (await fixture.ReadFileAsync()).State);
             }
             Assert.Equal(prepared.Plan, (await fixture.ReadFileAsync()).Plan);
-            Assert.Equal(before, await InstallationSnapshotAsync(fixture));
+            Assert.Equal(before, await fixture.InstallationSnapshotAsync());
         }
     }
 
@@ -259,15 +260,6 @@ public sealed partial class DatasetActivationCoordinatorTests {
         });
     }
 
-    private static async Task<string> InstallationSnapshotAsync(Fixture fixture) {
-        await using var context = fixture.Projects();
-        return JsonSerializer.Serialize(new {
-            Lifecycle = await context.Set<DatasetLifecycleRecord>().AsNoTracking().OrderBy(row => row.Id).ToArrayAsync(),
-            State = await context.Set<FiniteOperationStateRecord>().AsNoTracking().OrderBy(row => row.NamespaceId).ThenBy(row => row.PoolId).ToArrayAsync(),
-            Epochs = await context.Set<FiniteOperationEpochRecord>().AsNoTracking().OrderBy(row => row.NamespaceId).ThenBy(row => row.PoolId)
-                .ThenBy(row => row.Epoch).ToArrayAsync()
-        });
-    }
 
     private enum InstallationFault {
         MissingActivePool, UnsupportedVersion, UnknownHistoricalState, UnknownHistoricalEpoch, OrphanKnownEpoch,

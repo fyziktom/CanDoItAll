@@ -613,6 +613,10 @@ public interface IAgentFrameworkWorkspaceService :
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
+    Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support saved planning actions.");
+
     Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not support pending-approval cancellation.");

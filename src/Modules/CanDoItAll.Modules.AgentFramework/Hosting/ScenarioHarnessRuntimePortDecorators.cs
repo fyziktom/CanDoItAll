@@ -16,6 +16,12 @@ internal sealed class ScenarioHarnessExecutionDecorator(
     IAgentExecutionRuntime,
     IAgentContinuationRuntime
 {
+    public AgentSavedEffectDispatchSupport SavedEffectDispatchSupport => innerContinuation.SavedEffectDispatchSupport;
+
+    public Task<AgentSavedEffectDispatchResult> DispatchSavedEffectAsync(AgentSavedEffectDispatchRequest request,
+        CancellationToken cancellationToken = default)
+        => innerContinuation.DispatchSavedEffectAsync(request, cancellationToken);
+
     public Task<AgentRuntimeResponse> ExecuteAsync(
         AgentRuntimeExecutionRequest request,
         CancellationToken cancellationToken = default)

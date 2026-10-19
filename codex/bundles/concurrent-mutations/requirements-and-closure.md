@@ -6,6 +6,12 @@ now compiled and passes its one case with three submissions; prior failures rema
 recorded. End-to-end implementation continues. SPA work must remain on
 `codex/concurrent-mutations` pending the user's consultation with its maintainer.
 
+The [P03 lifecycle integration](validation/2026-10-18-lifecycle-integration.md) adds
+owner/migration, retained native/API operations, creation cleanup and governed hierarchy
+with scoped passing proof. Four actual restart cases recover original Agent/Process
+receipts without resuming the old execution. Remaining producer/compensation recovery,
+claim fencing and capacity gates are explicit; this does not close R1 or R6 engine-wide.
+
 | ID | Requirement | Owner / proof destination | Current closure |
 | --- | --- | --- | --- |
 | R1 | Prevent concurrent lost edits across human, agent and workflow writers | Owner protocol, enabled writer inventory, SQL/API/tool/browser races; P02/P05/P07 | Partially implemented: Projects original-state and durable-operation/native recovery foundation is committed through `702d0a93`, with focused proof. Workspace W1b and Resource R1 have scoped owner/native/API proof; Resource passed 346 ordinary and four later browser cases under the exact reviewed historical bridge. Complete Projects producer cutover, remaining owners and durable recovery obligations remain open. |

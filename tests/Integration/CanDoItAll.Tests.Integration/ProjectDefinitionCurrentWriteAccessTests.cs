@@ -23,6 +23,18 @@ namespace CanDoItAll.Tests.Integration.Api;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectDefinitionCurrentWriteAccessTests {
+    [Fact]
+    public async Task Lifecycle_access_rechecks_the_same_original_credential_and_does_not_adopt_a_replacement_caller() {
+        using var fixture = await Fixture.CreateAsync();
+        IProjectLifecycleCurrentWriteAccess access = fixture.Access;
+        Assert.Equal(ProjectLifecycleWriteAccessDecision.Allowed, await access.ObserveAsync(default));
+        fixture.Tokens.Current = new ApiTokenCurrentObservation.Absent();
+        Assert.Equal(ProjectLifecycleWriteAccessDecision.Denied, await access.ObserveAsync(default));
+        fixture.Tokens.Current = new ApiTokenCurrentObservation.Found(fixture.Token with { Subject = "replacement-caller" });
+        Assert.Equal(ProjectLifecycleWriteAccessDecision.CallerChanged, await access.ObserveAsync(default));
+        Assert.Equal(3, fixture.Tokens.Observations);
+    }
+
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(10);
     private static readonly string Password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
     private static readonly string Hash = new ApiPasswordService().Hash(Password);

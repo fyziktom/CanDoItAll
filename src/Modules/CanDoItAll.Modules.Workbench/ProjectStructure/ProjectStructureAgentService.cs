@@ -221,43 +221,12 @@ public sealed partial class ProjectStructureAgentService(
                 cancellationToken));
     }
 
-    public async Task ChangeSubprojectAsync(
+    public Task ChangeSubprojectAsync(
         Guid parentProjectId,
         ProjectStructureSubprojectChangeRequest request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
-    {
-        if (request.ChildProjectId == Guid.Empty)
-        {
-            throw InvalidAgentRequest(400, "ChildProjectRequired", "A child project id is required.");
-        }
-
-        await leaseService.RunWithProjectMutationLeaseAsync(
-            request.ChildProjectId,
-            request.LeaseToken,
-            agent,
-            "change-subproject-link",
-            async cancellationToken =>
-            {
-                Result result;
-                if (request.CurrentParentProjectId.HasValue)
-                {
-                    result = await projectsService.ReconnectSubprojectAsync(
-                        request.ChildProjectId,
-                        request.CurrentParentProjectId.Value,
-                        parentProjectId,
-                        cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, request.ChildProjectId, request.CurrentParentProjectId.Value, parentProjectId));
-                }
-                else
-                {
-                    result = await projectsService.AddSubprojectAsync(parentProjectId, request.ChildProjectId, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, parentProjectId, request.ChildProjectId));
-                }
-
-                ThrowIfFailure(result);
-                return 0;
-            },
-            cancellationToken);
-    }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
     public async Task<ProjectStructureReadResponse> GetStructureAsync(
         Guid projectId,

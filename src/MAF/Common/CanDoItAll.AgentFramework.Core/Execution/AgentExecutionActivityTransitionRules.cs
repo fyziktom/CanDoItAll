@@ -70,9 +70,8 @@ internal static class AgentExecutionActivityTransitionRules
             return true;
         }
 
-        if (current == AgentExecutionActivityPhase.CreatingExecution &&
-            next == AgentExecutionActivityPhase.ResolvingPreparation)
-        {
+        if (current is AgentExecutionActivityPhase.CreatingExecution or AgentExecutionActivityPhase.UsingTool &&
+            next == AgentExecutionActivityPhase.ResolvingPreparation) {
             return true;
         }
 

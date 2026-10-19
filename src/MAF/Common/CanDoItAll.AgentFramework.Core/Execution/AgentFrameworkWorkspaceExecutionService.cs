@@ -31,7 +31,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     AgentToolAdmissionJournal? toolAdmissionJournal = null,
     IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
     IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
-    AgentToolPolicyCatalog? toolPolicies = null) :
+    AgentToolPolicyCatalog? toolPolicies = null,
+    IAgentPlanningStepRuntime? planningRuntime = null,
+    IEnumerable<IAgentPlanningParticipant>? planningParticipants = null) :
     IDisposable
 {
     private readonly IAgentOutputRepairService outputRepairService =
@@ -63,6 +65,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     private readonly ILogger logger = logger;
+    private readonly AgentPlanningCoordinator? planning = toolAdmissionJournal is not null && planningRuntime is not null
+        ? new(toolAdmissionJournal, planningRuntime, planningParticipants ?? []) : null;
+
+    private AgentPlanningCoordinator RequirePlanning() => planning
+        ?? throw new NotSupportedException("Planning requires the registered planning runtime and journal owner.");
     private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);

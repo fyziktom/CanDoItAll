@@ -18,10 +18,21 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
         Assert.NotEqual(current.Generation, original.Profile.Generation);
         using var fileObservation = await HistoricalFileObservation.StartAsync(fixture.WorkspaceRoot);
         var journal = new HistoricalJournal(fixture, current);
+        AgentToolHistoricalReceiptReadClaim? released = null;
         var reader = new HistoricalReader(async (claim, token) => {
             var admitted = await claim.RequireAsync(token);
             Assert.Equal(original, admitted.OriginalSession);
             Assert.Equal(current, admitted.CurrentFence.Profile);
+            var prefix = await claim.RequirePriorInvocationsAsync(token);
+            Assert.Equal(original, prefix.Session);
+            Assert.Equal(admitted.Binding, prefix.Current);
+            Assert.Equal(run.Revision, prefix.RunRevision);
+            Assert.Equal(run.ToolAdmission!.Revision, prefix.JournalRevision);
+            Assert.Equal(run.ToolAdmission.Batches.SelectMany(batch => batch.Proposals)
+                .TakeWhile(proposal => proposal.IntentId != admitted.Binding.IntentId).Select(proposal => proposal.IntentId),
+                prefix.Invocations.Select(item => item.Proposal.IntentId));
+            Assert.Null(prefix.PinnedEvidence);
+            released = claim;
             return new(AgentHistoricalReceiptKnowledge.Accepted, ObservedReceipt);
         });
         var request = HistoricalRequest(run);
@@ -52,6 +63,8 @@ public sealed partial class AgentToolEffectJournalIntegrationTests {
         }
         Assert.Equal(expected, seen);
         Assert.Equal(9, reader.Calls);
+        Assert.NotNull(released);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => released.RequirePriorInvocationsAsync().AsTask());
         Assert.Equal(before, HistoricalFiles(fixture));
         await fileObservation.AssertNoChangesAsync();
     }

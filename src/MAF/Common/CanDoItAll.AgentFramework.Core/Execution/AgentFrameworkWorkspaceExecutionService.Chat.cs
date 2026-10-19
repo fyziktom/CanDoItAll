@@ -222,7 +222,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             AutoApprovePendingToolCalls: false,
             InputAttachmentPaths: attachmentPaths)
         {
-            TransientContext = options.TransientContext
+            TransientContext = options.TransientContext,
+            PlanningOwner = options.PlanningOwner
         };
         var result = await ExecuteRunEntryAsync(
             activityOperation,

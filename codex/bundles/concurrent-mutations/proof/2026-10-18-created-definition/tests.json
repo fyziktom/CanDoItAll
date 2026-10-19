@@ -1,0 +1,80 @@
+[
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Created_definition_reconciliation_uses_original_prior_creations_in_interrupted_and_cancelled_claims(process: False, cancelled: True)",
+    "outcome": "Passed",
+    "duration": "00:00:11.0194698"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests.Original_created_definition_target_can_be_edited_and_replayed_without_broadening_the_captured_source(projectScope: False)",
+    "outcome": "Passed",
+    "duration": "00:00:11.7219933"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Created_definition_reconciliation_uses_original_prior_creations_in_interrupted_and_cancelled_claims(process: True, cancelled: True)",
+    "outcome": "Passed",
+    "duration": "00:00:16.8122182"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Created_definition_reconciliation_uses_original_prior_creations_in_interrupted_and_cancelled_claims(process: False, cancelled: False)",
+    "outcome": "Passed",
+    "duration": "00:00:11.1399174"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests.Project_scoped_creation_refuses_a_grandchild_before_reservation_or_grant_publication",
+    "outcome": "Passed",
+    "duration": "00:00:17.2606543"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests.Original_created_definition_target_can_be_edited_and_replayed_without_broadening_the_captured_source(projectScope: True)",
+    "outcome": "Passed",
+    "duration": "00:00:09.9051094"
+  },
+  {
+    "lane": "created-definition-repair",
+    "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Created_definition_reconciliation_uses_original_prior_creations_in_interrupted_and_cancelled_claims(process: True, cancelled: False)",
+    "outcome": "Passed",
+    "duration": "00:00:17.0590678"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_created_definition_recovers_the_unresolved_original_edit_after_seed_exit_and_Web_restart(process: False)",
+    "outcome": "Passed",
+    "duration": "00:00:43.0115876"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_hierarchy_recovers_the_unresolved_original_reconnect_after_seed_exit_and_Web_restart(process: True)",
+    "outcome": "Passed",
+    "duration": "00:00:53.0055654"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_interactive_receipts_survive_actual_seed_exit_and_Web_restart_without_resuming_the_original_run",
+    "outcome": "Passed",
+    "duration": "00:00:36.2229538"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_Process_receipts_survive_expired_claim_and_restart_but_refuse_reactivated_dataset_in_new_Web_process",
+    "outcome": "Passed",
+    "duration": "00:00:57.9155311"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_hierarchy_recovers_the_unresolved_original_reconnect_after_seed_exit_and_Web_restart(process: False)",
+    "outcome": "Passed",
+    "duration": "00:00:37.1111727"
+  },
+  {
+    "lane": "created-definition-restart",
+    "name": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_created_definition_recovers_the_unresolved_original_edit_after_seed_exit_and_Web_restart(process: True)",
+    "outcome": "Passed",
+    "duration": "00:00:55.7264619"
+  }
+]

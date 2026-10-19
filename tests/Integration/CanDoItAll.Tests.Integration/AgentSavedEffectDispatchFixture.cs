@@ -19,13 +19,18 @@ internal sealed class AgentSavedEffectDispatchFixture : IAsyncDisposable {
         return ValueTask.FromResult(true);
     }
 
-    internal static async Task<AgentSavedEffectDispatchFixture> CreateAsync(int count = 2) {
-        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync();
+    internal static async Task<AgentSavedEffectDispatchFixture> CreateAsync(int count = 2, bool canonicalCatalog = false) {
+        await using var source = await AgentToolAdmissionJournalFixture.CreateAsync(configureAgent: canonicalCatalog
+            ? agent => agent with {
+                Id = Guid.NewGuid(), Name = "Saved effect runtime fixture", TemplateKey = string.Empty,
+                IsTemplate = false, ConfigurationJson = "{}"
+            } : null);
         var run = source.Detail.Run with { ToolAdmission = source.Detail.Run.ToolAdmission! with {
             SchemaVersion = AgentToolJournalRecord.EffectJournalSchemaVersion,
             Support = AgentToolAdmissionSupport.EffectJournalOnly
         } };
-        var files = await AgentToolAdmissionJournalFixture.RestoreRetainedAsync(source.Agent, source.Provider, source.Profile, run);
+        var files = await AgentToolAdmissionJournalFixture.RestoreRetainedAsync(source.Agent, source.Provider, source.Profile, run,
+            canonicalCatalog ? WorkspaceScopeDescriptor.Organization(source.Profile.ProfileId.ToString("N")) : null);
         try {
             var owner = files.NewJournal();
             await using (var origin = await owner.AcquireRunAsync(files.Session, default)) {

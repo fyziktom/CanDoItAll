@@ -12,7 +12,7 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
     IAgentCatalogReadLeaseStore catalog, ProjectStructureAgentAdmissionService structureAdmissions,
     ProjectAgentSourceMutationAuthority agentAuthority, ProjectProcessExecutionMutationService processes,
     ProjectWriteAdmissionService projects, ProjectDefinitionOperationProtocol protocol,
-    ProjectDefinitionToolReceiptRecovery recovery, ProjectDefinitionWriter writer,
+    ProjectDefinitionToolReceiptRecovery recovery, ProjectDefinitionWriter writer, ProjectCreatedTargetProvenance createdTargets,
     ProjectStructureAgentAuthorizationService authorization, ProjectStructureLeaseService leases,
     ILogger<ProjectDefinitionToolAdmission> logger) {
     internal const string EffectSourceKind = "project-definition-operation";
@@ -45,8 +45,21 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
         var envelope = ProjectDefinitionToolProposalCodec.WriteSource(new(observed.Session, metadata.Namespace,
             metadata.Epoch, metadata.CallerBinding, ProjectDefinitionRequestVersion.VersionOne, agent, process));
         sources.Remove(context);
-        sources.Add(context, new(envelope));
+        sources.Add(context, new(envelope, new(observed.Session.Profile.ProfileId, metadata.Namespace,
+            metadata.CallerBinding, metadata.Epoch, metadata.AdmissionDeadlineUtc, metadata.ReplayUntilUtc)));
     }
+
+    internal AgentToolProtocolEnvelope OriginalSource(AgentRuntimeToolProviderContext context)
+        => Original(context).Envelope;
+
+    internal ProjectLifecycleWriteContext OriginalLifecycleContext(AgentRuntimeToolProviderContext context)
+        => Original(context).LifecycleContext;
+
+    internal ProjectOriginalCreationReceiptLookup OriginalCreationLookup => recovery.OriginalCreationLookup();
+
+    private CapturedSource Original(AgentRuntimeToolProviderContext context)
+        => sources.TryGetValue(context, out var captured) ? captured
+            : throw Denied("The provider has not captured its original source.");
 
     internal AgentRuntimeToolMetadata Metadata(AgentRuntimeToolProviderContext context, string provider, string tool) {
         var source = sources.TryGetValue(context, out var captured) ? captured.Envelope
@@ -67,13 +80,14 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
         var (admitted, source, input) = await RequireInvocationAsync(context, ProjectStructureToolPolicy.ProjectStructureProjectUpdate,
             new(request, ProjectId: projectId, EstimatedMinutes: estimatedMinutes), cancellationToken);
         var operation = source.Operation(admitted.IntentId);
-        var lookup = await recovery.LookupAsync(source, admitted.IntentId, admitted.Payload.ToolName, input, cancellationToken);
+        var lookup = await recovery.LookupAsync(source, admitted.IntentId, admitted.Payload.ToolName, input, cancellationToken,
+            token => ResolveSourcesAsync(source, admitted, input, token));
         if (lookup is ProjectDefinitionLookup.FoundScalars found) {
             RecordAccepted(operation);
             return found.Result.Acknowledgement;
         }
         RequireOpen(lookup);
-        var invocation = Invocation(source, admitted, input, null);
+        var invocation = Invocation(source, admitted, input, await ResolveSourcesAsync(source, admitted, input, cancellationToken));
         var command = new UpdateProjectDefinitionScalarsCommand(input.Request.ExpectedDefinition!, ProjectDefinitionToolProposalCodec.Scalars(input.Request));
         ProjectDefinitionAccepted<ProjectDefinitionScalarsAcknowledgement>? accepted = null;
         try {
@@ -110,14 +124,15 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
             return Summary(found.Result, parentProjectId.HasValue);
         }
         RequireOpen(lookup);
-        var original = Invocation(source, admitted, input, null);
+        var sources = await ResolveSourcesAsync(source, admitted, input, cancellationToken);
+        var original = Invocation(source, admitted, input, sources);
         var projectId = ProjectDefinitionToolProposalCodec.ReservedProjectId(source, admitted.IntentId);
         var reservation = await projects.ReserveCreationAsync(projectId, source.Session.AgentId, admitted.IntentId.Value,
             parentProjectId, cancellationToken, original.Authorization, input.Request.ExpectedParentAdmission);
         ProjectDefinitionToolReceiptRecovery.RequireReservation(source, admitted.IntentId, input, reservation);
         await projects.RequireCreationGrantAsync(reservation, cancellationToken);
         await authorization.GrantCreatedProjectAccessAsync(source.Session.AgentId, reservation, cancellationToken);
-        var invocation = Invocation(source, admitted, input, reservation);
+        var invocation = Invocation(source, admitted, input, sources.WithCreated(reservation));
         var command = new CreateProjectDefinitionCommand(ProjectDefinitionToolProposalCodec.Scalars(input.Request), [], [], null);
         var accepted = RequireAccepted(await writer.CreateAsync(new(operation, source.RequestVersion, command), invocation, reservation, cancellationToken));
         RecordAccepted(operation);
@@ -145,14 +160,10 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
     }
 
     private ProjectDefinitionInvocation Invocation(ProjectDefinitionToolSource source, AgentToolAdmittedInvocation admitted,
-        ProjectDefinitionToolArguments input, ProjectCreationReservation? reservation) {
+        ProjectDefinitionToolArguments input, ProjectGovernedSourceAdmissions sources) {
         ProjectWriteAdmission[] targets = input.Request.ExpectedDefinition is { } expected ? [expected.Project] :
             input.Request.ExpectedParentAdmission is { } parent ? [parent] : [];
-        if (source.Process is { } dispatch) {
-            var process = new ProjectProcessMutationAdmission(dispatch);
-            if (reservation is not null) {
-                process = process.WithCreatedProject(reservation);
-            }
+        if (sources.Process is { } process) {
             var operation = admitted.Payload.ToolName switch {
                 ProjectStructureToolPolicy.ProjectStructureProjectUpdate => ProjectProcessProjectOperation.Update,
                 ProjectStructureToolPolicy.ProjectStructureSubprojectCreate => ProjectProcessProjectOperation.CreateChild,
@@ -160,11 +171,29 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
             };
             return invocationFactory.ForProcess(process, operation, targets, admitted);
         }
-        var agent = source.AgentAdmission(admitted.Payload.ToolName);
-        if (reservation is not null) {
-            agent = agent.WithCreatedProject(reservation);
+        return invocationFactory.ForAgent(sources.Agent!, new(source.Session, null, source.Agent!.Governance), admitted, targets);
+    }
+
+    private async Task<ProjectGovernedSourceAdmissions> ResolveSourcesAsync(ProjectDefinitionToolSource source,
+        AgentToolAdmittedInvocation admitted, ProjectDefinitionToolArguments input, CancellationToken cancellationToken) {
+        if (!ProjectCreatedTargetProvenance.NeedsDefinitionProof(source, admitted.Payload.ToolName, input)) {
+            return ProjectCreatedTargetProvenance.Original(source, admitted.Payload.ToolName);
         }
-        return invocationFactory.ForAgent(agent, new(source.Session, null, source.Agent!.Governance), admitted, targets);
+        if (AgentToolInvocationClaim.Current?.Proposal.State == AgentToolProposalState.Completed) {
+            return await ResolveResultSourcesAsync(source, admitted.IntentId, admitted.Payload, input, cancellationToken);
+        }
+        var prefix = await admissions.RequirePriorInvocationsAsync(source.Session.Reference, cancellationToken);
+        return await createdTargets.ResolveDefinitionAsync(source, admitted.IntentId, admitted.Payload.ToolName, input,
+            prefix, OriginalCreationLookup, cancellationToken);
+    }
+
+    private async Task<ProjectGovernedSourceAdmissions> ResolveResultSourcesAsync(ProjectDefinitionToolSource source,
+        AgentToolBusinessIntentId intent, AgentToolPreparedPayload payload, ProjectDefinitionToolArguments input, CancellationToken cancellationToken) {
+        if (!ProjectCreatedTargetProvenance.NeedsDefinitionProof(source, payload.ToolName, input)) {
+            return ProjectCreatedTargetProvenance.Original(source, payload.ToolName);
+        }
+        var prefix = await admissions.RequirePriorResultInvocationsAsync(source.Session.Reference, intent, payload, cancellationToken);
+        return await createdTargets.ResolveDefinitionAsync(source, intent, payload.ToolName, input, prefix, OriginalCreationLookup, cancellationToken);
     }
 
     private async ValueTask<IAsyncDisposable> AuthorizeAsync(AgentRuntimeToolProviderContext context, AgentToolPreparedPayload payload,
@@ -181,7 +210,8 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
         if (disclosure.IsTypedFailure && disclosure.EffectState == AgentToolEffectState.NotCommitted) {
             return CompletedCheck.Instance;
         }
-        var lookup = await recovery.LookupAsync(source, disclosure.IntentId, disclosure.Payload.ToolName, input, cancellationToken);
+        var lookup = await recovery.LookupAsync(source, disclosure.IntentId, disclosure.Payload.ToolName, input, cancellationToken,
+            token => ResolveResultSourcesAsync(source, disclosure.IntentId, disclosure.Payload, input, token));
         object? expected = lookup switch {
             ProjectDefinitionLookup.FoundScalars found => found.Result.Acknowledgement,
             ProjectDefinitionLookup.FoundFull found => Summary(found.Result, input.ParentProjectId.HasValue),
@@ -234,7 +264,7 @@ public sealed class ProjectDefinitionToolAdmission(IAgentToolAdmissionVerifier a
             ack.Phases.Count, child ? 1 : 0, 0, accepted.AcceptedAtUtc) { ExpectedProjectAdmission = ack.Definition.Project };
     }
     private static AgentToolAdmissionException Denied(string message) => ProjectDefinitionToolProposalCodec.Denied(message);
-    private sealed record CapturedSource(AgentToolProtocolEnvelope Envelope);
+    private sealed record CapturedSource(AgentToolProtocolEnvelope Envelope, ProjectLifecycleWriteContext LifecycleContext);
     private sealed class CompletedCheck : IAsyncDisposable {
         internal static CompletedCheck Instance { get; } = new();
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

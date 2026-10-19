@@ -1,0 +1,36 @@
+{
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_56532_20261018_163613_115.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ydghef0i.n0c",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\b4qlmvyx.suj",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\qcew3lj3.kbt",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\y5lpp4oj.vrv",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_55412_20261018_163519_689.log",
+      "family": "anonymous-and-package-temp-files"
+    }
+  ],
+  "outcome": "All 24 discovered definition publication, provenance and governed regression cases passed",
+  "databaseNameDelta": [],
+  "remainingObservedProcesses": [],
+  "recordedUtc": "2026-10-18T20:39:26.3802585+00:00",
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ]
+}

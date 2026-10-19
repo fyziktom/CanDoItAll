@@ -8,6 +8,9 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectStructureAgentProjectCreationCoordinator(
     ProjectStructureAgentAuthorizationService authorizationService,
     ProjectWriteAdmissionService writeAdmissionService,
+    ProjectReservationCancellationOwner cancellationOwner,
+    ProjectCreationCompensationReader compensationReader,
+    ProjectDeletionCompletionProjection completionProjection,
     Func<Guid>? projectIdFactory = null)
 {
     private readonly Func<Guid> projectIdFactory = projectIdFactory ?? Guid.NewGuid;
@@ -30,11 +33,15 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
 
         var reservation = await writeAdmissionService.ReserveCreationAsync(
             reservedProjectId, agent.Id, Guid.NewGuid(), parentProjectId, cancellationToken, authorization);
-        await writeAdmissionService.RequireCreationGrantAsync(reservation, cancellationToken);
-        await authorizationService.GrantCreatedProjectAccessAsync(
-            agent.Id,
-            reservation,
-            cancellationToken);
+        var cancellation = await writeAdmissionService.CaptureReservationCancellationAsync(reservation, cancellationToken);
+        try {
+            await writeAdmissionService.RequireCreationGrantAsync(reservation, cancellationToken);
+            await authorizationService.GrantCreatedProjectAccessAsync(agent.Id, reservation, cancellationToken);
+        } catch (Exception grantFailure) {
+            await CancelReservedAccessOrThrowAsync(cancellation, authorization, grantFailure,
+                "The original reservation grant could not be acknowledged and its cancellation needs observation.");
+            throw;
+        }
 
         try
         {
@@ -59,11 +66,19 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
             var failureToSurface = ReferenceEquals(exception, compensatedTransfer)
                 ? compensatedTransfer.TransferFailure
                 : exception;
-            await RevokeReservedAccessOrThrowAsync(
-                agent.Id,
-                reservation,
-                failureToSurface,
-                "The empty subproject was removed after transfer failure, but its reserved access grant could not be revoked.");
+            var receipt = compensatedTransfer.CreationReceipt
+                ?? throw new InvalidOperationException("Compensated creation requires its exact original receipt.", exception);
+            var original = ProjectCreationCompensationRequest.FromReceipt(receipt);
+            var observed = await compensationReader.ObserveAsync(original, CancellationToken.None);
+            if (observed is not ProjectCreationCompensationObservation.Committed committed) {
+                throw new ProjectCreationCompensationRequiresObservationException(
+                    new ProjectCreationCompensationOutcome.Unconfirmed(original, ProjectCreationCompensationRecoveryReason.ReadUnavailable));
+            }
+            if (await completionProjection.ObserveAsync(committed.Completion, CancellationToken.None)
+                    is not ProjectDeletionCompletionProjectionResult.Completed) {
+                throw new ProjectCreationCompensationRequiresObservationException(
+                    new ProjectCreationCompensationOutcome.Committed(original, committed.Completion, true));
+            }
             ExceptionDispatchInfo.Capture(failureToSurface).Throw();
             throw new UnreachableException();
         }
@@ -94,9 +109,9 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
             (ProjectStructureProjectCreationRejectedException _) => true,
             out _))
         {
-            await RevokeReservedAccessOrThrowAsync(
-                agent.Id,
-                reservation,
+            await CancelReservedAccessOrThrowAsync(
+                cancellation,
+                authorization,
                 exception,
                 "Project creation was rejected and its reserved access grant could not be revoked.");
 
@@ -117,28 +132,20 @@ internal sealed class ProjectStructureAgentProjectCreationCoordinator(
         }
     }
 
-    private async Task RevokeReservedAccessOrThrowAsync(
-        Guid agentId,
-        ProjectCreationReservation reservation,
-        Exception originalFailure,
-        string compensationFailureMessage)
-    {
-        try
-        {
-            await writeAdmissionService.CancelCreationAsync(reservation, CancellationToken.None);
-            await authorizationService.RevokeCreatedProjectAccessAsync(
-                agentId,
-                reservation,
-                CancellationToken.None);
-        }
-        catch (Exception compensationException)
-        {
-            throw new AggregateException(
-                compensationFailureMessage,
-                originalFailure,
-                compensationException);
+    private async Task CancelReservedAccessOrThrowAsync(ProjectReservationCancellationRequest original,
+        ProjectMutationAuthorization? authorization, Exception originalFailure, string failureMessage) {
+        try {
+            var outcome = await cancellationOwner.CancelAsync(original, CancellationToken.None, authorization);
+            if (outcome is not ProjectReservationCancellationOutcome.Committed committed ||
+                    await completionProjection.ObserveAsync(committed.Completion, CancellationToken.None)
+                        is not ProjectDeletionCompletionProjectionResult.Completed) {
+                throw new ProjectReservationCancellationRequiresObservationException(outcome);
+            }
+        } catch (Exception cleanupFailure) {
+            throw new AggregateException(failureMessage, originalFailure, cleanupFailure);
         }
     }
+
 }
 
 internal static class ProjectStructureAgentCreationValidation

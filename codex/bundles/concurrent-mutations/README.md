@@ -8,7 +8,43 @@ The resumed native chat browser proof now passes: one case covers three submissi
 draft preservation, restore without resend and unknown outcomes across native navigation.
 Release build, portability enforcement and documentation/rendering checks pass; see the
 [resumption record](validation/2026-10-18-resumption.md). The remaining lifecycle,
-runtime-policy and capacity work is still active.
+runtime-policy and capacity work is still active. The selected publication authority now has
+[a passing 72-case checkpoint](validation/2026-10-19-selected-publication-cost.md),
+including all six unrelated writers below one second during a real SQL wait. Wider
+capacity and actual RunSnapshot/StepSnapshot/Refresh/Replan runtime activation remain open.
+The [runtime result codec extraction](validation/2026-10-19-runtime-result-codec.md)
+also passes compatibility proof. The [saved-effect runtime adapter](validation/2026-10-19-saved-effect-runtime.md)
+passes all 70 focused cases. The [planning decision journal](validation/2026-10-19-planning-decision-journal.md)
+passes all 94 focused cases. The [live planning owner](validation/2026-10-19-live-planning-owner.md)
+passes all 114 focused cases, including real file-owner work accounting and execution
+cancellation. The [actual MAF planning provider](validation/2026-10-19-planning-provider.md)
+passes all 103 cases in its repaired lane, with the original 146/158 result and exact
+unchanged-production bridge retained. The [active-work publication version](validation/2026-10-19-active-work-publication.md)
+passes all 47 contract/PostgreSQL cases in its repaired lane. The
+[planning saved-action owner](validation/2026-10-19-planning-saved-actions.md) passes
+all 146 cases after a definite-no-effect Refresh repair. The
+[registered Workbench planning publication](validation/2026-10-19-workbench-planning.md)
+passes 38 selected cases after fixture repairs, with an exact production bridge to
+76 earlier passing integration cases. The
+[historical planning receipt service](validation/2026-10-19-planning-historical-receipts.md)
+passes all 75 selected cases, including the publication and existing journal regressions.
+The [persisted planning admission](validation/2026-10-19-planning-admission.md)
+passes 60 cases after repairing a real UI/provider service-construction cycle. Its
+rejected candidate and blocked abandoned-fixture cleanup remain explicit. The
+[atomic start and provider contract](validation/2026-10-19-planning-start-contract.md)
+pass 123 selected cases. The [initial product execution path](validation/2026-10-19-product-planning-entry.md)
+passes 102 selected cases after the retained fixture/transport repairs. Saved product
+actions now pass all ten registered product cases plus 15 activity coordinator cases.
+The earlier failed candidates and subsequent repairs remain recorded; user-facing
+controls and the wider end-to-end gates remain open.
+
+P03 now includes the lifecycle owner/migration, native and HTTP retained operations,
+creation cleanup and governed Agent/Process hierarchy and definition editing. Six
+actual-process restart scenarios pass, including recovery of committed reconnects and
+created-target edits without saved completion. Original creation provenance is bounded
+and current permission checks remain mandatory.
+See [the lifecycle integration record](validation/2026-10-18-lifecycle-integration.md)
+for the exact proof and remaining caller, runtime and capacity gates.
 
 Historical handoff (2026-10-17): implementation stopped at the user's credit-saving
 checkpoint. The final C4 successor passed **706/706**. A new native chat browser test

@@ -52,13 +52,15 @@ public sealed record ProjectMutationCallerScope {
         return new(ProjectMutationCallerKind.GovernedExecution, stableExecutionKey);
     }
 
-    public ProjectCallerBinding Bind(DatasetNamespaceId @namespace) {
+    public ProjectCallerBinding Bind(DatasetNamespaceId @namespace) => BindKey(@namespace, Kind, Key);
+
+    internal static ProjectCallerBinding BindKey(DatasetNamespaceId @namespace, ProjectMutationCallerKind kind, ProjectCallerKey key) {
         ArgumentNullException.ThrowIfNull(@namespace);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         Append(hash, "projects:caller-binding:pc1");
         Append(hash, @namespace.Value.ToString("D"));
-        Append(hash, ((int)Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
-        hash.AppendData(Key.ToArray());
+        Append(hash, ((int)kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        hash.AppendData(key.ToArray());
         return new(ProjectCallerBinding.VersionOnePrefix + Convert.ToHexStringLower(hash.GetHashAndReset()));
     }
 

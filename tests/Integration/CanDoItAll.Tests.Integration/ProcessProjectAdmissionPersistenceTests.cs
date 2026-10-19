@@ -402,7 +402,8 @@ public sealed partial class ProcessProjectAdmissionPersistenceTests {
 
     private static ProjectProcessAdmissionPolicy Policy(IServiceProvider services, CoordinatedDatabaseTransaction coordinator, params IInterceptor[] interceptors) {
         var options = ProjectOptions(services, interceptors);
-        return new(new ProjectWriteAdmissionService(new ProjectFactory(options), options, coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>()));
+        return new(new ProjectWriteAdmissionService(new ProjectFactory(options), options, coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>(),
+            services.GetRequiredService<DatasetActivationService>()));
     }
 
     private static async Task AssertRowsAsync(ProcessPersistenceDbContext context, ProcessRuntimeCommitRequest request, int expected) {

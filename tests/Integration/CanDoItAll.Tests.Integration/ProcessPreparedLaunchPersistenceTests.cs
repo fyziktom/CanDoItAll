@@ -515,7 +515,8 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
     private static EfProcessPreparedLaunchStore Store(IServiceProvider services)
         => new(new ProcessFactory(ProcessOptions(services)), ProcessOptions(services));
     private static ProjectWriteAdmissionService Admissions(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
-        => new(new ProjectFactory(ProjectOptions(services)), ProjectOptions(services), coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>());
+        => new(new ProjectFactory(ProjectOptions(services)), ProjectOptions(services), coordinator,
+            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
     private static ProjectProcessAdmissionPolicy ProjectPolicy(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)
         => new(Admissions(services, coordinator));
     private static ProjectProcessLaunchTargetQuery Targets(IServiceProvider services, CoordinatedDatabaseTransaction coordinator)

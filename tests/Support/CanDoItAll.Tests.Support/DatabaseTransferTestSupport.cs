@@ -32,7 +32,7 @@ public static class DatabaseTransferTestSupport {
         return new(paths, writer, policies);
     }
 
-    private static DatasetActivationService UnconfiguredActivation() {
+    public static DatasetActivationService UnconfiguredActivation() {
         var policies = new PhysicalFileSystemPathPolicyFactory();
         return new(new MissingActivationPaths(), new DurableFileWriter(policies), policies);
     }

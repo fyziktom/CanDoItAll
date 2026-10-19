@@ -11,13 +11,14 @@ internal sealed class ProjectDefinitionGovernedInvocationFactory(ProjectAgentSou
         IReadOnlyCollection<ProjectWriteAdmission> originalTargets) {
         var binding = ProjectDefinitionGovernedBindings.ForAgent(original, verifiedSession, verifiedProposal);
         return new(binding.Caller, new ProjectDefinitionAgentReceiptAccess(original, catalog, projects),
-            agents.Bind(original, originalTargets), binding.Effect);
+            ProjectGovernedInvocationSource.Bind(agents.Bind(original, originalTargets), verifiedProposal), binding.Effect);
     }
 
     internal ProjectDefinitionInvocation ForProcess(ProjectProcessMutationAdmission original, ProjectProcessProjectOperation operation,
         IReadOnlyCollection<ProjectWriteAdmission> originalTargets, AgentToolAdmittedInvocation? verifiedProposal = null) {
         var binding = ProjectDefinitionGovernedBindings.ForProcess(original, operation, verifiedProposal);
+        var source = processes.BindProjectSource(original, originalTargets, operation);
         return new(binding.Caller, new ProjectDefinitionProcessReceiptAccess(original, processes, catalog, projects),
-            processes.BindProjectSource(original, originalTargets, operation), binding.Effect);
+            verifiedProposal is null ? source : ProjectGovernedInvocationSource.Bind(source, verifiedProposal), binding.Effect);
     }
 }

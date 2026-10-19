@@ -43,6 +43,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
     private readonly ProjectProcessAssetToolAdmission? processAssetAdmission;
     private readonly ProjectStructureResultDisclosureService? resultDisclosure;
     private readonly ProjectDefinitionToolAdmission? definitionAdmission;
+    private readonly ProjectLifecycleToolAdmission? lifecycleAdmission;
 
     public ProjectStructureAgentRuntimeToolProvider(
         ProjectStructureAgentService agentService,
@@ -68,7 +69,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectProcessExecutionMutationService? processMutations = null,
         ProjectProcessAssetToolAdmission? processAssetAdmission = null,
         ProjectStructureResultDisclosureService? resultDisclosure = null,
-        ProjectDefinitionToolAdmission? definitionAdmission = null) {
+        ProjectDefinitionToolAdmission? definitionAdmission = null,
+        ProjectLifecycleToolAdmission? lifecycleAdmission = null) {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(leaseService);
         ArgumentNullException.ThrowIfNull(analyticsService);
@@ -93,6 +95,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         this.processAssetAdmission = processAssetAdmission;
         this.resultDisclosure = resultDisclosure;
         this.definitionAdmission = definitionAdmission;
+        this.lifecycleAdmission = lifecycleAdmission;
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
         toolBuilder = new ProjectStructureToolBuilder(
             agentService,
@@ -119,7 +122,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             processMutations,
             processAssetAdmission,
             resultDisclosure,
-            definitionAdmission);
+            definitionAdmission,
+            lifecycleAdmission);
     }
 
     public int Order => ProviderOrder;
@@ -167,11 +171,15 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         }
         var disclosureService = resultDisclosure ?? throw new InvalidOperationException("Recoverable Structure tools require their owner result authorization.");
         var metadata = disclosureService.Metadata(context, Descriptor.ProviderKey)
-            .Where(item => toolNames.Contains(item.ToolName)).ToList();
+            .Where(item => toolNames.Contains(item.ToolName) && !ProjectLifecycleToolProposalCodec.Supports(item.ToolName)).ToList();
         if (ProjectDefinitionToolAdmission.UsesJournal(context)) {
             var definitions = definitionAdmission ?? throw new InvalidOperationException("Recoverable definition tools require their owner admission adapter.");
             foreach (var name in toolNames.Where(ProjectDefinitionToolProposalCodec.Supports)) {
                 metadata.Add(definitions.Metadata(context, Descriptor.ProviderKey, name));
+            }
+            foreach (var name in toolNames.Where(ProjectLifecycleToolProposalCodec.Supports)) {
+                metadata.Add((lifecycleAdmission ?? throw new InvalidOperationException("Recoverable hierarchy tools require their owner admission adapter."))
+                    .Metadata(context, Descriptor.ProviderKey, name));
             }
         }
         if (toolNames.Contains(ProjectStructureToolPolicy.ProjectStructureNodeProcessStart) &&
@@ -294,7 +302,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectProcessExecutionMutationService? processMutations,
         ProjectProcessAssetToolAdmission? processAssetAdmission,
         ProjectStructureResultDisclosureService? resultDisclosure,
-        ProjectDefinitionToolAdmission? definitionAdmission) {
+        ProjectDefinitionToolAdmission? definitionAdmission,
+        ProjectLifecycleToolAdmission? lifecycleAdmission) {
         private readonly ProjectStructureAgentService agentService = agentService;
         private readonly ProjectStructureLeaseService leaseService = leaseService;
         private readonly IProjectStructureAnalyticsService analyticsService = analyticsService;
@@ -567,12 +576,14 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             if (!accessState.CanWrite)
             {
                 tools.RemoveAll(tool => ProjectStructureToolPolicy.IsMutation(tool.Name) &&
-                    !(ProjectDefinitionToolAdmission.UsesJournal(context) && ProjectDefinitionToolProposalCodec.Supports(tool.Name)));
+                    !(ProjectDefinitionToolAdmission.UsesJournal(context) &&
+                        (ProjectDefinitionToolProposalCodec.Supports(tool.Name) || ProjectLifecycleToolProposalCodec.Supports(tool.Name))));
             }
             else if (accessState.RequiresNonTaskWriteGuard)
             {
                 tools.RemoveAll(tool => ProjectStructureNonTaskWritePolicy.RequiresFullStructureWrite(tool.Name) &&
-                    !(ProjectDefinitionToolAdmission.UsesJournal(context) && ProjectDefinitionToolProposalCodec.Supports(tool.Name)));
+                    !(ProjectDefinitionToolAdmission.UsesJournal(context) &&
+                        (ProjectDefinitionToolProposalCodec.Supports(tool.Name) || ProjectLifecycleToolProposalCodec.Supports(tool.Name))));
             }
 
             if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation)
@@ -603,7 +614,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     "Creates a new project and atomically attaches it as a direct subproject of parentProjectId. Governed proposals require request.expectedParentAdmission copied unchanged from the parent's coherent definition read. Use the returned project id for subsequent project_structure_node_create calls that populate the new subproject."));
             }
 
-            if (accessState.CanCreateSubprojects && accessState.CanWrite && accessState.AllowsGovernedProjectOperation(ProjectProcessProjectOperation.ChangeHierarchy))
+            if (accessState.CanCreateSubprojects && accessState.CanWrite && accessState.AllowsGovernedProjectOperation(ProjectProcessProjectOperation.ChangeHierarchy) ||
+                    ProjectDefinitionToolAdmission.UsesJournal(context))
             {
                 tools.Add(AIFunctionFactory.Create(
                     (Guid parentProjectId, ProjectStructureSubprojectChangeRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureSubprojectLinkAsync(agent, accessState, parentProjectId, request, estimatedMinutes, cancellationToken),
@@ -1001,55 +1013,29 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 async cancellationToken =>
                 {
                     accessState.EnsureProjectReadAllowed(projectId);
-                    return await agentService.GetHierarchyAsync(projectId, cancellationToken);
+                    var summary = await agentService.GetHierarchyAsync(projectId, cancellationToken);
+                    return accessState.ProviderContext is { } provider && ProjectDefinitionToolAdmission.UsesJournal(provider)
+                        ? await (lifecycleAdmission ?? throw new InvalidOperationException("The hierarchy admission adapter is missing."))
+                            .ReadHierarchyAsync(provider, summary, cancellationToken)
+                        : summary;
                 },
                 cancellationToken);
         }
 
-        private Task<OperationAck> ProjectStructureSubprojectLinkAsync(
+        private Task<ProjectStructureHierarchyAcknowledgement> ProjectStructureSubprojectLinkAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
             Guid parentProjectId,
             ProjectStructureSubprojectChangeRequest request,
             int? estimatedMinutes,
-            CancellationToken cancellationToken)
-        {
-            return ExecuteAsync(
-                agent,
-                "projects.subproject-change",
-                request.ChildProjectId,
-                null,
-                ProjectStructureLeaseScopeKind.Project,
-                request.ChildProjectId.ToString("D"),
-                request,
-                async cancellationToken =>
-                {
-                    await authorizationService.EnsureSubprojectLinkAuthorizedAsync(
-                        agent.Id,
-                        parentProjectId,
-                        request.ChildProjectId,
-                        request.CurrentParentProjectId,
-                        cancellationToken);
-                    accessState.EnsureSubprojectCreationAllowed(ProjectProcessProjectOperation.ChangeHierarchy);
-                    accessState.EnsureProjectWriteAllowed(parentProjectId);
-                    accessState.EnsureProjectWriteAllowed(request.ChildProjectId);
-                    if (request.CurrentParentProjectId.HasValue)
-                    {
-                        accessState.EnsureProjectWriteAllowed(request.CurrentParentProjectId.Value);
-                    }
-
-                    var affectedIds = new[] { parentProjectId, request.ChildProjectId, request.CurrentParentProjectId ?? parentProjectId }.Distinct().ToArray();
-                    var captured = new List<ProjectWriteAdmission>();
-                    foreach (var id in affectedIds) {
-                        captured.Add(await CaptureNodeMutationAdmissionAsync(agent, accessState, id, cancellationToken));
-                    }
-                    await agentService.ChangeSubprojectAsync(parentProjectId, request,
-                        BuildAgentContext(agent, accessState, parentProjectId, mutationDomain: ProjectAgentMutationDomain.Hierarchy) with {
-                            ExpectedProjectAdmissions = [.. captured]
-                        }, cancellationToken);
-                    return new OperationAck(true);
-                },
-                cancellationToken);
+            CancellationToken cancellationToken) {
+            if (accessState.ProviderContext is not { } provider || !ProjectDefinitionToolAdmission.UsesJournal(provider)) {
+                throw new ProjectLifecycleOriginalIntentRequiredException();
+            }
+            return (lifecycleAdmission ?? throw new InvalidOperationException("The hierarchy admission adapter is missing."))
+                .ChangeAsync(provider, parentProjectId, request, estimatedMinutes,
+                    BuildAgentContext(agent, accessState, parentProjectId, mutationDomain: ProjectAgentMutationDomain.Hierarchy),
+                    cancellationToken);
         }
 
         private Task<ProjectStructureNodesToSubprojectResult> ProjectStructureNodesToNewSubprojectAsync(

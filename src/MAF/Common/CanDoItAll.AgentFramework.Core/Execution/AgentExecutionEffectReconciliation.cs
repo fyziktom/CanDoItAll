@@ -160,7 +160,8 @@ internal sealed class AgentExecutionEffectReconciliation(
         }
         var governance = observation.Governance;
         var reference = observation.TurnContext;
-        var scope = ExecutionInvocationMetadata.ResolveContextWorkspaceScope(original);
+        var scope = original.ToolAdmission?.PlanningDecision is not null
+            ? AgentPlanningRunMetadata.ReadScope(original) : ExecutionInvocationMetadata.ResolveContextWorkspaceScope(original);
         if (admitted.Purpose != AgentRuntimeContextPurpose.InteractiveChat || governance is null || reference is null ||
             reference != AgentTurnContextMetadata.TryReadTurnContextReference(original.MetadataJson) ||
             governance.AuthorityId != admitted.Reference.AuthorityId || governance.AgentId != original.AgentId ||

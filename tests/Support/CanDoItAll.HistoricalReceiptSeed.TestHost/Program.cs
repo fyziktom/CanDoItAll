@@ -12,6 +12,7 @@ return await HistoricalSeedChild.RunAsync(args);
 
 internal static class HistoricalSeedChild {
     internal static async Task<int> RunAsync(string[] arguments) {
+        string? failurePath = null;
         try {
             if (arguments.Length != 4 || !Enum.TryParse<HistoricalReceiptSeedKind>(arguments[0], false, out var kind) ||
                 !Enum.IsDefined(kind) || arguments[0] != kind.ToString() || !Guid.TryParseExact(arguments[1], "D", out var nonce) || nonce == Guid.Empty ||
@@ -29,6 +30,7 @@ internal static class HistoricalSeedChild {
             if (!Path.IsPathFullyQualified(arguments[3]) || Path.GetDirectoryName(output) != outputRoot || File.Exists(output)) {
                 throw new ArgumentException("The seed result must be a new file directly under the recorded output root.");
             }
+            failurePath = Path.Combine(outputRoot, "seed-failure.json");
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(180));
             HistoricalReceiptSeeded frame;
             var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
@@ -60,6 +62,20 @@ internal static class HistoricalSeedChild {
             stream.Flush(flushToDisk: true);
             return 0;
         } catch (Exception failure) {
+            if (failurePath is not null) {
+                var diagnostic = new {
+                    FailureType = failure.GetType().FullName,
+                    CauseType = failure.GetBaseException().GetType().FullName,
+                    Frames = new StackTrace(failure.GetBaseException(), fNeedFileInfo: true).GetFrames().Take(12)
+                        .Select(frame => new { Type = frame.GetMethod()?.DeclaringType?.FullName, Method = frame.GetMethod()?.Name, Line = frame.GetFileLineNumber() }).ToArray()
+                };
+                try {
+                    await using var stream = new FileStream(failurePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                    await JsonSerializer.SerializeAsync(stream, diagnostic, HistoricalReceiptSeedProtocol.Json);
+                } catch (Exception diagnosticFailure) {
+                    await Console.Error.WriteLineAsync(diagnosticFailure.GetType().FullName);
+                }
+            }
             await Console.Error.WriteLineAsync(failure.GetType().FullName);
             return 2;
         }

@@ -12,7 +12,8 @@ public interface IProjectTransferReferenceQuery {
 public sealed class ProjectTransferReferenceQuery(DatabaseTransferOwnerSessionRunner sessions) : IProjectTransferReferenceQuery {
     public IReadOnlyCollection<Type> TargetEntityTypes { get; } = [
         typeof(Project), typeof(ProjectPhase), typeof(ProjectOptionSelection), typeof(ProjectHierarchyLink),
-        typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord), typeof(ProjectDefinitionReceiptRecord)
+        typeof(ProjectRetirementRecord), typeof(ProjectCreationReservationRecord), typeof(ProjectDefinitionReceiptRecord),
+        typeof(ProjectLifecycleReceiptRecord), typeof(ProjectDeletionCompletionRecord)
     ];
 
     public async Task<bool> TargetContainsAllAsync(DatabaseTransferOwnerRequest transfer, IReadOnlyCollection<Guid> projectIds,

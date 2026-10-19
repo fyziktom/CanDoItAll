@@ -17,6 +17,7 @@ public sealed class AgentToolRunLease : IAsyncDisposable {
     private readonly IAsyncDisposable handle;
     private AgentToolPinnedRunSnapshot? pinnedSnapshot;
     private AgentSavedEffectAdmission? savedEffect;
+    private AgentPlanningLiveWork? planningWork;
     private Guid savedClaimId;
     private int savedReceiptChecked;
     private int savedClaimStarted;
@@ -36,8 +37,28 @@ public sealed class AgentToolRunLease : IAsyncDisposable {
     public static AgentToolRunLease? Current => current.Value;
     public AgentToolSessionReference Session { get; }
     public Guid Id { get; }
+    public AgentPlanningLiveWork? PlanningWork {
+        get {
+            RequireOwner(owner);
+            return planningWork;
+        }
+    }
     internal AgentToolRunLeaseMode Mode { get; }
     internal long ReconciliationStartedTimestamp { get; }
+
+    internal void AdmitPlanningWork(AgentToolAdmissionJournal candidate, AgentPlanningLiveWork work) {
+        RequireOwner(candidate);
+        var original = Mode switch {
+            AgentToolRunLeaseMode.Dispatch => work.OriginalRun,
+            AgentToolRunLeaseMode.SavedEffectDispatch => RequireSavedEffect(candidate).Run,
+            _ => throw new AgentToolAdmissionException("tool-admission.lease-lost", "This lease cannot own planning work.")
+        };
+        if (original.ToolAdmission?.PlanningDecision is null || original.ToolAdmission.ActiveDispatchLeaseId != Id ||
+            original.ToolAdmission.Session.Reference != Session || !ReferenceEquals(work.Lease, this) ||
+            Interlocked.CompareExchange(ref planningWork, work, null) is not null) {
+            throw new AgentToolAdmissionException("tool-admission.lease-lost", "The acknowledged planning interval cannot be replaced.");
+        }
+    }
 
     internal void AdmitSavedEffect(AgentToolAdmissionJournal candidate, AgentSavedEffectAdmission admission) {
         RequireOwner(candidate);
@@ -195,6 +216,13 @@ public sealed class AgentToolInvocationClaim {
     public AgentToolProposalRecord Proposal { get; }
     public Guid Id { get; }
     public long JournalRevision { get; }
+
+    public ValueTask RequireCurrentIdentityAsync(CancellationToken cancellationToken = default)
+        => owner.RequireCurrentClaimIdentityAsync(this, null, cancellationToken);
+
+    public ValueTask<AgentToolInvocationPublicationLease> AcquirePublicationAsync(IAgentCatalogReadLease heldCatalog,
+        CancellationToken cancellationToken = default)
+        => owner.AcquireClaimPublicationAsync(this, heldCatalog, cancellationToken);
 
     public IDisposable Bind() {
         RequireOwner(owner);

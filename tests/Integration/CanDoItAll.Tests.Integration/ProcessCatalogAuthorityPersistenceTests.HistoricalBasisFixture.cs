@@ -38,9 +38,12 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     }
 
     private static async Task<HistoricalSeed> SeedHistoricalReceiptsAsync(IServiceProvider services, NativeClock clock,
-        bool process, bool sharedExecutor = false, int receiptCount = 4) {
+        bool process, bool sharedExecutor = false, int receiptCount = 4, bool hierarchy = false,
+        bool createdDefinitions = false, bool unresolvedLast = false) {
         ArgumentOutOfRangeException.ThrowIfLessThan(receiptCount, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(receiptCount, 5);
+        Assert.False(hierarchy && createdDefinitions);
+        Assert.False(unresolvedLast && !createdDefinitions);
         var owner = await Fixture.CreateAsync(services);
         var authority = await CaptureProjectOperationsAsync(owner);
         var store = Assert.IsType<FileSandboxWorkspaceStore>(services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>());
@@ -111,36 +114,47 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             using var bound = lease.Bind();
             await journal.BeginEffectSegmentAsync(lease, default);
             var tools = await providerTools.CreateToolsAsync(context, default);
-            var metadata = Assert.Single(providerTools.GetToolMetadata(context), item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
-            var tool = Assert.Single(tools.OfType<AIFunction>(), item => item.Name == metadata.ToolName);
-            for (var index = 0; index < receiptCount; index++) {
-                var original = (await projects.GetDefinitionAsync(owner.Project.ProjectId)).Value!;
-                var request = new ProjectStructureProjectSaveRequest($"Historical accepted definition {index}", "", "", "") {
-                    ExpectedDefinition = original.Expectation
-                };
-                Dictionary<string, object?> arguments = new() { ["projectId"] = owner.Project.ProjectId, ["request"] = request };
-                var payload = metadata.PrepareAdmission!(JsonSerializer.SerializeToElement(arguments, ProjectDefinitionToolProposalCodec.Json));
-                var callId = $"historical-definition-{index}";
-                var saved = await journal.AdmitBatchAsync(lease, payload.Digest, AgentToolAdmissionJournalFixture.Envelope(),
-                    [new(callId, payload, false)], default);
-                var batch = saved.Batches[^1];
-                var claim = await journal.ClaimInvocationAsync(lease, batch.Id, callId, payload, default);
-                using var dispatch = claim.Bind();
-                using var effect = AgentToolInvocationEffectScope.Begin();
-                var accepted = Assert.IsType<JsonElement>(await tool.InvokeAsync(new AIFunctionArguments(arguments)));
-                Assert.Equal(new AgentToolCommittedEffect(ProjectDefinitionToolAdmission.EffectSourceKind, claim.Proposal.IntentId.Value.ToString("D")),
-                    effect.CommittedEffect);
-                await journal.CompleteInvocationAsync(claim, AgentToolAdmissionJournalFixture.Envelope(accepted.GetRawText()),
-                    AgentToolEffectState.Committed, default);
-                intents.Add(claim.Proposal.IntentId);
+            if (hierarchy || createdDefinitions) {
+                Assert.Equal(5, receiptCount);
+                intents.AddRange(await SeedHistoricalCreatedTargetOperationsAsync(services, owner, journal, lease, providerTools, context, tools,
+                    process, createdDefinitions, unresolvedLast));
+            } else {
+                var metadata = Assert.Single(providerTools.GetToolMetadata(context), item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectUpdate);
+                var tool = Assert.Single(tools.OfType<AIFunction>(), item => item.Name == metadata.ToolName);
+                for (var index = 0; index < receiptCount; index++) {
+                    var original = (await projects.GetDefinitionAsync(owner.Project.ProjectId)).Value!;
+                    var request = new ProjectStructureProjectSaveRequest($"Historical accepted definition {index}", "", "", "") {
+                        ExpectedDefinition = original.Expectation
+                    };
+                    Dictionary<string, object?> arguments = new() { ["projectId"] = owner.Project.ProjectId, ["request"] = request };
+                    var payload = metadata.PrepareAdmission!(JsonSerializer.SerializeToElement(arguments, ProjectDefinitionToolProposalCodec.Json));
+                    var callId = $"historical-definition-{index}";
+                    var saved = await journal.AdmitBatchAsync(lease, payload.Digest, AgentToolAdmissionJournalFixture.Envelope(),
+                        [new(callId, payload, false)], default);
+                    var batch = saved.Batches[^1];
+                    var claim = await journal.ClaimInvocationAsync(lease, batch.Id, callId, payload, default);
+                    using var dispatch = claim.Bind();
+                    using var effect = AgentToolInvocationEffectScope.Begin();
+                    var accepted = Assert.IsType<JsonElement>(await tool.InvokeAsync(new AIFunctionArguments(arguments)));
+                    Assert.Equal(new AgentToolCommittedEffect(ProjectDefinitionToolAdmission.EffectSourceKind, claim.Proposal.IntentId.Value.ToString("D")),
+                        effect.CommittedEffect);
+                    await journal.CompleteInvocationAsync(claim, AgentToolAdmissionJournalFixture.Envelope(accepted.GetRawText()),
+                        AgentToolEffectState.Committed, default);
+                    intents.Add(claim.Proposal.IntentId);
+                }
             }
         }
         run = (await store.GetExecutionRunAsync(run.Id))!;
         Assert.Equal(receiptCount, run.ToolAdmission!.Batches.Length);
-        Assert.All(run.ToolAdmission.Batches.SelectMany(batch => batch.Proposals), proposal => {
+        var proposals = run.ToolAdmission.Batches.SelectMany(batch => batch.Proposals).ToArray();
+        Assert.All(unresolvedLast ? proposals[..^1] : proposals, proposal => {
             Assert.Equal(AgentToolProposalState.Completed, proposal.State);
             Assert.NotNull(proposal.Result);
         });
+        if (unresolvedLast) {
+            Assert.Equal(AgentToolProposalState.Executing, proposals[^1].State);
+            Assert.Null(proposals[^1].Result);
+        }
         var root = services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Storage.WorkspaceRoot;
         var layout = new FileSandboxWorkspaceStorageLayout(root, WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")));
         var receipts = await HistoricalReceiptDigestsAsync(services, intents);
@@ -212,7 +226,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                     Basis = basis;
                     var process = new ProjectProcessHistoricalReadAuthority(original, database, generations, basis, admissions,
                         services.GetRequiredService<IOptionsMonitor<ApiAccessOptions>>(), services.GetRequiredService<TimeProvider>());
-                    Receipts = new(new ProjectDefinitionHistoricalReceiptRecovery(basis, process, admissions, receiptReader),
+                    Receipts = new(new ProjectDefinitionHistoricalReceiptRecovery(basis, process, admissions, receiptReader, services.GetRequiredService<ProjectCreatedTargetProvenance>()),
                         afterReceipt is null ? null : (claim, token) => afterReceipt(this, claim, token));
                     return new([new ProcessHistoricalReceiptSourcePolicy(original, database, generations, process)], [Receipts]);
                 });
@@ -286,7 +300,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         await using var database = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var rows = await database.Set<ProjectDefinitionReceiptRecord>().AsNoTracking()
             .Where(row => ids.Contains(row.OperationId)).Select(row => new { row.OperationId, row.AcceptedPayload }).ToArrayAsync();
-        return rows.ToDictionary(row => row.OperationId, row => Convert.ToHexString(SHA256.HashData(row.AcceptedPayload)));
+        var lifecycle = await database.Set<ProjectLifecycleReceiptRecord>().AsNoTracking()
+            .Where(row => ids.Contains(row.OperationId)).Select(row => new { row.OperationId, row.AcceptedPayload }).ToArrayAsync();
+        return rows.Concat(lifecycle).ToDictionary(row => row.OperationId, row => Convert.ToHexString(SHA256.HashData(row.AcceptedPayload)));
     }
 
     private static async Task AssertHistoricalReceiptsUnchangedAsync(IServiceProvider services, HistoricalSeed seed) {

@@ -1,0 +1,27 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "portability-enforce-after-review",
+  "Arguments": [
+    "tools/Validation/Portability/enforce_portability_baseline.py",
+    "--scan",
+    ".artifacts/concurrent-mutations/validation/p03-existing-profile-reader-validation/portability-scan-current.json",
+    "--baseline",
+    "tools/Validation/Portability/portability-risk-baseline.json"
+  ],
+  "StartedUtc": "2026-10-18T22:22:50.7842575+00:00",
+  "State": "Completed",
+  "RunnerPid": 50792,
+  "ChildPid": 32624,
+  "ChildStartedUtc": "2026-10-18T22:22:50.7867860Z",
+  "ExitCode": 0,
+  "Seconds": 0.467973,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 68,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

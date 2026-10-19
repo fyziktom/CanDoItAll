@@ -20,7 +20,7 @@ internal static class ProjectDefinitionGovernedBindings {
         ArgumentNullException.ThrowIfNull(verifiedProposal);
         var session = verifiedSession.Session;
         var governance = original.Governance;
-        if (original.ProjectIds.Count > 1024 || original.ProjectLifetimes.Count > 1024 ||
+        if (original.ProjectIds.Count > 1024 || original.ProjectLifetimes.Count > 1024 || original.PriorCreatedProjects.Length > 3 ||
             governance is null || verifiedSession.Governance is null || session.Reference.BackgroundSource is not null ||
             session.Purpose != AgentRuntimeContextPurpose.InteractiveChat || session.AgentId != original.AgentId ||
             session.Profile.ProfileId != original.DatabaseProfileId || session.Reference.AuthorityId != governance.AuthorityId ||
@@ -48,6 +48,9 @@ internal static class ProjectDefinitionGovernedBindings {
                 item => Project(writer, new(item.DatabaseProfileId, item.ProjectId, item.LifetimeId)));
             Project(writer, original.SourceProject);
             Reservation(writer, original.CreatedProjectReservation);
+            if (original.Domain == ProjectAgentMutationDomain.Hierarchy) {
+                writer.Collection(original.PriorCreatedProjects.OrderBy(item => item.Id), item => Reservation(writer, item));
+            }
             Governance(writer, governance);
             writer.Text(session.Profile.Fingerprint);
             writer.Number(session.Profile.Generation.Value);
@@ -65,6 +68,7 @@ internal static class ProjectDefinitionGovernedBindings {
             ProjectProcessProjectOperation.Update => ProjectStructureToolPolicy.ProjectStructureProjectUpdate,
             ProjectProcessProjectOperation.CreateRoot => ProjectStructureToolPolicy.ProjectStructureProjectCreate,
             ProjectProcessProjectOperation.CreateChild => ProjectStructureToolPolicy.ProjectStructureSubprojectCreate,
+            ProjectProcessProjectOperation.ChangeHierarchy => ProjectStructureToolPolicy.ProjectStructureSubprojectLink,
             _ => throw Invalid("The Process operation is not a supported project definition effect.")
         };
         if (original.CreatedProjects.Length > 1024 || dispatch.SourceAuthority is null || dispatch.ProjectReference is null ||
@@ -147,7 +151,8 @@ internal static class ProjectDefinitionGovernedBindings {
     private static bool MatchesDefinitionTool(ProjectAgentMutationAdmission original) => (original.Operation, original.Domain) switch {
         (ProjectStructureToolPolicy.ProjectStructureProjectUpdate, ProjectAgentMutationDomain.NonTaskStructure) or
         (ProjectStructureToolPolicy.ProjectStructureProjectCreate, ProjectAgentMutationDomain.ProjectCreation) or
-        (ProjectStructureToolPolicy.ProjectStructureSubprojectCreate, ProjectAgentMutationDomain.SubprojectCreation) => true,
+        (ProjectStructureToolPolicy.ProjectStructureSubprojectCreate, ProjectAgentMutationDomain.SubprojectCreation) or
+        (ProjectStructureToolPolicy.ProjectStructureSubprojectLink, ProjectAgentMutationDomain.Hierarchy) => true,
         _ => false
     };
 

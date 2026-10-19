@@ -137,7 +137,7 @@ public sealed class ProjectTaskPlanOperationContractTests {
         var encoded = Encoding.UTF8.GetString(ProjectTaskPlanOperationCodec.EncodeAccepted(Accept(Command())));
         var malformed = new[] {
             encoded.Insert(1, "\"version\":1,"), encoded.Insert(1, "\"unknown\":1,"),
-            encoded.Replace("\"version\":1", "\"version\":2", StringComparison.Ordinal),
+            encoded.Replace("\"version\":1", "\"version\":3", StringComparison.Ordinal),
             encoded.Replace("2026-10-16T12:00:00+00:00", "2026-10-16T13:00:00+01:00", StringComparison.Ordinal)
         };
         foreach (var payload in malformed) {
@@ -184,8 +184,53 @@ public sealed class ProjectTaskPlanOperationContractTests {
         Assert.True(new ProjectTaskPlanOutcome.Rejected(command.Operation, ProjectTaskPlanRefusal.BasisChanged, true).RequiresReview);
     }
 
+    [Theory]
+    [InlineData(ProjectTaskPlanSource.WallTimeVersion)]
+    [InlineData(ProjectTaskPlanSource.ActiveWorkVersion)]
+    public void Each_supported_interpretation_preserves_exact_receipt_fields_and_encoded_payload(int version) {
+        var caller = Caller();
+        var command = Command(caller, version);
+        var accepted = Accept(command);
+        var receipt = ProjectTaskPlanOperationProtocol.CreateReceipt(accepted, caller);
+        Assert.Equal(version, receipt.SchemaVersion);
+        Assert.Equal(version, receipt.SourceVersion);
+        Assert.Equal(version, receipt.ResultVersion);
+        Assert.Equal(1, receipt.NormalizationVersion);
+        var decoded = ProjectTaskPlanOperationProtocol.Decode(receipt, command.Operation, caller, accepted.ReplayUntilUtc);
+        Assert.Equal(accepted.Tasks, decoded.Tasks);
+        Assert.Equal(accepted.Source, decoded.Source);
+        Assert.Equal(receipt.AcceptedPayload, ProjectTaskPlanOperationCodec.EncodeAccepted(decoded));
+        receipt.ResultVersion = version == 1 ? 2 : 1;
+        Assert.Throws<ProjectTaskPlanReceiptDecodeException>(() => ProjectTaskPlanOperationProtocol.Decode(
+            receipt, command.Operation, caller, accepted.ReplayUntilUtc));
+    }
+
+    [Fact]
+    public void Changed_work_interpretation_changes_semantics_without_creating_another_operation_address() {
+        var caller = Caller();
+        var first = Command(caller);
+        var second = new ProjectTaskPlanCommand(first.Operation, first.Basis, first.Proposal, first.Policy,
+            new(first.Source.DecisionId, first.Source.Generation, first.Source.DecisionStartedAtUtc, first.Source.Kind,
+                ProjectTaskPlanSource.ActiveWorkVersion, first.Source.Fingerprint), schemaVersion: ProjectTaskPlanSource.ActiveWorkVersion);
+        Assert.NotEqual(ProjectTaskPlanOperationCodec.Digest(first), ProjectTaskPlanOperationCodec.Digest(second));
+        Assert.Equal(ProjectTaskPlanOperationProtocol.OperationKey(first.Operation, caller),
+            ProjectTaskPlanOperationProtocol.OperationKey(second.Operation, caller));
+    }
+
+    [Fact]
+    public void Mixed_result_and_source_versions_cannot_reinterpret_retained_acceptance() {
+        foreach (var version in new[] { 1, 2 }) {
+            var payload = JsonNode.Parse(ProjectTaskPlanOperationCodec.EncodeAccepted(Accept(Command(version: version))))!;
+            payload["version"] = version == 1 ? 2 : 1;
+            Assert.Throws<ProjectTaskPlanReceiptDecodeException>(() => ProjectTaskPlanOperationCodec.DecodeAccepted(
+                Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        }
+        Assert.Throws<ArgumentException>(() => new ProjectTaskPlanSource(Guid.NewGuid(), 1, Instant,
+            ProjectTaskPlanSourceKind.OrdinaryAgentDecision, 3, new('b', 64)));
+    }
+
     private static ProjectTaskPlanCaller Caller() => new(ProjectTaskPlanCallerKind.OrdinaryAgent, Enumerable.Repeat((byte)3, 32).ToArray());
-    private static ProjectTaskPlanCommand Command(ProjectTaskPlanCaller? caller = null) {
+    private static ProjectTaskPlanCommand Command(ProjectTaskPlanCaller? caller = null, int version = 1) {
         caller ??= Caller();
         var ns = new DatasetNamespaceId(Guid.NewGuid());
         var expected = new ProjectDefinitionExpectation(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()), Guid.NewGuid());
@@ -193,7 +238,7 @@ public sealed class ProjectTaskPlanOperationContractTests {
         return new(new(ns, 1, Guid.NewGuid(), caller.Bind(ns)), basis,
             ProjectTaskPlanProposal.Normalize(new(1, [new("First", "", "", 1), new("Second", "", "", 1)])),
             DecisionDataPolicy.PlanningDefault(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(2)),
-            new(Guid.NewGuid(), 1, Instant, ProjectTaskPlanSourceKind.OrdinaryAgentDecision, 1, new('b', 64)));
+            new(Guid.NewGuid(), 1, Instant, ProjectTaskPlanSourceKind.OrdinaryAgentDecision, version, new('b', 64)), schemaVersion: version);
     }
 
     private static ProjectTaskPlanAccepted Accept(ProjectTaskPlanCommand command) {

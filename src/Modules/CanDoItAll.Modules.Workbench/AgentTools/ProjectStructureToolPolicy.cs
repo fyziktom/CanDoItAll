@@ -23,6 +23,7 @@ public static class ProjectStructureToolPolicy {
     public const string ProjectStructureDependenciesQuery = "project_structure_dependencies_query";
     public const string ProjectPlanSummaryGet = "project_plan_summary_get";
     public const string ProjectTaskCreate = "project_task_create";
+    public const string ProjectTaskPlanPublish = "project_task_plan_publish";
     public const string ProjectTaskUpdate = "project_task_update";
     public const string ProjectTaskResourceAttach = "project_task_resource_attach";
     public const string ProjectStructureDependencyLink = "project_structure_dependency_link";
@@ -87,6 +88,7 @@ public static class ProjectStructureToolPolicy {
         Read(ProjectStructureDependenciesQuery, ToolCapabilitySideEffectKind.WorkspaceRead),
         Read(ProjectPlanSummaryGet, ToolCapabilitySideEffectKind.WorkspaceRead),
         Mutation(ProjectTaskCreate, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },
+        Mutation(ProjectTaskPlanPublish, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction) },
         Mutation(ProjectTaskUpdate, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },
         Mutation(ProjectTaskResourceAttach, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },
         Mutation(ProjectStructureDependencyLink, ToolCapabilitySideEffectKind.ProjectStructureMutation, StaticRequirement(ProcessOperationContractNames.ExecuteExternalAction), effects: ExternalActionEffects) with { OperationClassifications = Classifications(CapabilityOperationClassification.ExternalAction, CapabilityOperationClassification.ScriptExecution) },

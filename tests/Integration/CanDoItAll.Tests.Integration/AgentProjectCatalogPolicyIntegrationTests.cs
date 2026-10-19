@@ -39,7 +39,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         Assert.Equal(eligibleId, oldLifetime.ProjectId);
         Assert.Equal(3, bound.AllowedProjectIds.Count);
         Assert.True((await projects.CreateAsync(missingId, new() { Name = "Previously missing" })).IsSuccess);
-        await projects.DeleteAsync(eligibleId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(eligibleId);
         Assert.True((await projects.CreateAsync(eligibleId, new() { Name = "New lifetime with old id" })).IsSuccess);
         var after = ReadAccess(await CreateGuardedStore(services, environment.RootPath).LoadCatalogAsync(), agent.Id);
         Assert.Equal(oldLifetime, Assert.Single(after.AllowedProjectLifetimes));
@@ -68,13 +68,14 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var lifetime = new AgentProjectStructureLifetime(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
         await workspace.GrantAgentProjectStructureLifetimeAsync(firstId, lifetime);
-        await admissions.CancelCreationAsync(reservation);
-        Assert.Equal(lifetime, Assert.Single(AgentProjectStructureAccessMetadata.Read(
-            Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectLifetimes));
+        var cancelled = Assert.IsType<ProjectReservationCancellationOutcome.Committed>(await services
+            .GetRequiredService<ProjectReservationCancellationOwner>().CancelAsync(await admissions.CaptureReservationCancellationAsync(reservation)));
+        Assert.Null(cancelled.CompletionIssue);
+        Assert.Empty(AgentProjectStructureAccessMetadata.Read(
+            Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectLifetimes);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(reservation.ProjectId, new() { Name = "Different lifetime" })).IsSuccess);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
-        await workspace.RevokeAgentProjectStructureLifetimeAsync(firstId, lifetime);
         Assert.Empty(AgentProjectStructureAccessMetadata.Read(
             Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectIds);
     }
@@ -94,7 +95,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var old = ReadAccess(saved, agent.Id);
         await store.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(current => current.Id != agent.Id
             ? current : current with { ConfigurationJson = AgentProjectStructureAccessMetadata.RevokeProject(current.ConfigurationJson, projectId).ConfigurationJson }).ToArray() });
-        await projects.DeleteAsync(projectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement catalog binding" })).IsSuccess);
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveCatalogAsync(saved));
         var currentCatalog = await store.LoadCatalogAsync();
@@ -122,7 +123,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
             .AddInterceptors(probe).Options;
         var canonical = services.GetRequiredService<ICanonicalRuntimeDatabase>();
         var admissions = new ProjectWriteAdmissionService(new ProjectFactory(options), options,
-            services.GetRequiredService<CoordinatedDatabaseTransaction>(), canonical);
+            services.GetRequiredService<CoordinatedDatabaseTransaction>(), canonical, services.GetRequiredService<DatasetActivationService>());
         var policy = new CatalogPolicyProbe(new AgentProjectAccessCatalogPolicy(admissions, canonical.Profile.Profile.Id), probe);
         var guarded = new FileSandboxWorkspaceStore(environment.RootPath, catalogMutationPolicy: policy);
         var agentIds = agents.Select(agent => agent.Id).ToHashSet();

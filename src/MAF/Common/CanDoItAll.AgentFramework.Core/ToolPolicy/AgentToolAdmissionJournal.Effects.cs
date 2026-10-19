@@ -97,7 +97,7 @@ public sealed partial class AgentToolAdmissionJournal {
             var lease = new AgentToolRunLease(this, reference, Guid.NewGuid(), handle, AgentToolRunLeaseMode.InterruptedEffectReconciliation, started);
             var admitted = await writer.UpdateExecutionRunDetailAsync(reference.ExecutionRunId, detail => {
                 var journal = RequireJournal(detail.Run);
-                if (journal.SchemaVersion != AgentToolJournalRecord.EffectJournalSchemaVersion ||
+                if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion) ||
                     journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.Session.Reference != reference) {
                     throw Failure("Interrupted reconciliation requires the exact retained effects-only session.");
                 }
@@ -132,9 +132,7 @@ public sealed partial class AgentToolAdmissionJournal {
         }
         var admission = new ExecutionRunAdmissionSnapshot(run, detail.ChatSession);
         RequireCurrent(journal.Session, admission, AgentToolRunLeaseMode.InterruptedEffectReconciliation);
-        var observation = new AgentToolSessionObservation(journal.Session,
-            AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson),
-            AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson));
+        var observation = AgentToolSessionObservation.From(run);
         await RequireEffectReadPolicyAsync(run, observation, currentRead, recheckAfterBackground: true, cancellationToken);
         var snapshot = ClassifyEffectSlice(journal);
         await RequireEffectReadPolicyAsync(run, observation, currentRead, recheckAfterBackground: true, cancellationToken);
@@ -301,9 +299,7 @@ public sealed partial class AgentToolAdmissionJournal {
         RequireInterruptedLease(lease, pinned);
         var run = pinned.Admission.Run;
         var journal = RequireJournal(run);
-        var observation = new AgentToolSessionObservation(journal.Session,
-            AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson),
-            AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson));
+        var observation = AgentToolSessionObservation.From(run);
         await RequireEffectReadPolicyAsync(run, observation, currentRead, recheckAfterBackground: false, cancellationToken);
         RequireInterruptedLease(lease, pinned);
         cancellationToken.ThrowIfCancellationRequested();
@@ -452,7 +448,7 @@ public sealed partial class AgentToolAdmissionJournal {
     }
 
     private async ValueTask<AgentToolReceiptReconciliationAdmission> RequireInterruptedReceiptAsync(
-        AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken) {
+        AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken, bool includePrior = false) {
         cancellationToken.ThrowIfCancellationRequested();
         var pinned = claim.Lease.RequirePinnedSnapshot(this);
         var detail = pinned.Admission;
@@ -487,12 +483,10 @@ public sealed partial class AgentToolAdmissionJournal {
             throw Failure("The interrupted proposal has no exact originally approved dispatched owner-receipt intent.");
         }
 
-        var observation = new AgentToolSessionObservation(journal.Session,
-            AgentTurnContextMetadata.TryReadTurnContextReference(detail.Run.MetadataJson),
-            AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(detail.Run.MetadataJson));
+        var observation = AgentToolSessionObservation.From(detail.Run);
         await RequireEffectReadPolicyAsync(detail.Run, observation, currentRead, recheckAfterBackground: true, cancellationToken);
         claim.RequireOwner(this);
         cancellationToken.ThrowIfCancellationRequested();
-        return new(journal.Session, claim.Binding, proposal.Payload) { PinnedEvidence = evidence };
+        return AgentToolPriorInvocationEvidence.Receipt(detail, claim.Binding, proposal.Payload, includePrior, evidence);
     }
 }

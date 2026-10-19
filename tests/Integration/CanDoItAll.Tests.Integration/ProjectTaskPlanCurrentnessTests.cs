@@ -193,7 +193,7 @@ public sealed class ProjectTaskPlanCurrentnessTests {
         });
         fixture.Authority.BeforeAcquire = null;
         var beforeDeletion = await fixture.CommandAsync();
-        await projects.DeleteAsync(fixture.Project.ProjectId, expectedProjectAdmission: fixture.Project);
+        await new ProjectLifecycleTestDriver(fixture.Services).DeleteAsync(fixture.Project.ProjectId);
         Assert.Equal(ProjectTaskPlanRefusal.SourceChanged,
             Assert.IsType<ProjectTaskPlanOutcome.Rejected>(await fixture.Publisher().PublishAsync(beforeDeletion, fixture.Invocation)).Reason);
         await fixture.VerifyAsync(0, 0);

@@ -265,13 +265,21 @@ public sealed class ProjectDefinitionWriter(
         if (write.ExternalIdentity is { } externalIdentity) {
             keys.Add(externalIdentity.MutationScopeKey);
         }
+        var originalCreation = write.Creation is not null && write.Attempt is null
+            ? await admissions.CaptureCreationBindingAsync(cancellationToken)
+            : null;
         var context = await factory.CreateDbContextAsync(cancellationToken);
         ProjectSourceMutationScope? scope = null;
         Exception? primaryFailure = null;
         DefinitionOutcome? accepted = null;
         string? parentName = null;
         try {
-            scope = await ProjectSourceMutationScope.BeginDefinitionAsync(context, keys,
+            scope = originalCreation is not null
+                ? await ProjectSourceMutationScope.BeginBoundAsync(context, keys,
+                    parentId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
+                    targetId, parentId.HasValue ? [parentId.Value] : [], write.Authorization, admissions, transactions,
+                    originalCreation, cancellationToken, write.Creation!.Reservation)
+                : await ProjectSourceMutationScope.BeginDefinitionAsync(context, keys,
                 write.Expected is not null ? ProjectMutationPurpose.ExistingWrite : parentId.HasValue ? ProjectMutationPurpose.CreateChild : ProjectMutationPurpose.CreateRoot,
                 targetId, write.Expected is not null ? [targetId] : parentId.HasValue ? [parentId.Value] : [],
                 write.Authorization, admissions, transactions, cancellationToken, write.Creation?.Reservation,
@@ -321,7 +329,8 @@ public sealed class ProjectDefinitionWriter(
                         record.ProjectId == targetId && record.State == ProjectCreationReservationState.Reserved && record.ImportedHistory == null, cancellationToken)) {
                     return Result<DefinitionOutcome>.Failure(Error.Failure("The project id belongs to a pending creation reservation.", ProjectErrorCodes.ReservedIdConflict));
                 }
-                if (reservation is not null && !await admissions.TryConsumeCreationAsync(context, reservation, parentId, cancellationToken)) {
+                if (reservation is not null && !await admissions.TryConsumeCreationAsync(context, reservation, parentId,
+                        write.Attempt?.Operation.Namespace ?? originalCreation!.Binding.Namespace, cancellationToken)) {
                     return Result<DefinitionOutcome>.Failure(Error.Failure(
                         "The exact project creation reservation is closed or its parent lifetime has changed.", ProjectErrorCodes.ReservationClosed));
                 }
@@ -352,7 +361,8 @@ public sealed class ProjectDefinitionWriter(
             }
             await context.SaveChangesAsync(cancellationToken);
             var admission = admissions.Capture(entity);
-            var receipt = write.Creation is null ? null : new ProjectCreationReceipt(admission, write.Creation.Reservation,
+            var receipt = write.Creation is null ? null : new ProjectCreationReceipt(admission,
+                write.Attempt?.Operation.Namespace ?? originalCreation!.Binding.Namespace, write.Creation.Reservation,
                 await ProjectCreationFingerprint.ReadAsync(context, admission, cancellationToken), write.Authorization);
             accepted = new(new(admission, entity.ConcurrencyToken), write.Scalars,
                 entity.ExternalNamespace is null ? null : new(entity.ExternalNamespace, entity.ExternalKey!), phases, options, receipt);
@@ -371,6 +381,9 @@ public sealed class ProjectDefinitionWriter(
                 } else {
                     await operationProtocol.RecordAcceptedAsync(context, operation, ToEditor(accepted), receipt?.Fingerprint, cancellationToken);
                 }
+            }
+            if (originalCreation is not null) {
+                await admissions.RequireCreationBindingAsync(originalCreation, cancellationToken);
             }
             try {
                 if (write.Attempt is { } committing) {
@@ -537,7 +550,7 @@ public sealed class ProjectDefinitionWriter(
         }
         var full = (attempt.Accepted as ProjectDefinitionDecodedReceipt.Full)?.Result.Acknowledgement
             ?? throw new InvalidOperationException("The replayed definition is missing its accepted result.");
-        var receipt = creation is null ? null : new ProjectCreationReceipt(full.Definition.Project, creation.Reservation,
+        var receipt = creation is null ? null : new ProjectCreationReceipt(full.Definition.Project, attempt.Operation.Namespace, creation.Reservation,
             attempt.CreationFingerprint ?? throw new InvalidOperationException("The replayed creation is missing its compensation fingerprint."), creation.Authorization);
         return new(full.Definition, new(full.Name, full.Description, full.Objective, full.Status, full.CurrentPhase, full.TargetDateUtc),
             full.ExternalIdentity, full.Phases, full.Options, receipt);

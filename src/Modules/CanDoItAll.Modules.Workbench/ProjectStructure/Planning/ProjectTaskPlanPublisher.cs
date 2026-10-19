@@ -25,9 +25,6 @@ internal sealed class ProjectTaskPlanPublisher {
         ProjectTaskPlanOperationOptions options, ProjectTaskPlanBasisCapture capture, ProjectTaskPlanReceiptReader receipts,
         DecisionDataPolicyBudget policyCeiling, ILogger<ProjectTaskPlanPublisher> logger) {
         ArgumentNullException.ThrowIfNull(policyCeiling);
-        if (policyCeiling.MaximumReplans != 0) {
-            throw new ArgumentException("Task publication does not implement automatic replanning.", nameof(policyCeiling));
-        }
         this.contexts = contexts;
         this.activation = activation;
         this.admissions = admissions;
@@ -85,6 +82,7 @@ internal sealed class ProjectTaskPlanPublisher {
                 return Reject(ProjectTaskPlanRefusal.InvalidInput);
             }
             await using var authority = await invocation.Authority.AcquireAsync(command.Source, target, cancellationToken);
+            RequireActiveWork(command, authority);
             var expectedProjects = CaptureProjects(target, authority);
             await authority.RequireCurrentAsync(cancellationToken);
             await using var context = await contexts.CreateDbContextAsync(cancellationToken);
@@ -103,7 +101,7 @@ internal sealed class ProjectTaskPlanPublisher {
                 await epochs.RequireAdmissibleAsync(context, epoch, cancellationToken);
                 await admissions.RequireManyForMutationAsync(expectedProjects, cancellationToken);
                 var current = await capture.ReadEnlistedAsync(context, binding, target, cancellationToken);
-                RequirePolicy(command, current.Basis.CapturedAtUtc);
+                RequirePolicy(command, current.Basis.CapturedAtUtc, authority);
                 if (!ProjectTaskPlanBasisCodec.MaterialEquals(command.Basis, current.Basis)) {
                     throw new PublicationRefused(ProjectTaskPlanRefusal.BasisChanged);
                 }
@@ -116,7 +114,7 @@ internal sealed class ProjectTaskPlanPublisher {
                 await authority.RequireCurrentAsync(cancellationToken);
                 await admissions.RequireManyForMutationAsync(expectedProjects, cancellationToken);
                 await epochs.RequireAdmissibleAsync(context, epoch, cancellationToken);
-                RequirePolicy(command, await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken));
+                RequirePolicy(command, await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken), authority);
                 commitAttempted = true;
                 await transaction.CommitAsync(cancellationToken);
                 committed = true;
@@ -219,17 +217,29 @@ internal sealed class ProjectTaskPlanPublisher {
         return expected.Values.OrderBy(project => project.ProjectId).ToArray();
     }
 
-    private void RequirePolicy(ProjectTaskPlanCommand command, DateTimeOffset now) {
-        var capabilities = new DecisionDataPolicyCapabilities(true, true, false, true, true, false,
+    private void RequirePolicy(ProjectTaskPlanCommand command, DateTimeOffset now, IProjectTaskPlanHeldAuthority authority) {
+        var activeWork = command.Source.Version == ProjectTaskPlanSource.ActiveWorkVersion;
+        var capabilities = new DecisionDataPolicyCapabilities(true, true, false, true, true, activeWork,
             PublicationFreshness.RequireCurrent, policyCeiling);
         if (DecisionDataPolicyResolver.Resolve(command.Policy, capabilities) != command.Policy) {
             throw new PublicationRefused(ProjectTaskPlanRefusal.PolicyChanged);
         }
         if (command.Source.DecisionStartedAtUtc > now || command.Basis.CapturedAtUtc > now ||
-                now - command.Source.DecisionStartedAtUtc >= command.Policy.Budget.MaximumWorkDuration ||
+                !activeWork && now - command.Source.DecisionStartedAtUtc >= command.Policy.Budget.MaximumWorkDuration ||
                 now - command.Basis.CapturedAtUtc >= command.Policy.Budget.MaximumBasisAge) {
             throw new PublicationRefused(ProjectTaskPlanRefusal.BudgetElapsed);
         }
+        RequireActiveWork(command, authority);
+    }
+
+    private static void RequireActiveWork(ProjectTaskPlanCommand command, IProjectTaskPlanHeldAuthority authority) {
+        if (command.Source.Version != ProjectTaskPlanSource.ActiveWorkVersion) {
+            return;
+        }
+        if (authority is not IProjectTaskPlanActiveWorkAuthority work) {
+            throw new ProjectTaskPlanAuthorityException(ProjectTaskPlanRefusal.SourceChanged);
+        }
+        work.RequireActiveWork(command.Source, command.Policy);
     }
 
     private sealed class PublicationRefused(ProjectTaskPlanRefusal reason) : InvalidOperationException {

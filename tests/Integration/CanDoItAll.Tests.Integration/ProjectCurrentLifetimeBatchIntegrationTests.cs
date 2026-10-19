@@ -17,7 +17,8 @@ public sealed class ProjectCurrentLifetimeBatchIntegrationTests {
         var canonical = application.Services.GetRequiredService<ICanonicalRuntimeDatabase>();
         var coordinator = CoordinatedDatabaseTransaction.ForProfile(canonical.Profile);
         var probe = new CommandProbe();
-        var (admissions, factory) = CreateAdmissions(canonical, coordinator, probe);
+        var (admissions, factory) = CreateAdmissions(canonical, coordinator, probe,
+            application.Services.GetRequiredService<DatasetActivationService>());
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         Project[] projects = [new() { Name = "First" }, new() { Name = "Second" }, new() { Name = "Third" }];
         owner.AddRange(projects);
@@ -101,7 +102,8 @@ public sealed class ProjectCurrentLifetimeBatchIntegrationTests {
         var restartedCanonical = restarted.Services.GetRequiredService<ICanonicalRuntimeDatabase>();
         var probe = new CommandProbe();
         var (admissions, _) = CreateAdmissions(restartedCanonical,
-            CoordinatedDatabaseTransaction.ForProfile(restartedCanonical.Profile), probe);
+            CoordinatedDatabaseTransaction.ForProfile(restartedCanonical.Profile), probe,
+            restarted.Services.GetRequiredService<DatasetActivationService>());
         await admissions.RequireManyCurrentAsync([targets[0], replacementAdmission]);
         Assert.Single(probe.Commands);
         Assert.NotEqual(targets[3].LifetimeId, replacementAdmission.LifetimeId);
@@ -122,12 +124,13 @@ public sealed class ProjectCurrentLifetimeBatchIntegrationTests {
     }
 
     private static (ProjectWriteAdmissionService Admissions, Factory Factory) CreateAdmissions(
-        ICanonicalRuntimeDatabase canonical, CoordinatedDatabaseTransaction coordinator, CommandProbe probe) {
+        ICanonicalRuntimeDatabase canonical, CoordinatedDatabaseTransaction coordinator, CommandProbe probe,
+        DatasetActivationService activation) {
         var options = new DbContextOptionsBuilder<ProjectsDbContext>();
         AppDbContextOptionsConfigurator.Configure(options, canonical.Profile);
         options.AddInterceptors(probe);
         var factory = new Factory(options.Options);
-        return (new(factory, options.Options, coordinator, canonical), factory);
+        return (new(factory, options.Options, coordinator, canonical, activation), factory);
     }
 
     private sealed class Factory(DbContextOptions<ProjectsDbContext> options) : IDbContextFactory<ProjectsDbContext> {

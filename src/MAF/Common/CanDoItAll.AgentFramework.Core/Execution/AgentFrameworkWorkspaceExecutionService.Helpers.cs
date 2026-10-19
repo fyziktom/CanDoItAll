@@ -243,12 +243,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
     private ExecutionRunRecord AdmitInteractiveRun(ExecutionRunRecord run, ChatSessionRecord session,
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments, ChatMessageRecord input,
-        AgentRuntimeTransientContext? runtimeContext) {
+        AgentRuntimeTransientContext? runtimeContext, AgentPlanningPreparedRun? planningRun) {
         if (toolAdmissionJournal is null || AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson) is null ||
             CreateRuntimeContextIntent(run, activityWorkspaceIdentity.WorkspaceScope).Purpose != AgentRuntimeContextPurpose.InteractiveChat) {
+            if (planningRun is not null) {
+                throw new InvalidOperationException("Planning admission requires its original interactive journal authority.");
+            }
             return run;
         }
 
+        if (planningRun is not null) {
+            run = run with { MetadataJson = AgentPlanningRunMetadata.Apply(run.MetadataJson, planningRun.Owner, planningRun.RuntimeContract) };
+            return run with { ToolAdmission = toolAdmissionJournal.CreateForNewPlanningRun(run, session,
+                new(input.Id, input.Content), planningRun.Admission) };
+        }
         var canRecover = inputAttachments.Count == 0 && toolAdmissionJournal.CanRecoverRuntimeContext(runtimeContext);
         return run with { ToolAdmission = toolAdmissionJournal.CreateForNewRun(run, session,
             canRecover ? AgentToolAdmissionSupport.Recoverable : AgentToolAdmissionSupport.RequestScopedInput,
@@ -461,6 +469,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
         AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
+        AgentPlanningPreparedRun? planningRun,
         CancellationToken cancellationToken)
     {
         if (store is ISandboxWorkspaceChatRunStartStore chatRunStartStore)
@@ -478,6 +487,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 inputAttachments,
                 runtimeContext,
                 initialActivityOperationId,
+                planningRun,
                 cancellationToken);
         }
 
@@ -565,7 +575,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 now,
                 run.Id);
 
-            run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
+            run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext, planningRun);
             prepared = new AgentExecutionStartupAggregate(
                 preparation.Blueprint,
                 catalogSnapshot,
@@ -602,6 +612,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         IReadOnlyList<AgentRuntimeInputAttachment> inputAttachments,
         AgentRuntimeTransientContext? runtimeContext,
         AgentExecutionOperationId initialActivityOperationId,
+        AgentPlanningPreparedRun? planningRun,
         CancellationToken cancellationToken)
     {
         EnsurePreparationCurrentForUse(
@@ -670,7 +681,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         now,
                         run.Id);
 
-                run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext);
+                run = AdmitInteractiveRun(run, updatedSession, inputAttachments, userMessage, runtimeContext, planningRun);
                 return new ChatBackedRunStartMutation(
                     CreateExecutionRunDetail(
                         run,

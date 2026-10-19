@@ -146,7 +146,7 @@ public sealed class ProjectWriteAdmissionIntegrationTests {
         AppDbContextOptionsConfigurator.Configure(searchOptions, canonical.Profile);
         searchOptions.AddInterceptors(probe);
         var admissions = new ProjectWriteAdmissionService(new Factory<ProjectsDbContext>(options => new(options), projectOptions.Options),
-            projectOptions.Options, coordinator, canonical);
+            projectOptions.Options, coordinator, canonical, application.Services.GetRequiredService<DatasetActivationService>());
         var search = new SearchIndexService(new Factory<SearchDbContext>(options => new(options), searchOptions.Options),
             application.Services.GetRequiredService<IClock>(), searchOptions.Options, coordinator);
         var project = new Project { Id = Guid.NewGuid(), Name = "Uncommitted admitted project", Slug = "uncommitted-admitted-project" };

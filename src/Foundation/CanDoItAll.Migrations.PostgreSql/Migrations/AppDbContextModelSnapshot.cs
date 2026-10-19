@@ -1950,6 +1950,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompletionNamespaceId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -1989,7 +1995,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("Status", "CreatedAtUtc")
                         .HasDatabaseName("IX_AF_ProjectAccessRevocations_Status");
 
+                    b.HasIndex(new[] { "Id" }, "IX_AF_ProjectAccessRevocations_Unfinished")
+                        .HasFilter("\"Status\" <> 4");
+
                     b.ToTable("AgentFramework_ProjectAccessRevocations", null, t => {
+                            t.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Completion", "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR (\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND \"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
+
                             t.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Lifetime", "(\"DatabaseProfileId\" IS NULL AND \"ProjectLifetimeId\" IS NULL) OR (\"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
                         });
                 });
@@ -5858,6 +5869,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("LifetimeId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("NamespaceId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ParentLifetimeId")
                         .HasColumnType("uuid");
 
@@ -5885,6 +5899,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("ParentProjectId", "State");
 
                     b.ToTable("Projects_ProjectCreationReservations", null, t => {
+                            t.HasCheckConstraint("CK_Projects_CreationReservation_Namespace", "\"NamespaceId\" IS NULL OR \"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
                             t.HasCheckConstraint("CK_Projects_CreationReservation_Parent", "(\"ParentProjectId\" IS NULL AND \"ParentLifetimeId\" IS NULL) OR (\"ParentProjectId\" IS NOT NULL AND \"ParentLifetimeId\" IS NOT NULL)");
                         });
                 });
@@ -5960,6 +5976,74 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         });
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectDeletionCompletionRecord", b => {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OriginKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RecoveryDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("RecoveryPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("ReferencePayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("ReleaseState")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ReleasedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("NamespaceId", "CompletionId");
+
+                    b.HasIndex("NamespaceId", "ProjectId", "LifetimeId")
+                        .IsUnique();
+
+                    b.HasIndex("NamespaceId", "ReleaseState", "CreatedAtUtc");
+
+                    b.HasIndex(new[] { "CompletionId" }, "IX_Projects_DeletionCompletions_Awaiting")
+                        .HasFilter("\"ReleaseState\" = 1");
+
+                    b.ToTable("Projects_DeletionCompletions", null, t => {
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Interpretation", "\"SchemaVersion\" = 1 AND \"OriginKind\" IN (1, 2, 3, 4)");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Recovery", "octet_length(\"RecoveryPayload\") BETWEEN 1 AND 65536 AND octet_length(\"RecoveryDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_References", "octet_length(\"ReferencePayload\") BETWEEN 1 AND 16384");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Release", "isfinite(\"CreatedAtUtc\") AND ((\"ReleaseState\" = 1 AND \"ReleasedAtUtc\" IS NULL) OR (\"ReleaseState\" = 2 AND \"ReleasedAtUtc\" IS NOT NULL AND isfinite(\"ReleasedAtUtc\")))");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Target", "\"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectHierarchyLink", b => {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -5984,6 +6068,73 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsUnique();
 
                     b.ToTable("Projects_ProjectHierarchyLinks", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectLifecycleReceiptRecord", b => {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CallerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("CallerKey")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("AcceptedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("CommandKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NormalizationVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ResultVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("SemanticDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId");
+
+                    b.ToTable("Projects_LifecycleReceipts", null, t => {
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Caller", "\"CallerKind\" IN (1, 2, 3, 4) AND octet_length(\"CallerKey\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Digest", "octet_length(\"SemanticDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"CommandKind\" IN (1, 2, 3, 4)");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 16384");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Time", "isfinite(\"AcceptedAtUtc\")");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOptionSelection", b => {
@@ -6988,6 +7139,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompletionNamespaceId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -7027,7 +7184,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
 
-                    b.ToTable("Workbench_ProjectCrossModuleMutations", (string)null);
+                    b.HasIndex(new[] { "Id" }, "IX_Workbench_ProjectCrossModuleMutations_UnfinishedDeletion")
+                        .HasFilter("\"MutationKind\" = 4 AND \"Status\" <> 2");
+
+                    b.HasIndex(new[] { "ProjectId", "Id" }, "IX_Workbench_ProjectDeletion_Subject")
+                        .HasFilter("\"MutationKind\" = 4");
+
+                    b.ToTable("Workbench_ProjectCrossModuleMutations", null, t => {
+                            t.HasCheckConstraint("CK_Workbench_ProjectMutation_CompletionBinding", "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR (\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND \"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"MutationKind\" = 4)");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b => {

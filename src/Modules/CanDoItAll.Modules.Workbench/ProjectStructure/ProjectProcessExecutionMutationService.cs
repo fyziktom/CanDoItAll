@@ -57,7 +57,11 @@ public sealed partial class ProjectProcessExecutionMutationService(
         if (admitted.PinnedEvidence is not { } pinned) {
             throw new AgentToolReceiptAccessDeniedException();
         }
-        var (source, _) = ProjectDefinitionToolProposalCodec.Read(admitted.Payload);
+        if (!ProjectDefinitionToolProposalCodec.Supports(admitted.Payload.ToolName) && !ProjectLifecycleToolProposalCodec.Supports(admitted.Payload.ToolName)) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var source = ProjectDefinitionToolProposalCodec.ReadSource(admitted.Payload.SourcePreparation
+            ?? throw new AgentToolReceiptAccessDeniedException());
         ProjectDefinitionToolReceiptRecovery.RequireSession(source, admitted.Session);
         if (source.Process is not { } saved || saved.Evidence != original.Dispatch.Evidence ||
             saved.OwnerFingerprint != original.Dispatch.OwnerFingerprint || saved.ProjectReference != original.Dispatch.ProjectReference ||

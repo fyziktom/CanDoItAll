@@ -12,6 +12,7 @@ internal static class ProjectsApi
         var projects = group.MapGroup("/projects").WithApiSection(ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjects)
             .WithTags("Projects");
         projects.MapDefinitionOperations();
+        projects.MapLifecycleOperations();
 
         projects.MapGet("/", ListProjectsAsync)
             .WithName("ListProjects")
@@ -62,10 +63,10 @@ internal static class ProjectsApi
                 return Task.CompletedTask;
             });
 
-        projects.MapDelete("/{projectId:guid}", DeleteProjectAsync)
+        projects.MapDelete("/{projectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DeleteProject")
-            .Produces<ProjectDeletionResult>(StatusCodes.Status200OK)
-            .Produces<ProjectDeletionCleanupPendingApiResponse>(StatusCodes.Status409Conflict);
+            .WithSummary("Refuse deletion without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         projects.MapGet("/deletion-cleanups", ListPendingDeletionCleanupsAsync)
             .WithName("ListPendingProjectDeletionCleanups")
@@ -88,20 +89,20 @@ internal static class ProjectsApi
             .WithName("GetProjectHierarchy")
             .Produces<ProjectHierarchySnapshot>();
 
-        projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", AttachSubprojectAsync)
+        projects.MapPost("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("AttachProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse attachment without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
-        projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", DetachSubprojectAsync)
+        projects.MapDelete("/{parentProjectId:guid}/subprojects/{childProjectId:guid}", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("DetachProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse detachment without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
-        projects.MapPost("/{childProjectId:guid}/reconnect-subproject", ReconnectSubprojectAsync)
+        projects.MapPost("/{childProjectId:guid}/reconnect-subproject", ProjectLifecycleApi.OriginalIntentRequired)
             .WithName("ReconnectProjectSubproject")
-            .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .WithSummary("Refuse reconnection without its original lifecycle intent.")
+            .ProducesApiErrors(StatusCodes.Status428PreconditionRequired);
 
         return group;
     }

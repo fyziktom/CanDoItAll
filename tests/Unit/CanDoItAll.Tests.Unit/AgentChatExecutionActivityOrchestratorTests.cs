@@ -10,6 +10,19 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed partial class AgentChatExecutionActivityOrchestratorTests
 {
     [Fact]
+    public async Task Typed_planning_selection_survives_governed_context_capture() {
+        var context = CreateContext();
+        var request = new AgentChatSendRequest(context.AgentId, context.Workspace.SessionId, "Plan tasks for review.") {
+            PlanningOwner = AgentPlanningOwner.ProjectTaskPlan
+        };
+        await context.Orchestrator.SendMessageAsync(request);
+        var call = Assert.Single(context.Workspace.SendCalls);
+        Assert.Equal(AgentPlanningOwner.ProjectTaskPlan, call.Options.PlanningOwner);
+        Assert.NotNull(AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(call.Options.Context!.MetadataJson));
+        Assert.Equal(call.Operation.StreamId.OperationId, call.Options.InitialActivityOperationId);
+    }
+
+    [Fact]
     public async Task StartSendMessage_returns_before_context_capture_and_exposes_initial_activity()
     {
         var context = CreateContext(blockContextCapture: true);

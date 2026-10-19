@@ -72,7 +72,11 @@ public sealed class ProjectProcessHistoricalReadAuthority(
     internal async Task<ProjectProcessExecutionAccess?> ReadReceiptAccessAsync(ProjectProcessMutationAdmission original,
         AgentToolHistoricalReceiptReadClaim claim, CancellationToken cancellationToken) {
         var admitted = await claim.RequireAsync(cancellationToken);
-        var (source, _) = ProjectDefinitionToolProposalCodec.Read(admitted.Payload);
+        if (!ProjectDefinitionToolProposalCodec.Supports(admitted.Payload.ToolName) && !ProjectLifecycleToolProposalCodec.Supports(admitted.Payload.ToolName)) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var source = ProjectDefinitionToolProposalCodec.ReadSource(admitted.Payload.SourcePreparation
+            ?? throw new AgentToolReceiptAccessDeniedException());
         ProjectDefinitionToolReceiptRecovery.RequireSession(source, admitted.OriginalSession);
         var session = admitted.OriginalSession;
         if (source.Process is not { } saved || saved.Evidence != original.Dispatch.Evidence ||

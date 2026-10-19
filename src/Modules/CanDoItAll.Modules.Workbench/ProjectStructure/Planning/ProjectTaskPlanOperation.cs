@@ -56,10 +56,13 @@ internal sealed record ProjectTaskPlanOperation {
 }
 
 internal sealed record ProjectTaskPlanSource {
+    internal const int WallTimeVersion = 1;
+    internal const int ActiveWorkVersion = 2;
+
     public ProjectTaskPlanSource(Guid decisionId, long generation, DateTimeOffset decisionStartedAtUtc,
         ProjectTaskPlanSourceKind kind, int version, string fingerprint) {
         if (decisionId == Guid.Empty || generation < 1 || decisionStartedAtUtc == default || decisionStartedAtUtc.Offset != TimeSpan.Zero ||
-                kind != ProjectTaskPlanSourceKind.OrdinaryAgentDecision || version != 1 || !ProjectTaskPlanOperationRules.IsDigest(fingerprint)) {
+                kind != ProjectTaskPlanSourceKind.OrdinaryAgentDecision || !SupportsVersion(version) || !ProjectTaskPlanOperationRules.IsDigest(fingerprint)) {
             throw new ArgumentException("A task-plan source requires the original supported decision occurrence and trusted fingerprint.");
         }
         DecisionId = decisionId;
@@ -76,6 +79,8 @@ internal sealed record ProjectTaskPlanSource {
     public ProjectTaskPlanSourceKind Kind { get; }
     public int Version { get; }
     public string Fingerprint { get; }
+
+    internal static bool SupportsVersion(int? version) => version is WallTimeVersion or ActiveWorkVersion;
 }
 
 internal sealed class ProjectTaskPlanCommand {
@@ -86,7 +91,7 @@ internal sealed class ProjectTaskPlanCommand {
         ArgumentNullException.ThrowIfNull(proposal);
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(source);
-        if (schemaVersion != 1 || normalizationVersion != 1 || operation.Namespace != basis.Namespace) {
+        if (schemaVersion != source.Version || normalizationVersion != 1 || operation.Namespace != basis.Namespace) {
             throw new ArgumentException("A task-plan command requires the original supported interpretation and dataset.");
         }
         Operation = operation;

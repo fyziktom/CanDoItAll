@@ -6599,7 +6599,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Program.cs",
       "path": "src/App/CanDoItAll.Web/Program.cs",
-      "sha256_lf": "ceef3219c49351e54beeac727f9e2740872a988f24ab11dc625e563edbefb12d",
+      "sha256_lf": "da8408b91f764883b83624431067394a7795f64ba80d89e43d1d491431b9026e",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.PostgreSqlDevDatabaseProfileRequest, CanDoItAll.Web.Program",
@@ -6614,7 +6614,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Native host composes module renderers and registers one scoped Projects browser store behind submission and metadata-reference seams with explicit limits. The offline activation entry point exits before starting the Web host. Definition effects and receipt truth remain Projects-owned; this registration owns no reusable rendering body."
+      "rationale": "Native host composes module renderers and registers scoped Projects definition/lifecycle browser stores with explicit limits. Offline activation and deletion recovery dispatch exit before Web host startup. Their operational decisions remain in their owning modules; Program owns no reusable rendering body."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/app.css",
@@ -6675,6 +6675,26 @@
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
       "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+    },
+    {
+      "identity": "src/App/CanDoItAll.Web/wwwroot/js/projectLifecyclePendingSubmissions.js",
+      "path": "src/App/CanDoItAll.Web/wwwroot/js/projectLifecyclePendingSubmissions.js",
+      "sha256_lf": "e778ee28dcd42fadd16c5cbbfb2afeae6c6be15a9ee95688f1db8a920bd8af42",
+      "kind": "ASSET",
+      "role": "PRODUCT",
+      "type": "Browser lifecycle submission store",
+      "project": "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+      "classification": "NON_RENDERING",
+      "caller": [
+        "src/App/CanDoItAll.Web/Infrastructure/BrowserProjectLifecyclePendingStore.cs"
+      ],
+      "native_owner": "Web owns IndexedDB; Projects owner alone determines acceptance and absence.",
+      "visual_owner": "No rendering",
+      "descendants": [],
+      "assets": "CanDoItAll.Web",
+      "scenario": "CanDoItAll.Web",
+      "evidence": "CanDoItAll.Web",
+      "rationale": "Bounded IndexedDB record/byte budget and revision CAS preserve original lifecycle submissions across tabs. No automatic retry, timer expiry or current-target recapture."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/js/projectPendingSubmissions.js",
@@ -12500,6 +12520,37 @@
       ]
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Lifecycle.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Lifecycle.cs",
+      "sha256_lf": "b6da62eb2e453afa51b9eeb6bdb1fcb39236523208a9e2fe44583345f8125c09",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
+      "project": "src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
+      ],
+      "native_owner": "ProjectsPage owns original editor, owner calls and storage reconciliation; Projects.UI renders typed state.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "ProjectLifecyclePendingSurface"
+      ],
+      "assets": "CanDoItAll.Modules.Projects",
+      "scenario": "CanDoItAll.Modules.Projects",
+      "evidence": "CanDoItAll.Modules.Projects",
+      "rationale": "Original deletion may close only its captured editor. Retained references remain independent of navigation and only exact owner evidence resolves entered operations.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ProjectsPage",
+          "lines": [
+            21
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Pending.cs",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.Pending.cs",
       "sha256_lf": "d4921e826698e31ab4eab021225dbf78aeefe9c0fd8eed3d8ca1f6baebd8c32d",
@@ -12547,7 +12598,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "sha256_lf": "888f47e88dea65846776ec81798f56956950e92da8c4a1633859257168b751bf",
+      "sha256_lf": "fec904a88e03ae11c9b0516e4fe53538d8558196408d30fcc2be825f87b4a6c8",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
@@ -12556,8 +12607,8 @@
       "caller": [
         "/projects"
       ],
-      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History; ProjectNativeDefinitionOperations; IProjectPendingSubmissionStore; ProjectPendingStoreLimits; IProjectPendingReferenceStore",
-      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard, ProjectPendingListSurface, ProjectPendingReferenceSurface",
+      "native_owner": "ProjectsService ProjectsService; IAdmittedProjectWorkbenchSeedService ProjectWorkbenchSeedService; ILogger<ProjectsPage> Logger; IProjectPackageService ProjectPackageService; IDatabaseProfileService DatabaseProfileService; NavigationManager Navigation; IAppNavigationHistory History; ProjectNativeDefinitionOperations; IProjectPendingSubmissionStore; ProjectPendingStoreLimits; IProjectPendingReferenceStore; ProjectNativeLifecycleOperations; original-opening retained lifecycle session and explicit recovery",
+      "visual_owner": "ProjectDeletionStatusSurface, ProjectFilesDialog, ProjectFilesPortfolioPane, ProjectHierarchyModal, ProjectModalHost, ProjectsAgentChatContextProvider, ProjectsBoard, ProjectPendingListSurface, ProjectPendingReferenceSurface, ProjectLifecyclePendingSurface",
       "descendants": [
         "ProjectDeletionStatusSurface",
         "ProjectFilesDialog",
@@ -12567,7 +12618,8 @@
         "ProjectsAgentChatContextProvider",
         "ProjectsBoard",
         "ProjectPendingListSurface",
-        "ProjectPendingReferenceSurface"
+        "ProjectPendingReferenceSurface",
+        "ProjectLifecyclePendingSurface"
       ],
       "assets": "CanDoItAll.Modules.Projects",
       "scenario": "CanDoItAll.Modules.Projects",
@@ -13755,7 +13807,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ActionContexts.cs",
-      "sha256_lf": "eb53602fc30080f3fca9de8293c038f127baf0eac65479b5cff1ded34dfda73a",
+      "sha256_lf": "2a16706ee00e00277d1b6c1322f82aa3b8133b2bcc5a95eabb06186886afb5ee",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureAuthoringOpening, CanDoItAll.Modules.Workbench.Pages.ProjectStructureActionContext",
@@ -13815,7 +13867,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "bf2b9475806eb08bd52791c515d6969b856e111dffc74effc8ad0eee1dd01752",
+      "sha256_lf": "5d35f6ad427df86d9c5e49afb3f6c106b15ecbd9145d679a1072a4fbc7d7a2dc",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14115,7 +14167,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ProjectHierarchy.cs",
-      "sha256_lf": "6774e7b8256cbc5d48f1750882747542170cd8736272e95eef5394a05821e44a",
+      "sha256_lf": "426b31e28ae273d8c2e0e2865103107fab6930c8e9804cded7e7b920f9757a87",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14124,7 +14176,7 @@
       "caller": [
         "Partial/compile dependency of CanDoItAll.Modules.Workbench"
       ],
-      "native_owner": "CanDoItAll.Modules.Workbench",
+      "native_owner": "CanDoItAll.Modules.Workbench; ProjectNativeLifecycleOperations; captured endpoint/edge/namespace and IndexedDB submission acknowledgement",
       "visual_owner": "No reusable rendering body",
       "descendants": [],
       "assets": "CanDoItAll.Modules.Workbench",
@@ -14355,7 +14407,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "c53802b1933a4d8e66b37a3f3efd77543e35af2a0a5ae058106c7b0140e9e8e3",
+      "sha256_lf": "407b3c5f82249a0b39c000ad28677b847770ad8d4db692f0cae71a906dd9305e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -31541,6 +31593,33 @@
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
       "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Projects.UI/ProjectLifecyclePendingSurface.razor",
+      "path": "src/UI/CanDoItAll.Projects.UI/ProjectLifecyclePendingSurface.razor",
+      "sha256_lf": "bcd6539fe86351277fdfdd3fdc1712257d75d387d95cbc7b9e024f6e304506c3",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectLifecyclePendingSurface",
+      "project": "src/UI/CanDoItAll.Projects.UI/CanDoItAll.Projects.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor"
+      ],
+      "native_owner": "ProjectsPage owns reads, writes, durable recovery and enabled action state.",
+      "visual_owner": "CanDoItAll.Projects.UI",
+      "descendants": [
+        "FormSection",
+        "Button",
+        "Stack",
+        "TextBlock",
+        "Alert",
+        "Cluster"
+      ],
+      "assets": "CanDoItAll.Projects.UI",
+      "scenario": "CanDoItAll.Projects.UI",
+      "evidence": "CanDoItAll.Projects.UI",
+      "rationale": "Typed bounded metadata, immutable operation references and explicit recovery callbacks; no injected services, storage, authority construction or effects."
     },
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectModalHost.razor",

@@ -131,6 +131,8 @@ public sealed record AgentChatSendRequest(
     Guid? ChatSessionId,
     string Prompt)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     public IReadOnlyList<string>? AttachmentPaths { get; init; }
 
     public AgentChatExecutionBehavior Behavior { get; init; } =

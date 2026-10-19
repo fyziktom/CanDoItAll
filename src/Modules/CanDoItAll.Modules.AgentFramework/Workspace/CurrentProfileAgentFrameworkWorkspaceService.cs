@@ -567,6 +567,22 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 cancellationToken));
     }
 
+    public Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, request.ChatSessionId,
+            "Planning action accepted.", (service, operation) => service.ApplyPlanningActionWithinOperationAsync(
+                operation, request, cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(request);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, request.ChatSessionId,
+            operation.StreamId.OperationId, service => service.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken));
+    }
+
     public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
         => ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, chatSessionId: null,

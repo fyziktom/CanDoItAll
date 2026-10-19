@@ -371,7 +371,7 @@ public sealed class ProjectOperationEpochTests {
         public ProjectDefinitionOperation Operation() => new(Binding.Namespace, new(1), Guid.NewGuid(), Caller.Bind(Binding.Namespace));
 
         public ProjectDefinitionReceiptReader CreateReceiptReader(DatasetActivationService activation)
-            => new(this, activation, new(this, ContextOptions, Transactions, this), NullLogger<ProjectDefinitionReceiptReader>.Instance);
+            => new(this, activation, new(this, ContextOptions, Transactions, this, activation), NullLogger<ProjectDefinitionReceiptReader>.Instance);
 
         public FiniteOperationEpochStore CreateService(IInterceptor? interceptor = null)
             => new(CreateNeutralOptions(interceptor), Transactions);
@@ -382,7 +382,8 @@ public sealed class ProjectOperationEpochTests {
                 projects.AddInterceptors(interceptor);
             }
             return new(CreateNeutralOptions(interceptor), Transactions, [Pool],
-                [new ProjectDefinitionReceiptRetention(projects.Options, Transactions)]);
+                [new ProjectDefinitionReceiptRetention(projects.Options, Transactions),
+                 new ProjectLifecycleReceiptRetention(projects.Options, Transactions)]);
         }
 
         public FiniteOperationMaintenanceCycle CreateCycle() => new(Pool, new([Pool]));

@@ -1,0 +1,15 @@
+{
+  "stale": 0,
+  "scan": "2521F0CC9E1041EDC4344D07B77E76E1201A7E7D993D026E639D770AF648250D",
+  "risk": "Runtime tests still required; this review does not claim cross-platform execution.",
+  "recordedUtc": "2026-10-18T22:22:49.6959526+00:00",
+  "review": [
+    "Existing root resolution and host-bound profile checks refuse legacy/rebound paths; ordinary connection construction is shared.",
+    "Physical reads use native contained non-probing policies, revalidate traversal, require private existing Unix permissions, and never chmod or create data directories.",
+    "The atomic-write match is FileMode.Open/FileAccess.Read/FileShare.Read; it performs no writes.",
+    "Key enumeration is top-directory only, 128 files and 64 KiB per file; profile publication scans stop after 256 entries.",
+    "JSON property uniqueness matches web serializer case-insensitivity; case-insensitive pending-name detection is conservative refusal on every platform.",
+    "Data Protection shares existing platform/certificate configuration but disables key generation and uses a repository whose StoreElement always refuses."
+  ],
+  "added": 21
+}

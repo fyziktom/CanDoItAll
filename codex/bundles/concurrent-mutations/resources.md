@@ -1,5 +1,37 @@
 # Resource ownership and cleanup
 
+## Product planning entry deadlock cleanup blocker (2026-10-19)
+
+Candidate `c4-product-planning-entry-validation` stopped its exact observed test process
+tree after a captured DI deadlock. Its new database
+`cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9` and directory
+`C:/Users/lucys/AppData/Local/Temp/integration-agentframework-structured-output-continuation-failure/b00a57e5e348487db6aa8a506d09dbc2`
+share the exact dataset namespace `d4f862b3-f7e2-422a-b7b1-50e51ee7a827`. The candidate
+observer recorded creation; the directory contains 11 files and no reparse points. The
+isolated container identity and ownership label were rechecked. Automatic approval review
+rejected the exact cleanup command as `blocked by policy`; it did not execute. No alternate
+deletion mechanism was attempted. Earlier blocked resources remain untouched. The repaired
+candidate reuses the same isolated PostgreSQL server and includes these resources in its
+baseline; complete cleanup remains blocked.
+
+## Current additional cleanup blocker, 2026-10-19
+
+The rejected `c4-planning-admission-reviewed` test tree was stopped after a diagnosed
+service-construction deadlock. Exact PID/start-time reconciliation found no remaining
+owned process. Its abandoned resources were linked by the unique fixture Agent and
+matching SQL/file activation namespace, with ownership evidence retained in
+[the candidate proof](proof/2026-10-19-planning-authority/c4-planning-admission-reviewed.json):
+
+- Database on the existing isolated fixture: `cditall_primary_cdf76c3af0574dbd9ce299eb90002a76`.
+- `C:/Users/lucys/AppData/Local/Temp/candoitall-tests/e62070c71e0544a0ad77f2db0f64bbfc`.
+- `C:/Users/lucys/AppData/Local/Temp/tool-admission/760b53a19e4f4592968c5df00bca127d`.
+
+Automatic approval review rejected the verified cleanup command with `blocked by policy`;
+the command did not execute. These resources remain, alongside the earlier profiler
+directory blocker. No alternate deletion mechanism was attempted. The repaired candidate
+reused the same PostgreSQL container, included these resources explicitly in its baseline,
+passed all 60 cases and added no database/process residue. Full bundle cleanup remains open.
+
 ## Planned isolated PostgreSQL fixture
 
 Reason: no `CANDOITALL_TESTS_POSTGRES_CONNECTION` is configured and no suitable isolated

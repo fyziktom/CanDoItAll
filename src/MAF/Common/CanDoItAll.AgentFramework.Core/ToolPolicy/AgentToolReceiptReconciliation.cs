@@ -9,6 +9,10 @@ public sealed record AgentToolReceiptReconciliationAdmission(
     AgentToolPreparedPayload Payload) {
     [JsonIgnore]
     public AgentToolPinnedReceiptEvidence? PinnedEvidence { get; internal init; }
+    [JsonIgnore]
+    public AgentPlanningDecisionObservation? Planning { get; internal init; }
+    [JsonIgnore]
+    internal AgentToolPriorReceiptObservation? PriorInvocations { get; init; }
 }
 
 public sealed class AgentToolPinnedReceiptEvidence {
@@ -71,6 +75,12 @@ public sealed class AgentToolReceiptReconciliationClaim {
 
     public ValueTask<AgentToolReceiptReconciliationAdmission> RequireAsync(CancellationToken cancellationToken = default)
         => owner.RequireReceiptReconciliationAsync(this, cancellationToken);
+
+    public async ValueTask<AgentToolPriorReceiptObservation> RequirePriorInvocationsAsync(
+        CancellationToken cancellationToken = default)
+        => (await owner.RequireReceiptReconciliationAsync(this, cancellationToken, includePrior: true)).PriorInvocations
+            ?? throw new AgentToolAdmissionException("tool-admission.prior-receipts-unavailable",
+                "The receipt owner did not provide verified prior invocation read evidence.");
 
     internal void RequireOwner(AgentToolAdmissionJournal candidate) {
         Lease.RequireOwner(candidate);

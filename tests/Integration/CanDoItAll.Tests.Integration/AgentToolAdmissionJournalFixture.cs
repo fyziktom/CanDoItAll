@@ -127,11 +127,13 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
     }
 
     internal static async Task<AgentToolAdmissionJournalFixture> RestoreRetainedAsync(
-        AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run) {
+        AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? storageScope = null) {
         var environment = CanDoItAllTestEnvironment.Create("retained-tool-admission");
         try {
             var workspace = environment.CreateInMemoryProfile("retained");
-            var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, WorkspaceScopeDescriptor.Sandbox);
+            var actualStorageScope = storageScope ?? WorkspaceScopeDescriptor.Sandbox;
+            var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, actualStorageScope);
             await store.UpdateCatalogAsync(catalog => catalog with {
                 Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray(),
                 Providers = catalog.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
@@ -140,7 +142,7 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
                 run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id);
             var saved = await store.SaveExecutionRunDetailAsync(new(run, chat, [], []));
             return new(environment, workspace.WorkspaceRootPath, store, profile, agent, provider, saved,
-                WorkspaceScopeDescriptor.Sandbox, []);
+                actualStorageScope, []);
         } catch {
             await environment.DisposeAsync();
             throw;

@@ -36,6 +36,15 @@ public sealed class DatasetActivationService(IControlPlanePathResolver paths, Du
 
     public async Task<DatasetActivationFileObservation> ObserveActiveBindingAsync(Guid profileId,
         CancellationToken cancellationToken = default) {
+        var observed = await ObserveExistingRecordAsync(profileId, cancellationToken);
+        if (observed.Record.State != DatasetActivationFileState.Active) {
+            throw new InvalidOperationException("The profile has no completed dataset activation; explicit activation or recovery is required.");
+        }
+        return observed;
+    }
+
+    public async Task<DatasetActivationFileObservation> ObserveExistingRecordAsync(Guid profileId,
+        CancellationToken cancellationToken = default) {
         ArgumentOutOfRangeException.ThrowIfEqual(profileId, Guid.Empty);
         cancellationToken.ThrowIfCancellationRequested();
         var root = paths.ResolveRootPathForRead();
@@ -56,9 +65,6 @@ public sealed class DatasetActivationService(IControlPlanePathResolver paths, Du
         var bytes = new byte[MaximumRecordBytes + 1];
         var length = await stream.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, cancellationToken);
         var record = DatasetActivationRecordCodec.Decode(bytes.AsSpan(0, length), profileId);
-        if (record.State != DatasetActivationFileState.Active) {
-            throw new InvalidOperationException("The profile has no completed dataset activation; explicit activation or recovery is required.");
-        }
         RequireObservationPaths();
         RequireNoPending();
         RequireObservationFile();
@@ -98,6 +104,40 @@ public sealed class DatasetActivationService(IControlPlanePathResolver paths, Du
             }
         }
     }
+    public ValueTask<IAsyncDisposable> AcquireExistingExclusionAsync(Guid profileId, CancellationToken cancellationToken = default) {
+        ArgumentOutOfRangeException.ThrowIfEqual(profileId, Guid.Empty);
+        cancellationToken.ThrowIfCancellationRequested();
+        return ControlPlaneFileCoordination.AcquireExistingAsync(files, paths.ResolveRootPathForRead(),
+            ControlPlaneCoordinationScope.DatasetActivation, cancellationToken);
+    }
+
+    public async Task<DatasetActivationRestorationLease> AcquireRestorationAsync(Guid profileId,
+        Guid expectedPlanId, CanDoItAll.SharedKernel.DatasetNamespaceId expectedNamespace,
+        CancellationToken cancellationToken = default) {
+        var coordination = await AcquireExistingExclusionAsync(profileId, cancellationToken);
+        try {
+            var observed = await ObserveExistingRecordAsync(profileId, cancellationToken);
+            var selected = DatasetActivationRestoration.Select(observed.Record, expectedPlanId, expectedNamespace);
+            var root = paths.ResolveRootPathForRead();
+            var path = Path.Combine(root, "database-profiles", ActivationDirectory, $"{profileId:D}.json");
+            return new(token => ObserveExistingRecordAsync(profileId, token), () => InvalidateCachedBinding(profileId),
+                root, path, files, coordination, observed, selected);
+        } catch (Exception primary) {
+            try {
+                await coordination.DisposeAsync();
+            } catch (Exception release) {
+                throw new AggregateException("Restoration admission and coordination release both failed.", primary, release);
+            }
+            throw;
+        }
+    }
+
+    private void InvalidateCachedBinding(Guid profileId) {
+        lock (cacheSync) {
+            activeBindings.Remove(profileId);
+        }
+    }
+
     public DatasetActivationLease Acquire(Guid profileId, CancellationToken cancellationToken = default) {
         if (profileId == Guid.Empty) {
             throw new ArgumentException("A dataset activation lease requires an explicit profile.", nameof(profileId));
@@ -109,11 +149,8 @@ public sealed class DatasetActivationService(IControlPlanePathResolver paths, Du
         var policy = pathPolicies.Create(root);
         var coordination = ControlPlaneFileCoordination.Acquire(files, root,
             ControlPlaneCoordinationScope.DatasetActivation, cancellationToken);
-        return new(profileId, root, Path.Combine(directory, $"{profileId:D}.json"), files, policy, coordination, () => {
-            lock (cacheSync) {
-                activeBindings.Remove(profileId);
-            }
-        });
+        return new(profileId, root, Path.Combine(directory, $"{profileId:D}.json"), files, policy, coordination,
+            () => InvalidateCachedBinding(profileId));
     }
 }
 
@@ -218,7 +255,7 @@ public sealed class DatasetActivationLease : IDisposable {
             return;
         }
         await WriteAsync(new(DatasetActivationFileRecord.CurrentVersion, profileId,
-            DatasetActivationFileState.Active, plan), createNew: false, cancellationToken);
+            DatasetActivationFileState.Active, plan, current.Restoration), createNew: false, cancellationToken);
     }
 
     public void Dispose() {

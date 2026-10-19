@@ -39,6 +39,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
+if (args.FirstOrDefault() == ProjectDeletionRecoveryCommand.CommandName) {
+    Environment.ExitCode = await ProjectDeletionRecoveryCommand.RunSelectedAsync(args);
+    return;
+}
+
 if (DatasetActivationCommand.Parse(args) is { } activationCommand) {
     await activationCommand.RunAsync();
     return;
@@ -84,6 +89,8 @@ builder.Services.AddScoped<BrowserProjectPendingSubmissionStore>();
 builder.Services.AddScoped<IProjectPendingSubmissionStore>(services => services.GetRequiredService<BrowserProjectPendingSubmissionStore>());
 builder.Services.AddScoped<IProjectPendingReferenceStore>(services => services.GetRequiredService<BrowserProjectPendingSubmissionStore>());
 builder.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
+builder.Services.AddScoped<IProjectLifecyclePendingStore, BrowserProjectLifecyclePendingStore>();
+builder.Services.AddSingleton(new ProjectLifecyclePendingStoreLimits(64, 2 * 1024 * 1024, 16));
 builder.Services.AddScoped<TuningCoordinator>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

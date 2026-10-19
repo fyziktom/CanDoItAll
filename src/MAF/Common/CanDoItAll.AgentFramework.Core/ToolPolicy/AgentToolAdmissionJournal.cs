@@ -28,6 +28,9 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
 
     public bool CanRecoverRuntimeContext(AgentRuntimeTransientContext? context) => contextAttachments.CanCapture(context);
 
+    internal TimeProvider Clock => clock;
+    internal AgentToolProfileBinding Profile => profile;
+
     public AgentRuntimeTransientContext RestoreRuntimeContext(AgentToolAdmittedRuntimeContext context) => contextAttachments.Restore(context);
 
     public AgentToolJournalRecord CreateForNewRun(ExecutionRunRecord run, ChatSessionRecord chat,
@@ -73,6 +76,183 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         } catch {
             await handle.DisposeAsync();
             throw;
+        }
+    }
+
+    public AgentToolJournalRecord CreateForNewPlanningRun(ExecutionRunRecord run, ChatSessionRecord chat,
+        AgentToolOriginalInput originalInput, AgentToolProtocolEnvelope originalTarget, AgentPlanningPolicyProvenance provenance) {
+        ArgumentNullException.ThrowIfNull(originalInput);
+        var admitted = CreateForNewRun(run, chat, originalInput: originalInput);
+        return CreatePlanningJournal(admitted, originalTarget, provenance);
+    }
+
+    public AgentToolJournalRecord CreateForNewPlanningRun(ExecutionRunRecord run, ChatSessionRecord chat,
+        AgentToolOriginalInput originalInput, AgentPlanningRunAdmission preparation) {
+        ArgumentNullException.ThrowIfNull(originalInput);
+        ArgumentNullException.ThrowIfNull(preparation);
+        var admitted = CreateForNewRun(run, chat, originalInput: originalInput);
+        return CreatePlanningJournal(admitted, preparation.BindOriginalTarget(admitted.Session), preparation.Provenance);
+    }
+
+    private AgentToolJournalRecord CreatePlanningJournal(AgentToolJournalRecord admitted, AgentToolProtocolEnvelope originalTarget,
+        AgentPlanningPolicyProvenance provenance) {
+        var planning = admitted with {
+            SchemaVersion = AgentToolJournalRecord.PlanningSchemaVersion,
+            Support = AgentToolAdmissionSupport.EffectJournalOnly,
+            PlanningDecision = AgentPlanningDecisionTransitions.Create(admitted.Session.Reference, originalTarget, provenance, clock.GetUtcNow())
+        };
+        planning.Validate();
+        return planning;
+    }
+
+    internal async Task<AgentToolRunLease> AcquirePlanningStepAsync(AgentPlanningDecisionOwner owner,
+        AgentPlanningDecisionExpectation expected, Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(currentRead);
+        var snapshot = await RequireSnapshotAsync(expected.ExecutionRunId, cancellationToken);
+        var original = snapshot.Run with { PendingApprovals = snapshot.Run.PendingApprovals.ToImmutableArray() };
+        RequirePlanningExpectation(original, expected);
+        RequirePlanningStart(original);
+        RequireCurrent(original.ToolAdmission!.Session, snapshot);
+        await RequireSavedReadAsync(original, currentRead, cancellationToken);
+        var handle = await leases.AcquireToolDispatchLeaseAsync(original.Id, cancellationToken);
+        try {
+            var lease = new AgentToolRunLease(this, original.ToolAdmission.Session.Reference, Guid.NewGuid(), handle);
+            long started = 0;
+            var saved = await writer.UpdateExecutionRunDetailAsync(original.Id, current => {
+                var journal = RequireOriginalRun(original, current, compareRevision: true);
+                RequirePlanningExpectation(current.Run, expected);
+                RequirePlanningStart(current.Run);
+                RequireCurrent(journal.Session, new(current.Run, current.ChatSession));
+                var now = clock.GetUtcNow();
+                started = clock.GetTimestamp();
+                var changed = journal with {
+                    Revision = checked(journal.Revision + 1), ActiveDispatchLeaseId = lease.Id,
+                    PlanningDecision = AgentPlanningDecisionTransitions.BeginStep(journal.PlanningDecision!, lease.Id, now)
+                };
+                AgentToolJournalTransitions.ValidatePersistence(journal, changed);
+                return current with { Run = current.Run with {
+                    ToolAdmission = changed, State = ExecutionState.Running,
+                    Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = now
+                } };
+            }, cancellationToken);
+            lease.AdmitPlanningWork(this, new(owner, lease, saved.Run, started));
+            return lease;
+        } catch (Exception primary) {
+            try {
+                await handle.DisposeAsync();
+            } catch (Exception cleanup) {
+                throw new AgentEffectReconciliationLeaseException(primary, cleanup);
+            }
+            throw;
+        }
+    }
+
+    private static void RequirePlanningStart(ExecutionRunRecord run) {
+        var journal = RequireJournal(run);
+        var decision = journal.PlanningDecision!;
+        if (decision.Work.Open is not null) {
+            throw new AgentPlanningAdmissionException(decision.DecisionId, decision.CurrentGeneration,
+                AgentPlanningAdmissionRefusal.InterruptedWorkAccountingUnavailable);
+        }
+        if (run.State != ExecutionState.Preparing || run.Outcome is not null || run.PendingApprovals.Count != 0 ||
+            journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.OriginalInput is null ||
+            journal.Session.Reference.BackgroundSource is not null || !string.IsNullOrEmpty(run.ProcessRunId) || journal.HasUnresolvedEffects) {
+            throw Failure("A new planning step requires its original interactive preparation without pending or uncertain effects.");
+        }
+    }
+
+    internal async Task<ExecutionRunAdmissionSnapshot> ReadPlanningSnapshotAsync(AgentToolRunLease lease, CancellationToken cancellationToken) {
+        RequireBoundPlanningLease(lease);
+        var snapshot = await ReadVerifiedSnapshotAsync(lease, reconciliationOnly: false, cancellationToken);
+        if (snapshot.Run.ToolAdmission?.PlanningDecision is null) {
+            throw Failure("This run has no original planning decision.");
+        }
+        return snapshot;
+    }
+
+    internal async Task<ExecutionRunRecord> UpdatePlanningAsync(AgentToolRunLease lease, ExecutionRunRecord original,
+        AgentPlanningDecisionExpectation? expected, bool outcomeOnly,
+        Func<ExecutionRunRecord, ExecutionRunRecord> update, CancellationToken cancellationToken) {
+        RequireBoundPlanningLease(lease);
+        var saved = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
+            RequireBoundPlanningLease(lease);
+            var run = current.Run;
+            var journal = RequireJournal(run);
+            if (journal.SchemaVersion != AgentToolJournalRecord.PlanningSchemaVersion ||
+                journal.Session != original.ToolAdmission?.Session || journal.Session.Profile != profile ||
+                run.Id != original.Id || run.AgentId != original.AgentId || run.ChatSessionId != original.ChatSessionId ||
+                run.CreatedAtUtc != original.CreatedAtUtc || run.SourceKind != original.SourceKind ||
+                run.SourceId != original.SourceId || run.MetadataJson != original.MetadataJson) {
+                throw Failure("The original planning run, source or authority changed.");
+            }
+            if (!outcomeOnly) {
+                RequireCurrent(journal.Session, new(run, current.ChatSession), lease.Mode);
+            }
+            RequireLease(lease, journal);
+            if (expected is not null && expected != AgentPlanningDecisionExpectation.From(run)) {
+                throw Failure("The displayed planning decision or revision changed. Reload before applying this action.");
+            }
+            var changed = update(run);
+            AgentToolJournalTransitions.ValidatePersistence(journal, changed.ToolAdmission);
+            var observed = clock.GetUtcNow();
+            var updatedAt = outcomeOnly && (observed.Offset != TimeSpan.Zero || observed < run.UpdatedAtUtc)
+                ? run.UpdatedAtUtc : observed;
+            return current with { Run = changed with { Revision = checked(run.Revision + 1), UpdatedAtUtc = updatedAt } };
+        }, cancellationToken);
+        return saved.Run;
+    }
+
+    private void RequireBoundPlanningLease(AgentToolRunLease lease) {
+        lease.RequireOwner(this);
+        if (!ReferenceEquals(AgentToolRunLease.Current, lease) ||
+            lease.Mode != AgentToolRunLeaseMode.Dispatch &&
+                (lease.Mode != AgentToolRunLeaseMode.SavedEffectDispatch || lease.PlanningWork is null)) {
+            throw Failure("Planning work requires the bound original live dispatch lease.");
+        }
+    }
+
+    internal async Task<ExecutionRunDetail> ChangeClosedPlanningAsync(AgentPlanningDecisionExpectation expected,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
+        Func<ExecutionRunDetail, ExecutionRunDetail> change, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(currentRead);
+        var snapshot = await RequireSnapshotAsync(expected.ExecutionRunId, cancellationToken);
+        var original = snapshot.Run with { PendingApprovals = snapshot.Run.PendingApprovals.ToImmutableArray() };
+        RequirePlanningExpectation(original, expected);
+        RequireClosedPlanning(original);
+        await RequireSavedReadAsync(original, currentRead, cancellationToken);
+        await using var handle = await leases.AcquireToolDispatchLeaseAsync(original.Id, cancellationToken);
+        return await writer.UpdateExecutionRunDetailAsync(original.Id, current => {
+            var journal = RequireSavedOriginal(original, current, compareRevision: true);
+            RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
+            RequirePlanningExpectation(current.Run, expected);
+            RequireClosedPlanning(current.Run);
+            var changed = change(current);
+            AgentToolJournalTransitions.ValidatePersistence(journal, changed.Run.ToolAdmission);
+            return changed with { Run = changed.Run with {
+                Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = clock.GetUtcNow()
+            } };
+        }, cancellationToken);
+    }
+
+    private static void RequirePlanningExpectation(ExecutionRunRecord run, AgentPlanningDecisionExpectation expected) {
+        if (run.ToolAdmission?.SchemaVersion != AgentToolJournalRecord.PlanningSchemaVersion ||
+            AgentPlanningDecisionExpectation.From(run) != expected) {
+            throw Failure("The displayed planning decision or revision changed. Reload before applying this action.");
+        }
+    }
+
+    private static void RequireClosedPlanning(ExecutionRunRecord run) {
+        var decision = run.ToolAdmission!.PlanningDecision!;
+        if (decision.Work.Open is not null) {
+            throw new AgentPlanningAdmissionException(decision.DecisionId, decision.CurrentGeneration,
+                AgentPlanningAdmissionRefusal.InterruptedWorkAccountingUnavailable);
+        }
+        if (decision.Current.State is not (AgentPlanningGenerationState.AwaitingApproval or AgentPlanningGenerationState.PausedBasisChanged)) {
+            throw new AgentPlanningAdmissionException(decision.DecisionId, decision.CurrentGeneration,
+                AgentPlanningAdmissionRefusal.DecisionInactive);
         }
     }
 
@@ -313,9 +493,98 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             throw Failure("The requested session does not match the active admitted runtime.");
         }
         var detail = await ReadVerifiedSnapshotAsync(lease, reconciliationOnly: false, cancellationToken);
-        return new(RequireJournal(detail.Run).Session,
-            AgentTurnContextMetadata.TryReadTurnContextReference(detail.Run.MetadataJson),
-            AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(detail.Run.MetadataJson));
+        return AgentToolSessionObservation.From(detail.Run);
+    }
+
+    public async ValueTask<AgentToolPriorInvocationObservation> RequirePriorInvocationsAsync(
+        AgentToolSessionReference session, CancellationToken cancellationToken = default) {
+        var claim = AgentToolInvocationClaim.Current ?? throw Failure("No current serial proposal is bound to this invocation.");
+        claim.RequireOwner(this);
+        if (claim.RunLease.Session != session) {
+            throw Failure("The current serial proposal belongs to a different execution session.");
+        }
+        var snapshot = await ReadVerifiedSnapshotAsync(claim.RunLease, reconciliationOnly: false, cancellationToken);
+        var journal = RequireJournal(snapshot.Run);
+        var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
+        if (proposal.State is not (AgentToolProposalState.Executing or AgentToolProposalState.Completed) ||
+            proposal.DispatchClaimId != claim.Id || proposal.Payload != claim.Proposal.Payload || proposal.IntentId != claim.Proposal.IntentId) {
+            throw Failure("The current serial dispatch no longer owns this exact proposal.");
+        }
+        claim.RequireOwner(this);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(journal.Session, claim.Binding, snapshot.Run.Revision, journal.Revision,
+            AgentToolPriorInvocationEvidence.Capture(journal, claim.Binding));
+    }
+
+    public async ValueTask<AgentToolPriorReceiptObservation> RequirePriorResultInvocationsAsync(AgentToolSessionReference session,
+        AgentToolBusinessIntentId intent, AgentToolPreparedPayload payload, CancellationToken cancellationToken = default) {
+        var lease = AgentToolRunLease.Current ?? throw Failure("No active admitted runtime lease is held.");
+        lease.RequireOwner(this);
+        if (lease.Session != session) {
+            throw Failure("The result belongs to a different execution session.");
+        }
+        var snapshot = await ReadVerifiedSnapshotAsync(lease, reconciliationOnly: false, cancellationToken);
+        var journal = RequireJournal(snapshot.Run);
+        foreach (var batch in journal.Batches) {
+            foreach (var proposal in batch.Proposals) {
+                if (proposal.IntentId != intent) {
+                    continue;
+                }
+                if (proposal.State != AgentToolProposalState.Completed || proposal.Payload != payload) {
+                    throw Failure("The result does not match this exact completed proposal.");
+                }
+                lease.RequireOwner(this);
+                cancellationToken.ThrowIfCancellationRequested();
+                var binding = Binding(batch.Id, proposal);
+                return new(journal.Session, binding, snapshot.Run.Revision, journal.Revision,
+                    AgentToolPriorInvocationEvidence.Capture(journal, binding), null);
+            }
+        }
+        throw Failure("The completed result is absent from this verified journal.");
+    }
+
+    internal async ValueTask<AgentToolInvocationPublicationLease> AcquireClaimPublicationAsync(AgentToolInvocationClaim claim,
+        IAgentCatalogReadLease heldCatalog, CancellationToken cancellationToken) {
+        claim.RequireOwner(this);
+        if (heldCatalog.Scope != WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N"))) {
+            throw Failure("The owner mutation's catalog belongs to another execution profile.");
+        }
+        var publication = await heldCatalog.AcquireExecutionAdmissionReadLeaseAsync(reader, claim.RunLease.Session.ExecutionRunId, cancellationToken);
+        try {
+            await RequireCurrentClaimIdentityAsync(claim, publication.Snapshot, cancellationToken);
+            return new(this, claim, publication);
+        } catch (Exception primary) {
+            try {
+                await publication.DisposeAsync();
+            } catch (Exception cleanup) {
+                throw new AggregateException(primary, cleanup);
+            }
+            throw;
+        }
+    }
+
+    internal async ValueTask RequireCurrentClaimIdentityAsync(AgentToolInvocationClaim claim, ExecutionRunAdmissionSnapshot? protectedSnapshot,
+        CancellationToken cancellationToken) {
+        claim.RequireOwner(this);
+        if (!ReferenceEquals(AgentToolInvocationClaim.Current, claim)) {
+            throw Failure("The original claim is not bound to this invocation.");
+        }
+        var snapshot = protectedSnapshot ?? await RequireSnapshotAsync(claim.RunLease.Session.ExecutionRunId, cancellationToken);
+        var journal = RequireJournal(snapshot.Run);
+        if (claim.RunLease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
+            var admitted = RequireBoundSavedEffect(claim.RunLease);
+            journal = RequireSavedOriginal(admitted.Run, new(snapshot.Run, snapshot.ChatSession, [], []), compareRevision: false);
+        }
+        RequireCurrent(journal.Session, snapshot, claim.RunLease.Mode);
+        RequireLease(claim.RunLease, journal);
+        var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
+        RequireClaim(claim, proposal);
+        if (proposal.Payload != claim.Proposal.Payload || proposal.ApprovalStatus != ExecutionApprovalStatus.Approved ||
+                proposal.ApprovedDigest != proposal.Payload.Digest) {
+            throw Failure("The owner mutation no longer has its exact approved proposal.");
+        }
+        claim.RequireOwner(this);
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     public async ValueTask<AgentToolAdmittedInvocation> RequireInvocationAsync(AgentToolSessionReference session,
@@ -428,15 +697,16 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
     }
 
     internal async ValueTask<AgentToolReceiptReconciliationAdmission> RequireReceiptReconciliationAsync(
-        AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken) {
+        AgentToolReceiptReconciliationClaim claim, CancellationToken cancellationToken, bool includePrior = false) {
         claim.RequireOwner(this);
         if (claim.Lease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
-            return await RequireSavedEffectReceiptAsync(claim, cancellationToken);
+            return await RequireSavedEffectReceiptAsync(claim, cancellationToken, includePrior);
         }
         if (claim.Lease.Mode == AgentToolRunLeaseMode.InterruptedEffectReconciliation) {
-            return await RequireInterruptedReceiptAsync(claim, cancellationToken);
+            return await RequireInterruptedReceiptAsync(claim, cancellationToken, includePrior);
         }
-        var journal = await ReadVerifiedAsync(claim.Lease, reconciliationOnly: true, cancellationToken);
+        var snapshot = await ReadVerifiedSnapshotAsync(claim.Lease, reconciliationOnly: true, cancellationToken);
+        var journal = RequireJournal(snapshot.Run);
         if (journal.Session.Reference.BackgroundSource is not null &&
                 !await CanReadBackgroundResultAsync((await RequireSnapshotAsync(claim.Lease.Session.ExecutionRunId, cancellationToken)).Run, cancellationToken)) {
             throw new AgentToolReceiptAccessDeniedException();
@@ -455,7 +725,9 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
             throw Failure("The cancelled proposal has no exact originally approved dispatched owner-receipt intent.");
         }
 
-        return new(journal.Session, claim.Binding, proposal.Payload);
+        claim.RequireOwner(this);
+        cancellationToken.ThrowIfCancellationRequested();
+        return AgentToolPriorInvocationEvidence.Receipt(snapshot, claim.Binding, proposal.Payload, includePrior);
     }
 
     public async Task<AgentToolRunCancellationReconciliation> ReconcileCancelledAsync(AgentToolRunLease lease,

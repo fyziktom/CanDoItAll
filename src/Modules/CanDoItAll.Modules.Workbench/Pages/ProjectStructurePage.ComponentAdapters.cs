@@ -25,7 +25,7 @@ public partial class ProjectStructurePage
     private Guid StructureContextId {
         get {
             if (surface?.ProjectId == ProjectId && surface.ExpectedProjectAdmission is not null) {
-                if (structureContext is null || !IsCurrentAction(structureContext)) {
+                if (structureContext is null || !IsDisplayedAction(structureContext)) {
                     structureContext = CaptureActionContext();
                     structureContextId = Guid.NewGuid();
                 }
@@ -83,6 +83,8 @@ public partial class ProjectStructurePage
             return;
         }
         if (structureContext is null || !IsCurrentAction(structureContext)) {
+            structureLoadError = "The displayed workspace changed. Reload the project before continuing.";
+            await InvokeAsync(StateHasChanged);
             return;
         }
         switch (intent) {

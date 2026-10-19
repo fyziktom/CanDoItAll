@@ -6,6 +6,40 @@ namespace CanDoItAll.Tests.Integration;
 [Trait("Category", "LiveProcess")]
 [Trait("Category", "HostPlatform")]
 public sealed class AgentHistoricalReceiptRestartTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Historical_hierarchy_recovers_the_unresolved_original_reconnect_after_seed_exit_and_Web_restart(bool process)
+        => VerifyCreatedTargetRestartAsync(process ? HistoricalReceiptSeedKind.ProcessHierarchy : HistoricalReceiptSeedKind.InteractiveHierarchy, process);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Historical_created_definition_recovers_the_unresolved_original_edit_after_seed_exit_and_Web_restart(bool process)
+        => VerifyCreatedTargetRestartAsync(process ? HistoricalReceiptSeedKind.ProcessCreatedDefinition : HistoricalReceiptSeedKind.InteractiveCreatedDefinition, process);
+
+    private static Task VerifyCreatedTargetRestartAsync(HistoricalReceiptSeedKind kind, bool process)
+        => AgentHistoricalReceiptRestartFixture.RunAsync(kind, async fixture => {
+                if (process) {
+                    await fixture.ExpireOriginalClaimAsync();
+                }
+                await fixture.StartWebAsync();
+                var first = await fixture.ReadAsync(fixture.Seed.Request);
+                fixture.AssertAcceptedPage(first, firstPage: true);
+                var lastRequest = fixture.Next(first);
+                fixture.AssertAcceptedPage(await fixture.ReadAsync(lastRequest), firstPage: false);
+                await fixture.AssertOriginalEvidenceAsync();
+                await fixture.SetSourceReadAsync(false);
+                fixture.AssertRefused(await fixture.ReadAsync(lastRequest), AgentHistoricalReceiptReviewStop.ReadDenied);
+                await fixture.SetSourceReadAsync(true);
+                fixture.AssertAcceptedPage(await fixture.ReadAsync(lastRequest), firstPage: false);
+                await fixture.ReplaceTargetLifetimeAsync();
+                var replaced = await fixture.ReadAsync(lastRequest);
+                Assert.Equal(AgentHistoricalReceiptReviewStop.ExhaustedSnapshot, replaced.Stop);
+                Assert.Equal(AgentHistoricalReceiptKnowledge.ReadUnavailable, Assert.Single(replaced.Observations).Knowledge);
+                await fixture.AssertOriginalEvidenceAsync();
+            });
+
     [Fact]
     public Task Historical_interactive_receipts_survive_actual_seed_exit_and_Web_restart_without_resuming_the_original_run()
         => AgentHistoricalReceiptRestartFixture.RunAsync(HistoricalReceiptSeedKind.Interactive, async fixture => {

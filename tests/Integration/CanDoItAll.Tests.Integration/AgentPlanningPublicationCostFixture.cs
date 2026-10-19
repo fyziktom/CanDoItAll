@@ -20,7 +20,9 @@ using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
-internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
+internal enum AgentPlanningPublicationGuard { CoarseCatalog = 1, SelectedAgent = 2 }
+
+internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, AgentPlanningPublicationGuard guard) {
     internal const string OutputRootEnvironment = "CANDOITALL_AGENT_PLANNING_COST_OUTPUT_ROOT";
     private readonly CancellationTokenSource deadline = new(TimeSpan.FromMinutes(10));
     private readonly List<FileWorkspace> workspaces = [];
@@ -36,21 +38,25 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
     private object? observation;
     private bool responsive;
 
-    internal static async Task RunAsync() {
+    internal static async Task RunAsync(AgentPlanningPublicationGuard guard = AgentPlanningPublicationGuard.CoarseCatalog) {
+        if (!Enum.IsDefined(guard)) {
+            throw new ArgumentOutOfRangeException(nameof(guard));
+        }
         var configured = Environment.GetEnvironmentVariable(OutputRootEnvironment);
         Assert.True(!string.IsNullOrWhiteSpace(configured) && Path.IsPathFullyQualified(configured) && Directory.Exists(configured),
             "Supply an existing parent-owned planning-cost output root before this opt-in row.");
         var parent = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configured!));
         RequireNoLinks(parent);
-        var rowRoot = Path.Combine(parent, $"coarse-{Guid.NewGuid():N}");
+        var prefix = guard == AgentPlanningPublicationGuard.CoarseCatalog ? "coarse" : "selected";
+        var rowRoot = Path.Combine(parent, $"{prefix}-{Guid.NewGuid():N}");
         Assert.False(Directory.Exists(rowRoot));
         await WriteNewAsync(rowRoot + ".intent.json", new {
-            Owner = nameof(AgentPlanningPublicationCostTests), RowRoot = rowRoot, Environment.ProcessId,
+            Owner = nameof(AgentPlanningPublicationCostTests), Guard = guard.ToString(), RowRoot = rowRoot, Environment.ProcessId,
             RecordedAtUtc = DateTimeOffset.UtcNow, CooperativeRowSeconds = 600,
             Profile = "small-file/one-task/one-forced-SQL-wait", MaximumPostgresLeases = 1, MaximumFileWorkspaces = 2
         });
         Directory.CreateDirectory(rowRoot);
-        var fixture = new AgentPlanningPublicationCostFixture(rowRoot);
+        var fixture = new AgentPlanningPublicationCostFixture(rowRoot, guard);
         Exception? primary = null;
         try {
             await fixture.InitializeAsync();
@@ -67,7 +73,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         Exception? evidence = null;
         try {
             await fixture.RecordAsync("result", new {
-                SourceOnlyReference = "actual coarse exclusion, synthetic task-plan authority; no live-provider provenance",
+                SourceOnlyReference = $"actual {guard} exclusion, synthetic task-plan authority; no live-provider provenance",
                 fixture.observation, fixture.samples, ReferenceResponsivenessPassed = fixture.responsive,
                 WorkloadFailureType = primary?.GetType().FullName, CleanupFailureType = cleanup?.GetType().FullName,
                 CleanupConfirmed = cleanup is null, CapacityQualified = false,
@@ -80,13 +86,13 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         }
         var failures = new[] { primary, cleanup, evidence }.OfType<Exception>().ToArray();
         if (failures.Length > 1) {
-            throw new AggregateException("Coarse publication probe or its evidence is incomplete.", failures);
+            throw new AggregateException("Publication probe or its evidence is incomplete.", failures);
         }
         if (failures.Length == 1) {
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failures[0]).Throw();
         }
         Assert.True(fixture.responsive,
-            "The coarse publication guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.");
+            "The publication guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.");
     }
 
     private async Task InitializeAsync() {
@@ -107,7 +113,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         var binding = new AgentToolProfileBinding(canonical.Profile.Profile.Id,
             canonical.Profile.Profile.Runtime.Fingerprint, new(canonical.Generation));
         for (var index = 0; index < 2; index++) {
-            var workspace = await FileWorkspace.CreateAsync(outputRoot, binding, sql, index, deadline.Token);
+            var workspace = await FileWorkspace.CreateAsync(outputRoot, binding, sql, index, guard, deadline.Token);
             workspaces.Add(workspace);
             RequireContained(workspace.Files.WorkspaceRoot);
             await RecordAsync("workspace", await workspace.DescribeAsync(deadline.Token));
@@ -118,8 +124,8 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         var token = deadline.Token;
         var fixture = sql!;
         var command = await fixture.CommandAsync(1, token);
-        var authority = new CoarseAuthority(workspaces[0], command.Source, fixture.Project,
-            fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>());
+        var authority = new PublicationAuthority(workspaces[0], command.Source, fixture.Project,
+            fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>(), guard);
         await using var holder = await fixture.ContextAsync(token);
         var effectiveTimeout = holder.Database.GetCommandTimeout() ?? new NpgsqlConnectionStringBuilder(profile!.ConnectionString).CommandTimeout;
         Assert.InRange(effectiveTimeout, 1, 30);
@@ -129,6 +135,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         var holderPid = ((NpgsqlConnection)holder.Database.GetDbConnection()).ProcessID;
         fixture.Probe.Reset();
         origin = Stopwatch.GetTimestamp();
+        using var trace = new AgentPlanningPublicationTrace();
         using var holderBudget = CancellationTokenSource.CreateLinkedTokenSource(token);
         holderBudget.CancelAfter(TimeSpan.FromSeconds(30));
         var timer = Task.Delay(Timeout.InfiniteTimeSpan, holderBudget.Token);
@@ -177,10 +184,11 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
                 AllocationScope = "whole cohort process-wide, not per-operation allocations or peak memory",
                 ObservedWorkbenchEfCommands = fixture.Probe.Commands.Count,
                 SqlCoverage = "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
-                LogicalRunReadBytes = authority.ReadBytes, PhysicalDeviceIoMeasured = false
+                LogicalRunReadBytes = authority.ReadBytes, PhysicalDeviceIoMeasured = false,
+                FileReadCoverage = "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
             };
             try {
-                await RecordAsync("cohort", new { observation, samples });
+                await RecordAsync("cohort", new { observation, samples, Trace = trace.Snapshot() });
             } catch (Exception evidence) {
                 primary = primary is null ? evidence : new AggregateException(primary, evidence);
             }
@@ -210,6 +218,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
     }
 
     private async Task<OperationSample> MeasureOperationAsync(string name, Func<Task> operation) {
+        using var activity = new Activity("planning-cost-operation").SetBaggage(AgentPlanningPublicationTrace.OperationKey, name).Start();
         var start = Elapsed();
         string? failure = null;
         try {
@@ -280,7 +289,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
             failures.Add(evidence);
         }
         if (failures.Count != 0) {
-            throw new AggregateException("Coarse publication probe cleanup or its evidence is incomplete.", failures);
+            throw new AggregateException("Publication probe cleanup or its evidence is incomplete.", failures);
         }
     }
 
@@ -338,10 +347,11 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
             new AgentProjectAccessCatalogPolicy(sql.Services.GetRequiredService<ProjectWriteAdmissionService>(), files.Profile.ProfileId));
 
         internal static async Task<FileWorkspace> CreateAsync(string parent, AgentToolProfileBinding profile,
-            ProjectTaskPlanOperationFixture sql, int index, CancellationToken token) {
+            ProjectTaskPlanOperationFixture sql, int index, AgentPlanningPublicationGuard guard, CancellationToken token) {
             var files = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: profile,
                 configureAgent: agent => agent with { IsTemplate = false, Status = AgentLifecycleStatus.Active },
-                storageScope: WorkspaceScopeDescriptor.Organization($"coarse-probe-{index}"), ownedParentRoot: parent);
+                storageScope: WorkspaceScopeDescriptor.Organization(guard == AgentPlanningPublicationGuard.CoarseCatalog
+                    ? $"coarse-probe-{index}" : profile.ProfileId.ToString("N")), ownedParentRoot: parent);
             try {
                 var agents = Enumerable.Range(0, 3).Select(number => files.Agent with {
                     Id = Guid.NewGuid(), Name = $"Coarse probe unrelated {number}", ConfigurationJson = "{}"
@@ -458,8 +468,8 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         }
     }
 
-    private sealed class CoarseAuthority(FileWorkspace workspace, ProjectTaskPlanSource source, ProjectWriteAdmission project,
-        ICanonicalRuntimeDatabase canonical) : IProjectTaskPlanPublicationAuthority, IProjectTaskPlanReceiptAccess {
+    private sealed class PublicationAuthority(FileWorkspace workspace, ProjectTaskPlanSource source, ProjectWriteAdmission project,
+        ICanonicalRuntimeDatabase canonical, AgentPlanningPublicationGuard guard) : IProjectTaskPlanPublicationAuthority, IProjectTaskPlanReceiptAccess {
         private readonly long generation = canonical.Generation;
         private readonly ICanonicalRuntimeDatabase runtime = canonical;
         private readonly FileSandboxWorkspaceStore store = workspace.NewStore();
@@ -468,7 +478,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
         private long acquired;
         private long released;
         internal long ReadBytes { get; private set; }
-        internal object Evidence => new { Entered = entered, Acquired = acquired, Released = released,
+        internal object Evidence => new { Guard = guard.ToString(), Entered = entered, Acquired = acquired, Released = released,
             AcquireMilliseconds = acquired == 0 ? (double?)null : Stopwatch.GetElapsedTime(entered, acquired).TotalMilliseconds,
             HeldMilliseconds = released == 0 || acquired == 0 ? (double?)null : Stopwatch.GetElapsedTime(acquired, released).TotalMilliseconds };
 
@@ -480,10 +490,15 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
             var dispatch = await store.AcquireToolDispatchLeaseAsync(workspace.Files.Detail.Run.Id, cancellationToken);
             IAgentCatalogReadLease? catalog = null;
             try {
-                catalog = await store.AcquireAgentReadLeaseAsync(workspace.Files.Agent.Id, cancellationToken);
+                catalog = guard == AgentPlanningPublicationGuard.CoarseCatalog
+                    ? await store.AcquireAgentReadLeaseAsync(workspace.Files.Agent.Id, cancellationToken)
+                    : await store.AcquirePlanningAuthoritySnapshotAsync(new(workspace.Files.StorageScope,
+                        workspace.Files.Detail.Run.ToolAdmission!.Session, workspace.Files.Detail.Run.Revision,
+                        workspace.Files.Detail.Run.ToolAdmission.Revision), cancellationToken);
                 Assert.Equal(workspace.Files.Agent.Id, catalog.Agent!.Id);
                 var path = workspace.Layout.RunPath(workspace.Files.Detail.Run.Id);
-                var run = await json.ReadJsonAsync<ExecutionRunRecord>(path, cancellationToken);
+                var run = catalog is IAgentPlanningPublicationSnapshotLease selected
+                    ? selected.OriginalRun : await json.ReadJsonAsync<ExecutionRunRecord>(path, cancellationToken);
                 Assert.NotNull(run);
                 Assert.Equal(workspace.Files.Detail.Run.Id, run.Id);
                 Assert.Equal(workspace.Files.Detail.Run.Revision, run.Revision);
@@ -515,7 +530,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot) {
             return Task.FromResult(original == source && target == project && runtime.Generation == generation);
         }
 
-        private sealed class Held(CoarseAuthority owner, IAgentCatalogReadLease catalog, IAsyncDisposable dispatch)
+        private sealed class Held(PublicationAuthority owner, IAgentCatalogReadLease catalog, IAsyncDisposable dispatch)
             : IProjectTaskPlanHeldAuthority {
             private bool disposed;
             public ImmutableArray<ProjectWriteAdmission> AdditionalProjects => [];

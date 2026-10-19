@@ -73,10 +73,10 @@ public sealed class ProjectDefinitionGovernedBindingTests {
     }
 
     [Fact]
-    public void Process_definition_binding_rejects_native_or_hierarchy_authority_and_an_unrelated_proposal() {
+    public void Process_binding_supports_hierarchy_and_rejects_native_move_or_an_unrelated_proposal() {
         var original = Process();
         Assert.Throws<InvalidOperationException>(() => ProjectDefinitionGovernedBindings.ForProcess(original, ProjectProcessProjectOperation.Native));
-        Assert.Throws<InvalidOperationException>(() => ProjectDefinitionGovernedBindings.ForProcess(original, ProjectProcessProjectOperation.ChangeHierarchy));
+        Assert.Equal(ProjectDefinitionEffectKind.Process, ProjectDefinitionGovernedBindings.ForProcess(original, ProjectProcessProjectOperation.ChangeHierarchy).Effect.Kind);
         Assert.Throws<InvalidOperationException>(() => ProjectDefinitionGovernedBindings.ForProcess(original, ProjectProcessProjectOperation.MoveToChild));
 
         var background = new AgentToolBackgroundSourceBinding("process-step", original.Dispatch.Evidence.StepKey,

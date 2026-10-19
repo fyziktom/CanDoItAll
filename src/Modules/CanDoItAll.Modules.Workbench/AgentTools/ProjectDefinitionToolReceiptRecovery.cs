@@ -8,7 +8,7 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectDefinitionToolReceiptRecovery(IAgentCatalogReadLeaseStore catalog,
     ProjectProcessExecutionMutationService processes, ProjectWriteAdmissionService projects,
-    ProjectDefinitionReceiptReader receipts) : IAgentToolReceiptReconciliationProvider {
+    ProjectDefinitionReceiptReader receipts, ProjectCreatedTargetProvenance createdTargets) : IAgentToolReceiptReconciliationProvider {
     public bool Supports(string toolName) => ProjectDefinitionToolProposalCodec.Supports(toolName);
 
     public async ValueTask<AgentToolReceiptObservation> ReconcileAsync(AgentToolReceiptReconciliationClaim claim,
@@ -16,8 +16,8 @@ public sealed class ProjectDefinitionToolReceiptRecovery(IAgentCatalogReadLeaseS
         var admitted = await claim.RequireAsync(cancellationToken);
         var (source, input) = ProjectDefinitionToolProposalCodec.Read(admitted.Payload);
         RequireSession(source, admitted.Session);
-        var lookup = await LookupCoreAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input,
-            admitted.PinnedEvidence is null ? null : claim, cancellationToken);
+        var lookup = (await LookupOriginalAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input,
+            admitted.PinnedEvidence is null ? null : claim, cancellationToken, ResolveSourcesAsync)).Lookup;
         await claim.RequireAsync(cancellationToken);
         return lookup switch {
             ProjectDefinitionLookup.FoundFull found => Receipt(found.Result),
@@ -30,29 +30,44 @@ public sealed class ProjectDefinitionToolReceiptRecovery(IAgentCatalogReadLeaseS
                 => throw new InvalidDataException("The original owner receipt cannot currently be interpreted."),
             _ => throw new AgentToolReceiptAccessDeniedException()
         };
+
+        async Task<ProjectGovernedSourceAdmissions> ResolveSourcesAsync(CancellationToken token) {
+            if (!ProjectCreatedTargetProvenance.NeedsDefinitionProof(source, admitted.Payload.ToolName, input)) {
+                return ProjectCreatedTargetProvenance.Original(source, admitted.Payload.ToolName);
+            }
+            return await createdTargets.ResolveDefinitionAsync(source, admitted.Binding.IntentId, admitted.Payload.ToolName, input,
+                await claim.RequirePriorInvocationsAsync(token), OriginalCreationLookup(admitted.PinnedEvidence is null ? null : claim), token);
+        }
     }
 
     internal async Task<ProjectDefinitionLookup> LookupAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,
-        string tool, ProjectDefinitionToolArguments input, CancellationToken cancellationToken)
-        => await LookupCoreAsync(source, intent, tool, input, null, cancellationToken);
+        string tool, ProjectDefinitionToolArguments input, CancellationToken cancellationToken,
+        Func<CancellationToken, Task<ProjectGovernedSourceAdmissions>>? resolveSources = null)
+        => (await LookupOriginalAsync(source, intent, tool, input, null, cancellationToken, resolveSources)).Lookup;
 
-    private async Task<ProjectDefinitionLookup> LookupCoreAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,
-        string tool, ProjectDefinitionToolArguments input, AgentToolReceiptReconciliationClaim? pinnedClaim, CancellationToken cancellationToken) {
+    internal ProjectOriginalCreationReceiptLookup OriginalCreationLookup(AgentToolReceiptReconciliationClaim? pinnedClaim = null)
+        => (source, intent, tool, input, token) => tool is ProjectStructureToolPolicy.ProjectStructureProjectCreate or
+            ProjectStructureToolPolicy.ProjectStructureSubprojectCreate
+                ? LookupOriginalAsync(source, intent, tool, input, pinnedClaim, token)
+                : throw ProjectDefinitionToolProposalCodec.Denied("Creation provenance cannot resolve another kind of operation.");
+
+    internal async Task<(ProjectDefinitionLookup Lookup, ProjectCreationReservation? Reservation)> LookupOriginalAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,
+        string tool, ProjectDefinitionToolArguments input, AgentToolReceiptReconciliationClaim? pinnedClaim, CancellationToken cancellationToken,
+        Func<CancellationToken, Task<ProjectGovernedSourceAdmissions>>? resolveSources = null) {
         ProjectCreationReservation? reservation = null;
         if (tool != ProjectStructureToolPolicy.ProjectStructureProjectUpdate) {
             reservation = await FindReservationAsync(source, intent, input, cancellationToken);
         }
-        IProjectDefinitionReceiptAccess access;
-        if (source.Process is { } dispatch) {
-            var original = new ProjectProcessMutationAdmission(dispatch);
-            access = new ProjectDefinitionProcessReceiptAccess(reservation is null ? original : original.WithCreatedProject(reservation),
-                processes, catalog, projects, pinnedClaim);
-        } else {
-            var original = source.AgentAdmission(tool);
-            access = new ProjectDefinitionAgentReceiptAccess(reservation is null ? original : original.WithCreatedProject(reservation),
-                catalog, projects);
+        var original = ProjectCreatedTargetProvenance.Original(source, tool);
+        if (reservation is not null) {
+            original = original.WithCreated(reservation);
         }
-        return await receipts.LookupAsync(source.Operation(intent), new ProjectDefinitionReceiptInvocation(source.Caller, access), cancellationToken);
+        IProjectDefinitionReceiptAccess Bind(ProjectGovernedSourceAdmissions sources)
+            => sources.Process is { } process ? new ProjectDefinitionProcessReceiptAccess(process, processes, catalog, projects, pinnedClaim)
+                : new ProjectDefinitionAgentReceiptAccess(sources.Agent!, catalog, projects);
+        IProjectDefinitionReceiptAccess access = tool == ProjectStructureToolPolicy.ProjectStructureProjectUpdate && resolveSources is not null
+            ? new ProjectDeferredDefinitionReceiptAccess(resolveSources, Bind) : Bind(original);
+        return (await receipts.LookupAsync(source.Operation(intent), new ProjectDefinitionReceiptInvocation(source.Caller, access), cancellationToken), reservation);
     }
 
     internal async Task<ProjectCreationReservation?> FindReservationAsync(ProjectDefinitionToolSource source, AgentToolBusinessIntentId intent,

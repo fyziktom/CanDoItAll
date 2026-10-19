@@ -142,7 +142,7 @@ internal static class MafRuntimeResponseAssembler
             .ToList();
     }
 
-    private static ProviderUsageObservation CreateProviderUsageObservation(
+    internal static ProviderUsageObservation CreateProviderUsageObservation(
         ProviderProfile provider,
         string model,
         AgentSession runtimeSession,

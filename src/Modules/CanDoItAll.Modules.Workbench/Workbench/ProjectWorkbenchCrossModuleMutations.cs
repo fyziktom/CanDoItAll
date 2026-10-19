@@ -31,9 +31,16 @@ internal enum ProjectCrossModuleMutationApprovalState
 
 internal sealed class ProjectCrossModuleMutationRecord
 {
+    internal static string PendingDeletionFilter => FormattableString.Invariant(
+        $"\"MutationKind\" = {(int)ProjectCrossModuleMutationKind.DeleteProject} AND \"Status\" <> {(int)ProjectCrossModuleMutationStatus.Completed}");
+
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid ProjectId { get; set; }
+
+    public Guid? CompletionNamespaceId { get; set; }
+
+    public Guid? CompletionId { get; set; }
 
     public string ScopeNodeKey { get; set; } = string.Empty;
 
@@ -62,8 +69,17 @@ internal sealed class ProjectCrossModuleMutationRecordConfiguration : IEntityTyp
 {
     public void Configure(EntityTypeBuilder<ProjectCrossModuleMutationRecord> builder)
     {
-        builder.ToTable("Workbench_ProjectCrossModuleMutations");
+        builder.ToTable("Workbench_ProjectCrossModuleMutations", table =>
+            table.HasCheckConstraint("CK_Workbench_ProjectMutation_CompletionBinding",
+                "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR " +
+                "(\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND " +
+                "\"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND " +
+                "\"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"MutationKind\" = 4)"));
         builder.HasKey(item => item.Id);
+        builder.HasIndex(item => item.Id, "IX_Workbench_ProjectCrossModuleMutations_UnfinishedDeletion")
+            .HasFilter(ProjectCrossModuleMutationRecord.PendingDeletionFilter);
+        builder.HasIndex(item => new { item.ProjectId, item.Id }, "IX_Workbench_ProjectDeletion_Subject")
+            .HasFilter(FormattableString.Invariant($"\"MutationKind\" = {(int)ProjectCrossModuleMutationKind.DeleteProject}"));
         builder.Property(item => item.ScopeNodeKey).HasMaxLength(160).IsRequired();
         builder.Property(item => item.PayloadJson).HasColumnType("TEXT");
         builder.Property(item => item.ErrorMessage).HasColumnType("TEXT");

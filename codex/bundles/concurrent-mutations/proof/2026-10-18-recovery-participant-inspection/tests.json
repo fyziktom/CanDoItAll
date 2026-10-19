@@ -1,0 +1,52 @@
+[
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_inspectors_refuse_missing_foreign_and_unbound_records_without_dispatch(owner: Workbench)",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Agent)",
+    "outcome": "Failed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Agent_stored_original_blocks_claim_and_file_dispatch_until_release_and_never_adopts_legacy_rows",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_inspectors_refuse_missing_foreign_and_unbound_records_without_dispatch(owner: Agent)",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Typed_preparation_preserves_one_original_in_both_owner_records_and_rolls_back_with_the_owner",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Workbench_stored_original_gates_dependencies_direct_dispatch_and_fresh_recovery_before_any_claim",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Workbench)",
+    "outcome": "Failed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_workbench_inspector_refuses_an_oversized_otherwise_valid_payload",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-repair-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Workbench)",
+    "outcome": "Passed"
+  },
+  {
+    "candidate": "p03-recovery-participant-inspection-repair-validation",
+    "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionCompletionParticipantTests.Recovery_exclusive_inspection_uses_nowait_against_the_actual_participant_row(owner: Agent)",
+    "outcome": "Passed"
+  }
+]

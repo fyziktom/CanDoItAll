@@ -7,7 +7,6 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectTaskPlanOperationCodec {
-    internal const int CurrentVersion = 1;
     private const int MaximumCommandBytes = 3 * 1024 * 1024;
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) {
         PropertyNameCaseInsensitive = false,
@@ -23,7 +22,11 @@ internal static class ProjectTaskPlanOperationCodec {
         using var destination = new DigestStream(hash);
         using (var writer = new Utf8JsonWriter(destination)) {
             writer.WriteStartObject();
-            writer.WriteString("domain", "workbench:task-plan:command:v1");
+            writer.WriteString("domain", command.SchemaVersion switch {
+                ProjectTaskPlanSource.WallTimeVersion => "workbench:task-plan:command:v1",
+                ProjectTaskPlanSource.ActiveWorkVersion => "workbench:task-plan:command:v2",
+                _ => throw new ArgumentException("The task-plan command interpretation is unsupported.", nameof(command))
+            });
             writer.WriteString("pool", WorkbenchTaskPlanFiniteOperations.Pool.Value);
             writer.WriteString("family", WorkbenchTaskPlanFiniteOperations.Family.Value);
             writer.WriteNumber("schemaVersion", command.SchemaVersion);
@@ -46,7 +49,7 @@ internal static class ProjectTaskPlanOperationCodec {
     internal static byte[] EncodeAccepted(ProjectTaskPlanAccepted accepted) {
         ArgumentNullException.ThrowIfNull(accepted);
         using var stream = new BoundedStream();
-        JsonSerializer.Serialize(stream, new StoredAcceptance(CurrentVersion, Address(accepted.Operation),
+        JsonSerializer.Serialize(stream, new StoredAcceptance(accepted.Source.Version, Address(accepted.Operation),
             accepted.OriginalDefinition, accepted.Source, accepted.SemanticDigest, accepted.AcceptedAtUtc,
             accepted.ReplayUntilUtc, accepted.Tasks), Options);
         return stream.ToArray();
@@ -62,7 +65,7 @@ internal static class ProjectTaskPlanOperationCodec {
                 throw new JsonException();
             }
             var stored = document.Deserialize<StoredAcceptance>(Options) ?? throw new JsonException();
-            if (stored.Version != CurrentVersion) {
+            if (!ProjectTaskPlanSource.SupportsVersion(stored.Version) || stored.Source is null || stored.Source.Version != stored.Version) {
                 throw new JsonException();
             }
             var operation = new ProjectTaskPlanOperation(new(stored.Operation.Namespace), stored.Operation.Epoch,

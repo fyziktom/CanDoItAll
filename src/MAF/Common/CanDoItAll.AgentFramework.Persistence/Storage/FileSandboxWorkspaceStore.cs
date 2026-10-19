@@ -233,9 +233,9 @@ public sealed partial class FileSandboxWorkspaceStore :
                             ? agent with { UpdatedAtUtc = AgentConfigurationVersion.NextRevision(original.UpdatedAtUtc, DateTimeOffset.UtcNow) }
                             : agent).ToArray()
                     };
-                    var index = await LoadWorkspaceIndexCoreAsync(cancellationToken);
                     await SaveCatalogCoreAsync(operation, current, catalogExists: true, target, cancellationToken,
-                        _ => validateCurrentContext(), publication);
+                        _ => validateCurrentContext(), publication, CatalogPublicationDependencies.CatalogOnly);
+                    var index = await LoadWorkspaceIndexCoreAsync(cancellationToken);
                     await SaveWorkspaceIndexCoreAsync(new WorkspaceStorageIndex(
                         checked(index.Revision + 1L), DateTimeOffset.UtcNow), cancellationToken);
                 } catch (Exception failure) {
@@ -334,7 +334,9 @@ public sealed partial class FileSandboxWorkspaceStore :
                 File.Exists(layout.CatalogPath),
                 updatedCatalog,
                 cancellationToken,
-                validatePublication);
+                validatePublication,
+                dependencies: expectedRevision.HasValue ? CatalogPublicationDependencies.WholeWorkspace : CatalogPublicationDependencies.CatalogOnly);
+            workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
             var nextWorkspaceIndex = new WorkspaceStorageIndex(
                 Revision: catalogSave.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
                 UpdatedAtUtc: catalogSave.Changed ? DateTimeOffset.UtcNow : workspaceIndex.UpdatedAtUtc);
@@ -1731,13 +1733,18 @@ public sealed partial class FileSandboxWorkspaceStore :
         SandboxWorkspaceCatalog catalog,
         CancellationToken cancellationToken,
         Action<SandboxWorkspaceCatalog>? validatePublication = null,
-        AgentPolicyPublication? policyPublication = null)
+        AgentPolicyPublication? policyPublication = null,
+        CatalogPublicationDependencies dependencies = CatalogPublicationDependencies.WholeWorkspace)
     {
         var prepared = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, catalog, cancellationToken, policyPublication);
         if (!prepared.Changed && validatePublication is null) {
             return prepared;
         }
-        var witness = await CapturePublicationWitnessAsync(cancellationToken);
+        var witness = dependencies == CatalogPublicationDependencies.CatalogOnly
+            ? await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+                PendingCommitJournalPaths.Append(layout.CatalogPath), [], PendingCommitJournalPaths,
+                physicalPathPolicyFactory, cancellationToken, pendingPublicationTargets: SharedPublicationPaths)
+            : await CapturePublicationWitnessAsync(cancellationToken);
         await using var publication = await operation.AcquireAsync(
             FileSandboxWorkspaceWriteSet.Catalog(currentCatalog, prepared.Catalog), witness, cancellationToken);
         try {
@@ -1757,6 +1764,8 @@ public sealed partial class FileSandboxWorkspaceStore :
             throw;
         }
     }
+
+    private enum CatalogPublicationDependencies { WholeWorkspace, CatalogOnly }
 
     private async Task<CatalogSaveResult> PrepareCatalogCoreAsync(SandboxWorkspaceCatalog currentCatalog,
         bool catalogExists, SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken,

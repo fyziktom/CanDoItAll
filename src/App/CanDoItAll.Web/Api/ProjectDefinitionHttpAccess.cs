@@ -8,6 +8,22 @@ namespace CanDoItAll.Web.Api;
 internal sealed class ProjectDefinitionHttpAccess(WebCurrentPrincipalResolver principals, IOptions<ApiAccessOptions> options,
     IHttpContextAccessor http, IApiTokenRegistry tokens, IApiUserStore users, ApiSessionService sessions, TimeProvider clock) {
     internal async Task<ProjectDefinitionInvocation> ResolveWriteAsync(CancellationToken cancellationToken) {
+        var (caller, currentWrite) = await CaptureWriteAsync(cancellationToken);
+        return new(caller, new ReceiptAccess(this, caller), currentWrite: currentWrite);
+    }
+
+    internal async Task<ProjectLifecycleInvocation> ResolveLifecycleWriteAsync(CancellationToken cancellationToken) {
+        var (caller, currentWrite) = await CaptureWriteAsync(cancellationToken);
+        return new(caller, new LifecycleReceiptAccess(this, caller), currentWrite);
+    }
+
+    internal async Task<ProjectLifecycleReceiptInvocation> ResolveLifecycleReadAsync(CancellationToken cancellationToken) {
+        var caller = await ResolveCallerAsync(cancellationToken);
+        return new(caller, new LifecycleReceiptAccess(this, caller));
+    }
+
+    private async Task<(ProjectMutationCallerScope Caller, ProjectDefinitionCurrentWriteAccess CurrentWrite)> CaptureWriteAsync(
+        CancellationToken cancellationToken) {
         var context = http.HttpContext ?? throw new WebCurrentPrincipalDeniedException();
         if (!options.Value.Enabled) {
             throw new WebCurrentPrincipalDeniedException();
@@ -16,8 +32,7 @@ internal sealed class ProjectDefinitionHttpAccess(WebCurrentPrincipalResolver pr
             ? await principals.CaptureDefinitionWriteAuthorityAsync(cancellationToken) : null;
         var caller = observation is null ? ProjectMutationCallerScope.OpenApi
             : ProjectMutationCallerScope.FromVerifiedSubject(observation.Issuer, observation.Subject);
-        return new(caller, new ReceiptAccess(this, caller), currentWrite:
-            new ProjectDefinitionCurrentWriteAccess(context, observation, tokens, users, sessions, options, clock));
+        return (caller, new(context, observation, tokens, users, sessions, options, clock));
     }
 
     internal async Task<ProjectDefinitionReceiptInvocation> ResolveReadAsync(CancellationToken cancellationToken) {
@@ -39,6 +54,16 @@ internal sealed class ProjectDefinitionHttpAccess(WebCurrentPrincipalResolver pr
 
     private sealed class ReceiptAccess(ProjectDefinitionHttpAccess owner, ProjectMutationCallerScope expected) : IProjectDefinitionReceiptAccess {
         public async Task<bool> CanReadAsync(ProjectWriteAdmission target, CancellationToken cancellationToken) {
+            try {
+                return await owner.ResolveCallerAsync(cancellationToken) == expected;
+            } catch (WebCurrentPrincipalDeniedException) {
+                return false;
+            }
+        }
+    }
+
+    private sealed class LifecycleReceiptAccess(ProjectDefinitionHttpAccess owner, ProjectMutationCallerScope expected) : IProjectLifecycleReceiptAccess {
+        public async Task<bool> CanReadAsync(ProjectLifecycleSubmission original, CancellationToken cancellationToken) {
             try {
                 return await owner.ResolveCallerAsync(cancellationToken) == expected;
             } catch (WebCurrentPrincipalDeniedException) {

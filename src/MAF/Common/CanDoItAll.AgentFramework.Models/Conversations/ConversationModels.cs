@@ -965,6 +965,8 @@ public sealed record AgentChatRunOptions(
     bool RuntimeToolProvidersEnabled = true,
     bool WorkspaceToolsEnabled = true)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     public ExecutionInvocationContext? Context { get; init; }
 
     public bool ToolCapabilitiesEnabled { get; init; } = true;
@@ -984,6 +986,8 @@ public sealed record ExecutionRunRequest(
     IReadOnlyList<string>? InputAttachmentPaths = null,
     AgentJsonSchemaOutputContract? JsonSchemaOutput = null)
 {
+    public AgentPlanningOwner? PlanningOwner { get; init; }
+
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
 }

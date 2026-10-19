@@ -1,0 +1,40 @@
+{
+  "recordedUtc": "2026-10-18T21:10:20.6919889+00:00",
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "outcome": "13 of 13 passed, all six restart fixtures cleaned; observer-start gap recorded separately. Database baseline is preceding closed candidate final reconciliation.",
+  "remainingObservedProcesses": [],
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_54292_20261018_170503_233.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\kfgjo2ep.afb",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\b444ae27-bc1d-469b-9604-a5a615b9a610.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\45328334-cc17-4d63-ac4d-7afc288bc9a8.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\c6db80ce-fd02-4dba-b5d6-037399503167.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\uf4qrptg.1pm",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\mat-debug-52564.log",
+      "family": "anonymous-and-package-temp-files"
+    }
+  ],
+  "databaseNameDelta": []
+}

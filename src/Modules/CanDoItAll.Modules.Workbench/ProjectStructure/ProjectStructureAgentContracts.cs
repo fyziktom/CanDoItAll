@@ -317,7 +317,11 @@ public sealed record ProjectStructureProjectSaveRequest(
 public sealed record ProjectStructureSubprojectChangeRequest(
     Guid ChildProjectId,
     Guid? CurrentParentProjectId = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    public ProjectWriteAdmission? ExpectedParentAdmission { get; init; }
+    public ProjectWriteAdmission? ExpectedChildAdmission { get; init; }
+    public ProjectHierarchyEdgeExpectation? ExpectedCurrentEdge { get; init; }
+}
 
 /// <summary>
 /// Source of a structure read, as a JSON integer. 0 ContextDefault (the default; over HTTP it reads the current

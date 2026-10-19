@@ -1,4 +1,5 @@
 using CanDoItAll.SharedKernel;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -82,23 +83,32 @@ public sealed record DatasetActivationPlan {
 }
 
 public sealed record DatasetActivationFileRecord {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
+    public const int LegacyVersion = 1;
 
-    public DatasetActivationFileRecord(int version, Guid profileId, DatasetActivationFileState state, DatasetActivationPlan plan) {
+    public DatasetActivationFileRecord(int version, Guid profileId, DatasetActivationFileState state, DatasetActivationPlan plan,
+        DatasetActivationRestoration? restoration = null) {
         ArgumentNullException.ThrowIfNull(plan);
-        if (version != CurrentVersion || profileId == Guid.Empty || !Enum.IsDefined(state)) {
+        if (version is not (LegacyVersion or CurrentVersion) || profileId == Guid.Empty || !Enum.IsDefined(state)) {
             throw new ArgumentException("The dataset activation file record is invalid or unsupported.");
+        }
+        if (restoration is not null && (version != CurrentVersion || plan.Kind != DatasetActivationKind.Attach ||
+                plan.Binding != restoration.AbandonedPlan.ExpectedPreviousSqlBinding || plan.PlanId == restoration.AbandonedPlan.PlanId)) {
+            throw new ArgumentException("Restoration must retain the exact previous binding and a distinct attachment plan.");
         }
         Version = version;
         ProfileId = profileId;
         State = state;
         Plan = plan;
+        Restoration = restoration;
     }
 
     public int Version { get; }
     public Guid ProfileId { get; }
     public DatasetActivationFileState State { get; }
     public DatasetActivationPlan Plan { get; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DatasetActivationRestoration? Restoration { get; }
 }
 
 internal sealed class DatasetLifecycleRecordConfiguration : IEntityTypeConfiguration<DatasetLifecycleRecord> {

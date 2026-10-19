@@ -29,7 +29,8 @@ internal sealed record DeleteProjectMutationPayload(
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
     IReadOnlyList<Guid>? OutstandingMutationIds = null,
     IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
-    ProjectAssignmentReference? SourceReference = null);
+    ProjectAssignmentReference? SourceReference = null,
+    ProjectDeletionPreparationContext? CompletionContext = null);
 
 internal sealed record MoveDescendantsMutationPayload(
     Guid SourceProjectId,
@@ -73,7 +74,8 @@ public sealed class ProjectCrossModuleMutationProcessor(
     IClock clock,
     ProjectCrossModuleMutationProcessingOptions processingOptions,
     TimeProvider timeProvider,
-    ILogger<ProjectCrossModuleMutationProcessor> logger)
+    ILogger<ProjectCrossModuleMutationProcessor> logger,
+    IProjectDeletionCompletionQuery deletionCompletions)
 {
     private const int ProcessingLockStripeCount = 64;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -104,6 +106,11 @@ public sealed class ProjectCrossModuleMutationProcessor(
             if (current is null)
             {
                 return null;
+            }
+
+            if (current.MutationKind == ProjectCrossModuleMutationKind.DeleteProject) {
+                await RequireProjectDeletionReleaseAsync(current.ProjectId, current.Id,
+                    ProjectWorkbenchDeletionPayload.Read(current), cancellationToken);
             }
 
             if (current.Status == ProjectCrossModuleMutationStatus.Completed)
@@ -291,7 +298,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
                 dbContext,
                 mutation,
                 claimToken,
-                Deserialize<DeleteProjectMutationPayload>(mutation.PayloadJson),
+                ProjectWorkbenchDeletionPayload.Read(mutation),
                 cancellationToken),
             ProjectCrossModuleMutationKind.MoveDescendants => MoveAssignmentsAsync(
                 new ProjectPartyAssignmentMoveOperationId(mutation.Id),
@@ -335,6 +342,7 @@ public sealed class ProjectCrossModuleMutationProcessor(
         DeleteProjectMutationPayload payload,
         CancellationToken cancellationToken)
     {
+        await RequireProjectDeletionReleaseAsync(mutation.ProjectId, mutation.Id, payload, cancellationToken);
         await projectPartyIntegrationBridge.DeleteAssignmentsForProjectAsync(
             mutation.ProjectId,
             cancellationToken, RequireSource(payload.SourceReference, mutation.ProjectId));
@@ -350,6 +358,27 @@ public sealed class ProjectCrossModuleMutationProcessor(
                 payload with { ManagedStorageOutcomes = outcomes },
                 JsonOptions),
             cancellationToken);
+    }
+
+    internal async Task RequireProjectDeletionReleaseAsync(Guid projectId, Guid recoveryId,
+        DeleteProjectMutationPayload payload, CancellationToken cancellationToken) {
+        if (await ObserveProjectDeletionReleaseAsync(projectId, recoveryId, payload, cancellationToken)
+                is not ProjectDeletionCompletionObservation.Released) {
+            throw new ProjectDeletionParticipantCleanupException(recoveryId,
+                "The exact deletion owner release is not confirmed. Retain the original recovery and reconcile its owner before retrying.");
+        }
+    }
+
+    internal Task<ProjectDeletionCompletionObservation> ObserveProjectDeletionReleaseAsync(Guid projectId, Guid recoveryId,
+        DeleteProjectMutationPayload payload, CancellationToken cancellationToken) {
+        var original = payload.CompletionContext;
+        if (original is null || original.Project.ProjectId != projectId ||
+                payload.SourceReference != ProjectAssignmentReference.From(original.Project)) {
+            throw new ProjectDeletionParticipantCleanupException(recoveryId,
+                "This retained cleanup has no exact original completion binding and requires explicit legacy reconciliation.");
+        }
+        return deletionCompletions.ObserveAsync(original,
+            new(new(ProjectWorkbenchDeletionParticipant.ParticipantIdValue), recoveryId), cancellationToken);
     }
 
     private async Task DeleteStorageObjectsAsync(

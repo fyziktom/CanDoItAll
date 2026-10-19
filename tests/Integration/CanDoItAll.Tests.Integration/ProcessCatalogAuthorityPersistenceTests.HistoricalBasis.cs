@@ -32,7 +32,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         ProjectWriteAdmission? replacement = null;
         afterAccess.Sql.BeforeFinalTarget = async token => {
             afterAccess.Sql.BeforeFinalTarget = null;
-            await projects.DeleteAsync(seed.Owner.Project.ProjectId);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(seed.Owner.Project.ProjectId);
             Assert.True((await projects.CreateAsync(seed.Owner.Project.ProjectId, new() { Name = "Replaced after receipt access" })).IsSuccess);
             replacement = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(seed.Owner.Project.ProjectId, token);
         };
