@@ -4,6 +4,11 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
+The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
+passes 54/54 focused cases. External update/archive now compare actual Agent state,
+capture mutable requests before storage work and retain historical replay receipts.
+Process/Workflow policy activation and the wider E2E gates remain active.
+
 The resumed native chat browser proof now passes: one case covers three submissions,
 draft preservation, restore without resend and unknown outcomes across native navigation.
 Release build, portability enforcement and documentation/rendering checks pass; see the

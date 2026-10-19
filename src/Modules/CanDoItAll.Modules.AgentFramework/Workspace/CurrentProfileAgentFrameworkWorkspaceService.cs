@@ -347,13 +347,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         AgentExternalProvisioningCommand command,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await ResolveService().ProvisionAgentByExternalKeyAsync(
+        var (service, workspace) = ResolveExternalMutationWorkspace();
+        var receipt = await service.ProvisionAgentByExternalKeyAsync(
             command,
             cancellationToken);
         if (!receipt.Replayed)
         {
             await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt), workspace);
         }
 
         return receipt;
@@ -363,16 +364,26 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         AgentExternalArchiveCommand command,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await ResolveService().ArchiveAgentByExternalKeyAsync(
+        var (service, workspace) = ResolveExternalMutationWorkspace();
+        var receipt = await service.ArchiveAgentByExternalKeyAsync(
             command,
             cancellationToken);
         if (!receipt.Replayed)
         {
             await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt), workspace);
         }
 
         return receipt;
+    }
+
+    private (IAgentFrameworkWorkspaceService Service, AgentExecutionActivityWorkspaceIdentity Workspace) ResolveExternalMutationWorkspace() {
+        lock (executionSubscriptionGate) {
+            var identity = ResolvePinnedActivityExecutionIdentity();
+            var service = workspaceFactory.GetWorkspaceService(identity.WorkspaceScope);
+            EnsurePinnedActivityExecutionIdentity(identity, ResolvePinnedActivityExecutionIdentity());
+            return (service, new(identity.ProfileId, identity.WorkspaceScope, identity.ProfileGeneration));
+        }
     }
 
     public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
@@ -1153,11 +1164,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
 
     private async Task SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
         CancellationToken cancellationToken,
-        Func<Exception, Exception>? synchronizationExceptionFactory = null)
+        Func<Exception, Exception>? synchronizationExceptionFactory = null,
+        AgentExecutionActivityWorkspaceIdentity? expectedWorkspace = null)
     {
         try {
             referenceDataCacheInvalidator.Invalidate();
-            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+            if (expectedWorkspace is null) {
+                await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+            } else {
+                await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(expectedWorkspace, cancellationToken);
+            }
             referenceDataCacheInvalidator.Invalidate();
         } catch (Exception exception) when (synchronizationExceptionFactory is not null) {
             throw synchronizationExceptionFactory(exception);

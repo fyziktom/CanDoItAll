@@ -6,6 +6,12 @@ now compiled and passes its one case with three submissions; prior failures rema
 recorded. End-to-end implementation continues. SPA work must remain on
 `codex/concurrent-mutations` pending the user's consultation with its maintainer.
 
+The [external Agent checkpoint](validation/2026-10-19-external-agent-preconditions.md)
+passes 54/54 focused cases and closes its cached-binding version and delayed-input
+defects. It preserves historical replay, pins postcommit projection to original context
+and excludes execution journals from catalog-only dependencies. Full writer coverage,
+retention/restore, Process/Workflow activation and capacity gates remain open.
+
 The [P03 lifecycle integration](validation/2026-10-18-lifecycle-integration.md) adds
 owner/migration, retained native/API operations, creation cleanup and governed hierarchy
 with scoped passing proof. Six actual restart cases recover original Agent/Process

@@ -1,5 +1,18 @@
 # Resource ownership and cleanup
 
+## External Agent preconditions (2026-10-19)
+
+Owned validation directories `c4-external-agent-preconditions` and
+`c4-external-agent-preconditions-ready` reused the existing PostgreSQL 18 fixture
+and standard Release outputs. Ownership records precede creation. The first stopped
+before execution on a copied freeze-command list; no tests or new stack ran there.
+Its observer ended with zero remaining observed processes/database delta and one
+unattributed TEMP delta preserved. The successor passed 54/54, verified unchanged
+source/runtime, retained proof and released its freeze. Its observer covered both
+commands; reconciliation found zero remaining observed processes/database delta and
+preserved six unattributed TEMP deltas. Earlier cleanup blockers remain unresolved;
+none was retried or bypassed. See [the checkpoint](validation/2026-10-19-external-agent-preconditions.md).
+
 ## Product planning entry deadlock cleanup blocker (2026-10-19)
 
 Candidate `c4-product-planning-entry-validation` stopped its exact observed test process

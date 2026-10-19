@@ -141,6 +141,10 @@ public interface IAiTechnicalAgentBridge
     Task SynchronizeDirectoryProjectionAsync(
         CancellationToken cancellationToken = default);
 
+    Task SynchronizeDirectoryProjectionAsync(AgentExecutionActivityWorkspaceIdentity expectedWorkspace,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This bridge does not support a refresh bound to the original workspace.");
+
     Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default);

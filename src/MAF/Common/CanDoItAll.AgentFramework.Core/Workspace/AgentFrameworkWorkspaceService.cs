@@ -111,7 +111,9 @@ public sealed partial class AgentFrameworkWorkspaceService :
             resolvedProviderProfileService);
         externalProvisioningService = new AgentExternalProvisioningService(
             store,
-            resolvedProviderProfileService);
+            resolvedProviderProfileService,
+            activityWorkspaceIdentity,
+            executionProfileGenerationSource);
         var executionPreparationService =
             new AgentExecutionPreparationService(
                 store,

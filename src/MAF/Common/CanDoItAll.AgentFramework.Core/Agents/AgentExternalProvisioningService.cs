@@ -23,8 +23,10 @@ public sealed class AgentExternalProvisioningException(
 }
 
 internal sealed class AgentExternalProvisioningService(
-    ISandboxWorkspaceStore store,
-    IProviderProfileService providerProfileService)
+    ISandboxWorkspaceCatalogStore store,
+    IProviderProfileService providerProfileService,
+    AgentExecutionActivityWorkspaceIdentity workspace,
+    IAgentExecutionProfileGenerationSource generationSource)
 {
     private const int MaximumRetainedOperations = 2048;
     private static readonly HashSet<string> RawSecretPropertyNames =
@@ -47,21 +49,22 @@ internal sealed class AgentExternalProvisioningService(
         CancellationToken cancellationToken = default)
     {
         var identity = NormalizeIdentity(externalNamespace, key);
+        RequireCurrentWorkspace();
         var catalog = await store.LoadCatalogAsync(cancellationToken);
+        RequireCurrentWorkspace();
         var binding = FindBinding(catalog.AgentExternalBindings, identity)
             ?? throw Failure(
                 AgentExternalProvisioningFailureKind.NotFound,
                 "agents.external-key-not-found",
                 "No agent is bound to the requested external identity in this workspace.");
-        if (!catalog.Agents.Any(item => item.Id == binding.AgentId))
-        {
-            throw Failure(
+        var agent = catalog.Agents.FirstOrDefault(item => item.Id == binding.AgentId)
+            ?? throw Failure(
                 AgentExternalProvisioningFailureKind.NotFound,
                 "agents.external-key-agent-not-found",
                 "The external identity binding does not resolve to an agent in this workspace.");
-        }
 
-        return ToResource(binding);
+        return new(identity.Namespace, identity.Key, agent.Id, CreateTargetVersion(identity, agent),
+            agent.Status == AgentLifecycleStatus.Archived, agent.UpdatedAtUtc);
     }
 
     public async Task<AgentExternalProvisioningReceipt> UpsertAsync(
@@ -74,12 +77,17 @@ internal sealed class AgentExternalProvisioningService(
         var identity = NormalizeIdentity(command.Namespace, command.Key);
         var idempotencyKey = command.IdempotencyKey.Trim();
         var expectedVersion = NormalizeVersion(command.ExpectedConfigurationVersion);
-        var requestFingerprint = CreateRequestFingerprint(identity, expectedVersion, command.Agent);
+        var editor = JsonSerializer.Deserialize<AgentEditorModel>(
+            JsonSerializer.SerializeToUtf8Bytes(CopyForPersistence(command.Agent), FingerprintSerializerOptions),
+            FingerprintSerializerOptions) ?? throw new InvalidOperationException("The provisioning editor could not be captured.");
+        var requestFingerprint = CreateRequestFingerprint(identity, expectedVersion, editor);
+        RequireCurrentWorkspace();
         AgentExternalProvisioningReceipt? result = null;
 
         try {
-            await store.UpdateWorkspaceAsync(document =>
+            await store.UpdateCatalogAsync(document =>
             {
+                RequireCurrentWorkspace();
                 var previousOperation = document.AgentExternalProvisioningOperations.FirstOrDefault(operation =>
                     string.Equals(operation.IdempotencyKey, idempotencyKey, StringComparison.Ordinal));
                 if (previousOperation is not null)
@@ -117,15 +125,6 @@ internal sealed class AgentExternalProvisioningService(
                         "If-Match is required when updating an existing external identity binding.");
                 }
 
-                if (binding is not null &&
-                    !string.Equals(binding.ConfigurationVersion, expectedVersion, StringComparison.Ordinal))
-                {
-                    throw Failure(
-                        AgentExternalProvisioningFailureKind.PreconditionFailed,
-                        "agents.external-key-version-conflict",
-                        "The supplied configuration version is stale.");
-                }
-
                 var existingAgent = binding is null
                     ? null
                     : document.Agents.FirstOrDefault(item => item.Id == binding.AgentId)
@@ -133,33 +132,32 @@ internal sealed class AgentExternalProvisioningService(
                             AgentExternalProvisioningFailureKind.Conflict,
                             "agents.external-key-agent-missing",
                             "The external identity binding points to an agent that no longer exists.");
+                if (existingAgent is not null) {
+                    RequireTargetVersion(identity, existingAgent, expectedVersion!);
+                }
                 var agentId = binding?.AgentId ?? Guid.NewGuid();
                 var now = DateTimeOffset.UtcNow;
-                var editor = CopyForPersistence(command.Agent);
                 var definition = AgentDefinitionFactory.Create(
-                    document.ToCatalog(),
+                    document,
                     editor,
                     agentId,
                     existingAgent,
                     now,
                     providerProfileService,
                     "External-key provisioning");
-                var configurationVersion = AgentConfigurationVersion.Create(definition);
-                var isNoOp = binding is not null &&
+                var isNoOp = existingAgent is not null &&
                              string.Equals(
-                                 binding.ConfigurationVersion,
-                                 configurationVersion,
+                                 AgentConfigurationVersion.Create(existingAgent),
+                                 AgentConfigurationVersion.Create(definition),
                                  StringComparison.Ordinal);
                 var persistedAgent = isNoOp ? existingAgent! : definition;
-                var persistedBinding = isNoOp
-                    ? binding!
-                    : new AgentExternalBindingRecord(
+                var persistedBinding = new AgentExternalBindingRecord(
                         identity.Namespace,
                         identity.Key,
                         agentId,
-                        configurationVersion,
-                        definition.Status == AgentLifecycleStatus.Archived,
-                        now);
+                        CreateTargetVersion(identity, persistedAgent),
+                        persistedAgent.Status == AgentLifecycleStatus.Archived,
+                        persistedAgent.UpdatedAtUtc);
                 var warnings = isNoOp
                     ? new[] { "The requested configuration already matches the stored agent." }
                     : [];
@@ -188,9 +186,7 @@ internal sealed class AgentExternalProvisioningService(
                             .Append(persistedAgent)
                             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                             .ToList(),
-                    AgentExternalBindings = isNoOp
-                        ? document.AgentExternalBindings
-                        : document.AgentExternalBindings
+                    AgentExternalBindings = document.AgentExternalBindings
                             .Where(item => !HasIdentity(item, identity))
                             .Append(persistedBinding)
                             .OrderBy(item => item.Namespace, StringComparer.Ordinal)
@@ -200,7 +196,7 @@ internal sealed class AgentExternalProvisioningService(
                         document.AgentExternalProvisioningOperations,
                         operation)
                 };
-            }, cancellationToken);
+            }, _ => RequireCurrentWorkspace(), cancellationToken);
         } catch (Exception conflict) when (conflict is SandboxWorkspacePublicationConflictException or SandboxWorkspaceConcurrencyException) {
             throw new AgentExternalProvisioningException(AgentExternalProvisioningFailureKind.Conflict,
                 "agents.external-key-publication-conflict",
@@ -225,11 +221,13 @@ internal sealed class AgentExternalProvisioningService(
                 "agents.external-key-version-required",
                 "If-Match is required when archiving an external identity binding.");
         var requestFingerprint = CreateArchiveFingerprint(identity, expectedVersion);
+        RequireCurrentWorkspace();
         AgentExternalProvisioningReceipt? result = null;
 
         try {
-            await store.UpdateWorkspaceAsync(document =>
+            await store.UpdateCatalogAsync(document =>
             {
+                RequireCurrentWorkspace();
                 var previousOperation = document.AgentExternalProvisioningOperations.FirstOrDefault(operation =>
                     string.Equals(operation.IdempotencyKey, idempotencyKey, StringComparison.Ordinal));
                 if (previousOperation is not null)
@@ -254,30 +252,23 @@ internal sealed class AgentExternalProvisioningService(
                         AgentExternalProvisioningFailureKind.NotFound,
                         "agents.external-key-not-found",
                         "No agent is bound to the requested external identity in this workspace.");
-                if (!string.Equals(binding.ConfigurationVersion, expectedVersion, StringComparison.Ordinal))
-                {
-                    throw Failure(
-                        AgentExternalProvisioningFailureKind.PreconditionFailed,
-                        "agents.external-key-version-conflict",
-                        "The supplied configuration version is stale.");
-                }
-
                 var agent = document.Agents.FirstOrDefault(item => item.Id == binding.AgentId)
                     ?? throw Failure(
                         AgentExternalProvisioningFailureKind.Conflict,
                         "agents.external-key-agent-missing",
                         "The external identity binding points to an agent that no longer exists.");
+                RequireTargetVersion(identity, agent, expectedVersion);
                 var now = DateTimeOffset.UtcNow;
-                var archivedAgent = agent with
+                var archivedAgent = agent.Status == AgentLifecycleStatus.Archived ? agent : agent with
                 {
                     Status = AgentLifecycleStatus.Archived,
                     UpdatedAtUtc = AgentConfigurationVersion.NextRevision(agent.UpdatedAtUtc, now)
                 };
                 var archivedBinding = binding with
                 {
-                    ConfigurationVersion = AgentConfigurationVersion.Create(archivedAgent),
+                    ConfigurationVersion = CreateTargetVersion(identity, archivedAgent),
                     IsArchived = true,
-                    UpdatedAtUtc = now
+                    UpdatedAtUtc = archivedAgent.UpdatedAtUtc
                 };
                 var receipt = new AgentExternalProvisioningReceipt(
                     identity.Namespace,
@@ -312,7 +303,7 @@ internal sealed class AgentExternalProvisioningService(
                         document.AgentExternalProvisioningOperations,
                         operation)
                 };
-            }, cancellationToken);
+            }, _ => RequireCurrentWorkspace(), cancellationToken);
         } catch (Exception conflict) when (conflict is SandboxWorkspacePublicationConflictException or SandboxWorkspaceConcurrencyException) {
             throw new AgentExternalProvisioningException(AgentExternalProvisioningFailureKind.Conflict,
                 "agents.external-key-publication-conflict",
@@ -377,7 +368,7 @@ internal sealed class AgentExternalProvisioningService(
             Operation = "upsert",
             Identity = AgentExternalIdentityNormalizer.ToCanonicalString(identity),
             ExpectedVersion = expectedVersion,
-            Agent = CopyForPersistence(agent)
+            Agent = agent
         };
         return Convert.ToHexString(SHA256.HashData(
             JsonSerializer.SerializeToUtf8Bytes(material, FingerprintSerializerOptions)));
@@ -417,14 +408,34 @@ internal sealed class AgentExternalProvisioningService(
         => string.Equals(binding.Namespace, identity.Namespace, StringComparison.Ordinal) &&
            string.Equals(binding.Key, identity.Key, StringComparison.Ordinal);
 
-    private static AgentExternalProvisioningResource ToResource(AgentExternalBindingRecord binding)
-        => new(
-            binding.Namespace,
-            binding.Key,
-            binding.AgentId,
-            binding.ConfigurationVersion,
-            binding.IsArchived,
-            binding.UpdatedAtUtc);
+    private string CreateTargetVersion(AgentExternalIdentity identity, AgentDefinition agent) {
+        var material = new {
+            Domain = "external-agent-target/v1",
+            workspace.DatabaseProfileId,
+            Generation = workspace.DatabaseProfileGeneration.Value,
+            ScopeKind = workspace.WorkspaceScope.Kind,
+            ScopeKey = workspace.WorkspaceScope.Key,
+            Identity = AgentExternalIdentityNormalizer.ToCanonicalString(identity),
+            AgentId = agent.Id,
+            Revision = agent.UpdatedAtUtc.UtcTicks,
+            Configuration = AgentConfigurationVersion.Create(agent)
+        };
+        return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(material, FingerprintSerializerOptions)));
+    }
+
+    private void RequireTargetVersion(AgentExternalIdentity identity, AgentDefinition agent, string expectedVersion) {
+        if (!string.Equals(CreateTargetVersion(identity, agent), expectedVersion, StringComparison.Ordinal)) {
+            throw Failure(AgentExternalProvisioningFailureKind.PreconditionFailed,
+                "agents.external-key-version-conflict", "The supplied configuration version is stale.");
+        }
+    }
+
+    private void RequireCurrentWorkspace() {
+        if (generationSource.GetGeneration() != workspace.DatabaseProfileGeneration) {
+            throw Failure(AgentExternalProvisioningFailureKind.PreconditionFailed,
+                "agents.external-key-context-changed", "The original workspace context is no longer current.");
+        }
+    }
 
     private static AgentExternalIdentity NormalizeIdentity(string externalNamespace, string key)
     {

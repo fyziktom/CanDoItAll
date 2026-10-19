@@ -5,6 +5,12 @@ are claimed. Baseline is `ead988abeb4cfb3e12341e618362bfa3dde5df29`. Projects de
 coverage is detailed separately in [editor design](03-editor-and-validation-design.md).
 This inventory prevents the Projects pilot from being mistaken for engine-wide protection.
 
+2026-10-19 update: the [external Agent checkpoint](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-external-agent-preconditions.md)
+passes 54 focused cases and replaces cached-binding preconditions with actual
+target/revision/context checks. Delayed request capture, catalog-only publication,
+historical replay and pinned postcommit projection are covered. Other Agent writers,
+operation retention, restore and global profile-activation fences remain open.
+
 ## Meaning of status
 
 - **Enforced path observed**: source checks the caller's original expectation at the

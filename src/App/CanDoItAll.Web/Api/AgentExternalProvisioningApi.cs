@@ -15,6 +15,7 @@ internal static class AgentExternalProvisioningApi
             .Produces<AgentExternalProvisioningResource>(StatusCodes.Status200OK)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces<ApiErrorResponse>(StatusCodes.Status412PreconditionFailed)
             .ProducesApiErrors(
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden);
@@ -49,12 +50,6 @@ internal static class AgentExternalProvisioningApi
     /// Read which agent an external identity (namespace and key) is bound to.
     /// </summary>
     /// <remarks>
-    /// Resolves a caller-defined external identity to the agent bound to it by
-    /// <c>PUT /api/agents/by-external-key/{externalNamespace}/{key}</c> or by a package import
-    /// (<c>POST /api/agents/import-package</c>), and returns the binding's configuration version, also as the quoted
-    /// <c>ETag</c> response header. Send that value as <c>If-Match</c> with the next <c>PUT</c> or <c>DELETE</c>
-    /// through this identity. Read the agent itself with <c>GET /api/agents/{agentId}</c>.
-    ///
     /// The namespace and key are trimmed and lowered before the lookup; each must then be 1 to 100 characters of
     /// lowercase letters, digits, <c>.</c>, <c>_</c> or <c>-</c>, starting and ending with a letter or digit. Deleting
     /// the agent with <c>DELETE /api/agents/{agentId}</c> also removes its bindings.
@@ -68,10 +63,6 @@ internal static class AgentExternalProvisioningApi
     /// <param name="key">
     /// Key of the external identity within the namespace, for example <c>invoice-assistant</c>.
     /// </param>
-    /// <response code="200">
-    /// The binding: the bound agent, the recorded configuration version (also in the <c>ETag</c> header), whether the
-    /// agent is archived and when the binding last changed.
-    /// </response>
     /// <response code="400">The namespace or key has an invalid format (<c>agents.external-key-invalid</c>).</response>
     /// <response code="404">
     /// No agent is bound to the identity in this workspace (<c>agents.external-key-not-found</c>), or the binding
@@ -84,6 +75,7 @@ internal static class AgentExternalProvisioningApi
     /// An authorization policy rejected the authenticated caller (<c>api.authorization-forbidden</c>). This operation
     /// itself requires only a valid bearer token.
     /// </response>
+    [Description("Read the bound Agent's current revision, archive state and opaque 64-hex version. The ETag binds Agent identity, actual configuration and original workspace context. Ordinary and policy edits invalidate it. Responses are not cached.")]
     internal static async Task<IResult> GetAsync(
         string externalNamespace,
         string key,
@@ -98,6 +90,7 @@ internal static class AgentExternalProvisioningApi
                 key,
                 cancellationToken);
             response.Headers.ETag = QuoteEtag(resource.ConfigurationVersion);
+            response.Headers.CacheControl = "no-store";
             return Results.Ok(resource);
         }
         catch (AgentExternalProvisioningException exception)
@@ -124,12 +117,6 @@ internal static class AgentExternalProvisioningApi
     /// <c>bearerToken</c>, <c>clientSecret</c>, <c>password</c>, <c>privateKey</c> or <c>refreshToken</c> member,
     /// also inside string members whose names end in <c>Json</c>). Capability identifiers that do not exist in the
     /// workspace are ignored.
-    ///
-    /// Concurrency: omit <c>If-Match</c> when creating. When updating, send the configuration version from the last
-    /// <c>GET</c> or receipt as <c>If-Match</c>; a missing or stale value is rejected with HTTP 412 and nothing is
-    /// written. If the new configuration equals the recorded one, nothing is changed and the receipt's
-    /// <c>warnings</c> say so. The response's <c>ETag</c> header carries the resulting configuration version in
-    /// quotes.
     ///
     /// Idempotency: <c>Idempotency-Key</c> is required. Repeating the same request (identity, <c>If-Match</c> and
     /// body) with the same key returns the stored receipt with <c>replayed</c> true and the original status, and
@@ -192,6 +179,7 @@ internal static class AgentExternalProvisioningApi
     /// An authorization policy rejected the authenticated caller (<c>api.authorization-forbidden</c>). This operation
     /// itself requires only a valid bearer token.
     /// </response>
+    [Description("Create without If-Match; update with the version from an explicit current read. A stale actual Agent or workspace token returns 412. An unchanged Agent retains its revision while a new idempotency receipt is stored. Replay returns the historical receipt.")]
     internal static async Task<IResult> UpsertAsync(
         string externalNamespace,
         string key,
@@ -254,11 +242,6 @@ internal static class AgentExternalProvisioningApi
     /// <c>PUT</c> can change its status again. To remove an agent permanently use
     /// <c>DELETE /api/agents/{agentId}</c>, which also removes its bindings.
     ///
-    /// <c>If-Match</c> is required and must equal the binding's current configuration version; a missing or stale
-    /// value is rejected with HTTP 412 and nothing is written. The response's <c>ETag</c> header carries the
-    /// configuration version after archiving. Archiving an agent that is already archived succeeds again and keeps
-    /// the same configuration version.
-    ///
     /// Idempotency: <c>Idempotency-Key</c> is required. Repeating the same request (identity and <c>If-Match</c>) with
     /// the same key returns the stored receipt with <c>replayed</c> true and writes nothing again; the same key with a
     /// different request is rejected with HTTP 409. Keys are shared with <c>PUT</c> on this route. An HTTP 500 can
@@ -303,6 +286,7 @@ internal static class AgentExternalProvisioningApi
     /// An authorization policy rejected the authenticated caller (<c>api.authorization-forbidden</c>). This operation
     /// itself requires only a valid bearer token.
     /// </response>
+    [Description("Archive using the bound Agent's current opaque version in If-Match. Stale actual Agent or workspace state returns 412. An already archived Agent retains its revision; replay retains the original receipt.")]
     internal static async Task<IResult> ArchiveAsync(
         string externalNamespace,
         string key,
@@ -315,7 +299,7 @@ internal static class AgentExternalProvisioningApi
         string? idempotencyKey,
         [FromHeader(Name = "If-Match")]
         [Description(
-            "Required. Current configuration version of the binding, from the ETag or configurationVersion of the " +
+            "Required. Current opaque Agent/workspace version, from the ETag or configurationVersion of the " +
             "last read or receipt: 64 hexadecimal digits, surrounding quotes allowed.")]
         string? ifMatch,
         HttpResponse response,

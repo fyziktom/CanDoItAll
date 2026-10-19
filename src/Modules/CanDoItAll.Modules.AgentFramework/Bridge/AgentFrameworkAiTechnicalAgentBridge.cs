@@ -16,6 +16,12 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
         await SynchronizeAsync(workspace, cancellationToken);
     }
 
+    public Task SynchronizeDirectoryProjectionAsync(AgentExecutionActivityWorkspaceIdentity expectedWorkspace,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(expectedWorkspace);
+        return SynchronizeAsync(OrganizationWorkspace(), cancellationToken, expectedWorkspace);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds, CancellationToken cancellationToken = default)
         => (await projections.ReadAsync(partyIds, cancellationToken)).ToDictionary(item => item.Key, item => item.Value.Directory);
@@ -108,8 +114,12 @@ internal sealed class AgentFrameworkAiTechnicalAgentBridge(
     private IAgentFrameworkWorkspaceService OrganizationWorkspace()
         => workspaceFactory.GetWorkspaceService(workspaceFactory.GetOrganizationScope());
 
-    private async Task SynchronizeAsync(IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken) {
+    private async Task SynchronizeAsync(IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken,
+        AgentExecutionActivityWorkspaceIdentity? expectedWorkspace = null) {
         var snapshot = await workspace.LoadCatalogSnapshotAsync(cancellationToken);
+        if (expectedWorkspace is not null && snapshot.Workspace != expectedWorkspace) {
+            throw new InvalidOperationException("The technical projection refresh belongs to a different workspace context.");
+        }
         if (snapshot.Workspace.WorkspaceScope != workspaceFactory.GetOrganizationScope() ||
             snapshot.Snapshot.Revision != snapshot.Snapshot.Catalog.CatalogDataRevision) {
             throw new InvalidOperationException("The workspace returned an inconsistent organization catalog snapshot.");

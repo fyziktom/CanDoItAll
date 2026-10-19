@@ -163,19 +163,25 @@ public sealed class AgentDecisionDataPolicyOwnerIntegrationTests {
     });
 
     [Fact]
-    public Task Provisioning_and_package_receipts_hash_the_real_persisted_definition_with_owner_policy() => RunAsync(async fixture => {
-        var service = new AgentExternalProvisioningService(fixture.Store, new ProviderProfileService());
+    public Task Provisioning_and_package_receipts_bind_the_real_persisted_definition_with_owner_policy() => RunAsync(async fixture => {
+        var service = new AgentExternalProvisioningService(fixture.Store, new ProviderProfileService(), fixture.Workspace, fixture.Generation);
         var create = new AgentExternalProvisioningCommand("policy-fixture", "owned", "create", null,
             new AgentEditorModel { Name = "Provisioned policy fixture", Instructions = "Local test", ConfigurationJson = "{}" });
         var created = await service.UpsertAsync(create, fixture.Token);
         await fixture.SavePolicyAsync(created.AgentId);
+        var stale = await Assert.ThrowsAsync<AgentExternalProvisioningException>(() => service.UpsertAsync(create with {
+            IdempotencyKey = "stale", ExpectedConfigurationVersion = created.ConfigurationVersion
+        }, fixture.Token));
+        Assert.Equal(AgentExternalProvisioningFailureKind.PreconditionFailed, stale.Kind);
+        var refreshed = await service.GetAsync(create.Namespace, create.Key, fixture.Token);
         var changed = await service.UpsertAsync(create with {
-            IdempotencyKey = "replace", ExpectedConfigurationVersion = created.ConfigurationVersion,
+            IdempotencyKey = "replace", ExpectedConfigurationVersion = refreshed.ConfigurationVersion,
             Agent = new AgentEditorModel { Name = "Provisioned replacement", Instructions = "Changed", ConfigurationJson = "{\"opaque\":1}" }
         }, fixture.Token);
         var actual = (await fixture.CatalogAsync()).Agents.Single(agent => agent.Id == created.AgentId);
         Assert.Equal(Policy(), AgentDecisionDataPolicyMetadata.Read(actual.ConfigurationJson));
-        Assert.Equal(AgentConfigurationVersion.Create(actual), changed.ConfigurationVersion);
+        Assert.Equal((await service.GetAsync(create.Namespace, create.Key, fixture.Token)).ConfigurationVersion, changed.ConfigurationVersion);
+        Assert.NotEqual(refreshed.ConfigurationVersion, changed.ConfigurationVersion);
         var imported = new AgentImportResult(actual with { Name = "Package replacement", ConfigurationJson = "{}" }, [], [], [], [], [], []) {
             PackageSha256 = new string('A', 64), PackageSchemaVersion = "1.0"
         };
@@ -224,17 +230,18 @@ public sealed class AgentDecisionDataPolicyOwnerIntegrationTests {
 
     [Fact]
     public Task Concurrent_policy_change_refuses_a_prepared_provisioning_receipt_without_returning_its_configuration_version() => RunAsync(async fixture => {
-        var service = new AgentExternalProvisioningService(fixture.Store, new ProviderProfileService());
+        var service = new AgentExternalProvisioningService(fixture.Store, new ProviderProfileService(), fixture.Workspace, fixture.Generation);
         var create = new AgentExternalProvisioningCommand("policy-race", "owned", "create-race", null,
             new AgentEditorModel { Name = "Provisioning race", ConfigurationJson = "{}" });
         var created = await service.UpsertAsync(create, fixture.Token);
         await fixture.SavePolicyAsync(created.AgentId);
+        var refreshed = await service.GetAsync(create.Namespace, create.Key, fixture.Token);
         var blocker = Fixture.GuardAgentId;
         Assert.True(string.CompareOrdinal(blocker.ToString("N"), created.AgentId.ToString("N")) < 0);
         await fixture.HoldAgentAsync(blocker);
         using var wait = new KeyWait();
         var pending = fixture.Track(service.UpsertAsync(create with {
-            IdempotencyKey = "refused-provision", ExpectedConfigurationVersion = created.ConfigurationVersion,
+            IdempotencyKey = "refused-provision", ExpectedConfigurationVersion = refreshed.ConfigurationVersion,
             Agent = new AgentEditorModel { Name = "Refused provisioning target", ConfigurationJson = "{}" }
         }, fixture.Token));
         await wait.Entered.Task.WaitAsync(fixture.Token);
