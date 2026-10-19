@@ -27,6 +27,9 @@ public sealed class AgentChatSession(
     public AgentDefinition? Agent { get; private set; }
     public ChatAgentWorkspaceSnapshot? Workspace { get; private set; }
     public AgentEffectContinuation? EffectContinuation { get; private set; }
+    public AgentPlanningReview? PlanningReview { get; private set; }
+    public bool PlanningReviewOpen { get; private set; }
+    public bool PlanningActionUnconfirmed { get; private set; }
     public AgentHistoricalReceiptReviewRequest? HistoricalReceiptReference { get; private set; }
     public ImmutableArray<AgentDefinition> Agents { get; private set; } = [];
     public ImmutableArray<ProviderProfile> Providers { get; private set; } = [];
@@ -44,6 +47,24 @@ public sealed class AgentChatSession(
 
     public bool MatchesAccepted(Guid? agentId, Guid? sessionId) => IsCurrent(Generation) && Agent?.Id == agentId
         && Workspace is not null && Workspace.SelectedSessionId == sessionId;
+
+    public void SetPlanningReviewOpen(AgentPlanningDecisionExpectation expected, bool open) {
+        if (IsCurrent(Generation) && PlanningReview?.Expected == expected) {
+            PlanningReviewOpen = open;
+        }
+    }
+
+    public bool CanApplyPlanningAction(AgentPlanningActionRequest request)
+        => IsCurrent(Generation) && PlanningReviewOpen && !PlanningActionUnconfirmed && PlanningReview is { } review &&
+            review.Expected == request.Expected && review.ChatSessionId == request.ChatSessionId &&
+            review.AvailableActions.Contains(request.Action) && (request.Action != AgentPlanningAction.Approve ||
+                review.Publication is { } publication && publication.Binding == request.Binding && publication.ApprovalId == request.ApprovalId);
+
+    public void MarkPlanningActionUnconfirmed(long generation) {
+        if (IsCurrent(generation)) {
+            PlanningActionUnconfirmed = true;
+        }
+    }
 
     public async Task<bool> LoadAsync(Guid? agentId, Guid? sessionId, bool focused,
         AgentDefinition? preferredAgent = null, bool refreshCatalog = true, Guid? runId = null,
@@ -63,6 +84,9 @@ public sealed class AgentChatSession(
         Focused = focused;
         ErrorMessage = "";
         HistoricalReceiptReference = null;
+        PlanningReview = null;
+        PlanningReviewOpen = false;
+        PlanningActionUnconfirmed = false;
         if (selectionChanged) {
             ClearWorkspace(clearAgent: agentChanged);
         }
@@ -124,6 +148,12 @@ public sealed class AgentChatSession(
                     Revision++;
                     return false;
                 }
+                if (detail.PlanningReview is { } review && (review.Expected.ExecutionRunId != detail.Run.Id ||
+                        review.ChatSessionId != detail.Run.ChatSessionId || review.Expected.RunRevision != detail.Run.Revision)) {
+                    ErrorMessage = "The planning review does not match this execution. Refresh to read its current state.";
+                    Revision++;
+                    return false;
+                }
                 nextWorkspace = CopyWorkspace(nextWorkspace with {
                     SelectedRun = detail.Run,
                     SelectedSession = detail.ChatSession
@@ -133,6 +163,7 @@ public sealed class AgentChatSession(
             AcceptAgent(nextAgent);
             Workspace = nextWorkspace;
             EffectContinuation = detail?.EffectContinuation;
+            PlanningReview = detail?.PlanningReview;
             ExecutionLog = detail?.ExecutionLog.ToImmutableArray() ?? [];
             Metrics = detail?.Metrics.ToImmutableArray() ?? [];
             Revision++;
@@ -192,6 +223,8 @@ public sealed class AgentChatSession(
                 AcceptAgent(Agents.FirstOrDefault(agent => agent.Id == current.Id));
                 if (Agent is null) {
                     Workspace = null;
+                    PlanningReview = null;
+                    PlanningReviewOpen = false;
                     HistoricalReceiptReference = null;
                     ExecutionLog = [];
                     Metrics = [];
@@ -245,6 +278,9 @@ public sealed class AgentChatSession(
         }
         Workspace = null;
         EffectContinuation = null;
+        PlanningReview = null;
+        PlanningReviewOpen = false;
+        PlanningActionUnconfirmed = false;
         HistoricalReceiptReference = null;
         ExecutionLog = [];
         Metrics = [];
@@ -280,6 +316,8 @@ public sealed class AgentChatSession(
             return;
         }
         disposed = true;
+        PlanningReview = null;
+        PlanningReviewOpen = false;
         HistoricalReceiptReference = null;
         Generation++;
         targetLifetime.Cancel();

@@ -1,6 +1,7 @@
 @using CanDoItAll.Modules.Prompts.Components
 @using CanDoItAll.AgentFramework.UI.Chat
 <AgentChatRecoverySurface State="ActionPresentation" Intent="HandleActionIntentAsync" />
+<AgentChatPlanningSurface State="ActionPresentation" Intent="HandleActionIntentAsync" />
 @if (submissionNotificationFailure is not null) {
     <Alert AlertStyle="AlertStyle.Warning">The retained submission list could not be refreshed or logged. Its copies remain available in this session.</Alert>
 }
@@ -10,6 +11,9 @@
             <TextBlock Value="@(submission.State == AgentChatSubmissionState.NotSent ? "Prompt not sent" : "Submission outcome unconfirmed")" />
             <TextBlock Value="@($"Original Agent: {submission.AgentId:D}; thread: {submission.SessionId?.ToString("D") ?? "new thread"}; profile generation: {submission.ProfileGeneration.Value}.")" />
             <TextBlock Value="@submission.RequestPrompt" data-testid="agents-chat-retained-content" />
+            @if (submission.PlanningOwner is not null) {
+                <TextBlock Value="Submitted purpose: plan project tasks for review." />
+            }
             <TextBlock Value="This copy is retained only for this session. Restoring text does not resend it or reuse its execution permissions." />
             <Button Text="Restore draft" Icon="restore" ButtonStyle="ButtonStyle.Secondary"
                     Disabled="@(!CanRestoreSubmission(submission))" Click="@(() => RestoreSubmission(submission))"
@@ -53,6 +57,11 @@
                             SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
             <ComposerActions>
                 @{ var composerOwner = chatSession.Generation; }
+                <Button Text="Plan project tasks" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                        Disabled="@(IsChatInteractionBusy || BlocksNewMessage || selectedAgentId is null || draftAttachmentPaths.Count > 0)"
+                        title="Uses the current Project Structure context. Review is required before publication; attachments are not supported."
+                        Click="@(() => chatSession.IsCurrent(composerOwner) ? SendMessageCoreAsync(AgentPlanningOwner.ProjectTaskPlan) : Task.CompletedTask)"
+                        data-testid="agents-chat-plan-tasks" />
                 <PromptGalleryChatComposerButton Provider="@SelectedAgentProviderKind"
                                                  Model="@selectedAgent?.Model"
                                                  TargetKey="@composerOwner"

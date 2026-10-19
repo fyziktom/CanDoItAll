@@ -7377,7 +7377,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "sha256_lf": "b969f2411219543b6416959762755c6e1bd789499c57550ec2d7bb08e894c32c",
+      "sha256_lf": "f33f4ec8f61fdcf29be87f58698658ceb87c86bbfdd2ed1d13d4712dc02a7a17",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",
@@ -9793,7 +9793,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
-      "sha256_lf": "c2af38c1ad157d9c852eee8e371128a13c27a94d393caf70397d1dc836ca4b75",
+      "sha256_lf": "ccb7e5afca10560980e6e3e28ca40ae70472be9a8aeeda77745583fe0c68f2f5",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel",
@@ -9805,9 +9805,10 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor"
       ],
       "native_owner": "Native conversation selection, durable runs, cancel/recover and transcript reads; ChatWorkspacePanel and AgentChatActionsSurface render",
-      "visual_owner": "CanDoItAll.AgentFramework.UI/Chat/AgentChatActionsSurface; existing native chat orchestration",
+      "visual_owner": "CanDoItAll.AgentFramework.UI/Chat/AgentChatActionsSurface; existing native chat orchestration, AgentChatPlanningSurface",
       "descendants": [
         "AgentChatActionsSurface",
+        "AgentChatPlanningSurface",
         "AgentChatRecoverySurface",
         "ChatWorkspacePanel",
         "PromptGalleryChatComposerButton"
@@ -9820,7 +9821,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "a2306da64d118e3c71dedefeb6a87c4878444c72b9b55d1b92bbedf8cbcbef64",
+      "sha256_lf": "9798fa60ce4813d4eafa85566caa2b8951ffb71abfee10fcc4c60233514eb443",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -16720,6 +16721,28 @@
       "scenario": "CanDoItAll.AgentFramework.UiSandbox",
       "evidence": "CanDoItAll.AgentFramework.UiSandbox",
       "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+    },
+    {
+      "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/PlanningReviewSpecimen.razor",
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/PlanningReviewSpecimen.razor",
+      "sha256_lf": "6f6d15f82be29be51a439eb38830f70ac6d7be350da305767047c07d6752af08",
+      "kind": "RAZOR",
+      "role": "SCENARIO",
+      "type": "CanDoItAll.AgentFramework.UiSandbox.Components.PlanningReviewSpecimen",
+      "project": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "/historical-receipts"
+      ],
+      "native_owner": "Deterministic scenario host only",
+      "visual_owner": "AgentChatPlanningSurface",
+      "descendants": [
+        "AgentChatPlanningSurface"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UiSandbox",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Backend-free ready, maximum task list, unconfirmed and changed-basis planning scenario."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/Routes.razor",
@@ -25474,6 +25497,27 @@
       "scenario": "CanDoItAll.AgentFramework.UiSandbox",
       "evidence": "CanDoItAll.AgentFramework.UI",
       "rationale": "Immutable sanitized page values plus origin-bound read intents. Existing Alert, Stack, TextBlock and Button contracts; no injected service, CSS or authority dependency. Scenario source: src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor. Source-only two host Facts in AgentChatPanelResponsivenessTests.HistoricalReview.cs; runtime and visual proof pending."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatPlanningSurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatPlanningSurface.razor",
+      "sha256_lf": "a4c26a6743db7bd5269e435d31670590761e45114d9c713e90dc40aa10a431b4",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Chat.AgentChatPlanningSurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+        "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/PlanningReviewSpecimen.razor"
+      ],
+      "native_owner": "Callers above own effects and authority",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Pure immutable planning review and exact origin-bound action intents. Existing session owns reads and review state; activity orchestrator owns admission. Controlled shared dialog scrolls full escaped proposal with persistent action footer; no injected service or new project dependency."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",

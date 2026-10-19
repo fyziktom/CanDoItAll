@@ -10,8 +10,10 @@ namespace CanDoItAll.Tests.Playwright;
 [Trait("Category", "Playwright")]
 [Trait("Category", "HostPlatform")]
 public sealed class AgentChatSubmissionBrowserTests {
-    [Fact]
-    public async Task Native_chat_retains_original_submissions_across_typing_navigation_and_unconfirmed_outcomes() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_chat_retains_original_submissions_across_typing_navigation_and_unconfirmed_outcomes(bool planning) {
         AgentChatSubmissionBrowserHost? host = null;
         IPlaywright? playwright = null;
         IBrowser? browser = null;
@@ -36,7 +38,7 @@ public sealed class AgentChatSubmissionBrowserTests {
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
             await OpenThreadAsync(host.OriginalThread);
             var draft = page.GetByTestId("chat-prompt-input");
-            var send = page.GetByTestId("chat-send-button");
+            var send = page.GetByTestId(planning ? "agents-chat-plan-tasks" : "chat-send-button");
             var retained = page.GetByTestId("agents-chat-retained-submission");
             var restore = page.GetByTestId("agents-chat-restore-submission");
 
@@ -150,6 +152,7 @@ public sealed class AgentChatSubmissionBrowserTests {
                 Assert.Equal(host.AgentId, attempt.Request.AgentId);
                 Assert.Equal(host.OriginalThread.Id, attempt.Request.ChatSessionId);
                 Assert.Equal(text, attempt.Request.Prompt);
+                Assert.Equal(planning ? AgentPlanningOwner.ProjectTaskPlan : (AgentPlanningOwner?)null, attempt.Request.PlanningOwner);
                 await Assertions.Expect(draft).ToHaveValueAsync("");
                 return attempt;
             }
@@ -166,12 +169,13 @@ public sealed class AgentChatSubmissionBrowserTests {
                 Assert.Equal(host.OriginalThread.Id, item.SessionId);
                 Assert.Equal(text, item.Draft);
                 Assert.Equal(attempt.Request.Prompt, item.RequestPrompt);
+                Assert.Equal(attempt.Request.PlanningOwner, item.PlanningOwner);
                 Assert.NotNull(item.Stream);
                 Assert.Equal(attempt.Stream, item.Stream);
                 Assert.Equal(item.ProfileGeneration, item.Stream.DatabaseProfileGeneration);
                 Assert.Equal(sends, host.Control.SendCount);
                 evidence.Add(new { item.Id, item.AgentId, item.SessionId, item.State, item.Draft, item.RequestPrompt,
-                    item.ProfileGeneration, item.Stream, Sends = sends });
+                    item.ProfileGeneration, item.Stream, item.PlanningOwner, Sends = sends });
             }
             async Task ShotAsync(string name) {
                 Assert.False(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth > document.documentElement.clientWidth"));
@@ -187,7 +191,7 @@ public sealed class AgentChatSubmissionBrowserTests {
                     await CleanupAsync(() => page.ScreenshotAsync(new() { Path = Path.Combine(host.Evidence, "failure.png"), Timeout = 5_000 }));
                 }
                 await CleanupAsync(() => File.WriteAllTextAsync(Path.Combine(host.Evidence, "evidence.json"), JsonSerializer.Serialize(new {
-                    Passed = passed, Viewport = "1920x1080@1", ControlledBoundary = "IAgentChatExecutionOrchestrator",
+                    Passed = passed, Planning = planning, Viewport = "1920x1080@1", ControlledBoundary = "IAgentChatExecutionOrchestrator",
                     NativePanelAndRetention = true, RuntimeAdmissionProof = false, FullReloadPersistenceClaimed = false,
                     SendCount = host.Control.SendCount, Observations = evidence, Errors = errors.ToArray()
                 })));

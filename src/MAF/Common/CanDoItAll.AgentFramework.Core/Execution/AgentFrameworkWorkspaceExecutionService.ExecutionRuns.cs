@@ -294,7 +294,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 ? AgentExecutionActivityPhase.AwaitingApproval
                 : AgentExecutionActivityPhase.PersistingResult, message);
             await AppendExecutionLogAsync(saved.Id, saved.AgentId, saved.ChatSessionId, saved.State,
-                "Planning", message, settlement.Token);
+                saved.State == ExecutionState.WaitingOnTool ? AgentExecutionActivityRuntimeProgressPolicy.ApprovalPhase : "Planning",
+                message, settlement.Token);
             TerminalizePersistedActivity(operation, saved.State, runOutcome: saved.Outcome);
             return await GetExecutionRunDetailAsync(saved.Id, settlement.Token);
         });

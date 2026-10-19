@@ -28,6 +28,36 @@ public sealed class AgentChatExecutionOrchestrator(
     private const string CancelledMessage = "The agent operation was cancelled.";
     private const string FailedMessage = "The agent operation failed.";
 
+    public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
+        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        ValidateAgentId(agentId);
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        var operation = AdmitOperation(agentId, request.ChatSessionId, "Planning action accepted.");
+        return (operation.StreamId, ApplyPlanningActionAsync(operation, request, cancellationToken));
+    }
+
+    private async Task<ExecutionRunDetail> ApplyPlanningActionAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken) {
+        using (operation) {
+            try {
+                operation.Report(AgentExecutionActivityPhase.ResolvingSession, "Loading the original planning decision.");
+                await Task.Yield();
+                var result = await workspaceExecutionService.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken)
+                    .ConfigureAwait(false);
+                EnsureTerminalized(operation);
+                await PublishCompletionAsync(AgentChatContextInvocationFactory.CreateCompletionNotification(result.Run)).ConfigureAwait(false);
+                return result;
+            } catch (OperationCanceledException) {
+                TerminalizeCancellation(operation);
+                throw;
+            } catch {
+                TerminalizeFailure(operation);
+                throw;
+            }
+        }
+    }
+
     public Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
         CancellationToken cancellationToken = default) {
         AgentHistoricalReceiptReviewService.RequireInitialized(historicalRuntimeState);
@@ -193,7 +223,8 @@ public sealed class AgentChatExecutionOrchestrator(
                             operation.StreamId.OperationId,
                             operation.StreamId.DatabaseProfileGeneration,
                             behavior,
-                            conversationKey),
+                            conversationKey,
+                            planningOwner),
                         cancellationToken)
                     .ConfigureAwait(false);
                 if (capture.Context is { } context)
@@ -207,14 +238,13 @@ public sealed class AgentChatExecutionOrchestrator(
                     AgentExecutionActivityPhase.PreparingInput,
                     PreparingInputMessage);
                 var invocation = capture.Invocation;
-                var options = invocation.Options with { PlanningOwner = planningOwner };
                 var result = await workspaceExecutionService
                     .SendMessageWithinOperationAsync(
                         operation,
                         agentId,
                         chatSessionId,
                         invocation.Prompt,
-                        options,
+                        invocation.Options,
                         cancellationToken,
                         attachmentPaths)
                     .ConfigureAwait(false);

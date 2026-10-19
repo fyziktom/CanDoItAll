@@ -219,7 +219,7 @@
     }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
-        => IsBusy ? [] : ActiveRun?.PendingApprovals ?? [];
+        => IsBusy || ActiveRun?.ToolAdmission?.PlanningDecision is not null ? [] : ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 

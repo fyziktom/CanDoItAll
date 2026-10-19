@@ -36,7 +36,18 @@ pass 123 selected cases. The [initial product execution path](validation/2026-10
 passes 102 selected cases after the retained fixture/transport repairs. Saved product
 actions now pass all ten registered product cases plus 15 activity coordinator cases.
 The earlier failed candidates and subsequent repairs remain recorded; user-facing
-controls and the wider end-to-end gates remain open.
+controls are covered by the subsequent native checkpoint; wider end-to-end gates remain open.
+
+The [native planning review checkpoint](validation/2026-10-19-native-planning-review.md)
+passes all 130 focused cases. The native chat now offers explicit project-task planning,
+exact-generation review, refresh, cancellation and publication with draft preservation.
+The real native browser journey now also passes after capture-purpose and source-refresh
+repairs: another actor pauses the old plan, refresh produces generation two, publication
+occurs once and the canvas updates while later typing survives. The final repair passes
+26/26; broader focused proof and failed predecessors are retained in that record.
+First review took about 6.1 seconds, leaving latency qualification open. Agent policy
+editing/API and Process/Workflow integration remain next. The signed review/API checkpoint
+is `59b6f1dd4`; SPA remains isolated on its existing branch.
 
 P03 now includes the lifecycle owner/migration, native and HTTP retained operations,
 creation cleanup and governed Agent/Process hierarchy and definition editing. Six

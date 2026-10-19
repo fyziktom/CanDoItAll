@@ -15,6 +15,51 @@ public sealed class AgentTurnContextCaptureServiceTests
     private static readonly Guid ProfileId = Guid.NewGuid();
     private static readonly Guid LifetimeId = Guid.NewGuid();
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Planning_captures_original_authority_without_using_expired_ui_material(bool planning) {
+        var projectScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
+        var original = CreateProjectStructureSnapshot(projectScope);
+        var published = new AgentChatContextRegistry(TimeProvider.System);
+        var capturedAt = DateTimeOffset.UtcNow.AddMinutes(-10);
+        using var publication = published.PublishModuleContext(new(original.Scope, [new(original.Fragments[0], [new(
+            new("test.material"), new("content"), new("coverage"), new(1), new("freshness"),
+            capturedAt, capturedAt.AddMinutes(1), new UnusedMaterial())])]));
+        var registry = new FixedContextRegistry(published.Capture());
+        var resolver = new RecordingAuthorityResolver(request => CreateAuthority(request, projectScope, mutationAllowed: true));
+        var command = CreateCommand(Guid.NewGuid()) with { PlanningOwner = planning ? AgentPlanningOwner.ProjectTaskPlan : null };
+        var service = CreateService(registry, resolver);
+
+        if (!planning) {
+            await Assert.ThrowsAsync<AgentChatContextAttachmentUnavailableException>(() => service.CaptureAsync(command));
+            return;
+        }
+
+        var result = await service.CaptureAsync(command);
+        Assert.Equal(command.Prompt, result.Invocation.Prompt);
+        Assert.Equal(command.PlanningOwner, result.Invocation.Options.PlanningOwner);
+        Assert.Null(result.Invocation.Options.TransientContext);
+        var reference = Assert.IsType<AgentTurnContextReference>(result.TurnReference);
+        Assert.Equal(original.Scope.Source.Id, reference.SourceId);
+        Assert.Equal(AgentTurnContextMetadata.EmptyModelContextDigest, reference.ModelContextDigest);
+        var metadata = result.Invocation.Options.Context!.MetadataJson;
+        var authority = Assert.IsType<AgentExecutionGovernanceSnapshot>(AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(metadata));
+        Assert.Equal(original.Scope.ObservedProjectLifetime, authority.SourceProjectLifetime);
+        Assert.Equal(projectScope, authority.WorkspaceScope);
+        Assert.True(authority.MutationAllowed);
+        Assert.DoesNotContain(original.Fragments[0].Content, metadata, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(metadata);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.TransientContextDigestMetadataKey, out _));
+    }
+
+    [Fact]
+    public async Task Unknown_planning_selection_fails_instead_of_becoming_ordinary_chat() {
+        var service = CreateService(new FixedContextRegistry(null), new RecordingAuthorityResolver(_ => throw new InvalidOperationException()));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.CaptureAsync(
+            CreateCommand(Guid.NewGuid()) with { PlanningOwner = (AgentPlanningOwner)999 }));
+    }
+
     [Fact]
     public async Task Authorized_capture_binds_turn_reference_authority_and_digest()
     {
@@ -89,9 +134,10 @@ public sealed class AgentTurnContextCaptureServiceTests
             .HasFlag(AgentChatContextPermission.Mutate));
     }
 
-    [Fact]
-    public async Task Forged_workspace_scope_fails_before_invocation_is_built()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Forged_workspace_scope_fails_before_invocation_is_built(bool planning) {
         var publishedScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
         var canonicalScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
         var registry = new FixedContextRegistry(CreateProjectStructureSnapshot(publishedScope));
@@ -102,12 +148,13 @@ public sealed class AgentTurnContextCaptureServiceTests
         var service = CreateService(registry, resolver);
 
         await Assert.ThrowsAsync<AgentExecutionAuthorityMismatchException>(
-            () => service.CaptureAsync(CreateCommand(Guid.NewGuid())));
+            () => service.CaptureAsync(CreateCommand(Guid.NewGuid()) with { PlanningOwner = planning ? AgentPlanningOwner.ProjectTaskPlan : null }));
     }
 
-    [Fact]
-    public async Task Profile_generation_change_during_capture_fails_admission()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Profile_generation_change_during_capture_fails_admission(bool planning) {
         var projectScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
         var registry = new FixedContextRegistry(CreateProjectStructureSnapshot(projectScope));
         var resolver = new RecordingAuthorityResolver(request => CreateAuthority(
@@ -121,28 +168,33 @@ public sealed class AgentTurnContextCaptureServiceTests
             TimeProvider.System);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CaptureAsync(CreateCommand(Guid.NewGuid())));
+            () => service.CaptureAsync(CreateCommand(Guid.NewGuid()) with { PlanningOwner = planning ? AgentPlanningOwner.ProjectTaskPlan : null }));
 
         Assert.Contains("database profile changed", exception.Message, StringComparison.Ordinal);
         Assert.Null(resolver.LastRequest);
     }
 
-    [Fact]
-    public async Task Detached_capture_produces_no_turn_reference_or_authority()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Detached_capture_produces_no_turn_reference_or_authority(bool planning) {
         var registry = new FixedContextRegistry(context: null);
         var resolver = new RecordingAuthorityResolver(_ =>
             throw new InvalidOperationException("The resolver must not run for a detached turn."));
         var service = CreateService(registry, resolver);
 
-        var result = await service.CaptureAsync(CreateCommand(Guid.NewGuid()));
+        var command = CreateCommand(Guid.NewGuid()) with { PlanningOwner = planning ? AgentPlanningOwner.ProjectTaskPlan : null };
+        var result = await service.CaptureAsync(command);
 
         Assert.Null(result.Context);
         Assert.Null(result.TurnReference);
         Assert.Null(result.Authority);
         Assert.Null(result.Invocation.Options.TransientContext);
         Assert.Null(resolver.LastRequest);
+        Assert.Equal(command.PlanningOwner, result.Invocation.Options.PlanningOwner);
     }
+
+    private sealed record UnusedMaterial : IAgentChatContextAttachment;
 
     private static AgentTurnContextCaptureService CreateService(
         IAgentChatContextRegistry registry,

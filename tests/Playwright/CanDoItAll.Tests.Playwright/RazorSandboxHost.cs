@@ -8,7 +8,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Playwright;
 
-internal enum RazorSandboxTarget { AgentEditor, Application }
+internal enum RazorSandboxTarget { AgentEditor, Application, AgentChat }
 
 internal sealed class RazorSandboxHost(RazorSandboxTarget target = RazorSandboxTarget.AgentEditor) : IAsyncDisposable {
     private readonly CanDoItAllTestEnvironment environment = CanDoItAllTestEnvironment.Create("agent-editor-sandbox");
@@ -16,6 +16,7 @@ internal sealed class RazorSandboxHost(RazorSandboxTarget target = RazorSandboxT
     private readonly string projectName = target switch {
         RazorSandboxTarget.AgentEditor => "CanDoItAll.AgentFramework.Editor.UiSandbox",
         RazorSandboxTarget.Application => "CanDoItAll.Application.UiSandbox",
+        RazorSandboxTarget.AgentChat => "CanDoItAll.AgentFramework.UiSandbox",
         _ => throw new ArgumentOutOfRangeException(nameof(target))
     };
     private readonly string evidence = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "sandbox-hosts", target.ToString(), Guid.NewGuid().ToString("N"));
@@ -43,7 +44,8 @@ internal sealed class RazorSandboxHost(RazorSandboxTarget target = RazorSandboxT
             await File.WriteAllTextAsync(Path.Combine(evidence, "sandbox-publish.log"), text);
             Assert.Equal(0, publishing.ExitCode);
         }
-        var binaryRoot = published ? directory : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0");
+        var outputRoot = target == RazorSandboxTarget.AgentChat ? Path.Combine(root, "bin", "Parity") : Path.Combine(root, "bin");
+        var binaryRoot = published ? directory : Path.Combine(outputRoot, PlaywrightTestHostPaths.BuildConfiguration, "net10.0");
         var hashes = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(binaryRoot, "*", SearchOption.AllDirectories)
                      .Where(file => Path.GetExtension(file) is ".dll" or ".pdb" or ".css" or ".woff2")) {
@@ -59,8 +61,7 @@ internal sealed class RazorSandboxHost(RazorSandboxTarget target = RazorSandboxT
         BaseUrl = $"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}";
         listener.Stop();
         var start = StartInfo(directory);
-        start.ArgumentList.Add(published ? Path.Combine(directory, projectName + ".dll")
-            : Path.Combine(root, "bin", PlaywrightTestHostPaths.BuildConfiguration, "net10.0", projectName + ".dll"));
+        start.ArgumentList.Add(Path.Combine(binaryRoot, projectName + ".dll"));
         start.ArgumentList.Add("--urls");
         start.ArgumentList.Add(BaseUrl);
         start.Environment["ASPNETCORE_ENVIRONMENT"] = published ? "Production" : "Development";

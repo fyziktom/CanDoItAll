@@ -9,6 +9,61 @@ using ProviderService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IPr
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSessionTests {
+    [Fact]
+    public async Task Planning_review_requires_the_open_exact_view_and_is_cleared_before_a_same_target_failed_read() {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        var detail = CreatePlanningDetail(agent, chat);
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, chat, detail.Run));
+        reads.Detail = (_, _) => Task.FromResult(detail);
+        using var session = Session(service);
+        Assert.True(await session.LoadAsync(agent.Id, chat.Id, false));
+        var review = detail.PlanningReview!;
+        var request = PlanningAction(review, AgentPlanningAction.Approve);
+        Assert.False(session.CanApplyPlanningAction(request));
+        session.SetPlanningReviewOpen(review.Expected, true);
+        Assert.True(session.CanApplyPlanningAction(request));
+        Assert.False(session.CanApplyPlanningAction(new(AgentPlanningAction.Approve, chat.Id, review.Expected,
+            request.Binding, "another-approval")));
+        Assert.False(session.CanApplyPlanningAction(new(AgentPlanningAction.Cancel, Guid.NewGuid(), review.Expected)));
+        session.MarkPlanningActionUnconfirmed(session.Generation);
+        Assert.False(session.CanApplyPlanningAction(request));
+        var pending = new TaskCompletionSource<ExecutionRunDetail>(TaskCreationOptions.RunContinuationsAsynchronously);
+        reads.Detail = (_, _) => pending.Task;
+        var reload = session.LoadAsync(agent.Id, chat.Id, false);
+        Assert.Null(session.PlanningReview);
+        Assert.False(session.PlanningReviewOpen);
+        pending.SetException(new AgentToolReceiptAccessDeniedException());
+        Assert.False(await reload);
+        Assert.Null(session.PlanningReview);
+        Assert.False(session.CanApplyPlanningAction(request));
+        Assert.NotEmpty(session.ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_foreign_or_stale_planning_projection_is_not_accepted(bool foreignRun) {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        var detail = CreatePlanningDetail(agent, chat);
+        var expected = detail.PlanningReview!.Expected;
+        detail = detail with { PlanningReview = detail.PlanningReview with {
+            Expected = new(foreignRun ? Guid.NewGuid() : expected.ExecutionRunId, foreignRun ? expected.RunRevision : expected.RunRevision + 1,
+                expected.JournalRevision, expected.DecisionId, expected.Generation)
+        } };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, chat, detail.Run));
+        reads.Detail = (_, _) => Task.FromResult(detail);
+        using var session = Session(service);
+        Assert.False(await session.LoadAsync(agent.Id, chat.Id, false));
+        Assert.Null(session.PlanningReview);
+        Assert.Contains("does not match", session.ErrorMessage, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(ProfileReadStage.Catalog)]
     [InlineData(ProfileReadStage.Workspace)]

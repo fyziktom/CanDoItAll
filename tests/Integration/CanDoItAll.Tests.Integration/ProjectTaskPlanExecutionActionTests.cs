@@ -24,6 +24,7 @@ public sealed class ProjectTaskPlanExecutionActionTests {
         Assert.Equal(request.Binding, review.Publication!.Binding);
         Assert.Contains("Review concurrent edits", review.Publication.Content, StringComparison.Ordinal);
         Assert.Contains("Priority: 3", review.Publication.Content, StringComparison.Ordinal);
+        Assert.Contains($"Original project: {fixture.Files.Sql.Project.ProjectId:D}", review.Publication.Content, StringComparison.Ordinal);
         var serializedReview = JsonSerializer.Serialize(review, JsonSerializerOptions.Web);
         Assert.DoesNotContain("originalTarget", serializedReview, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(original.Run.ToolAdmission.Session.Profile.Fingerprint, serializedReview, StringComparison.Ordinal);
@@ -134,6 +135,9 @@ public sealed class ProjectTaskPlanExecutionActionTests {
             Assert.Equal(AgentPlanningGenerationState.PausedBasisChanged, exhausted.Run.ToolAdmission.PlanningDecision.Current.State);
             Assert.Equal(1, exhausted.Run.ToolAdmission.PlanningDecision.AutomaticReplans);
             Assert.Empty(exhausted.Run.PendingApprovals);
+            Assert.Equal(new[] { AgentPlanningAction.Refresh, AgentPlanningAction.Cancel }, exhausted.PlanningReview!.AvailableActions);
+            var latest = exhausted.ExecutionLog.MaxBy(entry => entry.CreatedAtUtc)!;
+            Assert.Equal(AgentExecutionActivityPhase.AwaitingApproval, AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(latest.State, latest.Phase));
             Assert.Equal(2, fixture.Wire.Requests.Count);
             await fixture.Files.Sql.VerifyAsync(2, 2);
         } else {
@@ -143,6 +147,11 @@ public sealed class ProjectTaskPlanExecutionActionTests {
             Assert.Equal(behavior == OnBasisChange.Fail ? RunOutcome.Failed : (RunOutcome?)null, saved.Run.Outcome);
             Assert.Empty(saved.Run.PendingApprovals);
             Assert.Single(fixture.Wire.Requests);
+            if (behavior == OnBasisChange.PauseForReview) {
+                Assert.Equal(new[] { AgentPlanningAction.Refresh, AgentPlanningAction.Cancel }, saved.PlanningReview!.AvailableActions);
+                Assert.Contains(saved.ExecutionLog, entry => entry.State == ExecutionState.WaitingOnTool &&
+                    AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(entry.State, entry.Phase) == AgentExecutionActivityPhase.AwaitingApproval);
+            }
         }
     }
 

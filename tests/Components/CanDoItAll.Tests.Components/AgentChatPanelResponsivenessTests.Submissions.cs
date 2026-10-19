@@ -15,6 +15,45 @@ public sealed partial class AgentChatPanelResponsivenessTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Composer_carries_only_the_explicit_planning_selection_and_retains_its_failed_submission(bool planning) {
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, DeferredWorkspaceProxy>();
+        var reads = (DeferredWorkspaceProxy)(object)service;
+        reads.Service = service;
+        reads.Agents = [agent];
+        reads.InitialWorkspace = CreateWorkspace(agent.Id, session);
+        var orchestration = DispatchProxy.Create<IAgentChatExecutionOrchestrator, CompletedRunOrchestratorProxy>();
+        var writer = (CompletedRunOrchestratorProxy)(object)orchestration;
+        writer.SendCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var context = CreateContext(service, orchestration);
+        var cut = context.Render<AgentChatPanel>(parameters => parameters
+            .Add(component => component.PreferredAgentId, agent.Id)
+            .Add(component => component.PreferredSessionId, session.Id));
+        cut.Find("[data-testid='chat-prompt-input']").Input("Original planning prompt");
+        await cut.Find(planning ? "[data-testid='agents-chat-plan-tasks']" : "[data-testid='chat-send-button']").ClickAsync(new MouseEventArgs());
+        var operation = CaptureSubmittedOperation(cut.Instance);
+        try {
+            await writer.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(planning ? AgentPlanningOwner.ProjectTaskPlan : (AgentPlanningOwner?)null,
+                Assert.Single(writer.SendRequests).PlanningOwner);
+            cut.Find("[data-testid='chat-prompt-input']").Input("Newer draft");
+            writer.SendCompletion.SetException(new IOException("Unconfirmed transport"));
+            await operation.WaitAsync(TimeSpan.FromSeconds(10));
+            var retained = Assert.Single(context.Services.GetRequiredService<AgentChatSubmissionRetention>().Snapshot());
+            Assert.Equal(planning ? AgentPlanningOwner.ProjectTaskPlan : (AgentPlanningOwner?)null, retained.PlanningOwner);
+            Assert.Equal(AgentChatSubmissionState.Unconfirmed, retained.State);
+            Assert.Equal("Newer draft", cut.FindComponent<ChatWorkspacePanel>().Instance.DraftPrompt);
+            Assert.Single(writer.SendRequests);
+        } finally {
+            writer.SendCompletion.TrySetCanceled();
+            await operation.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Definite_admission_conflict_retains_original_attachments_without_overwriting_later_typing(bool laterTyping) {
         var agent = CreateAgent();
         var session = CreateSession(agent.Id);

@@ -4,7 +4,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public static class AgentExecutionActivityRuntimeProgressPolicy
 {
-    private const string ApprovalPhase = "Approval";
+    public const string ApprovalPhase = "Approval";
 
     public static AgentExecutionActivityPhase? ResolvePhase(
         ExecutionState state,

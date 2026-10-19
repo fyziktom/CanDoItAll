@@ -6,6 +6,20 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSubmissionRetentionTests {
     [Fact]
+    public void Planning_purpose_is_retained_with_original_submission_and_never_inferred_for_another_send() {
+        var owner = new AgentChatSubmissionRetention();
+        var agent = Guid.NewGuid();
+        Assert.True(owner.TryReserve(agent, null, null, new(1), "plan", "plan", [], out var planning, AgentPlanningOwner.ProjectTaskPlan));
+        owner.RetainFailure(planning!.Id, definitelyNotSent: true);
+        var failed = Assert.Single(owner.Snapshot());
+        Assert.Equal(AgentPlanningOwner.ProjectTaskPlan, failed.PlanningOwner);
+        Assert.True(owner.TryTakeNotSent(failed, out var restored));
+        Assert.Equal(AgentPlanningOwner.ProjectTaskPlan, restored!.PlanningOwner);
+        Assert.True(owner.TryReserve(agent, null, null, new(1), "ordinary", "ordinary", [], out var ordinary));
+        Assert.Null(ordinary!.PlanningOwner);
+    }
+
+    [Fact]
     public void Retention_freezes_editable_content_and_refuses_capacity_without_evicting_originals() {
         var owner = new AgentChatSubmissionRetention();
         var paths = new List<string> { "uploads/original.png" };

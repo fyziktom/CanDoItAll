@@ -19,7 +19,8 @@ public sealed record AgentChatSubmission(
     string RequestPrompt,
     ImmutableArray<string> AttachmentPaths,
     AgentChatSubmissionState State,
-    AgentExecutionActivityStreamId? Stream = null);
+    AgentExecutionActivityStreamId? Stream = null,
+    AgentPlanningOwner? PlanningOwner = null);
 
 public sealed class AgentChatSubmissionRetention {
     public const int MaximumSubmissions = 16;
@@ -39,10 +40,13 @@ public sealed class AgentChatSubmissionRetention {
 
     public bool TryReserve(Guid agentId, Guid? sessionId, AgentChatHandleId? handleId,
         DatabaseProfileGeneration profileGeneration, string draft, string requestPrompt,
-        IReadOnlyList<string> attachmentPaths, out AgentChatSubmission? submission) {
+        IReadOnlyList<string> attachmentPaths, out AgentChatSubmission? submission, AgentPlanningOwner? planningOwner = null) {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentException.ThrowIfNullOrWhiteSpace(requestPrompt);
         ArgumentNullException.ThrowIfNull(attachmentPaths);
+        if (planningOwner.HasValue && !Enum.IsDefined(planningOwner.Value)) {
+            throw new ArgumentOutOfRangeException(nameof(planningOwner));
+        }
         if (agentId == Guid.Empty || sessionId == Guid.Empty) {
             throw new ArgumentException("The submitted chat target must be valid.");
         }
@@ -61,7 +65,7 @@ public sealed class AgentChatSubmissionRetention {
                 return false;
             }
             submission = new(Guid.NewGuid(), agentId, sessionId, handleId, profileGeneration, draft,
-                requestPrompt, attachmentPaths.ToImmutableArray(), AgentChatSubmissionState.Pending);
+                requestPrompt, attachmentPaths.ToImmutableArray(), AgentChatSubmissionState.Pending, PlanningOwner: planningOwner);
             submissions.Add(submission.Id, submission);
             characters += (int)size;
         }

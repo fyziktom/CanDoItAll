@@ -9,6 +9,88 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed partial class AgentChatExecutionActivityOrchestratorTests
 {
+    [Theory]
+    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, true)]
+    [InlineData(ExecutionState.WaitingOnTool, null, false)]
+    [InlineData(ExecutionState.Completed, RunOutcome.Cancelled, false)]
+    [InlineData(ExecutionState.Failed, RunOutcome.Failed, false)]
+    public async Task Planning_completion_refreshes_only_the_original_confirmed_source(
+        ExecutionState state, RunOutcome? outcome, bool refresh) {
+        var context = CreateContext(blockContextCapture: true);
+        var source = new AgentChatContextSource(new("original-project"), new(Guid.NewGuid().ToString("D")));
+        var scope = new AgentChatContextScope(AgentChatContextScopeId.Create(), source, "Original project",
+            accessMode: AgentChatContextScopeAccessMode.Unrestricted,
+            completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
+        var invocation = AgentChatContextInvocationFactory.Create(new(scope, [], 1, DateTimeOffset.UtcNow),
+            context.AgentId, context.Workspace.SessionId, "Original request", AgentExecutionOperationId.New(), new(1), DateTimeOffset.UtcNow,
+            AgentChatExecutionBehavior.Default, AgentPlanningOwner.ProjectTaskPlan).Options.Context!;
+        context.Workspace.PlanningRun = run => run with {
+            SourceKind = invocation.SourceKind, SourceId = invocation.SourceId, RequestedBy = invocation.RequestedBy,
+            RequestedByKind = invocation.RequestedByKind, MetadataJson = invocation.MetadataJson, State = state, Outcome = outcome
+        };
+        var notifications = new List<AgentChatExecutionCompleted>();
+        using var subscription = context.Notifications.Subscribe(source, value => {
+            notifications.Add(value);
+            return Task.CompletedTask;
+        });
+        var operation = context.Orchestrator.StartPlanningAction(context.AgentId, new(AgentPlanningAction.Cancel,
+            context.Workspace.SessionId, new(context.Workspace.ExecutionRunId, 1, 1, Guid.NewGuid(), 1)));
+        await operation.Completion;
+        Assert.False(context.ContextRegistry.CaptureStarted.IsCompleted);
+        if (refresh) {
+            var notification = Assert.Single(notifications);
+            Assert.Equal(source, notification.Source);
+            Assert.Equal(scope.Id, notification.ScopeId);
+            Assert.Equal(context.Workspace.ExecutionRunId, notification.ExecutionRunId);
+        } else {
+            Assert.Empty(notifications);
+        }
+    }
+
+    [Theory]
+    [InlineData(AgentPlanningAction.Approve)]
+    [InlineData(AgentPlanningAction.Refresh)]
+    [InlineData(AgentPlanningAction.Cancel)]
+    public async Task Saved_planning_action_keeps_exact_request_without_recapturing_context(AgentPlanningAction action) {
+        var context = CreateContext(blockContextCapture: true);
+        var binding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), 1,
+            AgentToolProtocolEnvelope.Create("test", 1, "{}").Digest);
+        var request = new AgentPlanningActionRequest(action, context.Workspace.SessionId,
+            new(context.Workspace.ExecutionRunId, 9007199254740993, 9, Guid.NewGuid(), 2),
+            action == AgentPlanningAction.Approve ? binding : null, action == AgentPlanningAction.Approve ? "original-approval" : null);
+        context.Workspace.PlanningRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operation = context.Orchestrator.StartPlanningAction(context.AgentId, request);
+        await context.Workspace.PlanningStarted.Task.WaitAsync(TestContext.DefaultTimeout);
+        Assert.False(operation.Completion.IsCompleted);
+        var call = Assert.Single(context.Workspace.PlanningCalls);
+        Assert.Same(request, call.Request);
+        Assert.Equal(context.AgentId, call.Operation.AgentId);
+        Assert.Equal(request.ChatSessionId, call.Operation.ChatSessionId);
+        Assert.Equal(operation.StreamId, call.Operation.StreamId);
+        context.Workspace.PlanningRelease.SetResult();
+        var result = await operation.Completion.WaitAsync(TestContext.DefaultTimeout);
+        Assert.Equal(request.Expected.ExecutionRunId, result.Run.Id);
+        Assert.False(context.ContextRegistry.CaptureStarted.IsCompleted);
+        Assert.Empty(context.Workspace.SendCalls);
+        Assert.Empty(context.Workspace.ApprovalCalls);
+        Assert.Equal(AgentExecutionActivityPhase.Completed, (await ReadEventsAsync(context.Coordinator, operation.StreamId))[^1].Event.Phase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Saved_planning_failure_terminalizes_activity_and_preserves_the_original_failure(bool cancelled) {
+        var context = CreateContext();
+        Exception failure = cancelled ? new OperationCanceledException() : new IOException("planning fixture failure");
+        context.Workspace.PlanningFault = failure;
+        var operation = context.Orchestrator.StartPlanningAction(context.AgentId, new(AgentPlanningAction.Cancel,
+            context.Workspace.SessionId, new(context.Workspace.ExecutionRunId, 1, 1, Guid.NewGuid(), 1)));
+        Assert.Same(failure, await Assert.ThrowsAnyAsync<Exception>(() => operation.Completion));
+        Assert.Equal(cancelled ? AgentExecutionActivityPhase.Cancelled : AgentExecutionActivityPhase.Failed,
+            (await ReadEventsAsync(context.Coordinator, operation.StreamId))[^1].Event.Phase);
+        Assert.False(context.ContextRegistry.CaptureStarted.IsCompleted);
+    }
+
     [Fact]
     public async Task Typed_planning_selection_survives_governed_context_capture() {
         var context = CreateContext();
@@ -18,6 +100,8 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
         await context.Orchestrator.SendMessageAsync(request);
         var call = Assert.Single(context.Workspace.SendCalls);
         Assert.Equal(AgentPlanningOwner.ProjectTaskPlan, call.Options.PlanningOwner);
+        Assert.Null(call.Options.TransientContext);
+        Assert.Equal(request.Prompt, call.Prompt);
         Assert.NotNull(AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(call.Options.Context!.MetadataJson));
         Assert.Equal(call.Operation.StreamId.OperationId, call.Options.InitialActivityOperationId);
     }
@@ -292,11 +376,11 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
             new SandboxAgentExecutionAuthorityResolver(),
             generationSource,
             timeProvider);
+        var notifications = new AgentChatExecutionNotificationHub(NullLogger<AgentChatExecutionNotificationHub>.Instance);
         var orchestrator = new AgentChatExecutionOrchestrator(
             workspace,
             turnContextCaptureService,
-            new AgentChatExecutionNotificationHub(
-                NullLogger<AgentChatExecutionNotificationHub>.Instance),
+            notifications,
             coordinator,
             new TestWorkspaceFactory(workspaceScope),
             new TestDatabaseProfileRuntimeAccessor(profileId),
@@ -306,7 +390,7 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
             coordinator,
             contextRegistry,
             workspace,
-            Guid.NewGuid(), profileId, generationSource);
+            Guid.NewGuid(), profileId, generationSource, notifications);
     }
 
     private static async Task<IReadOnlyList<
@@ -329,7 +413,8 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
         ActivityWorkspaceExecutionService Workspace,
         Guid AgentId,
         Guid ProfileId,
-        RecoveryProfileGenerationSource GenerationSource)
+        RecoveryProfileGenerationSource GenerationSource,
+        AgentChatExecutionNotificationHub Notifications)
     {
         public static TimeSpan DefaultTimeout { get; } = TimeSpan.FromSeconds(10);
     }
@@ -437,6 +522,30 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests
         public List<SendCall> SendCalls { get; } = [];
 
         public List<ApprovalCall> ApprovalCalls { get; } = [];
+
+        public List<(IAgentExecutionActivityOperationLease Operation, AgentPlanningActionRequest Request)> PlanningCalls { get; } = [];
+        public TaskCompletionSource? PlanningRelease { get; set; }
+        public TaskCompletionSource PlanningStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Exception? PlanningFault { get; set; }
+        public Func<ExecutionRunRecord, ExecutionRunRecord>? PlanningRun { get; set; }
+
+        public async Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+            AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+            PlanningCalls.Add((operation, request));
+            PlanningStarted.SetResult();
+            if (PlanningRelease is not null) {
+                await PlanningRelease.Task;
+            }
+            if (PlanningFault is not null) {
+                throw PlanningFault;
+            }
+            BindAndComplete(operation);
+            var now = DateTimeOffset.UnixEpoch;
+            var run = new ExecutionRunRecord(ExecutionRunId, operation.AgentId ?? throw new InvalidOperationException("Unbound planning operation."), SessionId, "Planning", "chat", SessionId.ToString("D"),
+                "test", "", "test", "test", "{}", "Original request", "Recorded", "test", "test", ExecutionState.Completed,
+                RunOutcome.Succeeded, now, now, now, now, "", null, []);
+            return new(PlanningRun?.Invoke(run) ?? run, null, [], []);
+        }
 
         public List<(IAgentExecutionActivityOperationLease Operation, Guid RunId)> RecoveryCalls { get; } = [];
         public Exception? RecoveryFault { get; set; }

@@ -80,7 +80,7 @@ internal sealed class ProjectTaskPlanAgentParticipant(IAgentCatalogReadLeaseStor
     public string DescribePublication(AgentToolSessionObservation original, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding) {
         var planning = original.Planning ?? throw ProjectTaskPlanAgentCodec.Denied("The original planning observation is missing.");
         var command = ProjectTaskPlanAgentCodec.Resolve(planning, original.Session, payload, binding);
-        return string.Join("\n\n", command.Command.Proposal.Tasks.Select((task, index) =>
+        return $"Original project: {command.Target.Project.ProjectId:D}\n\n" + string.Join("\n\n", command.Command.Proposal.Tasks.Select((task, index) =>
             $"{index + 1}. {task.Title}\nDescription: {task.Description}\nNotes: {task.Notes}\nPriority: {task.Priority}"));
     }
 

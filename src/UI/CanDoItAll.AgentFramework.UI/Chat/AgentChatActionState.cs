@@ -12,12 +12,18 @@ public sealed record AgentChatActionState(AgentChatActionOrigin Origin, string? 
     public bool EffectLeaseReleaseUnconfirmed { get; init; }
     public bool EffectActivityFinalizationFailed { get; init; }
     public AgentChatHistoricalReceiptState? HistoricalReceipts { get; init; }
+    public AgentPlanningReview? PlanningReview { get; init; }
+    public bool PlanningReviewOpen { get; init; }
+    public bool PlanningActionUnconfirmed { get; init; }
 }
 
-public enum AgentChatAction { RecoverOriginalRun, CancelPendingRun, NewThread, OpenRuntime, ReviewSavedReceipts, ReadNextSavedReceipts }
+public enum AgentChatAction { RecoverOriginalRun, CancelPendingRun, NewThread, OpenRuntime, ReviewSavedReceipts, ReadNextSavedReceipts,
+    OpenPlanningReview, ClosePlanningReview, ReloadPlanningReview, ApplyPlanningAction }
 
 public sealed record AgentChatActionIntent(AgentChatActionOrigin Origin, AgentChatAction Action) {
     public AgentHistoricalReceiptReviewRequest? HistoricalRequest { get; init; }
+    public AgentPlanningActionRequest? PlanningRequest { get; init; }
+    public AgentPlanningDecisionExpectation? PlanningExpectation { get; init; }
 }
 
 public sealed record AgentImageSelection(long Generation, InputFileChangeEventArgs Files);

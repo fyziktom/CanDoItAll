@@ -6,7 +6,14 @@ Work has resumed. The historical C4 correctness candidate passed 706/706; the ad
 native chat browser proof now passes. Lifecycle owners and retained native/API operations
 are integrated, and six actual Agent/Process restart scenarios pass. SPA remains on its
 own branch named "codex/concurrent-mutations" pending consultation with its maintainer.
-Persisted policy editing does not yet enforce snapshot/refresh/replan across execution.
+The registered ordinary-Agent project-task planning path now captures persisted policy,
+enforces saved decision generations and publication freshness, and supports explicit
+refresh/replan, cancellation and reviewed publication. Native controls pass focused
+component/owner tests and the real browser journey, including a second actor's conflict,
+new-generation publication, preserved typing and automatic source refresh. Agent policy
+editing/API and Process/Workflow producer policy integration remain open. See the
+[native planning proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-native-planning-review.md)
+for scoped counts and the measured 6.1-second first-review latency still requiring analysis.
 Lifecycle, remaining owners, measured performance gaps and cleanup still block E2E closure.
 
 Status: architecture direction reviewed; P01a cleanup and Projects original-state,
