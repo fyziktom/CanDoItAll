@@ -17,7 +17,8 @@ internal static class ProcessDecisionReceiptCodec {
             return null;
         }
         Validate(receipt);
-        var json = JsonSerializer.Serialize(new Document(1, ToDocument(receipt.Command), receipt.Changed, ToDocument(receipt.Current),
+        var json = JsonSerializer.Serialize(new Document(receipt.Command.Material is null ? 1 : 2,
+            ToDocument(receipt.Command) with { Material = receipt.Command.Material }, receipt.Changed, ToDocument(receipt.Current),
             receipt.Previous is { } previous ? ToDocument(previous) : null, receipt.Child is { } child ? ToDocument(child) : null), Options);
         RequireBound(json);
         return json;
@@ -29,10 +30,11 @@ internal static class ProcessDecisionReceiptCodec {
         }
         RequireBound(json);
         var document = JsonSerializer.Deserialize<Document>(json, Options) ?? throw new InvalidDataException("The Process decision receipt is empty.");
-        if (document.Version != 1 || document.Command is null || document.Current is null) {
+        if (document.Version is not (1 or 2) || document.Command is null || document.Current is null ||
+                (document.Version == 2) != (document.Command.Material is not null)) {
             throw new InvalidDataException("The Process decision receipt has an unsupported version or missing command.");
         }
-        var command = FromDocument(document.Command);
+        var command = FromDocument(document.Command) with { Material = document.Command.Material };
         var receipt = new ProcessDecisionReceipt(command, document.Changed, FromDocument(document.Current),
             document.Previous is { } previous ? FromDocument(previous) : null, document.Child is { } child ? FromDocument(child) : null);
         if (!string.Equals(json, Write(receipt), StringComparison.Ordinal)) {
@@ -135,7 +137,10 @@ internal static class ProcessDecisionReceiptCodec {
     private sealed record CommandDocument(CommandKind Kind, Guid StepId, ProcessDecisionId? DecisionId = null,
         ProcessDecisionExpectation? Expected = null, ProcessDecisionMaterialId? MaterialId = null,
         ChildDocument? Child = null, ProcessDecisionChildId? ChildId = null, ProcessDecisionChildClosure? Closure = null,
-        ProcessDecisionPhaseChange? PhaseChange = null, ProcessDecisionRefreshKind? RefreshKind = null);
+        ProcessDecisionPhaseChange? PhaseChange = null, ProcessDecisionRefreshKind? RefreshKind = null) {
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ProcessDecisionMaterialStamp? Material { get; init; }
+    }
     private sealed record GenerationDocument(ProcessDecisionReference Reference, long Revision, ProcessDecisionPhase Phase,
         ProcessDecisionMaterialId MaterialId, Guid BudgetId, int ChildCount, int UnclosedChildCount);
     private sealed record ChildDocument(ProcessDecisionReference Reference, ProcessDecisionChildId ChildId,

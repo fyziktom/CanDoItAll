@@ -15,12 +15,12 @@ internal static class ProcessDecisionPersistenceFixture {
     internal static async Task<ProcessRuntimeCommitResult> StartAsync(ProcessPersistenceDbContext context)
         => await new EfProcessRuntimeUnitOfWork(context).CommitAsync(await StartRequestAsync(context));
 
-    internal static async Task<ProcessRuntimeCommitRequest> StartRequestAsync(ProcessPersistenceDbContext context) {
+    internal static async Task<ProcessRuntimeCommitRequest> StartRequestAsync(ProcessPersistenceDbContext context,
+        Func<ProcessDecisionDataPolicyAdmission, ProcessDecisionDataPolicyAdmission>? configureAdmission = null) {
         var initial = ProcessProjectAdmissionFixture.Initial();
         var assignment = initial.InitialAssignments!.Single();
-        initial = initial with { InitialAssignments = [assignment with {
-            DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(initial.InitialPlan!.Definition.VersionId, assignment.StepInstanceId)
-        }] };
+        var admission = ProcessDecisionPolicyFixture.Create(initial.InitialPlan!.Definition.VersionId, assignment.StepInstanceId);
+        initial = initial with { InitialAssignments = [assignment with { DecisionDataPolicy = configureAdmission?.Invoke(admission) ?? admission }] };
         var state = (await new EfProcessRuntimeUnitOfWork(context).CommitAsync(initial)).State;
         var reserved = await ReserveCaptureAsync(context, state, 0);
         var budget = reserved.DecisionBudget!.Change.Balance;

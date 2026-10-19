@@ -128,6 +128,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessPreparedLaunchStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<IProcessLaunchLinkReceiptStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
+        services.TryAddScoped<IProcessDecisionMaterialReader, EfProcessDecisionMaterialStore>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeActivityStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());

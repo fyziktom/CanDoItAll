@@ -30,3 +30,8 @@ dotnet build .\src\Processes\CanDoItAll.Processes.Application\CanDoItAll.Process
 inside the effect owner's transaction. It is only the decision condition: the actual
 source, profile, manager action or dispatch claim and supported execution contract must
 also authorize the operation. A historical child observation is not publication authority.
+
+`IProcessDecisionMaterialReader` retrieves one original material by its full immutable
+scope and reference. It does not select the active parent generation or grant execution
+authority. Missing material is an explicit recovery failure; callers must not substitute
+current source reads.

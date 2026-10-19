@@ -55,8 +55,10 @@ remain open.
 
 The [original material value checkpoint](validation/2026-10-19-process-inherited-material-value.md)
 passes 44 selected cases for scope/content integrity, original capture age and bounded
-Unicode payloads. Canonical parent storage, shared budget and child runtime wiring remain
-open; this pure contract does not activate delegated execution.
+Unicode payloads. The [canonical captured-material checkpoint](validation/2026-10-19-process-material-persistence.md)
+now has 237 distinct selected passing behaviours across an exact test-only repair bridge.
+Shared active parent scope/budget, neutral content-schema separation for mixed executors
+and child runtime wiring remain open; these contracts do not activate delegated execution.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,

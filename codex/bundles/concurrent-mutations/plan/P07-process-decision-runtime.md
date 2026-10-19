@@ -27,6 +27,10 @@ records the remaining shared-scope, budget, exact reservation and journal-versio
 before actual producer activation.
 Its first [immutable material value checkpoint](../validation/2026-10-19-process-inherited-material-value.md)
 passes 44 selected cases for original capture age and exact scope/content integrity.
+The [canonical material storage checkpoint](../validation/2026-10-19-process-material-persistence.md)
+has 237 distinct selected passing behaviours: atomic capture/runtime/accounting, historical
+recovery, strict schema 3 admission and downgrade protection. Shared active scope/budget,
+neutral content-schema separation for mixed executors and actual runtime wiring remain open.
 
 ## Source facts and rejected shortcuts
 

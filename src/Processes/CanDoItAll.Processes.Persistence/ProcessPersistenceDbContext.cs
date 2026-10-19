@@ -46,6 +46,10 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessDecisionChildEntity> DecisionChildren => Set<ProcessDecisionChildEntity>();
 
+    public DbSet<ProcessDecisionMaterialScopeEntity> DecisionMaterialScopes => Set<ProcessDecisionMaterialScopeEntity>();
+
+    public DbSet<ProcessDecisionMaterialEntity> DecisionMaterials => Set<ProcessDecisionMaterialEntity>();
+
     public DbSet<ProcessProjectionSnapshotEntity> ProjectionSnapshots => Set<ProcessProjectionSnapshotEntity>();
 
     public DbSet<ProcessProjectionHistoryEntity> ProjectionHistory => Set<ProcessProjectionHistoryEntity>();

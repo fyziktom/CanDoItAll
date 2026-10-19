@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,12 @@ using static CanDoItAll.Processes.Persistence.ProcessDecisionRows;
 
 namespace CanDoItAll.Processes.Persistence;
 
-public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext) {
+public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext, ICanonicalRuntimeDatabase? runtimeDatabase = null) {
+    private readonly EfProcessDecisionMaterialStore materials = new(dbContext, runtimeDatabase);
+
+    internal Task RequireOriginalMaterialAsync(ProcessDecisionMaterial material, CancellationToken cancellationToken)
+        => materials.RequireOriginalAsync(material, cancellationToken);
+
     public async Task<ProcessDecisionGeneration?> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepId,
         CancellationToken cancellationToken = default) {
         var row = await (from head in dbContext.DecisionHeads.AsNoTracking()
@@ -47,7 +53,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
     }
 
     internal async Task<ProcessDecisionReceipt?> StageAsync(ProcessRuntimeStateSnapshot state, ProcessRuntimeStateSnapshot proposed, ProcessDecisionCommand? command,
-        ProcessDecisionBudgetReceipt? accounting, CancellationToken cancellationToken) {
+        ProcessDecisionBudgetReceipt? accounting, ProcessDecisionMaterial? material, CancellationToken cancellationToken) {
         if (command is null) {
             if (accounting?.Command is ProcessDecisionBudgetSettlement && await dbContext.DecisionChildren.AnyAsync(item =>
                     item.BudgetId == accounting.Change.Balance.BudgetId.Value && item.AllocationId == accounting.Command.AllocationId.Value, cancellationToken).ConfigureAwait(false)) {
@@ -71,7 +77,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         }
         RequireRuntimeTransition(proposed, nextStep, command);
         if (command is ProcessDecisionStart start) {
-            return await StageStartAsync(state, start, accounting, cancellationToken).ConfigureAwait(false);
+            return await StageStartAsync(state, start, accounting, material, cancellationToken).ConfigureAwait(false);
         }
         var expected = command.Expected!;
         var head = await dbContext.DecisionHeads.SingleOrDefaultAsync(item => item.DecisionId == expected.Reference.DecisionId.Value,
@@ -92,7 +98,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
                 receipt = await StageClosureAsync(current, closure, accounting, cancellationToken).ConfigureAwait(false);
                 break;
             case ProcessDecisionRefresh refresh:
-                receipt = await StageRefreshAsync(state, current, refresh, accounting, cancellationToken).ConfigureAwait(false);
+                receipt = await StageRefreshAsync(state, current, refresh, accounting, material, cancellationToken).ConfigureAwait(false);
                 break;
             case ProcessDecisionChangePhase phase when accounting is null:
                 var changed = phase.Change switch {
@@ -119,8 +125,9 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
     }
 
     private async Task<ProcessDecisionReceipt> StageStartAsync(ProcessRuntimeStateSnapshot state, ProcessDecisionStart command,
-        ProcessDecisionBudgetReceipt? accounting, CancellationToken cancellationToken) {
-        var policy = await ReadPolicyAsync(state, command.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        ProcessDecisionBudgetReceipt? accounting, ProcessDecisionMaterial? material, CancellationToken cancellationToken) {
+        var admission = await ReadAdmissionAsync(state, command.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        var policy = admission.Policy;
         if (policy.Budget.MaximumReplans >= ProcessDecisionGeneration.MaximumGenerations) {
             throw new ProcessDecisionException(ProcessDecisionRefusal.GenerationCapacity);
         }
@@ -131,10 +138,11 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             throw new InvalidOperationException("The original decision budget changed or this step already has a decision.");
         }
         await RequireUnusedCaptureAsync(budget.BudgetId, capture.Id, cancellationToken).ConfigureAwait(false);
+        await materials.StageAsync(state, admission, command, material, null, cancellationToken).ConfigureAwait(false);
         var current = ProcessDecisionTransitions.Create(command.DecisionId, command.MaterialId, budget.BudgetId);
         dbContext.DecisionHeads.Add(new() { DecisionId = command.DecisionId.Value, RootRunId = state.RootRunId.Value, RunId = state.RunId.Value,
             StepInstanceId = command.StepInstanceId.Value, BudgetId = budget.BudgetId.Value, CurrentGeneration = 1, Revision = 1 });
-        AddGeneration(current, capture.Id);
+        AddGeneration(current, capture.Id, material?.Reference.MaterialId.Value);
         return new(command, true, current);
     }
 
@@ -182,9 +190,10 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
     }
 
     private async Task<ProcessDecisionReceipt> StageRefreshAsync(ProcessRuntimeStateSnapshot state, ProcessDecisionGeneration current,
-        ProcessDecisionRefresh command, ProcessDecisionBudgetReceipt? accounting, CancellationToken cancellationToken) {
+        ProcessDecisionRefresh command, ProcessDecisionBudgetReceipt? accounting, ProcessDecisionMaterial? material, CancellationToken cancellationToken) {
         RequireAccounting(command.StepInstanceId, current.BudgetId, accounting);
-        var policy = await ReadPolicyAsync(state, command.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        var admission = await ReadAdmissionAsync(state, command.StepInstanceId, cancellationToken).ConfigureAwait(false);
+        var policy = admission.Policy;
         if (policy.Budget != accounting!.Change.Balance.Ceiling || policy.OnBasisChange == OnBasisChange.Fail ||
                 command.Kind == ProcessDecisionRefreshKind.AutomaticReplan && policy.OnBasisChange != OnBasisChange.Replan) {
             throw new InvalidOperationException("The original Process policy does not admit this refresh.");
@@ -193,11 +202,12 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         await RequireUnusedCaptureAsync(current.BudgetId, capture.Id, cancellationToken).ConfigureAwait(false);
         var change = ProcessDecisionTransitions.Advance(current, command.Expectation, command.MaterialId);
         _ = RequireCompleteChildren(current, await ReadBoundedChildrenAsync(current.Reference, cancellationToken).ConfigureAwait(false));
-        AddGeneration(change.Current, capture.Id);
+        await materials.StageAsync(state, admission, command, material, current.MaterialId, cancellationToken).ConfigureAwait(false);
+        AddGeneration(change.Current, capture.Id, material?.Reference.MaterialId.Value);
         return new(command, true, change.Current, change.Previous);
     }
 
-    private async Task<DecisionDataPolicy> ReadPolicyAsync(ProcessRuntimeStateSnapshot state, ProcessStepInstanceId stepId, CancellationToken cancellationToken) {
+    private async Task<ProcessDecisionDataPolicyAdmission> ReadAdmissionAsync(ProcessRuntimeStateSnapshot state, ProcessStepInstanceId stepId, CancellationToken cancellationToken) {
         var row = await (from assignment in dbContext.RuntimeStepAssignments.AsNoTracking()
             join plan in dbContext.InstancePlans.AsNoTracking() on assignment.PlanId equals plan.PlanId
             where assignment.RunId == state.RunId.Value && assignment.StepInstanceId == stepId.Value
@@ -207,7 +217,7 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         }
         var admission = ProcessDecisionDataPolicyAdmissionCodec.Deserialize(json);
         admission.RequireBinding(new(row.DefinitionVersionId), stepId);
-        return admission.Policy;
+        return admission;
     }
 
     private async Task RequireUnusedCaptureAsync(DecisionBudgetId budgetId, DecisionBudgetAllocationId allocationId, CancellationToken cancellationToken) {
@@ -272,9 +282,10 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         }
     }
 
-    private void AddGeneration(ProcessDecisionGeneration generation, DecisionBudgetAllocationId capture) {
+    private void AddGeneration(ProcessDecisionGeneration generation, DecisionBudgetAllocationId capture, Guid? canonicalMaterialId) {
         var entity = new ProcessDecisionGenerationEntity { DecisionId = generation.Reference.DecisionId.Value, Generation = generation.Reference.Generation,
-            MaterialId = generation.MaterialId.Value, BudgetId = generation.BudgetId.Value, CaptureAllocationId = capture.Value };
+            MaterialId = generation.MaterialId.Value, CanonicalMaterialId = canonicalMaterialId,
+            BudgetId = generation.BudgetId.Value, CaptureAllocationId = capture.Value };
         WriteGeneration(entity, generation);
         dbContext.DecisionGenerations.Add(entity);
     }

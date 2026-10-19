@@ -29,6 +29,16 @@ public sealed record ProcessDecisionMaterialReference(ProcessDecisionMaterialSco
     }
 }
 
+public sealed record ProcessDecisionMaterialStamp(ProcessDecisionMaterialReference Reference, string Fingerprint) {
+    public void Validate() {
+        ArgumentNullException.ThrowIfNull(Reference);
+        Reference.Validate();
+        if (Fingerprint is null || Fingerprint.Length != 64 || Fingerprint.Any(character => !char.IsAsciiHexDigitUpper(character))) {
+            throw new InvalidDataException("A Process material stamp requires its original SHA256 fingerprint.");
+        }
+    }
+}
+
 public sealed class ProcessDecisionMaterial {
     public const int MaximumPayloadUtf8Bytes = 1_048_576;
     private static readonly UTF8Encoding Utf8 = new(false, true);
@@ -76,6 +86,7 @@ public sealed class ProcessDecisionMaterial {
     public string PayloadJson { get; }
     public int PayloadUtf8Bytes { get; }
     public string Fingerprint { get; }
+    public ProcessDecisionMaterialStamp Stamp => new(Reference, Fingerprint);
 
     public void RequireOriginal(ProcessDecisionMaterial observed) {
         ArgumentNullException.ThrowIfNull(observed);

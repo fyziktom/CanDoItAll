@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Data;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -16,7 +17,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
     IProcessProjectAdmissionPolicy? projectAdmissionPolicy = null,
     IProcessLaunchAuthorityPolicy? launchAuthorityPolicy = null,
     IProcessToolLaunchAdmissionPolicy? toolLaunchPolicy = null,
-    IProcessAuthoringStore? authoringStore = null) :
+    IProcessAuthoringStore? authoringStore = null,
+    ICanonicalRuntimeDatabase? runtimeDatabase = null) :
     IProcessRuntimeUnitOfWork,
     IProcessRuntimeStateStore,
     IProcessRuntimeActivityStore,
@@ -25,7 +27,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
     private readonly EfProcessDecisionBudgetStore decisionBudgets = new(dbContext);
-    private readonly EfProcessDecisionStore decisions = new(dbContext);
+    private readonly EfProcessDecisionStore decisions = new(dbContext, runtimeDatabase);
 
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
         ProcessRunId runId,
@@ -160,7 +162,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if ((request.DecisionBudget is not null || request.Decision is not null) &&
+        if ((request.DecisionBudget is not null || request.Decision is not null || request.DecisionMaterial is not null) &&
                 (request.InitialPlan is not null || request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
             throw new InvalidOperationException("Process accounting and decisions must accompany an applied mutation of an existing runtime state.");
         }
@@ -173,6 +175,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         ValidateCommitIdentity(request);
         ValidateInitialPlanMatchesState(request);
         ValidateAtomicMutation(request);
+        EfProcessDecisionMaterialStore.RequireCommandMaterial(request.Decision, request.DecisionMaterial);
 
         var preparedAuthority = await AcquirePreparedAuthorityLeaseAsync(request, cancellationToken).ConfigureAwait(false);
         await using var authorityLease = preparedAuthority.Lease;
@@ -240,6 +243,9 @@ public sealed class EfProcessRuntimeUnitOfWork(
         {
             ProcessDecisionBudgetReceiptCodec.RequireSameCommand(request.DecisionBudget, duplicate.DecisionBudget);
             ProcessDecisionReceiptCodec.RequireSameCommand(request.Decision, duplicate.Decision);
+            if (request.DecisionMaterial is { } material) {
+                await decisions.RequireOriginalMaterialAsync(material, cancellationToken).ConfigureAwait(false);
+            }
             RequireSameProjectAdmission(duplicate.State.ProjectAdmission, request.Mutation.State.ProjectAdmission);
             RequireSameLaunchAdmission(duplicate.State.LaunchAdmissionId, request.Mutation.State.LaunchAdmissionId);
             if (preparedLaunch is not null && preparedLaunch.AcceptedAtUtc is null) {
@@ -298,7 +304,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
 
         var decisionBudget = await decisionBudgets.StageAsync(request.OriginalState, request.DecisionBudget, cancellationToken).ConfigureAwait(false);
-        var decision = await decisions.StageAsync(request.OriginalState, request.Mutation.State, request.Decision, decisionBudget, cancellationToken).ConfigureAwait(false);
+        var decision = await decisions.StageAsync(request.OriginalState, request.Mutation.State, request.Decision, decisionBudget,
+            request.DecisionMaterial, cancellationToken).ConfigureAwait(false);
         await AppendEventsAsync(request.Mutation.Events, cancellationToken).ConfigureAwait(false);
         AddOutboxMessages(request.Mutation.OutboxMessages, request.Mutation.State.UpdatedAtUtc);
         AddArtifactLedgerEvents(request.Mutation.ArtifactLedgerEvents);

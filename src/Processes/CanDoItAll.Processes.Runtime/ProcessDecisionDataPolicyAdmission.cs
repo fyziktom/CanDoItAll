@@ -5,6 +5,8 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Processes.Runtime;
 
+public enum ProcessDecisionMaterialProtocol { CanonicalSnapshotV1 = 1 }
+
 [JsonConverter(typeof(ProcessDecisionDataPolicyAdmissionJsonConverter))]
 public sealed record ProcessDecisionDataPolicyAdmission(
     Guid WorkspaceNamespaceId,
@@ -19,11 +21,13 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     ImmutableArray<DecisionDataPolicyBudget> EnclosingBudgets,
     DecisionDataPolicy Policy) {
     public const int LegacySchemaVersion = 1;
-    public const int SchemaVersion = 2;
+    public const int ExecutionContractSchemaVersion = 2;
+    public const int SchemaVersion = 3;
     public const int MaximumUtf8Bytes = 32_768;
     public const int MaximumEnclosingPolicies = 32;
 
     public ProcessDecisionExecutionContract? ExecutionContract { get; init; }
+    public ProcessDecisionMaterialProtocol? MaterialProtocol { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -34,6 +38,9 @@ public sealed record ProcessDecisionDataPolicyAdmission(
             throw new InvalidDataException("The Process decision policy requires its original identity and bounded provenance.");
         }
         ExecutionContract?.Validate();
+        if (MaterialProtocol is { } protocol && (protocol != ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 || ExecutionContract is null)) {
+            throw new InvalidDataException("Canonical Process material requires its supported protocol and original executor contract.");
+        }
         foreach (var preference in new[] { DefinitionOverride, StepOverride, AuthorizedInvocationOverride }) {
             if (preference is not null) {
                 _ = DecisionDataPolicyOverrideCodec.Serialize(preference);

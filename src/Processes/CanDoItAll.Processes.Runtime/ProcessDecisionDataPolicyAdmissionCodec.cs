@@ -46,8 +46,12 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
             var wire = document.RootElement.Deserialize<AdmissionWire>(wireOptions)
                 ?? throw new JsonException("The Process decision policy must be an object.");
             var validSchema = wire.SchemaVersion switch {
-                ProcessDecisionDataPolicyAdmission.LegacySchemaVersion => !document.RootElement.TryGetProperty("executionContract", out _),
-                ProcessDecisionDataPolicyAdmission.SchemaVersion => wire.ExecutionContract is not null,
+                ProcessDecisionDataPolicyAdmission.LegacySchemaVersion => !document.RootElement.TryGetProperty("executionContract", out _) &&
+                    !document.RootElement.TryGetProperty("materialProtocol", out _),
+                ProcessDecisionDataPolicyAdmission.ExecutionContractSchemaVersion => wire.ExecutionContract is not null &&
+                    !document.RootElement.TryGetProperty("materialProtocol", out _),
+                ProcessDecisionDataPolicyAdmission.SchemaVersion => wire.ExecutionContract is not null &&
+                    wire.MaterialProtocol == ProcessDecisionMaterialProtocol.CanonicalSnapshotV1,
                 _ => false
             };
             if (!validSchema || wire.Capabilities is null ||
@@ -58,7 +62,7 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
                 new(wire.DefinitionVersionId), new(wire.StepInstanceId), wire.WorkspacePolicy, wire.DefinitionOverride,
                 wire.StepOverride, wire.AuthorizedInvocationOverride, wire.Capabilities.ToModel(),
                 [.. wire.EnclosingBudgets.Select(budget => budget.ToModel())], wire.Policy) {
-                ExecutionContract = wire.ExecutionContract
+                ExecutionContract = wire.ExecutionContract, MaterialProtocol = wire.MaterialProtocol
             };
             admission.Validate();
             return admission;
@@ -73,13 +77,13 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
     internal static byte[] Encode(ProcessDecisionDataPolicyAdmission value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        var schema = value.ExecutionContract is null
-            ? ProcessDecisionDataPolicyAdmission.LegacySchemaVersion : ProcessDecisionDataPolicyAdmission.SchemaVersion;
+        var schema = value.MaterialProtocol is not null ? ProcessDecisionDataPolicyAdmission.SchemaVersion :
+            value.ExecutionContract is null ? ProcessDecisionDataPolicyAdmission.LegacySchemaVersion : ProcessDecisionDataPolicyAdmission.ExecutionContractSchemaVersion;
         var wire = new AdmissionWire(schema, value.WorkspaceNamespaceId,
             value.WorkspaceHeadRevision, value.DefinitionVersionId.Value, value.StepInstanceId.Value,
             value.WorkspacePolicy, value.DefinitionOverride, value.StepOverride, value.AuthorizedInvocationOverride,
             CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy,
-            value.ExecutionContract);
+            value.ExecutionContract, value.MaterialProtocol);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(wire, wireOptions);
         if (bytes.Length > ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes) {
             throw new JsonException("The Process decision policy exceeds its encoding bound.");
@@ -119,7 +123,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         [property: JsonRequired] CapabilitiesWire Capabilities,
         [property: JsonRequired] ImmutableArray<BudgetWire> EnclosingBudgets,
         [property: JsonRequired] DecisionDataPolicy Policy,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionExecutionContract? ExecutionContract);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionExecutionContract? ExecutionContract,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionMaterialProtocol? MaterialProtocol);
 
     private sealed record BudgetWire(
         [property: JsonRequired] int MaximumReplans,

@@ -2,8 +2,9 @@
 
 Refinement after the [versioned execution contract](P07-process-execution-contract.md).
 The first [pure material value contract](../validation/2026-10-19-process-inherited-material-value.md)
-now passes 44 selected cases. Storage/runtime integration below remains prospective;
-no activation is claimed. The original E2E scope
+now passes 44 selected cases. [Canonical captured-material storage](../validation/2026-10-19-process-material-persistence.md)
+has 237 selected passing behaviours across an exact test-only repair bridge. Active parent
+scope/budget and child runtime integration below remain open; no activation is claimed. The original E2E scope
 still includes both RunSnapshot and StepSnapshot for supported Process/Workflow work.
 
 ## Current code constraints
@@ -95,6 +96,67 @@ an exact original-material comparison before continuation. This pure contract is
 permission check, scope-membership proof, current-head read or publication fence.
 
 ## Refresh and budget authority
+
+The mixed-executor review identified a required contract refinement: current material
+includes the executor contract/owner, so Agent and Workflow assignments cannot share one
+run material even when they need identical business facts. Introduce an explicit neutral
+business content schema, separate from dispatch capability, before wiring these consumers.
+Do not reinterpret the old owner-specific protocol as that schema or weaken executor
+equality. Historical material must retain its original meaning and new unsupported
+protocols must fail explicitly. The immutable storage checkpoint remains useful, but its
+current material contract is not the final mixed-executor contract.
+
+Likewise, a nested Process must bind its parent's scope through verified runtime ancestry;
+it cannot change `OwnerRunId` to itself or renew the capture timestamp. Current staging
+correctly accepts only material owned by the committing run. A future inherited binding
+must be explicit and must not turn the historical reader into a permission check.
+
+For shared accounting, reuse the existing bounded allocation arithmetic. A genuine run
+budget needs a real runtime owner and immutable initial provenance; a synthetic step and
+the first assignment's policy are invalid substitutes. Decide original child funding
+before activation, including parent capture/orchestration work. Copying a full ceiling
+into every step double-spends it, while changing an already admitted ceiling contradicts
+the retained policy. Parent refresh consumes one parent replan and unknown child outcomes
+retain their reservations. Combined scope/child/generation/allocation bounds require their
+own capacity proof; individual maxima do not promise that all maxima can coexist.
+
+### Canonical storage implementation contract
+
+The next storage slice separates an immutable scope row from its bounded material rows.
+The scope fixes the profile, namespace, real root/owner run, optional logical step and
+executor contract. Filtered unique indexes prevent two scopes for the same run or step;
+the material key and `(scope, generation)` index prevent identity aliasing. No `MAX`
+query or newest-row convention will select the active parent generation. Run-wide
+refresh remains refused until the shared scope owner can fence all affected decisions.
+
+A start/refresh command carries only the exact material reference and SHA256 fingerprint.
+The bounded payload travels separately into the existing runtime unit of work, which
+stages scope/material, generation, accounting, state and receipt in the same root-fenced
+transaction. Receipt schema 2 binds that stamp; schema 1 retains its exact old encoding.
+An old opaque material ID is never upgraded by inventing content. A declared executor
+contract requires its original material; a legacy admission cannot silently acquire one.
+Canonical-material admission uses policy schema 3, retaining exact schema 1/2 encoding
+when the protocol is absent. Earlier admission readers therefore reject a governed
+material contract. Old receipt readers also reject material-bearing receipt schema 2.
+Downgrade checks prepared and committed schema 3 admissions even before the first
+captured payload exists. Existing unsupported executor guards remain closed.
+Replay compares the supplied payload with the retained original before returning the old
+receipt, including when the decision head has advanced.
+
+Store capture time as UTC ticks, preserving .NET's 100 ns identity through PostgreSQL's
+otherwise lower timestamp precision. Payload text must remain text, not JSONB, because
+its exact UTF-8 bytes participate in the fingerprint. Enforce its byte bound in SQL and
+reconstruct/verify the value on exact reads. Query clients request the original scope and
+reference; those reads provide historical material, not authorization or currentness.
+The canonical database profile is required for governed writes and reads. No material
+payload is added to runtime state or a command receipt, and child publication keeps its
+small metadata query. New foreign keys restrict removal of referenced material.
+
+Proof must cover restart and old receipt replay, payload/time/scope/contract substitution,
+rollback of a failed runtime/accounting save, same-ID races, run-scope reuse, nullable-step
+uniqueness, UTF-8 byte bounds, tick precision, migration/downgrade refusal, missing or
+corrupted material, and legacy opaque IDs. This remains storage foundation until real
+parent-scope/budget and executor admission are connected and tested.
 
 Under the existing root transaction lock, a shared scope first enters Reconciling.
 Every covered publication path must check that parent scope in its actual effect

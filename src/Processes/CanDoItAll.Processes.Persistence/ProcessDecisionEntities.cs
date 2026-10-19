@@ -20,6 +20,7 @@ public sealed class ProcessDecisionGenerationEntity {
     public long Revision { get; set; }
     public ProcessDecisionPhase Phase { get; set; }
     public Guid MaterialId { get; set; }
+    public Guid? CanonicalMaterialId { get; set; }
     public Guid BudgetId { get; set; }
     public Guid CaptureAllocationId { get; set; }
     public int ChildCount { get; set; }
@@ -63,6 +64,9 @@ internal sealed class ProcessDecisionGenerationConfiguration : IEntityTypeConfig
             AND ("Phase" <> 5 OR "Generation" < {ProcessDecisionGeneration.MaximumGenerations})
             """));
         builder.HasKey(item => new { item.DecisionId, item.Generation });
+        builder.ToTable(table => table.HasCheckConstraint("CK_process_decision_generations_material",
+            "\"CanonicalMaterialId\" IS NULL OR \"CanonicalMaterialId\" = \"MaterialId\""));
+        builder.HasOne<ProcessDecisionMaterialEntity>().WithMany().HasForeignKey(item => item.CanonicalMaterialId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(item => item.Revision).IsConcurrencyToken();
         builder.HasIndex(item => new { item.BudgetId, item.CaptureAllocationId }).IsUnique();
         builder.HasOne<ProcessDecisionHeadEntity>().WithMany().HasForeignKey(item => item.DecisionId).OnDelete(DeleteBehavior.Restrict);

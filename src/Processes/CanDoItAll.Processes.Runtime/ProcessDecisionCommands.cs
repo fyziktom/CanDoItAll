@@ -6,9 +6,23 @@ public enum ProcessDecisionPhaseChange { WaitForReview, BeginReconciliation, Com
 public enum ProcessDecisionRefreshKind { ManagerRefresh, AutomaticReplan }
 
 public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstanceId) {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionMaterialStamp? Material { get; init; }
+
     public void Validate() {
         if (StepInstanceId.Value == Guid.Empty) {
             throw new InvalidDataException("A Process decision command requires its original step.");
+        }
+        if (Material is { } material) {
+            material.Validate();
+            var materialId = this switch {
+                ProcessDecisionStart start => start.MaterialId,
+                ProcessDecisionRefresh refresh => refresh.MaterialId,
+                _ => throw new InvalidDataException("Only a Process start or refresh can admit original material.")
+            };
+            if (material.Reference.MaterialId != materialId) {
+                throw new InvalidDataException("The Process command and its original material identity disagree.");
+            }
         }
         switch (this) {
             case ProcessDecisionStart start when start.DecisionId.Value != Guid.Empty && start.MaterialId.Value != Guid.Empty:

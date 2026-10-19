@@ -79,6 +79,7 @@ internal static class ProcessPreparedLaunchCodec {
         preparation = preparation with { PreparedAtUtc = NormalizeTimestamp(preparation.PreparedAtUtc) };
         if (preparation.AdmissionId.Value == Guid.Empty || preparation.CallerIntentId is { } intent && intent.Value == Guid.Empty ||
                 preparation.InitialCommit.InitialPlan is null || preparation.InitialCommit.DecisionBudget is not null ||
+                preparation.InitialCommit.Decision is not null || preparation.InitialCommit.DecisionMaterial is not null ||
                 preparation.InitialCommit.InitialAssignments is null || preparation.InitialCommit.InitialLaunchAdmission is not null ||
                 preparation.InitialCommit.Mutation.State.LaunchAdmissionId != preparation.AdmissionId ||
                 preparation.InitialCommit.OriginalState.LaunchAdmissionId != preparation.AdmissionId ||

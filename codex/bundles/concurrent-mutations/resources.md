@@ -573,3 +573,17 @@ the separate 16,384 new-delta bound. No TEMP entries were deleted or excluded. F
 reconciliation found no observed process, database-name delta or new TEMP entry; three
 unattributed entries from the first candidate were preserved. Earlier denied cleanup
 remains unchanged. See the [material proof](validation/2026-10-19-process-inherited-material-value.md).
+
+## 2026-10-19 Canonical material storage
+
+`c4-process-material-persistence` and its test-repair successor recorded ownership before
+creation, reused standard Release outputs and the existing isolated PostgreSQL18 fixture.
+The initial 237-case run passed 234; three test-only SQL execution/expected-code repairs
+were retained explicitly. The successor passed all 44 affected database cases and an
+exact source/runtime bridge retains the other 193 passes. Both freezes were verified and
+released after complete-command observation. Neither candidate left an observed process
+or database-name delta. Fifteen and eight unattributed TEMP entries were preserved without
+claiming ownership. No new resource family or stack was introduced. The reviewed 32,768
+TEMP baseline bound and separate 16,384 delta bound remain unchanged. Earlier denied
+cleanup remains explicit; the fixture remains needed for continuing implementation.
+See the [validation record](validation/2026-10-19-process-material-persistence.md).

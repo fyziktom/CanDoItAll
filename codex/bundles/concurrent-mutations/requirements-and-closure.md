@@ -24,7 +24,11 @@ remain open.
 
 The [immutable material checkpoint](validation/2026-10-19-process-inherited-material-value.md)
 passes 44 selected cases for original scope/content integrity and capture age. It is a
-pure prerequisite; canonical parent storage, shared budget and runtime wiring remain open.
+pure prerequisite. [Canonical captured-material storage](validation/2026-10-19-process-material-persistence.md)
+now has 237 distinct selected passing behaviours: atomic storage/runtime/accounting,
+strict versioned admission, original receipt recovery and migration/downgrade proof.
+The active shared parent, genuine run budget/funding, neutral content schema for mixed
+executors and actual runtime wiring remain open. This does not close R5 or R6.
 
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash

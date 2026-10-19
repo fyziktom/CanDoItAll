@@ -7,22 +7,48 @@ namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed partial class ProcessPreparedLaunchPersistenceTests {
     [Theory]
-    [InlineData(false, false, ProcessDecisionChildOwner.Agent)]
-    [InlineData(true, false, ProcessDecisionChildOwner.Agent)]
-    [InlineData(true, true, ProcessDecisionChildOwner.Agent)]
-    [InlineData(true, true, ProcessDecisionChildOwner.Workflow)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Preparation_cannot_embed_runtime_decision_or_captured_material(bool payload) {
+        await using var app = await TestApplication.CreateAsync(Harness());
+        var original = ProcessPreparedLaunchFixture.Create(ProcessPreparedLaunchFixture.Local(Profile(app.Services).Profile.Id), new(Guid.NewGuid()));
+        var state = original.InitialCommit.OriginalState;
+        var step = state.Steps.Single().StepInstanceId;
+        var scope = new ProcessDecisionMaterialScope(new(Guid.NewGuid()), Profile(app.Services).Profile.Id, Guid.NewGuid(), state.RootRunId, state.RunId, step);
+        var material = new ProcessDecisionMaterial(scope, new(scope.Id, 1, new(Guid.NewGuid())), ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent),
+            ProcessProjectAdmissionFixture.Now, "{}");
+        var invalid = original with { InitialCommit = original.InitialCommit with {
+            Decision = payload ? null : new ProcessDecisionStart(step, new(Guid.NewGuid()), material.Reference.MaterialId),
+            DecisionMaterial = payload ? material : null
+        } };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Store(app.Services).PrepareAsync(invalid));
+    }
+
+    [Theory]
+    [InlineData(false, false, ProcessDecisionChildOwner.Agent, false)]
+    [InlineData(true, false, ProcessDecisionChildOwner.Agent, false)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Agent, false)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Workflow, false)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Agent, true)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Workflow, true)]
     public async Task Decision_policy_survives_preparation_commit_reload_and_rejects_every_repair_substitution(
-        bool admitted, bool declaredContract, ProcessDecisionChildOwner executor) {
+        bool admitted, bool declaredContract, ProcessDecisionChildOwner executor, bool canonicalMaterial) {
         await using var app = await TestApplication.CreateAsync(Harness());
         var services = app.Services;
         var original = ProcessPreparedLaunchFixture.Create(ProcessPreparedLaunchFixture.Local(Profile(services).Profile.Id), new(Guid.NewGuid()));
         var assignment = Assert.Single(original.InitialCommit.InitialAssignments!);
         var policy = ProcessDecisionPolicyFixture.Create(original.InitialCommit.InitialPlan!.Definition.VersionId, assignment.StepInstanceId) with {
-            ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(executor) : null
+            ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(executor) : null,
+            MaterialProtocol = canonicalMaterial ? ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 : null
         };
         var prepared = await Store(services).PrepareAsync(original with { InitialCommit = original.InitialCommit with {
             InitialAssignments = [assignment with { DecisionDataPolicy = admitted ? policy : null }]
         } });
+        if (canonicalMaterial) {
+            await using var pending = new ProcessPersistenceDbContext(ProcessOptions(services));
+            var refusal = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => ProcessDecisionMaterialPersistenceTests.MigrateAsync(pending, true));
+            Assert.Equal(Npgsql.PostgresErrorCodes.RaiseException, refusal.SqlState);
+        }
         await using (var context = new ProcessPersistenceDbContext(ProcessOptions(services))) {
             var owner = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: Coordinator(services), launchAuthorityPolicy: new AuthorityPolicy());
             Assert.True((await owner.CommitAsync(ProcessPreparedLaunchFixture.Commit(prepared))).Succeeded);
@@ -43,7 +69,12 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
                     contract with { ContractId = Guid.NewGuid() }, contract with { Version = 2 },
                     contract with { Executor = executor == ProcessDecisionChildOwner.Agent ? ProcessDecisionChildOwner.Workflow : ProcessDecisionChildOwner.Agent } }) {
                     await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync([current with {
-                        DecisionDataPolicy = policy with { ExecutionContract = replacement }
+                        DecisionDataPolicy = policy with { ExecutionContract = replacement, MaterialProtocol = replacement is null ? null : policy.MaterialProtocol }
+                    }]).AsTask());
+                }
+                if (declaredContract) {
+                    await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync([current with {
+                        DecisionDataPolicy = policy with { MaterialProtocol = canonicalMaterial ? null : ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 }
                     }]).AsTask());
                 }
             }

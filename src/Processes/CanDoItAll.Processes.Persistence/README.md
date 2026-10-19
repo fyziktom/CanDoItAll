@@ -81,3 +81,21 @@ transaction and takes the same root advisory lock as runtime commits. It rereads
 complete binding, current generation, runtime phase, closure and budget overrun before
 publication. The outer transaction retains the lock through effect commit or rollback.
 This condition does not supply source/manager authorization or enable a policy executor.
+
+## Canonical captured material
+
+`EfProcessDecisionMaterialStore` stages one immutable scope and its bounded material
+through the existing runtime unit of work. The selected canonical database profile,
+original policy namespace, real run/step, executor contract and exact command stamp must
+agree. Scope/material, generation, budget settlement, runtime mutation and the small
+versioned receipt commit together. Retries compare the retained original, even after
+the decision advances. Legacy opaque material IDs remain absent from canonical storage.
+
+Payloads use bounded text, preserving exact UTF-8 content, and captures use UTC ticks
+to preserve sub-microsecond identity. Exact reads verify content fingerprints. Unique
+scope/generation indexes and restrictive foreign keys prevent ambiguous bindings and
+removal of referenced material. Downgrade refuses retained material or newer receipts.
+No material is copied into each state/receipt, and effect queries retain small metadata.
+Run-wide refresh remains refused by the step owner until the shared parent can fence
+and reconcile all affected decisions. Historical material storage alone does not enable
+governed Agent/Workflow execution.

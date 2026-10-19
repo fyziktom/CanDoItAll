@@ -54,3 +54,13 @@ object. Its versioned fingerprint binds every field, and freshness uses only the
 capture time. A child cannot restamp identical content to renew its age. The owner still
 validates the business payload schema; these pure values do not establish current scope
 membership, permission, canonical persistence or an effect publication fence.
+
+Start/refresh commands can bind an exact `ProcessDecisionMaterialStamp`. The payload
+is supplied separately to the runtime commit request; it is not embedded in command
+receipts or runtime state. Material-bearing receipts use schema 2, while absent material
+retains schema 1. The persistence owner requires the canonical payload for a declared
+execution contract and checks its original scope before staging the decision.
+Canonical material admission uses policy schema 3 and explicitly declares its material
+protocol. Readers of the earlier declaration-only envelope reject that new schema.
+Absent protocol retains the exact schema 1/2 encodings. Unsupported executors remain
+closed; a declaration is never a capability grant.
