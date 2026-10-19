@@ -45,9 +45,13 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
             return;
         }
         RequireProfile(material.Scope);
-        admission.RequireExecutionContract(material.ExecutionContract);
-        if (admission.MaterialProtocol != ProcessDecisionMaterialProtocol.CanonicalSnapshotV1) {
-            throw new InvalidDataException("The original Process admission does not declare canonical material support.");
+        admission.Validate();
+        if (admission.MaterialProtocol != material.Protocol ||
+                material.ContentContract is { } content && admission.ContentContract != content) {
+            throw new InvalidDataException("The original Process admission does not declare this material protocol and content schema.");
+        }
+        if (material.ExecutionContract is { } legacyContract) {
+            admission.RequireExecutionContract(legacyContract);
         }
         if (material.Scope.RootRunId != state.RootRunId || material.Scope.OwnerRunId != state.RunId ||
                 material.Scope.WorkspaceNamespaceId != admission.WorkspaceNamespaceId || material.Scope.ReadBasisMode != admission.Policy.ReadBasisMode ||
@@ -80,11 +84,13 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
             dbContext.DecisionMaterialScopes.Add(new() {
                 ScopeId = material.Scope.Id.Value, DatabaseProfileId = material.Scope.DatabaseProfileId,
                 WorkspaceNamespaceId = material.Scope.WorkspaceNamespaceId, RootRunId = state.RootRunId.Value, OwnerRunId = state.RunId.Value,
-                StepInstanceId = material.Scope.StepInstanceId?.Value, ContractId = material.ExecutionContract.ContractId,
-                ContractVersion = material.ExecutionContract.Version, Executor = material.ExecutionContract.Executor
+                StepInstanceId = material.Scope.StepInstanceId?.Value,
+                ContractId = material.ContentContract?.SchemaId ?? material.ExecutionContract!.ContractId,
+                ContractVersion = material.ContentContract?.Version ?? material.ExecutionContract!.Version,
+                Executor = material.ExecutionContract?.Executor, MaterialProtocol = material.Protocol
             });
-        } else if (Scope(scopeRow) != material.Scope || Contract(scopeRow) != material.ExecutionContract) {
-            throw new InvalidDataException("The original Process material scope or executor contract changed.");
+        } else if (Scope(scopeRow) != material.Scope || !MatchesContract(scopeRow, material)) {
+            throw new InvalidDataException("The original Process material scope or protocol contract changed.");
         }
         var retained = await dbContext.DecisionMaterials.AsNoTracking().SingleOrDefaultAsync(item => item.MaterialId == material.Reference.MaterialId.Value,
             cancellationToken).ConfigureAwait(false);
@@ -120,11 +126,22 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
         => new(new(row.ScopeId), row.DatabaseProfileId, row.WorkspaceNamespaceId, new(row.RootRunId), new(row.OwnerRunId),
             row.StepInstanceId is { } step ? new(step) : null);
 
-    private static ProcessDecisionExecutionContract Contract(ProcessDecisionMaterialScopeEntity row) => new(row.ContractId, row.ContractVersion, row.Executor);
+    private static bool MatchesContract(ProcessDecisionMaterialScopeEntity row, ProcessDecisionMaterial material)
+        => row.MaterialProtocol == material.Protocol && row.Executor == material.ExecutionContract?.Executor &&
+            row.ContractId == (material.ContentContract?.SchemaId ?? material.ExecutionContract!.ContractId) &&
+            row.ContractVersion == (material.ContentContract?.Version ?? material.ExecutionContract!.Version);
 
     private static ProcessDecisionMaterial Read(ProcessDecisionMaterialScopeEntity scope, ProcessDecisionMaterialEntity row) {
-        var material = new ProcessDecisionMaterial(Scope(scope), new(new(row.ScopeId), row.Generation, new(row.MaterialId)), Contract(scope),
-            new(row.CapturedAtUtcTicks, TimeSpan.Zero), row.PayloadJson);
+        var originalScope = Scope(scope);
+        ProcessDecisionMaterialReference reference = new(new(row.ScopeId), row.Generation, new(row.MaterialId));
+        DateTimeOffset captured = new(row.CapturedAtUtcTicks, TimeSpan.Zero);
+        ProcessDecisionMaterial material = scope.MaterialProtocol switch {
+            ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 when scope.Executor is { } executor
+                => new(originalScope, reference, new ProcessDecisionExecutionContract(scope.ContractId, scope.ContractVersion, executor), captured, row.PayloadJson),
+            ProcessDecisionMaterialProtocol.SharedContentV1 when scope.Executor is null
+                => ProcessDecisionMaterial.FromContent(originalScope, reference, new(scope.ContractId, scope.ContractVersion), captured, row.PayloadJson),
+            _ => throw new InvalidDataException("The retained Process material has an unsupported protocol or executor/content shape.")
+        };
         if (row.Fingerprint != material.Fingerprint || row.PayloadUtf8Bytes != material.PayloadUtf8Bytes) {
             throw new InvalidDataException("The retained Process material failed its original content fingerprint or byte bound.");
         }

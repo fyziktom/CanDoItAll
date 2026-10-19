@@ -13,7 +13,8 @@ public sealed class ProcessDecisionMaterialScopeEntity {
     public Guid? StepInstanceId { get; set; }
     public Guid ContractId { get; set; }
     public int ContractVersion { get; set; }
-    public ProcessDecisionChildOwner Executor { get; set; }
+    public ProcessDecisionChildOwner? Executor { get; set; }
+    public ProcessDecisionMaterialProtocol MaterialProtocol { get; set; }
 }
 
 public sealed class ProcessDecisionMaterialEntity {
@@ -36,9 +37,12 @@ internal sealed class ProcessDecisionMaterialScopeConfiguration : IEntityTypeCon
             AND "OwnerRunId" <> '00000000-0000-0000-0000-000000000000'::uuid
             AND ("StepInstanceId" IS NULL OR "StepInstanceId" <> '00000000-0000-0000-0000-000000000000'::uuid)
             AND "ContractId" <> '00000000-0000-0000-0000-000000000000'::uuid
-            AND "ContractVersion" > 0 AND "Executor" BETWEEN 0 AND 1
+            AND "ContractVersion" > 0
+            AND (("MaterialProtocol" = 1 AND "Executor" IS NOT NULL AND "Executor" BETWEEN 0 AND 1)
+                OR ("MaterialProtocol" = 2 AND "Executor" IS NULL))
             """));
         builder.HasKey(item => item.ScopeId);
+        builder.Property(item => item.MaterialProtocol).HasDefaultValue(ProcessDecisionMaterialProtocol.CanonicalSnapshotV1);
         builder.HasIndex(item => item.OwnerRunId).IsUnique().HasFilter("\"StepInstanceId\" IS NULL");
         builder.HasIndex(item => new { item.OwnerRunId, item.StepInstanceId }).IsUnique().HasFilter("\"StepInstanceId\" IS NOT NULL");
         builder.HasIndex(item => item.RootRunId);

@@ -42,17 +42,28 @@ public sealed record ProcessDecisionMaterialStamp(ProcessDecisionMaterialReferen
 public sealed class ProcessDecisionMaterial {
     public const int MaximumPayloadUtf8Bytes = 1_048_576;
     private static readonly UTF8Encoding Utf8 = new(false, true);
-    private static ReadOnlySpan<byte> FingerprintDomain => "process-decision-material/v1"u8;
+    private ReadOnlySpan<byte> FingerprintDomain => ContentContract is null ? "process-decision-material/v1"u8 : "process-decision-material/v2"u8;
 
     public ProcessDecisionMaterial(ProcessDecisionMaterialScope scope, ProcessDecisionMaterialReference reference,
-        ProcessDecisionExecutionContract executionContract, DateTimeOffset capturedAtUtc, string payloadJson) {
+        ProcessDecisionExecutionContract executionContract, DateTimeOffset capturedAtUtc, string payloadJson)
+        : this(scope, reference, executionContract ?? throw new ArgumentNullException(nameof(executionContract)), null, capturedAtUtc, payloadJson) { }
+
+    public static ProcessDecisionMaterial FromContent(ProcessDecisionMaterialScope scope, ProcessDecisionMaterialReference reference,
+        ProcessDecisionContentContract contentContract, DateTimeOffset capturedAtUtc, string payloadJson)
+        => new(scope, reference, null, contentContract ?? throw new ArgumentNullException(nameof(contentContract)), capturedAtUtc, payloadJson);
+
+    private ProcessDecisionMaterial(ProcessDecisionMaterialScope scope, ProcessDecisionMaterialReference reference,
+        ProcessDecisionExecutionContract? executionContract, ProcessDecisionContentContract? contentContract, DateTimeOffset capturedAtUtc, string payloadJson) {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(reference);
-        ArgumentNullException.ThrowIfNull(executionContract);
         ArgumentNullException.ThrowIfNull(payloadJson);
+        if ((executionContract is null) == (contentContract is null)) {
+            throw new InvalidDataException("Process material requires exactly one original protocol contract.");
+        }
         scope.Validate();
         reference.Validate();
-        executionContract.Validate();
+        executionContract?.Validate();
+        contentContract?.Validate();
         if (scope.Id != reference.ScopeId || capturedAtUtc == default || capturedAtUtc.Offset != TimeSpan.Zero ||
             payloadJson.Length > MaximumPayloadUtf8Bytes) {
             throw new InvalidDataException("Process material requires its original scope, UTC capture and bounded payload.");
@@ -73,6 +84,7 @@ public sealed class ProcessDecisionMaterial {
         Scope = scope;
         Reference = reference;
         ExecutionContract = executionContract;
+        ContentContract = contentContract;
         CapturedAtUtc = capturedAtUtc;
         PayloadJson = payloadJson;
         PayloadUtf8Bytes = payload.Length;
@@ -81,7 +93,10 @@ public sealed class ProcessDecisionMaterial {
 
     public ProcessDecisionMaterialScope Scope { get; }
     public ProcessDecisionMaterialReference Reference { get; }
-    public ProcessDecisionExecutionContract ExecutionContract { get; }
+    public ProcessDecisionExecutionContract? ExecutionContract { get; }
+    public ProcessDecisionContentContract? ContentContract { get; }
+    public ProcessDecisionMaterialProtocol Protocol => ContentContract is null
+        ? ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 : ProcessDecisionMaterialProtocol.SharedContentV1;
     public DateTimeOffset CapturedAtUtc { get; }
     public string PayloadJson { get; }
     public int PayloadUtf8Bytes { get; }
@@ -90,7 +105,7 @@ public sealed class ProcessDecisionMaterial {
 
     public void RequireOriginal(ProcessDecisionMaterial observed) {
         ArgumentNullException.ThrowIfNull(observed);
-        if (Scope != observed.Scope || Reference != observed.Reference || ExecutionContract != observed.ExecutionContract ||
+        if (Scope != observed.Scope || Reference != observed.Reference || ExecutionContract != observed.ExecutionContract || ContentContract != observed.ContentContract ||
             CapturedAtUtc != observed.CapturedAtUtc || PayloadJson != observed.PayloadJson) {
             throw new InvalidDataException("The observed Process material differs from the original inherited snapshot.");
         }
@@ -116,9 +131,14 @@ public sealed class ProcessDecisionMaterial {
         AppendGuid(Scope.StepInstanceId?.Value ?? Guid.Empty);
         AppendInteger(Reference.Generation);
         AppendGuid(Reference.MaterialId.Value);
-        AppendGuid(ExecutionContract.ContractId);
-        AppendInteger(ExecutionContract.Version);
-        AppendInteger((int)ExecutionContract.Executor);
+        if (ContentContract is { } content) {
+            AppendGuid(content.SchemaId);
+            AppendInteger(content.Version);
+        } else {
+            AppendGuid(ExecutionContract!.ContractId);
+            AppendInteger(ExecutionContract.Version);
+            AppendInteger((int)ExecutionContract.Executor);
+        }
         AppendInteger(CapturedAtUtc.UtcTicks);
         AppendInteger(payload.Length);
         hash.AppendData(payload);

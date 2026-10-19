@@ -19,7 +19,7 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFi
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
-public sealed class ProcessDecisionMaterialPersistenceTests {
+public sealed partial class ProcessDecisionMaterialPersistenceTests {
     [Theory]
     [InlineData(ReadBasisMode.RunSnapshot)]
     [InlineData(ReadBasisMode.StepSnapshot)]
@@ -71,7 +71,7 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
             1 => Copy(original, captured: original.CapturedAtUtc.AddTicks(1)),
             2 => Copy(original, scope: original.Scope with { WorkspaceNamespaceId = Guid.NewGuid() }),
             3 => Copy(original, reference: original.Reference with { Generation = 2 }),
-            4 => Copy(original, contract: original.ExecutionContract with { Version = 2 }),
+            4 => Copy(original, contract: original.ExecutionContract! with { Version = 2 }),
             _ => original
         };
         var retry = request with { DecisionMaterial = change == 5 ? null : changed,
@@ -107,7 +107,7 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
             5 => original.Scope with { StepInstanceId = null },
             _ => original.Scope
         };
-        var changed = Copy(original, scope: scope, contract: change == 6 ? original.ExecutionContract with { Version = 2 } : null,
+        var changed = Copy(original, scope: scope, contract: change == 6 ? original.ExecutionContract! with { Version = 2 } : null,
             reference: change == 7 ? original.Reference with { Generation = 2 } : null);
         var invalid = request with { DecisionMaterial = changed, Decision = request.Decision! with { Material = changed.Stamp } };
         await Assert.ThrowsAsync<InvalidDataException>(() => Owner(context, app.Services).CommitAsync(invalid));
@@ -117,15 +117,17 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
         Assert.Equal(request.OriginalState.UpdatedAtUtc, (await Owner(context, app.Services).LoadAsync(request.OriginalState.RunId))!.UpdatedAtUtc);
     }
 
-    [Fact]
-    public async Task Restart_and_refresh_keep_original_receipt_and_material_separate_from_the_new_generation() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Restart_and_refresh_keep_original_receipt_and_material_separate_from_the_new_generation(bool sharedContent) {
         await using var environment = CanDoItAllTestEnvironment.Create("process-decision-generation");
         var harness = new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = environment.CreatePostgreSqlProfile("material-restart") };
         ProcessRuntimeCommitRequest original;
         ProcessDecisionReceipt receipt;
         await using (var app = await TestApplication.CreateAsync(harness)) {
             await using var context = Context(app.Services);
-            original = await OriginalAsync(context, app.Services);
+            original = await OriginalAsync(context, app.Services, sharedContent: sharedContent);
             var started = await Owner(context, app.Services).CommitAsync(original);
             receipt = started.Decision!;
             var refreshed = await Owner(context, app.Services).CommitAsync(await RefreshRequestAsync(context, started.State, original.DecisionMaterial!));
@@ -174,8 +176,10 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
         Assert.Equal(5, (await BudgetAsync(context, results[0].State)).ConsumedWorkTicks);
     }
 
-    [Fact]
-    public async Task Sibling_decisions_reuse_one_run_snapshot_without_copying_its_payload() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Sibling_decisions_reuse_one_run_snapshot_without_copying_its_payload(bool sharedContent) {
         await using var app = await TestApplication.CreateAsync();
         await using var context = Context(app.Services);
         var owner = Owner(context, app.Services);
@@ -189,15 +193,21 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
         var state = initial.OriginalState with { PlanHash = plan.PlanHash, Steps = [initial.OriginalState.Steps.Single(),
             initial.OriginalState.Steps.Single() with { StepInstanceId = secondId, StepDefinitionId = plan.Steps[1].StepDefinitionId }] };
         var assignment = initial.InitialAssignments!.Single();
-        var assignments = new[] { assignment, assignment with { StepInstanceId = secondId, StepKey = "second" } }
-            .Select(item => item with { DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(plan.Definition.VersionId, item.StepInstanceId) with {
-                ExecutionContract = Contract(), MaterialProtocol = ProcessDecisionMaterialProtocol.CanonicalSnapshotV1
+        var assignments = new[] { assignment, assignment with { StepInstanceId = secondId, StepKey = "second",
+            ExecutorKind = sharedContent ? ProcessLaunchExecutorKinds.Workflow : assignment.ExecutorKind } }
+            .Select((item, index) => item with { DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(plan.Definition.VersionId, item.StepInstanceId) with {
+                ExecutionContract = ProcessDecisionPolicyFixture.Contract(sharedContent && index == 1 ? ProcessDecisionChildOwner.Workflow : ProcessDecisionChildOwner.Agent),
+                MaterialProtocol = sharedContent ? ProcessDecisionMaterialProtocol.SharedContentV1 : ProcessDecisionMaterialProtocol.CanonicalSnapshotV1,
+                ContentContract = sharedContent ? ProcessDecisionPolicyFixture.ContentContract() : null
             } }).ToArray();
         state = (await owner.CommitAsync(initial with { InitialPlan = plan, InitialAssignments = assignments, OriginalState = state,
             Mutation = initial.Mutation with { State = state } })).State;
         var scope = new ProcessDecisionMaterialScope(new(Guid.NewGuid()), Database(app.Services).Profile.Profile.Id,
             assignments[0].DecisionDataPolicy!.WorkspaceNamespaceId, state.RootRunId, state.RunId, null);
-        var material = new ProcessDecisionMaterial(scope, new(scope.Id, 1, new(Guid.NewGuid())), Contract(), ProcessProjectAdmissionFixture.Now, "{\"tasks\":[]}");
+        ProcessDecisionMaterialReference reference = new(scope.Id, 1, new(Guid.NewGuid()));
+        var material = sharedContent
+            ? ProcessDecisionMaterial.FromContent(scope, reference, ProcessDecisionPolicyFixture.ContentContract(), ProcessProjectAdmissionFixture.Now, "{\"tasks\":[]}")
+            : new ProcessDecisionMaterial(scope, reference, Contract(), ProcessProjectAdmissionFixture.Now, "{\"tasks\":[]}");
         foreach (var step in state.Steps) {
             var budget = (await new EfProcessDecisionBudgetStore(context).ReadAsync(state.RunId, step.StepInstanceId))!;
             var allocation = new DecisionBudgetAllocationId(Guid.NewGuid());
@@ -372,10 +382,12 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
     }
 
     private static async Task<ProcessRuntimeCommitRequest> OriginalAsync(ProcessPersistenceDbContext context, IServiceProvider services,
-        ReadBasisMode mode = ReadBasisMode.StepSnapshot) {
+        ReadBasisMode mode = ReadBasisMode.StepSnapshot, bool sharedContent = false, ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent) {
         var request = await StartRequestAsync(context, original => {
             var stepOverride = original.StepOverride! with { ReadBasisMode = mode };
-            return original with { ExecutionContract = Contract(), MaterialProtocol = ProcessDecisionMaterialProtocol.CanonicalSnapshotV1, StepOverride = stepOverride,
+            return original with { ExecutionContract = ProcessDecisionPolicyFixture.Contract(executor),
+                MaterialProtocol = sharedContent ? ProcessDecisionMaterialProtocol.SharedContentV1 : ProcessDecisionMaterialProtocol.CanonicalSnapshotV1,
+                ContentContract = sharedContent ? ProcessDecisionPolicyFixture.ContentContract() : null, StepOverride = stepOverride,
                 Policy = DecisionDataPolicyResolver.Resolve(original.WorkspacePolicy, original.OwnerCapabilities,
                     definition: original.DefinitionOverride, step: stepOverride, authorizedInvocation: original.AuthorizedInvocationOverride,
                     enclosingBudgets: original.EnclosingBudgets) };
@@ -385,8 +397,11 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
         var scope = new ProcessDecisionMaterialScope(new(Guid.NewGuid()), Database(services).Profile.Profile.Id, admission.WorkspaceNamespaceId,
             request.OriginalState.RootRunId, request.OriginalState.RunId, mode == ReadBasisMode.StepSnapshot ? Step(request.OriginalState) : null);
         var start = (ProcessDecisionStart)request.Decision!;
-        var material = new ProcessDecisionMaterial(scope, new(scope.Id, 1, start.MaterialId), Contract(),
-            new DateTimeOffset(2026, 10, 19, 12, 0, 0, TimeSpan.Zero).AddTicks(7), "{ \"tasks\": [] }");
+        var captured = new DateTimeOffset(2026, 10, 19, 12, 0, 0, TimeSpan.Zero).AddTicks(7);
+        ProcessDecisionMaterialReference reference = new(scope.Id, 1, start.MaterialId);
+        var material = sharedContent
+            ? ProcessDecisionMaterial.FromContent(scope, reference, ProcessDecisionPolicyFixture.ContentContract(), captured, "{ \"tasks\": [] }")
+            : new ProcessDecisionMaterial(scope, reference, ProcessDecisionPolicyFixture.Contract(executor), captured, "{ \"tasks\": [] }");
         return request with { DecisionMaterial = material, Decision = start with { Material = material.Stamp } };
     }
 
@@ -405,18 +420,25 @@ public sealed class ProcessDecisionMaterialPersistenceTests {
     }
 
     private static ProcessDecisionMaterial Copy(ProcessDecisionMaterial original, ProcessDecisionMaterialScope? scope = null,
-        ProcessDecisionMaterialReference? reference = null, ProcessDecisionExecutionContract? contract = null, DateTimeOffset? captured = null, string? payload = null)
-        => new(scope ?? original.Scope, reference ?? original.Reference, contract ?? original.ExecutionContract,
-            captured ?? original.CapturedAtUtc, payload ?? original.PayloadJson);
+        ProcessDecisionMaterialReference? reference = null, ProcessDecisionExecutionContract? contract = null, DateTimeOffset? captured = null, string? payload = null,
+        ProcessDecisionContentContract? content = null)
+        => original.ContentContract is { } shared
+            ? ProcessDecisionMaterial.FromContent(scope ?? original.Scope, reference ?? original.Reference, content ?? shared,
+                captured ?? original.CapturedAtUtc, payload ?? original.PayloadJson)
+            : new(scope ?? original.Scope, reference ?? original.Reference, contract ?? original.ExecutionContract!,
+                captured ?? original.CapturedAtUtc, payload ?? original.PayloadJson);
 
     private static ProcessDecisionExecutionContract Contract() => ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent);
     private static ICanonicalRuntimeDatabase Database(IServiceProvider services) => services.GetRequiredService<ICanonicalRuntimeDatabase>();
     private static EfProcessRuntimeUnitOfWork Owner(ProcessPersistenceDbContext context, IServiceProvider services) => new(context, runtimeDatabase: Database(services));
     private static EfProcessDecisionMaterialStore Reader(ProcessPersistenceDbContext context, IServiceProvider services) => new(context, Database(services));
 
-    internal static async Task MigrateAsync(ProcessPersistenceDbContext context, bool down) {
-        var migration = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials();
-        var commands = context.GetService<IMigrationsSqlGenerator>().Generate(down ? migration.DownOperations : migration.UpOperations, context.Model);
+    internal static async Task MigrateAsync(ProcessPersistenceDbContext context, bool down, bool sharedOnly = false) {
+        Migration[] migrations = [new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedMaterialContracts()];
+        var selected = sharedOnly ? migrations.Skip(1) : migrations;
+        var commands = (down ? selected.Reverse() : selected).SelectMany(migration =>
+            context.GetService<IMigrationsSqlGenerator>().Generate(down ? migration.DownOperations : migration.UpOperations, context.Model));
         await using var transaction = await context.Database.BeginTransactionAsync();
         foreach (var command in commands) {
             await using var sql = context.Database.GetDbConnection().CreateCommand();

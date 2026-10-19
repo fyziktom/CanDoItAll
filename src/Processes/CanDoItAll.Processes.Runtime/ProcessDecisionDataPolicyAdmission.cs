@@ -5,7 +5,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Processes.Runtime;
 
-public enum ProcessDecisionMaterialProtocol { CanonicalSnapshotV1 = 1 }
+public enum ProcessDecisionMaterialProtocol { CanonicalSnapshotV1 = 1, SharedContentV1 = 2 }
 
 [JsonConverter(typeof(ProcessDecisionDataPolicyAdmissionJsonConverter))]
 public sealed record ProcessDecisionDataPolicyAdmission(
@@ -28,6 +28,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
 
     public ProcessDecisionExecutionContract? ExecutionContract { get; init; }
     public ProcessDecisionMaterialProtocol? MaterialProtocol { get; init; }
+    public ProcessDecisionContentContract? ContentContract { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -38,7 +39,14 @@ public sealed record ProcessDecisionDataPolicyAdmission(
             throw new InvalidDataException("The Process decision policy requires its original identity and bounded provenance.");
         }
         ExecutionContract?.Validate();
-        if (MaterialProtocol is { } protocol && (protocol != ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 || ExecutionContract is null)) {
+        ContentContract?.Validate();
+        var validMaterial = MaterialProtocol switch {
+            null => ContentContract is null,
+            ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 => ExecutionContract is not null && ContentContract is null,
+            ProcessDecisionMaterialProtocol.SharedContentV1 => ExecutionContract is not null && ContentContract is not null,
+            _ => false
+        };
+        if (!validMaterial) {
             throw new InvalidDataException("Canonical Process material requires its supported protocol and original executor contract.");
         }
         foreach (var preference in new[] { DefinitionOverride, StepOverride, AuthorizedInvocationOverride }) {

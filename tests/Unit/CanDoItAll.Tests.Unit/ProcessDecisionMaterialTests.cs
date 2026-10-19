@@ -14,6 +14,45 @@ public sealed class ProcessDecisionMaterialTests {
     private const string Payload = "{\"tasks\":[]}";
 
     [Theory]
+    [InlineData(false, "44330FA4DAFBC5AD8321B3C8EFA025F9EE8628A56A0A05E396D0FCD998EDA793")]
+    [InlineData(true, "489141DF345C63AFD17605FACD5B4ECFE9AF9679F44F8A686CA6AFF2CF03A5BF")]
+    public void Shared_content_fingerprint_binds_business_schema_without_an_executor(bool step, string expected) {
+        var scope = Scope(step);
+        var material = ProcessDecisionMaterial.FromContent(scope, new(scope.Id, 1, MaterialId), ProcessDecisionPolicyFixture.ContentContract(), Captured, Payload);
+        Assert.Equal(expected, material.Fingerprint);
+        Assert.Equal(ProcessDecisionMaterialProtocol.SharedContentV1, material.Protocol);
+        Assert.Null(material.ExecutionContract);
+        Assert.Equal(ProcessDecisionPolicyFixture.ContentContract(), material.ContentContract);
+        Assert.Throws<ProcessDecisionMaterialExpiredException>(() => material.RequireFresh(Captured.AddMinutes(2), TimeSpan.FromMinutes(1)));
+    }
+
+    [Fact]
+    public void Content_schema_changes_and_legacy_protocol_are_not_the_same_original_material() {
+        var scope = Scope();
+        ProcessDecisionMaterialReference reference = new(scope.Id, 1, MaterialId);
+        var contract = ProcessDecisionPolicyFixture.ContentContract();
+        var material = ProcessDecisionMaterial.FromContent(scope, reference, contract, Captured, Payload);
+        foreach (var changed in new[] { contract with { SchemaId = Guid.NewGuid() }, contract with { Version = 2 } }) {
+            var replacement = ProcessDecisionMaterial.FromContent(scope, reference, changed, Captured, Payload);
+            Assert.Throws<InvalidDataException>(() => material.RequireOriginal(replacement));
+            Assert.NotEqual(material.Fingerprint, replacement.Fingerprint);
+        }
+        var legacy = new ProcessDecisionMaterial(scope, reference, new(contract.SchemaId, contract.Version, ProcessDecisionChildOwner.Agent), Captured, Payload);
+        Assert.Throws<InvalidDataException>(() => material.RequireOriginal(legacy));
+        Assert.NotEqual(material.Fingerprint, legacy.Fingerprint);
+        Assert.Equal(ProcessDecisionMaterialProtocol.CanonicalSnapshotV1, legacy.Protocol);
+    }
+
+    [Fact]
+    public void Shared_content_requires_a_real_declared_schema() {
+        var scope = Scope();
+        ProcessDecisionMaterialReference reference = new(scope.Id, 1, MaterialId);
+        Assert.Throws<ArgumentNullException>(() => ProcessDecisionMaterial.FromContent(scope, reference, null!, Captured, Payload));
+        Assert.Throws<InvalidDataException>(() => ProcessDecisionMaterial.FromContent(scope, reference, new(Guid.Empty, 1), Captured, Payload));
+        Assert.Throws<InvalidDataException>(() => ProcessDecisionMaterial.FromContent(scope, reference, new(Guid.NewGuid(), 0), Captured, Payload));
+    }
+
+    [Theory]
     [InlineData(false, "0049203A0515566FE649958CF9EF42328D0123E985B6FB5D742C95B3B830D6C1")]
     [InlineData(true, "F1114CA41EA2BCB8F6A8103B2EF5CE982DF7F046C3E5797C0B343DC8A24A6BB3")]
     public void Original_material_has_a_culture_independent_protocol_fingerprint(bool step, string expected) {

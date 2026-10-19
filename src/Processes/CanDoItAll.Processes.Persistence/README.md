@@ -99,3 +99,11 @@ No material is copied into each state/receipt, and effect queries retain small m
 Run-wide refresh remains refused by the step owner until the shared parent can fence
 and reconcile all affected decisions. Historical material storage alone does not enable
 governed Agent/Workflow execution.
+
+Scopes explicitly distinguish executor-bound legacy material from shared business
+content. The shared protocol stores its schema ID/version and a null executor;
+legacy rows retain their original executor and fingerprint. SQL shape checks and
+reader reconstruction reject mixed or unknown formats. Downgrade refuses shared
+scopes and their prepared/committed admissions, including before capture. One run
+payload can be reused by Agent and Workflow assignments with different execution
+contracts when both originally admit the same content schema.

@@ -100,6 +100,9 @@ owner. That deliberately refuses a different executor, but cannot yet express on
 RunSnapshot consumed by both Agent and Workflow steps. Separate the business content
 schema from dispatch capability before activating those consumers; do not weaken exact
 executor admission or relabel original material. Preserve historical protocol meaning.
+The subsequent [shared-content checkpoint](2026-10-19-process-shared-content.md) completes
+this prerequisite with 265 passing selected cases; it does not change this historical
+storage candidate's identity or claim runtime activation.
 
 The active shared scope, genuine parent budget/funding, nested scope membership, actual
 child journal/manager continuation and real settings producer remain open. Indexed query

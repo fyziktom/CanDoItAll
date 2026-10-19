@@ -587,3 +587,13 @@ claiming ownership. No new resource family or stack was introduced. The reviewed
 TEMP baseline bound and separate 16,384 delta bound remain unchanged. Earlier denied
 cleanup remains explicit; the fixture remains needed for continuing implementation.
 See the [validation record](validation/2026-10-19-process-material-persistence.md).
+
+## 2026-10-19 Shared material content
+
+`c4-process-shared-content` recorded ownership before creation and reused the existing
+Release outputs and isolated PostgreSQL18 fixture. All 265 selected cases passed;
+complete source/runtime verification and 536.0032092 seconds of whole-command observation
+preceded freeze release. No observed process or database-name delta remains. Fourteen
+unattributed TEMP entries were preserved. The initial startup-file check typo and actual
+prior V2 startup are retained in proof. No new family or stack was added; earlier denied
+cleanup remains unchanged. See the [validation record](validation/2026-10-19-process-shared-content.md).

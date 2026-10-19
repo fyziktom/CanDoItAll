@@ -8885,8 +8885,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("DatabaseProfileId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Executor")
+                    b.Property<int?>("Executor")
                         .HasColumnType("integer");
+
+                    b.Property<int>("MaterialProtocol")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<Guid>("OwnerRunId")
                         .HasColumnType("uuid");
@@ -8914,7 +8919,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.ToTable("process_decision_material_scopes", null, t =>
                         {
-                            t.HasCheckConstraint("CK_process_decision_material_scopes_identity", "\"ScopeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"WorkspaceNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"OwnerRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND (\"StepInstanceId\" IS NULL OR \"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND \"ContractId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ContractVersion\" > 0 AND \"Executor\" BETWEEN 0 AND 1");
+                            t.HasCheckConstraint("CK_process_decision_material_scopes_identity", "\"ScopeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"WorkspaceNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"OwnerRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND (\"StepInstanceId\" IS NULL OR \"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND \"ContractId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ContractVersion\" > 0\nAND ((\"MaterialProtocol\" = 1 AND \"Executor\" IS NOT NULL AND \"Executor\" BETWEEN 0 AND 1)\n    OR (\"MaterialProtocol\" = 2 AND \"Executor\" IS NULL))");
                         });
                 });
 

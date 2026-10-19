@@ -64,3 +64,11 @@ Canonical material admission uses policy schema 3 and explicitly declares its ma
 protocol. Readers of the earlier declaration-only envelope reject that new schema.
 Absent protocol retains the exact schema 1/2 encodings. Unsupported executors remain
 closed; a declaration is never a capability grant.
+
+`SharedContentV1` separates a business `ProcessDecisionContentContract` from the exact
+assignment executor contract. `ProcessDecisionMaterial.FromContent` creates a neutral
+snapshot with no capture executor and a distinct fingerprint domain. Legacy material
+keeps its original framing. Policy schema 3 requires the content contract only for the
+shared protocol; older or executor-bound envelopes reject it. Mixed Agent/Workflow
+consumers can share the same business payload while retaining independent dispatch
+capabilities. Neither protocol permits relabeling historical material.

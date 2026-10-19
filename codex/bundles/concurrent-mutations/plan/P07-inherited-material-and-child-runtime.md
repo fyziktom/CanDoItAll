@@ -104,7 +104,10 @@ business content schema, separate from dispatch capability, before wiring these 
 Do not reinterpret the old owner-specific protocol as that schema or weaken executor
 equality. Historical material must retain its original meaning and new unsupported
 protocols must fail explicitly. The immutable storage checkpoint remains useful, but its
-current material contract is not the final mixed-executor contract.
+current material contract is not the final mixed-executor contract. The subsequent
+[shared-content refinement](P07-shared-material-content-contract.md) implements that
+separation with 265 passing selected cases and explicit legacy compatibility; the
+shared active parent and runtime integration below remain required.
 
 Likewise, a nested Process must bind its parent's scope through verified runtime ancestry;
 it cannot change `OwnerRunId` to itself or renew the capture timestamp. Current staging

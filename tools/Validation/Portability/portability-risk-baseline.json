@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-19T20:53:51.962931+00:00",
+  "generated_utc": "2026-10-19T21:29:15.714309+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15627,
+  "allowance_count": 15631,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13715,6 +13715,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019204112_AddProcessDecisionMaterials.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "5da7377241a95b9f6e2d4a964e601ff7201d0c3d22a97325c856809ceac82761",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019211948_AddProcessSharedMaterialContracts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "62b79ac9438fbca6da4304e4327848ffb6e2c04beb8108d5cc555cddb1e451e2",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019211948_AddProcessSharedMaterialContracts.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "674b922e8cc429bcf0195392073d3f342bad00f2329e3822f374287929e8929b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019211948_AddProcessSharedMaterialContracts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "a87c0f832451844e5a8a28cdde20a65d8de7f7165ae4316f8fb81ab66cb2a374",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019211948_AddProcessSharedMaterialContracts.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "bc80d2e3dec0a0094f5ac13b9a61daec964c81780fd0d29dab4e2e4f9fde8fae",
       "count": 1
     },
     {
