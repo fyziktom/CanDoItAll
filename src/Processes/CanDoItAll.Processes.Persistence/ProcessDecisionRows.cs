@@ -47,4 +47,44 @@ internal static class ProcessDecisionRows {
         allocation.Validate();
         return allocation;
     }
+
+    internal static ProcessDecisionBudgetEntity NewBudget(DecisionBudgetId id, Guid rootRunId, Guid runId, Guid? stepId,
+        DecisionDataPolicyBudget ceiling) {
+        var entity = new ProcessDecisionBudgetEntity {
+            BudgetId = id.Value, RootRunId = rootRunId, RunId = runId, StepInstanceId = stepId,
+            MaximumWorkTicks = ceiling.MaximumWorkDuration.Ticks, MaximumReplans = ceiling.MaximumReplans,
+            MaximumBasisAgeTicks = ceiling.MaximumBasisAge.Ticks
+        };
+        WriteBalance(entity, DecisionBudgetTransitions.Create(id, ceiling));
+        return entity;
+    }
+
+    internal static void WriteBalance(ProcessDecisionBudgetEntity entity, DecisionBudgetBalance balance) {
+        entity.Revision = balance.Revision;
+        entity.ConsumedWorkTicks = balance.ConsumedWorkTicks;
+        entity.ReservedWorkTicks = balance.ReservedWorkTicks;
+        entity.ConsumedReplans = balance.ConsumedReplans;
+        entity.ReservedReplans = balance.ReservedReplans;
+        entity.AllocationCount = balance.AllocationCount;
+        entity.OverrunDetected = balance.OverrunDetected;
+    }
+
+    internal static void WriteAllocation(ProcessDecisionBudgetAllocationEntity entity, DecisionBudgetAllocation allocation) {
+        entity.GrantedWorkTicks = allocation.Grant.WorkTicks;
+        entity.GrantedReplans = allocation.Grant.Replans;
+        entity.OwnerWorkRevision = allocation.Settlement?.OwnerWorkRevision;
+        entity.ConsumedWorkTicks = allocation.Settlement?.Consumed.WorkTicks;
+        entity.ConsumedReplans = allocation.Settlement?.Consumed.Replans;
+    }
+
+    internal static DecisionBudgetChange ApplyAccounting(ProcessDecisionBudgetEntity budget, ProcessDecisionBudgetAllocationEntity? allocation,
+        ProcessDecisionBudgetCommand command) {
+        var balance = ReadBalance(budget);
+        var retained = allocation is null ? null : ReadAllocation(allocation);
+        return command switch {
+            ProcessDecisionBudgetReservation reservation => DecisionBudgetTransitions.Reserve(balance, command.AllocationId, reservation.Grant, retained),
+            ProcessDecisionBudgetSettlement settlement when retained is not null => DecisionBudgetTransitions.Settle(balance, retained, settlement.Settlement),
+            _ => throw new InvalidOperationException("Settlement requires the original retained Process allocation.")
+        };
+    }
 }

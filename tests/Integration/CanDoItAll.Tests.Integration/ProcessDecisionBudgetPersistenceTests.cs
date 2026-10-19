@@ -327,18 +327,13 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
         Assert.Equal(reservation.DecisionBudget, (await owner.FindCompletedCommandAsync(request.CommandId))!.DecisionBudget);
     }
 
-    private static async Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade) {
-        var migration = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionBudgets();
-        var generations = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations();
-        var operations = downgrade ? generations.DownOperations.Concat(migration.DownOperations).ToArray()
-            : migration.UpOperations.Concat(generations.UpOperations).ToArray();
-        var commands = context.GetService<IMigrationsSqlGenerator>().Generate(operations, context.Model);
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        foreach (var command in commands) {
-            await context.Database.ExecuteSqlRawAsync(command.CommandText);
-        }
-        await transaction.CommitAsync();
-    }
+    private static Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade)
+        => ProcessDecisionMigrationFixture.ApplyAsync(context, downgrade,
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionBudgets(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedMaterialContracts(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRunDecisionFunding());
 
     private static ProcessRuntimeCommitRequest Initial(bool admitted = true) {
         var request = ProcessProjectAdmissionFixture.Initial();

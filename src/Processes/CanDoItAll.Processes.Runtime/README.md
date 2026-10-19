@@ -15,8 +15,8 @@ recorded overruns prevent further reservations. These values do not authorize ex
 or verify business receipts. Typed accounting commands now let the persistence owner
 compare revisions and update the balance/allocation atomically with runtime state under
 the existing root fence. Receipts preserve the original accounting result separately
-from current state. Actual child-owner settlement verification, generation fencing and
-inherited allocations remain required before runtime activation.
+from current state. Actual child-owner settlement verification and executor wiring remain
+required before runtime activation.
 
 The pure decision-generation lifecycle separates active dispatch, manager review and
 quiescence. It compares exact generation/revision expectations, retains immutable child
@@ -72,3 +72,21 @@ keeps its original framing. Policy schema 3 requires the content contract only f
 shared protocol; older or executor-bound envelopes reject it. Mixed Agent/Workflow
 consumers can share the same business payload while retaining independent dispatch
 capabilities. Neither protocol permits relabeling historical material.
+
+## Root decision accounting
+
+`ProcessDecisionRunAdmission` retains the original root run, selected profile, workspace
+head, policy inputs and resolved limits. A nullable accounting step denotes that real
+root owner. It never denotes an invented step. Funded step admissions retain a typed
+reference to this root budget and their own original ceiling.
+
+Each local allocation has a deterministic, domain-separated parent allocation identity.
+Reservations and closed usage apply to both ledgers; the root's 256-allocation bound is
+shared across captures, orchestration and descendant work. An unresolved child does not
+release its grant. RunSnapshot children share their root's read/publication/change policy,
+and only the root can charge a shared material replan. StepSnapshot retains per-step policy
+resolution within the original workspace and enclosing limits.
+
+Funded admissions and receipts have explicit new wire versions. Legacy encodings remain
+unchanged. Root accounting does not itself enable an executor or implement shared material
+reconciliation.

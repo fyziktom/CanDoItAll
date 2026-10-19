@@ -26,7 +26,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
     IProcessIdempotencyStore
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
-    private readonly EfProcessDecisionBudgetStore decisionBudgets = new(dbContext);
+    private readonly EfProcessDecisionBudgetStore decisionBudgets = new(dbContext, runtimeDatabase);
     private readonly EfProcessDecisionStore decisions = new(dbContext, runtimeDatabase);
 
     public async Task<ProcessRuntimeStateSnapshot?> LoadAsync(
@@ -162,6 +162,11 @@ public sealed class EfProcessRuntimeUnitOfWork(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (request.InitialRunDecisionAdmission is not null && (request.InitialPlan is null || request.InitialAssignments is null ||
+                request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
+            throw new InvalidOperationException("Root decision admission must accompany the initial real Process plan and assignments.");
+        }
+
         if ((request.DecisionBudget is not null || request.Decision is not null || request.DecisionMaterial is not null) &&
                 (request.InitialPlan is not null || request.Mutation.Outcome != ProcessRuntimeTransitionOutcome.Applied)) {
             throw new InvalidOperationException("Process accounting and decisions must accompany an applied mutation of an existing runtime state.");
@@ -241,6 +246,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             cancellationToken).ConfigureAwait(false);
         if (duplicate is not null)
         {
+            await decisionBudgets.RequireOriginalInitialAsync(request, cancellationToken).ConfigureAwait(false);
             ProcessDecisionBudgetReceiptCodec.RequireSameCommand(request.DecisionBudget, duplicate.DecisionBudget);
             ProcessDecisionReceiptCodec.RequireSameCommand(request.Decision, duplicate.Decision);
             if (request.DecisionMaterial is { } material) {
@@ -283,7 +289,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
             request,
             isNewState: existing is null,
             cancellationToken).ConfigureAwait(false);
-        StageInitialAssignments(request, isNewState: existing is null);
+        await StageInitialAssignmentsAsync(request, isNewState: existing is null, cancellationToken).ConfigureAwait(false);
 
         if (existing is null)
         {
@@ -437,9 +443,10 @@ public sealed class EfProcessRuntimeUnitOfWork(
         }
     }
 
-    private void StageInitialAssignments(
+    private async Task StageInitialAssignmentsAsync(
         ProcessRuntimeCommitRequest request,
-        bool isNewState)
+        bool isNewState,
+        CancellationToken cancellationToken)
     {
         if (request.InitialAssignments is not { } assignments)
         {
@@ -499,7 +506,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
 
         dbContext.RuntimeStepAssignments.AddRange(
             assignments.Select(EfProcessRuntimeStepAssignmentStore.ToEntity));
-        decisionBudgets.StageInitial(request.Mutation.State.RootRunId, assignments);
+        await decisionBudgets.StageInitialAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     private static void ValidateAssignmentParentLineage(

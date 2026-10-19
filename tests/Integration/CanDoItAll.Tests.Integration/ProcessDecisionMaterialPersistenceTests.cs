@@ -433,20 +433,10 @@ public sealed partial class ProcessDecisionMaterialPersistenceTests {
     private static EfProcessRuntimeUnitOfWork Owner(ProcessPersistenceDbContext context, IServiceProvider services) => new(context, runtimeDatabase: Database(services));
     private static EfProcessDecisionMaterialStore Reader(ProcessPersistenceDbContext context, IServiceProvider services) => new(context, Database(services));
 
-    internal static async Task MigrateAsync(ProcessPersistenceDbContext context, bool down, bool sharedOnly = false) {
+    internal static Task MigrateAsync(ProcessPersistenceDbContext context, bool down, bool sharedOnly = false) {
         Migration[] migrations = [new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials(),
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedMaterialContracts()];
-        var selected = sharedOnly ? migrations.Skip(1) : migrations;
-        var commands = (down ? selected.Reverse() : selected).SelectMany(migration =>
-            context.GetService<IMigrationsSqlGenerator>().Generate(down ? migration.DownOperations : migration.UpOperations, context.Model));
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        foreach (var command in commands) {
-            await using var sql = context.Database.GetDbConnection().CreateCommand();
-            sql.Transaction = transaction.GetDbTransaction();
-            sql.CommandText = command.CommandText;
-            await sql.ExecuteNonQueryAsync();
-        }
-        await transaction.CommitAsync();
+        return ProcessDecisionMigrationFixture.ApplyAsync(context, down, sharedOnly ? [migrations[1]] : migrations);
     }
 
     private sealed class AfterMaterialFlush : SaveChangesInterceptor {

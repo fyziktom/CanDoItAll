@@ -351,6 +351,9 @@ public sealed record ProcessRuntimeCommitRequest(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionMaterial? DecisionMaterial { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionRunAdmission? InitialRunDecisionAdmission { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(

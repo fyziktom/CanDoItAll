@@ -4,6 +4,14 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
+The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) passes
+361/361 selected cases after correcting the legacy optional-parent SQL projection.
+Local and descendant work now share one genuine root budget, with atomic reservations,
+settlement, original receipts and cancellation/overrun publication checks. Active shared
+material ownership and actual Agent/Workflow execution remain required. Eight previously
+validated checkpoints are now signed, through `41a4df8d5`; prior pending-signature records
+remain historical. Continue the [active scope design](plan/P07-active-run-material-scope.md).
+
 The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
 passes 40/40 cases. Policy and historical receipt commit together; read-only lookup
 recovers the original result after lost acknowledgement without replaying PUT.

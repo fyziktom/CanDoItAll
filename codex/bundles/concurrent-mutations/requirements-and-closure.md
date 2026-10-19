@@ -29,8 +29,10 @@ now has 237 distinct selected passing behaviours: atomic storage/runtime/account
 strict versioned admission, original receipt recovery and migration/downgrade proof.
 The [shared-content checkpoint](validation/2026-10-19-process-shared-content.md) passes
 265/265 selected cases for mixed-executor reuse and exact historical compatibility.
-The active shared parent, genuine run budget/funding and actual runtime wiring remain
-open. These prerequisites do not close R5 or R6.
+The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) now passes
+361/361 selected cases, implementing genuine root accounting and atomic descendant funding.
+The active shared parent and actual runtime wiring remain open. These prerequisites do not
+close R5 or R6. Grant sizing/fair scheduling and workload capacity still require proof.
 
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash

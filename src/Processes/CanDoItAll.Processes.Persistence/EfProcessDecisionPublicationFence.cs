@@ -35,7 +35,8 @@ public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPe
             new(original.Address.Reference, original.Address.ChildId, original.Owner, original.AllocationId, observation.Closure), kind);
     }
 
-    private static bool AllowsRuntime(ProcessDecisionChildRead current, ProcessDecisionPublicationKind kind) => kind switch {
+    private static bool AllowsRuntime(ProcessDecisionChildRead current, ProcessDecisionPublicationKind kind)
+        => current.RootStatus != ProcessRuntimeStatus.CancelRequested && !ProcessRuntimeTerminalStates.IsRunTerminal(current.RootStatus) && (kind switch {
         ProcessDecisionPublicationKind.Dispatch => current.RunStatus == ProcessRuntimeStatus.Active &&
             current.StepStatus is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running && current.ActiveClaimToken is not null && current.HasLiveClaim,
         ProcessDecisionPublicationKind.ManagerReview =>
@@ -43,7 +44,7 @@ public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPe
             current.StepStatus is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked &&
             current.ActiveClaimToken is null && !current.HasLiveClaim,
         _ => false
-    };
+    });
 
     private static long RootLockKey(Guid rootRunId) {
         Span<byte> bytes = stackalloc byte[16];

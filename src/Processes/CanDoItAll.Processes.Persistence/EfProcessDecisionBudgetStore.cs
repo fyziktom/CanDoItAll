@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -6,11 +7,17 @@ using static CanDoItAll.Processes.Persistence.ProcessDecisionRows;
 
 namespace CanDoItAll.Processes.Persistence;
 
-public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbContext) {
-    public async Task<DecisionBudgetBalance?> ReadAsync(ProcessRunId runId, ProcessStepInstanceId stepInstanceId,
+public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbContext, ICanonicalRuntimeDatabase? runtimeDatabase = null) {
+    private readonly EfProcessDecisionFundingStore funding = new(dbContext, runtimeDatabase);
+
+    internal Task RequireOriginalInitialAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken)
+        => funding.RequireOriginalInitialAsync(request, cancellationToken);
+
+    public async Task<DecisionBudgetBalance?> ReadAsync(ProcessRunId runId, ProcessStepInstanceId? stepInstanceId,
         CancellationToken cancellationToken = default) {
+        var stepId = stepInstanceId?.Value;
         var entity = await dbContext.DecisionBudgets.AsNoTracking()
-            .SingleOrDefaultAsync(item => item.RunId == runId.Value && item.StepInstanceId == stepInstanceId.Value, cancellationToken).ConfigureAwait(false);
+            .SingleOrDefaultAsync(item => item.RunId == runId.Value && item.StepInstanceId == stepId, cancellationToken).ConfigureAwait(false);
         return entity is null ? null : ReadBalance(entity);
     }
 
@@ -21,19 +28,16 @@ public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbC
         return entity is null ? null : ReadAllocation(entity);
     }
 
-    internal void StageInitial(ProcessRunId rootRunId, IReadOnlyList<ProcessRuntimeStepAssignment> assignments) {
-        foreach (var assignment in assignments) {
+    internal async Task StageInitialAsync(ProcessRuntimeCommitRequest request, CancellationToken cancellationToken) {
+        var root = await funding.StageInitialAsync(request, cancellationToken).ConfigureAwait(false);
+        foreach (var assignment in request.InitialAssignments!) {
             if (assignment.DecisionDataPolicy is not { } admission) {
                 continue;
             }
             admission.Validate();
-            var balance = DecisionBudgetTransitions.Create(new(Guid.NewGuid()), admission.Policy.Budget);
-            var entity = new ProcessDecisionBudgetEntity {
-                BudgetId = balance.BudgetId.Value, RootRunId = rootRunId.Value, RunId = assignment.RunId.Value,
-                StepInstanceId = assignment.StepInstanceId.Value, MaximumWorkTicks = balance.Ceiling.MaximumWorkDuration.Ticks,
-                MaximumReplans = balance.Ceiling.MaximumReplans, MaximumBasisAgeTicks = balance.Ceiling.MaximumBasisAge.Ticks
-            };
-            WriteBalance(entity, balance);
+            var entity = NewBudget(new(Guid.NewGuid()), request.Mutation.State.RootRunId.Value, assignment.RunId.Value,
+                assignment.StepInstanceId.Value, admission.Policy.Budget);
+            entity.ParentBudgetId = root?.BudgetId.Value;
             dbContext.DecisionBudgets.Add(entity);
         }
     }
@@ -48,49 +52,40 @@ public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbC
             throw new InvalidOperationException("Process accounting requires the runtime owner's fenced transaction.");
         }
         var expectation = command.Expectation;
-        var step = originalState.Steps.SingleOrDefault(item => item.StepInstanceId == expectation.StepInstanceId)
-            ?? throw new InvalidOperationException("The accounting step is not part of the original Process state.");
-        if (command is ProcessDecisionBudgetReservation && (ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) ||
+        var step = expectation.StepInstanceId is { } stepId
+            ? originalState.Steps.SingleOrDefault(item => item.StepInstanceId == stepId)
+                ?? throw new InvalidOperationException("The accounting step is not part of the original Process state.")
+            : null;
+        if (command is ProcessDecisionBudgetReservation && (step is not null && ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) ||
                 ProcessRuntimeTerminalStates.IsRunTerminal(originalState.Status) || originalState.Status == ProcessRuntimeStatus.CancelRequested)) {
             throw new InvalidOperationException("A stopped Process cannot reserve new decision work.");
         }
         var head = await dbContext.DecisionBudgets.SingleOrDefaultAsync(item => item.BudgetId == expectation.BudgetId.Value,
             cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("The original Process budget was not found.");
         if (head.RootRunId != originalState.RootRunId.Value || head.RunId != originalState.RunId.Value ||
-                head.StepInstanceId != expectation.StepInstanceId.Value || head.Revision != expectation.Revision) {
+                head.StepInstanceId != expectation.StepInstanceId?.Value || head.Revision != expectation.Revision) {
             throw new InvalidOperationException("The Process budget identity or revision no longer matches the accounting command.");
         }
-        var current = ReadBalance(head);
+        if (step is null) {
+            await funding.RequireDirectRootAsync(head, originalState, command, cancellationToken).ConfigureAwait(false);
+        }
         var entity = await dbContext.DecisionBudgetAllocations.SingleOrDefaultAsync(item =>
             item.BudgetId == head.BudgetId && item.AllocationId == command.AllocationId.Value, cancellationToken).ConfigureAwait(false);
-        var allocation = entity is null ? null : ReadAllocation(entity);
-        var change = command switch {
-            ProcessDecisionBudgetReservation reservation => DecisionBudgetTransitions.Reserve(current, command.AllocationId, reservation.Grant, allocation),
-            ProcessDecisionBudgetSettlement settlement when allocation is not null => DecisionBudgetTransitions.Settle(current, allocation, settlement.Settlement),
-            _ => throw new InvalidOperationException("Settlement requires the original retained Process allocation.")
-        };
+        var change = ApplyAccounting(head, entity, command);
+        var funded = await funding.StageAsync(originalState, head, entity, command, cancellationToken).ConfigureAwait(false);
+        if (funded is not null && funded.Receipt.Change.Changed != change.Changed) {
+            throw new InvalidDataException("Parent funding and local accounting disagree about the original transition.");
+        }
         if (change.Changed) {
             WriteBalance(head, change.Balance);
             if (entity is null) {
-                entity = new() { BudgetId = head.BudgetId, AllocationId = command.AllocationId.Value };
+                entity = new() { BudgetId = head.BudgetId, AllocationId = command.AllocationId.Value,
+                    FundingBudgetId = funded?.Receipt.Change.Balance.BudgetId.Value,
+                    FundingAllocationId = funded?.Receipt.Command.AllocationId.Value };
                 dbContext.DecisionBudgetAllocations.Add(entity);
             }
-            entity.GrantedWorkTicks = change.Allocation.Grant.WorkTicks;
-            entity.GrantedReplans = change.Allocation.Grant.Replans;
-            entity.OwnerWorkRevision = change.Allocation.Settlement?.OwnerWorkRevision;
-            entity.ConsumedWorkTicks = change.Allocation.Settlement?.Consumed.WorkTicks;
-            entity.ConsumedReplans = change.Allocation.Settlement?.Consumed.Replans;
+            WriteAllocation(entity, change.Allocation);
         }
-        return new(command, change);
-    }
-
-    private static void WriteBalance(ProcessDecisionBudgetEntity entity, DecisionBudgetBalance balance) {
-        entity.Revision = balance.Revision;
-        entity.ConsumedWorkTicks = balance.ConsumedWorkTicks;
-        entity.ReservedWorkTicks = balance.ReservedWorkTicks;
-        entity.ConsumedReplans = balance.ConsumedReplans;
-        entity.ReservedReplans = balance.ReservedReplans;
-        entity.AllocationCount = balance.AllocationCount;
-        entity.OverrunDetected = balance.OverrunDetected;
+        return new(command, change) { Funding = funded };
     }
 }

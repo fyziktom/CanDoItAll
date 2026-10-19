@@ -107,3 +107,23 @@ reader reconstruction reject mixed or unknown formats. Downgrade refuses shared
 scopes and their prepared/committed admissions, including before capture. One run
 payload can be reused by Agent and Workflow assignments with different execution
 contracts when both originally admit the same content schema.
+
+## Root funding and publication
+
+`EfProcessDecisionFundingStore` stages root admission and local funding through the
+existing runtime unit of work. A genuine root budget has no step ID and retains the
+original admission command with a restrictive receipt reference. Nested launches reuse
+that budget after the existing typed parent-step precondition verifies lineage.
+
+Every local reservation and settlement changes its root allocation in the same fenced
+transaction. Exact budget/allocation indexes avoid sibling scans on the ordinary path.
+Direct root commands cannot take over an allocation already owned by a child. Cancellation
+or terminal root state refuses new descendant work; closed owner evidence can still settle
+it. Unknown work remains reserved and recorded overruns block new work and publication.
+
+Child publication additionally joins the exact root funding allocation and root runtime
+status. The optional parent metadata projection uses nullable fields for legacy steps
+without funding. It does not load the root admission payload or scan child journals.
+Migration downgrade refuses root admissions, funded allocations and newer receipts,
+including prepared launches before execution. Active shared material coordination remains
+a separate prerequisite for governed runtime activation.

@@ -3,11 +3,13 @@
 Refinement after the [versioned execution contract](P07-process-execution-contract.md).
 The first [pure material value contract](../validation/2026-10-19-process-inherited-material-value.md)
 now passes 44 selected cases. [Canonical captured-material storage](../validation/2026-10-19-process-material-persistence.md)
-has 237 selected passing behaviours across an exact test-only repair bridge. Active parent
-scope/budget and child runtime integration below remain open; no activation is claimed. The original E2E scope
+has 237 selected passing behaviours across an exact test-only repair bridge. The
+[root funding checkpoint](../validation/2026-10-19-process-run-budget-funding.md) adds
+361 selected passes for genuine run accounting and atomic descendant allocations. Active
+parent scope and child runtime integration below remain open; no activation is claimed. The original E2E scope
 still includes both RunSnapshot and StepSnapshot for supported Process/Workflow work.
 
-## Current code constraints
+## Original code constraints
 
 The Process generation owner currently retains a material ID, not a canonical material
 payload or parent material scope. Its publication condition fences one decision. Local
@@ -122,6 +124,10 @@ into every step double-spends it, while changing an already admitted ceiling con
 the retained policy. Parent refresh consumes one parent replan and unknown child outcomes
 retain their reservations. Combined scope/child/generation/allocation bounds require their
 own capacity proof; individual maxima do not promise that all maxima can coexist.
+
+The [run funding design](P07-run-budget-funding.md) and its 361-case checkpoint implement
+that accounting prerequisite. The [active scope design](P07-active-run-material-scope.md)
+owns the remaining parent lifecycle, capture/quiescence and inherited membership work.
 
 ### Canonical storage implementation contract
 

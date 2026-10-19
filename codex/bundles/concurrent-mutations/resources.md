@@ -597,3 +597,24 @@ preceded freeze release. No observed process or database-name delta remains. Fou
 unattributed TEMP entries were preserved. The initial startup-file check typo and actual
 prior V2 startup are retained in proof. No new family or stack was added; earlier denied
 cleanup remains unchanged. See the [validation record](validation/2026-10-19-process-shared-content.md).
+
+## 2026-10-19 Root funding
+
+`c4-process-run-budget-funding` retained 327 passes and 34 failures. The corrected
+`c4-process-run-funding-publication-repair` repeated all 361 cases and passed. Both used
+the existing standard Release outputs, isolated PostgreSQL fixture and 114 resource
+families. No new stack or resource family was introduced. Whole-command observation and
+unchanged source/runtime checks preceded both freeze releases. No observed process or
+database-name delta remained; 32 and 20 unattributed TEMP entries were preserved.
+
+The prepared repair directory was renamed with ownership recorded before the move. The
+observer initially rejected its ownership state before tests began; the successor checks
+both exact ownership records, source absence, common intended parent and ordered timestamps.
+The failed startup and correction are retained. Earlier denied cleanup remains unchanged;
+the shared fixture is still needed for active-scope and runtime integration. See the
+[validation record](validation/2026-10-19-process-run-budget-funding.md).
+
+The stalled Agent recovery commit and seven retained Process checkpoints completed with
+valid signatures: `5656cae65`, `cb42edb57`, `1229f6986`, `4f3b07476`, `621611e79`,
+`ecbb119d4`, `8bb22f773`, `41a4df8d5`. Each Process checkpoint used its saved reviewed blobs;
+later root-funding changes were not accidentally staged into those commits.

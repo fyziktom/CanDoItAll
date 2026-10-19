@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
+using static CanDoItAll.Processes.Runtime.ProcessDecisionPolicyWire;
 
 namespace CanDoItAll.Processes.Runtime;
 
@@ -23,14 +24,7 @@ public static class ProcessDecisionDataPolicyAdmissionCodec {
 }
 
 internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConverter<ProcessDecisionDataPolicyAdmission> {
-    private static readonly JsonSerializerOptions wireOptions = new() {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = false,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        NumberHandling = JsonNumberHandling.Strict,
-        MaxDepth = 16,
-        Converters = { new OverrideConverter() }
-    };
+    private static readonly JsonSerializerOptions wireOptions = ProcessDecisionPolicyWire.Options;
 
     public override bool HandleNull => true;
 
@@ -45,17 +39,20 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         try {
             var wire = document.RootElement.Deserialize<AdmissionWire>(wireOptions)
                 ?? throw new JsonException("The Process decision policy must be an object.");
+            var materialShape = wire.ExecutionContract is not null &&
+                (wire.MaterialProtocol == ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 && !document.RootElement.TryGetProperty("contentContract", out _) ||
+                wire.MaterialProtocol == ProcessDecisionMaterialProtocol.SharedContentV1 && wire.ContentContract is not null);
             var validSchema = wire.SchemaVersion switch {
                 ProcessDecisionDataPolicyAdmission.LegacySchemaVersion => !document.RootElement.TryGetProperty("executionContract", out _) &&
                     !document.RootElement.TryGetProperty("materialProtocol", out _) && !document.RootElement.TryGetProperty("contentContract", out _),
                 ProcessDecisionDataPolicyAdmission.ExecutionContractSchemaVersion => wire.ExecutionContract is not null &&
                     !document.RootElement.TryGetProperty("materialProtocol", out _) && !document.RootElement.TryGetProperty("contentContract", out _),
-                ProcessDecisionDataPolicyAdmission.SchemaVersion => wire.ExecutionContract is not null &&
-                    (wire.MaterialProtocol == ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 && !document.RootElement.TryGetProperty("contentContract", out _) ||
-                    wire.MaterialProtocol == ProcessDecisionMaterialProtocol.SharedContentV1 && wire.ContentContract is not null),
+                ProcessDecisionDataPolicyAdmission.SchemaVersion => materialShape,
+                ProcessDecisionDataPolicyAdmission.FundedSchemaVersion => materialShape && wire.Funding is not null,
                 _ => false
             };
-            if (!validSchema || wire.Capabilities is null ||
+            if (!validSchema || wire.SchemaVersion != ProcessDecisionDataPolicyAdmission.FundedSchemaVersion && document.RootElement.TryGetProperty("funding", out _) ||
+                wire.Capabilities is null ||
                 wire.EnclosingBudgets.IsDefault || wire.EnclosingBudgets.Any(budget => budget is null)) {
                 throw new JsonException("The Process decision policy requires its supported schema and original limits.");
             }
@@ -63,7 +60,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
                 new(wire.DefinitionVersionId), new(wire.StepInstanceId), wire.WorkspacePolicy, wire.DefinitionOverride,
                 wire.StepOverride, wire.AuthorizedInvocationOverride, wire.Capabilities.ToModel(),
                 [.. wire.EnclosingBudgets.Select(budget => budget.ToModel())], wire.Policy) {
-                ExecutionContract = wire.ExecutionContract, MaterialProtocol = wire.MaterialProtocol, ContentContract = wire.ContentContract
+                ExecutionContract = wire.ExecutionContract, MaterialProtocol = wire.MaterialProtocol, ContentContract = wire.ContentContract,
+                Funding = wire.Funding?.ToModel()
             };
             admission.Validate();
             return admission;
@@ -78,13 +76,15 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
     internal static byte[] Encode(ProcessDecisionDataPolicyAdmission value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        var schema = value.MaterialProtocol is not null ? ProcessDecisionDataPolicyAdmission.SchemaVersion :
+        var schema = value.Funding is not null ? ProcessDecisionDataPolicyAdmission.FundedSchemaVersion :
+            value.MaterialProtocol is not null ? ProcessDecisionDataPolicyAdmission.SchemaVersion :
             value.ExecutionContract is null ? ProcessDecisionDataPolicyAdmission.LegacySchemaVersion : ProcessDecisionDataPolicyAdmission.ExecutionContractSchemaVersion;
         var wire = new AdmissionWire(schema, value.WorkspaceNamespaceId,
             value.WorkspaceHeadRevision, value.DefinitionVersionId.Value, value.StepInstanceId.Value,
             value.WorkspacePolicy, value.DefinitionOverride, value.StepOverride, value.AuthorizedInvocationOverride,
             CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy,
-            value.ExecutionContract, value.MaterialProtocol, value.ContentContract);
+            value.ExecutionContract, value.MaterialProtocol, value.ContentContract,
+            value.Funding is { } funding ? new FundingWire(funding.RootRunId.Value, funding.BudgetId.Value) : null);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(wire, wireOptions);
         if (bytes.Length > ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes) {
             throw new JsonException("The Process decision policy exceeds its encoding bound.");
@@ -126,45 +126,10 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         [property: JsonRequired] DecisionDataPolicy Policy,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionExecutionContract? ExecutionContract,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionMaterialProtocol? MaterialProtocol,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionContentContract? ContentContract);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionContentContract? ContentContract,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] FundingWire? Funding);
 
-    private sealed record BudgetWire(
-        [property: JsonRequired] int MaximumReplans,
-        [property: JsonRequired] TimeSpan MaximumWorkDuration,
-        [property: JsonRequired] TimeSpan MaximumBasisAge) {
-        internal static BudgetWire From(DecisionDataPolicyBudget value)
-            => new(value.MaximumReplans, value.MaximumWorkDuration, value.MaximumBasisAge);
-        internal DecisionDataPolicyBudget ToModel() => new(MaximumReplans, MaximumWorkDuration, MaximumBasisAge);
-    }
-
-    private sealed record CapabilitiesWire(
-        [property: JsonRequired] bool SupportsRunSnapshot,
-        [property: JsonRequired] bool SupportsStepSnapshot,
-        [property: JsonRequired] bool SupportsPinnedObservation,
-        [property: JsonRequired] bool SupportsCurrentPublication,
-        [property: JsonRequired] bool SupportsPauseForReview,
-        [property: JsonRequired] bool SupportsReplan,
-        [property: JsonRequired] PublicationFreshness MinimumPublicationFreshness,
-        [property: JsonRequired] BudgetWire BudgetCeiling) {
-        internal static CapabilitiesWire From(DecisionDataPolicyCapabilities value)
-            => new(value.SupportsRunSnapshot, value.SupportsStepSnapshot, value.SupportsPinnedObservation,
-                value.SupportsCurrentPublication, value.SupportsPauseForReview, value.SupportsReplan,
-                value.MinimumPublicationFreshness, BudgetWire.From(value.BudgetCeiling));
-        internal DecisionDataPolicyCapabilities ToModel() {
-            if (BudgetCeiling is null) {
-                throw new InvalidDataException("The Process decision policy requires its owner budget ceiling.");
-            }
-            return new(SupportsRunSnapshot, SupportsStepSnapshot, SupportsPinnedObservation,
-                SupportsCurrentPublication, SupportsPauseForReview, SupportsReplan, MinimumPublicationFreshness, BudgetCeiling.ToModel());
-        }
-    }
-
-    private sealed class OverrideConverter : JsonConverter<DecisionDataPolicyOverride> {
-        public override DecisionDataPolicyOverride? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
-            using var document = JsonDocument.ParseValue(ref reader);
-            return DecisionDataPolicyOverrideCodec.Deserialize(document.RootElement.GetRawText());
-        }
-        public override void Write(Utf8JsonWriter writer, DecisionDataPolicyOverride value, JsonSerializerOptions options)
-            => writer.WriteRawValue(DecisionDataPolicyOverrideCodec.Serialize(value));
+    private sealed record FundingWire([property: JsonRequired] Guid RootRunId, [property: JsonRequired] Guid BudgetId) {
+        internal ProcessDecisionFundingReference ToModel() => new(new(RootRunId), new(BudgetId));
     }
 }

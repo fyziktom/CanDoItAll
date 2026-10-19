@@ -70,6 +70,7 @@ internal static class ProcessPreparedLaunchCodec {
     private const string ProjectMutationHashDomain = "process-project-mutations-v1\n";
     private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
     private const string DecisionPolicyHashDomain = "process-decision-policy-v1\n";
+    private const string RootDecisionPolicyHashDomain = "process-root-decision-policy-v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -157,7 +158,8 @@ internal static class ProcessPreparedLaunchCodec {
             ? SourceLifetimeHashDomain : string.Empty;
         var decisionDomain = preparation.InitialCommit.InitialAssignments?.Any(assignment => assignment.DecisionDataPolicy is not null) == true
             ? DecisionPolicyHashDomain : string.Empty;
-        return Hash(decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
+        var rootDecisionDomain = preparation.InitialCommit.InitialRunDecisionAdmission is null ? string.Empty : RootDecisionPolicyHashDomain;
+        return Hash(rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
     }
 
     private static void RequireDecisionPolicyBindings(ProcessPreparedLaunch preparation) {
@@ -166,7 +168,10 @@ internal static class ProcessPreparedLaunchCodec {
         }
         foreach (var assignment in assignments) {
             assignment.DecisionDataPolicy?.RequireBinding(plan.Definition.VersionId, assignment.StepInstanceId);
+            preparation.InitialCommit.InitialRunDecisionAdmission?.RequireChild(assignment.DecisionDataPolicy
+                ?? throw new InvalidDataException("A governed root requires the original funded policy of every assignment."));
         }
+        preparation.InitialCommit.InitialRunDecisionAdmission?.RequireRoot(preparation.InitialCommit.Mutation.State, plan.Definition.VersionId);
     }
 
     private static bool HasSourceLifetimeSchema(ProcessLaunchAuthority? authority)

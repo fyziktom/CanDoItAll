@@ -20,12 +20,23 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
             join allocation in context.DecisionBudgetAllocations.AsNoTracking()
                 on new { child.BudgetId, child.AllocationId } equals new { allocation.BudgetId, allocation.AllocationId }
             join budget in context.DecisionBudgets.AsNoTracking() on allocation.BudgetId equals budget.BudgetId
+            join parent in context.DecisionBudgets.AsNoTracking().Select(item => new {
+                BudgetId = (Guid?)item.BudgetId, RootRunId = (Guid?)item.RootRunId, RunId = (Guid?)item.RunId,
+                item.StepInstanceId, OverrunDetected = (bool?)item.OverrunDetected
+            }) on budget.ParentBudgetId equals parent.BudgetId into parents
+            from parent in parents.DefaultIfEmpty()
+            join parentAllocation in context.DecisionBudgetAllocations.AsNoTracking()
+                on new { BudgetId = allocation.FundingBudgetId, AllocationId = allocation.FundingAllocationId }
+                equals new { BudgetId = (Guid?)parentAllocation.BudgetId, AllocationId = (Guid?)parentAllocation.AllocationId } into parentAllocations
+            from parentAllocation in parentAllocations.DefaultIfEmpty()
             join state in context.RuntimeStates.AsNoTracking() on head.RunId equals state.RunId
+            join rootState in context.RuntimeStates.AsNoTracking() on head.RootRunId equals rootState.RunId
             join step in context.RuntimeSteps.AsNoTracking()
                 on new { head.RunId, head.StepInstanceId } equals new { step.RunId, step.StepInstanceId }
             where head.RootRunId == address.RootRunId.Value && head.RunId == address.RunId.Value && head.StepInstanceId == address.StepInstanceId.Value &&
                 head.DecisionId == address.Reference.DecisionId.Value && generation.Generation == address.Reference.Generation && child.ChildId == address.ChildId.Value
             select new { Head = head, Generation = generation, Child = child, Allocation = allocation, Budget = budget,
+                Parent = parent, ParentAllocation = parentAllocation, RootStatus = rootState.Status,
                 StateRoot = state.RootRunId, RunStatus = state.Status, StepStatus = step.Status, step.ActiveClaimToken,
                 HasLiveClaim = context.DispatchClaims.Any(claim => claim.RunId == head.RunId && claim.StepInstanceId == head.StepInstanceId &&
                     (claim.Status == DispatchClaimStatus.Claimed || claim.Status == DispatchClaimStatus.LeaseRenewed || claim.Status == DispatchClaimStatus.Reclaimed)) })
@@ -43,6 +54,19 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
         var childValue = ProcessDecisionRows.ReadChild(row.Child);
         var allocationValue = ProcessDecisionRows.ReadAllocation(row.Allocation);
         var balance = ProcessDecisionRows.ReadBalance(row.Budget);
+        if (row.Budget.ParentBudgetId is { } parentId) {
+            if (row.Parent is null || row.ParentAllocation is null || row.Parent.BudgetId != parentId ||
+                row.Parent.RunId != address.RootRunId.Value || row.Parent.RootRunId != address.RootRunId.Value || row.Parent.StepInstanceId is not null ||
+                row.Allocation.FundingBudgetId != parentId || row.ParentAllocation.BudgetId != parentId ||
+                row.ParentAllocation.AllocationId != ProcessDecisionFundingIdentity.Derive(new(parentId), balance.BudgetId, allocationValue.Id).Value ||
+                row.ParentAllocation.FundingBudgetId is not null || row.ParentAllocation.FundingAllocationId is not null ||
+                ProcessDecisionRows.ReadAllocation(row.ParentAllocation).Grant != allocationValue.Grant ||
+                ProcessDecisionRows.ReadAllocation(row.ParentAllocation).Settlement != allocationValue.Settlement) {
+                throw new InvalidDataException("The Process child has no matching original root funding.");
+            }
+        } else if (row.Allocation.FundingBudgetId is not null || row.Allocation.FundingAllocationId is not null) {
+            throw new InvalidDataException("The Process child has funding outside its original budget.");
+        }
         if ((childValue.Closure is null) != (allocationValue.Settlement is null) ||
                 childValue.Closure?.OwnerRevision != allocationValue.Settlement?.OwnerWorkRevision) {
             throw new InvalidDataException("The retained Process child and allocation closure disagree.");
@@ -51,9 +75,9 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
             allocationValue.BudgetId, allocationValue.Id, allocationValue.Grant);
         admission.Validate();
         return new(new(admission, generationValue, childValue.Closure, allocationValue.Settlement, current),
-            row.RunStatus, row.StepStatus, row.ActiveClaimToken, row.HasLiveClaim, balance.OverrunDetected);
+            row.RunStatus, row.RootStatus, row.StepStatus, row.ActiveClaimToken, row.HasLiveClaim, balance.OverrunDetected || row.Parent?.OverrunDetected == true);
     }
 }
 
 internal sealed record ProcessDecisionChildRead(ProcessDecisionChildObservation Observation, ProcessRuntimeStatus RunStatus,
-    ProcessRuntimeStepStatus StepStatus, Guid? ActiveClaimToken, bool HasLiveClaim, bool BudgetOverrun);
+    ProcessRuntimeStatus RootStatus, ProcessRuntimeStepStatus StepStatus, Guid? ActiveClaimToken, bool HasLiveClaim, bool BudgetOverrun);

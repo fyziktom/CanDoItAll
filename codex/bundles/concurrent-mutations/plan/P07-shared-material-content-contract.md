@@ -51,5 +51,6 @@ This refinement does not activate a governed executor. A real parent scope/budge
 inherited child journal and producer/manager wiring still precede activation.
 
 Implementation checkpoint: [265/265 selected cases passed](../validation/2026-10-19-process-shared-content.md),
-with compatibility, migration, dependency and resource evidence. Parent accounting and
-actual runtime activation remain separate required work.
+with compatibility, migration, dependency and resource evidence. The subsequent
+[root accounting checkpoint](../validation/2026-10-19-process-run-budget-funding.md) passes
+361 selected cases. Active parent scope and actual runtime activation remain required.

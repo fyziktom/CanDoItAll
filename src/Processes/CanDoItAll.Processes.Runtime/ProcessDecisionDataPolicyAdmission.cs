@@ -23,12 +23,14 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     public const int LegacySchemaVersion = 1;
     public const int ExecutionContractSchemaVersion = 2;
     public const int SchemaVersion = 3;
+    public const int FundedSchemaVersion = 4;
     public const int MaximumUtf8Bytes = 32_768;
     public const int MaximumEnclosingPolicies = 32;
 
     public ProcessDecisionExecutionContract? ExecutionContract { get; init; }
     public ProcessDecisionMaterialProtocol? MaterialProtocol { get; init; }
     public ProcessDecisionContentContract? ContentContract { get; init; }
+    public ProcessDecisionFundingReference? Funding { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -40,13 +42,14 @@ public sealed record ProcessDecisionDataPolicyAdmission(
         }
         ExecutionContract?.Validate();
         ContentContract?.Validate();
+        Funding?.Validate();
         var validMaterial = MaterialProtocol switch {
             null => ContentContract is null,
             ProcessDecisionMaterialProtocol.CanonicalSnapshotV1 => ExecutionContract is not null && ContentContract is null,
             ProcessDecisionMaterialProtocol.SharedContentV1 => ExecutionContract is not null && ContentContract is not null,
             _ => false
         };
-        if (!validMaterial) {
+        if (!validMaterial || Funding is not null && MaterialProtocol is null) {
             throw new InvalidDataException("Canonical Process material requires its supported protocol and original executor contract.");
         }
         foreach (var preference in new[] { DefinitionOverride, StepOverride, AuthorizedInvocationOverride }) {
