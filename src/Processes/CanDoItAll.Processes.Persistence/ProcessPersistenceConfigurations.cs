@@ -255,6 +255,9 @@ internal sealed class ProcessRuntimeIdempotencyEntityConfiguration : IEntityType
         builder.HasKey(key => new { key.RunId, key.CommandId });
         builder.Property(key => key.Outcome).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(key => key.DecisionBudgetReceiptJson).HasColumnType("text");
+        builder.Property(key => key.DecisionRunScopeReceiptJson).HasColumnType("text");
+        builder.ToTable(table => table.HasCheckConstraint("CK_process_idempotency_scope_receipt",
+            $"\"DecisionRunScopeReceiptJson\" IS NULL OR octet_length(\"DecisionRunScopeReceiptJson\") BETWEEN 1 AND {ProcessDecisionRunScopeReceiptCodec.MaximumUtf8Bytes}"));
         builder.Property(key => key.DecisionReceiptJson).HasColumnType("text");
         builder.ToTable(table => table.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision",
             $"\"DecisionReceiptJson\" IS NULL OR octet_length(\"DecisionReceiptJson\") BETWEEN 1 AND {ProcessDecisionReceiptCodec.MaximumUtf8Bytes}"));

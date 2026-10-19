@@ -72,4 +72,36 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             }).ToArray()
         } };
     }
+
+    [Fact]
+    public async Task Prepared_shared_scope_is_immutable_and_blocks_downgrade_before_runtime_admission() {
+        await using var app = await TestApplication.CreateAsync(Harness());
+        var original = FundedPreparation(app.Services, ReadBasisMode.RunSnapshot);
+        var root = ProcessDecisionRunPolicyFixture.WithSharedScope(original.InitialCommit.InitialRunDecisionAdmission!);
+        original = original with { InitialCommit = original.InitialCommit with { InitialRunDecisionAdmission = root,
+            InitialAssignments = original.InitialCommit.InitialAssignments!.Select(item => item with {
+                DecisionDataPolicy = ProcessDecisionRunPolicyFixture.Child(root, item.StepInstanceId)
+            }).ToArray()
+        } };
+        var saved = await Store(app.Services).PrepareAsync(original);
+        await using var context = new ProcessPersistenceDbContext(ProcessOptions(app.Services));
+        Assert.Empty(await context.DecisionRunScopes.ToArrayAsync());
+        var failure = await Assert.ThrowsAsync<PostgresException>(() => ProcessDecisionRunScopeRecoveryTests.MigrateAsync(context, true));
+        Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+        var retained = (await Store(app.Services).GetAsync(saved.Preparation.AdmissionId))!;
+        Assert.Equal(root.MaterialScope, retained.Preparation.InitialCommit.InitialRunDecisionAdmission!.MaterialScope);
+        var row = await context.PreparedLaunches.SingleAsync(item => item.Id == saved.Preparation.AdmissionId.Value);
+        var expected = "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            "process-shared-run-scope-v1\nprocess-root-decision-policy-v1\nprocess-decision-policy-v1\n" + row.PayloadJson))).ToLowerInvariant();
+        Assert.Equal(expected, row.PreparationFingerprint);
+        var owner = new EfProcessRuntimeUnitOfWork(context, coordinatedTransaction: Coordinator(app.Services), launchAuthorityPolicy: new AuthorityPolicy(),
+            runtimeDatabase: app.Services.GetRequiredService<ICanonicalRuntimeDatabase>());
+        var request = ProcessPreparedLaunchFixture.Commit(retained);
+        Assert.True((await owner.CommitAsync(request)).Succeeded);
+        Assert.True((await owner.CommitAsync(request)).Succeeded);
+        Assert.Single(await context.DecisionRunScopes.ToArrayAsync());
+        await Assert.ThrowsAsync<ProcessLaunchIntentConflictException>(() => owner.CommitAsync(request with {
+            InitialRunDecisionAdmission = request.InitialRunDecisionAdmission! with { MaterialScope = null }
+        }));
+    }
 }

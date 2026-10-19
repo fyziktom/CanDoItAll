@@ -12,9 +12,11 @@ public sealed record ProcessDecisionRunAdmission(ProcessRunId RunId, DecisionBud
     DecisionDataPolicyOverride? AuthorizedInvocationOverride, DecisionDataPolicyCapabilities OwnerCapabilities,
     ImmutableArray<DecisionDataPolicyBudget> EnclosingBudgets, DecisionDataPolicy Policy) {
     public const int SchemaVersion = 1;
+    public const int SharedScopeSchemaVersion = 2;
     public const int MaximumUtf8Bytes = ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes;
 
     public ProcessDecisionFundingReference Funding => new(RunId, BudgetId);
+    public ProcessDecisionRunScopeAdmission? MaterialScope { get; init; }
 
     public void Validate() {
         if (RunId.Value == Guid.Empty || BudgetId.Value == Guid.Empty || DatabaseProfileId == Guid.Empty ||
@@ -33,6 +35,13 @@ public sealed record ProcessDecisionRunAdmission(ProcessRunId RunId, DecisionBud
         if (resolved != Policy) {
             throw new InvalidDataException("The root policy differs from its original preferences and limits.");
         }
+        if (MaterialScope is { } scope) {
+            scope.Validate();
+            if (scope.Funding != Funding || scope.DatabaseProfileId != DatabaseProfileId || scope.WorkspaceNamespaceId != WorkspaceNamespaceId ||
+                    Policy.ReadBasisMode != ReadBasisMode.RunSnapshot) {
+                throw new InvalidDataException("The shared material scope must belong to its original RunSnapshot root admission.");
+            }
+        }
     }
 
     public void RequireRoot(ProcessRuntimeStateSnapshot state, ProcessDefinitionVersionId definitionVersionId) {
@@ -48,7 +57,8 @@ public sealed record ProcessDecisionRunAdmission(ProcessRunId RunId, DecisionBud
         child.Validate();
         if (child.Funding != Funding || child.WorkspaceNamespaceId != WorkspaceNamespaceId ||
             child.WorkspaceHeadRevision != WorkspaceHeadRevision || child.WorkspacePolicy != WorkspacePolicy ||
-            !child.EnclosingBudgets.Contains(Policy.Budget)) {
+            !child.EnclosingBudgets.Contains(Policy.Budget) || child.SharedRunScopeId != MaterialScope?.ScopeId ||
+            MaterialScope is { } scope && child.ContentContract != scope.ContentContract) {
             throw new InvalidDataException("Funded Process work must retain the original root policy and its enclosing budget.");
         }
         if (Policy.ReadBasisMode == ReadBasisMode.RunSnapshot && (child.Policy.ReadBasisMode != ReadBasisMode.RunSnapshot ||

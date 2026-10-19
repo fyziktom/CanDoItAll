@@ -34,14 +34,18 @@ internal sealed class ProcessDecisionRunAdmissionJsonConverter : JsonConverter<P
         try {
             var wire = document.RootElement.Deserialize<AdmissionWire>(Options)
                 ?? throw new JsonException("The Process root admission must be an object.");
-            if (wire.SchemaVersion != ProcessDecisionRunAdmission.SchemaVersion || wire.Capabilities is null ||
+            if (wire.SchemaVersion is not (ProcessDecisionRunAdmission.SchemaVersion or ProcessDecisionRunAdmission.SharedScopeSchemaVersion) ||
+                (wire.SchemaVersion == ProcessDecisionRunAdmission.SharedScopeSchemaVersion) != (wire.MaterialScope is not null) || wire.Capabilities is null ||
                 wire.EnclosingBudgets.IsDefault || wire.EnclosingBudgets.Any(item => item is null)) {
                 throw new JsonException("The Process root admission requires its supported schema and original limits.");
             }
             ProcessDecisionRunAdmission result = new(new(wire.RunId), new(wire.BudgetId), wire.DatabaseProfileId,
                 wire.WorkspaceNamespaceId, wire.WorkspaceHeadRevision, new(wire.DefinitionVersionId), wire.WorkspacePolicy,
                 wire.DefinitionOverride, wire.AuthorizedInvocationOverride, wire.Capabilities.ToModel(),
-                [.. wire.EnclosingBudgets.Select(item => item.ToModel())], wire.Policy);
+                [.. wire.EnclosingBudgets.Select(item => item.ToModel())], wire.Policy) {
+                MaterialScope = wire.MaterialScope is { } scope ? new(new(scope.ScopeId), new(new(wire.RunId), new(wire.BudgetId)),
+                    wire.DatabaseProfileId, wire.WorkspaceNamespaceId, scope.ContentContract) : null
+            };
             if (document.RootElement.GetRawText() != Encoding.UTF8.GetString(Encode(result))) {
                 throw new JsonException("The retained Process root admission is not its canonical original encoding.");
             }
@@ -57,10 +61,12 @@ internal sealed class ProcessDecisionRunAdmissionJsonConverter : JsonConverter<P
     internal static byte[] Encode(ProcessDecisionRunAdmission value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        AdmissionWire wire = new(ProcessDecisionRunAdmission.SchemaVersion, value.RunId.Value, value.BudgetId.Value,
+        AdmissionWire wire = new(value.MaterialScope is null ? ProcessDecisionRunAdmission.SchemaVersion : ProcessDecisionRunAdmission.SharedScopeSchemaVersion,
+            value.RunId.Value, value.BudgetId.Value,
             value.DatabaseProfileId, value.WorkspaceNamespaceId, value.WorkspaceHeadRevision, value.DefinitionVersionId.Value,
             value.WorkspacePolicy, value.DefinitionOverride, value.AuthorizedInvocationOverride,
-            CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy);
+            CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy,
+            value.MaterialScope is { } scope ? new(scope.ScopeId.Value, scope.ContentContract) : null);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(wire, Options);
         if (bytes.Length > ProcessDecisionRunAdmission.MaximumUtf8Bytes) {
             throw new JsonException("The Process root admission exceeds its encoding bound.");
@@ -81,5 +87,8 @@ internal sealed class ProcessDecisionRunAdmissionJsonConverter : JsonConverter<P
         [property: JsonRequired] DecisionDataPolicyOverride? AuthorizedInvocationOverride,
         [property: JsonRequired] CapabilitiesWire Capabilities,
         [property: JsonRequired] ImmutableArray<BudgetWire> EnclosingBudgets,
-        [property: JsonRequired] DecisionDataPolicy Policy);
+        [property: JsonRequired] DecisionDataPolicy Policy,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ScopeWire? MaterialScope);
+
+    private sealed record ScopeWire([property: JsonRequired] Guid ScopeId, [property: JsonRequired] ProcessDecisionContentContract ContentContract);
 }

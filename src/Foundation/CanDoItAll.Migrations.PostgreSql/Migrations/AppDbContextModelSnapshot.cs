@@ -8845,6 +8845,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SharedRunScopeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("StepInstanceId")
                         .HasColumnType("uuid");
 
@@ -8854,6 +8857,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.HasIndex("RootRunId");
+
+                    b.HasIndex("SharedRunScopeId");
 
                     b.HasIndex("RunId", "StepInstanceId")
                         .IsUnique();
@@ -8953,6 +8958,85 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         {
                             t.HasCheckConstraint("CK_process_decision_material_scopes_identity", "\"ScopeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"WorkspaceNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"OwnerRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND (\"StepInstanceId\" IS NULL OR \"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND \"ContractId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ContractVersion\" > 0\nAND ((\"MaterialProtocol\" = 1 AND \"Executor\" IS NOT NULL AND \"Executor\" BETWEEN 0 AND 1)\n    OR (\"MaterialProtocol\" = 2 AND \"Executor\" IS NULL))");
                         });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
+                {
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CaptureAllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("CaptureKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CaptureMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CurrentMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentMemberships")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TotalMemberships")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ScopeId");
+
+                    b.HasIndex("BudgetId")
+                        .IsUnique();
+
+                    b.HasIndex("CurrentMaterialId");
+
+                    b.HasIndex("BudgetId", "CaptureAllocationId");
+
+                    b.ToTable("process_decision_run_scopes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_run_scopes_state", "\"Revision\" >= 1 + \"TotalMemberships\" AND \"Phase\" BETWEEN 0 AND 5\nAND \"TotalMemberships\" BETWEEN 0 AND 256\nAND \"CurrentMemberships\" BETWEEN 0 AND \"TotalMemberships\"\nAND (\"CurrentMaterialId\" IS NOT NULL OR (\"TotalMemberships\" = 0 AND \"Phase\" NOT IN (2, 4)))\nAND (\"Phase\" <> 0 OR \"CurrentMaterialId\" IS NULL)\nAND ((\"Phase\" = 1 AND \"CaptureAllocationId\" IS NOT NULL AND \"CaptureMaterialId\" IS NOT NULL\n    AND \"CaptureKind\" IS NOT NULL AND \"CaptureKind\" BETWEEN 0 AND 2\n    AND ((\"CurrentMaterialId\" IS NULL) = (\"CaptureKind\" = 0)))\n    OR (\"Phase\" <> 1 AND \"CaptureAllocationId\" IS NULL AND \"CaptureMaterialId\" IS NULL AND \"CaptureKind\" IS NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeMemberEntity", b =>
+                {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DecisionId", "Generation");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("RunId", "StepInstanceId");
+
+                    b.HasIndex("ScopeId", "MaterialId");
+
+                    b.ToTable("process_decision_run_scope_members", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>
@@ -9730,6 +9814,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("DecisionReceiptJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("DecisionRunScopeReceiptJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -9739,6 +9826,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.ToTable("process_runtime_idempotency_keys", null, t =>
                         {
+                            t.HasCheckConstraint("CK_process_idempotency_scope_receipt", "\"DecisionRunScopeReceiptJson\" IS NULL OR octet_length(\"DecisionRunScopeReceiptJson\") BETWEEN 1 AND 8192");
+
                             t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision", "\"DecisionReceiptJson\" IS NULL OR octet_length(\"DecisionReceiptJson\") BETWEEN 1 AND 16384");
 
                             t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision_budget", "\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND 8192");
@@ -10665,6 +10754,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SharedRunScopeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
                         .WithMany()
                         .HasForeignKey("RunId", "StepInstanceId")
@@ -10693,6 +10787,66 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerRunId", "StepInstanceId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_root_budget");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CurrentMaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_run_scope_current_material");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_material_scope");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "CaptureAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_run_scope_capture_allocation");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeMemberEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_material");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_scope");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "Generation")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_decision");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_assignment");
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>

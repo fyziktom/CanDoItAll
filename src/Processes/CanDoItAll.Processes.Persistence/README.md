@@ -127,3 +127,16 @@ without funding. It does not load the root admission payload or scan child journ
 Migration downgrade refuses root admissions, funded allocations and newer receipts,
 including prepared launches before execution. Active shared material coordination remains
 a separate prerequisite for governed runtime activation.
+
+`EfProcessDecisionRunScopeStore` now owns that active scope boundary inside the same root
+transaction. A declared scope exists before capture; its material pointer remains empty
+until closed root work and canonical content commit together. Pending capture can only be
+settled by its matching completion or explicit abort. Root and local reservations and new
+dispatch claims are refused while the scope is frozen.
+
+Bounded membership links each inherited local generation to its original parent material.
+Refresh checks the complete membership, actual child rows, cleared claims and all root
+allocations. Local inheritance and publication use indexed metadata reads; neither copies
+the payload. Old generations remain readable but lose publication authority as soon as the
+parent starts reconciliation. The new migration refuses downgrade even for a prepared-only
+scope declaration. Executor producers and inherited child journals remain separate work.

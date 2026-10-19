@@ -29,6 +29,11 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
                 on new { BudgetId = allocation.FundingBudgetId, AllocationId = allocation.FundingAllocationId }
                 equals new { BudgetId = (Guid?)parentAllocation.BudgetId, AllocationId = (Guid?)parentAllocation.AllocationId } into parentAllocations
             from parentAllocation in parentAllocations.DefaultIfEmpty()
+            join sharedScope in context.DecisionRunScopes.AsNoTracking() on head.SharedRunScopeId equals sharedScope.ScopeId into sharedScopes
+            from sharedScope in sharedScopes.DefaultIfEmpty()
+            join scopeMember in context.DecisionRunScopeMembers.AsNoTracking()
+                on new { generation.DecisionId, generation.Generation } equals new { scopeMember.DecisionId, scopeMember.Generation } into scopeMembers
+            from scopeMember in scopeMembers.DefaultIfEmpty()
             join state in context.RuntimeStates.AsNoTracking() on head.RunId equals state.RunId
             join rootState in context.RuntimeStates.AsNoTracking() on head.RootRunId equals rootState.RunId
             join step in context.RuntimeSteps.AsNoTracking()
@@ -36,7 +41,7 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
             where head.RootRunId == address.RootRunId.Value && head.RunId == address.RunId.Value && head.StepInstanceId == address.StepInstanceId.Value &&
                 head.DecisionId == address.Reference.DecisionId.Value && generation.Generation == address.Reference.Generation && child.ChildId == address.ChildId.Value
             select new { Head = head, Generation = generation, Child = child, Allocation = allocation, Budget = budget,
-                Parent = parent, ParentAllocation = parentAllocation, RootStatus = rootState.Status,
+                Parent = parent, ParentAllocation = parentAllocation, SharedScope = sharedScope, ScopeMember = scopeMember, RootStatus = rootState.Status,
                 StateRoot = state.RootRunId, RunStatus = state.Status, StepStatus = step.Status, step.ActiveClaimToken,
                 HasLiveClaim = context.DispatchClaims.Any(claim => claim.RunId == head.RunId && claim.StepInstanceId == head.StepInstanceId &&
                     (claim.Status == DispatchClaimStatus.Claimed || claim.Status == DispatchClaimStatus.LeaseRenewed || claim.Status == DispatchClaimStatus.Reclaimed)) })
@@ -51,6 +56,17 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
         }
         var current = row.Head.CurrentGeneration == row.Generation.Generation;
         var generationValue = current ? ProcessDecisionRows.RequireHead(row.Head, row.Generation) : ProcessDecisionRows.ReadGeneration(row.Generation);
+        if (row.Head.SharedRunScopeId is { } scopeId) {
+            if (row.SharedScope is null || row.ScopeMember is null || row.ScopeMember.ScopeId != scopeId ||
+                    row.ScopeMember.RunId != row.Head.RunId || row.ScopeMember.StepInstanceId != row.Head.StepInstanceId ||
+                    row.ScopeMember.MaterialId != row.Generation.MaterialId || row.SharedScope.BudgetId != row.Budget.ParentBudgetId ||
+                    row.Generation.CanonicalMaterialId != row.Generation.MaterialId) {
+                throw new InvalidDataException("The Process child has no matching original shared material membership.");
+            }
+            current &= row.SharedScope.Phase == ProcessDecisionRunScopePhase.Active && row.SharedScope.CurrentMaterialId == row.Generation.MaterialId;
+        } else if (row.ScopeMember is not null) {
+            throw new InvalidDataException("A legacy Process decision cannot acquire shared material membership retroactively.");
+        }
         var childValue = ProcessDecisionRows.ReadChild(row.Child);
         var allocationValue = ProcessDecisionRows.ReadAllocation(row.Allocation);
         var balance = ProcessDecisionRows.ReadBalance(row.Budget);

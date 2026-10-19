@@ -71,6 +71,7 @@ internal static class ProcessPreparedLaunchCodec {
     private const string SourceLifetimeHashDomain = "process-agent-source-lifetime-v2\n";
     private const string DecisionPolicyHashDomain = "process-decision-policy-v1\n";
     private const string RootDecisionPolicyHashDomain = "process-root-decision-policy-v1\n";
+    private const string SharedRunScopeHashDomain = "process-shared-run-scope-v1\n";
     private static readonly JsonSerializerOptions Options = ProcessInstancePlanPersistenceMapper.CreateSerializerOptions();
 
     public static ProcessPreparedLaunchEntity ToEntity(ProcessPreparedLaunch preparation) {
@@ -80,7 +81,7 @@ internal static class ProcessPreparedLaunchCodec {
         preparation = preparation with { PreparedAtUtc = NormalizeTimestamp(preparation.PreparedAtUtc) };
         if (preparation.AdmissionId.Value == Guid.Empty || preparation.CallerIntentId is { } intent && intent.Value == Guid.Empty ||
                 preparation.InitialCommit.InitialPlan is null || preparation.InitialCommit.DecisionBudget is not null ||
-                preparation.InitialCommit.Decision is not null || preparation.InitialCommit.DecisionMaterial is not null ||
+                preparation.InitialCommit.Decision is not null || preparation.InitialCommit.DecisionMaterial is not null || preparation.InitialCommit.DecisionRunScope is not null ||
                 preparation.InitialCommit.InitialAssignments is null || preparation.InitialCommit.InitialLaunchAdmission is not null ||
                 preparation.InitialCommit.Mutation.State.LaunchAdmissionId != preparation.AdmissionId ||
                 preparation.InitialCommit.OriginalState.LaunchAdmissionId != preparation.AdmissionId ||
@@ -159,7 +160,8 @@ internal static class ProcessPreparedLaunchCodec {
         var decisionDomain = preparation.InitialCommit.InitialAssignments?.Any(assignment => assignment.DecisionDataPolicy is not null) == true
             ? DecisionPolicyHashDomain : string.Empty;
         var rootDecisionDomain = preparation.InitialCommit.InitialRunDecisionAdmission is null ? string.Empty : RootDecisionPolicyHashDomain;
-        return Hash(rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
+        var scopeDomain = preparation.InitialCommit.InitialRunDecisionAdmission?.MaterialScope is null ? string.Empty : SharedRunScopeHashDomain;
+        return Hash(scopeDomain + rootDecisionDomain + decisionDomain + lifetimeDomain + projectDomain + sourceDomain + payload);
     }
 
     private static void RequireDecisionPolicyBindings(ProcessPreparedLaunch preparation) {

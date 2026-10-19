@@ -284,7 +284,8 @@ public sealed partial class ProcessDecisionFundingPersistenceTests {
     }
 
     internal static Task FundingMigrationAsync(ProcessPersistenceDbContext context, bool down)
-        => ProcessDecisionMigrationFixture.ApplyAsync(context, down, new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRunDecisionFunding());
+        => ProcessDecisionMigrationFixture.ApplyAsync(context, down, new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRunDecisionFunding(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes());
 
     [Theory]
     [InlineData(0)]

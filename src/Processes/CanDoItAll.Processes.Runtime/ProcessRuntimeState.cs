@@ -354,6 +354,9 @@ public sealed record ProcessRuntimeCommitRequest(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionRunAdmission? InitialRunDecisionAdmission { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionRunScopeCommand? DecisionRunScope { get; init; }
 }
 
 public sealed record ProcessRuntimeCommitResult(
@@ -371,6 +374,9 @@ public sealed record ProcessRuntimeCommitResult(
 
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionReceipt? Decision { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionRunScopeReceipt? DecisionRunScope { get; init; }
 
     public static ProcessRuntimeCommitResult FromMutation(ProcessRuntimeMutation mutation)
     {

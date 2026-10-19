@@ -24,6 +24,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     public const int ExecutionContractSchemaVersion = 2;
     public const int SchemaVersion = 3;
     public const int FundedSchemaVersion = 4;
+    public const int SharedScopeSchemaVersion = 5;
     public const int MaximumUtf8Bytes = 32_768;
     public const int MaximumEnclosingPolicies = 32;
 
@@ -31,6 +32,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     public ProcessDecisionMaterialProtocol? MaterialProtocol { get; init; }
     public ProcessDecisionContentContract? ContentContract { get; init; }
     public ProcessDecisionFundingReference? Funding { get; init; }
+    public ProcessDecisionMaterialScopeId? SharedRunScopeId { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -51,6 +53,10 @@ public sealed record ProcessDecisionDataPolicyAdmission(
         };
         if (!validMaterial || Funding is not null && MaterialProtocol is null) {
             throw new InvalidDataException("Canonical Process material requires its supported protocol and original executor contract.");
+        }
+        if (SharedRunScopeId is { } scope && (scope.Value == Guid.Empty || Funding is null ||
+                MaterialProtocol != ProcessDecisionMaterialProtocol.SharedContentV1 || Policy.ReadBasisMode != ReadBasisMode.RunSnapshot)) {
+            throw new InvalidDataException("An inherited run scope requires original root funding and shared RunSnapshot content.");
         }
         foreach (var preference in new[] { DefinitionOverride, StepOverride, AuthorizedInvocationOverride }) {
             if (preference is not null) {

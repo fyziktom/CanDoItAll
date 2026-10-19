@@ -90,3 +90,19 @@ resolution within the original workspace and enclosing limits.
 Funded admissions and receipts have explicit new wire versions. Legacy encodings remain
 unchanged. Root accounting does not itself enable an executor or implement shared material
 reconciliation.
+
+## Active shared material scope
+
+Root admission schema 2 declares one original shared material scope; step schema 5 binds
+every funded descendant to it. The scope starts without material, reserves one root capture,
+and becomes active only when canonical material and closed usage commit together. Capture
+abort retains measured work and any overrun. Unknown work remains reserved.
+
+Reconciliation freezes new grants, dispatch claims, joins and publication. The bounded
+complete membership must have closed children and cleared claims before capture can begin.
+Refresh advances the parent material once; unfinished local decisions explicitly rebind
+through their own runtime owner with preparation work and zero additional replans. Original
+capture times and prior material/decision generations remain historical facts.
+
+These owner transitions do not activate an executor. The Application producer and inherited
+Agent/Workflow journal paths must use them before advertising shared snapshot capability.

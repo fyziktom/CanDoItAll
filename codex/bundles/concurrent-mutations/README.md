@@ -7,10 +7,15 @@ The original end-to-end outcome remains active. SPA work stays on its own
 The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) passes
 361/361 selected cases after correcting the legacy optional-parent SQL projection.
 Local and descendant work now share one genuine root budget, with atomic reservations,
-settlement, original receipts and cancellation/overrun publication checks. Active shared
-material ownership and actual Agent/Workflow execution remain required. Eight previously
-validated checkpoints are now signed, through `41a4df8d5`; prior pending-signature records
-remain historical. Continue the [active scope design](plan/P07-active-run-material-scope.md).
+settlement, original receipts and cancellation/overrun publication checks. Root funding is
+signed as `bed62fc21`; prior pending-signature records remain historical.
+
+The [active shared scope checkpoint](validation/2026-10-19-process-shared-run-scope.md)
+passes all 68 repair cases, covering every failure in the retained initial 397/414 run.
+Root capture and accounting commit atomically; descendants inherit original material, and
+parent reconciliation freezes joins and publication. Eight Release builds, model consistency
+and full portability enforcement pass. Actual Agent/Workflow execution remains required;
+continue the [inherited Agent design](plan/P07-inherited-agent-journal.md).
 
 The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
 passes 40/40 cases. Policy and historical receipt commit together; read-only lookup

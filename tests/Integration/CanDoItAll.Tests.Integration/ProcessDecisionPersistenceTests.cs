@@ -360,8 +360,12 @@ public sealed class ProcessDecisionPersistenceTests {
         Assert.Contains("WHERE", head, StringComparison.Ordinal);
         var child = Assert.Single(probe.Reads, sql => sql.Contains("FROM process_decision_children", StringComparison.Ordinal));
         Assert.Contains("\"ChildId\" =", child, StringComparison.Ordinal);
+        var scope = Assert.Single(probe.Reads, sql => sql.Contains("FROM process_decision_run_scopes", StringComparison.Ordinal));
+        Assert.Contains("\"RunId\" =", scope, StringComparison.Ordinal);
+        Assert.Contains("\"StepInstanceId\" IS NULL", scope, StringComparison.Ordinal);
+        Assert.DoesNotContain("PayloadJson", scope, StringComparison.Ordinal);
         Assert.DoesNotContain(probe.Reads, sql => sql.Contains("FROM process_runtime_events", StringComparison.Ordinal));
-        Assert.InRange(probe.Reads.Count, 3, 4);
+        Assert.InRange(probe.Reads.Count, 4, 5);
     }
 
     [Fact]
@@ -454,15 +458,10 @@ public sealed class ProcessDecisionPersistenceTests {
         }
     }
 
-    private static async Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade) {
-        var migration = new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations();
-        var commands = context.GetService<IMigrationsSqlGenerator>().Generate(downgrade ? migration.DownOperations : migration.UpOperations, context.Model);
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        foreach (var command in commands) {
-            await context.Database.ExecuteSqlRawAsync(command.CommandText);
-        }
-        await transaction.CommitAsync();
-    }
+    private static Task ApplyMigrationAsync(ProcessPersistenceDbContext context, bool downgrade)
+        => ProcessDecisionMigrationFixture.ApplyAsync(context, downgrade,
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes());
 
     private sealed class AfterFlushFault : SaveChangesInterceptor {
         public Exception Failure { get; } = new InvalidOperationException("Injected failure after generation SQL flush.");

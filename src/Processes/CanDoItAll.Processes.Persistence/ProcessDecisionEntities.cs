@@ -12,6 +12,7 @@ public sealed class ProcessDecisionHeadEntity {
     public Guid BudgetId { get; set; }
     public int CurrentGeneration { get; set; }
     public long Revision { get; set; }
+    public Guid? SharedRunScopeId { get; set; }
 }
 
 public sealed class ProcessDecisionGenerationEntity {
@@ -48,6 +49,7 @@ internal sealed class ProcessDecisionHeadConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(item => new { item.RunId, item.StepInstanceId }).IsUnique();
         builder.HasIndex(item => item.BudgetId).IsUnique();
         builder.HasIndex(item => item.RootRunId);
+        builder.HasOne<ProcessDecisionRunScopeEntity>().WithMany().HasForeignKey(item => item.SharedRunScopeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ProcessRuntimeStepAssignmentEntity>().WithMany()
             .HasForeignKey(item => new { item.RunId, item.StepInstanceId }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ProcessDecisionBudgetEntity>().WithMany().HasForeignKey(item => item.BudgetId).OnDelete(DeleteBehavior.Restrict);

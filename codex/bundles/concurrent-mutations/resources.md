@@ -618,3 +618,17 @@ The stalled Agent recovery commit and seven retained Process checkpoints complet
 valid signatures: `5656cae65`, `cb42edb57`, `1229f6986`, `4f3b07476`, `621611e79`,
 `ecbb119d4`, `8bb22f773`, `41a4df8d5`. Each Process checkpoint used its saved reviewed blobs;
 later root-funding changes were not accidentally staged into those commits.
+
+## 2026-10-19 Active shared run scope
+
+The first `c4-process-shared-run-scope` candidate retained 397 passes and 17 failures.
+`c4-process-shared-run-scope-repair` passes all 68 focused cases covering every failed
+behavior and the affected wire/query contracts. Both roots recorded ownership before
+creation, reused standard Release outputs and the same isolated PostgreSQL fixture, and
+introduced no new resource family or stack. Complete source/runtime verification and
+whole-command observation preceded freeze release.
+
+No observed process or database-name delta remained. The first run's 28 and repair's
+12 unattributed TEMP entries remain preserved. Earlier denied cleanup is unchanged.
+The shared fixture remains needed for inherited Agent/Workflow execution proof.
+See the [scope validation record](validation/2026-10-19-process-shared-run-scope.md).

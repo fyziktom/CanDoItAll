@@ -1,8 +1,11 @@
 # Active run material scope ownership
 
 Design before implementation, following root funding and shared business content.
-Status: planned; executor activation remains blocked on this owner and actual child journal
-integration. The immutable material store alone is not an active publication authority.
+Status: implemented in the runtime transaction boundary; the
+[68-case repair checkpoint](../validation/2026-10-19-process-shared-run-scope.md) passes.
+Executor activation still requires actual inherited child journal integration and the
+application capture/reconciliation producer. The immutable material store alone is not an
+active publication authority.
 
 ## Original admission
 
@@ -12,6 +15,12 @@ and neutral business content contract. Initial root preparation includes a disti
 domain. Step admissions bind the exact scope through a new required wire schema, so old
 readers cannot silently ignore parent enforcement. Existing content bytes retain their
 protocol meaning; legacy material is not upgraded implicitly.
+
+The scope declaration is part of root admission schema 2; funded step admission schema 5
+requires the same scope. This reuses original policy provenance and initial command replay
+instead of adding a second root admission channel. Prepared scope launches use their own
+hash domain. Local inherited decision receipts use schema 3. Historical wire encodings
+remain byte-identical when these required fields are absent.
 
 The genuine root head begins awaiting capture, with no fabricated material generation.
 The first capture uses a root budget reservation and commits its closed usage, canonical
@@ -71,6 +80,11 @@ awaiting capture or reconciling require the matching typed begin-capture command
 head expectation. Validate this before staging accounting, then apply the scope transition
 in the same unit of work. Funding arithmetic remains independent of providers and journals.
 
+The same fence also rejects acquiring or reopening a dispatch claim while the scope is
+not active. A claim can otherwise appear after the completeness check while source work is
+outside SQL. Existing claims must be released through their real runtime owner; expiration
+alone is not closure. Claim comparison uses sets, so it is linear in the runtime state.
+
 Begin-capture verifies complete quiescence and absence of unknown root allocations,
 reserves one grant and records its exact identity before source work outside SQL. Completion
 requires that allocation's closed usage and original material stamp, then atomically
@@ -79,9 +93,10 @@ allocation. Unknown outcome leaves capturing/reserved state intact for exact rec
 
 Explicit abort needs closed owner evidence, retains consumed work and the retired allocation
 count, and returns to the original awaiting-capture/reconciling state. Successful automatic
-refresh consumes one replan. Failed preparation must follow existing successful-generation
-accounting without creating an unbounded retry path. The finite work and allocation limits
-still apply. Test new-reservation/quiescence and lost-capture-acknowledgement races explicitly.
+refresh consumes one replan. An explicit abort preserves the actual reported work/replans,
+including overrun; it cannot relabel measured work as zero. An overrun cannot activate new
+material and remains visible after abort. The finite work and allocation limits prevent
+unbounded retries. Test new-reservation/quiescence and lost-capture-acknowledgement races.
 
 ## Boundaries and failure recovery
 
@@ -95,6 +110,14 @@ Preserve source/Project-before-root lock order. A crash after enrollment recover
 child ID before preparing new input. A crash after material commit returns the original
 receipt. No current-source fallback may repair missing original material or owner evidence.
 Downgrade must refuse new scope admissions even when only prepared and not yet captured.
+
+Persistence retains one active head and indexed membership metadata in addition to the
+existing canonical material rows. Membership joins read metadata, without copying or
+rehashing the business payload inside the root lock. A root refresh reads at most 257
+membership/allocation rows to detect overflow, checks actual child counts and claims, and
+requires the complete set to agree with retained counters. Publication uses indexed joins
+to the active head and original membership. No provider or journal callbacks execute in
+that transaction. This establishes bounded work, not a measured throughput qualification.
 
 Inherited Agent material requires a new journal/decision origin with its original capture
 time. Keep schema-6 interactive chat and approval checks intact. Inherited children cannot

@@ -3,15 +3,25 @@ using CanDoItAll.Processes.Abstractions;
 namespace CanDoItAll.Processes.Runtime;
 
 public enum ProcessDecisionPhaseChange { WaitForReview, BeginReconciliation, Complete, Cancel }
-public enum ProcessDecisionRefreshKind { ManagerRefresh, AutomaticReplan }
+public enum ProcessDecisionRefreshKind { ManagerRefresh, AutomaticReplan, ParentRefresh }
 
 public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstanceId) {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProcessDecisionMaterialStamp? Material { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessDecisionRunScopeExpectation? InheritedScope { get; init; }
 
     public void Validate() {
         if (StepInstanceId.Value == Guid.Empty) {
             throw new InvalidDataException("A Process decision command requires its original step.");
+        }
+        if (InheritedScope is { } scope) {
+            scope.Validate();
+            if (Material?.Reference.ScopeId != scope.ScopeId || this is not (ProcessDecisionStart or ProcessDecisionRefresh { Kind: ProcessDecisionRefreshKind.ParentRefresh })) {
+                throw new InvalidDataException("Shared material inheritance requires an original start or explicit parent refresh.");
+            }
+        } else if (this is ProcessDecisionRefresh { Kind: ProcessDecisionRefreshKind.ParentRefresh }) {
+            throw new InvalidDataException("A parent refresh requires its exact shared scope expectation.");
         }
         if (Material is { } material) {
             material.Validate();

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-19T22:08:19.801512+00:00",
+  "generated_utc": "2026-10-19T23:15:01.062899+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15635,
+  "allowance_count": 15639,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13763,6 +13763,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019215227_AddProcessRunDecisionFunding.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "6ed3edae73459de3a7e0e783bed0664054d7ae3f1a3970f20e0189a5049372cf",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019230204_AddProcessSharedRunMaterialScopes.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b607f5b6d00e904d3112a84dc4bfb6d1511fb748ef66596b946d19a99025896e",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019230204_AddProcessSharedRunMaterialScopes.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "ecf03fda2f98d6288a898c87d301787aa3c09a58f5532e10184687e35ba1928c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019230204_AddProcessSharedRunMaterialScopes.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c5c6640598438c1c18b5f034cd3f1884c6721f6169f6082f06a269758a92daac",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019230204_AddProcessSharedRunMaterialScopes.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ef3169ce3c4dc074a7e6de10ce653b79b2b766a0ef8a0b32e76d8fc0cbede137",
       "count": 1
     },
     {

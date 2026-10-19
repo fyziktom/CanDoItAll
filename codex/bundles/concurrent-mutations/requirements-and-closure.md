@@ -31,8 +31,11 @@ The [shared-content checkpoint](validation/2026-10-19-process-shared-content.md)
 265/265 selected cases for mixed-executor reuse and exact historical compatibility.
 The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) now passes
 361/361 selected cases, implementing genuine root accounting and atomic descendant funding.
-The active shared parent and actual runtime wiring remain open. These prerequisites do not
-close R5 or R6. Grant sizing/fair scheduling and workload capacity still require proof.
+The [active shared scope](validation/2026-10-19-process-shared-run-scope.md) now passes
+68 focused repair cases, including all failures from the retained initial 397/414 run.
+Atomic capture, original inherited membership and parent publication fencing are implemented.
+Actual Agent/Workflow runtime wiring remains open. These prerequisites do not close R5 or
+R6. Grant sizing/fair scheduling and workload capacity still require proof.
 
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash

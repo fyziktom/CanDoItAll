@@ -30,7 +30,12 @@ public static class ProcessDecisionRunPolicyFixture {
         return new(root.WorkspaceNamespaceId, root.WorkspaceHeadRevision, definition ?? root.DefinitionVersionId, step,
             root.WorkspacePolicy, root.DefinitionOverride, null, root.AuthorizedInvocationOverride, root.OwnerCapabilities, [.. enclosing], policy) {
             ExecutionContract = ProcessDecisionPolicyFixture.Contract(executor), MaterialProtocol = ProcessDecisionMaterialProtocol.SharedContentV1,
-            ContentContract = ProcessDecisionPolicyFixture.ContentContract(), Funding = root.Funding
+            ContentContract = root.MaterialScope?.ContentContract ?? ProcessDecisionPolicyFixture.ContentContract(), Funding = root.Funding,
+            SharedRunScopeId = root.MaterialScope?.ScopeId
         };
     }
+
+    public static ProcessDecisionRunAdmission WithSharedScope(ProcessDecisionRunAdmission root) => root with {
+        MaterialScope = new(new(Guid.NewGuid()), root.Funding, root.DatabaseProfileId, root.WorkspaceNamespaceId, ProcessDecisionPolicyFixture.ContentContract())
+    };
 }

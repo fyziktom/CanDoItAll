@@ -340,6 +340,7 @@ public sealed class ProcessRuntimeIdempotencyEntity
     public DateTimeOffset CompletedAtUtc { get; set; }
 
     public string? DecisionBudgetReceiptJson { get; set; }
+    public string? DecisionRunScopeReceiptJson { get; set; }
 
     public string? DecisionReceiptJson { get; set; }
 }

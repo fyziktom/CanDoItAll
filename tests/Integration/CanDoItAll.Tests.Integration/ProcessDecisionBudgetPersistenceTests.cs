@@ -333,7 +333,8 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionGenerations(),
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessDecisionMaterials(),
             new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedMaterialContracts(),
-            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRunDecisionFunding());
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessRunDecisionFunding(),
+            new CanDoItAll.Migrations.PostgreSql.Migrations.AddProcessSharedRunMaterialScopes());
 
     private static ProcessRuntimeCommitRequest Initial(bool admitted = true) {
         var request = ProcessProjectAdmissionFixture.Initial();

@@ -38,6 +38,9 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
         ProcessDecisionCommand command, ProcessDecisionMaterial? material, ProcessDecisionMaterialId? previousMaterialId,
         CancellationToken cancellationToken) {
         RequireCommandMaterial(command, material);
+        if (command.InheritedScope is not null) {
+            throw new InvalidOperationException("Inherited material must pass through its shared run scope owner.");
+        }
         if (material is null) {
             if (admission.ExecutionContract is not null) {
                 throw new InvalidDataException("The admitted Process execution contract requires its original canonical material.");
@@ -75,6 +78,22 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
         } else if (material.Reference.Generation != 1) {
             throw new InvalidDataException("A Process decision must start with its original material generation.");
         }
+        await StageCanonicalAsync(material, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal void StageRunScope(ProcessDecisionRunScopeAdmission admission) {
+        admission.Validate();
+        RequireProfile(admission.MaterialScope);
+        dbContext.DecisionMaterialScopes.Add(new() {
+            ScopeId = admission.ScopeId.Value, DatabaseProfileId = admission.DatabaseProfileId,
+            WorkspaceNamespaceId = admission.WorkspaceNamespaceId, RootRunId = admission.Funding.RootRunId.Value,
+            OwnerRunId = admission.Funding.RootRunId.Value, ContractId = admission.ContentContract.SchemaId,
+            ContractVersion = admission.ContentContract.Version, MaterialProtocol = ProcessDecisionMaterialProtocol.SharedContentV1
+        });
+    }
+
+    internal async Task StageCanonicalAsync(ProcessDecisionMaterial material, CancellationToken cancellationToken) {
+        RequireProfile(material.Scope);
         var scopeRow = await dbContext.DecisionMaterialScopes.AsNoTracking().SingleOrDefaultAsync(item =>
             item.ScopeId == material.Scope.Id.Value, cancellationToken).ConfigureAwait(false);
         if (scopeRow is null) {
@@ -83,7 +102,7 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
             }
             dbContext.DecisionMaterialScopes.Add(new() {
                 ScopeId = material.Scope.Id.Value, DatabaseProfileId = material.Scope.DatabaseProfileId,
-                WorkspaceNamespaceId = material.Scope.WorkspaceNamespaceId, RootRunId = state.RootRunId.Value, OwnerRunId = state.RunId.Value,
+                WorkspaceNamespaceId = material.Scope.WorkspaceNamespaceId, RootRunId = material.Scope.RootRunId.Value, OwnerRunId = material.Scope.OwnerRunId.Value,
                 StepInstanceId = material.Scope.StepInstanceId?.Value,
                 ContractId = material.ContentContract?.SchemaId ?? material.ExecutionContract!.ContractId,
                 ContractVersion = material.ContentContract?.Version ?? material.ExecutionContract!.Version,
@@ -108,9 +127,16 @@ public sealed class EfProcessDecisionMaterialStore(ProcessPersistenceDbContext d
         });
     }
 
-    internal static void RequireCommandMaterial(ProcessDecisionCommand? command, ProcessDecisionMaterial? material) {
+    internal static void RequireCommandMaterial(ProcessDecisionCommand? command, ProcessDecisionMaterial? material,
+        ProcessDecisionRunScopeCommand? scope = null) {
         command?.Validate();
-        if (command?.Material != material?.Stamp) {
+        scope?.Validate();
+        if (scope is not null && command is not null) {
+            throw new InvalidDataException("A root scope command cannot also mutate a local decision.");
+        }
+        var expected = command?.InheritedScope is null ? command?.Material : null;
+        expected ??= scope?.Material;
+        if (expected != material?.Stamp) {
             throw new InvalidDataException("A material-bearing Process command requires the exact separately supplied original payload.");
         }
     }
