@@ -20,6 +20,9 @@ public partial class AgentCatalogPanel
     public bool IsLoading { get; set; }
 
     [Parameter]
+    public bool CanRecoverPolicy { get; set; }
+
+    [Parameter]
     public Guid? OpeningManagedAgentChatId { get; set; }
 
     [Parameter]

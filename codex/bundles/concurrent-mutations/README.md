@@ -9,8 +9,10 @@ passes 40/40 cases. Policy and historical receipt commit together; read-only loo
 recovers the original result after lost acknowledgement without replaying PUT.
 Receipt publication keeps only the affected Agent's lock. [Native retained-save recovery](validation/2026-10-19-agent-policy-native-recovery.md)
 now has 39 passing selected behaviors, including actual two-tab dispatch exclusion,
-browser reload and historical recovery with later typing preserved. Production-host
-restart and native entry for deleted Agents remain open; wider E2E work continues.
+browser reload and historical recovery with later typing preserved. The
+[deleted-Agent recovery checkpoint](validation/2026-10-19-agent-policy-deleted-recovery.md)
+closes native entry after deletion and actual owned-host restart, with 58 distinct
+selected passing behaviors across its explicit repair bridges. Wider E2E work continues.
 
 The [Process policy admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases, preserving legacy launch fingerprints and storing immutable policy

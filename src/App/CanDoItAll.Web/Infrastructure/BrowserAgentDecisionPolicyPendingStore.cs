@@ -12,7 +12,7 @@ namespace CanDoItAll.Web.Infrastructure;
 internal sealed class BrowserAgentDecisionPolicyPendingStore(IJSRuntime js, IInteractiveAccessPrincipalProvider principals)
     : IAgentDecisionPolicyPendingStore, IAsyncDisposable {
     internal const string ModulePath = "./js/agentDecisionPolicyPending.js";
-    internal const int MaximumRecords = 128;
+    internal const int MaximumRecords = IAgentDecisionPolicyPendingStore.MaximumRecords;
     internal const int MaximumRequestBytes = 8192;
     internal const int MaximumOutcomeBytes = 4096;
     private readonly SemaphoreSlim initialization = new(1, 1);
@@ -46,7 +46,30 @@ internal sealed class BrowserAgentDecisionPolicyPendingStore(IJSRuntime js, IInt
         }
     }
 
-    public async ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionDataPolicyExpectation context,
+    public async ValueTask<IReadOnlyList<AgentDecisionPolicyPendingSummary>> ListAsync(AgentExecutionActivityWorkspaceIdentity context,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(context);
+        await InitializeAsync(cancellationToken);
+        var scope = new BrowserAgentDecisionPolicyPendingScope(caller!, context.DatabaseProfileId.ToString("D"),
+            (int)context.WorkspaceScope.Kind, context.WorkspaceScope.Key);
+        var rows = await InvokeAsync<Summary[]>("list", cancellationToken, scope);
+        if (rows is null || rows.Length > MaximumRecords) {
+            throw new InvalidOperationException("The retained policy list exceeds its supported bound.");
+        }
+        HashSet<Guid> agents = [];
+        List<AgentDecisionPolicyPendingSummary> summaries = [];
+        foreach (var row in rows) {
+            if (row is null || !Guid.TryParseExact(row.AgentId, "D", out var agentId) || agentId == Guid.Empty ||
+                    !Guid.TryParseExact(row.OperationId, "D", out var operationId) || operationId == Guid.Empty ||
+                    !Enum.IsDefined(row.Stage) || !agents.Add(agentId)) {
+                throw new InvalidOperationException("The retained policy list has invalid or duplicate identities.");
+            }
+            summaries.Add(new(agentId, operationId, row.Stage));
+        }
+        return summaries;
+    }
+
+    public async ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionPolicyPendingAddress context,
         CancellationToken cancellationToken = default) {
         await InitializeAsync(cancellationToken);
         var key = Key(context);
@@ -75,7 +98,7 @@ internal sealed class BrowserAgentDecisionPolicyPendingStore(IJSRuntime js, IInt
         ArgumentNullException.ThrowIfNull(command);
         var payload = BrowserAgentDecisionPolicyPendingCodec.Encode(command);
         await InitializeAsync(cancellationToken);
-        var key = Key(command.Expectation);
+        var key = Key(AgentDecisionPolicyPendingAddress.From(command.Expectation));
         var method = kind switch {
             ChangeKind.Prepare => "prepare",
             ChangeKind.BeginDispatch => "beginDispatch",
@@ -106,9 +129,14 @@ internal sealed class BrowserAgentDecisionPolicyPendingStore(IJSRuntime js, IInt
         return result;
     }
 
-    private BrowserAgentDecisionPolicyPendingKey Key(AgentDecisionDataPolicyExpectation expectation)
-        => new(caller!, expectation.Workspace.DatabaseProfileId.ToString("D"), (int)expectation.Workspace.WorkspaceScope.Kind,
-            expectation.Workspace.WorkspaceScope.Key, expectation.AgentId.ToString("D"));
+    private BrowserAgentDecisionPolicyPendingKey Key(AgentDecisionPolicyPendingAddress context) {
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.Workspace is null || context.AgentId == Guid.Empty) {
+            throw new ArgumentException("The retained policy read requires its workspace and Agent identity.", nameof(context));
+        }
+        return new(caller!, context.Workspace.DatabaseProfileId.ToString("D"), (int)context.Workspace.WorkspaceScope.Kind,
+            context.Workspace.WorkspaceScope.Key, context.AgentId.ToString("D"));
+    }
 
     private async ValueTask RequireCallerAsync(CancellationToken cancellationToken) {
         if (await CurrentCallerAsync(cancellationToken) != caller) {
@@ -154,4 +182,7 @@ internal sealed class BrowserAgentDecisionPolicyPendingStore(IJSRuntime js, IInt
     private sealed record Initialization([property: JsonRequired] int Schema, [property: JsonRequired] int MaximumRecords,
         [property: JsonRequired] int MaximumRequestBytes, [property: JsonRequired] int MaximumOutcomeBytes);
     private sealed record Change([property: JsonRequired] bool Changed, [property: JsonRequired] BrowserAgentDecisionPolicyPendingWire? Record);
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+    private sealed record Summary([property: JsonRequired] string AgentId, [property: JsonRequired] string OperationId,
+        [property: JsonRequired] AgentDecisionPolicyPendingStage Stage);
 }

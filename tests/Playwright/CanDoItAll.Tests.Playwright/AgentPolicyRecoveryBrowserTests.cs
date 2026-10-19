@@ -126,11 +126,107 @@ public sealed class AgentPolicyRecoveryBrowserTests {
         async Task OpenAsync(IPage target) {
             await (target == page ? oracle : otherOracle).NavigateAsync(host.BaseUrl + "/agents?tab=agents");
             await PlaywrightAppFixture.CompleteDatabaseStartupAsync(target);
+            await Assertions.Expect(target.GetByTestId("agents-policy-recovery")).ToBeVisibleAsync();
             await target.GetByTestId("agents-catalog-search").FillAsync(agent.Name);
             await target.GetByTestId("agents-catalog-card").Filter(new() { HasText = agent.Name }).First.ClickAsync();
             await target.GetByTestId("agents-catalog-policy").ClickAsync();
             await Assertions.Expect(target.GetByTestId("agent-policy-read")).ToBeVisibleAsync();
         }
+    }
+
+    [Fact]
+    public async Task Deleted_agent_receipt_recovers_from_catalog_after_an_actual_owned_host_restart() {
+        await using var host = await LiveUiHost.StartAsync();
+        var (agentId, siblingId) = await host.SeedAsync(async services => {
+            var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+            var seed = (await workspace.ListAgentsAsync(false)).First();
+            return (await workspace.CloneAgentAsync(seed.Id, "Retained policy recovery"), seed.Id);
+        });
+        var page = await host.NewPageAsync();
+        var oracle = CrmHrBrowserOracle.Attach(page);
+        const string moduleRoute = "**/js/agentDecisionPolicyPending*.js";
+        await page.RouteAsync(moduleRoute, async route => {
+            var response = await route.FetchAsync();
+            var source = (await response.TextAsync()).Replace("export function recordOutcome(", "function actualRecordOutcome(", StringComparison.Ordinal);
+            await route.FulfillAsync(new() { Response = response, Body = source + """
+
+                export function recordOutcome(...args) {
+                    window.policyOutcomeFailures = (window.policyOutcomeFailures || 0) + 1;
+                    throw new Error('Injected terminal browser persistence failure');
+                }
+                """ });
+        });
+        var passed = false;
+        PlaywrightAppFixture.OwnedHostRestart? restart = null;
+        try {
+            await oracle.NavigateAsync(host.BaseUrl + "/agents?tab=agents");
+            await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+            await page.GetByTestId("agents-catalog-search").FillAsync("Retained policy recovery");
+            await page.GetByTestId("agents-catalog-card").Filter(new() { HasText = "Retained policy recovery" }).ClickAsync();
+            await page.GetByTestId("agents-catalog-policy").ClickAsync();
+            var dialog = page.GetByTestId("agent-policy-dialog");
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-save")).ToBeEnabledAsync();
+            await dialog.GetByTestId("agent-policy-read").SelectOptionAsync(nameof(ReadBasisMode.RunSnapshot));
+            await dialog.GetByTestId("agent-policy-work").FillAsync("00:03:00");
+            await dialog.GetByTestId("agent-policy-save").ClickAsync();
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-status")).ToContainTextAsync("recovery could not finish");
+            Assert.Equal(1, await page.EvaluateAsync<int>("window.policyOutcomeFailures"));
+            var retained = await RetainedAsync(page);
+            Assert.Equal(1, retained.GetProperty("stage").GetInt32());
+            var operation = retained.GetProperty("operationId").GetString()!;
+            await host.SeedAsync(async services => {
+                var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+                Assert.Equal(TimeSpan.FromMinutes(3), (await workspace.ReadAgentDecisionDataPolicyAsync(agentId)).Policy!.MaximumWorkDuration);
+                await workspace.DeleteAgentAsync(agentId);
+                Assert.DoesNotContain(await workspace.ListAgentsAsync(false), item => item.Id == agentId);
+                return true;
+            });
+            var catalogBeforeRecovery = await ReadSiblingAsync();
+            await page.UnrouteAsync(moduleRoute);
+            await oracle.NavigateAsync("about:blank");
+            restart = await host.RestartOwnedApplicationAsync();
+            Assert.NotEqual(restart.PreviousStartedUtc, restart.CurrentStartedUtc);
+            await oracle.NavigateAsync(host.BaseUrl + "/agents?tab=agents");
+            await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+            Assert.False(await page.EvaluateAsync<bool>("'policyOutcomeFailures' in window"));
+            Assert.Equal(retained.GetProperty("payload").GetString(), (await RetainedAsync(page)).GetProperty("payload").GetString());
+            await page.GetByTestId("agents-policy-recovery").ClickAsync();
+            var list = page.GetByTestId("agent-policy-recovery-dialog");
+            await Assertions.Expect(list).ToContainTextAsync(operation);
+            await Assertions.Expect(list.GetByTestId("agent-policy-recovery-reload")).ToBeInViewportAsync(new() { Ratio = 1 });
+            await page.ScreenshotAsync(new() { Path = host.Artifact("agent-policy-deleted-recovery-list.png") });
+            await list.GetByTestId($"agent-policy-recovery-{agentId:N}").ClickAsync();
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-unconfirmed")).ToContainTextAsync(operation);
+            Assert.Equal(0, await dialog.Locator("form").CountAsync());
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-save")).ToBeDisabledAsync();
+            await dialog.GetByTestId("agent-policy-recover").ClickAsync();
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-historical")).ToContainTextAsync("RunSnapshot");
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-historical")).ToContainTextAsync("00:03:00");
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-save")).ToBeDisabledAsync();
+            Assert.Equal(JsonValueKind.Null, (await RetainedAsync(page)).ValueKind);
+            Assert.Equal(catalogBeforeRecovery, await ReadSiblingAsync());
+            await host.SeedAsync(async services => {
+                Assert.DoesNotContain(await services.GetRequiredService<IAgentFrameworkWorkspaceService>().ListAgentsAsync(false), item => item.Id == agentId);
+                return true;
+            });
+            await dialog.GetByTestId("agent-policy-read-current").ClickAsync();
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-status")).ToContainTextAsync("could not be read");
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-historical")).ToContainTextAsync("00:03:00");
+            await Assertions.Expect(dialog.GetByTestId("agent-policy-save")).ToBeInViewportAsync(new() { Ratio = 1 });
+            Assert.False(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth > document.documentElement.clientWidth"));
+            await page.ScreenshotAsync(new() { Path = host.Artifact("agent-policy-deleted-recovery-receipt.png") });
+            await oracle.AssertCleanAsync();
+            passed = true;
+        } finally {
+            await page.ScreenshotAsync(new() { Path = host.Artifact(passed ? "agent-policy-deleted-final.png" : "agent-policy-deleted-failure.png"), Timeout = 5_000 });
+            await host.CaptureHostLogAsync();
+            await File.WriteAllTextAsync(host.Artifact("agent-policy-deleted-recovery-evidence.json"), JsonSerializer.Serialize(new {
+                Passed = passed, Viewport = "1920x1080@1", RealNativeProducer = true, TerminalBrowserFault = true,
+                DeletedAgent = agentId, HostRestart = restart, SameOrigin = host.BaseUrl, oracle.ExpectedTeardown
+            }));
+        }
+        Task<AgentDecisionDataPolicySnapshot> ReadSiblingAsync() => host.SeedAsync(services =>
+            services.GetRequiredService<IAgentFrameworkWorkspaceService>().ReadAgentDecisionDataPolicyAsync(siblingId));
     }
 
     private static Task<JsonElement> RetainedAsync(IPage page) => page.EvaluateAsync<JsonElement>("""

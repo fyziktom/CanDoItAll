@@ -6,6 +6,12 @@ Product module that exposes AgentFramework catalog, provider, governed execution
 Chats presentation, shared provider-usage analytics, and technical-agent bridge capabilities to the app
 runtime.
 
+The Agent catalog owns the retained-policy recovery entry point even when its Agent no
+longer exists. `AgentDecisionPolicyRecoverySession` validates the current workspace
+around bounded browser reads and rejects a changed selection. The existing editor
+session looks up the original receipt; the recovery dialog never dispatches a new save.
+Cancellation and retirement prevent late reads from opening another workspace's editor.
+
 ## Project Type
 
 - SDK: `Microsoft.NET.Sdk.Razor`

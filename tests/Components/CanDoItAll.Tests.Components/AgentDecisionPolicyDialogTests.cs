@@ -284,7 +284,9 @@ public sealed class AgentDecisionPolicyDialogTests {
             Fail(PendingFailure.Initialize);
             return ValueTask.CompletedTask;
         }
-        public ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionDataPolicyExpectation context, CancellationToken cancellationToken = default)
+        public ValueTask<IReadOnlyList<AgentDecisionPolicyPendingSummary>> ListAsync(AgentExecutionActivityWorkspaceIdentity context, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyList<AgentDecisionPolicyPendingSummary>>(Record is null ? [] : [new(Record.Command.Expectation.AgentId, Record.Command.OperationId, Record.Stage)]);
+        public ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionPolicyPendingAddress context, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(Record);
         public ValueTask<AgentDecisionPolicyPendingChange> PrepareAsync(ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
             Fail(PendingFailure.Prepare);

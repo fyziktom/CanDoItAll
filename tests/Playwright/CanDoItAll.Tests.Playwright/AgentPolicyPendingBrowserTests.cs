@@ -40,7 +40,16 @@ public sealed class AgentPolicyPendingBrowserTests {
         var retained = await first.EvaluateAsync<JsonElement>("key => pending.read(key)", input.key);
         Assert.Equal(input.payload, retained.GetProperty("payload").GetString());
         Assert.Equal(1, retained.GetProperty("stage").GetInt32());
+        var summaries = await first.EvaluateAsync<JsonElement>("key => pending.list(key)", input.key);
+        var summary = Assert.Single(summaries.EnumerateArray());
+        Assert.Equal(input.key.agentId, summary.GetProperty("agentId").GetString());
+        Assert.Equal(input.operationId, summary.GetProperty("operationId").GetString());
+        Assert.Equal(new[] { "agentId", "operationId", "stage" }, await first.EvaluateAsync<string[]>(
+            "async key => Object.keys((await pending.list(key))[0]).sort()", input.key));
         var wrongCaller = input.key with { caller = "ap1:" + new string('b', 64) };
+        foreach (var foreign in new[] { wrongCaller, input.key with { profileId = Guid.NewGuid().ToString("D") }, input.key with { scopeKey = "other" } }) {
+            Assert.Empty((await first.EvaluateAsync<JsonElement>("key => pending.list(key)", foreign)).EnumerateArray());
+        }
         Assert.Equal(JsonValueKind.Null, (await first.EvaluateAsync<JsonElement>("key => pending.read(key)", wrongCaller)).ValueKind);
         Assert.Equal(JsonValueKind.Null, (await first.EvaluateAsync<JsonElement>("key => pending.read(key)", input.key with { profileId = Guid.NewGuid().ToString("D") })).ValueKind);
         Assert.Equal(JsonValueKind.Null, (await first.EvaluateAsync<JsonElement>("key => pending.read(key)", input.key with { scopeKey = "other" })).ValueKind);
@@ -73,6 +82,23 @@ public sealed class AgentPolicyPendingBrowserTests {
             }
             """, input);
         Assert.True(bound.GetProperty("refused").GetBoolean());
+        Assert.Equal(128, (await first.EvaluateAsync<JsonElement>("key => pending.list(key)", input.key)).GetArrayLength());
+        await first.EvaluateAsync("""
+            x => new Promise((resolve, reject) => {
+                const open = indexedDB.open('candoitall.agents.pending-policy', 1);
+                open.onerror = () => reject(open.error);
+                open.onsuccess = () => {
+                    const db = open.result;
+                    const tx = db.transaction('submissions', 'readwrite');
+                    tx.objectStore('submissions').put({ schema: 1, key: x.key, operationId: x.operationId, payload: x.payload, stage: 0, outcome: null },
+                        [x.key.caller, x.key.profileId, x.key.scopeKind, x.key.scopeKey, x.key.agentId]);
+                    tx.oncomplete = () => { db.close(); resolve(); };
+                    tx.onabort = () => { db.close(); reject(tx.error); };
+                };
+            })
+            """, input);
+        var overflow = await Assert.ThrowsAsync<PlaywrightException>(() => first.EvaluateAsync<JsonElement>("key => pending.list(key)", input.key));
+        Assert.Contains("CapacityExceeded", overflow.Message, StringComparison.Ordinal);
         async Task<IPage> PageAsync() {
             var page = await context.NewPageAsync();
             await page.GotoAsync(origin);

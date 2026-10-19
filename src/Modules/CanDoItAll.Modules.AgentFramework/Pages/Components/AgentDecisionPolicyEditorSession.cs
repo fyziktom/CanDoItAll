@@ -21,7 +21,7 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
             }
             var snapshot = await workspace.ReadAgentDecisionDataPolicyAsync(state.AgentId, cancellationToken);
             if (initialize) {
-                retained = await pending.ReadAsync(snapshot.Expectation, cancellationToken);
+                retained = await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(snapshot.Expectation), cancellationToken);
             }
             state.CompleteRead(snapshot);
             if (initialize) {
@@ -106,7 +106,9 @@ internal sealed class AgentDecisionPolicyEditorSession(AgentDecisionPolicyEditor
         }
         try {
             var earlier = state.Pending;
-            var retained = await pending.ReadAsync(state.Original!.Expectation, cancellationToken);
+            var expectation = earlier?.Command.Expectation ?? state.Unconfirmed?.Expectation ?? state.Original?.Expectation
+                ?? throw new InvalidOperationException("The original recovery address is unavailable.");
+            var retained = await pending.ReadAsync(AgentDecisionPolicyPendingAddress.From(expectation), cancellationToken);
             var command = retained?.Command ?? earlier?.Command ?? state.Unconfirmed;
             var needsResolution = retained?.Stage != AgentDecisionPolicyPendingStage.Prepared && command is not null;
             state.CompleteRecovery(retained, keepBusy: needsResolution);

@@ -502,3 +502,19 @@ observation covers all three entire test commands. Reconciliation found zero rem
 observed processes and zero database-name delta. Twelve unattributed TEMP entries remain
 preserved. No earlier blocked cleanup was retried or bypassed. See the
 [accounting validation record](validation/2026-10-19-process-budget-persistence.md).
+
+## 2026-10-19 Deleted-Agent policy recovery and actual host restart
+
+`c4-agent-policy-deleted-recovery`, `c4-agent-policy-deleted-recovery-ready` and
+`c4-agent-policy-deleted-recovery-owner` have ownership recorded before creation and
+reuse the existing isolated PostgreSQL18 fixture and standard Release outputs. The
+native restart replaces only the fixture's own process, retaining its profile, database,
+origin and browser storage; original and successor IDs/start times are recorded.
+All freezes were verified before release and every execution command was fully observed.
+Each candidate reconciled to zero remaining observed processes and zero database delta.
+Fifteen, 21 and nine unattributed TEMP entries respectively remain preserved. Initial
+failures, exact repairs, 58 latest passing identities and reviewed screenshots are retained
+in [the validation record](validation/2026-10-19-agent-policy-deleted-recovery.md). Two
+read-only Components MCP query children also exited; no installation was changed.
+No prior cleanup-review denial was retried or bypassed. The shared fixture remains needed
+for continuing Process/Workflow work; this is not complete bundle cleanup.

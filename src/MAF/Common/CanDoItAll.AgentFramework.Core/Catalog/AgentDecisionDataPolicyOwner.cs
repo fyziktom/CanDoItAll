@@ -6,6 +6,12 @@ internal sealed class AgentDecisionDataPolicyOwner(
     ISandboxWorkspaceCatalogStore store,
     AgentExecutionActivityWorkspaceIdentity workspace,
     IAgentExecutionProfileGenerationSource generationSource) {
+    public AgentExecutionActivityWorkspaceIdentity ReadContext(CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+        RequireCurrent(workspace);
+        return workspace;
+    }
+
     public async Task<AgentDecisionDataPolicyLookup> LookupAsync(ReplaceAgentDecisionDataPolicyCommand command,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(command);

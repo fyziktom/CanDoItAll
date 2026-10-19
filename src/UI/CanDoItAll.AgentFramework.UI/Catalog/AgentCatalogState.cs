@@ -22,6 +22,7 @@ public abstract record AgentCatalogIntent {
     public sealed record SelectTeam(Guid? TeamId) : AgentCatalogIntent;
     public sealed record OpenAgent(Guid? AgentId) : AgentCatalogIntent;
     public sealed record OpenDataPolicy(Guid AgentId) : AgentCatalogIntent;
+    public sealed record OpenPolicyRecovery : AgentCatalogIntent;
     public sealed record OpenTeam(Guid? TeamId) : AgentCatalogIntent;
     public sealed record EditMembers(Guid TeamId) : AgentCatalogIntent;
     public sealed record DeleteTeam(Guid TeamId) : AgentCatalogIntent;

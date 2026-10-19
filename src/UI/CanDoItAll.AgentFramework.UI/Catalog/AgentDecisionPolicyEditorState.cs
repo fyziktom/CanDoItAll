@@ -14,6 +14,7 @@ public sealed class AgentDecisionPolicyEditorState {
 
     public Guid AgentId { get; }
     public event Action? Changed;
+    private AgentExecutionActivityWorkspaceIdentity? recoveryContext;
     public AgentDecisionPolicyDraft Draft { get; } = new();
     public AgentDecisionDataPolicySnapshot? Original { get; private set; }
     public AgentDecisionDataPolicySnapshot? Current { get; private set; }
@@ -31,6 +32,19 @@ public sealed class AgentDecisionPolicyEditorState {
     public bool CanAdopt => Current is not null && RecoveryReady && !RecoveryBlocked && Pending is null && !Busy && !Retired && Unconfirmed is null;
     public bool CanRecover => !Busy && !Retired && (!RecoveryReady || RecoveryBlocked || Pending is not null || Unconfirmed is not null);
     public bool CanDiscardPrepared => !Busy && !Retired && Pending?.Stage == AgentDecisionPolicyPendingStage.Prepared;
+
+    public void RestorePending(AgentExecutionActivityWorkspaceIdentity context, AgentDecisionPolicyPendingRecord pending) {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(pending);
+        var original = Original?.Expectation.Workspace ?? recoveryContext;
+        var retained = pending.Command.Expectation.Workspace;
+        if (Busy || Retired || original is not null && original != context || Pending is { } existing && existing.Command != pending.Command ||
+                retained.DatabaseProfileId != context.DatabaseProfileId || retained.WorkspaceScope != context.WorkspaceScope) {
+            throw new InvalidOperationException("The retained submission cannot replace this editor's active context.");
+        }
+        recoveryContext = context;
+        CompleteRecovery(pending, restoreSubmittedValues: Original is null && Submitted is null);
+    }
 
     public bool BeginRead() {
         if (Busy || Retired) {
@@ -256,15 +270,17 @@ public sealed class AgentDecisionPolicyEditorState {
     }
 
     private void RequireIdentity(AgentDecisionDataPolicySnapshot snapshot) {
-        if (snapshot.Expectation.AgentId != AgentId || Original is { } original && snapshot.Expectation.Workspace != original.Expectation.Workspace) {
+        var context = Original?.Expectation.Workspace ?? recoveryContext;
+        if (snapshot.Expectation.AgentId != AgentId || context is not null && snapshot.Expectation.Workspace != context) {
             throw new InvalidOperationException("The policy observation belongs to another Agent or workspace.");
         }
     }
 
     private void RequirePendingIdentity(ReplaceAgentDecisionDataPolicyCommand command) {
         var workspace = command.Expectation.Workspace;
-        if (command.Expectation.AgentId != AgentId || Original is { } original &&
-            (workspace.DatabaseProfileId != original.Expectation.Workspace.DatabaseProfileId || workspace.WorkspaceScope != original.Expectation.Workspace.WorkspaceScope)) {
+        var context = Original?.Expectation.Workspace ?? recoveryContext;
+        if (command.Expectation.AgentId != AgentId || context is not null &&
+            (workspace.DatabaseProfileId != context.DatabaseProfileId || workspace.WorkspaceScope != context.WorkspaceScope)) {
             throw new InvalidOperationException("The retained policy belongs to another Agent or workspace.");
         }
     }

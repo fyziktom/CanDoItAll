@@ -9718,7 +9718,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "a33a4b2f7217a039d2421e2e1324834e2dcde9b4488c3a441ccf88f6a035e596",
+      "sha256_lf": "363438a713825fc9577c305c506221f1c6775fd6e390b624d1efc976c7c7c50a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9728,15 +9728,16 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
       "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime",
-      "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog",
+      "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog; AgentDecisionPolicyRecoveryDialog",
       "descendants": [
         "AgentCatalogPanel",
-        "AgentDecisionPolicyDialog"
+        "AgentDecisionPolicyDialog",
+        "AgentDecisionPolicyRecoveryDialog"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution.",
+      "rationale": "Catalog retains policy editor state and owns the scope-cancelled recovery-list activation independently of Agent existence; module session validates exact selection before opening existing recovery. The retained-save entry is available only in an interactive renderer so prerender cannot accept an inert click.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "AgentCatalogHost",
@@ -25376,7 +25377,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
-      "sha256_lf": "06aff886be56675297ece74c50da3c0ac15b97dfd4b75baf1ef9d547c671703f",
+      "sha256_lf": "a54646dda872c2981dd9da029ef96b9b5fa31faf40334618f99845774fe8100d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -25394,12 +25395,12 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+      "rationale": "Existing toolbar renders a typed retained-save intent only for a capable native host; no new layout, owner read or browser access."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
-      "sha256_lf": "ec447039f6c36a632e10b1fa7d8e368ac847b54249478bb7c4fa23c4dbea9c57",
+      "sha256_lf": "8940a26bcfbee26ce7b70f5b4e309887107bedce8fb2c8b6551a87c328e2b065",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -25414,7 +25415,7 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Existing renderer parameter exposes recovery capability; host owns the action and lifetime."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.css",
@@ -35415,7 +35416,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/js/agentDecisionPolicyPending.js",
       "path": "src/App/CanDoItAll.Web/wwwroot/js/agentDecisionPolicyPending.js",
-      "sha256_lf": "189fd0c56d8757eb49549b86ea6cc122131265a8236fb32b34c569382f01fd5c",
+      "sha256_lf": "1bf1c74790707bae685c499a3199b5c693d9835ddf9b5e478b53cbdbd523b711",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Agent policy IndexedDB adapter",
@@ -35430,7 +35431,49 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Bounded strict-durability original-submission storage, exact CAS transitions and removal; no DOM rendering or backend requests."
+      "rationale": "IndexedDB original-submission CAS plus scoped bounded cursor enumeration returning only identity/stage summaries; malformed matching records fail, no DOM or owner requests."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyRecoveryDialog.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyRecoveryDialog.razor",
+      "sha256_lf": "c6298661c8e45c63d05486e366fae47ed8800d9e21a0172b0a5d46ce2b74de5d",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDecisionPolicyRecoveryDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
+      ],
+      "native_owner": "Module recovery session owns context/list/selection reads; dialog owns cancellation and callback lifetime",
+      "visual_owner": "AgentDecisionPolicyRecoverySurface",
+      "descendants": [
+        "AgentDecisionPolicyRecoverySurface"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Scoped module reads begin only after interactive rendering. Retired/cancelled callbacks cannot reopen policy editors. No mutation implementation. Dynamic error text is bound as an expression; rendered failure is covered by a native component test."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicyRecoverySurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentDecisionPolicyRecoverySurface.razor",
+      "sha256_lf": "bd208588e93575fbd1bc8960d78ccc7e8ee07175b000f59b1636fb452d08f3d6",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentDecisionPolicyRecoverySurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyRecoveryDialog.razor"
+      ],
+      "native_owner": "Native module recovery session",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Shared Medium Dialog, Stack, TextBlock, Alert, SelectionListItem and Button render bounded summaries and typed intents. No CSS, new assets or owner service. Native tests cover actual composition."
     }
   ],
   "evaluation_summary": {

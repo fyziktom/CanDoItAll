@@ -22,14 +22,17 @@ function requireUuid(value) {
     return value;
 }
 
-function captureKey(key) {
+function captureScope(key) {
     if (!key || typeof key.caller !== "string" || !/^ap1:[0-9a-f]{64}$/.test(key.caller) ||
         !Number.isInteger(key.scopeKind) || key.scopeKind < 0 || key.scopeKind > 4 ||
         typeof key.scopeKey !== "string" || key.scopeKey.length > 256) {
         fail("InvalidScope");
     }
-    return { caller: key.caller, profileId: requireUuid(key.profileId), scopeKind: key.scopeKind,
-        scopeKey: key.scopeKey, agentId: requireUuid(key.agentId) };
+    return { caller: key.caller, profileId: requireUuid(key.profileId), scopeKind: key.scopeKind, scopeKey: key.scopeKey };
+}
+
+function captureKey(key) {
+    return { ...captureScope(key), agentId: requireUuid(key.agentId) };
 }
 
 function address(key) {
@@ -90,6 +93,45 @@ export async function initialize() {
         await opening;
     }
     return { schema, maximumRecords, maximumRequestBytes, maximumOutcomeBytes };
+}
+
+export function list(scope) {
+    scope = captureScope(scope);
+    if (!database) {
+        fail("StorageUnavailable");
+    }
+    const prefix = [scope.caller, scope.profileId, scope.scopeKind, scope.scopeKey];
+    const range = IDBKeyRange.bound([...prefix, ""], [...prefix, "\uffff"]);
+    return new Promise((resolve, reject) => {
+        const rows = [];
+        let failure;
+        const tx = database.transaction(storeName, "readonly");
+        tx.oncomplete = () => resolve(rows);
+        tx.onabort = () => reject(failure ?? tx.error ?? new Error("Agent policy recovery: TransactionAborted."));
+        tx.onerror = () => {};
+        const request = tx.objectStore(storeName).openCursor(range);
+        request.onsuccess = () => {
+            try {
+                const cursor = request.result;
+                if (!cursor) {
+                    return;
+                }
+                if (rows.length === maximumRecords) {
+                    fail("CapacityExceeded");
+                }
+                const key = captureKey(cursor.value?.key);
+                const record = validate(cursor.value, { ...scope, agentId: key.agentId });
+                if (indexedDB.cmp(cursor.key, address(key)) !== 0) {
+                    fail("CorruptRecord");
+                }
+                rows.push({ agentId: key.agentId, operationId: record.operationId, stage: record.stage });
+                cursor.continue();
+            } catch (error) {
+                failure = error;
+                tx.abort();
+            }
+        };
+    });
 }
 
 function transact(key, mode, action) {

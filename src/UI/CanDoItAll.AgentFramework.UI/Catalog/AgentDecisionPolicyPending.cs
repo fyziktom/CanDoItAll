@@ -29,9 +29,18 @@ public sealed record AgentDecisionPolicyPendingRecord {
 
 public sealed record AgentDecisionPolicyPendingChange(bool Changed, AgentDecisionPolicyPendingRecord? Record);
 
+public sealed record AgentDecisionPolicyPendingAddress(AgentExecutionActivityWorkspaceIdentity Workspace, Guid AgentId) {
+    public static AgentDecisionPolicyPendingAddress From(AgentDecisionDataPolicyExpectation expectation)
+        => new(expectation.Workspace, expectation.AgentId);
+}
+
+public sealed record AgentDecisionPolicyPendingSummary(Guid AgentId, Guid OperationId, AgentDecisionPolicyPendingStage Stage);
+
 public interface IAgentDecisionPolicyPendingStore {
+    public const int MaximumRecords = 128;
     ValueTask InitializeAsync(CancellationToken cancellationToken = default);
-    ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionDataPolicyExpectation context, CancellationToken cancellationToken = default);
+    ValueTask<IReadOnlyList<AgentDecisionPolicyPendingSummary>> ListAsync(AgentExecutionActivityWorkspaceIdentity context, CancellationToken cancellationToken = default);
+    ValueTask<AgentDecisionPolicyPendingRecord?> ReadAsync(AgentDecisionPolicyPendingAddress context, CancellationToken cancellationToken = default);
     ValueTask<AgentDecisionPolicyPendingChange> PrepareAsync(ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default);
     ValueTask<AgentDecisionPolicyPendingChange> BeginDispatchAsync(ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default);
     ValueTask<AgentDecisionPolicyPendingChange> RecordOutcomeAsync(ReplaceAgentDecisionDataPolicyCommand command,

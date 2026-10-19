@@ -126,6 +126,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => ResolveService().LoadCatalogSnapshotAsync(cancellationToken);
 
+    public Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => ResolveService().ReadAgentDecisionDataPolicyContextAsync(cancellationToken);
+
     public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
         CancellationToken cancellationToken = default)
         => ResolveService().ReadAgentDecisionDataPolicyAsync(agentId, cancellationToken);

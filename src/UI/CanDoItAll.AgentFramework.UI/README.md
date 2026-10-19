@@ -13,6 +13,13 @@ succeed before dispatch. Reopening restores the original submission, and recover
 its receipt without resending. Historical acceptance requires a current read and explicit
 reconciliation before another save. See [native proof and limits](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
 
+`Catalog/AgentDecisionPolicyRecoverySurface` renders bounded retained-save summaries in
+the catalog independently of a live Agent selection. The module owns workspace capture,
+list reads and exact selection checks. A recovery-only editor has no current baseline;
+historical acceptance does not enable another save. See the
+[deleted-Agent recovery design](../../../codex/bundles/concurrent-mutations/plan/P07-agent-policy-deleted-recovery.md)
+and [native deletion/restart proof](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-deleted-recovery.md).
+
 ## Request History
 
 `History` owns the complete `ProviderHistoryWorkspace`: raw filter draft and validation,

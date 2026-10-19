@@ -10,6 +10,9 @@ public sealed partial class AgentFrameworkWorkspaceService
         return new(activityWorkspaceIdentity, snapshot);
     }
 
+    public Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(policyOwner.ReadContext(cancellationToken));
+
     public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
         CancellationToken cancellationToken = default) => policyOwner.ReadAsync(agentId, cancellationToken);
 

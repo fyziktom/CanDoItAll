@@ -500,6 +500,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not expose coherent catalog snapshots.");
 
+    Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not expose Agent policy recovery context.");
     Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not expose Agent policy authoring.");

@@ -8,6 +8,10 @@ using CanDoItAll.Web.Api;
 namespace CanDoItAll.Web.Infrastructure;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+internal sealed record BrowserAgentDecisionPolicyPendingScope([property: JsonRequired] string Caller, [property: JsonRequired] string ProfileId,
+    [property: JsonRequired] int ScopeKind, [property: JsonRequired] string ScopeKey);
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record BrowserAgentDecisionPolicyPendingKey([property: JsonRequired] string Caller, [property: JsonRequired] string ProfileId,
     [property: JsonRequired] int ScopeKind, [property: JsonRequired] string ScopeKey, [property: JsonRequired] string AgentId);
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

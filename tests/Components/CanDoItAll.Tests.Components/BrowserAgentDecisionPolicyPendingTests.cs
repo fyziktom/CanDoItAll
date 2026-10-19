@@ -57,8 +57,8 @@ public sealed class BrowserAgentDecisionPolicyPendingTests {
         await using var store = new BrowserAgentDecisionPolicyPendingStore(runtime, principal);
         await store.InitializeAsync();
         runtime.Module.AfterRead = () => principal.Subject = "another-operator";
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.ReadAsync(Command().Expectation));
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.ReadAsync(Command().Expectation));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.ReadAsync(AgentDecisionPolicyPendingAddress.From(Command().Expectation)));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.ReadAsync(AgentDecisionPolicyPendingAddress.From(Command().Expectation)));
         Assert.Equal(1, runtime.Module.Reads);
     }
 
@@ -71,11 +71,55 @@ public sealed class BrowserAgentDecisionPolicyPendingTests {
     }
 
     [Fact]
+    public async Task List_returns_only_scoped_summaries_and_rejects_a_caller_change_during_await() {
+        var principal = new Principal();
+        var runtime = new BrowserRuntime();
+        var command = Command();
+        runtime.Module.Summaries = JsonSerializer.Serialize(new[] { new { agentId = command.Expectation.AgentId.ToString("D"),
+            operationId = command.OperationId.ToString("D"), stage = 1 } });
+        await using var store = new BrowserAgentDecisionPolicyPendingStore(runtime, principal);
+        var row = Assert.Single(await store.ListAsync(command.Expectation.Workspace));
+        Assert.Equal(command.Expectation.AgentId, row.AgentId);
+        Assert.Equal(command.OperationId, row.OperationId);
+        var scope = Assert.IsType<BrowserAgentDecisionPolicyPendingScope>(runtime.Module.ListScope);
+        Assert.Equal(command.Expectation.Workspace.DatabaseProfileId.ToString("D"), scope.ProfileId);
+        Assert.Equal(command.Expectation.Workspace.WorkspaceScope.Key, scope.ScopeKey);
+        runtime.Module.AfterRead = () => principal.Subject = "another-operator";
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.ListAsync(command.Expectation.Workspace));
+        Assert.Equal(0, runtime.Module.Writes);
+    }
+
+    [Theory]
+    [InlineData(ListCorruption.Overflow)]
+    [InlineData(ListCorruption.Duplicate)]
+    [InlineData(ListCorruption.InvalidAgent)]
+    [InlineData(ListCorruption.InvalidOperation)]
+    [InlineData(ListCorruption.InvalidStage)]
+    [InlineData(ListCorruption.UnknownMember)]
+    public async Task Invalid_browser_summary_list_is_never_silently_truncated_or_adopted(ListCorruption corruption) {
+        var runtime = new BrowserRuntime();
+        var row = new { agentId = Guid.NewGuid().ToString("D"), operationId = Guid.NewGuid().ToString("D"), stage = 1 };
+        runtime.Module.Summaries = corruption switch {
+            ListCorruption.Overflow => JsonSerializer.Serialize(Enumerable.Range(0, 129).Select(_ => row with { agentId = Guid.NewGuid().ToString("D") })),
+            ListCorruption.Duplicate => JsonSerializer.Serialize(new[] { row, row }),
+            ListCorruption.InvalidAgent => JsonSerializer.Serialize(new[] { row with { agentId = Guid.Empty.ToString("D") } }),
+            ListCorruption.InvalidOperation => JsonSerializer.Serialize(new[] { row with { operationId = "invalid" } }),
+            ListCorruption.InvalidStage => JsonSerializer.Serialize(new[] { row with { stage = 99 } }),
+            ListCorruption.UnknownMember => JsonSerializer.Serialize(new[] { new { row.agentId, row.operationId, row.stage, unexpected = true } }),
+            _ => throw new ArgumentOutOfRangeException(nameof(corruption))
+        };
+        await using var store = new BrowserAgentDecisionPolicyPendingStore(runtime, new Principal());
+        var failure = await Record.ExceptionAsync(async () => await store.ListAsync(Command().Expectation.Workspace));
+        Assert.True(failure is InvalidOperationException or JsonException, failure?.GetType().Name ?? "No rejection");
+        Assert.Equal(0, runtime.Module.Writes);
+    }
+
+    [Fact]
     public async Task Trusted_local_identity_uses_existing_provider_when_api_authentication_is_disabled() {
         var runtime = new BrowserRuntime();
         await using var store = new BrowserAgentDecisionPolicyPendingStore(runtime,
             new Principal { Authenticated = false, TrustedLocal = true });
-        Assert.Null(await store.ReadAsync(Command().Expectation));
+        Assert.Null(await store.ReadAsync(AgentDecisionPolicyPendingAddress.From(Command().Expectation)));
         Assert.Equal(1, runtime.Imports);
         Assert.Equal(1, runtime.Module.Reads);
     }
@@ -97,6 +141,7 @@ public sealed class BrowserAgentDecisionPolicyPendingTests {
         => new("ap1:" + new string('a', 64), command.Expectation.Workspace.DatabaseProfileId.ToString("D"),
             (int)command.Expectation.Workspace.WorkspaceScope.Kind, command.Expectation.Workspace.WorkspaceScope.Key, command.Expectation.AgentId.ToString("D"));
     public enum Corruption { Duplicate, UnknownMember, Oversized, OtherCaller, OtherOperation, MissingOutcome }
+    public enum ListCorruption { Overflow, Duplicate, InvalidAgent, InvalidOperation, InvalidStage, UnknownMember }
 
     private sealed class Principal : IInteractiveAccessPrincipalProvider {
         public string Subject { get; set; } = "operator";
@@ -125,6 +170,8 @@ public sealed class BrowserAgentDecisionPolicyPendingTests {
         public int Reads { get; private set; }
         public int Writes { get; private set; }
         public Action? AfterRead { get; set; }
+        public string Summaries { get; set; } = "[]";
+        public object? ListScope { get; private set; }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) {
             if (identifier == "initialize") {
@@ -136,6 +183,11 @@ public sealed class BrowserAgentDecisionPolicyPendingTests {
                 Reads++;
                 AfterRead?.Invoke();
                 return ValueTask.FromResult(default(TValue)!);
+            }
+            if (identifier == "list") {
+                ListScope = Assert.Single(args!);
+                AfterRead?.Invoke();
+                return ValueTask.FromResult(JsonSerializer.Deserialize<TValue>(Summaries, new JsonSerializerOptions(JsonSerializerDefaults.Web))!);
             }
             Writes++;
             throw new InvalidOperationException("Unexpected browser write.");
