@@ -41,7 +41,8 @@ supported governed contract selects the new path.
 
 | Owner | Responsibility |
 | --- | --- |
-| Process Runtime | Immutable decision/generation references, bounded state transitions, child enrollment and allocation arithmetic; no provider, UI, EF or business JSON interpretation. |
+| SharedKernel | Owner-neutral policy and allocation arithmetic; no runtime, storage, source authority or generation coordination. |
+| Process Runtime | Immutable decision/generation references, bounded state transitions and child enrollment using the shared arithmetic; no provider, UI, EF or business JSON interpretation. |
 | Process Application | Admission/manager orchestration and neutral business-owner ports; exact source expectations, explicit supported-contract selection and resumable decision references. |
 | Process Persistence | Decision heads/history, child enrollments, reservations and work allocations in the canonical dataset; CAS, root fence and atomic step/decision transitions. |
 | Process module | Actual Agent/Workflow dispatch adapters, retained child recovery and result translation into the Process outcome contract. |

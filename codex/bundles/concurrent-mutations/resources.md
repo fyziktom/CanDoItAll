@@ -1,5 +1,15 @@
 # Resource ownership and cleanup
 
+## Shared allocation boundary checkpoint (2026-10-19)
+
+Owned `c4-shared-decision-budget` passed the same 28 arithmetic cases after their move
+to SharedKernel. Its source/runtime inputs and exact naming-only source transformation
+were verified; the freeze was released. The observer covered the entire command and
+reconciliation found zero remaining observed processes and zero database delta. Four
+unattributed TEMP entries were preserved. No new database fixture or application host
+was required; existing cleanup blockers remain unchanged. See
+[the validation record](validation/2026-10-19-shared-decision-budget.md).
+
 ## Process decision arithmetic checkpoint (2026-10-19)
 
 Owned `c4-process-decision-budget` built standard Release outputs and passed all 28 pure

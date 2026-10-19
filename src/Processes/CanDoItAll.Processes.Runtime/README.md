@@ -9,7 +9,7 @@ to one database profile, project and project lifetime. It is an immutable scope 
 not a permission grant. Legacy runs retain a null admission; observation and existing
 unscoped transitions remain supported without deriving authority from launch variables.
 
-Decision budget values and pure transitions reserve bounded child allowances and settle
+SharedKernel's decision budget values and pure transitions reserve bounded child allowances and settle
 exact closed-owner usage without resetting consumed work. Historical retries are read-only;
 recorded overruns prevent further reservations. These values do not authorize execution
 or verify business receipts. Their durable owner must compare revisions and update the

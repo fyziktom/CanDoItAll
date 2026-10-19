@@ -22,6 +22,11 @@ The authoritative project and package dependency list is in [CanDoItAll.SharedKe
 
 Keep this project aligned with its solution boundary and avoid introducing dependency cycles back into higher-level runtime projects.
 
+The concurrency primitives include policy resolution and pure budget allocation/settlement
+arithmetic shared by the engine designs. They do not authorize execution, validate an
+engine journal, coordinate generations or own persistence. Each engine keeps those duties
+and must atomically persist its balance and allocation before dispatching child work.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

@@ -25,6 +25,9 @@ at the owner fence while historical reads remain available. The
 The [pure allocation foundation](validation/2026-10-19-process-decision-budget.md)
 passes 28 Unit cases for shared allowances, exact replay, settlement and recorded
 overruns. Durable budget storage, decision fences and actual runtime wiring remain open.
+The [shared-boundary checkpoint](validation/2026-10-19-shared-decision-budget.md)
+moves the unchanged arithmetic to SharedKernel and repeats all 28 cases, preserving
+engine dependency direction before durable integration.
 
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
@@ -78,9 +81,11 @@ native planning checkpoint is `bd89b5254`; SPA remains isolated on its existing 
 The [Agent policy editor and HTTP checkpoint](validation/2026-10-19-agent-policy-access.md)
 passes 63 focused cases, followed by all six affected native/component browser cases
 after a subtitle binding correction. It preserves original versions and drafts,
-requires explicit conflict reconciliation, and blocks uncertain policy saves. Durable
-policy-operation recovery across navigation/restart, external-Agent target preconditions
-and Process/Workflow integration remain open, along with the wider bundle gates.
+requires explicit conflict reconciliation, and blocks uncertain policy saves. Recovery
+for existing Agents is now covered by the later native checkpoint, and
+external-Agent target preconditions by their later checkpoint. Deleted-Agent recovery
+entry, production-host restart and Process/Workflow integration remain open, along with
+the wider bundle gates.
 
 P03 now includes the lifecycle owner/migration, native and HTTP retained operations,
 creation cleanup and governed Agent/Process hierarchy and definition editing. Six

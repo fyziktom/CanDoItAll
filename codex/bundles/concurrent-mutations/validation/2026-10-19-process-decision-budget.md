@@ -3,6 +3,9 @@
 **28/28 focused Unit cases pass, with no skips.** This implements the arithmetic in
 [the allocation design](../plan/P07-process-decision-budget.md). It does not implement
 SQL admission, a durable shared ledger, runtime activation or a production producer.
+The subsequent [shared-boundary checkpoint](2026-10-19-shared-decision-budget.md) moves
+the unchanged arithmetic to SharedKernel; the source locations below describe this
+historical first checkpoint.
 
 Runtime now owns typed decision/allocation identities, immutable balances and grants,
 exact settlement evidence references and pure reservation/settlement transitions.

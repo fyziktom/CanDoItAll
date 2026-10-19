@@ -1,38 +1,36 @@
-using CanDoItAll.SharedKernel;
+namespace CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Processes.Runtime;
-
-public static class ProcessDecisionBudgetTransitions {
-    public static ProcessDecisionBudgetBalance Create(ProcessDecisionId decisionId, DecisionDataPolicyBudget ceiling) {
-        var balance = new ProcessDecisionBudgetBalance(decisionId, 1, ceiling, 0, 0, 0, 0, 0, false);
+public static class DecisionBudgetTransitions {
+    public static DecisionBudgetBalance Create(DecisionBudgetId budgetId, DecisionDataPolicyBudget ceiling) {
+        var balance = new DecisionBudgetBalance(budgetId, 1, ceiling, 0, 0, 0, 0, 0, false);
         balance.Validate();
         return balance;
     }
 
-    public static ProcessDecisionBudgetChange Reserve(ProcessDecisionBudgetBalance current, ProcessDecisionAllocationId allocationId,
-        ProcessDecisionBudgetAmount requested, ProcessDecisionBudgetAllocation? existing = null) {
+    public static DecisionBudgetChange Reserve(DecisionBudgetBalance current, DecisionBudgetAllocationId allocationId,
+        DecisionBudgetAmount requested, DecisionBudgetAllocation? existing = null) {
         ArgumentNullException.ThrowIfNull(current);
         current.Validate();
-        var allocation = new ProcessDecisionBudgetAllocation(current.DecisionId, allocationId, requested);
+        var allocation = new DecisionBudgetAllocation(current.BudgetId, allocationId, requested);
         allocation.Validate();
         if (existing is not null) {
             RequireAllocation(current, existing);
             if (existing.Id != allocationId || existing.Grant != requested) {
-                throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.OriginalAllocationChanged);
+                throw new DecisionBudgetException(DecisionBudgetRefusal.OriginalAllocationChanged);
             }
             return new(false, current, existing);
         }
         if (current.OverrunDetected) {
-            throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.Overrun);
+            throw new DecisionBudgetException(DecisionBudgetRefusal.Overrun);
         }
-        if (current.AllocationCount == ProcessDecisionBudgetBalance.MaximumAllocations) {
-            throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.AllocationCapacity);
+        if (current.AllocationCount == DecisionBudgetBalance.MaximumAllocations) {
+            throw new DecisionBudgetException(DecisionBudgetRefusal.AllocationCapacity);
         }
         if (requested.WorkTicks > current.Ceiling.MaximumWorkDuration.Ticks - current.ConsumedWorkTicks - current.ReservedWorkTicks) {
-            throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.WorkExhausted);
+            throw new DecisionBudgetException(DecisionBudgetRefusal.WorkExhausted);
         }
         if (requested.Replans > current.Ceiling.MaximumReplans - current.ConsumedReplans - current.ReservedReplans) {
-            throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.ReplansExhausted);
+            throw new DecisionBudgetException(DecisionBudgetRefusal.ReplansExhausted);
         }
         var next = current with {
             Revision = checked(current.Revision + 1),
@@ -44,8 +42,8 @@ public static class ProcessDecisionBudgetTransitions {
         return new(true, next, allocation);
     }
 
-    public static ProcessDecisionBudgetChange Settle(ProcessDecisionBudgetBalance current, ProcessDecisionBudgetAllocation allocation,
-        ProcessDecisionBudgetSettlement settlement) {
+    public static DecisionBudgetChange Settle(DecisionBudgetBalance current, DecisionBudgetAllocation allocation,
+        DecisionBudgetSettlement settlement) {
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(allocation);
         ArgumentNullException.ThrowIfNull(settlement);
@@ -54,7 +52,7 @@ public static class ProcessDecisionBudgetTransitions {
         settlement.Validate();
         if (allocation.Settlement is { } original) {
             if (original != settlement) {
-                throw new ProcessDecisionBudgetException(ProcessDecisionBudgetRefusal.OriginalSettlementChanged);
+                throw new DecisionBudgetException(DecisionBudgetRefusal.OriginalSettlementChanged);
             }
             return new(false, current, allocation);
         }
@@ -77,9 +75,9 @@ public static class ProcessDecisionBudgetTransitions {
         return new(true, next, allocation with { Settlement = settlement });
     }
 
-    private static void RequireAllocation(ProcessDecisionBudgetBalance balance, ProcessDecisionBudgetAllocation allocation) {
+    private static void RequireAllocation(DecisionBudgetBalance balance, DecisionBudgetAllocation allocation) {
         allocation.Validate();
-        if (allocation.DecisionId != balance.DecisionId || balance.AllocationCount == 0 ||
+        if (allocation.BudgetId != balance.BudgetId || balance.AllocationCount == 0 ||
             allocation.Grant.WorkTicks > balance.Ceiling.MaximumWorkDuration.Ticks || allocation.Grant.Replans > balance.Ceiling.MaximumReplans ||
             allocation.Settlement is null && (balance.ReservedWorkTicks < allocation.Grant.WorkTicks || balance.ReservedReplans < allocation.Grant.Replans) ||
             allocation.Settlement is { } closed && (balance.ConsumedWorkTicks < closed.Consumed.WorkTicks || balance.ConsumedReplans < closed.Consumed.Replans ||

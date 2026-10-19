@@ -85,13 +85,13 @@ same-project contention; shared-lock implementation and sustained qualification 
 R4/R6 gates. Freeze release `C5F0742B` permits successor edits only. C4 shared TEMP
 observation gaps and earlier cleanup blockers remain explicit.
 
-R1 also retains a concrete external-Agent target-version gap: external binding versions
-can remain stale after ordinary or policy edits. The successor must compare the
+The earlier external-Agent target-version gap is closed by the
+[54-case checkpoint](validation/2026-10-19-external-agent-preconditions.md): updates use
 original workspace/profile scope, Agent identity and actual configuration version,
-freeze the submitted editor once before awaiting, and preserve historical replay
-receipts. A reserved-policy preservation test does not prove this target CAS. R5's
-Agent policy owner and selected project-task planning runtime are integrated; Agent policy editing/API now has focused proof; durable policy-operation recovery and
-Process/Workflow policy propagation remain open. Matching
+freeze the submission before awaiting and preserve historical receipts. R5's Agent
+policy owner, selected project-task planning runtime, editor/API and existing-Agent
+browser recovery have focused proof. Deleted-Agent recovery entry, production-host
+restart and Process/Workflow policy propagation remain open. Matching
 policy contents after an unknown write cannot substitute for an original operation receipt.
 
 Required continuations include complete Projects producer cutover; P03 original deletion,

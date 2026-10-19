@@ -1,14 +1,16 @@
-# Process decision work allocations
+# Decision work allocations
 
 Prospective foundation after `77858d487`, subordinate to the
 [decision runtime design](P07-process-decision-runtime.md). No Process/Workflow policy
 activation is authorized by this foundation alone.
 The pure arithmetic now has [28 passing Unit cases](../validation/2026-10-19-process-decision-budget.md).
 Durable owner integration and actual producer proof remain prospective.
+The [shared-boundary refinement](P07-shared-decision-budget-boundary.md) moves these
+calculations into SharedKernel before any engine's durable-owner integration.
 
 ## Fixed responsibility and arithmetic
 
-Process Runtime owns immutable budget balances and allocation transitions. They use
+SharedKernel owns immutable budget balances and allocation transitions. They use
 the existing SharedKernel policy ceiling but do not capture business material, read
 clocks, perform I/O, interpret Agent/Workflow journals or authorize a manager. The
 existing manager loop-repeat ledger counts incident recovery attempts; it has neither
@@ -57,7 +59,7 @@ provider work; a rejected allocation cannot start a child.
 
 ## Implementation and validation contract
 
-Use small top-level values and a pure transition class in the existing Runtime project.
+Use small top-level values and a pure transition class in the existing SharedKernel project.
 Do not add an interface, DI registration, project reference or runtime partial for
 arithmetic. Typed decision/allocation identities prevent accidental interchange. Keep
 business receipt verification at the real adapter boundary and transaction ownership
