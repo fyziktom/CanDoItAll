@@ -18,6 +18,10 @@ The [child publication condition](P07-process-child-publication.md) now has
 It supplies stable occurrence identity, exact lookup and an enlisted root/generation
 check. Actual effect callers and source/manager authority still need to compose it;
 the existing policy guards remain closed.
+The [versioned execution admission design](P07-process-execution-contract.md) binds an
+exact adapter identity/version/owner while preserving schema 1 launch bytes, with
+[114 selected passing behaviours](../validation/2026-10-19-process-execution-contract.md).
+No executor activation follows from this declaration.
 
 ## Source facts and rejected shortcuts
 

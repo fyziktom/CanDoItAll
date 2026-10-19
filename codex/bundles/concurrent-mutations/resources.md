@@ -549,3 +549,15 @@ Complete source/runtime identities were verified before releasing the freeze. Re
 reconciliation found zero remaining observed processes and zero database-name delta;
 16 unattributed TEMP entries remain preserved. No earlier denied cleanup was retried.
 See the [publication validation record](validation/2026-10-19-process-child-publication.md).
+
+## 2026-10-19 Versioned Process execution admission
+
+`c4-process-execution-contract` and its exact test-only successor recorded ownership
+before creation and reused standard Release outputs plus the existing PostgreSQL18
+fixture. Complete-command observation and full source/runtime verification passed for
+both candidates before freeze release. The first has 112/114 passing cases; the repair
+has 60/60 Unit passes and an exact unchanged-production/runtime bridge to all 54 database
+passes. No observed process or database-name delta remained. Eleven unattributed TEMP
+entries from the first candidate were preserved; the repair observed none. Earlier
+cleanup denials remain unchanged. See the
+[validation record](validation/2026-10-19-process-execution-contract.md).

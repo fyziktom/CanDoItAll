@@ -7,14 +7,19 @@ namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed partial class ProcessPreparedLaunchPersistenceTests {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Decision_policy_survives_preparation_commit_reload_and_rejects_every_repair_substitution(bool admitted) {
+    [InlineData(false, false, ProcessDecisionChildOwner.Agent)]
+    [InlineData(true, false, ProcessDecisionChildOwner.Agent)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Agent)]
+    [InlineData(true, true, ProcessDecisionChildOwner.Workflow)]
+    public async Task Decision_policy_survives_preparation_commit_reload_and_rejects_every_repair_substitution(
+        bool admitted, bool declaredContract, ProcessDecisionChildOwner executor) {
         await using var app = await TestApplication.CreateAsync(Harness());
         var services = app.Services;
         var original = ProcessPreparedLaunchFixture.Create(ProcessPreparedLaunchFixture.Local(Profile(services).Profile.Id), new(Guid.NewGuid()));
         var assignment = Assert.Single(original.InitialCommit.InitialAssignments!);
-        var policy = ProcessDecisionPolicyFixture.Create(original.InitialCommit.InitialPlan!.Definition.VersionId, assignment.StepInstanceId);
+        var policy = ProcessDecisionPolicyFixture.Create(original.InitialCommit.InitialPlan!.Definition.VersionId, assignment.StepInstanceId) with {
+            ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(executor) : null
+        };
         var prepared = await Store(services).PrepareAsync(original with { InitialCommit = original.InitialCommit with {
             InitialAssignments = [assignment with { DecisionDataPolicy = admitted ? policy : null }]
         } });
@@ -31,6 +36,16 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             await store.SaveAsync([current with { Prompt = "A permitted recovery prompt edit." }]);
             foreach (var replacement in new ProcessDecisionDataPolicyAdmission?[] { admitted ? null : policy, policy with { WorkspaceHeadRevision = Guid.NewGuid() } }) {
                 await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync([current with { DecisionDataPolicy = replacement }]).AsTask());
+            }
+            if (admitted) {
+                var contract = ProcessDecisionPolicyFixture.Contract(executor);
+                foreach (var replacement in new ProcessDecisionExecutionContract?[] { declaredContract ? null : contract,
+                    contract with { ContractId = Guid.NewGuid() }, contract with { Version = 2 },
+                    contract with { Executor = executor == ProcessDecisionChildOwner.Agent ? ProcessDecisionChildOwner.Workflow : ProcessDecisionChildOwner.Agent } }) {
+                    await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveAsync([current with {
+                        DecisionDataPolicy = policy with { ExecutionContract = replacement }
+                    }]).AsTask());
+                }
             }
             Assert.Equal(encoded, (await context.RuntimeStepAssignments.AsNoTracking().SingleAsync(item => item.RunId == assignment.RunId.Value)).DecisionDataPolicyJson);
             var retained = (await Store(services).GetAsync(prepared.Preparation.AdmissionId))!;

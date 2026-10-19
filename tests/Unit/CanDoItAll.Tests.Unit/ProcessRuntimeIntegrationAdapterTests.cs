@@ -6879,9 +6879,10 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ExecuteAsync_rejects_invalid_contract_or_unsupported_policy_before_workflow_launch(bool decisionPolicy)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExecuteAsync_rejects_invalid_contract_or_unsupported_policy_before_workflow_launch(bool decisionPolicy, bool declaredContract)
     {
         var agent = NewAgent(
             "Workflow process sentinel",
@@ -6902,7 +6903,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 assignment.StepInstanceId.ToString()));
         if (decisionPolicy) {
             assignment = assignment with { DecisionDataPolicy = CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Create(
-                ProcessDefinitionVersionId.New(), assignment.StepInstanceId) };
+                ProcessDefinitionVersionId.New(), assignment.StepInstanceId) with {
+                    ExecutionContract = declaredContract ? CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Workflow) : null
+                } };
         }
         var workspace = new ThrowingWorkspaceService(
             agent,

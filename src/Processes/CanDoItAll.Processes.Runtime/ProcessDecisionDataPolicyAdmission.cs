@@ -18,9 +18,12 @@ public sealed record ProcessDecisionDataPolicyAdmission(
     DecisionDataPolicyCapabilities OwnerCapabilities,
     ImmutableArray<DecisionDataPolicyBudget> EnclosingBudgets,
     DecisionDataPolicy Policy) {
-    public const int SchemaVersion = 1;
+    public const int LegacySchemaVersion = 1;
+    public const int SchemaVersion = 2;
     public const int MaximumUtf8Bytes = 32_768;
     public const int MaximumEnclosingPolicies = 32;
+
+    public ProcessDecisionExecutionContract? ExecutionContract { get; init; }
 
     public void Validate() {
         if (WorkspaceNamespaceId == Guid.Empty || WorkspaceHeadRevision == Guid.Empty ||
@@ -30,6 +33,7 @@ public sealed record ProcessDecisionDataPolicyAdmission(
             EnclosingBudgets.Any(budget => budget is null)) {
             throw new InvalidDataException("The Process decision policy requires its original identity and bounded provenance.");
         }
+        ExecutionContract?.Validate();
         foreach (var preference in new[] { DefinitionOverride, StepOverride, AuthorizedInvocationOverride }) {
             if (preference is not null) {
                 _ = DecisionDataPolicyOverrideCodec.Serialize(preference);
@@ -47,6 +51,15 @@ public sealed record ProcessDecisionDataPolicyAdmission(
         Validate();
         if (DefinitionVersionId != definitionVersionId || StepInstanceId != stepInstanceId) {
             throw new InvalidDataException("The Process decision policy belongs to another definition version or logical step.");
+        }
+    }
+
+    public void RequireExecutionContract(ProcessDecisionExecutionContract supported) {
+        ArgumentNullException.ThrowIfNull(supported);
+        supported.Validate();
+        Validate();
+        if (ExecutionContract != supported) {
+            throw new InvalidDataException("The Process decision requires its exact admitted execution contract, version and executor owner.");
         }
     }
 }

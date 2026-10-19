@@ -5,6 +5,9 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Tests.Support;
 
 public static class ProcessDecisionPolicyFixture {
+    public static ProcessDecisionExecutionContract Contract(ProcessDecisionChildOwner executor)
+        => new(Guid.Parse("26ffb370-a3da-4c9a-b2cb-8ac977a82e57"), 1, executor);
+
     public static ProcessDecisionDataPolicyAdmission Create(ProcessDefinitionVersionId definition, ProcessStepInstanceId step) {
         DecisionDataPolicy workspace = new(ReadBasisMode.StepSnapshot, PublicationFreshness.RequireCurrent,
             OnBasisChange.PauseForReview, new(0, TimeSpan.FromMinutes(5), TimeSpan.FromHours(1)));

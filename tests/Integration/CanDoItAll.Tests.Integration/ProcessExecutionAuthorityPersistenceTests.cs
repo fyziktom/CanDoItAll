@@ -188,13 +188,15 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Unsupported_decision_policy_preserves_history_but_blocks_reservation_and_owner_mutation(bool latePolicy) {
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Unsupported_decision_policy_preserves_history_but_blocks_reservation_and_owner_mutation(bool latePolicy, bool declaredContract) {
         await using var app = await TestApplication.CreateAsync(Harness());
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
-        var fixture = await SeedAsync(services, decisionPolicy: !latePolicy);
+        var fixture = await SeedAsync(services, decisionPolicy: !latePolicy, declaredContract: declaredContract);
         var original = Assert.IsType<ProcessExecutionDispatchAuthority>((await Reader(services).ReadAsync(fixture.Run.Id)).Snapshot?.DispatchAuthority);
         Assert.Equal(latePolicy, original.ObservedCurrentDispatch);
         var options = Options(services);
@@ -209,7 +211,9 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
             await using var changed = new ProcessPersistenceDbContext(options);
             var assignment = await changed.RuntimeStepAssignments.SingleAsync(item => item.RunId == fixture.RunId);
             assignment.DecisionDataPolicyJson = ProcessDecisionDataPolicyAdmissionCodec.Serialize(ProcessDecisionPolicyFixture.Create(
-                fixture.Prepared.Preparation.InitialCommit.InitialPlan!.Definition.VersionId, new(assignment.StepInstanceId)));
+                fixture.Prepared.Preparation.InitialCommit.InitialPlan!.Definition.VersionId, new(assignment.StepInstanceId)) with {
+                    ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent) : null
+                });
             await changed.SaveChangesAsync();
         }
         var history = await Reader(services).ReadAsync(fixture.Run.Id);
@@ -230,7 +234,7 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         }
     }
 
-    private static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false) {
+    private static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false, bool declaredContract = false) {
         var projectId = Guid.NewGuid();
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Saved Process source" })).IsSuccess);
         var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
@@ -248,7 +252,9 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         if (decisionPolicy) {
             var initial = Assert.Single(preparation.InitialCommit.InitialAssignments!);
             preparation = preparation with { InitialCommit = preparation.InitialCommit with { InitialAssignments = [initial with {
-                DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(preparation.InitialCommit.InitialPlan!.Definition.VersionId, initial.StepInstanceId)
+                DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(preparation.InitialCommit.InitialPlan!.Definition.VersionId, initial.StepInstanceId) with {
+                    ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent) : null
+                }
             }] } };
         }
         var prepared = await services.GetRequiredService<IProcessPreparedLaunchStore>().PrepareAsync(preparation);

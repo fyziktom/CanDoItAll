@@ -36,3 +36,12 @@ decision, generation, owner and admitted logical ordinal. Retries preserve that 
 claim IDs and mutable inputs do not create new occurrences. `ProcessDecisionChildAdmission`
 binds the exact runtime address, material and allocated work. These values do not grant
 source permission or prove that an executor supports governed decisions.
+
+## Admitted execution contracts
+
+Policy schema 1 retains its original encoding. A policy with an explicit execution
+contract uses schema 2 and binds the exact adapter contract identity, version and
+Agent/Workflow owner into preparation and immutable assignment storage. Unsupported
+envelopes and contract mismatches fail explicitly. Contract identities belong to the
+business adapters; Runtime does not depend on their modules or SDKs. This declaration
+does not enable an executor or replace its source, material and publication checks.

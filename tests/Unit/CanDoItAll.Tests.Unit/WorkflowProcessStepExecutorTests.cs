@@ -18,11 +18,15 @@ public sealed partial class WorkflowProcessStepExecutorTests
     private static readonly Guid ProfileId = Guid.NewGuid();
     private static readonly DateTimeOffset Now = new(2026, 7, 12, 20, 30, 0, TimeSpan.Zero);
 
-    [Fact]
-    public async Task ExecuteAsync_refuses_unactivated_decision_policy_before_child_launch() {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAsync_refuses_unactivated_decision_policy_before_child_launch(bool declaredContract) {
         var assignment = CreateAssignment(new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid())));
         assignment = assignment with { DecisionDataPolicy = CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Create(
-            ProcessDefinitionVersionId.New(), assignment.StepInstanceId) };
+            ProcessDefinitionVersionId.New(), assignment.StepInstanceId) with {
+                ExecutionContract = declaredContract ? CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Workflow) : null
+            } };
         var launch = new RecordingWorkflowLaunchService();
         var runtime = new RecordingWorkflowRuntimeManager();
         var result = await CreateExecutor(launch, runtime, assignment).ExecuteAsync(assignment, ProcessStepExecutionContract.Empty,

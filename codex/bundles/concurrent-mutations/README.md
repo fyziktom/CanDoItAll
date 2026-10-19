@@ -47,6 +47,12 @@ and the enlisted generation condition now have restart, rollback, race and unrel
 proof. Actual Agent/Workflow publication must still compose this fence with original
 source/manager authority, inherited material and the supported execution contract.
 
+The [versioned execution admission checkpoint](validation/2026-10-19-process-execution-contract.md)
+has 114 selected passing behaviours across an exact test-only repair bridge. It preserves
+schema 1 bytes, binds schema 2's exact contract into launch/assignment intent and retains
+the existing unsupported-execution guards. Actual inherited material and runtime wiring
+remain open.
+
 The [external Agent precondition checkpoint](validation/2026-10-19-external-agent-preconditions.md)
 passes 54/54 focused cases. External update/archive now compare actual Agent state,
 capture mutable requests before storage work and retain historical replay receipts.

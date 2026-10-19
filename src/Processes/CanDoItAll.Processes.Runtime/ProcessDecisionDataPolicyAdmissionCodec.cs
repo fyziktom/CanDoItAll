@@ -45,14 +45,21 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         try {
             var wire = document.RootElement.Deserialize<AdmissionWire>(wireOptions)
                 ?? throw new JsonException("The Process decision policy must be an object.");
-            if (wire.SchemaVersion != ProcessDecisionDataPolicyAdmission.SchemaVersion || wire.Capabilities is null ||
+            var validSchema = wire.SchemaVersion switch {
+                ProcessDecisionDataPolicyAdmission.LegacySchemaVersion => !document.RootElement.TryGetProperty("executionContract", out _),
+                ProcessDecisionDataPolicyAdmission.SchemaVersion => wire.ExecutionContract is not null,
+                _ => false
+            };
+            if (!validSchema || wire.Capabilities is null ||
                 wire.EnclosingBudgets.IsDefault || wire.EnclosingBudgets.Any(budget => budget is null)) {
                 throw new JsonException("The Process decision policy requires its supported schema and original limits.");
             }
             var admission = new ProcessDecisionDataPolicyAdmission(wire.WorkspaceNamespaceId, wire.WorkspaceHeadRevision,
                 new(wire.DefinitionVersionId), new(wire.StepInstanceId), wire.WorkspacePolicy, wire.DefinitionOverride,
                 wire.StepOverride, wire.AuthorizedInvocationOverride, wire.Capabilities.ToModel(),
-                [.. wire.EnclosingBudgets.Select(budget => budget.ToModel())], wire.Policy);
+                [.. wire.EnclosingBudgets.Select(budget => budget.ToModel())], wire.Policy) {
+                ExecutionContract = wire.ExecutionContract
+            };
             admission.Validate();
             return admission;
         } catch (Exception failure) when (failure is ArgumentException or InvalidDataException or OverflowException or DecisionDataPolicyException) {
@@ -66,10 +73,13 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
     internal static byte[] Encode(ProcessDecisionDataPolicyAdmission value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        var wire = new AdmissionWire(ProcessDecisionDataPolicyAdmission.SchemaVersion, value.WorkspaceNamespaceId,
+        var schema = value.ExecutionContract is null
+            ? ProcessDecisionDataPolicyAdmission.LegacySchemaVersion : ProcessDecisionDataPolicyAdmission.SchemaVersion;
+        var wire = new AdmissionWire(schema, value.WorkspaceNamespaceId,
             value.WorkspaceHeadRevision, value.DefinitionVersionId.Value, value.StepInstanceId.Value,
             value.WorkspacePolicy, value.DefinitionOverride, value.StepOverride, value.AuthorizedInvocationOverride,
-            CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy);
+            CapabilitiesWire.From(value.OwnerCapabilities), [.. value.EnclosingBudgets.Select(BudgetWire.From)], value.Policy,
+            value.ExecutionContract);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(wire, wireOptions);
         if (bytes.Length > ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes) {
             throw new JsonException("The Process decision policy exceeds its encoding bound.");
@@ -108,7 +118,8 @@ internal sealed class ProcessDecisionDataPolicyAdmissionJsonConverter : JsonConv
         [property: JsonRequired] DecisionDataPolicyOverride? AuthorizedInvocationOverride,
         [property: JsonRequired] CapabilitiesWire Capabilities,
         [property: JsonRequired] ImmutableArray<BudgetWire> EnclosingBudgets,
-        [property: JsonRequired] DecisionDataPolicy Policy);
+        [property: JsonRequired] DecisionDataPolicy Policy,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessDecisionExecutionContract? ExecutionContract);
 
     private sealed record BudgetWire(
         [property: JsonRequired] int MaximumReplans,

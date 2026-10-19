@@ -16,6 +16,12 @@ adds native orphaned-ticket entry and actual owned-host restart, with 58 distinc
 passing behaviors across exact repair bridges. This does not close all of R5 or the
 Process/Workflow runtime requirements.
 
+The [versioned execution admission checkpoint](validation/2026-10-19-process-execution-contract.md)
+adds 114 selected passing behaviours across its exact test-only repair bridge. Contract
+identity/version/owner are immutable launch facts; declaration alone does not activate
+governed execution or close R5. Shared inherited material and actual child-owner wiring
+remain open.
+
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
 compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch
@@ -109,8 +115,9 @@ The earlier external-Agent target-version gap is closed by the
 original workspace/profile scope, Agent identity and actual configuration version,
 freeze the submission before awaiting and preserve historical receipts. R5's Agent
 policy owner, selected project-task planning runtime, editor/API and existing-Agent
-browser recovery have focused proof. Deleted-Agent recovery entry, production-host
-restart and Process/Workflow policy propagation remain open. Matching
+browser recovery have focused proof. Deleted-Agent recovery entry and owned-host
+restart now have the linked checkpoint proof; Process/Workflow policy propagation
+remains open. Matching
 policy contents after an unknown write cannot substitute for an original operation receipt.
 
 Required continuations include complete Projects producer cutover; P03 original deletion,
