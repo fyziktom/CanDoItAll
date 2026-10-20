@@ -227,7 +227,7 @@ public sealed partial class ProcessDecisionFundingPersistenceTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Actual_publication_fence_rechecks_root_overrun_or_cancellation(bool cancel) {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var scope = app.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
         await using var context = Context(services);

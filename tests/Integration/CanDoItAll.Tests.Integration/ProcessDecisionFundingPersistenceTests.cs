@@ -244,7 +244,8 @@ public sealed partial class ProcessDecisionFundingPersistenceTests {
             1, ProcessProjectAdmissionFixture.Now, ProcessProjectAdmissionFixture.Now.AddHours(1), null, null);
         var request = Change(state);
         var target = request.Mutation.State with { Status = ProcessRuntimeStatus.Active,
-            Steps = [state.Steps.Single() with { Status = ProcessRuntimeStepStatus.Running, ActiveClaimToken = claim.ClaimToken }], Claims = [claim] };
+            Steps = [state.Steps.Single() with { Status = ProcessRuntimeStepStatus.Running, AttemptNumber = claim.AttemptNumber,
+                ActiveClaimToken = claim.ClaimToken }], Claims = [claim] };
         return (await Owner(context, services).CommitAsync(request with { Mutation = request.Mutation with { State = target } })).State;
     }
 

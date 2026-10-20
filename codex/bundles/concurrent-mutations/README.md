@@ -302,3 +302,9 @@ The [actual inherited workspace lifecycle](validation/2026-10-19-inherited-works
 now passes all 185 selected cases after repairing the retained caller's activity transition.
 It retains original input/scope, current authorization and exclusive provider ownership.
 Concrete Process/Workflow source, Workbench publication and manager integration continue next.
+
+
+The [Process publication claim-lifetime repair](validation/2026-10-19-publication-claim-lifetime.md)
+passes all 106 selected cases. Dispatch now requires the exact active claim and attempt
+with unexpired lifetime after the root lock; historical read and manager review remain
+separate. Concrete producer/publication integration and R5/R6 closure remain open.

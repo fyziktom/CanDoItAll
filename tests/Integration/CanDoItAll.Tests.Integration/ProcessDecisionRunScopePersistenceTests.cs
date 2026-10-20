@@ -15,7 +15,7 @@ namespace CanDoItAll.Tests.Integration.Processes;
 public sealed class ProcessDecisionRunScopePersistenceTests {
     [Fact]
     public async Task Original_scope_admission_is_atomic_and_no_work_starts_before_first_capture() {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var context = Context(app.Services);
         var initial = Initial(app.Services);
         var owner = Owner(context, app.Services);
@@ -41,7 +41,7 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
 
     [Fact]
     public async Task Capture_commits_one_canonical_payload_with_accounting_and_replays_original_receipts() {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var context = Context(app.Services);
         var owner = Owner(context, app.Services);
         var initial = Initial(app.Services);
@@ -67,7 +67,7 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
 
     [Fact]
     public async Task Agent_and_nested_workflow_share_original_material_without_recapture_or_payload_duplication() {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var context = Context(app.Services);
         var owner = Owner(context, app.Services);
         var initial = Initial(app.Services);
@@ -95,7 +95,7 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
     [InlineData(1)]
     [InlineData(2)]
     public async Task Shared_start_rejects_recapture_missing_inheritance_and_wrong_scope_without_spending_preparation(int change) {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var context = Context(app.Services);
         var owner = Owner(context, app.Services);
         var initial = Initial(app.Services);
@@ -118,7 +118,7 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
 
     [Fact]
     public async Task Parent_refresh_requires_quiescence_and_child_rebind_charges_no_second_replan() {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var context = Context(app.Services);
         var owner = Owner(context, app.Services);
         var initial = Initial(app.Services);
@@ -152,7 +152,7 @@ public sealed class ProcessDecisionRunScopePersistenceTests {
     [InlineData(ProcessDecisionPublicationKind.Dispatch)]
     [InlineData(ProcessDecisionPublicationKind.ManagerReview)]
     public async Task Parent_reconciliation_revokes_live_child_publication_in_the_effect_transaction(ProcessDecisionPublicationKind kind) {
-        await using var app = await TestApplication.CreateAsync();
+        await using var app = await TestApplication.CreateAsync(new ProcessDecisionPublicationTestClock().Harness());
         await using var serviceScope = app.Services.CreateAsyncScope();
         var services = serviceScope.ServiceProvider;
         await using var context = Context(services);

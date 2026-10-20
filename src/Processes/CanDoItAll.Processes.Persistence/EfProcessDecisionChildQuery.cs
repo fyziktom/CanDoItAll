@@ -44,6 +44,10 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
             select new { Head = head, Generation = generation, Child = child, Allocation = allocation, Budget = budget,
                 Parent = parent, ParentAllocation = parentAllocation, SharedScope = sharedScope, ScopeMember = scopeMember, RootStatus = rootState.Status,
                 StateRoot = state.RootRunId, RunStatus = state.Status, StepStatus = step.Status, step.ActiveClaimToken,
+                MatchingClaimExpiresAtUtc = context.DispatchClaims.Where(claim => claim.RunId == head.RunId &&
+                    claim.StepInstanceId == head.StepInstanceId && claim.ClaimToken == step.ActiveClaimToken && claim.AttemptNumber == step.AttemptNumber &&
+                    (claim.Status == DispatchClaimStatus.Claimed || claim.Status == DispatchClaimStatus.LeaseRenewed || claim.Status == DispatchClaimStatus.Reclaimed))
+                    .Select(claim => (DateTimeOffset?)claim.ExpiresAtUtc).FirstOrDefault(),
                 HasLiveClaim = context.DispatchClaims.Any(claim => claim.RunId == head.RunId && claim.StepInstanceId == head.StepInstanceId &&
                     (claim.Status == DispatchClaimStatus.Claimed || claim.Status == DispatchClaimStatus.LeaseRenewed || claim.Status == DispatchClaimStatus.Reclaimed)) })
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -92,9 +96,11 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
             allocationValue.BudgetId, allocationValue.Id, allocationValue.Grant);
         admission.Validate();
         return new(new(admission, generationValue, childValue.Closure, allocationValue.Settlement, current),
-            row.RunStatus, row.RootStatus, row.StepStatus, row.ActiveClaimToken, row.HasLiveClaim, balance.OverrunDetected || row.Parent?.OverrunDetected == true);
+            row.RunStatus, row.RootStatus, row.StepStatus, row.ActiveClaimToken, row.MatchingClaimExpiresAtUtc,
+            row.HasLiveClaim, balance.OverrunDetected || row.Parent?.OverrunDetected == true);
     }
 }
 
 internal sealed record ProcessDecisionChildRead(ProcessDecisionChildObservation Observation, ProcessRuntimeStatus RunStatus,
-    ProcessRuntimeStatus RootStatus, ProcessRuntimeStepStatus StepStatus, Guid? ActiveClaimToken, bool HasLiveClaim, bool BudgetOverrun);
+    ProcessRuntimeStatus RootStatus, ProcessRuntimeStepStatus StepStatus, Guid? ActiveClaimToken,
+    DateTimeOffset? MatchingClaimExpiresAtUtc, bool HasLiveClaim, bool BudgetOverrun);

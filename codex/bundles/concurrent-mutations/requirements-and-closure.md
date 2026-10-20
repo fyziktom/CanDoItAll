@@ -170,3 +170,9 @@ originals through the Process Application boundary with three bounded SQL reads.
 adds 185 passing selected cases, including credentials, history, usage, competing callers
 and retained execution reads. Producer activation, inherited Workbench publication and
 manager paths remain open under R5/R6; historical read is not dispatch authority.
+
+
+The [Process publication claim-lifetime repair](validation/2026-10-19-publication-claim-lifetime.md)
+passes all 106 selected cases. Dispatch now requires the exact active claim and attempt
+with unexpired lifetime after the root lock; historical read and manager review remain
+separate. Concrete producer/publication integration and R5/R6 closure remain open.

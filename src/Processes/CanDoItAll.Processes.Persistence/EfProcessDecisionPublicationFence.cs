@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPersistenceDbContext> options,
-    CoordinatedDatabaseTransaction transactions) : IProcessDecisionPublicationFence {
+    CoordinatedDatabaseTransaction transactions, TimeProvider clock) : IProcessDecisionPublicationFence {
     public async Task RequireAsync(ProcessDecisionChildAdmission original, ProcessDecisionPublicationKind kind,
         CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(original);
@@ -35,10 +35,10 @@ public sealed class EfProcessDecisionPublicationFence(DbContextOptions<ProcessPe
             new(original.Address.Reference, original.Address.ChildId, original.Owner, original.AllocationId, observation.Closure), kind);
     }
 
-    private static bool AllowsRuntime(ProcessDecisionChildRead current, ProcessDecisionPublicationKind kind)
+    private bool AllowsRuntime(ProcessDecisionChildRead current, ProcessDecisionPublicationKind kind)
         => current.RootStatus != ProcessRuntimeStatus.CancelRequested && !ProcessRuntimeTerminalStates.IsRunTerminal(current.RootStatus) && (kind switch {
         ProcessDecisionPublicationKind.Dispatch => current.RunStatus == ProcessRuntimeStatus.Active &&
-            current.StepStatus is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running && current.ActiveClaimToken is not null && current.HasLiveClaim,
+            current.StepStatus is ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running && current.MatchingClaimExpiresAtUtc > clock.GetUtcNow(),
         ProcessDecisionPublicationKind.ManagerReview =>
             current.RunStatus is ProcessRuntimeStatus.Active or ProcessRuntimeStatus.Waiting or ProcessRuntimeStatus.Blocked or ProcessRuntimeStatus.WaitingForUser &&
             current.StepStatus is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked &&

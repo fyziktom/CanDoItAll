@@ -85,6 +85,11 @@ plus the enlisted root fence. It cannot revive an old dispatch claim or bypass s
 policy with a flag. A closed original record may remain readable without permission to
 dispatch new work. Original receipts remain the recovery authority after lost acknowledgement.
 
+The [claim-lifetime repair](../validation/2026-10-19-publication-claim-lifetime.md) passes
+106 selected cases. The dispatch fence now requires the exact active attempt and unexpired
+claim after waiting for the root lock. Historical reading and manager-review claim release
+remain distinct predicates.
+
 ## Process outcomes and accounting
 
 The adapter's waiting/terminal outcome and the Process decision/budget command must commit

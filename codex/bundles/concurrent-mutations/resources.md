@@ -697,3 +697,14 @@ identities verify before freeze release. No observed process or database-name de
 remains; eight initial and nine final unattributed TEMP entries are preserved. The shared
 fixture remains needed by later lanes. Historical cleanup denials remain open. See the
 [validation record](validation/2026-10-19-inherited-workspace-lifecycle.md).
+
+
+## Publication claim-lifetime checkpoint
+
+The c4-publication-claim-lifetime root records ownership before creation and reuses
+PostgreSQL 18 on 53619, existing Process families and standard Release outputs. All
+106 selected cases pass. The 422.7272699-second observer covers the complete execution;
+source/runtime identity verifies before freeze release. No observed process or
+database-name delta remains. Four unattributed TEMP entries are preserved. Historical
+cleanup denials remain open; the fixture is still needed. See the
+[validation record](validation/2026-10-19-publication-claim-lifetime.md).
