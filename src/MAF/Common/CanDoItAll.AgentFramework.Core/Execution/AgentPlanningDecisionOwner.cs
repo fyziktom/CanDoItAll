@@ -12,6 +12,10 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
         => journal.AcquirePlanningStepAsync(this, expected, currentRead, cancellationToken);
 
+    public Task<AgentToolRunLease> StartInheritedAsync(AgentPlanningDecisionExpectation expected,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
+        => journal.AcquirePlanningStepAsync(this, expected, currentRead, cancellationToken, inherited: true);
+
     public Task<AgentToolRunLease> ResumeSavedEffectAsync(AgentSavedEffectContinuationRequest request,
         AgentPlanningDecisionExpectation expected, Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
         CancellationToken cancellationToken)
@@ -122,6 +126,9 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         AgentPlanningDecisionExpectation expected, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(expected);
         var snapshot = await journal.ReadPlanningSnapshotAsync(lease, cancellationToken);
+        if (snapshot.Run.ToolAdmission!.PlanningDecision?.InheritedOrigin is not null) {
+            throw Refuse(snapshot.Run.ToolAdmission.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+        }
         long started = 0;
         var saved = await journal.UpdatePlanningAsync(lease, snapshot.Run, expected, outcomeOnly: false, run => {
             var decision = run.ToolAdmission!.PlanningDecision!;
@@ -136,20 +143,35 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         return new(this, lease, saved, started);
     }
 
-    public async Task<ExecutionRunRecord> CaptureBasisAsync(AgentPlanningLiveWork work,
+    public Task<ExecutionRunRecord> CaptureBasisAsync(AgentPlanningLiveWork work,
         Func<AgentPlanningDecisionRecord, CancellationToken, Task<AgentToolProtocolEnvelope>> capture,
         CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(capture);
+        return BindBasisAsync(work, async (decision, now, token) => new(Guid.NewGuid(), now, await capture(decision, token)),
+            inherited: false, cancellationToken);
+    }
+
+    public Task<ExecutionRunRecord> InheritBasisAsync(AgentPlanningLiveWork work,
+        Func<AgentPlanningInheritedOrigin, CancellationToken, Task<AgentPlanningBasisRecord>> read,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(read);
+        return BindBasisAsync(work, (decision, _, token) => read(decision.InheritedOrigin!, token), inherited: true, cancellationToken);
+    }
+
+    private async Task<ExecutionRunRecord> BindBasisAsync(AgentPlanningLiveWork work,
+        Func<AgentPlanningDecisionRecord, DateTimeOffset, CancellationToken, Task<AgentPlanningBasisRecord>> read,
+        bool inherited, CancellationToken cancellationToken) {
         var snapshot = await journal.ReadPlanningSnapshotAsync(work.Lease, cancellationToken);
         var decision = work.Require(this, snapshot.Run);
-        if (decision.Current.State != AgentPlanningGenerationState.Active ||
+        if (inherited != (decision.InheritedOrigin is not null) || decision.Current.State != AgentPlanningGenerationState.Active ||
             decision.Current.Steps[^1].State != AgentPlanningStepState.CapturingBasis) {
             throw Refuse(decision, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
         var now = clock.GetUtcNow();
         AgentPlanningDecisionTransitions.RequireBudget(decision, Elapsed(work), now);
         var basis = decision.Policy.ReadBasisMode == ReadBasisMode.RunSnapshot ? decision.Current.Bases.FirstOrDefault() : null;
-        basis ??= new(Guid.NewGuid(), now, await capture(decision, cancellationToken));
+        basis ??= await read(decision, now, cancellationToken);
+        decision.InheritedOrigin?.RequireOriginalBasis(basis);
         var segmentId = Guid.NewGuid();
         return await UpdateAsync(work, outcomeOnly: false, run => {
             var current = run.ToolAdmission!;

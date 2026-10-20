@@ -47,12 +47,15 @@ internal sealed class AgentPlanningDecisionJsonConverter : JsonConverter<AgentPl
         try {
             var wire = document.RootElement.Deserialize<DecisionWire>(wireOptions)
                 ?? throw new JsonException("A planning decision must be an object.");
-            if (wire.SchemaVersion != AgentPlanningDecisionRecord.Version || wire.Provenance is null) {
+            var inherited = wire.SchemaVersion == AgentPlanningDecisionRecord.InheritedVersion;
+            if (wire.SchemaVersion is not (AgentPlanningDecisionRecord.Version or AgentPlanningDecisionRecord.InheritedVersion) ||
+                inherited != (wire.InheritedOrigin is not null) || inherited == (wire.Provenance is not null) ||
+                inherited != document.RootElement.TryGetProperty("inheritedOrigin", out _)) {
                 throw new JsonException("The planning decision requires its supported version and original provenance.");
             }
             var result = new AgentPlanningDecisionRecord(wire.DecisionId, wire.Session, wire.StartedAtUtc, wire.Owner,
-                wire.OriginalTarget, wire.Policy, wire.Provenance.ToModel(), wire.CurrentGeneration, wire.AutomaticReplans,
-                wire.Generations, wire.Work);
+                wire.OriginalTarget, wire.Policy, wire.Provenance?.ToModel(), wire.CurrentGeneration, wire.AutomaticReplans,
+                wire.Generations, wire.Work, wire.InheritedOrigin?.ToModel());
             result.Validate();
             return result;
         } catch (Exception failure) when (failure is ArgumentException or InvalidDataException or OverflowException) {
@@ -66,9 +69,10 @@ internal sealed class AgentPlanningDecisionJsonConverter : JsonConverter<AgentPl
     internal static byte[] Encode(AgentPlanningDecisionRecord value) {
         ArgumentNullException.ThrowIfNull(value);
         value.Validate();
-        var wire = new DecisionWire(AgentPlanningDecisionRecord.Version, value.DecisionId, value.Session, value.StartedAtUtc,
-            value.Owner, value.OriginalTarget, value.Policy, ProvenanceWire.From(value.Provenance), value.CurrentGeneration,
-            value.AutomaticReplans, value.Generations, value.Work);
+        var wire = new DecisionWire(value.InheritedOrigin is null ? AgentPlanningDecisionRecord.Version : AgentPlanningDecisionRecord.InheritedVersion,
+            value.DecisionId, value.Session, value.StartedAtUtc, value.Owner, value.OriginalTarget, value.Policy,
+            value.Provenance is { } provenance ? ProvenanceWire.From(provenance) : null, value.CurrentGeneration,
+            value.AutomaticReplans, value.Generations, value.Work, value.InheritedOrigin is { } origin ? InheritedWire.From(origin) : null);
         using var stream = new BoundedStream();
         using (var writer = new Utf8JsonWriter(stream)) {
             JsonSerializer.Serialize(writer, wire, wireOptions);
@@ -103,11 +107,33 @@ internal sealed class AgentPlanningDecisionJsonConverter : JsonConverter<AgentPl
         [property: JsonRequired] AgentPlanningOwner Owner,
         [property: JsonRequired] AgentToolProtocolEnvelope OriginalTarget,
         [property: JsonRequired] DecisionDataPolicy Policy,
-        [property: JsonRequired] ProvenanceWire Provenance,
+        [property: JsonRequired] ProvenanceWire? Provenance,
         [property: JsonRequired] int CurrentGeneration,
         [property: JsonRequired] int AutomaticReplans,
         [property: JsonRequired] ImmutableArray<AgentPlanningGenerationRecord> Generations,
-        [property: JsonRequired] AgentPlanningWorkRecord Work);
+        [property: JsonRequired] AgentPlanningWorkRecord Work,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] InheritedWire? InheritedOrigin = null);
+
+    private sealed record InheritedWire(
+        [property: JsonRequired] AgentToolProfileBinding Profile,
+        [property: JsonRequired] Guid WorkspaceNamespaceId,
+        [property: JsonRequired] Guid AgentId,
+        [property: JsonRequired] AgentToolBackgroundSourceBinding Source,
+        [property: JsonRequired] AgentToolProtocolEnvelope ParentBinding,
+        [property: JsonRequired] Guid BasisId,
+        [property: JsonRequired] DateTimeOffset CapturedAtUtc,
+        [property: JsonRequired] AgentToolSemanticDigest BasisDigest,
+        [property: JsonRequired] DecisionDataPolicy ParentPolicy,
+        [property: JsonRequired] Guid BudgetId,
+        [property: JsonRequired] Guid AllocationId,
+        [property: JsonRequired] long GrantedWorkTicks) {
+        internal static InheritedWire From(AgentPlanningInheritedOrigin value) => new(value.Profile, value.WorkspaceNamespaceId,
+            value.AgentId, value.Source, value.ParentBinding, value.BasisId, value.CapturedAtUtc, value.BasisDigest, value.ParentPolicy,
+            value.Allocation.BudgetId.Value, value.Allocation.Id.Value, value.Allocation.Grant.WorkTicks);
+
+        internal AgentPlanningInheritedOrigin ToModel() => new(Profile, WorkspaceNamespaceId, AgentId, Source,
+            ParentBinding, BasisId, CapturedAtUtc, BasisDigest, ParentPolicy, new(new(BudgetId), new(AllocationId), new(GrantedWorkTicks, 0)));
+    }
 
     private sealed record ProvenanceWire(
         [property: JsonRequired] Guid WorkspaceNamespaceId,

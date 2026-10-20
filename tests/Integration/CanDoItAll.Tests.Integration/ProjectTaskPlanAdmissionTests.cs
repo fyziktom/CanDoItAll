@@ -156,7 +156,7 @@ public sealed class ProjectTaskPlanAdmissionTests {
         await using var fixture = await ProjectTaskPlanAgentFixture.CreateAsync(projectContext: true);
         var waiting = await fixture.PrepareAsync();
         var decision = waiting.ToolAdmission!.PlanningDecision!;
-        var changed = decision with { Provenance = decision.Provenance with { WorkspaceNamespaceId = Guid.NewGuid() } };
+        var changed = decision with { Provenance = decision.Provenance! with { WorkspaceNamespaceId = Guid.NewGuid() } };
         await Assert.ThrowsAsync<AgentToolAdmissionException>(() => fixture.Participant.CaptureBasisAsync(changed, default));
         Assert.Throws<AgentToolAdmissionException>(() => ProjectTaskPlanAgentCodec.Prepare(changed,
             decision.Current.Bases.Single(), ProjectTaskPlanAgentFixture.Draft));

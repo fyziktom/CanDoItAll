@@ -34,8 +34,12 @@ The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.m
 The [active shared scope](validation/2026-10-19-process-shared-run-scope.md) now passes
 68 focused repair cases, including all failures from the retained initial 397/414 run.
 Atomic capture, original inherited membership and parent publication fencing are implemented.
-Actual Agent/Workflow runtime wiring remains open. These prerequisites do not close R5 or
-R6. Grant sizing/fair scheduling and workload capacity still require proof.
+The [inherited Agent checkpoint](validation/2026-10-19-inherited-agent-planning.md)
+has 242 distinct passing behaviors across its test-only repair bridge, including original
+material/time/grant, current source denial, restart/unknown work and actual MAF input.
+Actual Process/Workflow producers, Workbench publication and manager continuation remain
+open. These prerequisites do not close R5 or R6. Grant sizing/fair scheduling and workload
+capacity still require proof.
 
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash

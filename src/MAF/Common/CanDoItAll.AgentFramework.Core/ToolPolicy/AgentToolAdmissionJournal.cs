@@ -107,23 +107,26 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
 
     internal async Task<AgentToolRunLease> AcquirePlanningStepAsync(AgentPlanningDecisionOwner owner,
         AgentPlanningDecisionExpectation expected, Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, bool inherited = false) {
         ArgumentNullException.ThrowIfNull(expected);
         ArgumentNullException.ThrowIfNull(currentRead);
         var snapshot = await RequireSnapshotAsync(expected.ExecutionRunId, cancellationToken);
         var original = snapshot.Run with { PendingApprovals = snapshot.Run.PendingApprovals.ToImmutableArray() };
-        RequirePlanningExpectation(original, expected);
-        RequirePlanningStart(original);
+        RequirePlanningExpectation(original, expected, inherited);
+        RequirePlanningStart(original, inherited);
         RequireCurrent(original.ToolAdmission!.Session, snapshot);
         await RequireSavedReadAsync(original, currentRead, cancellationToken);
+        if (inherited) {
+            await RequireBackgroundDispatchAsync(original, cancellationToken);
+        }
         var handle = await leases.AcquireToolDispatchLeaseAsync(original.Id, cancellationToken);
         try {
             var lease = new AgentToolRunLease(this, original.ToolAdmission.Session.Reference, Guid.NewGuid(), handle);
             long started = 0;
             var saved = await writer.UpdateExecutionRunDetailAsync(original.Id, current => {
                 var journal = RequireOriginalRun(original, current, compareRevision: true);
-                RequirePlanningExpectation(current.Run, expected);
-                RequirePlanningStart(current.Run);
+                RequirePlanningExpectation(current.Run, expected, inherited);
+                RequirePlanningStart(current.Run, inherited);
                 RequireCurrent(journal.Session, new(current.Run, current.ChatSession));
                 var now = clock.GetUtcNow();
                 started = clock.GetTimestamp();
@@ -149,17 +152,21 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         }
     }
 
-    private static void RequirePlanningStart(ExecutionRunRecord run) {
+    private static void RequirePlanningStart(ExecutionRunRecord run, bool inherited) {
         var journal = RequireJournal(run);
         var decision = journal.PlanningDecision!;
         if (decision.Work.Open is not null) {
             throw new AgentPlanningAdmissionException(decision.DecisionId, decision.CurrentGeneration,
                 AgentPlanningAdmissionRefusal.InterruptedWorkAccountingUnavailable);
         }
-        if (run.State != ExecutionState.Preparing || run.Outcome is not null || run.PendingApprovals.Count != 0 ||
-            journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.OriginalInput is null ||
-            journal.Session.Reference.BackgroundSource is not null || !string.IsNullOrEmpty(run.ProcessRunId) || journal.HasUnresolvedEffects) {
-            throw Failure("A new planning step requires its original interactive preparation without pending or uncertain effects.");
+        var originMatches = inherited
+            ? decision.InheritedOrigin is not null && journal.Session.Reference.BackgroundSource is not null &&
+                journal.BackgroundInput is not null && journal.OriginalInput is null && run.ChatSessionId is null
+            : decision.InheritedOrigin is null && journal.OriginalInput is not null &&
+                journal.Session.Reference.BackgroundSource is null && string.IsNullOrEmpty(run.ProcessRunId);
+        if (!originMatches || run.State != ExecutionState.Preparing || run.Outcome is not null || run.PendingApprovals.Count != 0 ||
+            journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.HasUnresolvedEffects) {
+            throw Failure("A new planning step requires its original admitted preparation without pending or uncertain effects.");
         }
     }
 
@@ -176,11 +183,15 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         AgentPlanningDecisionExpectation? expected, bool outcomeOnly,
         Func<ExecutionRunRecord, ExecutionRunRecord> update, CancellationToken cancellationToken) {
         RequireBoundPlanningLease(lease);
+        if (!outcomeOnly && original.ToolAdmission?.PlanningDecision?.InheritedOrigin is not null) {
+            await RequireBackgroundDispatchAsync(original, cancellationToken);
+        }
         var saved = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
             RequireBoundPlanningLease(lease);
             var run = current.Run;
             var journal = RequireJournal(run);
-            if (journal.SchemaVersion != AgentToolJournalRecord.PlanningSchemaVersion ||
+            if (journal.SchemaVersion is not (AgentToolJournalRecord.PlanningSchemaVersion or AgentToolJournalRecord.InheritedPlanningSchemaVersion) ||
+                journal.SchemaVersion != original.ToolAdmission?.SchemaVersion ||
                 journal.Session != original.ToolAdmission?.Session || journal.Session.Profile != profile ||
                 run.Id != original.Id || run.AgentId != original.AgentId || run.ChatSessionId != original.ChatSessionId ||
                 run.CreatedAtUtc != original.CreatedAtUtc || run.SourceKind != original.SourceKind ||
@@ -237,8 +248,8 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         }, cancellationToken);
     }
 
-    private static void RequirePlanningExpectation(ExecutionRunRecord run, AgentPlanningDecisionExpectation expected) {
-        if (run.ToolAdmission?.SchemaVersion != AgentToolJournalRecord.PlanningSchemaVersion ||
+    private static void RequirePlanningExpectation(ExecutionRunRecord run, AgentPlanningDecisionExpectation expected, bool inherited = false) {
+        if (run.ToolAdmission?.SchemaVersion != (inherited ? AgentToolJournalRecord.InheritedPlanningSchemaVersion : AgentToolJournalRecord.PlanningSchemaVersion) ||
             AgentPlanningDecisionExpectation.From(run) != expected) {
             throw Failure("The displayed planning decision or revision changed. Reload before applying this action.");
         }

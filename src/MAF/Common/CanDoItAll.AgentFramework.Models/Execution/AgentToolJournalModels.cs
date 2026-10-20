@@ -205,6 +205,7 @@ public sealed record AgentToolJournalRecord(
     public const int TypedContextSchemaVersion = 4;
     public const int EffectJournalSchemaVersion = 5;
     public const int PlanningSchemaVersion = 6;
+    public const int InheritedPlanningSchemaVersion = 7;
     public const int MaximumBatches = 512;
     public const int MaximumCallsPerBatch = 64;
     public const int MaximumSegments = 32;
@@ -227,12 +228,14 @@ public sealed record AgentToolJournalRecord(
     });
 
     private void ValidateCore() {
-        var effectJournalSchema = SchemaVersion is EffectJournalSchemaVersion or PlanningSchemaVersion;
-        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion or EffectJournalSchemaVersion or PlanningSchemaVersion) ||
+        var planningSchema = SchemaVersion is PlanningSchemaVersion or InheritedPlanningSchemaVersion;
+        var effectJournalSchema = SchemaVersion is EffectJournalSchemaVersion or PlanningSchemaVersion or InheritedPlanningSchemaVersion;
+        if (SchemaVersion is not (CurrentSchemaVersion or BackgroundSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion or EffectJournalSchemaVersion or PlanningSchemaVersion or InheritedPlanningSchemaVersion) ||
             Revision < 1 || !Enum.IsDefined(Support) || !Enum.IsDefined(ToolContinuationRequirement) ||
             Support == AgentToolAdmissionSupport.EffectJournalOnly && !effectJournalSchema ||
-            (SchemaVersion == PlanningSchemaVersion) != (PlanningDecision is not null) ||
-            SchemaVersion == PlanningSchemaVersion && Support != AgentToolAdmissionSupport.EffectJournalOnly ||
+            planningSchema != (PlanningDecision is not null) ||
+            (SchemaVersion == InheritedPlanningSchemaVersion) != (PlanningDecision?.InheritedOrigin is not null) ||
+            planningSchema && Support != AgentToolAdmissionSupport.EffectJournalOnly ||
             ToolContinuationRequirement != AgentToolContinuationRequirement.None &&
                 (!effectJournalSchema || Support != AgentToolAdmissionSupport.EffectJournalOnly) ||
             Batches.IsDefault || Segments.IsDefault || Batches.Length > MaximumBatches || Segments.Length > MaximumSegments ||
@@ -245,7 +248,7 @@ public sealed record AgentToolJournalRecord(
         ArgumentNullException.ThrowIfNull(Session.Reference);
         ArgumentNullException.ThrowIfNull(Session.Profile);
         if (Session.Reference.BackgroundSource is null ? SchemaVersion is not (CurrentSchemaVersion or ProviderDispatchSchemaVersion or TypedContextSchemaVersion or EffectJournalSchemaVersion or PlanningSchemaVersion) || BackgroundInput is not null :
-                SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion or EffectJournalSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
+                SchemaVersion is not (BackgroundSchemaVersion or ProviderDispatchSchemaVersion or EffectJournalSchemaVersion or InheritedPlanningSchemaVersion) || Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation || OriginalInput is not null ||
                 BackgroundInput is null || string.IsNullOrWhiteSpace(BackgroundInput.Content) ||
                 Encoding.UTF8.GetByteCount(BackgroundInput.Content) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
             throw new InvalidDataException("The admitted tool input does not match its interactive or background source.");

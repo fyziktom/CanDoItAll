@@ -11,7 +11,7 @@ internal static class AgentPlanningDecisionPersistence {
         if (current.DecisionId != proposed.DecisionId || current.Session != proposed.Session ||
             current.StartedAtUtc != proposed.StartedAtUtc || current.Owner != proposed.Owner ||
             current.OriginalTarget != proposed.OriginalTarget || current.Policy != proposed.Policy ||
-            !SameProvenance(current.Provenance, proposed.Provenance) ||
+            !SameProvenance(current.Provenance, proposed.Provenance) || current.InheritedOrigin != proposed.InheritedOrigin ||
             proposed.CurrentGeneration < current.CurrentGeneration || proposed.CurrentGeneration > current.CurrentGeneration + 1) {
             throw Conflict();
         }
@@ -137,8 +137,9 @@ internal static class AgentPlanningDecisionPersistence {
         }
     }
 
-    private static bool SameProvenance(AgentPlanningPolicyProvenance left, AgentPlanningPolicyProvenance right)
-        => left with { EnclosingBudgets = right.EnclosingBudgets } == right && left.EnclosingBudgets.SequenceEqual(right.EnclosingBudgets);
+    private static bool SameProvenance(AgentPlanningPolicyProvenance? left, AgentPlanningPolicyProvenance? right)
+        => left is null || right is null ? left == right
+            : left with { EnclosingBudgets = right.EnclosingBudgets } == right && left.EnclosingBudgets.SequenceEqual(right.EnclosingBudgets);
 
     private static bool SameHistory(AgentPlanningDecisionRecord left, AgentPlanningDecisionRecord right) {
         if (left.CurrentGeneration != right.CurrentGeneration) {

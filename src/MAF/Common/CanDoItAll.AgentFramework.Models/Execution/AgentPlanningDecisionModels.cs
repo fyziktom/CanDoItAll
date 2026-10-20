@@ -99,12 +99,14 @@ public sealed record AgentPlanningDecisionRecord(
     AgentPlanningOwner Owner,
     AgentToolProtocolEnvelope OriginalTarget,
     DecisionDataPolicy Policy,
-    AgentPlanningPolicyProvenance Provenance,
+    AgentPlanningPolicyProvenance? Provenance,
     int CurrentGeneration,
     int AutomaticReplans,
     ImmutableArray<AgentPlanningGenerationRecord> Generations,
-    AgentPlanningWorkRecord Work) {
+    AgentPlanningWorkRecord Work,
+    AgentPlanningInheritedOrigin? InheritedOrigin = null) {
     public const int Version = 1;
+    public const int InheritedVersion = 2;
     public const int MaximumGenerations = 32;
     public const int MaximumSteps = AgentToolJournalRecord.MaximumSegments;
     public const int MaximumUtf8Bytes = AgentToolProtocolEnvelope.MaximumUtf8Bytes;
@@ -114,10 +116,19 @@ public sealed record AgentPlanningDecisionRecord(
 
     public void Validate() {
         if (DecisionId == Guid.Empty || Session is null || !IsUtc(StartedAtUtc) || !Enum.IsDefined(Owner) ||
-            OriginalTarget is null || Policy is null || Provenance is null || Work is null ||
+            OriginalTarget is null || Policy is null || (Provenance is null) == (InheritedOrigin is null) || Work is null ||
             Generations.IsDefaultOrEmpty || Generations.Length > MaximumGenerations ||
             CurrentGeneration != Generations.Length || AutomaticReplans < 0 ||
-            AutomaticReplans > Policy.Budget.MaximumReplans || Policy != Provenance.Resolve()) {
+            AutomaticReplans > Policy.Budget.MaximumReplans ||
+            Policy != (InheritedOrigin?.ResolvePolicy() ?? Provenance!.Resolve())) {
+            throw Invalid();
+        }
+        if (InheritedOrigin is { } inherited) {
+            inherited.Validate(Session, StartedAtUtc);
+            if (CurrentGeneration != 1 || AutomaticReplans != 0) {
+                throw Invalid();
+            }
+        } else if (Session.BackgroundSource is not null) {
             throw Invalid();
         }
         var stepIds = new HashSet<Guid>();
@@ -127,6 +138,9 @@ public sealed record AgentPlanningDecisionRecord(
         var proposalIds = new HashSet<AgentToolBusinessIntentId>();
         var replans = 0;
         long payloadBytes = Encoding.UTF8.GetByteCount(OriginalTarget.PayloadJson);
+        if (InheritedOrigin is { } origin) {
+            payloadBytes += Encoding.UTF8.GetByteCount(origin.ParentBinding.PayloadJson);
+        }
         for (var ordinal = 0; ordinal < Generations.Length; ordinal++) {
             var generation = Generations[ordinal];
             if (generation is null || generation.Number != ordinal + 1 || !Enum.IsDefined(generation.Reason) ||
@@ -152,9 +166,11 @@ public sealed record AgentPlanningDecisionRecord(
             }
             foreach (var basis in generation.Bases) {
                 if (basis is null || basis.Id == Guid.Empty || !basisIds.Add(basis.Id) || basis.Value is null ||
-                    !IsUtc(basis.CapturedAtUtc) || basis.CapturedAtUtc < StartedAtUtc || basis.CapturedAtUtc > Work.LastObservedAtUtc) {
+                    !IsUtc(basis.CapturedAtUtc) || InheritedOrigin is null && basis.CapturedAtUtc < StartedAtUtc ||
+                    basis.CapturedAtUtc > Work.LastObservedAtUtc) {
                     throw Invalid();
                 }
+                InheritedOrigin?.RequireOriginalBasis(basis);
                 payloadBytes = checked(payloadBytes + Encoding.UTF8.GetByteCount(basis.Value.PayloadJson));
             }
             for (var index = 0; index < generation.Steps.Length; index++) {
@@ -201,7 +217,9 @@ public sealed record AgentPlanningDecisionRecord(
 
     public void ValidateJournal(AgentToolJournalRecord journal) {
         Validate();
-        if (journal.Session.Reference != Session || journal.Session.AgentId != Provenance.AgentId) {
+        if (journal.Session.Reference != Session || journal.Session.AgentId != (InheritedOrigin?.AgentId ?? Provenance!.AgentId) ||
+            InheritedOrigin is { } inherited && (journal.Session.Profile != inherited.Profile ||
+                journal.Session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation)) {
             throw Invalid();
         }
         var steps = Generations.SelectMany(generation => generation.Steps).ToArray();

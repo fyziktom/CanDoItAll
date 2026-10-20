@@ -431,6 +431,26 @@ transactions for publication tests. A fake clock or InMemory context does not pr
 distributed database exclusion. Production test hooks must remain narrowly scoped; do
 not introduce globally enabled fault switches or timing sleeps to manufacture races.
 
+## Inherited Agent execution
+
+An inherited background planning occurrence uses journal schema 7 and decision schema 2.
+It retains explicit parent provenance instead of constructing Workspace/Agent preference
+provenance. The original material identity, digest and capture time stay fixed; its local
+RunSnapshot covers all provider iterations, even for a parent StepSnapshot. The original
+finite child allocation supplies work, with zero local replans. A child cannot refresh
+parent material. A successor requires a new parent-issued occurrence after reconciliation.
+
+Current background source authority is checked before new work and provider dispatch.
+Revocation does not prevent recording a response already received or settling consumed
+work. Interrupted or uncertain work remains reserved. The MAF adapter selects the original
+background instruction explicitly and uses the retained basis without creating a chat.
+The interactive schema and its approval/source rules remain separate.
+
+This journal and provider path is implemented and tested. Actual Process/Workflow
+producers, inherited Workbench effects and current manager continuation are still gated;
+the protocol alone does not enable their settings. See the
+[implementation evidence](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-inherited-agent-planning.md).
+
 ## Validation plan
 
 These are required cases to map to exact tests during implementation. No counts or

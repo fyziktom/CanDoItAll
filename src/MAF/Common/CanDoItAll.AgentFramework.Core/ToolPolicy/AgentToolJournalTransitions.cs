@@ -12,7 +12,7 @@ public static class AgentToolJournalTransitions {
 
         current.Validate();
         if (proposed is null || proposed.SchemaVersion < current.SchemaVersion ||
-            (proposed.SchemaVersion == AgentToolJournalRecord.PlanningSchemaVersion) != (current.SchemaVersion == AgentToolJournalRecord.PlanningSchemaVersion) ||
+            (proposed.PlanningDecision is not null || current.PlanningDecision is not null) && proposed.SchemaVersion != current.SchemaVersion ||
             proposed.Session != current.Session || proposed.Support != current.Support ||
             proposed.OriginalInput != current.OriginalInput || proposed.BackgroundInput != current.BackgroundInput ||
             proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||

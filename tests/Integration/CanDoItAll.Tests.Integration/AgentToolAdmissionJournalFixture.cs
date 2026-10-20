@@ -138,8 +138,8 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
                 Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray(),
                 Providers = catalog.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
             });
-            var chat = new ChatSessionRecord(run.ChatSessionId!.Value, agent.Id, run.Title, run.CreatedAtUtc,
-                run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id);
+            var chat = run.ChatSessionId is { } chatId ? new ChatSessionRecord(chatId, agent.Id, run.Title, run.CreatedAtUtc,
+                run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id) : null;
             var saved = await store.SaveExecutionRunDetailAsync(new(run, chat, [], []));
             return new(environment, workspace.WorkspaceRootPath, store, profile, agent, provider, saved,
                 actualStorageScope, []);

@@ -14,8 +14,12 @@ The [active shared scope checkpoint](validation/2026-10-19-process-shared-run-sc
 passes all 68 repair cases, covering every failure in the retained initial 397/414 run.
 Root capture and accounting commit atomically; descendants inherit original material, and
 parent reconciliation freezes joins and publication. Eight Release builds, model consistency
-and full portability enforcement pass. Actual Agent/Workflow execution remains required;
-continue the [inherited Agent design](plan/P07-inherited-agent-journal.md).
+and full portability enforcement pass.
+The [inherited Agent checkpoint](validation/2026-10-19-inherited-agent-planning.md)
+now has 242 distinct passing behaviors across its explicit test-only repair bridge.
+Schema 7 retains parent material/time/grant, rejects local refresh, and supplies original
+background input through the real MAF path. Actual Process/Workflow producer, Workbench
+publication, manager continuation and settings activation remain open.
 
 The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
 passes 40/40 cases. Policy and historical receipt commit together; read-only lookup

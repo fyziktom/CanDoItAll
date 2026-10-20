@@ -54,12 +54,15 @@ internal static class ProjectTaskPlanAgentCodec {
     }
 
     internal static ProjectTaskPlanAgentTarget Target(AgentPlanningDecisionRecord decision) {
+        if (decision.Provenance is not { } provenance || decision.InheritedOrigin is not null) {
+            throw Denied("This task-plan adapter requires the original interactive planning admission.");
+        }
         var target = Read<ProjectTaskPlanAgentTarget>(decision.OriginalTarget, TargetFormat,
             AgentToolPreparedPayload.MaximumSourcePreparationUtf8Bytes);
         var session = target.Session;
         var governance = target.Agent.Governance;
         if (decision.Owner != AgentPlanningOwner.ProjectTaskPlan || decision.Session != session.Reference ||
-            session.AgentId != decision.Provenance.AgentId || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
+            session.AgentId != provenance.AgentId || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
             session.Reference.BackgroundSource is not null || target.Project.DatabaseProfileId != session.Profile.ProfileId ||
             governance.AgentId != session.AgentId || governance.AuthorityId != session.Reference.AuthorityId ||
             governance.DatabaseProfileId != session.Profile.ProfileId || governance.DatabaseProfileGeneration != session.Profile.Generation ||
@@ -93,7 +96,7 @@ internal static class ProjectTaskPlanAgentCodec {
         var (material, context) = Basis(basis);
         var step = decision.Current.Steps.LastOrDefault() ?? throw Denied("The original planning step is missing.");
         if (step.BasisId != basis.Id || material.Project.Expectation.Project != target.Project ||
-            context.Namespace.Value != decision.Provenance.WorkspaceNamespaceId ||
+            context.Namespace.Value != decision.Provenance?.WorkspaceNamespaceId ||
             context.CallerBinding != target.Caller.Bind(context.Namespace)) {
             throw Denied("The publication does not retain the original step, basis and caller.");
         }
@@ -150,7 +153,7 @@ internal static class ProjectTaskPlanAgentCodec {
         var (material, context) = Basis(basis);
         var draft = arguments.RootElement.Deserialize<ProjectTaskPlanAgentArguments>(Json)!.Draft;
         if (material.Project.Expectation.Project != target.Project || context.Namespace != source.Operation.Namespace ||
-            context.Namespace.Value != decision.Provenance.WorkspaceNamespaceId ||
+            context.Namespace.Value != decision.Provenance?.WorkspaceNamespaceId ||
             context.Epoch != source.Operation.Epoch || context.CallerBinding != source.Operation.CallerBinding ||
             context.CallerBinding != target.Caller.Bind(context.Namespace) ||
             Fingerprint(decision, generation!.Number, step.Id, basis, draft) != source.Fingerprint) {

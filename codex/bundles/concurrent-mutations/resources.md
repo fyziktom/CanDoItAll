@@ -632,3 +632,17 @@ No observed process or database-name delta remained. The first run's 28 and repa
 12 unattributed TEMP entries remain preserved. Earlier denied cleanup is unchanged.
 The shared fixture remains needed for inherited Agent/Workflow execution proof.
 See the [scope validation record](validation/2026-10-19-process-shared-run-scope.md).
+
+## 2026-10-19 Inherited Agent journal
+
+`c4-inherited-agent-journal` retained 238 passes and four test-setup/assertion failures
+from 242 cases. Its repair repeats all 21 consumers of the corrected fixture and passes;
+the exact production bridge supports the other 221 passing cases. Both owned roots reuse
+standard Release outputs, the existing isolated PostgreSQL fixture and existing resource
+families. No stack or provider endpoint was created. Observers covered all test commands
+for 450.60 and 54.18 seconds, followed by unchanged source/runtime verification.
+
+No observed process or database-name delta remained. Respectively 25 and 14 unattributed
+TEMP entries were preserved. Earlier denied cleanup remains unchanged. The shared fixture
+remains needed for actual Process/Workflow integration. See the
+[Agent validation record](validation/2026-10-19-inherited-agent-planning.md).

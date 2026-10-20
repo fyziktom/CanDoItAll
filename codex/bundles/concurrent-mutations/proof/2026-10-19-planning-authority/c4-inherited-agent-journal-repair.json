@@ -1,0 +1,816 @@
+{
+  "candidate": "c4-inherited-agent-journal-repair",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-repair",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--verbosity",
+        "quiet"
+      ],
+      "StartedUtc": "2026-10-20T00:10:17.8323635+00:00",
+      "State": "Completed",
+      "RunnerPid": 50248,
+      "ChildPid": 49496,
+      "ChildStartedUtc": "2026-10-20T00:10:17.8664228Z",
+      "ExitCode": 0,
+      "Seconds": 48.9151907,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 141970,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-repair",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T00:12:24.4043086+00:00",
+      "State": "Completed",
+      "RunnerPid": 12116,
+      "ChildPid": 31704,
+      "ChildStartedUtc": "2026-10-20T00:12:24.4076322Z",
+      "ExitCode": 0,
+      "Seconds": 0.0667495,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 1063,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-inherited-agent-owner",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~AgentInheritedPlanningOwnerTests"
+      ],
+      "StartedUtc": "2026-10-20T00:11:56.7921728+00:00",
+      "State": "Completed",
+      "RunnerPid": 26232,
+      "ChildPid": 36716,
+      "ChildStartedUtc": "2026-10-20T00:11:56.8398603Z",
+      "ExitCode": 0,
+      "Seconds": 2.1820338,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3045,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-inherited-planning-provider",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~MafInheritedPlanningRuntimeTests"
+      ],
+      "StartedUtc": "2026-10-20T00:11:59.0566621+00:00",
+      "State": "Completed",
+      "RunnerPid": 26232,
+      "ChildPid": 53200,
+      "ChildStartedUtc": "2026-10-20T00:11:59.0605016Z",
+      "ExitCode": 0,
+      "Seconds": 2.1327486,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 733,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-repair",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T00:12:19.4185707+00:00",
+      "State": "Completed",
+      "RunnerPid": 12116,
+      "ChildPid": 26328,
+      "ChildStartedUtc": "2026-10-20T00:12:19.4232038Z",
+      "ExitCode": 0,
+      "Seconds": 4.9735416,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-inherited-agent-owner",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~AgentInheritedPlanningOwnerTests",
+        "--logger",
+        "trx;LogFileName=inherited-agent-owner.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-agent-journal-repair"
+      ],
+      "StartedUtc": "2026-10-20T00:13:19.5283834+00:00",
+      "State": "Completed",
+      "RunnerPid": 28052,
+      "ChildPid": 23616,
+      "ChildStartedUtc": "2026-10-20T00:13:19.5680231Z",
+      "ExitCode": 0,
+      "Seconds": 30.5784396,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4007,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-inherited-planning-provider",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~MafInheritedPlanningRuntimeTests",
+        "--logger",
+        "trx;LogFileName=inherited-planning-provider.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-agent-journal-repair"
+      ],
+      "StartedUtc": "2026-10-20T00:13:50.1757624+00:00",
+      "State": "Completed",
+      "RunnerPid": 28052,
+      "ChildPid": 39212,
+      "ChildStartedUtc": "2026-10-20T00:13:50.1797801Z",
+      "ExitCode": 0,
+      "Seconds": 10.0443783,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1458,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-agent-journal-repair/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T00:13:06.4547874+00:00",
+      "State": "Completed",
+      "RunnerPid": 43296,
+      "ChildPid": 8092,
+      "ChildStartedUtc": "2026-10-20T00:13:06.4734360Z",
+      "ExitCode": 0,
+      "Seconds": 54.1765052,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-repair",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-agent-journal-repair/portability-scan-repair.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T00:12:18.9622892+00:00",
+      "State": "Completed",
+      "RunnerPid": 12116,
+      "ChildPid": 57696,
+      "ChildStartedUtc": "2026-10-20T00:12:18.9647964Z",
+      "ExitCode": 0,
+      "Seconds": 0.443144,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-repair",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-agent-journal-repair/portability-scan-repair.json"
+      ],
+      "StartedUtc": "2026-10-20T00:10:59.3562390+00:00",
+      "State": "Completed",
+      "RunnerPid": 12116,
+      "ChildPid": 50316,
+      "ChildStartedUtc": "2026-10-20T00:10:59.3925271Z",
+      "ExitCode": 0,
+      "Seconds": 79.5485731,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 472,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "bc2527de-9fea-43e4-a576-a9a05ff8fb4c",
+      "testId": "7dea52b4-0dc5-073c-a592-8ef1f5a8d620",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Lost_material_acknowledgement_reopens_exact_bytes_and_does_not_recapture",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.6472976",
+      "startTime": "2026-10-19T20:13:43.1028813-04:00",
+      "endTime": "2026-10-19T20:13:44.7503395-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bc2527de-9fea-43e4-a576-a9a05ff8fb4c",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "5b80c9e3-bfcd-4fac-9d85-d713aa3bd010",
+      "testId": "b90cc962-f0b3-8328-4bdd-716d7efc07d0",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Material_substitution_never_attaches_a_segment_or_enters_provider(field: 0)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.2917780",
+      "startTime": "2026-10-19T20:13:32.0560762-04:00",
+      "endTime": "2026-10-19T20:13:33.3480847-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5b80c9e3-bfcd-4fac-9d85-d713aa3bd010",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "0dc830f2-8ec0-48bb-9ffa-9b1f8cd79c4c",
+      "testId": "00cfe2b2-88f1-7aae-4425-fb0a6295c317",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Material_substitution_never_attaches_a_segment_or_enters_provider(field: 1)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.5839988",
+      "startTime": "2026-10-19T20:13:29.0484192-04:00",
+      "endTime": "2026-10-19T20:13:30.6320849-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0dc830f2-8ec0-48bb-9ffa-9b1f8cd79c4c",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "13962d7a-9a2b-4ab0-9093-0373fcf9503c",
+      "testId": "bc85cf43-6fa1-a7bd-8609-df493736bf77",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Revocation_keeps_actual_response_and_work_settlement_without_admitting_another_step(revokeRead: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.8320495",
+      "startTime": "2026-10-19T20:13:27.2161068-04:00",
+      "endTime": "2026-10-19T20:13:29.0477391-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "13962d7a-9a2b-4ab0-9093-0373fcf9503c",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "ff488430-7551-44c9-b09a-e635086e4b07",
+      "testId": "c2e13aae-552a-8864-c358-e026e7accf04",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Material_substitution_never_attaches_a_segment_or_enters_provider(field: 2)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4235920",
+      "startTime": "2026-10-19T20:13:30.6325536-04:00",
+      "endTime": "2026-10-19T20:13:32.0559692-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ff488430-7551-44c9-b09a-e635086e4b07",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "d200e9cd-7160-4ea1-bbc4-5f2945b33585",
+      "testId": "03c4c659-948d-2aa9-8290-2c70335d487a",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Parent_revocation_after_material_read_blocks_provider_entry(changeClaim: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3746259",
+      "startTime": "2026-10-19T20:13:39.1930358-04:00",
+      "endTime": "2026-10-19T20:13:40.5670687-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d200e9cd-7160-4ea1-bbc4-5f2945b33585",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "b45881b5-8c89-4064-93d0-85d2d32cd2e4",
+      "testId": "7d5033a7-9fb2-8ac4-2c69-70b9275975d4",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Revocation_keeps_actual_response_and_work_settlement_without_admitting_another_step(revokeRead: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.9156986",
+      "startTime": "2026-10-19T20:13:25.3004772-04:00",
+      "endTime": "2026-10-19T20:13:27.2154416-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b45881b5-8c89-4064-93d0-85d2d32cd2e4",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "7b347c5e-335c-4023-9637-d74a810b03ce",
+      "testId": "f9f56f76-dba2-cb24-dfea-2c242fe08a2d",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Parent_revocation_after_material_read_blocks_provider_entry(changeClaim: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4324519",
+      "startTime": "2026-10-19T20:13:40.5671826-04:00",
+      "endTime": "2026-10-19T20:13:41.9998775-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7b347c5e-335c-4023-9637-d74a810b03ce",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "b7b3f0e2-b55e-4ff1-bd32-689c86aa163d",
+      "testId": "685e1b9e-5376-5e16-98e4-245752764bb3",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Actual_background_admission_and_successive_provider_steps_keep_one_original_basis(parentMode: StepSnapshot)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.2240141",
+      "startTime": "2026-10-19T20:13:35.4544583-04:00",
+      "endTime": "2026-10-19T20:13:37.6784517-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b7b3f0e2-b55e-4ff1-bd32-689c86aa163d",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "19482ef7-b564-4466-bf83-d45a91233128",
+      "testId": "2dd0f025-7279-f642-a94e-c814c0e4fcf3",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Interactive_entry_capture_and_refresh_cannot_promote_inherited_authority",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.5132852",
+      "startTime": "2026-10-19T20:13:37.6791187-04:00",
+      "endTime": "2026-10-19T20:13:39.1920876-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "19482ef7-b564-4466-bf83-d45a91233128",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "5b44d2cf-43ff-4067-8a13-0b54377a6959",
+      "testId": "8d1e15cb-bb43-9050-a650-ac205bcf62af",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Parent_denial_or_changed_claim_prevents_opening_work(changeClaim: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.3698269",
+      "startTime": "2026-10-19T20:13:21.5465683-04:00",
+      "endTime": "2026-10-19T20:13:23.9234178-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5b44d2cf-43ff-4067-8a13-0b54377a6959",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "e64a6046-c6d1-438c-9295-d0d927db904f",
+      "testId": "ece1fdb8-e32a-5b92-c534-8a12b894c2cd",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Actual_background_admission_and_successive_provider_steps_keep_one_original_basis(parentMode: RunSnapshot)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.1056739",
+      "startTime": "2026-10-19T20:13:33.3482106-04:00",
+      "endTime": "2026-10-19T20:13:35.4540802-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e64a6046-c6d1-438c-9295-d0d927db904f",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "bb28a0df-4e84-4ae8-ae42-e6341ab0045d",
+      "testId": "a14b2a6b-f859-16ca-5429-c5f7b4e64b7c",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Existing_execution_is_looked_up_before_origin_binding_or_replacement_admission",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.1024803",
+      "startTime": "2026-10-19T20:13:42.0000234-04:00",
+      "endTime": "2026-10-19T20:13:43.1027429-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bb28a0df-4e84-4ae8-ae42-e6341ab0045d",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "e8fddfc4-823f-45b0-a749-e4eebe58877e",
+      "testId": "06c35e23-3276-9ff2-24a1-217be7e77b86",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Lost_start_acknowledgement_and_restart_keep_original_work_and_grant",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3193734",
+      "startTime": "2026-10-19T20:13:44.7504446-04:00",
+      "endTime": "2026-10-19T20:13:46.0700313-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e8fddfc4-823f-45b0-a749-e4eebe58877e",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "0d164e91-bca7-4eb1-98fd-4ebe2373d883",
+      "testId": "8b2586d1-2669-de5e-4d19-fa325670639a",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Parent_denial_or_changed_claim_prevents_opening_work(changeClaim: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.3740298",
+      "startTime": "2026-10-19T20:13:23.9350541-04:00",
+      "endTime": "2026-10-19T20:13:25.2983918-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0d164e91-bca7-4eb1-98fd-4ebe2373d883",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "eb3cf4aa-0de6-4dbb-86c1-f626e384e71d",
+      "testId": "766fca72-67dd-9939-7a21-cc3beebcc0aa",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Inherited_capture_age_and_finite_grant_are_checked_before_provider_entry(expireBasis: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4396831",
+      "startTime": "2026-10-19T20:13:47.4755423-04:00",
+      "endTime": "2026-10-19T20:13:48.9154695-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "eb3cf4aa-0de6-4dbb-86c1-f626e384e71d",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "bd6f050c-dfbb-47cc-b05f-02655e35aee8",
+      "testId": "c90570f6-7f44-23d0-9f92-e3665028c723",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Denied_current_reader_cannot_open_inherited_work",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.0756417",
+      "startTime": "2026-10-19T20:13:48.9155906-04:00",
+      "endTime": "2026-10-19T20:13:49.9913848-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bd6f050c-dfbb-47cc-b05f-02655e35aee8",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "3f4a0f8e-0809-413e-be56-ac0955911a59",
+      "testId": "73e25050-33db-0159-b2de-c1d41dc2fd0a",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.AgentInheritedPlanningOwnerTests.Inherited_capture_age_and_finite_grant_are_checked_before_provider_entry(expireBasis: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.4050822",
+      "startTime": "2026-10-19T20:13:46.0701378-04:00",
+      "endTime": "2026-10-19T20:13:47.4754353-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3f4a0f8e-0809-413e-be56-ac0955911a59",
+      "trx": "inherited-agent-owner.trx"
+    },
+    {
+      "executionId": "f94c70cb-bb80-4a34-87ce-a8e154afb77e",
+      "testId": "7b2455e8-5df5-f727-2de5-e78c159dad3a",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedPlanningRuntimeTests.Real_sdk_uses_original_background_instruction_and_inherited_material_on_every_iteration(mode: StepSnapshot)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:02.4091645",
+      "startTime": "2026-10-19T20:13:55.9558506-04:00",
+      "endTime": "2026-10-19T20:13:58.3527935-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f94c70cb-bb80-4a34-87ce-a8e154afb77e",
+      "trx": "inherited-planning-provider.trx"
+    },
+    {
+      "executionId": "8951ef97-193d-4b0f-b7a7-bdabef5d2047",
+      "testId": "83ce9d4d-8b09-d01c-7edf-79b1cad95747",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedPlanningRuntimeTests.Real_sdk_uses_original_background_instruction_and_inherited_material_on_every_iteration(mode: RunSnapshot)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5862094",
+      "startTime": "2026-10-19T20:13:52.3489534-04:00",
+      "endTime": "2026-10-19T20:13:55.9425557-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "8951ef97-193d-4b0f-b7a7-bdabef5d2047",
+      "trx": "inherited-planning-provider.trx"
+    },
+    {
+      "executionId": "213e4978-8520-4872-a7fd-2ed157e5a27b",
+      "testId": "e621e7e0-eb30-872a-6d11-3429a61dd67b",
+      "testName": "CanDoItAll.Tests.Integration.Runtime.MafInheritedPlanningRuntimeTests.Parent_revocation_during_provider_creation_refuses_the_actual_transport_call",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.7308136",
+      "startTime": "2026-10-19T20:13:58.3555028-04:00",
+      "endTime": "2026-10-19T20:14:00.0849660-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "213e4978-8520-4872-a7fd-2ed157e5a27b",
+      "trx": "inherited-planning-provider.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "before": "snap-20261019234231-926561d8",
+      "after": "snap-20261020000039-926561d8",
+      "projects": 4,
+      "types": 2082,
+      "members": 15749,
+      "findingsBefore": 633,
+      "findingsAfter": 636,
+      "diagnostics": 189,
+      "projectCycles": 0,
+      "existingTypeCyclesUnchanged": true,
+      "newFindings": [
+        {
+          "findingId": "finding-file-size-doc-src-maf-common-candoitall-agentframew-5e5c40b7bd4d",
+          "ruleId": "COMPLEXITY-001",
+          "severity": "Warning",
+          "category": "Complexity",
+          "title": "Large source file detected",
+          "description": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPlanningDecisionOwner.cs has 361 lines.",
+          "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+          "confidence": 0.88,
+          "relatedIds": [
+            "doc-src-maf-common-candoitall-agentframework-core-execu-95c123fdac34"
+          ],
+          "source": {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPlanningDecisionOwner.cs"
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-agentframework-model-4a0af395ad2c",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "category": "Complexity",
+          "title": "Type with many members",
+          "description": "CanDoItAll.AgentFramework.Models.AgentPlanningDecisionJsonConverter.InheritedWire exposes 15 source members.",
+          "rationale": "Large types often become aggregation points for unrelated behavior.",
+          "confidence": 0.71,
+          "relatedIds": [
+            "type-proj-candoitall-agentframework-models-candoitall-ag-77865f55d633"
+          ],
+          "source": {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentPlanningDecisionCodec.cs",
+            "line": 117,
+            "column": 5,
+            "endLine": 136,
+            "endColumn": 6
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-agentframework-model-33c5d2bc07ef",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "category": "Complexity",
+          "title": "Type with many members",
+          "description": "CanDoItAll.AgentFramework.Models.AgentPlanningInheritedOrigin exposes 15 source members.",
+          "rationale": "Large types often become aggregation points for unrelated behavior.",
+          "confidence": 0.71,
+          "relatedIds": [
+            "type-proj-candoitall-agentframework-models-candoitall-ag-7dd9c62fe6a4"
+          ],
+          "source": {
+            "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentPlanningInheritedOrigin.cs",
+            "line": 7,
+            "column": 1,
+            "endLine": 50,
+            "endColumn": 2
+          }
+        }
+      ],
+      "review": "No new project references, runtime partial files, provider interfaces or duplicated dispatch loops. Explicit inherited admission is a small Core factory; immutable origin and protocol validation are in Models. The three new findings are two member-count information notices on the original-origin and JSON wire records and one file-size warning on the existing planning owner (361 lines). The owner remains cohesive: shared work transitions and basis attachment handle both explicit origins; the new origin's validation and creation remain outside it. Existing journal-size warnings remain. Five prior type cycles are unchanged; no project cycle. MAF selects instruction strictly by admitted origin. Workbench only rejects inherited input at its interactive boundary. Actual Process/Workflow publication is still gated."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9519,
+      "runtimeFiles": 3889,
+      "sourceSha256": "9E82B95BA5A350F51A84B7496C0767D421C4998D8822DF036649CF74FDEAFFC5",
+      "runtimeSha256": "924FB6190FDAB884115333ADBAACB7B4B05033490FC07D40BED375DB8EE1C4DE"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "remainingObservedProcesses": [],
+      "recordedUtc": "2026-10-20T00:14:35.0326908+00:00",
+      "databaseNameDelta": [],
+      "outcome": "Inherited Agent repair completed: all21 fixture cases passed, covering all4 failures. Production inputs are byte-identical to the original242-case candidate; unaffected221 pass cases remain supported by that explicit bridge. Historical cleanup denials remain unchanged.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\b6d96858-88cf-430f-a615-71cd755d815b.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\xwxuo2sv.hd2",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\sd5bny5y.dzo",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\x52e3pax.mo4",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_39212_20261019_201350_381.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\dd_BackgroundDownload_20261019201333.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\h5z0bfya.vsl",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\5ww2bnuv.mid",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\dd_BackgroundDownload_20261019201348_00_setup_errors.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\igig55d0.cqw",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\dd_BackgroundDownload_20261019201348.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_23616_20261019_201319_759.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\gytmvzil.olf",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\dd_BackgroundDownload_20261019201348_00_setup.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ]
+    },
+    "production-bridge.json": {
+      "originalCandidate": "c4-inherited-agent-journal",
+      "originalSourceSha256": "DF851A01C46898CC7B9993C543F4518A02DB34677A2457DDF6ED1AFD127A11A9",
+      "allProductionInputsUnchanged": true,
+      "onlyChangedInputs": [
+        {
+          "path": "tests/integration/candoitall.tests.integration/agentinheritedplanningfixture.cs",
+          "before": [
+            "tests/Integration/CanDoItAll.Tests.Integration/AgentInheritedPlanningFixture.cs",
+            true,
+            "610C18B06393F9950102E62CBD5D6B35D774D42BEAF05D9B82FADD8440B0939B"
+          ],
+          "after": [
+            "tests/Integration/CanDoItAll.Tests.Integration/AgentInheritedPlanningFixture.cs",
+            true,
+            "1043C978E2780BAE16E323B9CD2324E1AA720B2986EE41FEF5AC5AA58FD8583B"
+          ]
+        },
+        {
+          "path": "tests/integration/candoitall.tests.integration/agentinheritedplanningownertests.cs",
+          "before": [
+            "tests/Integration/CanDoItAll.Tests.Integration/AgentInheritedPlanningOwnerTests.cs",
+            true,
+            "8F70B78C4E39E90EC9CE96D23933D776CC63AD2784E2353C1F709E3C4AAC1AB4"
+          ],
+          "after": [
+            "tests/Integration/CanDoItAll.Tests.Integration/AgentInheritedPlanningOwnerTests.cs",
+            true,
+            "8A0DBAEDC302B8C9EBF9085DAF82BF3136F9F5E883B7FD95511E5E742AB9DD8F"
+          ]
+        }
+      ],
+      "review": "Remove unsupported medium thinking override from the synthetic provider fixture, matching the existing interactive provider fixture. Expect the precise read-access denial when original parent identity changes. No production behavior, gate, timeout, dispatch check or policy changed. Repeat all21 inherited fixture consumers."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T00:13:06.4547874+00:00",
+      "observerSeconds": 54.1765052,
+      "commands": [
+        {
+          "command": "execute-inherited-agent-owner",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T00:13:19.5283834+00:00",
+          "seconds": 30.5784396
+        },
+        {
+          "command": "execute-inherited-planning-provider",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T00:13:50.1757624+00:00",
+          "seconds": 10.0443783
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "childStartedUtc": "2026-10-20T00:13:06.473436Z",
+      "childPid": 8092,
+      "state": "Running",
+      "confirmedBeforeTests": true,
+      "recordedUtc": "2026-10-20T00:13:18.6218817+00:00"
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

@@ -15,10 +15,10 @@ public sealed class AgentPlanningLiveOwnerTests {
         var draft = Create(source.Detail.Run.ToolAdmission!.Session);
         var journal = source.NewJournal();
         Assert.Throws<AgentToolAdmissionException>(() => journal.CreateForNewPlanningRun(source.Detail.Run, source.Detail.ChatSession!,
-            source.Detail.Run.ToolAdmission.OriginalInput!, draft.PlanningDecision!.OriginalTarget, draft.PlanningDecision.Provenance));
+            source.Detail.Run.ToolAdmission.OriginalInput!, draft.PlanningDecision!.OriginalTarget, draft.PlanningDecision.Provenance!));
         Assert.Throws<InvalidDataException>(() => journal.CreateForNewPlanningRun(source.Detail.Run with { ToolAdmission = null },
             source.Detail.ChatSession!, source.Detail.Run.ToolAdmission.OriginalInput!, draft.PlanningDecision!.OriginalTarget,
-            draft.PlanningDecision.Provenance with { AgentId = Guid.NewGuid() }));
+            draft.PlanningDecision.Provenance! with { AgentId = Guid.NewGuid() }));
     }
 
     [Fact]

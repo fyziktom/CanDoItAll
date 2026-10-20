@@ -2,6 +2,12 @@
 
 Refinement after the active Process material scope. Implement the inherited journal and actual owner path before lifting any Process executor refusal.
 
+The journal, live owner and actual MAF input path now have
+[242 distinct passing behaviors](../validation/2026-10-19-inherited-agent-planning.md)
+across an explicit test-only repair bridge. Actual Process/Workflow admission, inherited
+Workbench publication and manager continuation below remain implementation work; the
+ordinary executor refusal has not been lifted.
+
 ## Protocol and provenance
 
 Journal schema 7 and planning decision schema 2 explicitly distinguish an inherited background decision from schema 6 interactive planning. Keep schema 1 planning bytes and interactive session, latest-run, approval and publication snapshot checks unchanged. A persisted planning journal cannot change between these origins.

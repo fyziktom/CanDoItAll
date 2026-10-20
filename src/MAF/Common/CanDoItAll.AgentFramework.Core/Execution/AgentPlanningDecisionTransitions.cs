@@ -15,7 +15,8 @@ public enum AgentPlanningAdmissionRefusal {
     HistoryCapacity,
     InterruptedWorkAccountingUnavailable,
     InvalidPublication,
-    InvalidProviderOutput
+    InvalidProviderOutput,
+    ParentReconciliationRequired
 }
 
 public sealed class AgentPlanningAdmissionException(Guid decisionId, int generation, AgentPlanningAdmissionRefusal reason)
@@ -34,6 +35,18 @@ public static class AgentPlanningDecisionTransitions {
             [new(1, AgentPlanningGenerationReason.Initial, AgentPlanningGenerationState.Active, 0, [], [])],
             new(1, 0, now, null, null));
         return Valid(result);
+    }
+
+    public static AgentPlanningDecisionRecord CreateInherited(AgentToolSessionReference session, AgentToolProtocolEnvelope originalTarget,
+        AgentPlanningOwner owner, AgentPlanningInheritedOrigin origin, DateTimeOffset now) {
+        ArgumentNullException.ThrowIfNull(origin);
+        var result = Valid(new(Guid.NewGuid(), session, now, owner, originalTarget, origin.ResolvePolicy(), null, 1, 0,
+            [new(1, AgentPlanningGenerationReason.Initial, AgentPlanningGenerationState.Active, 0, [], [])],
+            new(1, 0, now, null, null), origin));
+        if (now - origin.CapturedAtUtc >= result.Policy.Budget.MaximumBasisAge) {
+            throw Refuse(result, AgentPlanningAdmissionRefusal.BasisExpired);
+        }
+        return result;
     }
 
     public static AgentPlanningDecisionRecord BeginStep(AgentPlanningDecisionRecord current, Guid dispatchLeaseId, DateTimeOffset now) {
@@ -86,6 +99,7 @@ public static class AgentPlanningDecisionTransitions {
             throw new ArgumentException("A captured planning basis requires its actual journal origin.", nameof(originSegmentId));
         }
         var bases = current.Current.Bases;
+        current.InheritedOrigin?.RequireOriginalBasis(captured);
         if (current.Policy.ReadBasisMode == ReadBasisMode.RunSnapshot && !bases.IsEmpty) {
             if (bases[0] != captured) {
                 throw Refuse(current, AgentPlanningAdmissionRefusal.OriginalStepChanged);
@@ -186,6 +200,9 @@ public static class AgentPlanningDecisionTransitions {
 
     public static AgentPlanningDecisionRecord NewGeneration(AgentPlanningDecisionRecord current, bool automatic, DateTimeOffset now) {
         current.Validate();
+        if (current.InheritedOrigin is not null) {
+            throw Refuse(current, AgentPlanningAdmissionRefusal.ParentReconciliationRequired);
+        }
         RequireTime(current, now);
         RequireClosed(current);
         RequireBudget(current, TimeSpan.Zero, now);

@@ -41,7 +41,7 @@ internal sealed class AgentPlanningLiveOwnerFixture : IAsyncDisposable {
         var factory = new AgentToolAdmissionJournal(source.Store, source.Profile, clock);
         var input = source.Detail.Run.ToolAdmission.OriginalInput!;
         var journal = factory.CreateForNewPlanningRun(source.Detail.Run with { ToolAdmission = null }, source.Detail.ChatSession!,
-            input, originalTarget ?? draft.PlanningDecision!.OriginalTarget, draft.PlanningDecision!.Provenance);
+            input, originalTarget ?? draft.PlanningDecision!.OriginalTarget, draft.PlanningDecision!.Provenance!);
         var provider = originalOpenAi ? source.Provider with { Kind = ProviderKind.OpenAi, Transport = ProviderTransportKind.ChatCompletions } : source.Provider;
         var run = source.Detail.Run with { ToolAdmission = journal };
         if (runtimeContract is not null) {

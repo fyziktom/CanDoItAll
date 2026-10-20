@@ -231,7 +231,7 @@ public sealed class AgentPlanningDecisionJournalTests {
         var current = journal.PlanningDecision!;
         var changed = change switch {
             Forgery.Target => current with { OriginalTarget = Envelope("{\"target\":\"different\"}") },
-            Forgery.PolicyHead => current with { Provenance = current.Provenance with { WorkspaceHeadRevision = Guid.NewGuid() } },
+            Forgery.PolicyHead => current with { Provenance = current.Provenance! with { WorkspaceHeadRevision = Guid.NewGuid() } },
             Forgery.Basis => current with { Generations = current.Generations.SetItem(0, current.Current with {
                 Bases = [current.Current.Bases[0] with { CapturedAtUtc = Start.AddSeconds(1) }]
             }) },

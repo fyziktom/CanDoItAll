@@ -33,8 +33,8 @@ public sealed class ProjectTaskPlanExecutionEntryTests {
         var journal = detail.Run.ToolAdmission!;
         Assert.Equal(AgentToolJournalRecord.PlanningSchemaVersion, journal.SchemaVersion);
         Assert.Equal(AgentPlanningGenerationState.AwaitingApproval, journal.PlanningDecision!.Current.State);
-        Assert.Equal(fixture.Policy.Expectation.Namespace.Value, journal.PlanningDecision.Provenance.WorkspaceNamespaceId);
-        Assert.Equal(fixture.Policy.Expectation.Head!.Revision, journal.PlanningDecision.Provenance.WorkspaceHeadRevision);
+        Assert.Equal(fixture.Policy.Expectation.Namespace.Value, journal.PlanningDecision.Provenance!.WorkspaceNamespaceId);
+        Assert.Equal(fixture.Policy.Expectation.Head!.Revision, journal.PlanningDecision.Provenance!.WorkspaceHeadRevision);
         Assert.Null(journal.PlanningDecision.Work.Open);
         Assert.Null(detail.Run.Outcome);
         Assert.Equal(journal.PlanningDecision.Current.Steps.Single().Publications.Single().Proposal,

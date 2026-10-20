@@ -26,7 +26,7 @@ public sealed class FileAgentPlanningDecisionTests {
                 ToolAdmission = original with {
                     Revision = original.Revision + 1,
                     PlanningDecision = original.PlanningDecision! with {
-                        Provenance = original.PlanningDecision.Provenance with { WorkspaceHeadRevision = Guid.NewGuid() }
+                        Provenance = original.PlanningDecision.Provenance! with { WorkspaceHeadRevision = Guid.NewGuid() }
                     }
                 }
             } };

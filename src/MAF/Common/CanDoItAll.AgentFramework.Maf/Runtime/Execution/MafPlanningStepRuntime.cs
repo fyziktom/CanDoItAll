@@ -84,10 +84,15 @@ internal sealed class MafPlanningStepRuntime(IMafProviderAgentFactory providers,
     }
 
     private static ChatMessage[] CreateInput(AgentPlanningStepObservation original, AgentPlanningPromptContract prompt) {
-        var decision = original.Run.ToolAdmission!.PlanningDecision!;
+        var journal = original.Run.ToolAdmission!;
+        var decision = journal.PlanningDecision!;
+        var instruction = decision.InheritedOrigin is null ? journal.OriginalInput?.Content : journal.BackgroundInput?.Content;
+        if (instruction is null) {
+            throw MafPlanningStepContext.Failure("The planning origin has no matching admitted instruction.");
+        }
         var content = JsonSerializer.Serialize(new {
             decision.DecisionId, decision.CurrentGeneration, StepId = decision.Current.Steps[^1].Id,
-            OriginalRequest = original.Run.ToolAdmission.OriginalInput!.Content,
+            OriginalRequest = instruction,
             OriginalTarget = JsonSerializer.Deserialize<JsonElement>(decision.OriginalTarget.PayloadJson),
             MaterialBasis = JsonSerializer.Deserialize<JsonElement>(original.Basis.Value.PayloadJson)
         });

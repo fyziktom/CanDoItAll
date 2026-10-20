@@ -60,7 +60,7 @@ internal sealed class ProjectTaskPlanAgentParticipant(IAgentCatalogReadLeaseStor
             throw ProjectTaskPlanAgentCodec.Denied("The original target's complete task basis could not be captured.");
         }
         var context = await publisher.GetWriteContextAsync(target.Caller, cancellationToken);
-        if (context.Namespace != captured.Basis.Namespace || context.Namespace.Value != decision.Provenance.WorkspaceNamespaceId) {
+        if (context.Namespace != captured.Basis.Namespace || context.Namespace.Value != decision.Provenance?.WorkspaceNamespaceId) {
             throw ProjectTaskPlanAgentCodec.Denied("The dataset changed while capturing the task-plan basis.");
         }
         using var material = JsonDocument.Parse(ProjectTaskPlanBasisCodec.Encode(captured.Basis));
