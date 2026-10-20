@@ -446,6 +446,14 @@ work. Interrupted or uncertain work remains reserved. The MAF adapter selects th
 background instruction explicitly and uses the retained basis without creating a chat.
 The interactive schema and its approval/source rules remain separate.
 
+Initial inherited admission now resolves the exact child execution ID under its existing
+per-run lease before preparing input or a grant. Interrupted initial publication recovers
+through the file owner's existing commit journal. The saved inherited runtime contract
+uses explicit metadata v3; interactive metadata v2 is unchanged. Current source read
+access and the business owner's original-parent check are mandatory on recovery. A
+retained record grants no new dispatch or work interval. See the
+[admission evidence](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-exact-inherited-admission.md).
+
 This journal and provider path is implemented and tested. Actual Process/Workflow
 producers, inherited Workbench effects and current manager continuation are still gated;
 the protocol alone does not enable their settings. See the

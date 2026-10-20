@@ -41,6 +41,12 @@ Actual Process/Workflow producers, Workbench publication and manager continuatio
 open. These prerequisites do not close R5 or R6. Grant sizing/fair scheduling and workload
 capacity still require proof.
 
+The [exact inherited admission checkpoint](validation/2026-10-19-exact-inherited-admission.md)
+adds 73 distinct passing selected behaviors across an exact test-only bridge. Stable child
+lookup precedes preparation; initial-save recovery, source reads, original metadata and
+unknown work are preserved. This is an admission prerequisite; actual producer and
+publication integration remain open.
+
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
 compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch

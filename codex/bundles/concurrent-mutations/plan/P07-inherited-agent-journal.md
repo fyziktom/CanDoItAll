@@ -8,6 +8,10 @@ across an explicit test-only repair bridge. Actual Process/Workflow admission, i
 Workbench publication and manager continuation below remain implementation work; the
 ordinary executor refusal has not been lifted.
 
+The [exact inherited admission owner](P07-exact-inherited-admission.md) now implements
+stable execution lookup and original initial-commit recovery, with 73 distinct selected
+passing behaviors. The Process and business-owner adapters remain required.
+
 ## Protocol and provenance
 
 Journal schema 7 and planning decision schema 2 explicitly distinguish an inherited background decision from schema 6 interactive planning. Keep schema 1 planning bytes and interactive session, latest-run, approval and publication snapshot checks unchanged. A persisted planning journal cannot change between these origins.

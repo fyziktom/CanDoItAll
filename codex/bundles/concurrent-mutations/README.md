@@ -21,6 +21,12 @@ Schema 7 retains parent material/time/grant, rejects local refresh, and supplies
 background input through the real MAF path. Actual Process/Workflow producer, Workbench
 publication, manager continuation and settings activation remain open.
 
+The [exact child admission checkpoint](validation/2026-10-19-exact-inherited-admission.md)
+now has 73 distinct passing selected behaviors across an exact test-only bridge. It
+resolves the stable execution before preparing new input, recovers interrupted initial
+saves and preserves original work/grants without scanning unrelated execution history.
+This prerequisite does not activate Process/Workflow producers.
+
 The [Agent policy receipt checkpoint](validation/2026-10-19-agent-policy-receipts.md)
 passes 40/40 cases. Policy and historical receipt commit together; read-only lookup
 recovers the original result after lost acknowledgement without replaying PUT.

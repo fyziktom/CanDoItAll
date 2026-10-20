@@ -646,3 +646,19 @@ No observed process or database-name delta remained. Respectively 25 and 14 unat
 TEMP entries were preserved. Earlier denied cleanup remains unchanged. The shared fixture
 remains needed for actual Process/Workflow integration. See the
 [Agent validation record](validation/2026-10-19-inherited-agent-planning.md).
+
+## Exact inherited admission candidate ownership
+
+The next candidate owns only `.artifacts/concurrent-mutations/validation/c4-exact-inherited-admission`
+and its bounded command, identity, test and observation evidence. It reuses the isolated
+PG18 fixture on loopback 53619 and the existing standard Release outputs. No new host,
+container, volume or database server is provisioned. Tests use the existing tool-admission
+fixture family and dispose their own temporary directories; observed unrelated TEMP
+deltas are not deletion authority. Historical cleanup denials remain unresolved.
+
+The original candidate retained 71/73 passes; two test-only successors retained 27/28
+and 28/28. Exact source bridges preserve the original 45 regression passes. All three
+observations covered their complete test commands, with no remaining observed process
+or database-name delta. Respectively 12, 4 and 4 unattributed TEMP entries were preserved.
+The final complete static gate passes. See the
+[admission validation record](validation/2026-10-19-exact-inherited-admission.md).
