@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Processes.Persistence;
@@ -97,10 +98,10 @@ public sealed class EfProcessDecisionChildQuery(IDbContextFactory<ProcessPersist
         admission.Validate();
         return new(new(admission, generationValue, childValue.Closure, allocationValue.Settlement, current),
             row.RunStatus, row.RootStatus, row.StepStatus, row.ActiveClaimToken, row.MatchingClaimExpiresAtUtc,
-            row.HasLiveClaim, balance.OverrunDetected || row.Parent?.OverrunDetected == true);
+            row.HasLiveClaim, balance.OverrunDetected || row.Parent?.OverrunDetected == true, balance);
     }
 }
 
 internal sealed record ProcessDecisionChildRead(ProcessDecisionChildObservation Observation, ProcessRuntimeStatus RunStatus,
     ProcessRuntimeStatus RootStatus, ProcessRuntimeStepStatus StepStatus, Guid? ActiveClaimToken,
-    DateTimeOffset? MatchingClaimExpiresAtUtc, bool HasLiveClaim, bool BudgetOverrun);
+    DateTimeOffset? MatchingClaimExpiresAtUtc, bool HasLiveClaim, bool BudgetOverrun, DecisionBudgetBalance Balance);

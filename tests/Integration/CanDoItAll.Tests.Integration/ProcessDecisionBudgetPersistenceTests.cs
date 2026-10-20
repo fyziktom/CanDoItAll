@@ -169,7 +169,12 @@ public sealed class ProcessDecisionBudgetPersistenceTests {
             1 => expectation with { BudgetId = other.BudgetId },
             _ => expectation with { Revision = expectation.Revision + 1 }
         } };
-        await Assert.ThrowsAsync<InvalidOperationException>(() => owner.CommitAsync(Advance(state, command)));
+        if (change == 2) {
+            var stale = await Assert.ThrowsAsync<ProcessDecisionException>(() => owner.CommitAsync(Advance(state, command)));
+            Assert.Equal(ProcessDecisionRefusal.StaleExpectation, stale.Reason);
+        } else {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => owner.CommitAsync(Advance(state, command)));
+        }
         Assert.Equal(balance, await BalanceAsync(context, state));
         Assert.Equal(other, await BalanceAsync(context, foreign));
         Assert.Empty(await context.DecisionBudgetAllocations.ToArrayAsync());

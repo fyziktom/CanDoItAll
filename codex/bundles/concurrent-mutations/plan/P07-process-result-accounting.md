@@ -26,6 +26,10 @@ remains outside the coordinator and Persistence. Neither Drivers nor Agent Core 
 dependency on Process Runtime. The contract-keyed reader is the existing extension seam.
 Do not add provider cases to the dispatcher or a new runtime partial.
 
+Application adds the repository-versioned Logging.Abstractions package for bounded
+original-child read failure diagnostics. It does not acquire a host, provider, storage
+or logging implementation dependency.
+
 Use the existing command/receipt and explicit enum state model. A two-commit sequence
 was rejected because a crash could expose a finished step with live child accounting.
 A generic transaction coordinator or new orchestration framework is unnecessary.
@@ -44,8 +48,8 @@ Snapshot result collections before the first await. Validate counts before copyi
 then validate the captured bounded arrays and all elements, including host capabilities.
 Immutable scalar records can be shared. The command result key must equal the envelope
 key. Unsupported/oversized input fails before storage or identity derivation.
-Host profile/capability identifiers also need explicit length bounds; their current
-structural checks do not bound strings. Preserve their existing accepted syntax.
+Host profile/capability identifiers retain their existing constructor bounds and syntax;
+snapshot validation also rejects default or malformed identifiers.
 
 An indexed run/step read identifies the durable local policy budget, optional head and
 capture state. No budget means legacy behavior; a present current policy with a missing
@@ -67,8 +71,11 @@ still proceeds; it never grants fresh dispatch authority.
 Read pending local allocations by OwnerRevision absence, including zero-tick grants.
 Identify the original shared capture specifically; another step's open child allocation
 in the same root is not a reason to block this step. Queries stay bounded and indexed.
-Legacy result acceptance adds at most one governance selection read. Record actual
-selected query counts and latency before product activation.
+Legacy result acceptance adds two indexed governance reads: selection before submission
+and an authoritative acceptance check inside the transaction. The latter also protects
+direct runtime callers. Selected results read the binding in four bounded metadata
+queries; the existing outcome reader separately validates its original source.
+Record actual selected query counts and latency before product activation.
 
 ## Replay and result normalization
 
@@ -133,7 +140,9 @@ must be rejected. Existing persisted records need no migration.
 ## Persistence acceptance and concurrency
 
 Inside the existing fenced transaction, stage budget/decision/runtime/events/outbox,
-SaveChanges, and validate each newly added strategy-result receipt before commit.
+SaveChanges, reload the persisted runtime state, and validate each newly added
+strategy-result receipt before commit. Reuse the existing post-save state reload;
+validation must not trust only the proposed in-memory state.
 For a policy-owned terminal result require the matching actual closed child/generation
 and no unsettled local allocations or original shared capture. A definite preflight
 failure/cancellation with no generation or unsettled work is the bounded exception.
@@ -144,6 +153,17 @@ The guard is scoped to new strategy results. It must not prevent ordinary cancel
 subsequent accounting, or an unrelated shared-root child from making progress.
 The transaction rolls back state, claims, results, accounting, events and outbox together
 on any refusal. Existing Project-before-root lock order remains unchanged.
+
+The first PostgreSQL candidate exposed legacy diagnostics serialization losing an
+execution identity when diagnostics and host evidence were both empty. Use the existing
+version-one object envelope for exactly that case. Keep existing legacy array bytes
+otherwise, including receipts without an execution identity. No migration, new format,
+inferred host fact or safety attestation is needed. Independent mapper tests and
+post-flush identity-loss injection must prove round-trip integrity and transaction rollback.
+Optional decision-head/generation/budget joins explicitly retain nullable keys and
+guard correlated predicates when an owner row is absent. Legacy runs without accounting
+must remain readable and committable through the same query on PostgreSQL and InMemory.
+Do not bypass the guard for a particular provider or add an early database probe.
 
 Distinguish stale budget revision from mismatched budget identity with a typed optimistic
 refusal. Retry at most three times, reloading only the original selection. No provider,

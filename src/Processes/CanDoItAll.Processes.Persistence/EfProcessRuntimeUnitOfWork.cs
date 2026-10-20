@@ -352,6 +352,8 @@ public sealed class EfProcessRuntimeUnitOfWork(
         dbContext.ChangeTracker.Clear();
         var persistedState = await LoadAsync(request.Mutation.State.RunId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The Process runtime state was not found after its mutation was saved.");
+        await ProcessDecisionResultAcceptance.RequireAsync(dbContext,
+            request with { Mutation = request.Mutation with { State = persistedState } }, cancellationToken).ConfigureAwait(false);
         return ProcessRuntimeCommitResult.FromMutation(request.Mutation) with {
             State = persistedState, DecisionBudget = decisionBudget, Decision = decision, DecisionRunScope = decisionScope
         };

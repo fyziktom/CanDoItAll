@@ -1,5 +1,23 @@
 # C# architecture entry review
 
+## Process result/accounting integration closure (2026-10-20)
+
+Status: PASS for this checkpoint only. [Validation](../validation/2026-10-20-process-result-accounting.md)
+records 369 distinct passing behaviors under the exact repair comparison, including
+actual PostgreSQL compound rollback, competing coordinators and legacy round trips.
+Dispatcher and recovery require the independently testable Application coordinator;
+Runtime owns pure validation/transitions and Persistence owns bounded projections,
+receipt serialization and atomic acceptance. No project reference, runtime partial,
+service locator or rendering responsibility was added.
+
+Scoped architecture snapshots retain six project edges and zero cycles. Two added
+member-count advisories were reviewed: the immutable selection and the single-purpose
+result coordinator. Existing workspace diagnostics remain explicit. Persisted-state
+acceptance reuses the transaction's existing reload, and child selection is bounded to
+four metadata queries. No model or external-owner await runs under the root transaction.
+Producer capture, manager continuation, Workflow, settings and sustained capacity are
+separate remaining gates. Historical entry conclusions below retain their original scope.
+
 Result: Pass for architecture direction and P01a only. Protected-owner/runtime rollout
 is not yet implementation-ready as a whole; its remaining gates stay in the execution
 plan and owner/policy reviews.

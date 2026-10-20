@@ -1,5 +1,21 @@
 # Resource ownership and cleanup
 
+## Process result/accounting checkpoint (2026-10-20)
+
+The initial, repaired and optional-join `c4-process-result-accounting` candidates have
+released test execution with complete source/runtime verification and whole-command
+observation. Each leaves zero observed processes or database-name delta. Their exact
+failure/success evidence is retained in three secret-reviewed proof files; the final
+candidate passes 111/111, with 258 unaffected passes under the exact repair comparison.
+Eleven final TEMP entries without proven ownership remain untouched.
+
+These owned candidate directories contain retained logs, source manifests and reusable
+validation helpers, with no new compiled output trees or server. Keep the identity
+manifests required by the repair bridge and the helpers used by the next producer proof.
+The existing isolated PG18 fixture on 53619 remains in use. Ordinary 5032, its databases,
+installed MCP tools and unrelated resources remain outside ownership. Historical
+cleanup denials listed below remain blocked and were not retried.
+
 ## Shared allocation boundary checkpoint (2026-10-19)
 
 Owned `c4-shared-decision-budget` passed the same 28 arithmetic cases after their move

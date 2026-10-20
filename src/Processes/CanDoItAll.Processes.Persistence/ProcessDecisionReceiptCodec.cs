@@ -17,7 +17,8 @@ internal static class ProcessDecisionReceiptCodec {
             return null;
         }
         Validate(receipt);
-        var version = receipt.Command is ProcessDecisionClosure { Completion: not null } ? 4
+        var version = receipt.Command is ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Review or ProcessDecisionCompletion.Reconcile } ? 5
+            : receipt.Command is ProcessDecisionClosure { Completion: not null } ? 4
             : receipt.Command.InheritedScope is not null ? 3 : receipt.Command.Material is null ? 1 : 2;
         var json = JsonSerializer.Serialize(new Document(version,
             ToDocument(receipt.Command) with { Material = receipt.Command.Material, InheritedScope = receipt.Command.InheritedScope }, receipt.Changed, ToDocument(receipt.Current),
@@ -32,10 +33,11 @@ internal static class ProcessDecisionReceiptCodec {
         }
         RequireBound(json);
         var document = JsonSerializer.Deserialize<Document>(json, Options) ?? throw new InvalidDataException("The Process decision receipt is empty.");
-        if (document.Version is not (1 or 2 or 3 or 4) || document.Command is null || document.Current is null ||
+        if (document.Version is not (1 or 2 or 3 or 4 or 5) || document.Command is null || document.Current is null ||
                 (document.Version is 2 or 3) != (document.Command.Material is not null) ||
                 (document.Version == 3) != (document.Command.InheritedScope is not null) ||
-                (document.Version == 4) != (document.Command.Completion is not null) ||
+                (document.Version is 4 or 5) != (document.Command.Completion is not null) ||
+                (document.Version == 5) != (document.Command.Completion is ProcessDecisionCompletion.Review or ProcessDecisionCompletion.Reconcile) ||
                 document.Command.Completion is not null && document.Command.Kind != CommandKind.Close) {
             throw new InvalidDataException("The Process decision receipt has an unsupported version or missing command.");
         }
@@ -113,9 +115,8 @@ internal static class ProcessDecisionReceiptCodec {
             ProcessDecisionClosure closure => receipt.Previous is null && child is not null &&
                 current.Reference == closure.Expectation.Reference && child.Reference == current.Reference &&
                 child.ChildId == closure.ChildId && child.Closure == closure.Closure &&
-                (closure.Completion is null || current.UnclosedChildCount == 0 &&
-                    current.Phase == (closure.Completion == ProcessDecisionCompletion.Complete
-                        ? ProcessDecisionPhase.Completed : ProcessDecisionPhase.Cancelled)),
+                (closure.Completion is null || current.Phase == ProcessDecisionTransitions.CompletionPhase(closure.Completion.Value) &&
+                    (closure.Completion is ProcessDecisionCompletion.Review or ProcessDecisionCompletion.Reconcile || current.UnclosedChildCount == 0)),
             ProcessDecisionChangePhase phase => receipt.Changed && receipt.Previous is null && child is null &&
                 current.Reference == phase.Expectation.Reference && current.Phase == ResultPhase(phase.Change),
             ProcessDecisionRefresh refresh => receipt.Changed && child is null && receipt.Previous is { } previous &&

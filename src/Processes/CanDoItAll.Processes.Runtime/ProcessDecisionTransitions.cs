@@ -39,36 +39,33 @@ public static class ProcessDecisionTransitions {
         RequireRetainedChild(current, child);
         ArgumentNullException.ThrowIfNull(closure);
         closure.Validate();
-        var finalPhase = completion switch {
-            null => current.Phase,
-            ProcessDecisionCompletion.Complete => ProcessDecisionPhase.Completed,
-            ProcessDecisionCompletion.Cancel => ProcessDecisionPhase.Cancelled,
-            _ => throw new InvalidDataException("The Process child completion is unsupported.")
-        };
-        if (child.Closure is not null) {
-            if (child.Closure != closure) {
-                throw new ProcessDecisionException(ProcessDecisionRefusal.OriginalClosureChanged);
-            }
-            if (completion is not null && current.Phase != finalPhase) {
-                throw new ProcessDecisionException(ProcessDecisionRefusal.InvalidPhase);
-            }
+        var finalPhase = completion is { } target ? CompletionPhase(target) : current.Phase;
+        if (child.Closure is not null && child.Closure != closure) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.OriginalClosureChanged);
+        }
+        if (child.Closure is not null && current.Phase == finalPhase) {
             return new(false, current, child);
         }
-        var allowed = completion switch {
-            ProcessDecisionCompletion.Complete => current.Phase is ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview,
-            ProcessDecisionCompletion.Cancel => current.Phase == ProcessDecisionPhase.Reconciling,
-            _ => current.Phase is ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview or ProcessDecisionPhase.Reconciling
-        };
-        if (!allowed) {
+        if (current.Phase is not (ProcessDecisionPhase.Active or ProcessDecisionPhase.WaitingForReview or ProcessDecisionPhase.Reconciling) ||
+                current.Phase == ProcessDecisionPhase.Reconciling && finalPhase == ProcessDecisionPhase.WaitingForReview) {
             throw new ProcessDecisionException(ProcessDecisionRefusal.InvalidPhase);
         }
-        if (completion is not null && current.UnclosedChildCount != 1) {
+        var remaining = current.UnclosedChildCount - (child.Closure is null ? 1 : 0);
+        if (completion is ProcessDecisionCompletion.Complete or ProcessDecisionCompletion.Cancel && remaining != 0) {
             throw new ProcessDecisionException(ProcessDecisionRefusal.UnclosedChildren);
         }
         return new(true, current with { Revision = checked(current.Revision + 1),
-            UnclosedChildCount = current.UnclosedChildCount - 1, Phase = finalPhase },
+            UnclosedChildCount = remaining, Phase = finalPhase },
             child with { Closure = closure });
     }
+
+    public static ProcessDecisionPhase CompletionPhase(ProcessDecisionCompletion completion) => completion switch {
+        ProcessDecisionCompletion.Complete => ProcessDecisionPhase.Completed,
+        ProcessDecisionCompletion.Cancel => ProcessDecisionPhase.Cancelled,
+        ProcessDecisionCompletion.Review => ProcessDecisionPhase.WaitingForReview,
+        ProcessDecisionCompletion.Reconcile => ProcessDecisionPhase.Reconciling,
+        _ => throw new InvalidDataException("The Process child completion is unsupported.")
+    };
 
     public static ProcessDecisionGeneration WaitForReview(ProcessDecisionGeneration current, ProcessDecisionExpectation expectation) {
         RequireExpected(current, expectation);

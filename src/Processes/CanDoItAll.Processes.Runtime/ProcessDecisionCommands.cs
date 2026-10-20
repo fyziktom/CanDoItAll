@@ -4,7 +4,7 @@ namespace CanDoItAll.Processes.Runtime;
 
 public enum ProcessDecisionPhaseChange { WaitForReview, BeginReconciliation, Complete, Cancel }
 public enum ProcessDecisionRefreshKind { ManagerRefresh, AutomaticReplan, ParentRefresh }
-public enum ProcessDecisionCompletion { Complete, Cancel }
+public enum ProcessDecisionCompletion { Complete, Cancel, Review, Reconcile }
 
 public abstract record ProcessDecisionCommand(ProcessStepInstanceId StepInstanceId) {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]

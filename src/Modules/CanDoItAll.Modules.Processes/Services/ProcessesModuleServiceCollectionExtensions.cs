@@ -117,6 +117,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessDecisionDispatchAuthorityQuery>(provider => provider.GetRequiredService<EfProcessExecutionAuthorityQuery>());
         services.TryAddScoped<EfProcessDecisionChildQuery>();
         services.TryAddScoped<IProcessDecisionChildReader>(provider => provider.GetRequiredService<EfProcessDecisionChildQuery>());
+        services.TryAddScoped<IProcessDecisionResultQuery, EfProcessDecisionResultQuery>();
+        services.TryAddScoped<ProcessDecisionResultCoordinator>();
         services.TryAddScoped<ProcessDecisionChildMaterialReader>();
         services.TryAddScoped<IProcessDecisionPublicationFence, EfProcessDecisionPublicationFence>();
         services.TryAddScoped<ProcessExecutionProjectAuthorityReader>();

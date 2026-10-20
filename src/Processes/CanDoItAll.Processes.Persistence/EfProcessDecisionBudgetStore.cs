@@ -63,8 +63,11 @@ public sealed class EfProcessDecisionBudgetStore(ProcessPersistenceDbContext dbC
         var head = await dbContext.DecisionBudgets.SingleOrDefaultAsync(item => item.BudgetId == expectation.BudgetId.Value,
             cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("The original Process budget was not found.");
         if (head.RootRunId != originalState.RootRunId.Value || head.RunId != originalState.RunId.Value ||
-                head.StepInstanceId != expectation.StepInstanceId?.Value || head.Revision != expectation.Revision) {
-            throw new InvalidOperationException("The Process budget identity or revision no longer matches the accounting command.");
+                head.StepInstanceId != expectation.StepInstanceId?.Value) {
+            throw new InvalidOperationException("The Process budget identity no longer matches the accounting command.");
+        }
+        if (head.Revision != expectation.Revision) {
+            throw new ProcessDecisionException(ProcessDecisionRefusal.StaleExpectation);
         }
         if (step is null) {
             await funding.RequireDirectRootAsync(head, originalState, command, cancellationToken).ConfigureAwait(false);

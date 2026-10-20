@@ -1,5 +1,13 @@
 # Requirements and closure ledger
 
+Current Process result/accounting evidence: [369 distinct passing behaviors](validation/2026-10-20-process-result-accounting.md),
+including 111 final cases and 258 unaffected cases under an exact repair comparison.
+Normal dispatch and interrupted recovery share original-child reads, stable result
+identity, atomic runtime/accounting acceptance and retained unknown work. This closes
+the result-submission prerequisite; R5 and end-to-end activation remain open for actual
+producer capture, manager actions, Workflow and settings. Full portability passes;
+sustained capacity and the historical incomplete broad Stable run remain open.
+
 Work resumed on 2026-10-18; see the [resumption record](validation/2026-10-18-resumption.md).
 C4's historical successor passed 706/706. The additional native chat browser proof is
 now compiled and passes its one case with three submissions; prior failures remain

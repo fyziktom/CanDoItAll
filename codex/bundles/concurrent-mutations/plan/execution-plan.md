@@ -1,5 +1,14 @@
 # Execution plan
 
+Current next work follows the passing [Process result/accounting integration](../validation/2026-10-20-process-result-accounting.md):
+369 distinct passing behaviors, required coordinator wiring for dispatch and recovery,
+atomic persisted-result acceptance, exact original child settlement and durable replay.
+Before producer activation, settle capture ownership after duplicate/lost acknowledgements,
+current-claim attachment, initial business target binding and manager continuation.
+The executor policy guard remains until that complete selected path is proved.
+Workflow, settings/SPA, remaining owner cutovers, sustained capacity and broad closure
+remain open. No SPA main merge is authorized.
+
 Work resumed on 2026-10-18 at the user's request. The native chat browser repair passes;
 P03 now has passing owner, caller, creation-provenance and six actual-process restart
 scenarios. See the [resumption](../validation/2026-10-18-resumption.md) and

@@ -70,13 +70,15 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             ?? throw new InvalidOperationException("The decision step is not part of the original Process state.");
         var nextStep = proposed.Steps.SingleOrDefault(item => item.StepInstanceId == command.StepInstanceId)
             ?? throw new InvalidOperationException("The decision step is missing from the proposed Process state.");
-        if (command is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview } &&
+        if (command is ProcessDecisionStart or ProcessDecisionEnrollment or ProcessDecisionRefresh or
+                ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview } or
+                ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Review } &&
                 (ProcessRuntimeTerminalStates.IsStepTerminal(step.Status) || ProcessRuntimeTerminalStates.IsStepTerminal(nextStep.Status) ||
                 ProcessRuntimeTerminalStates.IsRunTerminal(state.Status) || ProcessRuntimeTerminalStates.IsRunTerminal(proposed.Status) ||
                 state.Status == ProcessRuntimeStatus.CancelRequested || proposed.Status == ProcessRuntimeStatus.CancelRequested)) {
             throw new InvalidOperationException("A stopped Process cannot begin new decision work or review.");
         }
-        RequireRuntimeTransition(proposed, nextStep, command);
+        RequireRuntimeTransition(state, step, proposed, nextStep, command);
         if (command is ProcessDecisionStart start) {
             return await StageStartAsync(state, start, accounting, material, cancellationToken).ConfigureAwait(false);
         }
@@ -288,7 +290,12 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
         }
     }
 
-    private static void RequireRuntimeTransition(ProcessRuntimeStateSnapshot proposed, ProcessRuntimeStepState step, ProcessDecisionCommand command) {
+    private static void RequireRuntimeTransition(ProcessRuntimeStateSnapshot original, ProcessRuntimeStepState originalStep,
+        ProcessRuntimeStateSnapshot proposed, ProcessRuntimeStepState step, ProcessDecisionCommand command) {
+        if (ProcessRuntimeTerminalStates.IsRunTerminal(original.Status) && proposed.Status != original.Status ||
+                ProcessRuntimeTerminalStates.IsStepTerminal(originalStep.Status) && step.Status != originalStep.Status) {
+            throw new InvalidOperationException("Decision accounting cannot change the terminal runtime outcome.");
+        }
         var valid = command switch {
             ProcessDecisionChangePhase { Change: ProcessDecisionPhaseChange.WaitForReview or ProcessDecisionPhaseChange.BeginReconciliation }
                 => step.Status is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked,
@@ -297,6 +304,8 @@ public sealed class EfProcessDecisionStore(ProcessPersistenceDbContext dbContext
             ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Complete }
                 => step.Status is ProcessRuntimeStepStatus.Completed or ProcessRuntimeStepStatus.Failed,
             ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Cancel } => step.Status == ProcessRuntimeStepStatus.Cancelled,
+            ProcessDecisionClosure { Completion: ProcessDecisionCompletion.Review or ProcessDecisionCompletion.Reconcile }
+                => step.Status is ProcessRuntimeStepStatus.Waiting or ProcessRuntimeStepStatus.WaitingApproval or ProcessRuntimeStepStatus.Blocked,
             ProcessDecisionRefresh => step.Status == ProcessRuntimeStepStatus.Ready,
             _ => true
         };

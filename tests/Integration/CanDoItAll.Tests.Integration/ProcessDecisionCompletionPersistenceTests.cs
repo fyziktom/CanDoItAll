@@ -1,16 +1,54 @@
 using System.Data.Common;
 using System.Text.Json;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFixture;
 
 namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessDecisionCompletionPersistenceTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Legacy_result_without_budget_or_decision_keeps_its_original_execution_and_replay(bool hasExecution) {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        using var scope = app.Services.CreateScope();
+        var query = scope.ServiceProvider.GetRequiredService<IProcessDecisionResultQuery>();
+        var owner = new EfProcessRuntimeUnitOfWork(context);
+        var state = (await owner.CommitAsync(ProcessProjectAdmissionFixture.Initial())).State;
+        ProcessExecutionRunId? execution = hasExecution ? new(Guid.NewGuid()) : null;
+        Assert.Null(await query.ReadAsync(state.RunId, Step(state), execution));
+        var key = StrategyResultIdempotencyKey.New();
+        var receipt = new StrategyResultReceipt(Step(state), new("legacy-result-fixture"), key,
+            StrategyOutcome.Succeeded, ProcessRuntimeStepStatus.Completed, "sha256:" + new string('a', 64)) {
+            AppliedSequence = 1, ExecutionRunId = execution
+        };
+        var request = Request(state, null);
+        request = request with { Mutation = request.Mutation with { State = request.Mutation.State with {
+            Status = ProcessRuntimeStatus.Completed,
+            Steps = [state.Steps.Single() with { Status = ProcessRuntimeStepStatus.Completed, CompletedResultKey = key }],
+            AppliedResults = [receipt]
+        } } };
+        var result = await owner.CommitAsync(request);
+        Assert.Equal(JsonSerializer.Serialize(receipt), JsonSerializer.Serialize(Assert.Single(result.State.AppliedResults)));
+        var replay = await owner.CommitAsync(request);
+        Assert.Equal(execution, Assert.Single(replay.State.AppliedResults).ExecutionRunId);
+        Assert.Null(await query.ReadAsync(state.RunId, Step(state), execution));
+        Assert.Null(result.Decision);
+        Assert.Null(result.DecisionBudget);
+        Assert.Empty(await context.DecisionHeads.AsNoTracking().ToArrayAsync());
+        Assert.Empty(await context.DecisionBudgets.AsNoTracking().ToArrayAsync());
+        Assert.Equal(1, await context.StrategyResultReceipts.CountAsync());
+    }
+
     [Theory]
     [InlineData(ProcessRuntimeStepStatus.Completed, false)]
     [InlineData(ProcessRuntimeStepStatus.Completed, true)]
@@ -192,8 +230,106 @@ public sealed class ProcessDecisionCompletionPersistenceTests {
         Assert.Equal(2, await context.DecisionChildren.CountAsync(item => item.OwnerRevision == null));
     }
 
+    [Fact]
+    public async Task Bare_terminal_result_is_refused_after_flush_and_all_runtime_changes_roll_back() {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        var prepared = await PrepareAsync(context, ProcessRuntimeStepStatus.Completed, true);
+        var request = prepared.Request with { Decision = null, DecisionBudget = null };
+        var budget = await BudgetAsync(context, request.OriginalState);
+        var generation = await DecisionAsync(context, request.OriginalState);
+        var events = await context.RuntimeEvents.CountAsync();
+        var outbox = await context.OutboxMessages.CountAsync();
+        var probe = new FlushProbe();
+        await using (var guarded = Context(app.Services, probe)) {
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => new EfProcessRuntimeUnitOfWork(guarded).CommitAsync(request));
+            Assert.Contains("atomic original-child settlement", failure.Message, StringComparison.Ordinal);
+            Assert.True(probe.Flushed);
+        }
+        Assert.Equal(budget, await BudgetAsync(context, request.OriginalState));
+        Assert.Equal(generation, await DecisionAsync(context, request.OriginalState));
+        var owner = new EfProcessRuntimeUnitOfWork(context);
+        var retained = (await owner.LoadAsync(request.OriginalState.RunId))!;
+        Assert.Empty(retained.AppliedResults);
+        Assert.Equal(request.OriginalState.Steps.Single().ActiveClaimToken, retained.Steps.Single().ActiveClaimToken);
+        Assert.Equal(events, await context.RuntimeEvents.CountAsync());
+        Assert.Equal(outbox, await context.OutboxMessages.CountAsync());
+        Assert.Null(await owner.FindCompletedCommandAsync(request.CommandId));
+    }
+
+    [Fact]
+    public async Task Persisted_execution_identity_loss_refuses_commit_and_rolls_back_all_participants() {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        var prepared = await PrepareAsync(context, ProcessRuntimeStepStatus.Completed, true);
+        var request = prepared.Request;
+        var budget = await BudgetAsync(context, request.OriginalState);
+        var generation = await DecisionAsync(context, request.OriginalState);
+        var events = await context.RuntimeEvents.CountAsync();
+        var outbox = await context.OutboxMessages.CountAsync();
+        var fault = new LoseReceiptIdentity(request.OriginalState.RunId.Value);
+        await using (var guarded = Context(app.Services, fault)) {
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new EfProcessRuntimeUnitOfWork(guarded).CommitAsync(request));
+            Assert.Contains("atomic original-child settlement", failure.Message, StringComparison.Ordinal);
+            Assert.Equal(1, fault.Changed);
+        }
+        Assert.Equal(budget, await BudgetAsync(context, request.OriginalState));
+        Assert.Equal(generation, await DecisionAsync(context, request.OriginalState));
+        Assert.Null((await context.DecisionChildren.AsNoTracking().SingleAsync()).OwnerRevision);
+        var owner = new EfProcessRuntimeUnitOfWork(context);
+        var retained = (await owner.LoadAsync(request.OriginalState.RunId))!;
+        Assert.Empty(retained.AppliedResults);
+        Assert.Equal(request.OriginalState.Steps.Single().ActiveClaimToken, retained.Steps.Single().ActiveClaimToken);
+        Assert.Equal(request.OriginalState.Claims, retained.Claims);
+        Assert.Equal(events, await context.RuntimeEvents.CountAsync());
+        Assert.Equal(outbox, await context.OutboxMessages.CountAsync());
+        Assert.Null(await owner.FindCompletedCommandAsync(request.CommandId));
+        var retried = await owner.CommitAsync(request);
+        Assert.Equal(prepared.Child.ChildId.Value, Assert.Single(retried.State.AppliedResults).ExecutionRunId!.Value.Value);
+        Assert.Equal(9, retried.DecisionBudget!.Change.Balance.ConsumedWorkTicks);
+    }
+
+    [Theory]
+    [InlineData(ProcessDecisionCompletion.Review)]
+    [InlineData(ProcessDecisionCompletion.Reconcile)]
+    public async Task Nonterminal_closure_settles_known_work_and_keeps_sibling_reserved(ProcessDecisionCompletion completion) {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        var prepared = await PrepareAsync(context, ProcessRuntimeStepStatus.Completed, true, additionalChild: true);
+        var request = prepared.Request;
+        var state = request.Mutation.State;
+        request = request with {
+            Decision = (ProcessDecisionClosure)request.Decision! with { Completion = completion },
+            Mutation = request.Mutation with { State = state with {
+                Status = ProcessRuntimeStatus.Blocked,
+                Steps = [state.Steps.Single() with { Status = ProcessRuntimeStepStatus.Blocked, CompletedResultKey = null }],
+                AppliedResults = [state.AppliedResults.Single() with { Outcome = StrategyOutcome.NeedsManager, AppliedStepStatus = ProcessRuntimeStepStatus.Blocked }]
+            } }
+        };
+        var committed = await new EfProcessRuntimeUnitOfWork(context).CommitAsync(request);
+        Assert.Equal(ProcessDecisionTransitions.CompletionPhase(completion), committed.Decision!.Current.Phase);
+        Assert.Equal(1, committed.Decision.Current.UnclosedChildCount);
+        Assert.Equal(9, committed.DecisionBudget!.Change.Balance.ConsumedWorkTicks);
+        Assert.True(committed.DecisionBudget.Change.Balance.ReservedWorkTicks > 0);
+        Assert.Equal(prepared.Child.ChildId, committed.Decision.Child!.ChildId);
+    }
+
+    [Fact]
+    public async Task A_zero_work_replan_reservation_still_blocks_terminal_result_acceptance() {
+        await using var app = await TestApplication.CreateAsync();
+        await using var context = Context(app.Services);
+        var prepared = await PrepareAsync(context, ProcessRuntimeStepStatus.Completed, false, additionalReplanAllocation: true);
+        var budget = await BudgetAsync(context, prepared.Request.OriginalState);
+        Assert.Equal(1, budget.ReservedReplans);
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => new EfProcessRuntimeUnitOfWork(context).CommitAsync(prepared.Request));
+        Assert.Contains("atomic original-child settlement", failure.Message, StringComparison.Ordinal);
+        Assert.Equal(budget, await BudgetAsync(context, prepared.Request.OriginalState));
+        Assert.Equal(1, (await DecisionAsync(context, prepared.Request.OriginalState)).UnclosedChildCount);
+    }
+
     private static async Task<Prepared> PrepareAsync(ProcessPersistenceDbContext context,
-        ProcessRuntimeStepStatus status, bool accepted, bool additionalChild = false) {
+        ProcessRuntimeStepStatus status, bool accepted, bool additionalChild = false, bool additionalReplanAllocation = false) {
         var owner = new EfProcessRuntimeUnitOfWork(context);
         var enrolled = await EnrollAsync(context, (await StartAsync(context)).State);
         var child = enrolled.Decision!.Child!;
@@ -201,6 +337,11 @@ public sealed class ProcessDecisionCompletionPersistenceTests {
         if (additionalChild) {
             enrolled = await EnrollAsync(context, enrolled.State);
             sibling = enrolled.Decision!.Child;
+        }
+        if (additionalReplanAllocation) {
+            var balance = await BudgetAsync(context, enrolled.State);
+            enrolled = await owner.CommitAsync(Request(enrolled.State, null, new ProcessDecisionBudgetReservation(
+                new(Step(enrolled.State), balance.BudgetId, balance.Revision), new(Guid.NewGuid()), new(0, 1))));
         }
         var state = (await owner.CommitAsync(ProcessDecisionRunScopeFixture.Claim(enrolled.State))).State;
         if (status == ProcessRuntimeStepStatus.Cancelled) {
@@ -225,7 +366,7 @@ public sealed class ProcessDecisionCompletionPersistenceTests {
             _ => throw new ArgumentOutOfRangeException(nameof(status))
         };
         var receipt = new StrategyResultReceipt(Step(state), new("atomic-completion-fixture"), key,
-            outcome, status, "sha256:" + new string('a', 64)) { AppliedSequence = 1 };
+            outcome, status, "sha256:" + new string('a', 64)) { AppliedSequence = 1, ExecutionRunId = new(child.ChildId.Value) };
         var target = request.Mutation.State with {
             Status = status switch {
                 ProcessRuntimeStepStatus.Completed => ProcessRuntimeStatus.Completed,
@@ -250,6 +391,27 @@ public sealed class ProcessDecisionCompletionPersistenceTests {
     }
 
     private sealed record Prepared(ProcessRuntimeCommitRequest Request, ProcessDecisionChild Child, ProcessDecisionChild? Sibling);
+
+    private sealed class LoseReceiptIdentity(Guid runId) : SaveChangesInterceptor {
+        internal int Changed { get; private set; }
+        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            var context = (ProcessPersistenceDbContext)eventData.Context!;
+            Assert.NotNull(context.Database.CurrentTransaction);
+            Changed = await context.StrategyResultReceipts.Where(item => item.RunId == runId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.DiagnosticsJson, "[]"), cancellationToken);
+            return result;
+        }
+    }
+
+    private sealed class FlushProbe : SaveChangesInterceptor {
+        internal bool Flushed { get; private set; }
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            Flushed = result > 0 && eventData.Context!.Database.CurrentTransaction is not null;
+            return ValueTask.FromResult(result);
+        }
+    }
 
     private sealed class AfterFlushFault : SaveChangesInterceptor {
         internal IOException Failure { get; } = new("atomic-completion-after-flush");

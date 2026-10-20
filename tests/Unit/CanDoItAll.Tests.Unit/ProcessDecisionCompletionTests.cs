@@ -35,12 +35,12 @@ public sealed class ProcessDecisionCompletionTests {
     [InlineData(ProcessDecisionPhase.Active, ProcessDecisionCompletion.Cancel)]
     [InlineData(ProcessDecisionPhase.WaitingForReview, ProcessDecisionCompletion.Cancel)]
     [InlineData(ProcessDecisionPhase.Reconciling, ProcessDecisionCompletion.Complete)]
-    public void Completion_requires_its_original_phase(ProcessDecisionPhase phase, ProcessDecisionCompletion completion) {
+    public void Exact_last_child_settlement_can_complete_from_any_open_phase(ProcessDecisionPhase phase, ProcessDecisionCompletion completion) {
         var original = Enrolled(phase);
-        var failure = Assert.Throws<ProcessDecisionException>(() => ProcessDecisionTransitions.CloseChild(
-            original.Generation, original.Generation.Expectation, original.Child, Closure(false), completion));
-        Assert.Equal(ProcessDecisionRefusal.InvalidPhase, failure.Reason);
-        Assert.Null(original.Child.Closure);
+        var changed = ProcessDecisionTransitions.CloseChild(
+            original.Generation, original.Generation.Expectation, original.Child, Closure(false), completion);
+        Assert.Equal(ProcessDecisionTransitions.CompletionPhase(completion), changed.Generation.Phase);
+        Assert.Equal(0, changed.Generation.UnclosedChildCount);
     }
 
     [Fact]
@@ -70,11 +70,55 @@ public sealed class ProcessDecisionCompletionTests {
     }
 
     [Fact]
-    public void A_previously_closed_ordinary_child_cannot_gain_completion_as_a_read_only_replay() {
+    public void A_previously_closed_child_can_handoff_parent_completion_without_changing_its_closure() {
         var receipt = Receipt(null);
-        var failure = Assert.Throws<ProcessDecisionException>(() => ProcessDecisionTransitions.CloseChild(
-            receipt.Current, receipt.Current.Expectation, receipt.Child!, receipt.Child!.Closure!, ProcessDecisionCompletion.Complete));
-        Assert.Equal(ProcessDecisionRefusal.InvalidPhase, failure.Reason);
+        var changed = ProcessDecisionTransitions.CloseChild(
+            receipt.Current, receipt.Current.Expectation, receipt.Child!, receipt.Child!.Closure!, ProcessDecisionCompletion.Complete);
+        Assert.True(changed.Changed);
+        Assert.Equal(receipt.Current.Revision + 1, changed.Generation.Revision);
+        Assert.Equal(receipt.Child, changed.Child);
+        Assert.False(ProcessDecisionTransitions.CloseChild(changed.Generation, changed.Generation.Expectation,
+            changed.Child, changed.Child.Closure!, ProcessDecisionCompletion.Complete).Changed);
+    }
+
+    [Theory]
+    [InlineData(ProcessDecisionCompletion.Review)]
+    [InlineData(ProcessDecisionCompletion.Reconcile)]
+    public void Known_work_can_close_while_a_sibling_remains_open(ProcessDecisionCompletion completion) {
+        var first = Enrolled();
+        var sibling = first.Child with { ChildId = new(Guid.NewGuid()), AllocationId = new(Guid.NewGuid()) };
+        var current = ProcessDecisionTransitions.Enroll(first.Generation, first.Generation.Expectation, sibling);
+        var changed = ProcessDecisionTransitions.CloseChild(current.Generation, current.Generation.Expectation, first.Child, Closure(true), completion);
+        Assert.Equal(1, changed.Generation.UnclosedChildCount);
+        Assert.Equal(ProcessDecisionTransitions.CompletionPhase(completion), changed.Generation.Phase);
+        var receipt = new ProcessDecisionReceipt(new ProcessDecisionClosure(new(Guid.NewGuid()), current.Generation.Expectation,
+            first.Child.ChildId, changed.Child.Closure!) { Completion = completion }, true, changed.Generation, Child: changed.Child);
+        var json = ProcessDecisionReceiptCodec.Write(receipt)!;
+        Assert.Equal(5, JsonNode.Parse(json)!["version"]!.GetValue<int>());
+        Assert.Equal(receipt, ProcessDecisionReceiptCodec.Read(json));
+    }
+
+    [Fact]
+    public void Reconciliation_cannot_regress_to_review_or_reopen_a_terminal_generation() {
+        var original = Enrolled(ProcessDecisionPhase.Reconciling);
+        Assert.Equal(ProcessDecisionRefusal.InvalidPhase, Assert.Throws<ProcessDecisionException>(() =>
+            ProcessDecisionTransitions.CloseChild(original.Generation, original.Generation.Expectation, original.Child,
+                Closure(false), ProcessDecisionCompletion.Review)).Reason);
+        var terminal = Receipt(ProcessDecisionCompletion.Complete);
+        Assert.Equal(ProcessDecisionRefusal.InvalidPhase, Assert.Throws<ProcessDecisionException>(() =>
+            ProcessDecisionTransitions.CloseChild(terminal.Current, terminal.Current.Expectation, terminal.Child!,
+                terminal.Child!.Closure!, ProcessDecisionCompletion.Reconcile)).Reason);
+    }
+
+    [Theory]
+    [InlineData(ProcessDecisionCompletion.Review, 4)]
+    [InlineData(ProcessDecisionCompletion.Reconcile, 4)]
+    [InlineData(ProcessDecisionCompletion.Complete, 5)]
+    [InlineData(ProcessDecisionCompletion.Cancel, 5)]
+    public void Completion_values_cannot_cross_canonical_wire_versions(ProcessDecisionCompletion completion, int wrongVersion) {
+        var document = JsonNode.Parse(ProcessDecisionReceiptCodec.Write(Receipt(completion))!)!;
+        document["version"] = wrongVersion;
+        Assert.Throws<InvalidDataException>(() => ProcessDecisionReceiptCodec.Read(document.ToJsonString()));
     }
 
     [Fact]

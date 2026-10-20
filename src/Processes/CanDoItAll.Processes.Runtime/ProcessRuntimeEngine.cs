@@ -114,7 +114,7 @@ public sealed partial class ProcessRuntimeEngine(IProcessRuntimeUnitOfWork unitO
         SubmitStrategyResultCommand command,
         CancellationToken cancellationToken = default)
     {
-        var mutation = SubmitStrategyResult(state, context, command);
+        var mutation = PrepareStrategyResult(state, context, command);
 
         return CommitAsync(state, context.CommandId, mutation, cancellationToken);
     }

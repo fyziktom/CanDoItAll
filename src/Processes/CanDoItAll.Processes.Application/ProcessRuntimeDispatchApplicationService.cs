@@ -64,6 +64,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessRuntimeStepAssignmentStore assignmentStore,
     IProcessRuntimeStrategyFactoryResolver strategyFactoryResolver,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
+    ProcessDecisionResultCoordinator resultCoordinator,
     ProcessRuntimeDispatchOptions? options = null,
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
     IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
@@ -336,7 +337,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                     if (CountSubmittedResults(state, workItem.StepInstanceId) >= MaximumStepDispatchAttempts)
                     {
                         var overBudgetResult = CreateOverBudgetResult(workItem);
-                        var overBudgetCommit = await engine.SubmitStrategyResultAsync(
+                        var overBudgetCommit = await resultCoordinator.SubmitAsync(
                             state,
                             CreateContext(requestedBy, iteration, "attempt-budget"),
                             new SubmitStrategyResultCommand(
@@ -393,7 +394,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         new StrategyResultIdempotencyKey(result.IdempotencyKey),
                         result);
                     var resultCommit = await SubmitStrategyResultWithConcurrencyRetryAsync(
-                        engine,
                         runId,
                         state,
                         resultCommand,
@@ -934,7 +934,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     }
 
     private async Task<ProcessRuntimeCommitResult> SubmitStrategyResultWithConcurrencyRetryAsync(
-        ProcessRuntimeEngine engine,
         ProcessRunId runId,
         ProcessRuntimeStateSnapshot initialState,
         SubmitStrategyResultCommand command,
@@ -953,25 +952,20 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                         ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
                 }
 
-                return await engine.SubmitStrategyResultAsync(
+                return await resultCoordinator.SubmitAsync(
                     state,
                     CreateContext(requestedBy, iteration, attempt == 1 ? "result" : $"result-retry-{attempt}"),
                     command,
                     cancellationToken).ConfigureAwait(false);
             }
-            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumClaimCleanupConcurrencyRetries)
+            catch (Exception failure) when (attempt < MaximumClaimCleanupConcurrencyRetries &&
+                failure is ProcessRuntimeOptimisticConcurrencyException or ProcessDecisionException { Reason: ProcessDecisionRefusal.StaleExpectation })
             {
                 await Task.Delay(ClaimCleanupConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
             }
         }
 
-        var latestState = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
-        return await engine.SubmitStrategyResultAsync(
-            latestState,
-            CreateContext(requestedBy, iteration, "result-final-retry"),
-            command,
-            cancellationToken).ConfigureAwait(false);
+        throw new InvalidOperationException("The bounded Process result retry loop did not return an outcome.");
     }
 
     private async Task<ProcessRuntimeCommitResult> ExecuteLifecycleTransitionWithConcurrencyRetryAsync(
