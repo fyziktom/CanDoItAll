@@ -7973,13 +7973,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         {
                             t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
 
-                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Caller", "\"CallerKind\" = 1 AND octet_length(\"CallerKey\") = 32");
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Caller", "\"CallerKind\" IN (1, 2) AND octet_length(\"CallerKey\") = 32");
 
                             t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Decision", "\"DecisionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DecisionGeneration\" > 0");
 
                             t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Digest", "octet_length(\"SemanticDigest\") = 32 AND octet_length(\"SourceFingerprint\") = 32");
 
-                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"SourceVersion\" > 0 AND \"SourceKind\" = 1");
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"SourceVersion\" > 0 AND \"SourceKind\" = \"CallerKind\" AND (\"CallerKind\" = 1 OR (\"SchemaVersion\" = 2 AND \"NormalizationVersion\" = 1 AND \"ResultVersion\" = 2 AND \"SourceVersion\" = 2))");
 
                             t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 2097152");
 
@@ -8431,6 +8431,31 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workspace_Settings", null, t =>
                         {
                             t.HasCheckConstraint("CK_Workspace_Settings_DecisionDataPolicyJson", "\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND 1024");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAcceptedAssignmentSourceEntity", b =>
+                {
+                    b.Property<Guid>("AdmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("AdmissionId", "StepInstanceId");
+
+                    b.ToTable("process_accepted_assignment_sources", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_accepted_assignment_source", "\"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND octet_length(\"PayloadJson\") BETWEEN 2 AND 1048576\nAND \"Fingerprint\" ~ '^sha256:[0-9a-f]{64}$'");
                         });
                 });
 
@@ -9218,6 +9243,18 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset?>("AcceptedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("AcceptedSourceHeaderFingerprint")
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("AcceptedSourceHeaderJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AcceptedSourceVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<long>("AdmissionSequence")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
@@ -9298,7 +9335,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("State", "ContinuationLeaseExpiresAtUtc", "AdmissionSequence");
 
-                    b.ToTable("process_prepared_launches", (string)null);
+                    b.ToTable("process_prepared_launches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_prepared_launch_source", "(\"AcceptedSourceVersion\" = 0 AND \"AcceptedSourceHeaderJson\" IS NULL AND \"AcceptedSourceHeaderFingerprint\" IS NULL)\nOR (\"AcceptedSourceVersion\" = 1 AND \"AcceptedAtUtc\" IS NOT NULL\n    AND \"AcceptedSourceHeaderJson\" IS NOT NULL AND octet_length(\"AcceptedSourceHeaderJson\") BETWEEN 2 AND 1048576\n    AND \"AcceptedSourceHeaderFingerprint\" IS NOT NULL AND \"AcceptedSourceHeaderFingerprint\" ~ '^sha256:[0-9a-f]{64}$')");
+                        });
                 });
 
             modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionDeadLetterEntity", b =>
@@ -10666,6 +10706,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasOne("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", null)
                         .WithMany()
                         .HasForeignKey("ConnectorCommandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAcceptedAssignmentSourceEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessPreparedLaunchEntity", null)
+                        .WithMany()
+                        .HasForeignKey("AdmissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

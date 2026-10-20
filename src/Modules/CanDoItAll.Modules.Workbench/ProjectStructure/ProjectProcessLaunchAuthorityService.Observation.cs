@@ -94,7 +94,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
                 ceiling.WorkspaceScopeKind == ProcessLaunchSourceScopeKind.Sandbox) {
             throw Denied("The saved Process Agent source no longer permits result disclosure.");
         }
-        var agent = held.Agent;
+        var agent = FindHeldAgent(held, ceiling.AgentId);
         if (agent is null || agent.Id != ceiling.AgentId || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active ||
                 !agent.Permissions.CanUseTools) {
             throw Denied("The saved Process source Agent no longer permits result disclosure.");

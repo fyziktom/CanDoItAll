@@ -42,11 +42,12 @@ internal sealed class ProjectDefinitionProcessReceiptAccess(ProjectProcessMutati
             ? await catalog.AcquireAgentsReadLeaseAsync([sourceId.Value, executorId.Value], cancellationToken)
             : await catalog.AcquireAgentReadLeaseAsync((sourceId ?? executorId)!.Value, cancellationToken);
         if (held.Scope != WorkspaceScopeDescriptor.Organization(target.DatabaseProfileId.ToString("N")) ||
-                sourceId is { } initiator && !ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(initiator, held.Agent, original.ProjectAdmission)) {
+                sourceId is { } initiator && !ProjectDefinitionGovernedReadPolicy.CurrentAgentCanRead(initiator,
+                    ProjectProcessLaunchAuthorityService.FindHeldAgent(held, initiator), original.ProjectAdmission)) {
             return false;
         }
         if (executorId is { } executor) {
-            var agent = held.Agent?.Id == executor ? held.Agent : held.Agents.SingleOrDefault(item => item.Id == executor);
+            var agent = ProjectProcessLaunchAuthorityService.FindHeldAgent(held, executor);
             if (!ProjectDefinitionGovernedReadPolicy.CurrentExecutorCanUseCreatedProject(executor, agent, target)) {
                 return false;
             }

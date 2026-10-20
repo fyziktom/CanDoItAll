@@ -27,7 +27,7 @@ publication and manager authority still need their product integration.
 
 5. IAgentPlanningParticipant mixes common step prompt/PreparePublication/read with interactive PrepareRun/CaptureBasis. Introduce a common IAgentPlanningStepParticipant and leave existing IAgentPlanningParticipant as interactive extension so inherited participant need not implement throwing interactive methods. MAF runtime contracts should use common interface, registrations remain explicit.
 
-6. Current planning publication lease/expectation and AgentPlanningDecisionOwner.RequirePublication require OriginalChatSession/latestRun. Need explicit inherited schema7 snapshot mode and canonical parent source fencing, retaining all interactive6 predicates.
+6. Current planning publication lease/expectation and AgentPlanningDecisionOwner.RequirePublication require OriginalChatSession/latestRun. Need explicit inherited schema 7 snapshot mode and canonical parent source fencing, retaining all interactive6 predicates.
 
 7. Current saved-effect dispatch uses ordinary background dispatch claim. Waiting Process manager has no active claim. Need explicit owner-authorized manager continuation, validating current manager rights and exact pending original proposal, not a bypass flag.
 
@@ -150,3 +150,47 @@ through its existing governed Process policy pipeline. Both earlier failed candi
 remain recorded. Five direct Release builds and full portability enforcement pass. Actual
 Workbench/Process producer, workspace approval lifecycle, manager/historical recovery,
 Workflow and capacity remain open; this does not activate inherited product publication.
+
+The [inherited task receipt identity checkpoint](../validation/2026-10-20-inherited-task-receipt-identity.md) passes all 75 selected
+cases. Explicit Process-Agent caller/source identity preserves ordinary receipt bytes and
+partitions; kind 2 requires active work and matching origin. The two-check migration
+preserves rows and refuses downgrade with inherited evidence. Actual inherited Workbench
+adapter and Process producer remain the next integration; no product activation is claimed.
+
+The [inherited task publication codec](../validation/2026-10-20-inherited-task-publication-codec.md)
+passes all 124 selected cases. Original parent material stays shared; child-specific write
+contexts, strict origin decoding and receipt semantics remain distinct. Two failed wire
+candidates are retained and the full selection was repeated. Current source/executor
+authority, actual inherited publication/producer and workspace approval remain next.
+
+The [exact original Process source checkpoint](../validation/2026-10-20-selected-process-source-authority.md)
+passes all 23 selected cases. Source checks select the original launcher from the held
+two-Agent catalog without borrowing executor grants or acquiring another lease. The
+earlier 22/23 result and exact test-only deletion-intent repair are retained. Current
+executor authority, actual inherited publication and producer/approval integration remain next.
+
+The [inherited task publication authority](../validation/2026-10-20-inherited-task-publication-authority.md) passes all 67 selected integration cases,
+including 28 new cases. It binds original parent/live work, exact selected source/executor,
+current profile generation and the enlisted Process fence through actual SQL publication.
+The earlier 62/64 fixture result is retained. Historical receipt authorization, producer,
+manager/approval activation and atomic Process outcomes remain open.
+
+The [original inherited Process source read](../validation/2026-10-20-inherited-original-source-history.md) has 107 distinct passing cases across
+an exact one-test-file repair. It preserves accepted source fingerprints after assignment
+repair, expiry, closure and supersession while always denying dispatch. Four exact indexed
+reads replace reliance on current assignment; the earlier 100/107 result is retained.
+Product schema 7 receipt integration, producer/manager and atomic outcomes remain next.
+
+The [inherited task receipt history](../validation/2026-10-20-inherited-task-receipt-history.md) passes all 64 selected cases, including 20 new cases. Registered schema 7 history retains original receipts after expiry/repair/closure, applies current disclosure fences and leaves workspace files unchanged. All 28 publication regressions pass with actual Process metadata. Exact SQL/catalog bounds, source/runtime identity, full portability and observed resource closure pass. Producer/provider activation, manager approval and atomic parent outcomes remain open.
+
+The [root sequence registry repair](../validation/2026-10-20-root-sequence-registry.md) passes all 26 selected cases. Completed roots no longer retain semaphores, cancellation preserves waiting callers and disposal is concurrent-idempotent. The first single-mutex cost regression and all baseline/candidate measurements remain recorded; bounded registry partitions restore similar observed independent-root cost while retaining zero idle entries. Full portability and source/runtime checks pass. Probe output cleanup remains explicitly blocked by automatic approval review; sustained capacity is still open.
+
+The [explicit initial inherited source admission](../validation/2026-10-20-inherited-initial-source.md) passes all 247 selected cases, including 16 new cases. Core admits the exact parent through an explicit owner observation and constructs schema 7 directly from its authorized session; ordinary source support does not imply inherited support. The initial 38/244 candidate remains retained. Full portability, architecture, source/runtime identity and observed resource checks pass. Registered Process source integration and complete parent-policy comparison are next; producer/manager/Workflow and capacity remain open.
+
+The [registered inherited Process source](../validation/2026-10-20-inherited-product-source.md) has 153 distinct passing cases across an exact one-test-file repair. Initial and schema 7 observations use the registered owner and compare the complete original accepted policy; current generation, revocation and cancellation remain fenced. Full portability and source/runtime/resource checks pass. The retained performance review reopens whole accepted-launch decoding cost; qualify it before producer activation. Producer/manager, atomic outcomes, Workflow and capacity remain open.
+
+The [accepted-source scaling baseline](../validation/2026-10-20-accepted-source-scaling.md) passes all 15 measurement executions but reopens capacity: a 1024-step source read allocates 31 MB and has a 71.075 ms median. The [persistence design](P07-accepted-source-projection.md) separates immutable original-source evidence from live authority checks, with explicit versions and atomic capture. Producer activation remains gated.
+
+The [accepted-source codec foundation](../validation/2026-10-20-accepted-source-codec.md) passes 41 executions. Selected source bytes stay about 2.6 KB and allocations about 32 KB across the measured shapes, including 1024 steps and a 1 MiB prompt. The one-step codec timing tradeoff is retained. No runtime source path is switched yet; atomic storage, migration, actual SQL/capture cost and source-principal variants are next.
+
+The accepted-source persistence checkpoint passes 193 distinct cases across an explicit one-test assertion bridge. Atomic capture, migration, corruption/rollback/retry and registered-source/history paths are verified. At 1024 steps the selected SQL source is 2319 bytes with 2.904 ms median versus 4449292 bytes / 137.054 ms legacy; initial acceptance still takes 2593 ms, so sustained capacity remains open. Actual producer/manager integration, Workflow and legacy conversion remain gated. [Candidate validation](../validation/2026-10-20-accepted-source-persistence.md).

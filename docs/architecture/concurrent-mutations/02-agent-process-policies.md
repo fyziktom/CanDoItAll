@@ -529,3 +529,51 @@ repository's named foundation/release invalidation triggers.
 Design freeze can accept these responsibilities and policy semantics before execution.
 The publication lane cannot claim completion until its complete writer perimeter,
 durability, current-authority and performance evidence exists.
+
+Task-plan storage now has an explicit Process-Agent caller/source identity separate from
+ordinary chat planning. Existing receipt bytes and operation keys remain valid. Inherited
+receipts require active-work version 2 and an exact caller/source pair; a mismatched origin
+is refused before lookup or publication. The additive compatibility migration changes two
+check constraints and refuses downgrade while inherited receipts remain. This storage
+contract does not enable a Process producer or grant a publication lease: the original
+parent, executor permissions, current Project lifetime, finite work and selected transaction
+fence are still required by the inherited adapter.
+
+The inherited Workbench task-plan codec now retains its explicit Process child/material
+binding, original source and executor ceilings, and child-specific finite write context.
+Children can share identical parent task bytes without sharing a caller or operation.
+Background session fields have an explicit strict wire; the existing typed Process-step
+converter is shared with definition proposals without changing their bytes. Interactive
+target interpretation remains separate. All 124 selected codec and existing saved-dispatch
+cases pass. Actual inherited authority, producer/publication, approval, historical receipt,
+manager and Workflow activation still require their runtime integration proofs.
+
+Current Process source checks now select the original launching Agent by exact ID from
+the already held primary/selected catalog. A distinct executor cannot replace a missing
+or revoked launcher. Original source read/write/tool and exact Project lifetime ceilings
+remain enforced, with no extra catalog acquisition or SQL query. All 23 selected Process
+and Workflow cases pass. The inherited publication adapter must separately enforce its
+executor ceiling, live work and selected transaction fence.
+
+Inherited task publication now retains one exact catalog snapshot for executor and
+original Process launcher through the existing publisher. Current source and executor
+permissions are separate, with a current-generation check after waits and the selected
+Process fence inside SQL. All 67 selected integration cases pass. Historical recovery must
+resolve the immutable accepted source separately from current dispatch; producer, approval,
+manager and atomic parent-outcome integration remain open. See the [validation record](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-task-publication-authority.md).
+
+Selected historical Process source reads now use the immutable accepted launch and exact
+retained child/material evidence. Assignment repair, expiry, closure or supersession does
+not erase the original fingerprint. The result always denies dispatch. Four indexed reads
+and107 distinct selected cases are validated; product schema 7 receipt integration remains
+next. See the [original-source record](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-original-source-history.md).
+
+The product historical reader now accepts validated inherited schema 7 task receipts through an explicit execution/content registration at Process Application. Original parent/source/material/grant checks and current disclosure fences retain authority; dispatch remains false. Actual registered-service proof passes 64 cases, including 20 new cases and all 28 publication regressions. Positive reads use 12 bounded Process queries, one receipt query and two or three catalog reads without workspace writes. [Validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-task-receipt-history.md) retains compilation, analyzer limitations and resource evidence. Initial inherited admission still needs explicit parent-aware source authorization before producer activation.
+
+Process root sequencing now reclaims semaphore entries when the last holder/waiter ends. A fixed set of 64 short registry mutexes preserves exact per-root exclusion without holding a mutex across asynchronous work; sorted multi-root acquisition and reverse release remain. Atomic disposal prevents double release. [Validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-root-sequence-registry.md) records 26 passing cases, retention/cost comparisons, the extra allocation trade-off for fully idle acquisitions and the blocked probe-output cleanup. Full workload capacity remains unqualified.
+
+Initial inherited admission now requires an explicit source-owner observation over the original bounded parent envelope. Existing ordinary source implementations refuse it by default. Core retains that parent through new and saved workspace paths, validates original input before binding, and constructs the inherited journal directly from its authorized session. The [247-case validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-initial-source.md) retains the rejected temporary-journal design and its complete repair. Product Process source interpretation must still enforce the exact accepted full policy and current authorization before producer activation.
+
+Registered Process source observation now supports explicit initial inherited admission and saved schema 7 through shared canonical binding interpretation. Live and historical observations require the complete original accepted parent policy; current generation/cancellation are fenced across awaits. The persistence query returns the policy without changing saved source bytes. Inherited ordinary reservation remains unsupported. The 153-case proof is retained; whole prepared-launch decode scaling must be qualified before producer activation.
+
+The accepted-source persistence checkpoint separates immutable original header/assignment evidence from current authorization. New acceptance captures version 1 atomically; retained version 0 uses the explicit legacy path. Missing/corrupt projected evidence refuses observation. The Agent query reads one selected assignment; Workflow and bounded legacy conversion remain pending. See the [candidate validation](../../../codex/bundles/concurrent-mutations/validation/2026-10-20-accepted-source-persistence.md) for 193 passing cases, migration/rollback proof and qualified SQL measurements. Selected source reads stay about 2.3 KB across 1024 steps and a 1 MiB prompt; acceptance still scales with plan size and sustained capacity remains open.

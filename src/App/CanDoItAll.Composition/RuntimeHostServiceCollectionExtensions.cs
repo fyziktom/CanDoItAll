@@ -126,15 +126,16 @@ public static class RuntimeHostServiceCollectionExtensions
             var receipts = provider.GetRequiredService<ProjectDefinitionReceiptReader>();
             var lifecycleReceipts = provider.GetRequiredService<ProjectLifecycleReceiptReader>();
             var planningReceipts = provider.GetRequiredService<ProjectTaskPlanReceiptReader>();
+            var selectedProcessContracts = provider.GetServices<ProcessDecisionExecutionRegistration>().ToArray();
             var lifecycleCodec = provider.GetRequiredService<IProjectLifecycleRecoveryCodec>();
             var createdTargets = provider.GetRequiredService<ProjectCreatedTargetProvenance>();
             return basis => {
                 var processRead = new ProjectProcessHistoricalReadAuthority(original, database, generations, basis, admissions, options, clock);
                 var definitions = new ProjectDefinitionHistoricalReceiptRecovery(basis, processRead, admissions, receipts, createdTargets);
                 return new AgentHistoricalReceiptReadParticipants(
-                    [new ProcessHistoricalReceiptSourcePolicy(original, database, generations, processRead)],
+                    [new ProcessHistoricalReceiptSourcePolicy(original, database, generations, processRead, selectedProcessContracts)],
                     [definitions, new ProjectLifecycleHistoricalReceiptRecovery(definitions, createdTargets, lifecycleReceipts, lifecycleCodec),
-                        new ProjectTaskPlanHistoricalReceiptRecovery(definitions, planningReceipts)]);
+                        new ProjectTaskPlanHistoricalReceiptRecovery(definitions, planningReceipts, processRead)]);
             };
         });
         services.TryAddScoped<Func<IAgentHistoricalReceiptReviewService>>(provider => () => provider.GetRequiredService<IAgentHistoricalReceiptReviewService>());

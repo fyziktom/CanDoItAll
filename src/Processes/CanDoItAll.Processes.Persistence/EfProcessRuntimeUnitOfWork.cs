@@ -339,6 +339,7 @@ public sealed class EfProcessRuntimeUnitOfWork(
         });
 
         if (preparedLaunch is not null) {
+            EfProcessAcceptedSource.Capture(dbContext, preparedLaunch);
             preparedLaunch.AcceptedAtUtc = ProcessPreparedLaunchCodec.NormalizeTimestamp(clock.GetUtcNow());
             preparedLaunch.Execute = request.InitialLaunchAdmission!.Execute;
             preparedLaunch.State = ProcessLaunchContinuationState.Accepted;

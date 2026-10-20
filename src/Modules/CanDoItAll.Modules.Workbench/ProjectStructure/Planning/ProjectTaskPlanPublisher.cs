@@ -55,6 +55,9 @@ internal sealed class ProjectTaskPlanPublisher {
         ArgumentNullException.ThrowIfNull(invocation.Authority);
         ArgumentNullException.ThrowIfNull(invocation.ReceiptAccess);
         var operation = command.Operation;
+        if (!invocation.Caller.MatchesSource(command.Source.Kind)) {
+            return new ProjectTaskPlanOutcome.Rejected(operation, ProjectTaskPlanRefusal.CallerChanged);
+        }
         string digest;
         try {
             digest = ProjectTaskPlanOperationCodec.Digest(command);

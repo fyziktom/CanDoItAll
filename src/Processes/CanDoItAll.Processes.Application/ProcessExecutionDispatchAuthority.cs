@@ -1,6 +1,7 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -20,7 +21,9 @@ public sealed record ProcessExecutionDispatchAuthority(
 
 public sealed record ProcessExecutionDispatchAuthorityResult(
     ProcessExecutionAuthorityDisposition Disposition,
-    ProcessExecutionDispatchAuthority? Snapshot = null);
+    ProcessExecutionDispatchAuthority? Snapshot = null) {
+    public DecisionDataPolicy? OriginalDecisionPolicy { get; init; }
+}
 
 public sealed record ProcessSourceAuthorityObservation(bool ReadAllowed, bool DispatchAllowed);
 

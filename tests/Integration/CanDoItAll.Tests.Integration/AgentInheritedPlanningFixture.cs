@@ -78,7 +78,8 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
                 ProcessRunId = Guid.NewGuid().ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D")
             };
             var factory = new AgentInheritedPlanningAdmission(new(files.NewStore(), files.Profile, clock, backgroundSources: [policy]));
-            var journal = await factory.CreateAsync(candidate, "Prepare a bounded task plan.", AgentPlanningOwner.ProjectTaskPlan, (binding, _) => {
+            var journal = await factory.CreateAsync(candidate, "Prepare a bounded task plan.", AgentPlanningOwner.ProjectTaskPlan,
+                policy.ParentBinding, (binding, _) => {
                 var draft = AgentInheritedPlanningTestData.Create(binding.Session, parentMode).PlanningDecision!;
                 return Task.FromResult(new AgentInheritedPlanningBinding(draft.OriginalTarget,
                     draft.InheritedOrigin! with { CapturedAtUtc = clock.Now - (basisAge ?? TimeSpan.FromMinutes(1)) }));
@@ -117,10 +118,17 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
 
     internal sealed class SourcePolicy(Guid agentId, AgentToolProfileBinding originalProfile) : IAgentToolBackgroundSourcePolicy {
         public string SourceKind => AgentInheritedPlanningTestData.SourceKind;
+        internal AgentToolProtocolEnvelope ParentBinding { get; } = AgentPlanningDecisionTestData.Envelope("{\"parent\":1}");
         internal string SourceId { get; } = Guid.NewGuid().ToString("N");
         internal bool ReadAllowed { get; set; } = true;
         internal bool DispatchAllowed { get; set; } = true;
         internal AgentToolSemanticDigest Fingerprint { get; set; } = AgentPlanningDecisionTestData.Envelope("{\"owner\":1}").Digest;
+
+        public ValueTask<AgentToolBackgroundSourceObservation> ObserveInitialInheritedAsync(ExecutionRunRecord candidate,
+            AgentToolProfileBinding profile, AgentToolProtocolEnvelope originalParent, CancellationToken cancellationToken = default) {
+            Assert.Equal(ParentBinding, originalParent);
+            return ObserveAsync(candidate, profile, cancellationToken);
+        }
 
         public ValueTask<AgentToolBackgroundSourceObservation> ObserveAsync(ExecutionRunRecord execution, AgentToolProfileBinding profile,
             CancellationToken cancellationToken = default) {

@@ -6,8 +6,8 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
-internal enum ProjectTaskPlanCallerKind { OrdinaryAgent = 1 }
-internal enum ProjectTaskPlanSourceKind { OrdinaryAgentDecision = 1 }
+internal enum ProjectTaskPlanCallerKind { OrdinaryAgent = 1, ProcessAgent = 2 }
+internal enum ProjectTaskPlanSourceKind { OrdinaryAgentDecision = 1, ProcessAgentDecision = 2 }
 internal enum ProjectTaskPlanRefusal {
     InvalidInput, DatasetChanged, CallerChanged, EpochUnavailable, BasisChanged, PolicyChanged,
     BudgetElapsed, AuthorityDenied, SourceChanged, TransactionConflict, Unavailable, IdentityConflict,
@@ -21,7 +21,7 @@ internal enum ProjectTaskPlanDetailFailure { AccessDenied, TargetUnavailable, Un
 
 internal sealed class ProjectTaskPlanCaller {
     internal ProjectTaskPlanCaller(ProjectTaskPlanCallerKind kind, ReadOnlySpan<byte> key) {
-        if (kind != ProjectTaskPlanCallerKind.OrdinaryAgent || key.Length != 32) {
+        if (kind is not (ProjectTaskPlanCallerKind.OrdinaryAgent or ProjectTaskPlanCallerKind.ProcessAgent) || key.Length != 32) {
             throw new ArgumentException("A task-plan caller requires a supported owner kind and a 32-byte trusted key.");
         }
         Kind = kind;
@@ -30,6 +30,10 @@ internal sealed class ProjectTaskPlanCaller {
 
     internal ProjectTaskPlanCallerKind Kind { get; }
     internal ImmutableArray<byte> Key { get; }
+    internal bool MatchesSource(ProjectTaskPlanSourceKind source) => (Kind, source) is
+        (ProjectTaskPlanCallerKind.OrdinaryAgent, ProjectTaskPlanSourceKind.OrdinaryAgentDecision) or
+        (ProjectTaskPlanCallerKind.ProcessAgent, ProjectTaskPlanSourceKind.ProcessAgentDecision);
+
     internal string Bind(DatasetNamespaceId datasetNamespace) {
         ArgumentNullException.ThrowIfNull(datasetNamespace);
         var domain = $"workbench:task-plan:caller:v1:{WorkbenchTaskPlanFiniteOperations.Pool.Value:N}:{WorkbenchTaskPlanFiniteOperations.Family.Value:N}:{datasetNamespace.Value:N}:{(int)Kind}:{Convert.ToHexStringLower(Key.AsSpan())}";
@@ -62,7 +66,7 @@ internal sealed record ProjectTaskPlanSource {
     public ProjectTaskPlanSource(Guid decisionId, long generation, DateTimeOffset decisionStartedAtUtc,
         ProjectTaskPlanSourceKind kind, int version, string fingerprint) {
         if (decisionId == Guid.Empty || generation < 1 || decisionStartedAtUtc == default || decisionStartedAtUtc.Offset != TimeSpan.Zero ||
-                kind != ProjectTaskPlanSourceKind.OrdinaryAgentDecision || !SupportsVersion(version) || !ProjectTaskPlanOperationRules.IsDigest(fingerprint)) {
+                !Supports(kind, version) || !ProjectTaskPlanOperationRules.IsDigest(fingerprint)) {
             throw new ArgumentException("A task-plan source requires the original supported decision occurrence and trusted fingerprint.");
         }
         DecisionId = decisionId;
@@ -81,6 +85,11 @@ internal sealed record ProjectTaskPlanSource {
     public string Fingerprint { get; }
 
     internal static bool SupportsVersion(int? version) => version is WallTimeVersion or ActiveWorkVersion;
+    private static bool Supports(ProjectTaskPlanSourceKind kind, int version) => kind switch {
+        ProjectTaskPlanSourceKind.OrdinaryAgentDecision => SupportsVersion(version),
+        ProjectTaskPlanSourceKind.ProcessAgentDecision => version == ActiveWorkVersion,
+        _ => false
+    };
 }
 
 internal sealed class ProjectTaskPlanCommand {

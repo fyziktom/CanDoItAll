@@ -16,27 +16,32 @@ internal static class ProjectTaskPlanOperationProtocol {
             row.CallerKey == key && row.OperationId == operation.Id, cancellationToken);
     }
 
-    internal static ProjectTaskPlanReceiptRecord CreateReceipt(ProjectTaskPlanAccepted accepted, ProjectTaskPlanCaller caller) => new() {
-        NamespaceId = accepted.Operation.Namespace.Value,
-        Epoch = accepted.Operation.Epoch,
-        CallerKind = (int)caller.Kind,
-        CallerKey = caller.Key.ToArray(),
-        OperationId = accepted.Operation.Id,
-        SchemaVersion = accepted.Source.Version,
-        NormalizationVersion = 1,
-        ResultVersion = accepted.Source.Version,
-        SemanticDigest = Convert.FromHexString(accepted.SemanticDigest),
-        ProjectId = accepted.OriginalDefinition.Project.ProjectId,
-        LifetimeId = accepted.OriginalDefinition.Project.LifetimeId,
-        OriginalDefinitionRevision = accepted.OriginalDefinition.Revision,
-        DecisionId = accepted.Source.DecisionId,
-        DecisionGeneration = accepted.Source.Generation,
-        SourceKind = (int)accepted.Source.Kind,
-        SourceVersion = accepted.Source.Version,
-        SourceFingerprint = Convert.FromHexString(accepted.Source.Fingerprint),
-        AcceptedAtUtc = accepted.AcceptedAtUtc,
-        AcceptedPayload = ProjectTaskPlanOperationCodec.EncodeAccepted(accepted)
-    };
+    internal static ProjectTaskPlanReceiptRecord CreateReceipt(ProjectTaskPlanAccepted accepted, ProjectTaskPlanCaller caller) {
+        if (!caller.MatchesSource(accepted.Source.Kind)) {
+            throw new ArgumentException("The task-plan receipt caller differs from its original source kind.", nameof(caller));
+        }
+        return new() {
+            NamespaceId = accepted.Operation.Namespace.Value,
+            Epoch = accepted.Operation.Epoch,
+            CallerKind = (int)caller.Kind,
+            CallerKey = caller.Key.ToArray(),
+            OperationId = accepted.Operation.Id,
+            SchemaVersion = accepted.Source.Version,
+            NormalizationVersion = 1,
+            ResultVersion = accepted.Source.Version,
+            SemanticDigest = Convert.FromHexString(accepted.SemanticDigest),
+            ProjectId = accepted.OriginalDefinition.Project.ProjectId,
+            LifetimeId = accepted.OriginalDefinition.Project.LifetimeId,
+            OriginalDefinitionRevision = accepted.OriginalDefinition.Revision,
+            DecisionId = accepted.Source.DecisionId,
+            DecisionGeneration = accepted.Source.Generation,
+            SourceKind = (int)accepted.Source.Kind,
+            SourceVersion = accepted.Source.Version,
+            SourceFingerprint = Convert.FromHexString(accepted.Source.Fingerprint),
+            AcceptedAtUtc = accepted.AcceptedAtUtc,
+            AcceptedPayload = ProjectTaskPlanOperationCodec.EncodeAccepted(accepted)
+        };
+    }
 
     internal static ProjectTaskPlanAccepted Decode(ProjectTaskPlanReceiptRecord receipt, ProjectTaskPlanOperation operation,
         ProjectTaskPlanCaller caller, DateTimeOffset replayUntilUtc) {
@@ -44,7 +49,8 @@ internal static class ProjectTaskPlanOperationProtocol {
             throw new ProjectTaskPlanReceiptDecodeException();
         }
         var accepted = ProjectTaskPlanOperationCodec.DecodeAccepted(receipt.AcceptedPayload);
-        if (accepted.Operation != operation || receipt.NamespaceId != operation.Namespace.Value || receipt.Epoch != operation.Epoch ||
+        if (!caller.MatchesSource(accepted.Source.Kind) || accepted.Operation != operation ||
+                receipt.NamespaceId != operation.Namespace.Value || receipt.Epoch != operation.Epoch ||
                 receipt.OperationId != operation.Id || receipt.CallerKind != (int)caller.Kind ||
                 !receipt.CallerKey.AsSpan().SequenceEqual(caller.Key.AsSpan()) ||
                 accepted.SemanticDigest != Convert.ToHexStringLower(receipt.SemanticDigest) ||

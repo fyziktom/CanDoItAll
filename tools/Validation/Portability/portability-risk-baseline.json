@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-20T06:35:52.847774+00:00",
+  "generated_utc": "2026-10-20T13:37:04.385596+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15642,
+  "allowance_count": 15651,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -13787,6 +13787,54 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261019230204_AddProcessSharedRunMaterialScopes.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "ef3169ce3c4dc074a7e6de10ce653b79b2b766a0ef8a0b32e76d8fc0cbede137",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020071655_AddInheritedTaskPlanReceiptIdentity.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "acd45fbc0c4580c071c0bd7eca5e5ee63140b8d8a499328d74e63fb73462514f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020071655_AddInheritedTaskPlanReceiptIdentity.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "f4788f4ddded16ee08e508722d3819970660429095027000350bd03758acff24",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020071655_AddInheritedTaskPlanReceiptIdentity.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "907f194bcf53f9280111bbd5fce30694c49ab487fdbca97db1139a05f3ca34eb",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020071655_AddInheritedTaskPlanReceiptIdentity.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "bd181729269cec015519df4edef45adddc82bd3803162ef52b1297424d8d34e3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020131404_AddAcceptedProcessSourceProjection.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "c1ed8da77201c5a42838e6eaedcce53898f707eaa4632cedf48d9a67eb832b92",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020131404_AddAcceptedProcessSourceProjection.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "cea602c49478a140fb69a328c9c202001146d56e8073b3d9191dd54549b38b87",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020131404_AddAcceptedProcessSourceProjection.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6786ad9bedd67d902c39e3e34ccf84c92d250ae3914126bf8637e64b9e4d786b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261020131404_AddAcceptedProcessSourceProjection.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "c29aeb5f7bfa0ab0ecd6ea9871ca2edcb6426a0ceb651b29a0d1632c70fe611e",
       "count": 1
     },
     {
@@ -59699,6 +59747,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureToolPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "f0b27b6227ff28849923ad5c759cebd4daece3d8963df2fe73955290c424906d",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectTaskPlanProcessCodec.cs",
+      "category": "case-policy",
+      "source_fingerprint": "42f97ae4c532222ef78a674caa1828842461d1e5eda73976eba13afd20b59946",
       "count": 1
     },
     {

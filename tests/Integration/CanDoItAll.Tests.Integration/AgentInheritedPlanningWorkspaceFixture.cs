@@ -28,7 +28,7 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         };
         Request = new(Guid.NewGuid(), source.AgentId, "Prepare the original inherited plan.", AgentExecutionOperationId.New(), context,
             AgentPlanningOwner.ProjectTaskPlan, WorkspaceScopeDescriptor.Project(entry.Files.Sql.Project.ProjectId.ToString("D")),
-            RequireParentAsync, BindAsync);
+            source.ParentBinding, RequireParentAsync, BindAsync);
     }
 
     internal AgentToolProfileBinding Profile { get; }
@@ -71,7 +71,8 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         var journal = new AgentToolAdmissionJournal(Files.Store, Profile, backgroundSources: [source]);
         return (await new AgentInheritedPlanningRunAdmission(Files.Store, Files.Store, journal).AdmitAsync(Request.ExecutionRunId,
             Request.RequireOriginalParent, _ => Task.FromResult(new AgentInheritedPlanningRunPreparation(candidate,
-                Request.OriginalInput, Request.Owner, runtime.CaptureRuntimeContract(agent, provider, Participant), Request.ContextScope, BindAsync)))).Run;
+                Request.OriginalInput, Request.Owner, runtime.CaptureRuntimeContract(agent, provider, Participant), Request.ContextScope,
+                Request.ParentBinding, BindAsync)))).Run;
     }
 
     private Task RequireParentAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
@@ -99,10 +100,16 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
 
     private sealed class SourcePolicy : IAgentToolBackgroundSourcePolicy {
         public string SourceKind => AgentInheritedPlanningTestData.SourceKind;
+        internal AgentToolProtocolEnvelope ParentBinding { get; } = AgentPlanningDecisionTestData.Envelope("{\"parent\":1}");
         internal string SourceId { get; } = Guid.NewGuid().ToString("N");
         internal Guid AgentId { get; set; }
         internal AgentToolProfileBinding? Profile { get; set; }
         internal bool ReadAllowed { get; set; } = true;
+        public ValueTask<AgentToolBackgroundSourceObservation> ObserveInitialInheritedAsync(ExecutionRunRecord candidate,
+            AgentToolProfileBinding profile, AgentToolProtocolEnvelope originalParent, CancellationToken cancellationToken = default) {
+            Assert.Equal(ParentBinding, originalParent);
+            return ObserveAsync(candidate, profile, cancellationToken);
+        }
         public ValueTask<AgentToolBackgroundSourceObservation> ObserveAsync(ExecutionRunRecord execution, AgentToolProfileBinding profile,
             CancellationToken cancellationToken = default) {
             cancellationToken.ThrowIfCancellationRequested();

@@ -106,6 +106,37 @@ public sealed class ProjectProcessHistoricalReadAuthority(
         return new(dispatch, access.ReadAllowed, CanWrite: false);
     }
 
+    internal async Task<bool> CanReadTaskPlanAsync(ProjectTaskPlanProcessCommand original,
+        AgentToolHistoricalReceiptReadClaim claim, CancellationToken cancellationToken) {
+        var admitted = await claim.RequireAsync(cancellationToken);
+        var source = original.Target.Source;
+        if (admitted.Planning?.Decision.InheritedOrigin is not { } origin || admitted.OriginalSession != original.Target.Session ||
+            source.Evidence.ExecutionCreatedAtUtc != admitted.Request.ExecutionCreatedAtUtc ||
+            source.Evidence.ExecutionRunId != admitted.Request.ExecutionRunId || source.Evidence.ExecutorAgentId != admitted.Request.AgentId ||
+            original.Target.Project.DatabaseProfileId != admitted.CurrentFence.Profile.ProfileId) {
+            throw new AgentToolReceiptAccessDeniedException();
+        }
+        var parent = ProjectTaskPlanProcessCodec.Parent(origin);
+        var result = await reader.ObserveOriginalDecisionForReceiptReadAsync(source.Evidence, parent,
+            ProjectTaskPlanProcessContract.Execution, ProjectTaskPlanProcessContract.Content, cancellationToken);
+        if (result.Snapshot is not { ObservedCurrentDispatch: false, SourceAuthority: { } authority } observed ||
+            observed.Evidence != source.Evidence || observed.OwnerFingerprint != source.OwnerFingerprint ||
+            observed.ProjectReference != source.ProjectReference || observed.RootRunId != source.RootRunId ||
+            authority.DatabaseProfileId != admitted.CurrentFence.Profile.ProfileId) {
+            return false;
+        }
+        var current = admitted.CurrentFence.Profile;
+        var access = await ObserveHistoricalReadAsync(authority,
+            new(current.ProfileId, current.Fingerprint, current.Generation.Value), cancellationToken);
+        if (!access.ReadAllowed || !ProjectDefinitionGovernedReadPolicy.ProcessCanRead(new(source),
+                new(observed, true, false), original.Target.Project)) {
+            return false;
+        }
+        var matches = await projectAdmissions.CaptureAsync(original.Target.Project.ProjectId, cancellationToken) == original.Target.Project;
+        await claim.RequireAsync(cancellationToken);
+        return matches;
+    }
+
     private void RequireOperator(ProcessLaunchAuthority authority) {
         var options = apiOptions.CurrentValue;
         var surface = ProjectProcessReadAuthorityPolicy.OperatorSurface(authority);

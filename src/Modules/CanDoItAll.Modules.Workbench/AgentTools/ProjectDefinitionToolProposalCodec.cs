@@ -47,7 +47,7 @@ internal static class ProjectDefinitionToolProposalCodec {
     internal static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web) {
         MaxDepth = 32,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        Converters = { new JsonStringEnumConverter(), new ProcessStepInstanceIdConverter() }
+        Converters = { new JsonStringEnumConverter(), new ProjectProcessStepInstanceIdJsonConverter() }
     };
 
     internal static bool Supports(string tool) => tool is ProjectStructureToolPolicy.ProjectStructureProjectCreate or
@@ -181,21 +181,6 @@ internal static class ProjectDefinitionToolProposalCodec {
         if (value.Length > maximum || Utf8.GetByteCount(value) > maximum) {
             throw Denied("The definition proposal or original source exceeds its supported byte bound.");
         }
-    }
-
-    private sealed record ProcessStepIdentity(Guid Value);
-
-    private sealed class ProcessStepInstanceIdConverter : JsonConverter<ProcessStepInstanceId> {
-        public override ProcessStepInstanceId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
-            var identity = JsonSerializer.Deserialize<ProcessStepIdentity>(ref reader, options);
-            if (identity is null || identity.Value == Guid.Empty) {
-                throw new JsonException("The saved Process step instance identifier is missing or empty.");
-            }
-            return new(identity.Value);
-        }
-
-        public override void Write(Utf8JsonWriter writer, ProcessStepInstanceId value, JsonSerializerOptions options)
-            => JsonSerializer.Serialize(writer, new ProcessStepIdentity(value.Value), options);
     }
 
     internal static AgentToolAdmissionException Denied(string message) => new("projects.definition-tool-admission-denied", message);

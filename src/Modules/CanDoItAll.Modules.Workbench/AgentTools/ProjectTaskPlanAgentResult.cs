@@ -32,9 +32,12 @@ internal sealed record ProjectTaskPlanAgentResult(ProjectTaskPlanAgentResultKind
     [JsonIgnore]
     public AgentToolProtocolEnvelope OwnerResult => ProjectTaskPlanAgentCodec.Write(ProjectTaskPlanAgentCodec.ResultFormat, this, 65_536);
 
-    internal static AgentToolReceiptObservation Receipt(ProjectTaskPlanAgentCommand original, ProjectTaskPlanAccepted accepted) {
-        if (accepted.Operation != original.Command.Operation || accepted.Source != original.Command.Source ||
-            accepted.SemanticDigest != ProjectTaskPlanOperationCodec.Digest(original.Command)) {
+    internal static AgentToolReceiptObservation Receipt(ProjectTaskPlanAgentCommand original, ProjectTaskPlanAccepted accepted)
+        => Receipt(original.Command, accepted);
+
+    internal static AgentToolReceiptObservation Receipt(ProjectTaskPlanCommand original, ProjectTaskPlanAccepted accepted) {
+        if (accepted.Operation != original.Operation || accepted.Source != original.Source ||
+            accepted.SemanticDigest != ProjectTaskPlanOperationCodec.Digest(original)) {
             throw new InvalidDataException("The owner receipt differs from the original planning publication.");
         }
         return new(new(ProjectTaskPlanAgentCodec.EffectSourceKind, accepted.Operation.Id.ToString("D")),
@@ -45,15 +48,19 @@ internal sealed record ProjectTaskPlanAgentResult(ProjectTaskPlanAgentResultKind
         AgentToolPreparedPayload payload, AgentSavedEffectDispatchResult response) {
         var planning = original.Planning ?? throw ProjectTaskPlanAgentCodec.Denied("The original planning observation is missing.");
         var command = ProjectTaskPlanAgentCodec.Resolve(planning, original.Session, payload, response.Binding);
+        return Classify(command.Command, response);
+    }
+
+    internal static AgentPlanningPublicationAssessment Classify(ProjectTaskPlanCommand command, AgentSavedEffectDispatchResult response) {
         var result = ProjectTaskPlanAgentCodec.Read<ProjectTaskPlanAgentResult>(
             response.OwnerResult ?? throw ProjectTaskPlanAgentCodec.Denied("The saved publication has no acknowledged owner result."),
             ProjectTaskPlanAgentCodec.ResultFormat, 65_536);
-        if (result.OperationId != command.Command.Operation.Id || result.TaskIds.IsDefault ||
+        if (result.OperationId != command.Operation.Id || result.TaskIds.IsDefault ||
             result.TaskIds.Any(id => id == Guid.Empty) || result.TaskIds.Distinct().Count() != result.TaskIds.Length) {
             throw ProjectTaskPlanAgentCodec.Denied("The saved outcome does not identify the original task-plan operation.");
         }
         if (result.Kind == ProjectTaskPlanAgentResultKind.Published && response.EffectState == AgentToolEffectState.Committed &&
-            result.Refusal is null && result.TaskIds.Length == command.Command.Proposal.Tasks.Count) {
+            result.Refusal is null && result.TaskIds.Length == command.Proposal.Tasks.Count) {
             return new(AgentPlanningPublicationOutcome.Committed, result.CleanupIncomplete
                 ? "The original task plan was published; owner cleanup still needs attention." : result.SafeMessage);
         }

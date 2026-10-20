@@ -8,6 +8,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Application;
@@ -118,9 +119,10 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var fixture = await Fixture.CreateAsync(scope.ServiceProvider);
         var saved = await fixture.PrepareAsync();
+        var originalDelete = await new ProjectLifecycleTestDriver(scope.ServiceProvider).CaptureDeleteAsync(fixture.Project.ProjectId);
         await using var held = await fixture.Authority.AcquireAsync(fixture.SavedAuthority, fixture.SavedAuthority);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var deletion = scope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(fixture.Project.ProjectId, timeout.Token);
+        var deletion = scope.ServiceProvider.GetRequiredService<ProjectNativeLifecycleOperations>().DispatchAsync(originalDelete, timeout.Token);
         await using (var projects = new ProjectsDbContext(fixture.ProjectOptions)) {
             while (!await projects.Set<ProjectRetirementRecord>().AsNoTracking()
                 .AnyAsync(item => item.ProjectId == fixture.Project.ProjectId && item.LifetimeId == fixture.Project.LifetimeId, timeout.Token)) {
@@ -131,9 +133,10 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         await using var context = fixture.Context();
         await Assert.ThrowsAsync<ProjectWriteAdmissionRejectedException>(() => fixture.UnitOfWork(context, new HeldPolicy(held))
             .CommitAsync(ProcessPreparedLaunchFixture.Commit(saved), timeout.Token));
-        var deleted = await deletion.WaitAsync(timeout.Token);
-        Assert.Equal(fixture.Project.ProjectId, deleted.ProjectId);
-        Assert.Empty(deleted.Warnings);
+        var deleted = Assert.IsType<ProjectLifecycleOutcome.Accepted>(await deletion.WaitAsync(timeout.Token));
+        var acknowledged = Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(deleted.Result.Acknowledgement);
+        Assert.Equal(fixture.Project.ProjectId, acknowledged.Completion.Original.Project.ProjectId);
+        Assert.Null(deleted.CompletionIssue);
         await AssertNoInitialRowsAsync(context, saved);
         Assert.Null((await fixture.Store.GetAsync(saved.Preparation.AdmissionId))!.AcceptedAtUtc);
         await using var after = await fixture.Writer.AcquireAgentReadLeaseAsync(fixture.Agent.Id, timeout.Token);

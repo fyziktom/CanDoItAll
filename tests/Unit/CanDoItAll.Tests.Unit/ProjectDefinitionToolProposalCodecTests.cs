@@ -21,6 +21,21 @@ public sealed class ProjectDefinitionToolProposalCodecTests {
     private static readonly ProjectWriteAdmission Parent = new(Profile, Guid.Parse("77777777-7777-7777-7777-777777777777"), Guid.Parse("88888888-8888-8888-8888-888888888888"));
     private static readonly AgentToolBusinessIntentId Intent = new(Guid.Parse("99999999-9999-9999-9999-999999999999"));
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Shared_Process_step_converter_preserves_existing_bytes_and_rejects_missing_identity(bool taskPlan) {
+        var options = taskPlan ? ProjectTaskPlanAgentCodec.Json : ProjectDefinitionToolProposalCodec.Json;
+        var expected = """{"value":"01234567-89ab-cdef-0123-456789abcdef"}""";
+        ProcessStepInstanceId step = new(new Guid("01234567-89ab-cdef-0123-456789abcdef"));
+        Assert.Equal(expected, JsonSerializer.Serialize(step, options));
+        Assert.Equal(step, JsonSerializer.Deserialize<ProcessStepInstanceId>(expected, options));
+        foreach (var invalid in new[] { "{}", "null", "{\"value\":\"00000000-0000-0000-0000-000000000000\"}",
+                "{\"value\":\"01234567-89ab-cdef-0123-456789abcdef\",\"replacement\":true}" }) {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ProcessStepInstanceId>(invalid, options));
+        }
+    }
+
     [Fact]
     public void Scalar_preparation_preserves_original_expectation_raw_values_and_epoch() {
         var original = Source();

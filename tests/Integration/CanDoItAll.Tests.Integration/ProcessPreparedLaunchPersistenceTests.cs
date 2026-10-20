@@ -98,6 +98,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         var profile = environment.CreatePostgreSqlProfile("prepared-ack");
         var harness = Harness(environment, profile);
         ProcessPreparedLaunchSnapshot saved;
+        string[] acceptedSource;
         var failure = new ArgumentException("Injected accepted Process acknowledgement loss.");
         await using (var app = await TestApplication.CreateAsync(harness)) {
             var services = app.Services;
@@ -112,6 +113,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
             Assert.Equal(ProcessLaunchContinuationState.Accepted, result.Observation!.ContinuationState);
             Assert.Same(failure, result.Observation.ObservationException);
             Assert.False(policy.Held);
+            acceptedSource = await AcceptedSourceRowsAsync(context, saved.Preparation.AdmissionId.Value);
         }
         await using var restarted = await TestApplication.CreateAsync(harness);
         var retained = Assert.IsType<ProcessPreparedLaunchSnapshot>(await Store(restarted.Services).GetAsync(saved.Preparation.AdmissionId));
@@ -123,6 +125,7 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(saved.Preparation.InitialCommit.Mutation.Outcome, replay.Outcome);
         Assert.Equal(saved.Preparation.InitialCommit.Mutation.State.RunId, replay.State.RunId);
         await AssertInitialRowsAsync(current, saved.Preparation.InitialCommit, 1);
+        Assert.Equal(acceptedSource, await AcceptedSourceRowsAsync(current, saved.Preparation.AdmissionId.Value));
         Assert.True((await ordinary.CommitAsync(ProcessProjectAdmissionFixture.Cancel(replay.State))).Succeeded);
         Assert.Equal(saved.Preparation.AdmissionId, (await ordinary.LoadAsync(replay.State.RunId))!.LaunchAdmissionId);
     }
@@ -562,7 +565,25 @@ public sealed partial class ProcessPreparedLaunchPersistenceTests {
         Assert.Equal(expected, await context.OutboxMessages.CountAsync(item => item.EventId == eventId));
         Assert.Equal(expected, await context.ArtifactLedgerEvents.CountAsync(item => item.EventId == eventId));
         Assert.Equal(expected, await context.IdempotencyKeys.CountAsync(item => item.RunId == runId));
+        var launch = await context.PreparedLaunches.AsNoTracking().SingleAsync(item => item.RunId == runId);
+        Assert.Equal(expected, await context.AcceptedAssignmentSources.CountAsync(item => item.AdmissionId == launch.Id));
+        Assert.Equal(expected == 0 ? ProcessAcceptedSourceVersion.LegacyPreparedLaunch : ProcessAcceptedSourceVersion.OriginalProjection,
+            launch.AcceptedSourceVersion);
+        if (expected == 0) {
+            Assert.Null(launch.AcceptedSourceHeaderJson);
+            Assert.Null(launch.AcceptedSourceHeaderFingerprint);
+        } else {
+            Assert.NotNull(launch.AcceptedSourceHeaderJson);
+            Assert.NotNull(launch.AcceptedSourceHeaderFingerprint);
+        }
     }
+    private static Task<string[]> AcceptedSourceRowsAsync(ProcessPersistenceDbContext context, Guid admissionId)
+        => context.Database.SqlQuery<string>($"""
+            SELECT "AcceptedSourceVersion"::text || ':' || "AcceptedSourceHeaderJson" || ':' || "AcceptedSourceHeaderFingerprint" AS "Value"
+            FROM process_prepared_launches WHERE "Id" = {admissionId}
+            UNION ALL SELECT to_jsonb(s)::text FROM process_accepted_assignment_sources s WHERE s."AdmissionId" = {admissionId}
+            ORDER BY "Value"
+            """).ToArrayAsync();
     private sealed class ProcessFactory(DbContextOptions<ProcessPersistenceDbContext> options) : IDbContextFactory<ProcessPersistenceDbContext> {
         public ProcessPersistenceDbContext CreateDbContext() => new(options);
     }

@@ -1,0 +1,917 @@
+{
+  "candidate": "c4-selected-process-source-authority",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T08:19:01.9106345+00:00",
+      "State": "Completed",
+      "RunnerPid": 12488,
+      "ChildPid": 59684,
+      "ChildStartedUtc": "2026-10-20T08:19:01.9145703Z",
+      "ExitCode": 0,
+      "Seconds": 62.5340457,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 346277,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-workbench-final",
+      "Arguments": [
+        "build",
+        "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T08:18:32.8857184+00:00",
+      "State": "Completed",
+      "RunnerPid": 12488,
+      "ChildPid": 59096,
+      "ChildStartedUtc": "2026-10-20T08:18:32.9190400Z",
+      "ExitCode": 0,
+      "Seconds": 28.9770014,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 99449,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T08:20:43.9757390+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 48284,
+      "ChildStartedUtc": "2026-10-20T08:20:43.9789453Z",
+      "ExitCode": 0,
+      "Seconds": 0.1219612,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 1686,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-final-reviewed-selected-source-authority",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~Held_source_|FullyQualifiedName~Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor|FullyQualifiedName~Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes|FullyQualifiedName~Actual_flush_failure_rolls_back_the_admission_and_releases_catalog_lock_without_replacing_exception|FullyQualifiedName~Lost_commit_ack_then_revocation_preserves_exact_accepted_replay_and_denies_a_new_intent|FullyQualifiedName~Registered_process_definition_tool_replays_original_receipt_after_dispatch_expiry_but_cannot_dispatch_a_fresh_effect|FullyQualifiedName~Workflow_tool_source_and_executor_catalog_revocations_block_new_admission|FullyQualifiedName~Workflow_tool_uses_real_background_proposals_and_keeps_source_executor_and_two_child_identities_distinct|FullyQualifiedName~Mapped_workflow_original_source_revocation_blocks_new_owner_admission|FullyQualifiedName~Mapped_workflow_actual_executor_admits_one_outcome_only_child_and_new_claim_observes_it_after_restart"
+      ],
+      "StartedUtc": "2026-10-20T08:21:41.1446899+00:00",
+      "State": "Completed",
+      "RunnerPid": 39792,
+      "ChildPid": 51772,
+      "ChildStartedUtc": "2026-10-20T08:21:41.1789789Z",
+      "ExitCode": 0,
+      "Seconds": 2.1333426,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4367,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-selected-source-authority",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~Held_source_|FullyQualifiedName~Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor|FullyQualifiedName~Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes|FullyQualifiedName~Actual_flush_failure_rolls_back_the_admission_and_releases_catalog_lock_without_replacing_exception|FullyQualifiedName~Lost_commit_ack_then_revocation_preserves_exact_accepted_replay_and_denies_a_new_intent|FullyQualifiedName~Registered_process_definition_tool_replays_original_receipt_after_dispatch_expiry_but_cannot_dispatch_a_fresh_effect|FullyQualifiedName~Workflow_tool_source_and_executor_catalog_revocations_block_new_admission|FullyQualifiedName~Workflow_tool_uses_real_background_proposals_and_keeps_source_executor_and_two_child_identities_distinct|FullyQualifiedName~Mapped_workflow_original_source_revocation_blocks_new_owner_admission|FullyQualifiedName~Mapped_workflow_actual_executor_admits_one_outcome_only_child_and_new_claim_observes_it_after_restart"
+      ],
+      "StartedUtc": "2026-10-20T08:20:49.5824177+00:00",
+      "State": "Completed",
+      "RunnerPid": 55744,
+      "ChildPid": 57272,
+      "ChildStartedUtc": "2026-10-20T08:20:49.6220288Z",
+      "ExitCode": 0,
+      "Seconds": 2.1940545,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4367,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T08:20:38.7222591+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 46616,
+      "ChildStartedUtc": "2026-10-20T08:20:38.7242615Z",
+      "ExitCode": 0,
+      "Seconds": 5.2431236,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-selected-source-authority",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~Held_source_|FullyQualifiedName~Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor|FullyQualifiedName~Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes|FullyQualifiedName~Actual_flush_failure_rolls_back_the_admission_and_releases_catalog_lock_without_replacing_exception|FullyQualifiedName~Lost_commit_ack_then_revocation_preserves_exact_accepted_replay_and_denies_a_new_intent|FullyQualifiedName~Registered_process_definition_tool_replays_original_receipt_after_dispatch_expiry_but_cannot_dispatch_a_fresh_effect|FullyQualifiedName~Workflow_tool_source_and_executor_catalog_revocations_block_new_admission|FullyQualifiedName~Workflow_tool_uses_real_background_proposals_and_keeps_source_executor_and_two_child_identities_distinct|FullyQualifiedName~Mapped_workflow_original_source_revocation_blocks_new_owner_admission|FullyQualifiedName~Mapped_workflow_actual_executor_admits_one_outcome_only_child_and_new_claim_observes_it_after_restart",
+        "--logger",
+        "trx;LogFileName=selected-source-authority.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-selected-process-source-authority"
+      ],
+      "StartedUtc": "2026-10-20T08:22:32.8215292+00:00",
+      "State": "Completed",
+      "RunnerPid": 3548,
+      "ChildPid": 21512,
+      "ChildStartedUtc": "2026-10-20T08:22:32.8539212Z",
+      "ExitCode": 1,
+      "Seconds": 138.7133243,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 9335,
+      "StderrRetainedBytes": 253,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-process-source-authority/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T08:22:17.3407652+00:00",
+      "State": "Completed",
+      "RunnerPid": 54996,
+      "ChildPid": 60380,
+      "ChildStartedUtc": "2026-10-20T08:22:17.3599072Z",
+      "ExitCode": 0,
+      "Seconds": 154.3653519,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T08:18:59.2900824+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 57192,
+      "ChildStartedUtc": "2026-10-20T08:18:59.3186629Z",
+      "ExitCode": 0,
+      "Seconds": 0.129071,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-selected-process-source-authority/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T08:20:38.2503361+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 50268,
+      "ChildStartedUtc": "2026-10-20T08:20:38.2524424Z",
+      "ExitCode": 0,
+      "Seconds": 0.4599194,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-selected-process-source-authority/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T08:19:02.5496500+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 46472,
+      "ChildStartedUtc": "2026-10-20T08:19:02.5529212Z",
+      "ExitCode": 0,
+      "Seconds": 95.6868683,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 460,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T08:18:59.4694211+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 26668,
+      "ChildStartedUtc": "2026-10-20T08:18:59.4729541Z",
+      "ExitCode": 0,
+      "Seconds": 0.4422997,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T08:19:00.0486213+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 56784,
+      "ChildStartedUtc": "2026-10-20T08:19:00.0510741Z",
+      "ExitCode": 0,
+      "Seconds": 2.4833364,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T08:18:59.9257031+00:00",
+      "State": "Completed",
+      "RunnerPid": 53688,
+      "ChildPid": 18420,
+      "ChildStartedUtc": "2026-10-20T08:18:59.9281402Z",
+      "ExitCode": 0,
+      "Seconds": 0.1101772,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "1c939875-5485-4f69-a207-01136833f782",
+      "testId": "d1ab513d-fc92-f3a9-90ad-67bb53f8ab1e",
+      "testName": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectLifecycleOperationTests.Governed_lifecycle_checks_held_source_at_commit_and_fresh_authority_only_after_release",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.0214570",
+      "startTime": "2026-10-20T04:24:47.3621519-04:00",
+      "endTime": "2026-10-20T04:24:51.3812616-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1c939875-5485-4f69-a207-01136833f782",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "49e10e8d-e422-4348-bdfc-e04631947662",
+      "testId": "925ba68e-ffbe-6f19-a617-d5213f0e3671",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Mapped_workflow_original_source_revocation_blocks_new_owner_admission(revocation: Write)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.6693322",
+      "startTime": "2026-10-20T04:24:24.0455993-04:00",
+      "endTime": "2026-10-20T04:24:28.7146964-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "49e10e8d-e422-4348-bdfc-e04631947662",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "fc09cd72-fe80-4b7e-85ea-229948e553ee",
+      "testId": "b4831c66-38a7-5512-a90a-729400bfd4ac",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes(revocation: Read)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.5820138",
+      "startTime": "2026-10-20T04:22:49.6734183-04:00",
+      "endTime": "2026-10-20T04:22:56.2430487-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fc09cd72-fe80-4b7e-85ea-229948e553ee",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "d8f16c3f-742b-474d-acc7-99745ca0d2a7",
+      "testId": "a3e41ab4-8a11-241b-167f-356ff0a5401d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Workflow_tool_source_and_executor_catalog_revocations_block_new_admission(executor: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.8990190",
+      "startTime": "2026-10-20T04:23:34.5614820-04:00",
+      "endTime": "2026-10-20T04:23:41.4602189-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d8f16c3f-742b-474d-acc7-99745ca0d2a7",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "d7c7401a-1a8d-4159-b3d3-33c7bf71c9a9",
+      "testId": "2501a4a5-1cfb-e318-f7a6-f8b5bd3b6f0d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_revocation_cannot_borrow_a_different_primary_executors_grants(revocation: ExactLifetime)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9623330",
+      "startTime": "2026-10-20T04:23:05.9109179-04:00",
+      "endTime": "2026-10-20T04:23:10.8726274-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d7c7401a-1a8d-4159-b3d3-33c7bf71c9a9",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "a4c74cd8-17d3-4579-bf46-1a2df02d2edd",
+      "testId": "7d41079b-4995-6ae6-ada9-a4f23ad0f7c7",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Actual_flush_failure_rolls_back_the_admission_and_releases_catalog_lock_without_replacing_exception",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.6538437",
+      "startTime": "2026-10-20T04:24:33.7692322-04:00",
+      "endTime": "2026-10-20T04:24:38.4229946-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a4c74cd8-17d3-4579-bf46-1a2df02d2edd",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "703e9b4c-783a-48f5-8db1-df5d2203b1b1",
+      "testId": "9f124f24-c436-8af0-d9f5-797a312b3977",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Source_Agent_authority_is_held_through_actual_Process_commit_and_is_distinct_from_assigned_executor",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.8551770",
+      "startTime": "2026-10-20T04:23:55.9263620-04:00",
+      "endTime": "2026-10-20T04:24:00.7811365-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "703e9b4c-783a-48f5-8db1-df5d2203b1b1",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "303dc9b9-fb12-4497-bd7f-46c8e8d10603",
+      "testId": "03d97f26-2c8c-8e1d-a948-fd397a36c06b",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_revocation_cannot_borrow_a_different_primary_executors_grants(revocation: Write)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.1956287",
+      "startTime": "2026-10-20T04:23:10.8731712-04:00",
+      "endTime": "2026-10-20T04:23:16.0685792-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "303dc9b9-fb12-4497-bd7f-46c8e8d10603",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "4ff7556b-de7f-4fa2-9ca4-2874d3e34fe5",
+      "testId": "9fef08d6-8854-a0a8-00c1-1e4392a76e22",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes(revocation: ExactLifetime)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7379644",
+      "startTime": "2026-10-20T04:22:56.2446862-04:00",
+      "endTime": "2026-10-20T04:23:00.9811907-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4ff7556b-de7f-4fa2-9ca4-2874d3e34fe5",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "3d8d98f3-846b-4d9b-986b-d774ac5f4320",
+      "testId": "d67989fd-cca9-3027-fa8c-6861e031133e",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Lost_commit_ack_then_revocation_preserves_exact_accepted_replay_and_denies_a_new_intent",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4852707",
+      "startTime": "2026-10-20T04:23:41.4611971-04:00",
+      "endTime": "2026-10-20T04:23:45.9457753-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3d8d98f3-846b-4d9b-986b-d774ac5f4320",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "9288061e-189a-4849-87b3-936d96653815",
+      "testId": "ad9ac3d3-5eb0-81ba-04c8-96605224d5ad",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_revocation_cannot_borrow_a_different_primary_executors_grants(revocation: Tools)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0305783",
+      "startTime": "2026-10-20T04:23:16.0691962-04:00",
+      "endTime": "2026-10-20T04:23:21.0994552-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9288061e-189a-4849-87b3-936d96653815",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "ac2e1d5c-1244-4e65-a1bd-29a8d155165d",
+      "testId": "8336cbb7-2519-14b2-b8e6-355afa9f959b",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Mapped_workflow_actual_executor_admits_one_outcome_only_child_and_new_claim_observes_it_after_restart",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0537992",
+      "startTime": "2026-10-20T04:24:28.7151201-04:00",
+      "endTime": "2026-10-20T04:24:33.7688162-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ac2e1d5c-1244-4e65-a1bd-29a8d155165d",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "777be5b4-6c5d-40ef-9b42-7f586d8d42f4",
+      "testId": "9ad8a1b1-80ae-ed66-febb-4499f6fe6536",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_uses_exact_launcher_when_an_unprivileged_executor_is_primary(executorFirst: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0239109",
+      "startTime": "2026-10-20T04:23:50.9018778-04:00",
+      "endTime": "2026-10-20T04:23:55.9256803-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "777be5b4-6c5d-40ef-9b42-7f586d8d42f4",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "a1281ad2-a4ef-4a75-99b1-f8ad6636eee3",
+      "testId": "22e234c1-d5cc-a5f3-a234-6598cc33d5ef",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.3601816",
+      "startTime": "2026-10-20T04:24:42.9900423-04:00",
+      "endTime": "2026-10-20T04:24:47.3568048-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a1281ad2-a4ef-4a75-99b1-f8ad6636eee3",
+      "trx": "selected-source-authority.trx",
+      "error": "\n          \nCanDoItAll.Modules.Projects.ProjectLifecycleOriginalIntentRequiredException : Project deletion and hierarchy changes require an already captured original lifecycle submission. A current read cannot replace the caller's original expectation.\n\n          \n   at CanDoItAll.Modules.Projects.ProjectsService.DeleteAsync(Guid id, CancellationToken cancellationToken, ProjectWriteAdmission expectedProjectAdmission) in C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.Projects\\ProjectModels.cs:line 563\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessCatalogAuthorityPersistenceTests.cs:line 123\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessCatalogAuthorityPersistenceTests.cs:line 140\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessCatalogAuthorityPersistenceTests.cs:line 140\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission() in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessCatalogAuthorityPersistenceTests.cs:line 140\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "c38fe6f2-edc9-4fd9-8623-237a7b43f352",
+      "testId": "3cc8dd0d-9b64-7e53-6b36-8716ede5682e",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Workflow_tool_uses_real_background_proposals_and_keeps_source_executor_and_two_child_identities_distinct",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.7859907",
+      "startTime": "2026-10-20T04:24:00.7815670-04:00",
+      "endTime": "2026-10-20T04:24:09.5674284-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c38fe6f2-edc9-4fd9-8623-237a7b43f352",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "7063a58c-a554-4f16-a664-9832491b5e10",
+      "testId": "75dac103-5b01-464b-f26f-f14740a99b5c",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Registered_process_definition_tool_replays_original_receipt_after_dispatch_expiry_but_cannot_dispatch_a_fresh_effect",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:09.3934278",
+      "startTime": "2026-10-20T04:24:09.5678807-04:00",
+      "endTime": "2026-10-20T04:24:18.9611943-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7063a58c-a554-4f16-a664-9832491b5e10",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "61438146-e0ff-4dab-a4f4-d34376b984d9",
+      "testId": "16f65bab-7292-86bd-c065-5d786d638665",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes(revocation: Write)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:14.4602484",
+      "startTime": "2026-10-20T04:22:35.1932621-04:00",
+      "endTime": "2026-10-20T04:22:49.6602236-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "61438146-e0ff-4dab-a4f4-d34376b984d9",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "a310ac74-f22c-4671-8306-3333d71c953e",
+      "testId": "46b5df2f-092b-fcf5-1744-93808dd61fa2",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_missing_from_selected_catalog_is_not_replaced_by_executor",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.5661164",
+      "startTime": "2026-10-20T04:24:38.4234763-04:00",
+      "endTime": "2026-10-20T04:24:42.9894587-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a310ac74-f22c-4671-8306-3333d71c953e",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "6e2e7a56-8ae7-4335-82d6-c4810e59c215",
+      "testId": "5a287fa1-9d59-77d2-1336-7e028bce1b8d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_uses_exact_launcher_when_an_unprivileged_executor_is_primary(executorFirst: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9552991",
+      "startTime": "2026-10-20T04:23:45.9462434-04:00",
+      "endTime": "2026-10-20T04:23:50.9014024-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6e2e7a56-8ae7-4335-82d6-c4810e59c215",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "ebe043de-2046-4f36-8d6d-a47187018ff9",
+      "testId": "f907e3e5-427b-c085-d808-b8591b747c8b",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Held_source_revocation_cannot_borrow_a_different_primary_executors_grants(revocation: Read)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.5963272",
+      "startTime": "2026-10-20T04:23:21.0999497-04:00",
+      "endTime": "2026-10-20T04:23:25.6961969-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ebe043de-2046-4f36-8d6d-a47187018ff9",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "6bae1e9b-0bc6-4492-894e-826e2c060071",
+      "testId": "20b9dcfb-220f-55c6-27b0-cea0c6d96b28",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Current_catalog_revocation_denies_new_admission_without_any_initial_Process_writes(revocation: Tools)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9275532",
+      "startTime": "2026-10-20T04:23:00.9816983-04:00",
+      "endTime": "2026-10-20T04:23:05.9090519-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6bae1e9b-0bc6-4492-894e-826e2c060071",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "0a3dcb5b-941b-42eb-aa48-b8bd4ef276a6",
+      "testId": "b9684ed8-1ad5-e345-603b-83cb96ba7a7c",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Workflow_tool_source_and_executor_catalog_revocations_block_new_admission(executor: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.8642660",
+      "startTime": "2026-10-20T04:23:25.6967945-04:00",
+      "endTime": "2026-10-20T04:23:34.5609025-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0a3dcb5b-941b-42eb-aa48-b8bd4ef276a6",
+      "trx": "selected-source-authority.trx"
+    },
+    {
+      "executionId": "43d4e1b0-9b9b-403b-8884-4b9e2998ff79",
+      "testId": "6b151158-7343-6ca4-a75f-dac8920c6990",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Mapped_workflow_original_source_revocation_blocks_new_owner_admission(revocation: ExactLifetime)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0835863",
+      "startTime": "2026-10-20T04:24:18.9616904-04:00",
+      "endTime": "2026-10-20T04:24:24.0450875-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "43d4e1b0-9b9b-403b-8884-4b9e2998ff79",
+      "trx": "selected-source-authority.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020080757-9f0bb7eb",
+      "afterSnapshot": "snap-20261020082035-9f0bb7eb",
+      "before": {
+        "projectCount": 2,
+        "typeCount": 1204,
+        "memberCount": 10186,
+        "serviceRegistrationCount": 106,
+        "entityCount": 0,
+        "findingCount": 460,
+        "openQuestionCount": 15,
+        "diagnosticCount": 204
+      },
+      "after": {
+        "projectCount": 2,
+        "typeCount": 1204,
+        "memberCount": 10187,
+        "serviceRegistrationCount": 106,
+        "entityCount": 0,
+        "findingCount": 460,
+        "openQuestionCount": 15,
+        "diagnosticCount": 204
+      },
+      "newFindings": [],
+      "changedFindings": [
+        {
+          "before": {
+            "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-c4854aa79f6a",
+            "ruleId": "COMPLEXITY-002",
+            "severity": "Info",
+            "category": "Complexity",
+            "title": "Type with many members",
+            "description": "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService exposes 37 source members.",
+            "rationale": "Large types often become aggregation points for unrelated behavior.",
+            "confidence": 0.71,
+            "relatedIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+            ],
+            "source": {
+              "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
+              "line": 12,
+              "column": 1,
+              "endLine": 270,
+              "endColumn": 2
+            }
+          },
+          "after": {
+            "findingId": "finding-type-size-type-proj-candoitall-modules-workbench-ca-c4854aa79f6a",
+            "ruleId": "COMPLEXITY-002",
+            "severity": "Info",
+            "category": "Complexity",
+            "title": "Type with many members",
+            "description": "CanDoItAll.Modules.Workbench.ProjectProcessLaunchAuthorityService exposes 38 source members.",
+            "rationale": "Large types often become aggregation points for unrelated behavior.",
+            "confidence": 0.71,
+            "relatedIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+            ],
+            "source": {
+              "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
+              "line": 12,
+              "column": 1,
+              "endLine": 281,
+              "endColumn": 2
+            }
+          }
+        }
+      ],
+      "cyclesUnchanged": true,
+      "cycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ]
+        }
+      ],
+      "review": "Exact Agent-ID selection stays inside the already held catalog. One existing source authority owner shares the selector across capture/read/write/project-ceiling/receipt paths. A tiny Workflow-only runtime partial is removed; its existing source check is renamed and moved into the owner with identical Workflow behavior. No project/module dependency, registration, query, new lease, lock or interface is added. Existing one module/five type cycles and 204 diagnostics remain. Direct Workbench/Integration Release builds and full portability enforcement pass; selected execution is pending.",
+      "validation": {
+        "state": "InitialFailure",
+        "expected": 23,
+        "executed": 23,
+        "passed": 22,
+        "failed": 1,
+        "newCases": 7,
+        "newCasesPassed": 7,
+        "cause": "Existing deletion lock-order fixture used the deliberately closed ProjectsService.DeleteAsync(Guid) overload rather than an original lifecycle submission."
+      }
+    },
+    "discovery-review.json": {
+      "actual": 23,
+      "initialExpected": 21,
+      "additionalReviewed": [
+        "Governed_lifecycle_checks_held_source_at_commit_and_fresh_authority_only_after_release",
+        "Project_deletion_releases_SQL_before_catalog_cleanup_so_a_held_source_lease_cannot_deadlock_admission"
+      ],
+      "disposition": "Keep both existing authority/lock-order regressions; no test executed before count review."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9618,
+      "runtimeFiles": 1704,
+      "sourceSha256": "6CB242CECFB67DA4EA51AF02D2541FA232AC72212F4FB804BEEA8F2DBB4076BE",
+      "runtimeSha256": "FF8D7E137D0DBCBF9E0334D32261C49E1B0B8FBDB0A77A551610030958AFC22F"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\fyhsazxm.qcs",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\d0120eca-533e-4157-b7a8-decc40d49d68.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\bhrybbtg.ywe",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_21512_20261020_042233_071.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T08:26:28.0415832+00:00",
+      "outcome": "Selected source run: 22 of 23 cases pass, including all seven new source-selection cases. An existing Project deletion lock-order fixture calls the closed legacy delete overload without original lifecycle intent; repair that fixture and repeat the selection. Historical cleanup denials remain unchanged.",
+      "remainingObservedProcesses": []
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T08:22:17.3407652+00:00",
+      "observerSeconds": 154.3653519,
+      "commands": [
+        {
+          "command": "execute-selected-source-authority",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T08:22:32.8215292+00:00",
+          "seconds": 138.7133243
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "observerPid": 60380,
+      "identityConfirmed": true,
+      "observerStartedUtc": "2026-10-20T08:22:17.3599072Z",
+      "confirmedUtc": "2026-10-20T08:22:32.2438216+00:00"
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

@@ -20,6 +20,8 @@ internal sealed record ProjectTaskPlanAgentSource(Guid DecisionId, int Generatio
     AgentToolSemanticDigest BasisDigest, ProjectTaskPlanOperation Operation, string Fingerprint);
 internal sealed record ProjectTaskPlanAgentArguments(ProjectTaskPlanDraft Draft);
 internal sealed record ProjectTaskPlanAgentCommand(ProjectTaskPlanAgentTarget Target, ProjectTaskPlanCommand Command);
+internal sealed record ProjectTaskPlanPublicationTarget(AgentToolSessionAdmission Session, ProjectWriteAdmission Project,
+    ProjectTaskPlanCaller Caller, Guid WorkspaceNamespaceId, ProjectTaskPlanSourceKind SourceKind);
 
 internal static class ProjectTaskPlanAgentCodec {
     internal const string TargetFormat = "workbench-task-plan-target";
@@ -30,7 +32,8 @@ internal static class ProjectTaskPlanAgentCodec {
     private const int SemanticVersion = 2;
     internal static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web) {
         PropertyNameCaseInsensitive = false, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true, MaxDepth = 32
+        RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true, MaxDepth = 32,
+        Converters = { new ProjectProcessStepInstanceIdJsonConverter() }
     };
 
     internal static AgentToolProtocolEnvelope Write<T>(string format, T value, int maximumBytes) {
@@ -93,10 +96,17 @@ internal static class ProjectTaskPlanAgentCodec {
     internal static AgentToolPreparedCall Prepare(AgentPlanningDecisionRecord decision, AgentPlanningBasisRecord basis,
         string responseText) {
         var target = Target(decision);
-        var (material, context) = Basis(basis);
+        return Prepare(decision, basis, responseText, PublicationTarget(target, decision), Basis(basis));
+    }
+
+    internal static AgentToolPreparedCall Prepare(AgentPlanningDecisionRecord decision, AgentPlanningBasisRecord basis,
+        string responseText, ProjectTaskPlanPublicationTarget target,
+        (ProjectTaskPlanBasis Material, ProjectTaskPlanWriteContext Context) original) {
+        var (material, context) = original;
         var step = decision.Current.Steps.LastOrDefault() ?? throw Denied("The original planning step is missing.");
         if (step.BasisId != basis.Id || material.Project.Expectation.Project != target.Project ||
-            context.Namespace.Value != decision.Provenance?.WorkspaceNamespaceId ||
+            decision.Session != target.Session.Reference || context.Namespace.Value != target.WorkspaceNamespaceId ||
+            !target.Caller.MatchesSource(target.SourceKind) ||
             context.CallerBinding != target.Caller.Bind(context.Namespace)) {
             throw Denied("The publication does not retain the original step, basis and caller.");
         }
@@ -131,9 +141,16 @@ internal static class ProjectTaskPlanAgentCodec {
 
     internal static ProjectTaskPlanAgentCommand Resolve(AgentPlanningDecisionObservation observation,
         AgentToolSessionAdmission session, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding) {
+        var target = Target(observation.Decision);
+        return new(target, Resolve(observation, session, payload, binding, PublicationTarget(target, observation.Decision), Basis));
+    }
+
+    internal static ProjectTaskPlanCommand Resolve(AgentPlanningDecisionObservation observation, AgentToolSessionAdmission session,
+        AgentToolPreparedPayload payload, AgentToolApprovalBinding binding, ProjectTaskPlanPublicationTarget target,
+        Func<AgentPlanningBasisRecord, (ProjectTaskPlanBasis Material, ProjectTaskPlanWriteContext Context)> readOriginalBasis) {
         var decision = observation.Decision;
-        var target = Target(decision);
         if (target.Session != session || payload.SourcePreparation is not { } envelope ||
+            decision.Session != session.Reference || !target.Caller.MatchesSource(target.SourceKind) ||
             payload.ToolName != ProjectStructureToolPolicy.ProjectTaskPlanPublish ||
             binding.Digest != payload.Digest || binding.SemanticVersion != payload.SemanticVersion) {
             throw Denied("The saved task-plan proposal does not match this original session and binding.");
@@ -150,19 +167,23 @@ internal static class ProjectTaskPlanAgentCodec {
             basis.Value.Digest != source.BasisDigest || !step.Publications.Any(item => item.Proposal == binding && item.OriginalOperation == envelope)) {
             throw Denied("The saved publication is not part of this original decision, generation, step and basis.");
         }
-        var (material, context) = Basis(basis);
+        var (material, context) = readOriginalBasis(basis);
         var draft = arguments.RootElement.Deserialize<ProjectTaskPlanAgentArguments>(Json)!.Draft;
         if (material.Project.Expectation.Project != target.Project || context.Namespace != source.Operation.Namespace ||
-            context.Namespace.Value != decision.Provenance?.WorkspaceNamespaceId ||
+            context.Namespace.Value != target.WorkspaceNamespaceId ||
             context.Epoch != source.Operation.Epoch || context.CallerBinding != source.Operation.CallerBinding ||
             context.CallerBinding != target.Caller.Bind(context.Namespace) ||
             Fingerprint(decision, generation!.Number, step.Id, basis, draft) != source.Fingerprint) {
             throw Denied("The saved publication differs from its original material, operation context or semantic source.");
         }
-        return new(target, new(source.Operation, material, ProjectTaskPlanProposal.Normalize(draft), decision.Policy,
-            new(decision.DecisionId, generation.Number, decision.StartedAtUtc, ProjectTaskPlanSourceKind.OrdinaryAgentDecision,
-                ProjectTaskPlanSource.ActiveWorkVersion, source.Fingerprint), ProjectTaskPlanSource.ActiveWorkVersion));
+        return new(source.Operation, material, ProjectTaskPlanProposal.Normalize(draft), decision.Policy,
+            new(decision.DecisionId, generation.Number, decision.StartedAtUtc, target.SourceKind,
+                ProjectTaskPlanSource.ActiveWorkVersion, source.Fingerprint), ProjectTaskPlanSource.ActiveWorkVersion);
     }
+
+    private static ProjectTaskPlanPublicationTarget PublicationTarget(ProjectTaskPlanAgentTarget target, AgentPlanningDecisionRecord decision)
+        => new(target.Session, target.Project, target.Caller, decision.Provenance!.WorkspaceNamespaceId,
+            ProjectTaskPlanSourceKind.OrdinaryAgentDecision);
 
     private static string Fingerprint(AgentPlanningDecisionRecord decision, int generation, Guid step,
         AgentPlanningBasisRecord basis, ProjectTaskPlanDraft draft)

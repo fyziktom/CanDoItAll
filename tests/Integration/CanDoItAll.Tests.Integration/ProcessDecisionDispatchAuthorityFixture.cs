@@ -13,8 +13,9 @@ internal sealed record ProcessDecisionDispatchAuthorityFixture(ProcessDecisionCh
     ProcessRuntimeStateSnapshot State, ProcessExecutionClaimEvidence Evidence) {
     internal static async Task<ProcessDecisionDispatchAuthorityFixture> CreateAsync(ProcessPersistenceDbContext context,
         IServiceProvider services, ReadBasisMode mode = ReadBasisMode.RunSnapshot, bool descendant = false, bool prepared = false,
-        ProcessLaunchAuthority? authority = null) {
-        var original = await ProcessDecisionChildMaterialFixture.CreateAsync(context, services, mode, descendant, prepared: prepared, authority: authority);
+        ProcessLaunchAuthority? authority = null, DateTimeOffset? assignmentCreatedAt = null) {
+        var original = await ProcessDecisionChildMaterialFixture.CreateAsync(context, services, mode, descendant, prepared: prepared, authority: authority,
+            assignmentCreatedAt: assignmentCreatedAt);
         var state = (await Owner(context, services).CommitAsync(Claim(original.Enrolled.State))).State;
         var assignment = (await new EfProcessRuntimeStepAssignmentStore(context).LoadAsync(state.RunId, Step(state)))!;
         var claim = state.Claims.Single(item => item.ClaimToken == state.Steps.Single().ActiveClaimToken);

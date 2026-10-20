@@ -15,7 +15,8 @@ internal sealed record ProcessDecisionChildMaterialFixture(ProcessRuntimeCommitR
     ProcessDecisionChildMaterialBinding Binding, ProcessDecisionMaterial Material) {
     internal static async Task<ProcessDecisionChildMaterialFixture> CreateAsync(ProcessPersistenceDbContext context,
         IServiceProvider services, ReadBasisMode mode = ReadBasisMode.RunSnapshot, bool descendant = false,
-        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent, bool prepared = false, ProcessLaunchAuthority? authority = null) {
+        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent, bool prepared = false, ProcessLaunchAuthority? authority = null,
+        DateTimeOffset? assignmentCreatedAt = null) {
         var owner = authority is null ? Owner(context, services) : new EfProcessRuntimeUnitOfWork(context, services.GetRequiredService<TimeProvider>(),
             services.GetRequiredService<CoordinatedDatabaseTransaction>(), services.GetRequiredService<IProcessProjectAdmissionPolicy>(),
             services.GetRequiredService<IProcessLaunchAuthorityPolicy>(), runtimeDatabase: services.GetRequiredService<ICanonicalRuntimeDatabase>());
@@ -30,6 +31,7 @@ internal sealed record ProcessDecisionChildMaterialFixture(ProcessRuntimeCommitR
         }
         initial = initial with { InitialAssignments = initial.InitialAssignments!.Select(item => item with {
             ExecutorKind = executor == ProcessDecisionChildOwner.Agent ? ProcessLaunchExecutorKinds.Agent : ProcessLaunchExecutorKinds.Workflow,
+            CreatedAtUtc = assignmentCreatedAt ?? item.CreatedAtUtc,
             DecisionDataPolicy = item.DecisionDataPolicy! with { ExecutionContract = ProcessDecisionPolicyFixture.Contract(executor) }
         }).ToArray() };
         if (preparation is not null) {

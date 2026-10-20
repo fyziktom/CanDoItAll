@@ -19,6 +19,9 @@ public sealed class ProcessPreparedLaunchEntity {
     public string PayloadJson { get; set; } = string.Empty;
     public DateTimeOffset PreparedAtUtc { get; set; }
     public DateTimeOffset? AcceptedAtUtc { get; set; }
+    public ProcessAcceptedSourceVersion AcceptedSourceVersion { get; set; }
+    public string? AcceptedSourceHeaderJson { get; set; }
+    public string? AcceptedSourceHeaderFingerprint { get; set; }
     public bool? Execute { get; set; }
     public ProcessLaunchContinuationState State { get; set; }
     public Guid? ContinuationOwner { get; set; }
@@ -47,12 +50,19 @@ public sealed class ProcessPreparedLaunchEntity {
 
 internal sealed class ProcessPreparedLaunchEntityConfiguration : IEntityTypeConfiguration<ProcessPreparedLaunchEntity> {
     public void Configure(EntityTypeBuilder<ProcessPreparedLaunchEntity> builder) {
-        builder.ToTable("process_prepared_launches");
+        builder.ToTable("process_prepared_launches", table => table.HasCheckConstraint("CK_process_prepared_launch_source", $$"""
+            ("AcceptedSourceVersion" = 0 AND "AcceptedSourceHeaderJson" IS NULL AND "AcceptedSourceHeaderFingerprint" IS NULL)
+            OR ("AcceptedSourceVersion" = 1 AND "AcceptedAtUtc" IS NOT NULL
+                AND "AcceptedSourceHeaderJson" IS NOT NULL AND octet_length("AcceptedSourceHeaderJson") BETWEEN 2 AND {{ProcessAcceptedSourceCodec.MaximumPayloadUtf8Bytes}}
+                AND "AcceptedSourceHeaderFingerprint" IS NOT NULL AND "AcceptedSourceHeaderFingerprint" ~ '^sha256:[0-9a-f]{64}$')
+            """));
         builder.HasKey(item => item.Id);
         builder.Property(item => item.AdmissionSequence).ValueGeneratedOnAdd();
         builder.Property(item => item.RequestFingerprint).HasMaxLength(71).IsRequired();
         builder.Property(item => item.PreparationFingerprint).HasMaxLength(71).IsRequired();
         builder.Property(item => item.PayloadJson).IsRequired();
+        builder.Property(item => item.AcceptedSourceVersion).HasConversion<int>().HasDefaultValue(ProcessAcceptedSourceVersion.LegacyPreparedLaunch);
+        builder.Property(item => item.AcceptedSourceHeaderFingerprint).HasMaxLength(71);
         builder.Property(item => item.State).HasConversion<string>().HasMaxLength(32);
         builder.Property(item => item.LinkDeliveryState).HasConversion<string>().HasMaxLength(32);
         builder.Property(item => item.LinkConflictReason).HasConversion<string>().HasMaxLength(32);

@@ -23,4 +23,7 @@ public interface IAgentToolBackgroundSourcePolicy {
     ValueTask<AgentToolBackgroundSourceObservation> ObserveAsync(ExecutionRunRecord execution,
         AgentToolProfileBinding profile, CancellationToken cancellationToken = default);
 
+    ValueTask<AgentToolBackgroundSourceObservation> ObserveInitialInheritedAsync(ExecutionRunRecord candidate,
+        AgentToolProfileBinding profile, AgentToolProtocolEnvelope originalParent, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This background source does not support initial inherited planning admission.");
 }

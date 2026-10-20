@@ -298,7 +298,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         if (dispatch?.SourceAuthority is { } original) {
             (processObservation as ProjectProcessLaunchAuthorityService
                 ?? throw new InvalidOperationException("Workflow Process effects require the original source owner's held catalog policy."))
-                .RequireHeldWorkflowSource(original, held, use != WorkflowStructureAuthorityUse.Disclosure);
+                .RequireHeldSource(original, held, use != WorkflowStructureAuthorityUse.Disclosure);
         }
     }
 

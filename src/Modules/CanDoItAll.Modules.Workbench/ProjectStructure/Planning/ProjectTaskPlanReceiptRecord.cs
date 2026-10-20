@@ -31,9 +31,9 @@ internal sealed class ProjectTaskPlanReceiptRecordConfiguration : IEntityTypeCon
     public void Configure(EntityTypeBuilder<ProjectTaskPlanReceiptRecord> builder) {
         builder.ToTable(ProjectTaskPlanReceiptRecord.TableName, table => {
             table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
-            table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Caller", "\"CallerKind\" = 1 AND octet_length(\"CallerKey\") = 32");
+            table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Caller", "\"CallerKind\" IN (1, 2) AND octet_length(\"CallerKey\") = 32");
             table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Digest", "octet_length(\"SemanticDigest\") = 32 AND octet_length(\"SourceFingerprint\") = 32");
-            table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"SourceVersion\" > 0 AND \"SourceKind\" = 1");
+            table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"SourceVersion\" > 0 AND \"SourceKind\" = \"CallerKind\" AND (\"CallerKind\" = 1 OR (\"SchemaVersion\" = 2 AND \"NormalizationVersion\" = 1 AND \"ResultVersion\" = 2 AND \"SourceVersion\" = 2))");
             table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OriginalDefinitionRevision\" <> '00000000-0000-0000-0000-000000000000'::uuid");
             table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Decision", "\"DecisionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DecisionGeneration\" > 0");
             table.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Payload", $"octet_length(\"AcceptedPayload\") BETWEEN 1 AND {ProjectTaskPlanReceiptRecord.MaximumPayloadBytes}");

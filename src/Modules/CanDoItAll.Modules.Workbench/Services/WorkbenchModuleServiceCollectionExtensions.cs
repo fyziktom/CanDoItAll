@@ -46,6 +46,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectTaskPlanReceiptRetention>());
         services.AddScoped<ProjectTaskPlanBasisCapture>();
         services.AddScoped<ProjectTaskPlanReceiptReader>();
+        services.AddSingleton(new ProcessDecisionExecutionRegistration(ProjectTaskPlanProcessContract.Execution, ProjectTaskPlanProcessContract.Content));
         services.AddScoped(provider => new ProjectTaskPlanPublisher(
             provider.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(), provider.GetRequiredService<DatasetActivationService>(),
             provider.GetRequiredService<ProjectWriteAdmissionService>(), provider.GetRequiredService<CoordinatedDatabaseTransaction>(),

@@ -12,6 +12,7 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Context);
         ArgumentNullException.ThrowIfNull(request.ContextScope);
+        ArgumentNullException.ThrowIfNull(request.ParentBinding);
         ArgumentNullException.ThrowIfNull(request.RequireOriginalParent);
         ArgumentNullException.ThrowIfNull(request.BindAsync);
         if (request.AgentId == Guid.Empty || request.ActivityOperationId.Value == Guid.Empty || !Enum.IsDefined(request.Owner)) {
@@ -22,14 +23,16 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
         var admitted = await new AgentInheritedPlanningRunAdmission(runs, leases, journal).AdmitAsync(request.ExecutionRunId,
             async (run, token) => {
                 if (run.AgentId != request.AgentId || run.ToolAdmission?.PlanningDecision?.Owner != request.Owner ||
-                    AgentPlanningRunMetadata.ReadScope(run) != request.ContextScope) {
+                    AgentPlanningRunMetadata.ReadScope(run) != request.ContextScope ||
+                    run.ToolAdmission.PlanningDecision.InheritedOrigin?.ParentBinding != request.ParentBinding) {
                     throw new AgentToolAdmissionException("planning.inherited-original-changed", "The original child belongs to a different Agent, owner or workspace.");
                 }
                 await request.RequireOriginalParent(run, token);
             }, async token => {
                 startup = await prepare(executionRequest, null, token);
                 return new(startup.Run with { Id = request.ExecutionRunId }, request.OriginalInput, request.Owner,
-                    coordinator.CaptureRuntimeContract(request.Owner, startup.Agent, startup.Provider), request.ContextScope, request.BindAsync);
+                    coordinator.CaptureRuntimeContract(request.Owner, startup.Agent, startup.Provider), request.ContextScope,
+                    request.ParentBinding, request.BindAsync);
             }, cancellationToken);
         var original = admitted.Run;
         await coordinator.RequireCurrentReadAsync(original, cancellationToken);

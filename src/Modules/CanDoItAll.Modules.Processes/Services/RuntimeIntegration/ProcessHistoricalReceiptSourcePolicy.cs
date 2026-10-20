@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -10,7 +11,10 @@ public sealed class ProcessHistoricalReceiptSourcePolicy(
     IProcessOriginalReceiptAuthorityReader owner,
     ICanonicalRuntimeDatabase database,
     IAgentExecutionProfileGenerationSource generations,
-    IProcessHistoricalSourceAuthorityObserver sourcePolicy) : IAgentToolHistoricalBackgroundSourcePolicy {
+    IProcessHistoricalSourceAuthorityObserver sourcePolicy,
+    IEnumerable<ProcessDecisionExecutionRegistration>? selectedContracts = null) : IAgentToolHistoricalBackgroundSourcePolicy {
+    private readonly IReadOnlyDictionary<ProcessDecisionExecutionContract, ProcessDecisionContentContract?> contracts =
+        (selectedContracts ?? []).ToDictionary(item => item.Execution, item => item.Content);
     public string SourceKind => ProcessMockAgentCatalog.ProcessSourceKind;
 
     public async ValueTask<AgentToolBackgroundSourceObservation> ObserveHistoricalReadAsync(ExecutionRunRecord execution,
@@ -28,7 +32,7 @@ public sealed class ProcessHistoricalReceiptSourcePolicy(
         try {
             var evidence = ProcessExecutionClaimEvidenceReader.Read(execution, out _)
                 ?? throw new AgentToolReceiptAccessDeniedException();
-            var result = await owner.ObserveOriginalForReceiptReadAsync(evidence, cancellationToken);
+            var result = await ReadOriginalAsync(execution, evidence, cancellationToken);
             if (result.Snapshot is not { } snapshot || snapshot.Evidence != evidence ||
                 snapshot.SourceAuthority is not { } authority || authority.DatabaseProfileId != currentFence.Profile.ProfileId) {
                 throw new AgentToolReceiptAccessDeniedException();
@@ -41,5 +45,17 @@ public sealed class ProcessHistoricalReceiptSourcePolicy(
         } finally {
             RequireCurrent();
         }
+    }
+
+    private async Task<ProcessExecutionDispatchAuthorityResult> ReadOriginalAsync(ExecutionRunRecord execution,
+        ProcessExecutionClaimEvidence evidence, CancellationToken cancellationToken) {
+        if (execution.ToolAdmission is not { SchemaVersion: AgentToolJournalRecord.InheritedPlanningSchemaVersion } journal) {
+            return await owner.ObserveOriginalForReceiptReadAsync(evidence, cancellationToken);
+        }
+        var selected = ProcessInheritedSourceBinding.Read(execution, evidence, contracts);
+        var result = await owner.ObserveOriginalDecisionForReceiptReadAsync(evidence, selected.Parent,
+            selected.Parent.ExecutionContract, selected.Content, cancellationToken);
+        ProcessInheritedSourceBinding.RequireOriginalPolicy(journal.PlanningDecision!.InheritedOrigin!, result);
+        return result;
     }
 }

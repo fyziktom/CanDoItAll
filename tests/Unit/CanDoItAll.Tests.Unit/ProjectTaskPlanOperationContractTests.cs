@@ -36,7 +36,7 @@ public sealed class ProjectTaskPlanOperationContractTests {
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanOperation(command.Operation.Namespace, 0, Guid.NewGuid(), new('a', 64)));
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanOperation(command.Operation.Namespace, 1, Guid.Empty, new('a', 64)));
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanOperation(command.Operation.Namespace, 1, Guid.NewGuid(), new('A', 64)));
-        Assert.Throws<ArgumentException>(() => new ProjectTaskPlanCaller((ProjectTaskPlanCallerKind)2, new byte[32]));
+        Assert.Throws<ArgumentException>(() => new ProjectTaskPlanCaller((ProjectTaskPlanCallerKind)3, new byte[32]));
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.OrdinaryAgent, new byte[31]));
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanSource(Guid.NewGuid(), 0, Instant, ProjectTaskPlanSourceKind.OrdinaryAgentDecision, 1, new('b', 64)));
         Assert.Throws<ArgumentException>(() => new ProjectTaskPlanSource(Guid.NewGuid(), 1, default, ProjectTaskPlanSourceKind.OrdinaryAgentDecision, 1, new('b', 64)));
@@ -229,8 +229,72 @@ public sealed class ProjectTaskPlanOperationContractTests {
             ProjectTaskPlanSourceKind.OrdinaryAgentDecision, 3, new('b', 64)));
     }
 
+    [Fact]
+    public void Legacy_caller_binding_and_operation_key_keep_their_fixed_wire_identity() {
+        var caller = Caller();
+        var ns = new DatasetNamespaceId(new("11111111-2222-3333-4444-555555555555"));
+        Assert.Equal("f24ec00278da53ecc5a007f09850e532152187c3f314ee870a6d8ff90f855742", caller.Bind(ns));
+        var operation = new ProjectTaskPlanOperation(ns, 7, new("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"), caller.Bind(ns));
+        Assert.Equal("workbench:task-plan:operation:v1:c91aaef3cfc14c2988aa10693fecd4e3:d8835be06fd54d9d81621733367fc22e:" +
+            "11111111222233334444555555555555:7:1:" + string.Concat(Enumerable.Repeat("03", 32)) +
+            ":aaaaaaaabbbbccccddddeeeeeeeeeeee", ProjectTaskPlanOperationProtocol.OperationKey(operation, caller));
+    }
+
+    [Fact]
+    public void Same_key_and_operation_identifier_have_distinct_interactive_and_Process_partitions() {
+        var ordinary = Caller();
+        var inherited = new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.ProcessAgent, ordinary.Key.AsSpan());
+        var operation = Command(ordinary).Operation;
+        Assert.NotEqual(ordinary.Bind(operation.Namespace), inherited.Bind(operation.Namespace));
+        Assert.NotEqual(ProjectTaskPlanOperationProtocol.OperationKey(operation, ordinary),
+            ProjectTaskPlanOperationProtocol.OperationKey(operation, inherited));
+    }
+
+    [Fact]
+    public void Inherited_receipt_roundtrip_preserves_its_exact_source_and_active_work_interpretation() {
+        var caller = new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.ProcessAgent, Caller().Key.AsSpan());
+        var command = Command(caller, 2, ProjectTaskPlanSourceKind.ProcessAgentDecision);
+        var accepted = Accept(command);
+        var receipt = ProjectTaskPlanOperationProtocol.CreateReceipt(accepted, caller);
+        Assert.Equal(2, receipt.CallerKind);
+        Assert.Equal(2, receipt.SourceKind);
+        Assert.Equal(2, receipt.SchemaVersion);
+        var decoded = ProjectTaskPlanOperationProtocol.Decode(receipt, command.Operation, caller, accepted.ReplayUntilUtc);
+        Assert.Equal(accepted.Source, decoded.Source);
+        Assert.Equal(accepted.Tasks, decoded.Tasks);
+        Assert.Equal(receipt.AcceptedPayload, ProjectTaskPlanOperationCodec.EncodeAccepted(decoded));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Caller_kind_substitution_cannot_encode_or_decode_another_origins_receipt(bool inherited) {
+        var caller = new ProjectTaskPlanCaller(inherited ? ProjectTaskPlanCallerKind.ProcessAgent : ProjectTaskPlanCallerKind.OrdinaryAgent,
+            Caller().Key.AsSpan());
+        var wrong = new ProjectTaskPlanCaller(inherited ? ProjectTaskPlanCallerKind.OrdinaryAgent : ProjectTaskPlanCallerKind.ProcessAgent,
+            caller.Key.AsSpan());
+        var command = Command(caller, 2, inherited ? ProjectTaskPlanSourceKind.ProcessAgentDecision : ProjectTaskPlanSourceKind.OrdinaryAgentDecision);
+        var accepted = Accept(command);
+        Assert.Throws<ArgumentException>(() => ProjectTaskPlanOperationProtocol.CreateReceipt(accepted, wrong));
+        var receipt = ProjectTaskPlanOperationProtocol.CreateReceipt(accepted, caller);
+        receipt.CallerKind = (int)wrong.Kind;
+        Assert.Throws<ProjectTaskPlanReceiptDecodeException>(() => ProjectTaskPlanOperationProtocol.Decode(
+            receipt, command.Operation, wrong, accepted.ReplayUntilUtc));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(3)]
+    public void Inherited_source_cannot_use_wall_time_or_an_unknown_interpretation(int version) {
+        Assert.Throws<ArgumentException>(() => new ProjectTaskPlanSource(Guid.NewGuid(), 1, Instant,
+            ProjectTaskPlanSourceKind.ProcessAgentDecision, version, new('b', 64)));
+    }
+
     private static ProjectTaskPlanCaller Caller() => new(ProjectTaskPlanCallerKind.OrdinaryAgent, Enumerable.Repeat((byte)3, 32).ToArray());
-    private static ProjectTaskPlanCommand Command(ProjectTaskPlanCaller? caller = null, int version = 1) {
+    private static ProjectTaskPlanCommand Command(ProjectTaskPlanCaller? caller = null, int version = 1,
+        ProjectTaskPlanSourceKind sourceKind = ProjectTaskPlanSourceKind.OrdinaryAgentDecision) {
         caller ??= Caller();
         var ns = new DatasetNamespaceId(Guid.NewGuid());
         var expected = new ProjectDefinitionExpectation(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()), Guid.NewGuid());
@@ -238,7 +302,7 @@ public sealed class ProjectTaskPlanOperationContractTests {
         return new(new(ns, 1, Guid.NewGuid(), caller.Bind(ns)), basis,
             ProjectTaskPlanProposal.Normalize(new(1, [new("First", "", "", 1), new("Second", "", "", 1)])),
             DecisionDataPolicy.PlanningDefault(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(2)),
-            new(Guid.NewGuid(), 1, Instant, ProjectTaskPlanSourceKind.OrdinaryAgentDecision, version, new('b', 64)), schemaVersion: version);
+            new(Guid.NewGuid(), 1, Instant, sourceKind, version, new('b', 64)), schemaVersion: version);
     }
 
     private static ProjectTaskPlanAccepted Accept(ProjectTaskPlanCommand command) {

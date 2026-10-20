@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
@@ -17,6 +18,28 @@ public sealed partial class AgentToolAdmissionJournal {
     public async Task<AgentToolJournalRecord> CreateForNewBackgroundRunAsync(ExecutionRunRecord run, string input,
         AgentToolAdmissionSupport support = AgentToolAdmissionSupport.Recoverable,
         AgentRuntimeTransientContext? runtimeContext = null, CancellationToken cancellationToken = default) {
+        var session = await CreateNewBackgroundSessionAsync(run, runtimeContext, null, cancellationToken);
+        var journal = new AgentToolJournalRecord(AgentToolJournalRecord.BackgroundSchemaVersion, 1, session, [], [], Support: support,
+            RuntimeContext: runtimeContext is null ? null : new(runtimeContext.Content, runtimeContext.WorkspaceScope),
+            BackgroundInput: new(input));
+        journal.Validate();
+        return journal;
+    }
+
+    internal Task<AgentToolSessionAdmission> CreateForNewInheritedBackgroundSessionAsync(ExecutionRunRecord run, string input,
+        AgentToolProtocolEnvelope originalParent, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(originalParent);
+        if (Encoding.UTF8.GetByteCount(originalParent.PayloadJson) > AgentPlanningInheritedOrigin.MaximumBindingUtf8Bytes) {
+            throw new InvalidDataException("The original inherited parent binding exceeds its supported bound.");
+        }
+        if (string.IsNullOrWhiteSpace(input) || Encoding.UTF8.GetByteCount(input) > AgentToolProtocolEnvelope.MaximumUtf8Bytes) {
+            throw new InvalidDataException("The original inherited input is empty or exceeds its supported bound.");
+        }
+        return CreateNewBackgroundSessionAsync(run, null, originalParent, cancellationToken);
+    }
+
+    private async Task<AgentToolSessionAdmission> CreateNewBackgroundSessionAsync(ExecutionRunRecord run, AgentRuntimeTransientContext? runtimeContext,
+        AgentToolProtocolEnvelope? originalParent, CancellationToken cancellationToken) {
         if (run.ToolAdmission is not null || run.ChatSessionId is not null || run.PendingApprovals.Count != 0 ||
                 run.Revision != 1 || run.State != ExecutionState.Preparing || run.Outcome is not null ||
                 await reader.GetExecutionRunAsync(run.Id, cancellationToken) is not null) {
@@ -31,19 +54,17 @@ public sealed partial class AgentToolAdmissionJournal {
                 AgentChatContextDigest.Compute(runtimeContext) != ExecutionInvocationMetadata.ResolveTransientContextDigest(run))) {
             throw Failure("The background runtime context has no matching retained input digest.");
         }
-        var observation = await RequireBackgroundPolicy(run.SourceKind).ObserveAsync(run, profile, cancellationToken);
+        var policy = RequireBackgroundPolicy(run.SourceKind);
+        var observation = originalParent is null ? await policy.ObserveAsync(run, profile, cancellationToken)
+            : await policy.ObserveInitialInheritedAsync(run, profile, originalParent, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!observation.ReadAllowed || !observation.DispatchAllowed) {
             throw Failure("The source owner denied the new background execution.");
         }
         var binding = new AgentToolBackgroundSourceBinding(run.SourceKind, run.SourceId, observation.OwnerFingerprint,
             BackgroundExecutionFingerprint(run));
-        var session = new AgentToolSessionAdmission(new(run.Id, Guid.Empty, default, binding), run.AgentId,
+        return new(new(run.Id, Guid.Empty, default, binding), run.AgentId,
             AgentRuntimeContextPurpose.GovernedProcessAutomation, profile);
-        var journal = new AgentToolJournalRecord(AgentToolJournalRecord.BackgroundSchemaVersion, 1, session, [], [], Support: support,
-            RuntimeContext: runtimeContext is null ? null : new(runtimeContext.Content, runtimeContext.WorkspaceScope),
-            BackgroundInput: new(input));
-        journal.Validate();
-        return journal;
     }
 
     public Task<bool> CanReadBackgroundResultAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default)

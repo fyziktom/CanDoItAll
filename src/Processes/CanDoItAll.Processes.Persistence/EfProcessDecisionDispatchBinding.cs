@@ -34,8 +34,25 @@ internal sealed record ProcessDecisionDispatchSelection(ProcessDecisionChildMate
 
 internal static class EfProcessDecisionDispatchBinding {
     internal static async Task<(bool Allowed, DateTimeOffset ObservedAt)> RequireAsync(ProcessPersistenceDbContext context, ProcessExecutionClaimEvidence evidence,
-        ProcessRunId rootRunId, ProcessRuntimeStepAssignment originalAssignment, ProcessRuntimeStepAssignment assignment,
+        ProcessRunId rootRunId, ProcessAssignmentSource originalAssignment, ProcessRuntimeStepAssignment assignment,
         ProcessDecisionDispatchSelection selection, CancellationToken cancellationToken) {
+        if (originalAssignment.ReadinessHash != assignment.ReadinessHash || originalAssignment.DecisionDataPolicy is null || assignment.DecisionDataPolicy is null ||
+            ProcessDecisionDataPolicyAdmissionCodec.Serialize(originalAssignment.DecisionDataPolicy) !=
+                ProcessDecisionDataPolicyAdmissionCodec.Serialize(assignment.DecisionDataPolicy)) {
+            throw Mismatch("The Process assignment changed its originally admitted readiness or decision policy.");
+        }
+        var child = await RequireOriginalAsync(context, evidence, rootRunId, originalAssignment, selection, cancellationToken).ConfigureAwait(false);
+        var observedAt = selection.Clock.GetUtcNow();
+        return (evidence.ExecutionMayDispatch && child.Observation.IsCurrent && child.Observation.Generation.Phase == ProcessDecisionPhase.Active &&
+            child.Observation.Closure is null && child.Observation.Settlement is null && !child.BudgetOverrun && selection.Original.Child.Grant.WorkTicks > 0 &&
+            child.RootStatus != ProcessRuntimeStatus.CancelRequested && !ProcessRuntimeTerminalStates.IsRunTerminal(child.RootStatus) &&
+            child.RunStatus == ProcessRuntimeStatus.Active && child.StepStatus is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) &&
+            child.ActiveClaimToken == evidence.DispatchClaimToken && child.MatchingClaimExpiresAtUtc > observedAt, observedAt);
+    }
+
+    internal static async Task<ProcessDecisionChildRead> RequireOriginalAsync(ProcessPersistenceDbContext context, ProcessExecutionClaimEvidence evidence,
+        ProcessRunId rootRunId, ProcessAssignmentSource originalAssignment, ProcessDecisionDispatchSelection selection,
+        CancellationToken cancellationToken) {
         var original = selection.Original;
         var address = original.Child.Address;
         var policy = originalAssignment.DecisionDataPolicy
@@ -43,12 +60,8 @@ internal static class EfProcessDecisionDispatchBinding {
         policy.RequireExecutionContract(selection.SupportedExecution);
         if (!string.Equals(originalAssignment.ExecutorKind, ProcessLaunchExecutorKinds.Agent, StringComparison.OrdinalIgnoreCase) ||
             !Guid.TryParse(originalAssignment.ExecutorId, out var originalAgent) || originalAgent != evidence.ExecutorAgentId ||
-            originalAssignment.ReadinessHash != assignment.ReadinessHash) {
+            string.IsNullOrWhiteSpace(originalAssignment.ReadinessHash)) {
             throw Mismatch("The selected child differs from its originally admitted Agent or readiness contract.");
-        }
-        if (assignment.DecisionDataPolicy is null || ProcessDecisionDataPolicyAdmissionCodec.Serialize(policy) !=
-                ProcessDecisionDataPolicyAdmissionCodec.Serialize(assignment.DecisionDataPolicy)) {
-            throw Mismatch("The Process assignment changed its originally admitted decision policy.");
         }
         var expectedOwner = policy.SharedRunScopeId is null ? address.RunId : address.RootRunId;
         if (rootRunId != address.RootRunId || policy.StepInstanceId != address.StepInstanceId ||
@@ -63,12 +76,7 @@ internal static class EfProcessDecisionDispatchBinding {
             throw Mismatch("The selected Process child or its original grant changed.");
         }
         await RequireMaterialStampAsync(context, selection, policy, cancellationToken).ConfigureAwait(false);
-        var observedAt = selection.Clock.GetUtcNow();
-        return (evidence.ExecutionMayDispatch && child.Observation.IsCurrent && child.Observation.Generation.Phase == ProcessDecisionPhase.Active &&
-            child.Observation.Closure is null && child.Observation.Settlement is null && !child.BudgetOverrun && original.Child.Grant.WorkTicks > 0 &&
-            child.RootStatus != ProcessRuntimeStatus.CancelRequested && !ProcessRuntimeTerminalStates.IsRunTerminal(child.RootStatus) &&
-            child.RunStatus == ProcessRuntimeStatus.Active && child.StepStatus is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) &&
-            child.ActiveClaimToken == evidence.DispatchClaimToken && child.MatchingClaimExpiresAtUtc > observedAt, observedAt);
+        return child;
     }
 
     private static async Task RequireMaterialStampAsync(ProcessPersistenceDbContext context, ProcessDecisionDispatchSelection selection,

@@ -44,7 +44,8 @@ public sealed partial class AgentToolAdmissionJournal {
             var run = original.Run;
             var journal = run.ToolAdmission!;
             journal.Validate();
-            if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion) ||
+            if (journal.SchemaVersion is not (AgentToolJournalRecord.EffectJournalSchemaVersion or AgentToolJournalRecord.PlanningSchemaVersion or
+                    AgentToolJournalRecord.InheritedPlanningSchemaVersion) ||
                 journal.Support != AgentToolAdmissionSupport.EffectJournalOnly) {
                 return Refuse(AgentHistoricalReceiptReviewStop.Unsupported);
             }

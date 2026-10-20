@@ -138,6 +138,78 @@ public sealed class ProjectTaskPlanActiveWorkTests {
         await fixture.VerifyAsync(1, 1);
     }
 
+    [Fact]
+    public async Task Process_receipt_uses_its_own_partition_and_replays_exact_bytes_after_write_revocation() {
+        await using var fixture = await ProjectTaskPlanOperationFixture.CreateAsync();
+        var interactive = await fixture.CommandAsync(1);
+        Assert.IsType<ProjectTaskPlanOutcome.Accepted>(await fixture.Publisher().PublishAsync(interactive, fixture.Invocation));
+        var caller = new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.ProcessAgent, fixture.Caller.Key.AsSpan());
+        var fresh = await fixture.CommandAsync(1);
+        var command = new ProjectTaskPlanCommand(new(interactive.Operation.Namespace, interactive.Operation.Epoch,
+            interactive.Operation.Id, caller.Bind(interactive.Operation.Namespace)), fresh.Basis, fresh.Proposal, fresh.Policy,
+            new(fresh.Source.DecisionId, fresh.Source.Generation, fresh.Source.DecisionStartedAtUtc,
+                ProjectTaskPlanSourceKind.ProcessAgentDecision, ProjectTaskPlanSource.ActiveWorkVersion, fresh.Source.Fingerprint),
+            schemaVersion: ProjectTaskPlanSource.ActiveWorkVersion);
+        var authority = new ActiveWorkAuthority(fixture.Authority, command);
+        var invocation = new ProjectTaskPlanInvocation(caller, authority, fixture.Authority);
+        var accepted = Assert.IsType<ProjectTaskPlanOutcome.Accepted>(await fixture.Publisher().PublishAsync(command, invocation));
+        Assert.False(accepted.Replayed);
+        var checks = authority.Checks;
+        Assert.True(checks > 0);
+        fixture.Authority.AllowWrite = false;
+        var replay = Assert.IsType<ProjectTaskPlanOutcome.Accepted>(await fixture.Publisher().PublishAsync(command, invocation));
+        Assert.True(replay.Replayed);
+        Assert.Equal(checks, authority.Checks);
+        Assert.Equal(ProjectTaskPlanOperationCodec.EncodeAccepted(accepted.Acknowledgement),
+            ProjectTaskPlanOperationCodec.EncodeAccepted(replay.Acknowledgement));
+        await fixture.VerifyAsync(2, 2);
+        await using var context = await fixture.ContextAsync();
+        var rows = await context.Set<ProjectTaskPlanReceiptRecord>().Where(row => row.OperationId == interactive.Operation.Id)
+            .OrderBy(row => row.CallerKind).ToArrayAsync();
+        Assert.Equal([1, 2], rows.Select(row => row.CallerKind));
+        Assert.Equal([1, 2], rows.Select(row => row.SourceKind));
+        Assert.Equal(rows[0].CallerKey, rows[1].CallerKey);
+        Assert.NotEqual(rows[0].SemanticDigest, rows[1].SemanticDigest);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Mixed_caller_and_source_kinds_are_refused_before_lookup_or_authority_acquisition(bool inheritedSource) {
+        await using var fixture = await ProjectTaskPlanOperationFixture.CreateAsync();
+        var caller = new ProjectTaskPlanCaller(inheritedSource ? ProjectTaskPlanCallerKind.OrdinaryAgent : ProjectTaskPlanCallerKind.ProcessAgent,
+            fixture.Caller.Key.AsSpan());
+        var original = await fixture.CommandAsync(1);
+        var command = new ProjectTaskPlanCommand(new(original.Operation.Namespace, original.Operation.Epoch, original.Operation.Id,
+            caller.Bind(original.Operation.Namespace)), original.Basis, original.Proposal, original.Policy,
+            new(original.Source.DecisionId, original.Source.Generation, original.Source.DecisionStartedAtUtc,
+                inheritedSource ? ProjectTaskPlanSourceKind.ProcessAgentDecision : ProjectTaskPlanSourceKind.OrdinaryAgentDecision,
+                ProjectTaskPlanSource.ActiveWorkVersion, original.Source.Fingerprint), schemaVersion: ProjectTaskPlanSource.ActiveWorkVersion);
+        fixture.Probe.Reset();
+        var rejected = Assert.IsType<ProjectTaskPlanOutcome.Rejected>(await fixture.Publisher().PublishAsync(command,
+            new(caller, fixture.Authority, fixture.Authority)));
+        Assert.Equal(ProjectTaskPlanRefusal.CallerChanged, rejected.Reason);
+        Assert.Equal(0, fixture.Authority.Acquisitions);
+        Assert.Empty(fixture.Probe.Commands);
+        await fixture.VerifyAsync(0, 0);
+    }
+
+    [Fact]
+    public async Task Process_identity_does_not_replace_the_required_active_work_authority() {
+        await using var fixture = await ProjectTaskPlanOperationFixture.CreateAsync();
+        var caller = new ProjectTaskPlanCaller(ProjectTaskPlanCallerKind.ProcessAgent, fixture.Caller.Key.AsSpan());
+        var original = await fixture.CommandAsync(1);
+        var command = new ProjectTaskPlanCommand(new(original.Operation.Namespace, original.Operation.Epoch, original.Operation.Id,
+            caller.Bind(original.Operation.Namespace)), original.Basis, original.Proposal, original.Policy,
+            new(original.Source.DecisionId, original.Source.Generation, original.Source.DecisionStartedAtUtc,
+                ProjectTaskPlanSourceKind.ProcessAgentDecision, ProjectTaskPlanSource.ActiveWorkVersion, original.Source.Fingerprint),
+            schemaVersion: ProjectTaskPlanSource.ActiveWorkVersion);
+        var rejected = Assert.IsType<ProjectTaskPlanOutcome.Rejected>(await fixture.Publisher().PublishAsync(command,
+            new(caller, fixture.Authority, fixture.Authority)));
+        Assert.Equal(ProjectTaskPlanRefusal.SourceChanged, rejected.Reason);
+        await fixture.VerifyAsync(0, 0);
+    }
+
     private static ProjectTaskPlanCommand Version(ProjectTaskPlanCommand original, int version, DateTimeOffset? started = null,
         DecisionDataPolicy? policy = null, ProjectTaskPlanBasis? basis = null)
         => new(original.Operation, basis ?? original.Basis, original.Proposal, policy ?? original.Policy,

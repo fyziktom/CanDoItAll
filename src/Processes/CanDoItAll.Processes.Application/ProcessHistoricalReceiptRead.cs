@@ -20,6 +20,10 @@ public sealed record ProcessHistoricalReadContext {
 public interface IProcessOriginalReceiptAuthorityReader {
     Task<ProcessExecutionDispatchAuthorityResult> ObserveOriginalForReceiptReadAsync(ProcessExecutionClaimEvidence original,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessExecutionDispatchAuthorityResult> ObserveOriginalDecisionForReceiptReadAsync(ProcessExecutionClaimEvidence original,
+        ProcessDecisionChildMaterialBinding binding, ProcessDecisionExecutionContract supportedExecution,
+        ProcessDecisionContentContract? supportedContent, CancellationToken cancellationToken = default);
 }
 
 public interface IProcessHistoricalSourceAuthorityObserver {

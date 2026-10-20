@@ -743,3 +743,54 @@ source/runtime identities and observer coverage pass. Every candidate has zero r
 observed processes and zero database-name delta. Four, three and seven respective
 unattributed TEMP deltas are preserved without deletion authority. Shared fixture use and
 historical cleanup denials remain open. See the [validation record](validation/2026-10-20-parent-saved-effect-continuation.md) for exact identities and retained proof hashes.
+
+The c4-inherited-task-receipt-identity root is Released after all 75 cases passed.
+It reused standard Release and the existing isolated PostgreSQL fixture; source/runtime
+identities and full observer coverage passed. The observer first refused a stale baseline
+pin, corrected before tests without changing frozen source/runtime. Zero remaining observed
+processes and zero database-name delta; six unowned TEMP deltas preserved. Shared fixture
+and historical cleanup denials remain open. Exact identities are in the [receipt identity
+record](validation/2026-10-20-inherited-task-receipt-identity.md).
+
+The three inherited-task-publication-codec roots are Released. Earlier 89/96 Unit results
+remain recorded; the verified candidate repeats and passes all 124 selected cases. Every
+freeze and complete observer coverage passes, with zero remaining observed processes or
+database-name delta. Two, zero and six respective unowned TEMP entries are preserved.
+The existing isolated PostgreSQL fixture and historical cleanup denials remain open.
+Exact identities and hashes are in the [codec validation record](validation/2026-10-20-inherited-task-publication-codec.md).
+
+Both selected-process-source-authority roots are Released after the complete repaired
+23-case run. Frozen identities and observer coverage pass, with zero remaining observed
+processes or database-name delta. Four initial and five final unowned TEMP deltas are
+preserved. The shared PostgreSQL fixture and historical cleanup denials remain open.
+See the [authority validation record](validation/2026-10-20-selected-process-source-authority.md).
+
+Both inherited-task-publication-authority roots are Released. The final 67-case run and
+initial 62/64 attempt retain frozen identities, complete observer coverage and exact
+secret-reviewed proof. Each has zero remaining observed processes and database-name delta;
+three initial and thirteen final unowned TEMP entries remain untouched. The shared fixture
+and historical cleanup denials remain open. See the [publication authority record](validation/2026-10-20-inherited-task-publication-authority.md).
+
+Both inherited-original-source-history roots are Released. The initial100/107 and final30/30
+results retain complete frozen/observer proof and an exact test-only bridge preserving77
+regressions and1399 production outputs. Each has zero remaining observed processes and
+zero database-name delta; four initial and three final unowned TEMP entries are preserved.
+Shared fixture use and historical cleanup denials remain open. See the [history record](validation/2026-10-20-inherited-original-source-history.md).
+
+`c4-inherited-task-receipt-history` is Released: 64/64 selected cases, complete 508.435-second observation, unchanged source/runtime, no observed process or database-name delta. Eleven TEMP paths without proven ownership remain untouched. Shared PG18 remains in use. The separately owned `root-sequence-probe` standalone Release experiment remains active for its matched candidate measurement; its ownership sidecar records exact cleanup scope.
+
+`c4-root-sequence-registry` test execution is Released: 26/26 cases, unchanged source/runtime, complete 64.122-second observation, zero remaining observed processes/database-name delta, seven unowned TEMP paths preserved. The standalone `root-sequence-probe` has no active process but remains `CleanupBlocked`: automatic approval review rejected removal of its owned `bin` and `obj` directories with `blocked by policy`. No deletion or workaround occurred. Exact remaining paths and raw measurements/source are retained in its sidecar and reviewed proof. Shared PG18 remains needed.
+
+Both `c4-inherited-initial-source` roots are Released. The initial 38/244 result remains retained; the repaired full repeat passes 247/247. Frozen source/runtime and whole-command observation are verified. Each run leaves zero observed processes/database-name delta and preserves five TEMP paths without proven ownership. Shared PG18 and existing cleanup denials remain open. See the [admission record](validation/2026-10-20-inherited-initial-source.md).
+
+Registered Process source roots c4-inherited-product-source and c4-inherited-product-source-final are Released. Initial 152/153 and final 15/15 plus 138 unchanged regression passes are retained with exact identity bridge. No remaining observed processes or database-name delta; eight initial and three final unowned TEMP entries preserved. Shared PG18 remains needed; existing probe-output cleanup rejection is unchanged.
+
+The c4-accepted-source-scaling root is Released after 15 passing pure measurements, full identity/coverage checks and zero observed process/database delta. Nine unowned TEMP entries are preserved. No new host, project or database; the existing probe-output cleanup denial remains unchanged.
+
+The c4-accepted-source-codec root is Released after 41 passing pure executions, full identity/coverage checks and zero observed process/database delta. Nine unowned TEMP entries are preserved; no new host/database. Existing probe-output cleanup denial remains unchanged.
+
+`c4-accepted-source-persistence` is owned and prepared for migration, runtime-source and SQL scaling proof. Its pre-create sidecar records ownership; standard Release outputs and the existing isolated PG18 fixture are reused. No new server/container is created. Freeze, observer reconciliation and proof retention remain pending. Earlier cleanup denials remain open.
+
+Initial `c4-accepted-source-persistence` is Released with28/31 codec passes and160 unexecuted cases; complete21.477-second observation, no observed process/database-name delta and4 unowned TEMP paths preserved. The failure proof is retained and secret-reviewed. Owned `c4-accepted-source-persistence-final` reuses the same fixture/standard outputs for the corrected complete193-case candidate.
+
+The final accepted-source SQL/history, authority and dispatch/original groups pass 142 cases; the unchanged 51 earlier passes give 193 distinct passing cases. All three final roots are Released after full identity verification, observer coverage, retained proof and secret review, with no new process/database delta. The earlier combined regression command timed out at 900 seconds and remains recorded as such. Its root is ReleasedWithUnattributedDatabase: cditall_primary_3c41089b37074f30b5d6889519d95021 has no connections but lacks exact lease ownership evidence and is preserved. Earlier denied probe/SPA cleanup also remains open.

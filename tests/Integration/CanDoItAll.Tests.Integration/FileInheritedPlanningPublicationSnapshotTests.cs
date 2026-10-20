@@ -219,7 +219,7 @@ public sealed class FileInheritedPlanningPublicationSnapshotTests {
         var candidate = scenario.Run with { Id = Guid.NewGuid(), AgentId = agentId, ToolAdmission = null, SourceId = source.SourceId };
         var admission = new AgentInheritedPlanningAdmission(new(scenario.Store, scenario.Files.Profile,
             scenario.Inherited.Clock, backgroundSources: [source]));
-        var journal = await admission.CreateAsync(candidate, "Read original inherited material.", original.Owner,
+        var journal = await admission.CreateAsync(candidate, "Read original inherited material.", original.Owner, original.InheritedOrigin!.ParentBinding,
             (binding, _) => Task.FromResult(new AgentInheritedPlanningBinding(original.OriginalTarget,
                 original.InheritedOrigin! with { AgentId = agentId, Source = binding.Session.Reference.BackgroundSource! })), scenario.Token);
         return (await scenario.Store.SaveExecutionRunDetailAsync(new(candidate with { ToolAdmission = journal }, null, [], []), scenario.Token)).Run;

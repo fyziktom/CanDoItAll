@@ -11,6 +11,7 @@ public interface IAgentInheritedPlanningWorkspaceService {
 
 public sealed record AgentInheritedPlanningWorkspaceRequest(Guid ExecutionRunId, Guid AgentId, string OriginalInput,
     AgentExecutionOperationId ActivityOperationId, ExecutionInvocationContext Context, AgentPlanningOwner Owner, WorkspaceScopeDescriptor ContextScope,
+    AgentToolProtocolEnvelope ParentBinding,
     Func<ExecutionRunRecord, CancellationToken, Task> RequireOriginalParent,
     Func<AgentInheritedPlanningBindingContext, CancellationToken, Task<AgentInheritedPlanningBinding>> BindAsync);
 

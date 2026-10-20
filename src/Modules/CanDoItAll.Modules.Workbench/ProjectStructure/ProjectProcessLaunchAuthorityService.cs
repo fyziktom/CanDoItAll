@@ -48,7 +48,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         }
         await using var held = await catalog.AcquireAgentReadLeaseAsync(governance.AgentId, cancellationToken);
         RequireCatalogScope(held);
-        var agent = held.Agent ?? throw Denied("The process source Agent no longer exists.");
+        var agent = FindHeldAgent(held, governance.AgentId) ?? throw Denied("The process source Agent no longer exists.");
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
         var ceiling = CreateAgentCeiling(governance);
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.AgentExecution(ceiling, operation),
@@ -158,7 +158,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         RequireCatalogScope(held);
         RequireCeiling(source, project);
         RequireCeiling(current, project);
-        var agent = held.Agent;
+        var agent = FindHeldAgent(held, source.Ceiling.AgentId);
         if (agent is null || agent.Id != source.Ceiling.AgentId || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active ||
                 !agent.Permissions.CanUseTools) {
             throw Denied("The process source Agent is no longer active or permitted to use tools.");
@@ -200,6 +200,17 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
             throw Denied("The held Agent catalog belongs to a different profile or workspace scope.");
         }
     }
+
+    internal void RequireHeldSource(ProcessLaunchAuthority authority, IAgentCatalogReadLease? held, bool mutation) {
+        authority.Validate();
+        RequireReadSource(authority, held);
+        if (mutation) {
+            RequireSource(authority, authority, held);
+        }
+    }
+
+    internal static AgentDefinition? FindHeldAgent(IAgentCatalogReadLease held, Guid agentId)
+        => held.Agent?.Id == agentId ? held.Agent : held.Agents.SingleOrDefault(agent => agent.Id == agentId);
 
     private void RequireOperator(ProcessLaunchAuthority authority) {
         var options = apiOptions.CurrentValue;

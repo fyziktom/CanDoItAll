@@ -392,7 +392,8 @@ public sealed class AgentInheritedPlanningRunAdmissionTests {
     private static AgentInheritedPlanningRunPreparation Preparation(AgentInheritedPlanningFixture fixture, Guid id) {
         var decision = fixture.Original.ToolAdmission!.PlanningDecision!;
         return new(fixture.Original with { Id = id, MetadataJson = "{}", ToolAdmission = null }, "Prepare the original bounded plan.",
-            decision.Owner, RuntimeContract, fixture.Files.StorageScope, (binding, _) => Task.FromResult(new AgentInheritedPlanningBinding(decision.OriginalTarget,
+            decision.Owner, RuntimeContract, fixture.Files.StorageScope, decision.InheritedOrigin!.ParentBinding,
+            (binding, _) => Task.FromResult(new AgentInheritedPlanningBinding(decision.OriginalTarget,
                 decision.InheritedOrigin! with { Source = binding.Session.Reference.BackgroundSource! })));
     }
 

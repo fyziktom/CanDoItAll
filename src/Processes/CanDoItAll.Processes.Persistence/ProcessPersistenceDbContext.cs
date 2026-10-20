@@ -12,6 +12,8 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
 
     public DbSet<ProcessPreparedLaunchEntity> PreparedLaunches => Set<ProcessPreparedLaunchEntity>();
 
+    public DbSet<ProcessAcceptedAssignmentSourceEntity> AcceptedAssignmentSources => Set<ProcessAcceptedAssignmentSourceEntity>();
+
     public DbSet<ProcessInstancePlanEntity> InstancePlans => Set<ProcessInstancePlanEntity>();
 
     public DbSet<ProcessRuntimeStateEntity> RuntimeStates => Set<ProcessRuntimeStateEntity>();

@@ -56,7 +56,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
             }
             RequireCatalogScope(held);
             var executorId = admission.Dispatch.Evidence.ExecutorAgentId;
-            var executor = held.Agent?.Id == executorId ? held.Agent : held.Agents.SingleOrDefault(agent => agent.Id == executorId);
+            var executor = FindHeldAgent(held, executorId);
             if (createdTargets.Any(project => !ProjectDefinitionGovernedReadPolicy.CurrentExecutorCanUseCreatedProject(executorId, executor, project))) {
                 throw Denied("The current Process executor no longer has access to an exact created target.");
             }
@@ -66,7 +66,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
             throw Denied("The Process project operation does not match the actual owner mutation.");
         }
         var current = saved.Principal is ProcessLaunchPrincipal.AgentExecution source
-            ? CaptureProjectMutationCeiling(AgentProjectStructureAccessMetadata.Read(held!.Agent!.ConfigurationJson), source.Ceiling)
+            ? CaptureProjectMutationCeiling(AgentProjectStructureAccessMetadata.Read(FindHeldAgent(held!, source.Ceiling.AgentId)!.ConfigurationJson), source.Ceiling)
             : new ProcessProjectMutationCeiling(true, true, true, true);
         if (operation is not (ProjectProcessProjectOperation.Native or ProjectProcessProjectOperation.Update) && saved.ProjectMutations is null) {
             throw Denied("This saved Process has no original project-creation or hierarchy ceiling. Reconcile its source authority before this effect.");

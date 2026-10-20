@@ -47,7 +47,8 @@ public sealed class AgentInheritedPlanningOwnerTests {
         await using var fixture = await CreateAsync();
         var factory = new AgentInheritedPlanningAdmission(fixture.NewJournal());
         await Assert.ThrowsAsync<AgentToolAdmissionException>(() => factory.CreateAsync(fixture.Original with { ToolAdmission = null },
-            "replacement", AgentPlanningOwner.ProjectTaskPlan, (_, _) => throw new InvalidOperationException("Binding must not run.")));
+            "replacement", AgentPlanningOwner.ProjectTaskPlan, fixture.Policy.ParentBinding,
+            (_, _) => throw new InvalidOperationException("Binding must not run.")));
         var retained = await fixture.ReadAsync();
         Assert.Equal(fixture.Original.ToolAdmission!.PlanningDecision!.InheritedOrigin, retained.ToolAdmission!.PlanningDecision!.InheritedOrigin);
         Assert.Equal(fixture.Original.Revision, retained.Revision);
