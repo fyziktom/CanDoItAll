@@ -159,7 +159,8 @@ public sealed class ProjectTaskPlanExecutionEntryTests {
         internal IAgentFrameworkWorkspaceService Workspace => files.Sql.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
 
         internal static async Task<EntryFixture> CreateAsync(DecisionDataPolicy? requestedPolicy = null,
-            CanDoItAllTestEnvironment? testEnvironment = null, TestDatabaseProfile? activeProfile = null) {
+            CanDoItAllTestEnvironment? testEnvironment = null, TestDatabaseProfile? activeProfile = null,
+            Action<IServiceCollection>? configureServices = null) {
             var wire = new MafPlanningProviderFixture.Wire { ResponseText = ProjectTaskPlanAgentFixture.Draft };
             var client = new HttpClient(wire);
             wire.Client = client;
@@ -170,6 +171,7 @@ public sealed class ProjectTaskPlanExecutionEntryTests {
                     services.RemoveAll<IMafProviderAgentFactory>();
                     services.AddSingleton<IMafProviderAgentFactory>(new MafProviderAgentFactory(wire,
                         NoOpMafProviderStreamingDispatchGate.Instance, wire, httpClientSelector: wire));
+                    configureServices?.Invoke(services);
                 });
                 var secret = await files.Sql.Services.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
                     Name = "Planning transport fixture credential", Kind = SecretKind.ApiKey,

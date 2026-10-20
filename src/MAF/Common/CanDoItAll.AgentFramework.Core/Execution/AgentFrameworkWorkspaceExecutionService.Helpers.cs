@@ -7,16 +7,6 @@ namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService
 {
-    private sealed record AgentExecutionStartupAggregate(
-        AgentExecutionPreparationBlueprint Blueprint,
-        SandboxWorkspaceCatalogSnapshot CatalogSnapshot,
-        AgentDefinition Agent,
-        ProviderProfile Provider,
-        ChatSessionRecord? Session,
-        ExecutionRunRecord Run,
-        ChatMessageRecord? UserMessage,
-        IReadOnlyList<AgentRuntimeInputAttachment> InputAttachments);
-
     private sealed record ExecutionStateMutation(
         ExecutionRunRecord? Run = null,
         ChatSessionRecord? Session = null,

@@ -233,6 +233,48 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             result);
     }
 
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateActivityOperation(operation, request.AgentId, chatSessionId: null, request.ActivityOperationId);
+        return ExecuteWithinActivityBoundaryAsync(operation, async () => {
+            var runs = store as ISandboxWorkspaceExecutionRunStore
+                ?? throw new NotSupportedException("Inherited planning requires exact execution storage.");
+            var leases = store as ISandboxWorkspaceExecutionRunLeaseStore
+                ?? throw new NotSupportedException("Inherited planning requires execution leases.");
+            var coordinator = RequireInheritedPlanning();
+            var executor = new AgentInheritedPlanningWorkspaceExecution(runs, leases, toolAdmissionJournal!, coordinator);
+            var result = await executor.ExecuteAsync(request,
+                (input, original, token) => PrepareInheritedPlanningAsync(operation, input, original, token),
+                (startup, input, execution, token) => {
+                    EnsureActivityRunBinding(operation, startup.Run);
+                    return CompletePreparedExecutionRunAsync(startup, input, token, operation, inheritedExecution: execution);
+                }, cancellationToken);
+            if (result.Execution is null) {
+                EnsureActivityRunBinding(operation, result.Run);
+                operation.Report(AgentExecutionActivityPhase.PersistingResult,
+                    "Returning the original inherited execution without starting provider work.");
+                operation.Complete("The original inherited execution was retained without starting provider work.");
+            }
+            return result;
+        });
+    }
+
+    private async Task<AgentExecutionStartupAggregate> PrepareInheritedPlanningAsync(IAgentExecutionActivityOperationLease operation,
+        ExecutionRunRequest request, ExecutionRunRecord? original, CancellationToken cancellationToken) {
+        if (string.IsNullOrWhiteSpace(request.Prompt)) {
+            throw new ArgumentException("Inherited planning requires its original input.", nameof(request));
+        }
+        var preparation = await AcquireExecutionPreparationAsync(operation, request.AgentId, atomicConsumer: false, cancellationToken);
+        var provider = original is null ? await ResolvePreparedProviderAsync(operation, preparation, request, cancellationToken)
+            : await ResolveContinuationProviderLeaseAsync(original, preparation, cancellationToken);
+        var agent = CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider,
+            original?.Model ?? ResolveEffectiveManagedSeedModel(preparation.Blueprint.Agent, provider));
+        var run = original ?? CreatePreparingRun(agent, provider, chatSessionId: null, CreateSessionTitle(request.Prompt),
+            PrepareInvocationContext(request), request.Prompt, DateTimeOffset.UtcNow, autoApprovePendingToolCalls: false, request.InitialActivityOperationId);
+        return new(preparation.Blueprint, preparation.CatalogSnapshot, agent, provider, null, run, null, []);
+    }
+
     public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
@@ -1346,6 +1388,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 toolAdmissionJournal ?? throw new InvalidOperationException("The workspace has no durable admission journal."),
                 executionAuthorityResolver, activityWorkspaceIdentity, receiptReconciliationProviders?.ToArray() ?? []);
             if (detail.Run.ToolAdmission!.PlanningDecision is not null) {
+                if (detail.Run.ToolAdmission.PlanningDecision.InheritedOrigin is not null) {
+                    await RequireInheritedPlanning().RequireCurrentReadAsync(detail.Run, cancellationToken);
+                    return detail;
+                }
                 await reconciliation.RequirePlanningReadAsync(detail, cancellationToken);
                 return detail with { PlanningReview = await RequirePlanning().ReadReviewAsync(detail, cancellationToken) };
             }
@@ -1502,7 +1548,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionRunRequest request,
         CancellationToken cancellationToken,
         IAgentExecutionActivityOperationLease activityOperation,
-        IReadOnlyList<ExecutionApprovalRecord>? previousApprovals = null)
+        IReadOnlyList<ExecutionApprovalRecord>? previousApprovals = null,
+        AgentInheritedPlanningExecution? inheritedExecution = null)
     {
         EnsureRequiredActivityOperationId(
             request.InitialActivityOperationId,
@@ -1633,7 +1680,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     AgentExecutionActivityPhase.WaitingForProvider,
                     "Waiting for the configured provider.");
                 if (run.ToolAdmission?.PlanningDecision is not null) {
-                    planningResult = await RequirePlanning().RunAsync(runtimeAgent, provider, run, runtimeCancellationToken);
+                    planningResult = inheritedExecution is not null ? await inheritedExecution.RunAsync(runtimeCancellationToken)
+                        : await RequirePlanning().RunAsync(runtimeAgent, provider, run, runtimeCancellationToken);
                     runtimeResponse = TrackRuntimeResponse(planningResult.Refusal is { } refusal
                         ? planningResult.Response with { ResponseText = $"The original planning decision stopped: {refusal}." }
                         : planningResult.Response);

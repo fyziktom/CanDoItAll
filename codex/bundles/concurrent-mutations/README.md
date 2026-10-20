@@ -298,4 +298,7 @@ remain governed by the [integration design](plan/P07-process-planning-integratio
 The [canonical child/material reader](validation/2026-10-19-canonical-child-material.md)
 has 169 passing selected cases across an exact test-only repair. It resolves original
 policy, grant and material through three bounded reads without new module dependencies.
-The actual workspace lifecycle and Process producer integration continue next.
+The [actual inherited workspace lifecycle](validation/2026-10-19-inherited-workspace-lifecycle.md)
+now passes all 185 selected cases after repairing the retained caller's activity transition.
+It retains original input/scope, current authorization and exclusive provider ownership.
+Concrete Process/Workflow source, Workbench publication and manager integration continue next.

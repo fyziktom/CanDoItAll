@@ -11,6 +11,7 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed partial class AgentFrameworkWorkspaceService :
     IAgentFrameworkWorkspaceService,
     IAgentFrameworkWorkspaceActivityExecutionService,
+    IAgentInheritedPlanningWorkspaceService,
     IDisposable
 {
     private readonly ISandboxWorkspaceStore store;
@@ -62,7 +63,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
         AgentToolPolicyCatalog? toolPolicies = null,
         IAgentPlanningStepRuntime? planningRuntime = null,
-        IEnumerable<IAgentPlanningParticipant>? planningParticipants = null) {
+        IEnumerable<IAgentPlanningParticipant>? planningParticipants = null,
+        IEnumerable<IAgentInheritedPlanningParticipant>? inheritedPlanningParticipants = null) {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(executionRuntime);
@@ -156,7 +158,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
             receiptReconciliationProviders,
             toolPolicies,
             planningRuntime,
-            planningParticipants);
+            planningParticipants,
+            inheritedPlanningParticipants);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }

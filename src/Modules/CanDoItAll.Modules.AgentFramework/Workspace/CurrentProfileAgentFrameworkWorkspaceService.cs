@@ -11,6 +11,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     IAgentFrameworkWorkspaceService,
     IAgentFrameworkWorkspaceActivityExecutionService,
+    IAgentInheritedPlanningWorkspaceService,
     IDisposable
 {
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
@@ -526,6 +527,25 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 request,
                 cancellationToken));
     }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningAsync(AgentInheritedPlanningWorkspaceRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return ExecuteNewActivityOperationAsync(request.ActivityOperationId, request.AgentId, chatSessionId: null,
+            "Inherited planning request accepted.", (service, operation) => RequireInheritedWorkspace(service)
+                .ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return DispatchPinnedActivityOperation(operation, request.AgentId, expectedChatSessionId: null, request.ActivityOperationId,
+            service => RequireInheritedWorkspace(service).ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    private static IAgentInheritedPlanningWorkspaceService RequireInheritedWorkspace(IAgentFrameworkWorkspaceActivityExecutionService service)
+        => service as IAgentInheritedPlanningWorkspaceService
+            ?? throw new NotSupportedException("This workspace does not support inherited planning.");
 
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,

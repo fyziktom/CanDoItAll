@@ -33,7 +33,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
     AgentToolPolicyCatalog? toolPolicies = null,
     IAgentPlanningStepRuntime? planningRuntime = null,
-    IEnumerable<IAgentPlanningParticipant>? planningParticipants = null) :
+    IEnumerable<IAgentPlanningParticipant>? planningParticipants = null,
+    IEnumerable<IAgentInheritedPlanningParticipant>? inheritedPlanningParticipants = null) :
     IDisposable
 {
     private readonly IAgentOutputRepairService outputRepairService =
@@ -67,9 +68,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     private readonly ILogger logger = logger;
     private readonly AgentPlanningCoordinator? planning = toolAdmissionJournal is not null && planningRuntime is not null
         ? new(toolAdmissionJournal, planningRuntime, planningParticipants ?? []) : null;
+    private readonly AgentInheritedPlanningCoordinator? inheritedPlanning = toolAdmissionJournal is not null && planningRuntime is not null &&
+        store is ISandboxWorkspaceExecutionRunStore runs ? new(runs, toolAdmissionJournal, planningRuntime, inheritedPlanningParticipants ?? []) : null;
 
     private AgentPlanningCoordinator RequirePlanning() => planning
         ?? throw new NotSupportedException("Planning requires the registered planning runtime and journal owner.");
+    private AgentInheritedPlanningCoordinator RequireInheritedPlanning() => inheritedPlanning
+        ?? throw new NotSupportedException("Inherited planning requires its registered runtime, original store and journal owner.");
     private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);

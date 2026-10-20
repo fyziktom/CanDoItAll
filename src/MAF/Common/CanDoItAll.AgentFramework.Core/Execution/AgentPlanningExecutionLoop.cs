@@ -4,14 +4,17 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class AgentPlanningExecutionLoop(AgentPlanningDecisionOwner owner, IAgentPlanningStepRuntime runtime) {
-    internal async Task<AgentPlanningExecutionResult> RunAsync(AgentDefinition agent, ProviderProfile provider, AgentToolRunLease lease,
+    internal Task<AgentPlanningExecutionResult> RunAsync(AgentDefinition agent, ProviderProfile provider, AgentToolRunLease lease,
         IAgentPlanningStepParticipant participant, AgentToolSemanticDigest contract,
-        Func<AgentPlanningLiveWork, CancellationToken, Task<ExecutionRunRecord>> bindBasis, CancellationToken cancellationToken) {
+        Func<AgentPlanningLiveWork, CancellationToken, Task<ExecutionRunRecord>> bindBasis, CancellationToken cancellationToken)
+        => WithLeaseAsync(lease, work => RunBoundAsync(agent, provider, work, participant, contract, bindBasis, cancellationToken));
+
+    internal static async Task<T> WithLeaseAsync<T>(AgentToolRunLease lease, Func<AgentPlanningLiveWork, Task<T>> execute) {
         Exception? primary = null;
         try {
             using var bound = lease.Bind();
             var work = lease.PlanningWork ?? throw new InvalidOperationException("The admitted planning lease has no work interval.");
-            return await RunCoreAsync(agent, provider, work, participant, contract, bindBasis, cancellationToken);
+            return await execute(work);
         } catch (Exception failure) {
             primary = failure;
             throw;
@@ -24,7 +27,7 @@ internal sealed class AgentPlanningExecutionLoop(AgentPlanningDecisionOwner owne
         }
     }
 
-    private async Task<AgentPlanningExecutionResult> RunCoreAsync(AgentDefinition agent, ProviderProfile provider, AgentPlanningLiveWork work,
+    internal async Task<AgentPlanningExecutionResult> RunBoundAsync(AgentDefinition agent, ProviderProfile provider, AgentPlanningLiveWork work,
         IAgentPlanningStepParticipant participant, AgentToolSemanticDigest contract,
         Func<AgentPlanningLiveWork, CancellationToken, Task<ExecutionRunRecord>> bindBasis, CancellationToken cancellationToken) {
         AgentRuntimeResponse? accumulated = null;

@@ -19,6 +19,11 @@ public sealed class AgentInheritedPlanningRunAdmission(ISandboxWorkspaceExecutio
         }
         ArgumentNullException.ThrowIfNull(requireOriginalParent);
         ArgumentNullException.ThrowIfNull(prepare);
+        var original = await runs.GetExecutionRunAsync(executionRunId, cancellationToken);
+        if (original is not null) {
+            await RequireOriginalAsync(original, executionRunId, requireOriginalParent, cancellationToken);
+            return new(original, false);
+        }
         var lease = await leases.AcquireToolDispatchLeaseAsync(executionRunId, cancellationToken);
         AgentInheritedPlanningRunAdmissionResult result;
         try {

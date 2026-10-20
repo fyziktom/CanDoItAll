@@ -9,6 +9,12 @@ for the neutral canonical child/material binding and reader, including bounded r
 Existing Process/Workflow executor guards stay closed until the complete selected path
 passes its owner, restart, publication and manager-authority proof.
 
+Step 3 now has [185 passing selected cases](../validation/2026-10-19-inherited-workspace-lifecycle.md).
+The registered workspace reuses preparation, credentials, activity and usage persistence
+while a one-use capability holds ownership through completion. Retained reads bypass the
+provider lease and preserve the saved input and scope. Concrete Process source, Workbench
+publication and manager authority still need their product integration.
+
 ## Current boundaries and responsibilities
 
 1. Process executors still refuse every non-null DecisionDataPolicy; EfProcessExecutionAuthorityQuery and Workflow authority also refuse. Do not lift until exact execution contract and business participant are recognized.

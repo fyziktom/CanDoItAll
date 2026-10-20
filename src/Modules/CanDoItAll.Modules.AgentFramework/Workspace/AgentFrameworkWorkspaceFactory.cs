@@ -231,7 +231,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             receiptReconciliationProviders: serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray(),
             toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>(),
             planningRuntime: serviceProvider.GetRequiredService<IAgentPlanningStepRuntime>(),
-            planningParticipants: serviceProvider.GetServices<IAgentPlanningParticipant>());
+            planningParticipants: serviceProvider.GetServices<IAgentPlanningParticipant>(),
+            inheritedPlanningParticipants: serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
         return workspaceService;
     }
 

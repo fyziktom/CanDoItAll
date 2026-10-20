@@ -65,6 +65,18 @@ public sealed partial class AgentFrameworkWorkspaceService
             request,
             cancellationToken);
 
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningAsync(AgentInheritedPlanningWorkspaceRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(request.ActivityOperationId, nameof(request));
+        return ExecuteNewActivityOperationAsync(request.ActivityOperationId, request.AgentId, chatSessionId: null,
+            "Inherited planning request accepted.", operation => ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default)
+        => executionService.ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken);
+
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
         ExecutionRunRequest request,

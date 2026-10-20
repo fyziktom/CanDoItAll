@@ -165,6 +165,8 @@ capacity or activation acceptance. Imported architect inputs remain immutable ev
 
 The [canonical child/material reader](validation/2026-10-19-canonical-child-material.md)
 adds 169 passing selected cases across an exact test-only repair. It exposes canonical
-originals through the Process Application boundary with three bounded SQL reads. Actual
-workspace lifecycle, producer activation, inherited publication and manager paths remain
-open under R5/R6; historical read is not dispatch authority.
+originals through the Process Application boundary with three bounded SQL reads. The
+[actual inherited workspace lifecycle](validation/2026-10-19-inherited-workspace-lifecycle.md)
+adds 185 passing selected cases, including credentials, history, usage, competing callers
+and retained execution reads. Producer activation, inherited Workbench publication and
+manager paths remain open under R5/R6; historical read is not dispatch authority.

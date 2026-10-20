@@ -684,3 +684,16 @@ zero remaining observed processes and zero database-name delta. Seven and five u
 TEMP entries respectively were preserved. Exact identity checks pass before release.
 See the [validation record](validation/2026-10-19-canonical-child-material.md); historical
 cleanup denials remain unresolved.
+
+
+## Inherited workspace lifecycle checkpoint
+
+The c4-inherited-workspace-lifecycle and c4-inherited-workspace-lifecycle-final roots
+record ownership before creation, reuse existing task-plan/tool-admission resource
+families and PostgreSQL 18 on 53619, and use standard Release outputs. Initial 182/185
+and final 185/185 results are retained; all cases repeat after the production repair.
+Observers cover complete commands for 391.0883235 and 393.2450934 seconds. Both source/runtime
+identities verify before freeze release. No observed process or database-name delta
+remains; eight initial and nine final unattributed TEMP entries are preserved. The shared
+fixture remains needed by later lanes. Historical cleanup denials remain open. See the
+[validation record](validation/2026-10-19-inherited-workspace-lifecycle.md).
