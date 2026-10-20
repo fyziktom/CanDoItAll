@@ -29,3 +29,6 @@ codex/bundles/UI_AgentsOverview_01D_PostPush_Delivery_Closure_Bundle/retained/**
 codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/codeanalytics.json -text
 codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/inventory/predecessor-closure-seal.json -text
 codex/bundles/UI_AgentsOverview_01_State_Read_Seams_Bundle/subbundles/O02.md -text
+
+# Preserve the reviewed concurrent-mutation outcome proof bytes and hashes.
+codex/bundles/concurrent-mutations/proof/2026-10-19-planning-authority/c4-process-owner-outcome*.json -text whitespace=cr-at-eol

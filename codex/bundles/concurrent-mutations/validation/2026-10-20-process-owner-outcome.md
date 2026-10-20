@@ -120,6 +120,11 @@ The 9718 source inputs and 3896 runtime inputs were unchanged throughout final e
 source manifest `80A06570213C520AAF0F25274BCB0F2833628A811D2CC505980EF4F373276EE8`,
 runtime manifest `06AADE18EEC24111F1674036C33ECC8FE4CA1E58996CFF81153436154E7489D7`.
 All five retained proof documents passed secret scanning.
+Git byte preservation is scoped to these five proof files so their recorded hashes
+survive checkout; staged blobs are checked against the exact retained bytes. This
+metadata-only follow-up does not change the tested source or runtime inputs.
+Its regenerated full portability scan/enforcement and documentation checks also pass;
+no baseline was written and no behavioral rerun is claimed for metadata edits.
 
 Direct Release builds passed for Application, Workbench and AgentFramework module;
 Unit and Integration were refreshed after their respective changes. Final Integration
