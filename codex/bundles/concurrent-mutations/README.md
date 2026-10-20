@@ -289,3 +289,8 @@ Separate SPA preparation is committed at `2fe9e8e` and its dormant typed pending
 adapter at `0411cd3`; generated-client/editor cutover remains open. The
 [execution plan](plan/execution-plan.md) and
 [requirements ledger](requirements-and-closure.md) track the remaining work.
+
+The [shared inherited planning coordinator checkpoint](validation/2026-10-19-inherited-planning-coordinator.md)
+passes all 170 selected cases. The common loop, exact inherited startup, original material
+and project history are proved; concrete Process/Workflow activation and publication
+remain governed by the [integration design](plan/P07-process-planning-integration.md).

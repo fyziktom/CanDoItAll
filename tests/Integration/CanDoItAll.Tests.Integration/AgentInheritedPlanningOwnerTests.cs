@@ -216,6 +216,7 @@ public sealed class AgentInheritedPlanningOwnerTests {
             (_, _) => throw new InvalidOperationException("Committed material cannot be recaptured."), default));
         var observation = await fixture.Owner.ObserveStepAsync(work, default);
         Assert.Equal(fixture.Basis, observation.Basis);
+        Assert.Equal(fixture.Files.StorageScope, observation.Scope);
         await fixture.Owner.SettleTerminalAsync(work, AgentPlanningGenerationState.Failed, default);
     }
 }

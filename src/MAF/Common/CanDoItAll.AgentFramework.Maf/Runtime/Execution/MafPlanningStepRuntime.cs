@@ -13,15 +13,14 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class MafPlanningStepRuntime(IMafProviderAgentFactory providers, ILogger<MafPlanningStepRuntime> logger) : IAgentPlanningStepRuntime {
     private const string UsagePhase = "planning-step";
 
-    public AgentToolSemanticDigest CaptureRuntimeContract(AgentDefinition agent, ProviderProfile provider, IAgentPlanningParticipant participant)
+    public AgentToolSemanticDigest CaptureRuntimeContract(AgentDefinition agent, ProviderProfile provider, IAgentPlanningStepParticipant participant)
         => MafPlanningRuntimeContract.Capture(agent, provider, participant);
 
     public async Task<AgentPlanningStepResult> RunAsync(AgentPlanningStepRequest request, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
         MafPlanningRuntimeContract.Require(request);
         var original = await request.DecisionOwner.ObserveStepAsync(request.Work, cancellationToken);
-        var scope = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(original.Run.MetadataJson)?.WorkspaceScope;
-        var history = AgentHistoryInvocation.Create(original.Run, scope);
+        var history = AgentHistoryInvocation.Create(original.Run, original.Scope);
         AgentPlanningStepResult? result = null;
         var response = await HistoryAgentRuntime.ObserveAsync(history, async () => {
             result = await RunCoreAsync(request, original, history, cancellationToken);
@@ -43,10 +42,9 @@ internal sealed class MafPlanningStepRuntime(IMafProviderAgentFactory providers,
         var options = MafPlanningRuntimeContract.Options(request.Agent, request.Provider, prompt);
         options = ProviderHistoryChatContext.WithContext(options, history);
         var input = CreateInput(original, prompt);
-        var agent = providers.CreateFrameworkAgent(request.Provider, model, new ChatClientAgentOptions {
-            Name = request.Agent.Name, ChatOptions = options, UseProvidedChatClientAsIs = true,
-            AllowConcurrentInvocation = false, ThrowOnChatHistoryProviderConflict = true
-        }, frameworkManagedHistory: true, allowBackgroundResponses: false);
+        var agent = providers.CreateFrameworkAgent(request.Provider, model,
+            MafChatClientAgentOptionsFactory.CreatePlanning(options, request.Agent.Name),
+            frameworkManagedHistory: true, allowBackgroundResponses: false);
         Exception? originalFailure = null;
         try {
             if (agent.GetService<MafToolAdmissionChatClient>() is null) {

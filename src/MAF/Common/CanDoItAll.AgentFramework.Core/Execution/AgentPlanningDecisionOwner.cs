@@ -119,7 +119,10 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         var now = clock.GetUtcNow();
         var remaining = AgentPlanningDecisionTransitions.RemainingWork(decision, Elapsed(work), now);
         AgentPlanningDecisionTransitions.RequireBasisAge(decision, step, now);
-        return new(snapshot.Run, decision.Current.Bases.Single(item => item.Id == step.BasisId), remaining);
+        var scope = decision.InheritedOrigin is null
+            ? AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(snapshot.Run.MetadataJson)?.WorkspaceScope
+            : AgentPlanningRunMetadata.ReadScope(snapshot.Run);
+        return new(snapshot.Run, decision.Current.Bases.Single(item => item.Id == step.BasisId), remaining, scope);
     }
 
     public async Task<AgentPlanningLiveWork> StartStepAsync(AgentToolRunLease lease,

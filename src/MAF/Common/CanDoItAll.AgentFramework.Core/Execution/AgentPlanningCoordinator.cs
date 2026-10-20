@@ -44,51 +44,15 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
             ?? throw new AgentToolAdmissionException(UnsupportedCode, "This run has no admitted planning decision.");
         var participant = RequireParticipant(decision.Owner);
         var contract = RequireRuntimeContract(agent, provider, original, participant);
-        await using var lease = await owner.StartAsync(AgentPlanningDecisionExpectation.From(original), async (observation, token) => {
+        var lease = await owner.StartAsync(AgentPlanningDecisionExpectation.From(original), async (observation, token) => {
             if (observation.Session.Reference != decision.Session) {
                 return false;
             }
             await participant.RequireCurrentReadAsync(decision, token);
             return true;
         }, cancellationToken);
-        using var bound = lease.Bind();
-        var work = lease.PlanningWork ?? throw new InvalidOperationException("The admitted planning lease has no work interval.");
-        AgentRuntimeResponse? accumulated = null;
-        try {
-            while (true) {
-                await owner.CaptureBasisAsync(work, participant.CaptureBasisAsync, cancellationToken);
-                var result = await runtime.RunAsync(new(agent, provider, owner, work, participant, contract), cancellationToken);
-                accumulated = Accumulate(accumulated, result.RuntimeResponse);
-                if (result.Admission.Refusal is { } refusal) {
-                    using var settlement = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-                    var stopped = await owner.SettleTerminalAsync(work, AgentPlanningGenerationState.Failed, settlement.Token);
-                    return new(stopped, accumulated, refusal);
-                }
-                var admitted = result.Admission.Run.ToolAdmission!;
-                var publication = admitted.PlanningDecision!.Current.Steps[^1].Publications.SingleOrDefault();
-                if (publication is not null) {
-                    var proposal = AgentToolJournalTransitions.RequireProposal(admitted, publication.Proposal);
-                    var pending = new PendingToolApprovalRecord(Guid.NewGuid().ToString("D"), proposal.CallId,
-                        proposal.Payload.ToolName, "function", "Review the prepared publication.", proposal.Payload.ArgumentsJson);
-                    var waiting = await owner.PauseForApprovalAsync(work, pending, cancellationToken);
-                    return new(waiting, accumulated with {
-                        PendingApprovals = waiting.PendingApprovals, RuntimeSessionKey = string.Empty, SerializedSessionStateJson = null
-                    }, null);
-                }
-                work = await owner.AdvanceStepAsync(work, cancellationToken);
-            }
-        } catch (Exception failure) when (accumulated is not null) {
-            var failed = failure as AgentRuntimeUsageException;
-            IReadOnlyList<ProviderUsageObservation> additional = failed is null ? [] : ProviderUsageHistory.Attach(failed.UsageObservations, failed.HistoryEvidence);
-            throw new AgentRuntimeUsageException("The original planning decision stopped; recorded provider usage is retained.",
-                failure, [.. accumulated.UsageObservations, .. additional],
-                [.. accumulated.ToolInvocationTraces, .. (failed?.ToolInvocationTraces ?? [])],
-                failed?.EntryAgentRequestCompatibilityEvidence ?? accumulated.EntryAgentRequestCompatibilityEvidence,
-                failed?.FailureOrigin ?? AgentRuntimeFailureOrigin.Runtime, failed?.ProviderFailureIdentity) {
-                HistoryEvidence = failed?.HistoryEvidence ?? accumulated.HistoryEvidence,
-                ProviderStatusCode = failed?.ProviderStatusCode
-            };
-        }
+        return await new AgentPlanningExecutionLoop(owner, runtime).RunAsync(agent, provider, lease, participant, contract,
+            (work, token) => owner.CaptureBasisAsync(work, participant.CaptureBasisAsync, token), cancellationToken);
     }
 
     private IAgentPlanningParticipant RequireParticipant(AgentPlanningOwner selection)
@@ -239,24 +203,8 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
         await participant.RequireCurrentReadAsync(expected, token);
         return true;
     };
-
-    private static AgentRuntimeResponse Accumulate(AgentRuntimeResponse? previous, AgentRuntimeResponse current) {
-        var usage = ProviderUsageHistory.Attach(current.UsageObservations, current.HistoryEvidence);
-        return previous is null ? current with { UsageObservations = usage } : current with {
-            InputTokens = checked(previous.InputTokens + current.InputTokens),
-            CachedInputTokens = checked(previous.CachedInputTokens + current.CachedInputTokens),
-            OutputTokens = checked(previous.OutputTokens + current.OutputTokens),
-            ToolCalls = checked(previous.ToolCalls + current.ToolCalls),
-            UsageObservations = [.. previous.UsageObservations, .. usage],
-            ToolInvocationTraces = [.. previous.ToolInvocationTraces, .. current.ToolInvocationTraces]
-        };
-    }
 }
 
 internal sealed record AgentPlanningPreparedRun(AgentPlanningRunAdmission Admission,
     AgentPlanningOwner Owner, AgentToolSemanticDigest RuntimeContract);
-
-internal sealed record AgentPlanningExecutionResult(ExecutionRunRecord Run, AgentRuntimeResponse Response,
-    AgentPlanningAdmissionRefusal? Refusal);
-
 internal sealed record AgentPlanningPublicationResult(ExecutionRunRecord Run, AgentPlanningPublicationAssessment Assessment);

@@ -48,6 +48,13 @@ unknown work are preserved. This is an admission prerequisite; actual producer a
 publication integration remain open.
 
 The [Process admission foundation](validation/2026-10-19-process-policy-admission.md)
+is complemented by the [shared inherited planning coordinator](validation/2026-10-19-inherited-planning-coordinator.md),
+which passes all 170 selected cases after repairing the SDK options construction boundary.
+Both origins share provider iterations and usage accounting; inherited project history,
+original material and duplicate-start ownership have actual transport proof. Canonical
+Process producer/parent, publication and manager integration remain open.
+
+The Process admission foundation
 passes 68/68 cases. It adds immutable bounded policy provenance, legacy launch/hash
 compatibility, repair rejection and PostgreSQL migration/reload proof. The real launch
 producer, governed Process/Workflow execution, generation fences and durable resume

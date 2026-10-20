@@ -8,7 +8,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal static class MafPlanningRuntimeContract {
     private const int Version = 1;
 
-    internal static AgentToolSemanticDigest Capture(AgentDefinition agent, ProviderProfile provider, IAgentPlanningParticipant participant) {
+    internal static AgentToolSemanticDigest Capture(AgentDefinition agent, ProviderProfile provider, IAgentPlanningStepParticipant participant) {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(participant);

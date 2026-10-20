@@ -5,11 +5,9 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public interface IAgentPlanningParticipant {
+public interface IAgentPlanningStepParticipant {
     AgentPlanningOwner Owner { get; }
     AgentPlanningPromptContract Prompt { get; }
-    Task<AgentPlanningRunAdmission> PrepareRunAsync(AgentPlanningRunPreparation preparation, CancellationToken cancellationToken);
-    Task<AgentToolProtocolEnvelope> CaptureBasisAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken);
     Task RequireCurrentReadAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken);
     string DescribePublication(AgentToolSessionObservation original, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding)
         => throw new NotSupportedException("This planning participant cannot describe its original publication for review.");
@@ -19,23 +17,36 @@ public interface IAgentPlanningParticipant {
         => throw new NotSupportedException("This planning participant does not interpret saved publication outcomes.");
 }
 
+public interface IAgentPlanningParticipant : IAgentPlanningStepParticipant {
+    Task<AgentPlanningRunAdmission> PrepareRunAsync(AgentPlanningRunPreparation preparation, CancellationToken cancellationToken);
+    Task<AgentToolProtocolEnvelope> CaptureBasisAsync(AgentPlanningDecisionRecord decision, CancellationToken cancellationToken);
+}
+
+public interface IAgentInheritedPlanningParticipant : IAgentPlanningStepParticipant {
+    Task<AgentPlanningBasisRecord> ReadOriginalBasisAsync(AgentPlanningInheritedOrigin original, CancellationToken cancellationToken);
+}
+
 public enum AgentPlanningPublicationOutcome { Committed, BasisChanged, Refused }
 
 public sealed record AgentPlanningPublicationAssessment(AgentPlanningPublicationOutcome Outcome, string Message);
 
 public interface IAgentPlanningStepRuntime {
-    AgentToolSemanticDigest CaptureRuntimeContract(AgentDefinition agent, ProviderProfile provider, IAgentPlanningParticipant participant);
+    AgentToolSemanticDigest CaptureRuntimeContract(AgentDefinition agent, ProviderProfile provider, IAgentPlanningStepParticipant participant);
     Task<AgentPlanningStepResult> RunAsync(AgentPlanningStepRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed record AgentPlanningStepRequest(AgentDefinition Agent, ProviderProfile Provider,
-    AgentPlanningDecisionOwner DecisionOwner, AgentPlanningLiveWork Work, IAgentPlanningParticipant Participant,
+    AgentPlanningDecisionOwner DecisionOwner, AgentPlanningLiveWork Work, IAgentPlanningStepParticipant Participant,
     AgentToolSemanticDigest ExpectedRuntimeContract);
 
 public sealed record AgentPlanningStepResult(AgentPlanningResponseAdmission Admission,
     AgentRuntimeResponse RuntimeResponse, AgentPlanningOutputRefusal? OutputRefusal);
 
-public sealed record AgentPlanningStepObservation(ExecutionRunRecord Run, AgentPlanningBasisRecord Basis, TimeSpan RemainingWork);
+public sealed record AgentPlanningStepObservation(ExecutionRunRecord Run, AgentPlanningBasisRecord Basis,
+    TimeSpan RemainingWork, WorkspaceScopeDescriptor? Scope);
+
+public sealed record AgentPlanningExecutionResult(ExecutionRunRecord Run, AgentRuntimeResponse Response,
+    AgentPlanningAdmissionRefusal? Refusal);
 
 public enum AgentPlanningOutputRefusal { InvalidShape, LimitExceeded, UnsupportedContent, PreparationFailed }
 

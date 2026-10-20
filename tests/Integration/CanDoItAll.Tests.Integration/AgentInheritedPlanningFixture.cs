@@ -33,8 +33,10 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
     internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null)
         => new(store ?? Files.NewStore(), Files.Profile, Clock, backgroundSources: [Policy]);
 
-    internal static async Task<AgentInheritedPlanningFixture> CreateAsync(ReadBasisMode parentMode = ReadBasisMode.StepSnapshot, TimeSpan? basisAge = null) {
+    internal static async Task<AgentInheritedPlanningFixture> CreateAsync(ReadBasisMode parentMode = ReadBasisMode.StepSnapshot,
+        TimeSpan? basisAge = null, WorkspaceScopeDescriptor? scope = null) {
         var files = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true,
+            storageScope: scope,
             configureAgent: agent => agent with {
                 ConfigurationJson = AgentThinkingEffortConfiguration.WriteAgentOverride(agent.ConfigurationJson, null)
             });
@@ -42,7 +44,9 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
             var clock = new AgentPlanningLiveOwnerFixture.PlanningClock(files.Detail.Run.CreatedAtUtc);
             var policy = new SourcePolicy(files.Agent.Id, files.Profile);
             var candidate = files.Detail.Run with {
-                Id = Guid.NewGuid(), ChatSessionId = null, MetadataJson = "{}", ToolAdmission = null,
+                Id = Guid.NewGuid(), ChatSessionId = null, ToolAdmission = null,
+                MetadataJson = AgentPlanningRunMetadata.ApplyInherited("{}", AgentPlanningOwner.ProjectTaskPlan,
+                    AgentPlanningDecisionTestData.Envelope().Digest, files.StorageScope),
                 SourceKind = policy.SourceKind, SourceId = policy.SourceId,
                 ProcessRunId = Guid.NewGuid().ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D")
             };

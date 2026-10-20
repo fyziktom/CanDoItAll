@@ -29,6 +29,10 @@ internal sealed class MafPlanningProviderFixture : IMafProviderAgentFactory {
         Assert.True(frameworkManagedHistory);
         Assert.False(allowBackgroundResponses);
         Assert.True(options.UseProvidedChatClientAsIs);
+        Assert.False(options.AllowConcurrentInvocation);
+        Assert.True(options.DisableApprovalNotRequiredFunctionBypassing);
+        Assert.False(options.DisableApprovalResponseBinding);
+        Assert.True(options.ThrowOnChatHistoryProviderConflict);
         Assert.Null(options.ChatOptions!.Tools);
         Assert.Equal(AgentPlanningProviderBounds.MaximumOutputTokens, options.ChatOptions.MaxOutputTokens);
         Created++;
@@ -97,6 +101,7 @@ internal sealed class MafPlanningProviderFixture : IMafProviderAgentFactory {
         private readonly HistoryPartition partition = new(Guid.NewGuid(), Guid.NewGuid(), "planning-test");
         internal List<string> Requests { get; } = [];
         internal List<HistoryAttemptStart> Starts { get; } = [];
+        internal List<HistoryInvocationContext> Contexts { get; } = [];
         internal int Completed { get; private set; }
         internal string ResponseText { get; set; } = "{\"tasks\":[]}";
         internal HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
@@ -125,6 +130,7 @@ internal sealed class MafPlanningProviderFixture : IMafProviderAgentFactory {
         }
         public Task<HistoryAttemptStart> BeginAsync(HistoryInvocation invocation, CancellationToken cancellationToken) {
             var context = invocation.Context;
+            Contexts.Add(context);
             var source = context.Owner!;
             var start = new HistoryAttemptStart(HistoryEntryId.New(), partition, new(0, 0), context.RequestId, ProviderAttemptId.New(),
                 DateTimeOffset.UtcNow, invocation.Provider, invocation.Operation, context.Workload, context.Caller,
