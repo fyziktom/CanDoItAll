@@ -9,6 +9,10 @@ passes all 192 selected cases. Original target checks run inside exact new-only 
 cancellation and source revocation during the await prevent initial save. The concrete
 Process/Workbench path remains the next integration work.
 
+The [selected Process source query](validation/2026-10-19-selected-child-dispatch.md)
+passes 86 selected cases, including exact child and original policy checks, retained
+history and bounded metadata-only SQL. Legacy reservation/mutation routes remain closed.
+
 The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) passes
 361/361 selected cases after correcting the legacy optional-parent SQL projection.
 Local and descendant work now share one genuine root budget, with atomic reservations,

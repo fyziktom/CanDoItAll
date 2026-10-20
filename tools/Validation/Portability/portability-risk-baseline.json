@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-20T01:39:21.427381+00:00",
+  "generated_utc": "2026-10-20T03:30:19.255601+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15640,
+  "allowance_count": 15641,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -69899,6 +69899,12 @@
       "path": "src/Processes/CanDoItAll.Processes.Core/README.md",
       "category": "windows-executable",
       "source_fingerprint": "c44333235a3932e1a2681df47a0f37f3e5a153ae1293735450f40323a33fc63e",
+      "count": 1
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionDispatchBinding.cs",
+      "category": "case-policy",
+      "source_fingerprint": "46f2f358e99874693c6bbdd308acfc4168e61becb79211a28ee285af3c90ad67",
       "count": 1
     },
     {

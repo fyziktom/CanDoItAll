@@ -178,3 +178,5 @@ with unexpired lifetime after the root lock; historical read and manager review 
 separate. Concrete producer/publication integration and R5/R6 closure remain open.
 
 The [asynchronous child binding](validation/2026-10-19-asynchronous-child-binding.md) passes all 192 selected cases. It enables original database target/context reads inside exact new-only admission, with cancellation and current source checks after the await. It does not close R5/R6 or activate Process/Workflow producers.
+
+The [selected Process dispatch query](validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. It binds original child/grant/policy/material and exact current claim without loading the material payload. Producer routing, inherited business effects and manager continuation remain open.

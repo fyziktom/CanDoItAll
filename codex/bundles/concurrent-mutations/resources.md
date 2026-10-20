@@ -712,3 +712,7 @@ cleanup denials remain open; the fixture is still needed. See the
 ## Asynchronous binding checkpoint
 
 The c4-asynchronous-child-binding root records ownership before creation and reuses the existing isolated PostgreSQL 18 endpoint, standard Release outputs and 119 resource families. All 192 cases pass under full observation. Source/runtime identity is unchanged; no observed process or database-name delta remains. Twenty unattributed TEMP entries are preserved. The freeze is released and the fixture remains required. Details and proof identities are in the [validation record](validation/2026-10-19-asynchronous-child-binding.md). Historical cleanup denials remain open.
+
+## Selected Process dispatch checkpoint
+
+The c4-selected-child-dispatch root records ownership before creation and reuses the isolated PostgreSQL 18 fixture, standard Release outputs and 119 resource families. All 86 cases pass under complete observation; source/runtime is unchanged. No observed process or database-name delta remains; three unattributed TEMP entries are preserved. The freeze is released. The [validation record](validation/2026-10-19-selected-child-dispatch.md) retains exact identities. The shared fixture and historical cleanup denials remain open.

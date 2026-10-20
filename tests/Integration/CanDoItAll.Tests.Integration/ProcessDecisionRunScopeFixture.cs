@@ -10,8 +10,9 @@ using static CanDoItAll.Tests.Integration.Processes.ProcessDecisionPersistenceFi
 namespace CanDoItAll.Tests.Integration.Processes;
 
 internal static class ProcessDecisionRunScopeFixture {
-    internal static ProcessRuntimeCommitRequest Initial(IServiceProvider services, OnBasisChange change = OnBasisChange.Replan) {
-        var initial = ProcessProjectAdmissionFixture.Initial();
+    internal static ProcessRuntimeCommitRequest Initial(IServiceProvider services, OnBasisChange change = OnBasisChange.Replan,
+        ProcessRuntimeCommitRequest? request = null) {
+        var initial = request ?? ProcessProjectAdmissionFixture.Initial();
         var root = ProcessDecisionRunPolicyFixture.WithSharedScope(ProcessDecisionRunPolicyFixture.Root(initial.OriginalState.RunId,
             initial.InitialPlan!.Definition.VersionId, services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id, ReadBasisMode.RunSnapshot, change));
         return initial with { InitialRunDecisionAdmission = root, InitialAssignments = initial.InitialAssignments!.Select(item => item with {

@@ -128,3 +128,5 @@ the current finite arithmetic alone does not establish acceptable throughput.
 This refinement does not replace the full bundle requirements or claim R5/R6 completion.
 
 The [asynchronous binding prerequisite](../validation/2026-10-19-asynchronous-child-binding.md) now passes 192 selected cases. The new-only callback receives the actual candidate and source session, permits asynchronous business reads, then rechecks cancellation and original source authority before save. Retained paths do not renew the binding.
+
+The [selected source-query prerequisite](../validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. It preserves the original policy/Agent/claim and historical fingerprint with bounded metadata SQL, and observes expiry after awaited reads. It does not yet route the Process source policy or activate a producer.

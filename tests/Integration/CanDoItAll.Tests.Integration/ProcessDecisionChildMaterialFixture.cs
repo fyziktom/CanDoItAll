@@ -14,9 +14,10 @@ internal sealed record ProcessDecisionChildMaterialFixture(ProcessRuntimeCommitR
     ProcessDecisionChildMaterialBinding Binding, ProcessDecisionMaterial Material) {
     internal static async Task<ProcessDecisionChildMaterialFixture> CreateAsync(ProcessPersistenceDbContext context,
         IServiceProvider services, ReadBasisMode mode = ReadBasisMode.RunSnapshot, bool descendant = false,
-        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent) {
+        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent, bool prepared = false) {
         var owner = Owner(context, services);
-        var initial = Initial(services);
+        var preparation = prepared ? ProcessPreparedLaunchFixture.Create() : null;
+        var initial = Initial(services, request: preparation?.InitialCommit);
         if (mode == ReadBasisMode.StepSnapshot) {
             var root = ProcessDecisionRunPolicyFixture.Root(initial.OriginalState.RunId, initial.InitialPlan!.Definition.VersionId,
                 services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id);
@@ -28,6 +29,10 @@ internal sealed record ProcessDecisionChildMaterialFixture(ProcessRuntimeCommitR
             ExecutorKind = executor == ProcessDecisionChildOwner.Agent ? ProcessLaunchExecutorKinds.Agent : ProcessLaunchExecutorKinds.Workflow,
             DecisionDataPolicy = item.DecisionDataPolicy! with { ExecutionContract = ProcessDecisionPolicyFixture.Contract(executor) }
         }).ToArray() };
+        if (preparation is not null) {
+            var saved = await services.GetRequiredService<IProcessPreparedLaunchStore>().PrepareAsync(preparation with { InitialCommit = initial });
+            initial = ProcessPreparedLaunchFixture.Commit(saved);
+        }
         var state = (await owner.CommitAsync(initial)).State;
         ProcessRuntimeCommitResult joined;
         ProcessDecisionMaterial material;

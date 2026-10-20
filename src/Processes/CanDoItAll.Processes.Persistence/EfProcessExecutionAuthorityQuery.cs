@@ -33,6 +33,15 @@ public sealed class EfProcessExecutionAuthorityQuery(
         return await ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<ProcessExecutionDispatchAuthorityResult> ReadDecisionDispatchAsync(ProcessExecutionClaimEvidence evidence,
+        ProcessDecisionChildMaterialBinding original, ProcessDecisionExecutionContract supportedExecution,
+        ProcessDecisionContentContract? supportedContent, CancellationToken cancellationToken = default) {
+        var selection = new ProcessDecisionDispatchSelection(original, supportedExecution, supportedContent, clock);
+        selection.Validate(evidence);
+        await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken, selection).ConfigureAwait(false);
+    }
+
     public async Task<ProcessExecutionReservationObservation> ReadReservationAsync(ProcessExecutionClaimEvidence evidence,
         CancellationToken cancellationToken = default) {
         await using var context = await factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
@@ -53,7 +62,8 @@ public sealed class EfProcessExecutionAuthorityQuery(
     }
 
     internal static async Task<ProcessExecutionDispatchAuthorityResult> ReadCoreAsync(ProcessPersistenceDbContext context,
-        ProcessExecutionClaimEvidence evidence, DateTimeOffset observedAt, CancellationToken cancellationToken) {
+        ProcessExecutionClaimEvidence evidence, DateTimeOffset observedAt, CancellationToken cancellationToken,
+        ProcessDecisionDispatchSelection? selection = null) {
         ArgumentNullException.ThrowIfNull(evidence);
         if (evidence.ExecutionRunId == Guid.Empty || evidence.ExecutorAgentId == Guid.Empty ||
                 evidence.RunId.Value == Guid.Empty || evidence.StepInstanceId.Value == Guid.Empty ||
@@ -122,6 +132,10 @@ public sealed class EfProcessExecutionAuthorityQuery(
             row.Step.Status is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) &&
             row.Step.ActiveClaimToken == evidence.DispatchClaimToken && row.Step.AttemptNumber == row.Claim.AttemptNumber &&
             row.Claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) && row.Claim.ExpiresAtUtc > observedAt;
+        if (selection is not null) {
+            (current, observedAt) = await EfProcessDecisionDispatchBinding.RequireAsync(context, evidence, new(row.State.RootRunId),
+                original, assignment, selection, cancellationToken).ConfigureAwait(false);
+        }
         var fingerprint = "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
             row.State.RunId, row.State.RootRunId, row.State.PlanId, row.State.PlanHash,
             evidence.StepInstanceId, evidence.DispatchClaimToken, evidence.ExecutorAgentId,
@@ -132,6 +146,9 @@ public sealed class EfProcessExecutionAuthorityQuery(
             assignment.OperationTargetScope, original.CapabilityScope,
             PreparationFingerprint = saved?.PreparationFingerprint
         })))).ToLowerInvariant();
+        if (selection is not null) {
+            fingerprint = selection.Fingerprint(fingerprint, original.DecisionDataPolicy!);
+        }
         var reference = saved is null || source?.ProjectAdmission is null ? null : new ProcessExecutionProjectAuthority(
             saved.Preparation.AdmissionId, saved.PreparationFingerprint, evidence.RunId, evidence.StepInstanceId, assignment.ReadinessHash);
         return new(ProcessExecutionAuthorityDisposition.Bound, new(evidence, new(row.State.RootRunId), projectId, fingerprint,
