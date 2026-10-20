@@ -247,7 +247,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
     private static ProcessProjectAdmission? ResolveSourceProject(ProcessLaunchAuthority authority)
         => ProjectProcessReadAuthorityPolicy.ResolveSourceProject(authority);
 
-    private async Task RequireSourceProjectCurrentAsync(ProcessLaunchAuthority authority, CancellationToken cancellationToken) {
+    internal async Task RequireSourceProjectCurrentAsync(ProcessLaunchAuthority authority, CancellationToken cancellationToken) {
         if (ResolveSourceProject(authority) is not { } source) {
             return;
         }

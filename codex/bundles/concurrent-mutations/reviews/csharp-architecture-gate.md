@@ -1,5 +1,22 @@
 # C# architecture entry review
 
+## Initial root material producer closure (2026-10-20)
+
+Status: PASS for initial shared capture, with [192 distinct passing behaviors](../validation/2026-10-20-process-root-material-producer.md).
+Application owns capture identity/lifecycle through real persistence and business ports;
+Persistence owns the bounded original header and validated scope; Workbench owns coherent
+Project reads and source leases. The dispatcher delegates before claim admission.
+No project reference, runtime partial or service locator was added. No Process lock spans
+the business read. Current snapshot readiness does not replace child/publication authority.
+
+Before/after scoped reviews preserve seven project edges and six existing Workbench
+module/type cycles, with no project cycle. Two new informational member-count findings
+are accepted for cohesive attempt/receipt and capture-lifecycle responsibilities.
+Registered composition and actual source/capture tests validate wiring that the static
+DI interpreter does not fully recognize. Two test classes were corrected/extended without
+production changes; 2,324 production outputs are identical across that repair.
+Actual child binding, manager continuation and post-capture revocation remain activation gates.
+
 ## Process capture ownership closure (2026-10-20)
 
 Status: PASS for the commit/claim prerequisite. [Validation](../validation/2026-10-20-process-capture-ownership.md)

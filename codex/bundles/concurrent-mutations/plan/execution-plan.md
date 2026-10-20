@@ -1,18 +1,26 @@
 # Execution plan
 
+The [initial root material producer](../validation/2026-10-20-process-root-material-producer.md)
+passes 192 distinct behaviors with exact source/runtime/resource proof and retained
+initial failures. Required before-claim capture is now wired to the real Workbench reader.
+Next, design and implement the selected step preparation query, StepSnapshot capture,
+actual Agent child enrollment/binding and manager continuation as a complete selected
+execution path. Reuse the accepted source and original work owners; preserve the executor
+guard until that path passes. Workflow, settings/SPA and broad closure remain open.
+
 The [capture ownership prerequisite](../validation/2026-10-20-process-capture-ownership.md)
-passes 127 distinct behaviors under an exact test-only repair. Next, prepare the root's
-shared RunSnapshot before dispatch claims, then integrate StepSnapshot capture and
+passes 127 distinct behaviors under an exact test-only repair. The root's
+shared RunSnapshot now precedes dispatch claims; continue with StepSnapshot capture and
 actual child enrollment/binding. Keep the existing shared-scope claim prohibition.
-Fresh commit observation and exact step-claim attachment are available; current source
-authorization and registered business capture still require concrete integration.
+Fresh commit observation, exact step-claim attachment and root business capture are
+available. Selected step source authorization and child binding still require integration.
 Manager continuation, Workflow and activation gates remain open.
 
 Current next work follows the passing [Process result/accounting integration](../validation/2026-10-20-process-result-accounting.md):
 369 distinct passing behaviors, required coordinator wiring for dispatch and recovery,
 atomic persisted-result acceptance, exact original child settlement and durable replay.
-Before producer activation, settle capture ownership after duplicate/lost acknowledgements,
-current-claim attachment, initial business target binding and manager continuation.
+Capture ownership and initial root material are now available. Before producer activation,
+complete selected step capture, initial business target binding and manager continuation.
 The executor policy guard remains until that complete selected path is proved.
 Workflow, settings/SPA, remaining owner cutovers, sustained capacity and broad closure
 remain open. No SPA main merge is authorized.

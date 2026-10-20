@@ -65,6 +65,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessRuntimeStrategyFactoryResolver strategyFactoryResolver,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
     ProcessDecisionResultCoordinator resultCoordinator,
+    ProcessDecisionRootPreparationCoordinator rootPreparation,
     ProcessRuntimeDispatchOptions? options = null,
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
     IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
@@ -103,6 +104,7 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         var scheduler = new ProcessRuntimeScheduler();
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var dispatcher = new ProcessStrategyDispatcher(hostCapabilitySnapshotProvider);
+        var rootPreparationRequired = true;
 
         for (var iteration = 0; iteration < MaximumDispatchIterations; iteration++)
         {
@@ -160,6 +162,22 @@ public sealed class ProcessRuntimeDispatchApplicationService(
 
             if (state.Status == ProcessRuntimeStatus.Active)
             {
+                if (rootPreparationRequired) {
+                    var prepared = await rootPreparation.PrepareAsync(state, cancellationToken).ConfigureAwait(false);
+                    state = prepared.State;
+                    rootPreparationRequired = prepared.Status != ProcessDecisionRootPreparationStatus.NotRequired;
+                    if (prepared.Status is not (ProcessDecisionRootPreparationStatus.Ready or ProcessDecisionRootPreparationStatus.NotRequired)) {
+                        diagnostics.Add(prepared.Status switch {
+                            ProcessDecisionRootPreparationStatus.CapturePending => "The original run snapshot capture is pending reconciliation.",
+                            ProcessDecisionRootPreparationStatus.ReviewRequired => "The original run snapshot requires manager review before dispatch.",
+                            ProcessDecisionRootPreparationStatus.Stopped => "The original snapshot owner has stopped.",
+                            ProcessDecisionRootPreparationStatus.SourceProjectionRequired => "The original run source requires explicit projection conversion before capture.",
+                            _ => throw new InvalidDataException("The root preparation result is unsupported.")
+                        });
+                        return await CompleteDispatchAsync(new(runId, ToStage(state.Status), state.Status, diagnostics),
+                            requestedBy, cancellationToken).ConfigureAwait(false);
+                    }
+                }
                 var nowUtc = NormalizeUtc(clock.GetUtcNow());
                 var expireCommit = await ExecuteLifecycleTransitionWithConcurrencyRetryAsync(
                     runId,

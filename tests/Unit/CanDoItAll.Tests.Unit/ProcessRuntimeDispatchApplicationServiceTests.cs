@@ -37,6 +37,25 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         []);
 
     [Fact]
+    public async Task Root_preparation_refusal_returns_before_any_dispatch_claim_or_strategy_execution() {
+        var stepId = ProcessStepInstanceId.New();
+        var initial = new ProcessRuntimeStateSnapshot(RunId, RunId, PlanId, "sha256:plan", ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Pending)], [], [], new HashSet<ArtifactSlotId>(), Now);
+        var states = new InMemoryRuntimeStateStore(initial);
+        var owner = new RecordingRuntimeUnitOfWork(states);
+        var resolver = new RecordingStrategyFactoryResolver("implementation");
+        var service = new ProcessRuntimeDispatchApplicationService(new TestProcessProjectionClock(Now), states, owner,
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")), new InMemoryAssignmentStore([]), resolver,
+            NewNoOpCatchupService(), ProcessDecisionResultTestComposition.Legacy(owner),
+            ProcessDecisionResultTestComposition.RootSourceRequired(states, owner));
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+        Assert.Contains(result.Diagnostics, message => message.Contains("projection conversion", StringComparison.Ordinal));
+        Assert.Empty(states.State.Claims);
+        Assert.Empty(resolver.ExecutionContexts);
+        Assert.Equal(initial, states.State);
+    }
+
+    [Fact]
     public void Dispatch_defaults_keep_governed_attempt_inside_claim_lease()
     {
         var options = new ProcessRuntimeDispatchOptions();
@@ -71,6 +90,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new RecordingStrategyFactoryResolver("implementation"),
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, new RecordingRuntimeUnitOfWork(stateStore)),
             new ProcessRuntimeDispatchOptions
             {
                 DispatchLease = TimeSpan.FromMinutes(5),
@@ -105,7 +125,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             new RecordingStrategyFactoryResolver("implementation"),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)));
+            ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, new RecordingRuntimeUnitOfWork(stateStore)));
         var missingRunId = ProcessRunId.New();
 
         var exception = await Assert.ThrowsAsync<ProcessRuntimeDispatchRunNotFoundException>(
@@ -140,7 +161,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.ExecuteReadyAsync(RunId, "unit-test"));
@@ -176,7 +198,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -220,6 +243,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new RecordingStrategyFactoryResolver("implementation"),
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, new RecordingRuntimeUnitOfWork(stateStore)),
             blockedRunRecoveryCoordinator: recoveryCoordinator);
 
         var result = await service.ExecuteReadyAsync(RunId, "direct-api-test");
@@ -285,6 +309,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new ThrowingStrategyFactoryResolver(),
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, new RecordingRuntimeUnitOfWork(stateStore)),
             dispatchQueue: dispatchQueue);
 
         var result = await service.ExecuteReadyAsync(RunId, "direct-api-test");
@@ -333,7 +358,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ]),
             new ThrowingStrategyFactoryResolver(),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -395,7 +421,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ]),
             new ThrowingStrategyFactoryResolver(),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -632,7 +659,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -680,7 +708,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -744,6 +773,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             strategyResolver,
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork),
             hostCapabilitySnapshotProvider: new StaticHostCapabilitySnapshotProvider(
                 new ProcessHostCapabilitySnapshot(
                     new ProcessHostProfileId("linux-dispatch"),
@@ -799,6 +829,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             strategyResolver,
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork),
             new ProcessRuntimeDispatchOptions
             {
                 DispatchLease = TimeSpan.FromMinutes(25),
@@ -887,7 +918,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -947,6 +979,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new DeferredStrategyFactoryResolver(childRunId),
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork),
             dispatchQueue: dispatchQueue);
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
@@ -1004,7 +1037,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             new DeferredStrategyFactoryResolver(childRunId),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1045,7 +1079,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             new DeferredStrategyFactoryResolver(childRunId, sensitiveMessage),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)));
+            ProcessDecisionResultTestComposition.Legacy(new RecordingRuntimeUnitOfWork(stateStore)),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, new RecordingRuntimeUnitOfWork(stateStore)));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1088,7 +1123,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1130,7 +1166,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1169,7 +1206,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1212,7 +1250,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1254,7 +1293,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             assignmentStore,
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1317,6 +1357,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             strategyResolver,
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork),
             recoveryInstructionBuilder: CreateRecoveryInstructionBuilder());
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
@@ -1383,7 +1424,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             ]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1432,7 +1474,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1470,7 +1513,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             new ThrowingStrategyFactoryResolver(),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1514,7 +1558,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [NewManagedArtifactAssignment(stepId, "targeted-validation")]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1580,7 +1625,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [NewManagedArtifactAssignment(stepId, "targeted-validation")]),
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1649,7 +1695,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             assignmentStore,
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1705,7 +1752,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             assignmentStore,
             strategyResolver,
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1764,7 +1812,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             new InMemoryAssignmentStore([]),
             new ThrowingStrategyFactoryResolver(),
             NewNoOpCatchupService(),
-            ProcessDecisionResultTestComposition.Legacy(unitOfWork));
+            ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork));
 
         var result = await service.ExecuteReadyAsync(RunId, "unit-test");
 
@@ -1806,6 +1855,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             strategyResolver,
             NewNoOpCatchupService(),
             ProcessDecisionResultTestComposition.Legacy(unitOfWork),
+            ProcessDecisionResultTestComposition.LegacyRoot(stateStore, unitOfWork),
             new ProcessRuntimeDispatchOptions
             {
                 DispatchLease = TimeSpan.FromMinutes(5),

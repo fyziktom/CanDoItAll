@@ -1,5 +1,30 @@
 # Resource ownership and cleanup
 
+## Root material producer validation (2026-10-20)
+
+`c4-process-root-material-final` released the passing 19-case correction/source extension.
+Its complete ownership sidecar preceded directory creation. It reuses existing SQL and
+Agent file fixtures, refreshes standard Release test assemblies, and verifies discovery
+against current source method names as well as counts. Exact source/runtime verification,
+117.514 seconds of complete observation and reconciliation pass, with zero remaining
+observed processes/database-name delta. Six unowned TEMP entries are preserved.
+The 192-case combined proof and both candidate identities are retained for the next
+producer integration; no new host or compiled output tree remains.
+
+`c4-process-root-material` released its initial 188-case execution with raw 186/188
+results retained, complete identity verification, zero observed processes/database delta
+and 55 unowned TEMP entries preserved. Its ownership sidecar was written before directory
+creation; the missing observer schema fields were corrected explicitly before execution.
+The older test-binary mismatch and failed standalone logging fixture remain recorded.
+The directory contains
+command logs, exact candidate identities and copied reviewed validation helpers. Builds
+refresh standard Release outputs; tests reuse the existing isolated PG18 endpoint and
+its normal database leases. No new server, container or compiled output tree is created.
+Ordinary 5032, installed tools, unrelated resources and previously denied cleanup targets
+remain outside this action. Release requires the observer, identity verification and
+resource reconciliation before proof retention. A corrected candidate will repeat the
+two affected classes and add direct Agent-source coverage using the same SQL/file fixtures.
+
 ## Process capture ownership checkpoint (2026-10-20)
 
 The initial and repaired `c4-process-capture-ownership` candidates released test

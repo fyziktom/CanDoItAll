@@ -13,6 +13,13 @@ public sealed class EfProcessDecisionRunScopeStore(ProcessPersistenceDbContext c
     public async Task<ProcessDecisionRunScopeState?> ReadAsync(ProcessDecisionMaterialScopeId scopeId, CancellationToken cancellationToken = default)
         => (await LoadAsync(scopeId, false, cancellationToken).ConfigureAwait(false))?.State;
 
+    internal async Task<(ProcessDecisionRunAdmission Root, DecisionBudgetBalance Budget, ProcessDecisionRunScopeState Scope)>
+        ReadPreparationAsync(ProcessDecisionMaterialScopeId scopeId, CancellationToken cancellationToken) {
+        var loaded = await LoadAsync(scopeId, false, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The original shared root scope is missing.");
+        return (loaded.Root, ReadBalance(loaded.Budget), loaded.State);
+    }
+
     internal void StageInitial(ProcessRuntimeCommitRequest request) {
         if (request.InitialRunDecisionAdmission?.MaterialScope is not { } admission) {
             return;

@@ -1,6 +1,7 @@
 # Root material preparation before Process dispatch
 
-Status: accepted for implementation after signed capture ownership `0cea03fa4`.
+Status: implemented and validated with 192 distinct passing behaviors after signed
+capture ownership `0cea03fa4`; see the [closure record](../validation/2026-10-20-process-root-material-producer.md).
 Proof tier: Behavioral with exact retained results, identities and owned-resource
 reconciliation. Scope is the actual root RunSnapshot producer; Agent child execution,
 StepSnapshot production and manager continuation remain separate required follow-ons.
@@ -140,6 +141,14 @@ payload, retaining its actual capture timestamp and namespace. Do not use the in
 Agent wrapper that also carries a session-specific write context. Actual child binding
 will obtain its own authorized background session and write context later.
 
+The business read is authorized while its source lease and coherent Project transaction
+are held. Its stored snapshot is internal historical material, not continuing read,
+dispatch or publication authority. A source change after the completed read need not
+erase that snapshot; actual child binding and publication must revalidate the original
+source. Holding the catalog lease through Process commit would introduce a lock-order
+hazard and is deliberately excluded. Activation of actual execution remains gated until
+the post-capture revocation race is proved at that later boundary.
+
 ## Dispatcher and activation boundary
 
 The dispatcher calls the preparation coordinator before creating or reclaiming governed
@@ -147,6 +156,11 @@ dispatch work, while preserving ordinary no-shared-policy behavior. A pending/re
 preparation returns a safe diagnostic and current state without releasing another
 caller's work. Required composition prevents a production optional-service bypass.
 Fake legacy tests must explicitly select no shared root admission.
+
+The query's explicit NotRequired result may be retained for the current dispatch call:
+root admission is immutable, so a legacy/StepSnapshot runtime cannot acquire a new
+shared root scope in a later iteration. This avoids repeating the legacy probe.
+Governed roots continue checking readiness and material age before later dispatch work.
 
 Do not lift AgentFrameworkProcessStepExecutor's policy refusal in this slice. The real
 child producer, original target binding, saved-effect approval/refresh/cancel and atomic

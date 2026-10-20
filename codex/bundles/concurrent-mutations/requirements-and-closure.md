@@ -1,17 +1,24 @@
 # Requirements and closure ledger
 
+Current root producer evidence: [192 distinct passing behaviors](validation/2026-10-20-process-root-material-producer.md).
+Real registered RunSnapshot capture now precedes claims and owns exact reservations,
+material and settlement. Original source and coherent Project reads remain bounded;
+unknown acknowledgement never authorizes another capture. This closes initial shared
+material production only. Actual Agent child binding, StepSnapshot production, manager
+continuation and full R5 remain open. SPA stays on its own branch.
+
 Current capture ownership evidence: [127 distinct passing behaviors](validation/2026-10-20-process-capture-ownership.md).
 Original Applied receipts cannot grant another capture invocation; the new exact claim
 precondition protects StepSnapshot attachment. Shared RunSnapshot preparation retains
 its existing root owner and must precede dispatch. This closes the commit/claim
-prerequisite only. Registered producer capture, manager actions and full R5 remain open.
+prerequisite only. Registered step/child producers, manager actions and full R5 remain open.
 
 Current Process result/accounting evidence: [369 distinct passing behaviors](validation/2026-10-20-process-result-accounting.md),
 including 111 final cases and 258 unaffected cases under an exact repair comparison.
 Normal dispatch and interrupted recovery share original-child reads, stable result
 identity, atomic runtime/accounting acceptance and retained unknown work. This closes
 the result-submission prerequisite; R5 and end-to-end activation remain open for actual
-producer capture, manager actions, Workflow and settings. Full portability passes;
+step capture, child binding, manager actions, Workflow and settings. Full portability passes;
 sustained capacity and the historical incomplete broad Stable run remain open.
 
 Work resumed on 2026-10-18; see the [resumption record](validation/2026-10-18-resumption.md).

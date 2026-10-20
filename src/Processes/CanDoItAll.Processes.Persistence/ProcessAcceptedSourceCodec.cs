@@ -46,20 +46,26 @@ internal static class ProcessAcceptedSourceCodec {
     internal static ProcessAcceptedSource Read(ProcessAcceptedSourceVersion version, ProcessLaunchAdmissionId admissionId,
         ProcessStepInstanceId stepId, string preparationFingerprint, ProcessAcceptedSourceEnvelope header,
         ProcessAcceptedSourceEnvelope assignment) {
-        if (version != ProcessAcceptedSourceVersion.OriginalProjection) {
-            throw new NotSupportedException("The accepted source projection version is unsupported.");
-        }
-        var decodedHeader = Decode<ProcessAcceptedSourceHeader>(header, HeaderDomain);
-        RequireHeader(decodedHeader);
-        if (decodedHeader.AdmissionId != admissionId || decodedHeader.PreparationFingerprint != preparationFingerprint) {
-            throw Invalid("The accepted source header differs from its original admission.");
-        }
+        var decodedHeader = ReadHeader(version, admissionId, preparationFingerprint, header);
         var decodedAssignment = Decode<ProcessAssignmentSource>(assignment, AssignmentDomain + header.Fingerprint + "\n");
         RequireAssignment(decodedHeader, decodedAssignment);
         if (decodedAssignment.StepInstanceId != stepId) {
             throw Invalid("The accepted source assignment differs from the selected step.");
         }
         return new(decodedHeader, decodedAssignment);
+    }
+
+    internal static ProcessAcceptedSourceHeader ReadHeader(ProcessAcceptedSourceVersion version, ProcessLaunchAdmissionId admissionId,
+        string preparationFingerprint, ProcessAcceptedSourceEnvelope header) {
+        if (version != ProcessAcceptedSourceVersion.OriginalProjection) {
+            throw new NotSupportedException("The accepted source projection version is unsupported.");
+        }
+        var decoded = Decode<ProcessAcceptedSourceHeader>(header, HeaderDomain);
+        RequireHeader(decoded);
+        if (decoded.AdmissionId != admissionId || decoded.PreparationFingerprint != preparationFingerprint) {
+            throw Invalid("The accepted source header differs from its original admission.");
+        }
+        return decoded;
     }
 
     private static ProcessAcceptedSourceEnvelope Encode<T>(T value, string domain) {

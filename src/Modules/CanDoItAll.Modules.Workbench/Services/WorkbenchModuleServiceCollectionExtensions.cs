@@ -45,6 +45,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         taskPlanOptions.Validate(static options => options.IsValid(), "Task-plan operation timing is invalid.").ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectTaskPlanReceiptRetention>());
         services.AddScoped<ProjectTaskPlanBasisCapture>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessDecisionRootCapturer, ProjectTaskPlanRootCapturer>());
         services.AddScoped<ProjectTaskPlanReceiptReader>();
         services.AddSingleton(new ProcessDecisionExecutionRegistration(ProjectTaskPlanProcessContract.Execution, ProjectTaskPlanProcessContract.Content));
         services.AddScoped(provider => new ProjectTaskPlanPublisher(

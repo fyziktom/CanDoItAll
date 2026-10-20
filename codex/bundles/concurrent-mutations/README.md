@@ -4,14 +4,23 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
-Latest checkpoint: [Process capture ownership](validation/2026-10-20-process-capture-ownership.md)
+Latest checkpoint: [initial root snapshot production](validation/2026-10-20-process-root-material-producer.md)
+passes 192 distinct behaviors. Required dispatcher preparation captures real Project
+material before claims, invokes one capture under contention, preserves unknown work and
+atomically settles closed work. Root source reads stay at three rows / 6,612 serialized
+scalar bytes for both 1 and 128 steps. Original Agent/operator source, lifetime and
+profile checks are proved; Release builds, full portability and resource checks pass.
+The initial test setup/assembly failures remain recorded. Actual child binding,
+StepSnapshot production and manager continuation are next; the executor guard remains.
+
+The [Process capture ownership prerequisite](validation/2026-10-20-process-capture-ownership.md)
 has 127 distinct passing behaviors under an exact test-only correction. Durable replay
 cannot grant fresh capture ownership, and exact dispatch attachment rejects expired,
 replaced or cancelled authority, including rollback after SQL flush. The initial test
 candidate exposed and corrected the design ordering: RunSnapshot capture precedes claims;
 StepSnapshot capture uses its claim. Production scope admission was preserved.
 Builds, full portability, architecture and source/runtime/resource checks pass.
-The actual producer and manager paths remain next.
+Actual step/child producers and manager continuation remain next.
 
 The [Process result/accounting integration](validation/2026-10-20-process-result-accounting.md)
 has 369 distinct passing behaviors: 111 final cases and 258 unaffected passes retained
@@ -19,7 +28,7 @@ under an exact source comparison. Dispatcher and interrupted-execution recovery 
 original child evidence and atomically commit runtime results with work accounting.
 Receipt serialization and optional legacy joins are repaired; both failed candidates
 remain retained. Release builds, full portability, architecture and source/runtime/resource
-checks pass. Actual producer capture, manager continuation, Workflow, settings/SPA,
+checks pass. StepSnapshot capture, actual child binding, manager continuation, Workflow, settings/SPA,
 sustained capacity and broad Stable closure remain open.
 
 The [asynchronous child-binding checkpoint](validation/2026-10-19-asynchronous-child-binding.md)
