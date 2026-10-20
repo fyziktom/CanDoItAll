@@ -4,7 +4,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed record AgentInheritedPlanningRunPreparation(ExecutionRunRecord Candidate, string OriginalInput,
     AgentPlanningOwner Owner, AgentToolSemanticDigest RuntimeContract, WorkspaceScopeDescriptor Scope,
-    Func<AgentToolSessionAdmission, AgentInheritedPlanningBinding> Bind);
+    Func<AgentInheritedPlanningBindingContext, CancellationToken, Task<AgentInheritedPlanningBinding>> BindAsync);
 
 public sealed record AgentInheritedPlanningRunAdmissionResult(ExecutionRunRecord Run, bool Created);
 
@@ -64,7 +64,7 @@ public sealed class AgentInheritedPlanningRunAdmission(ISandboxWorkspaceExecutio
                 preparation.RuntimeContract, preparation.Scope)
         };
         var admission = await new AgentInheritedPlanningAdmission(journal).CreateAsync(candidate, preparation.OriginalInput,
-            preparation.Owner, preparation.Bind, cancellationToken);
+            preparation.Owner, preparation.BindAsync, cancellationToken);
         candidate = candidate with { ToolAdmission = admission };
         await RequireOriginalAsync(candidate, executionRunId, requireOriginalParent, cancellationToken);
         var saved = await runs.SaveExecutionRunDetailAsync(new(candidate, null, [], []), cancellationToken);

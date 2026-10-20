@@ -54,7 +54,8 @@ internal sealed class AgentInheritedPlanningCoordinatorFixture : IAsyncDisposabl
             }, _ => Task.FromResult(new AgentInheritedPlanningRunPreparation(
                 source.Original with { Id = id, MetadataJson = "{}", ToolAdmission = null }, "Prepare the inherited task plan.",
                 original.Owner, runtime.CaptureRuntimeContract(source.Files.Agent, provider, participant), source.Files.StorageScope,
-                session => new(original.OriginalTarget, original.InheritedOrigin! with { Source = session.Reference.BackgroundSource! }))));
+                (binding, _) => Task.FromResult(new AgentInheritedPlanningBinding(original.OriginalTarget,
+                    original.InheritedOrigin! with { Source = binding.Session.Reference.BackgroundSource! })))));
             return new(source, provider, wire, client, runtime, participant, saved.Run);
         } catch {
             client.Dispose();

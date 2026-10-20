@@ -13,6 +13,129 @@ public sealed class AgentInheritedPlanningRunAdmissionTests {
     private static readonly AgentToolSemanticDigest RuntimeContract = AgentPlanningDecisionTestData.Envelope("{\"runtime\":1}").Digest;
 
     [Fact]
+    public async Task Awaited_binding_holds_only_the_original_child_and_receives_its_final_admission_context() {
+        await using var fixture = await AgentInheritedPlanningFixture.CreateAsync();
+        var id = Guid.NewGuid();
+        var preparation = Preparation(fixture, id);
+        var entered = new TaskCompletionSource<AgentInheritedPlanningBindingContext>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var bindings = 0;
+        var first = Owner(fixture).AdmitAsync(id, RequireParent(fixture), _ => Task.FromResult(preparation with {
+            BindAsync = async (context, token) => {
+                Interlocked.Increment(ref bindings);
+                entered.SetResult(context);
+                await release.Task.WaitAsync(token);
+                return await preparation.BindAsync(context, token);
+            }
+        }));
+        try {
+            var context = await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.Equal(id, context.Candidate.Id);
+            Assert.Equal(preparation.Candidate.CreatedAtUtc, context.Candidate.CreatedAtUtc);
+            Assert.Equal(fixture.Policy.SourceId, context.Session.Reference.BackgroundSource!.SourceId);
+            Assert.Null(await fixture.Files.NewStore().GetExecutionRunAsync(id));
+            var second = Owner(fixture).AdmitAsync(id, RequireParent(fixture), NoPreparation);
+            var otherId = Guid.NewGuid();
+            var other = await Owner(fixture).AdmitAsync(otherId, RequireParent(fixture),
+                _ => Task.FromResult(Preparation(fixture, otherId))).WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.True(other.Created);
+            Assert.False(second.IsCompleted);
+            release.SetResult();
+            var results = await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.Equal(1, bindings);
+            Assert.Single(results, result => result.Created);
+            Assert.Equal(context.Candidate.MetadataJson, results[0].Run.MetadataJson);
+            Assert.Equal(RuntimeContract, AgentPlanningRunMetadata.Read(results[0].Run));
+            Assert.Equal(preparation.Scope, AgentPlanningRunMetadata.ReadScope(results[0].Run));
+            Assert.Equal(context.Session, results[0].Run.ToolAdmission!.Session);
+            Assert.Equal(JsonSerializer.Serialize(results[0].Run.ToolAdmission!), JsonSerializer.Serialize(results[1].Run.ToolAdmission!));
+        } finally {
+            release.TrySetResult();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancellation_during_binding_prevents_save_even_when_the_callback_ignores_cancellation(bool ignoreCancellation) {
+        await using var fixture = await AgentInheritedPlanningFixture.CreateAsync();
+        var id = Guid.NewGuid();
+        var preparation = Preparation(fixture, id);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellation = new CancellationTokenSource();
+        var pending = Owner(fixture).AdmitAsync(id, RequireParent(fixture), _ => Task.FromResult(preparation with {
+            BindAsync = async (context, token) => {
+                entered.SetResult();
+                await release.Task.WaitAsync(ignoreCancellation ? CancellationToken.None : token);
+                return await preparation.BindAsync(context, token);
+            }
+        }), cancellation.Token);
+        try {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await cancellation.CancelAsync();
+        } finally {
+            release.TrySetResult();
+        }
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(20)));
+        Assert.Null(await fixture.Files.NewStore().GetExecutionRunAsync(id));
+        Assert.True((await Owner(fixture).AdmitAsync(id, RequireParent(fixture),
+            _ => Task.FromResult(preparation)).WaitAsync(TimeSpan.FromSeconds(20))).Created);
+    }
+
+    [Fact]
+    public async Task Binding_failure_preserves_the_error_without_saving_and_releases_the_child() {
+        await using var fixture = await AgentInheritedPlanningFixture.CreateAsync();
+        var id = Guid.NewGuid();
+        var preparation = Preparation(fixture, id);
+        var failure = new IOException("original-target-unavailable");
+        Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() => Owner(fixture).AdmitAsync(id, RequireParent(fixture),
+            _ => Task.FromResult(preparation with { BindAsync = (_, _) => Task.FromException<AgentInheritedPlanningBinding>(failure) }))));
+        Assert.Null(await fixture.Files.NewStore().GetExecutionRunAsync(id));
+        Assert.True((await Owner(fixture).AdmitAsync(id, RequireParent(fixture),
+            _ => Task.FromResult(preparation)).WaitAsync(TimeSpan.FromSeconds(20))).Created);
+    }
+
+    [Theory]
+    [InlineData(SourceChange.ReadDenied)]
+    [InlineData(SourceChange.DispatchDenied)]
+    [InlineData(SourceChange.FingerprintChanged)]
+    public async Task Source_change_during_binding_cannot_authorize_initial_save(SourceChange change) {
+        await using var fixture = await AgentInheritedPlanningFixture.CreateAsync();
+        var id = Guid.NewGuid();
+        var preparation = Preparation(fixture, id);
+        var fingerprint = fixture.Policy.Fingerprint;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = Owner(fixture).AdmitAsync(id, RequireParent(fixture), _ => Task.FromResult(preparation with {
+            BindAsync = async (context, token) => {
+                entered.SetResult();
+                await release.Task.WaitAsync(token);
+                return await preparation.BindAsync(context, token);
+            }
+        }));
+        try {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            fixture.Policy.ReadAllowed = change != SourceChange.ReadDenied;
+            fixture.Policy.DispatchAllowed = change != SourceChange.DispatchDenied;
+            if (change == SourceChange.FingerprintChanged) {
+                fixture.Policy.Fingerprint = AgentPlanningDecisionTestData.Envelope("{\"owner\":2}").Digest;
+            }
+        } finally {
+            release.TrySetResult();
+        }
+        await Assert.ThrowsAsync<AgentToolAdmissionException>(() => pending.WaitAsync(TimeSpan.FromSeconds(20)));
+        Assert.Null(await fixture.Files.NewStore().GetExecutionRunAsync(id));
+        fixture.Policy.ReadAllowed = true;
+        fixture.Policy.DispatchAllowed = true;
+        fixture.Policy.Fingerprint = fingerprint;
+        Assert.True((await Owner(fixture).AdmitAsync(id, RequireParent(fixture),
+            _ => Task.FromResult(preparation)).WaitAsync(TimeSpan.FromSeconds(20))).Created);
+    }
+
+    public enum SourceChange { ReadDenied, DispatchDenied, FingerprintChanged }
+
+    [Fact]
     public async Task New_admission_binds_the_original_scope_contract_input_and_parent_before_publication() {
         await using var fixture = await AgentInheritedPlanningFixture.CreateAsync();
         var id = Guid.NewGuid();
@@ -269,8 +392,8 @@ public sealed class AgentInheritedPlanningRunAdmissionTests {
     private static AgentInheritedPlanningRunPreparation Preparation(AgentInheritedPlanningFixture fixture, Guid id) {
         var decision = fixture.Original.ToolAdmission!.PlanningDecision!;
         return new(fixture.Original with { Id = id, MetadataJson = "{}", ToolAdmission = null }, "Prepare the original bounded plan.",
-            decision.Owner, RuntimeContract, fixture.Files.StorageScope, session => new(decision.OriginalTarget,
-                decision.InheritedOrigin! with { Source = session.Reference.BackgroundSource! }));
+            decision.Owner, RuntimeContract, fixture.Files.StorageScope, (binding, _) => Task.FromResult(new AgentInheritedPlanningBinding(decision.OriginalTarget,
+                decision.InheritedOrigin! with { Source = binding.Session.Reference.BackgroundSource! })));
     }
 
     private static Func<ExecutionRunRecord, CancellationToken, Task> RequireParent(AgentInheritedPlanningFixture fixture)

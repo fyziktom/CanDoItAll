@@ -28,7 +28,7 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         };
         Request = new(Guid.NewGuid(), source.AgentId, "Prepare the original inherited plan.", AgentExecutionOperationId.New(), context,
             AgentPlanningOwner.ProjectTaskPlan, WorkspaceScopeDescriptor.Project(entry.Files.Sql.Project.ProjectId.ToString("D")),
-            RequireParentAsync, Bind);
+            RequireParentAsync, BindAsync);
     }
 
     internal AgentToolProfileBinding Profile { get; }
@@ -71,7 +71,7 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         var journal = new AgentToolAdmissionJournal(Files.Store, Profile, backgroundSources: [source]);
         return (await new AgentInheritedPlanningRunAdmission(Files.Store, Files.Store, journal).AdmitAsync(Request.ExecutionRunId,
             Request.RequireOriginalParent, _ => Task.FromResult(new AgentInheritedPlanningRunPreparation(candidate,
-                Request.OriginalInput, Request.Owner, runtime.CaptureRuntimeContract(agent, provider, Participant), Request.ContextScope, Bind)))).Run;
+                Request.OriginalInput, Request.Owner, runtime.CaptureRuntimeContract(agent, provider, Participant), Request.ContextScope, BindAsync)))).Run;
     }
 
     private Task RequireParentAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
@@ -85,13 +85,14 @@ internal sealed class AgentInheritedPlanningWorkspaceFixture : IAsyncDisposable 
         return Task.CompletedTask;
     }
 
-    private AgentInheritedPlanningBinding Bind(AgentToolSessionAdmission session) {
+    private Task<AgentInheritedPlanningBinding> BindAsync(AgentInheritedPlanningBindingContext context, CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
         Bindings++;
-        var template = AgentInheritedPlanningTestData.Create(session, mode);
+        var template = AgentInheritedPlanningTestData.Create(context.Session, mode);
         var decision = template.PlanningDecision!;
         var origin = decision.InheritedOrigin! with { CapturedAtUtc = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(1) };
         Participant.Basis = AgentInheritedPlanningTestData.Basis(template) with { CapturedAtUtc = origin.CapturedAtUtc };
-        return new(decision.OriginalTarget, origin);
+        return Task.FromResult(new AgentInheritedPlanningBinding(decision.OriginalTarget, origin));
     }
 
     public ValueTask DisposeAsync() => entry.DisposeAsync();

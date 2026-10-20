@@ -708,3 +708,7 @@ source/runtime identity verifies before freeze release. No observed process or
 database-name delta remains. Four unattributed TEMP entries are preserved. Historical
 cleanup denials remain open; the fixture is still needed. See the
 [validation record](validation/2026-10-19-publication-claim-lifetime.md).
+
+## Asynchronous binding checkpoint
+
+The c4-asynchronous-child-binding root records ownership before creation and reuses the existing isolated PostgreSQL 18 endpoint, standard Release outputs and 119 resource families. All 192 cases pass under full observation. Source/runtime identity is unchanged; no observed process or database-name delta remains. Twenty unattributed TEMP entries are preserved. The freeze is released and the fixture remains required. Details and proof identities are in the [validation record](validation/2026-10-19-asynchronous-child-binding.md). Historical cleanup denials remain open.

@@ -13,7 +13,7 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
         ArgumentNullException.ThrowIfNull(request.Context);
         ArgumentNullException.ThrowIfNull(request.ContextScope);
         ArgumentNullException.ThrowIfNull(request.RequireOriginalParent);
-        ArgumentNullException.ThrowIfNull(request.Bind);
+        ArgumentNullException.ThrowIfNull(request.BindAsync);
         if (request.AgentId == Guid.Empty || request.ActivityOperationId.Value == Guid.Empty || !Enum.IsDefined(request.Owner)) {
             throw new ArgumentException("Inherited planning requires an exact Agent, activity and registered owner.", nameof(request));
         }
@@ -29,7 +29,7 @@ internal sealed class AgentInheritedPlanningWorkspaceExecution(ISandboxWorkspace
             }, async token => {
                 startup = await prepare(executionRequest, null, token);
                 return new(startup.Run with { Id = request.ExecutionRunId }, request.OriginalInput, request.Owner,
-                    coordinator.CaptureRuntimeContract(request.Owner, startup.Agent, startup.Provider), request.ContextScope, request.Bind);
+                    coordinator.CaptureRuntimeContract(request.Owner, startup.Agent, startup.Provider), request.ContextScope, request.BindAsync);
             }, cancellationToken);
         var original = admitted.Run;
         await coordinator.RequireCurrentReadAsync(original, cancellationToken);

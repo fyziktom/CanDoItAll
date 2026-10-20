@@ -126,3 +126,5 @@ the current finite arithmetic alone does not establish acceptable throughput.
    complete writer coverage and broad/static/resource closure.
 
 This refinement does not replace the full bundle requirements or claim R5/R6 completion.
+
+The [asynchronous binding prerequisite](../validation/2026-10-19-asynchronous-child-binding.md) now passes 192 selected cases. The new-only callback receives the actual candidate and source session, permits asynchronous business reads, then rechecks cancellation and original source authority before save. Retained paths do not renew the binding.

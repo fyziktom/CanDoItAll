@@ -51,9 +51,10 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
                 ProcessRunId = Guid.NewGuid().ToString("D"), ProcessStepId = Guid.NewGuid().ToString("D")
             };
             var factory = new AgentInheritedPlanningAdmission(new(files.NewStore(), files.Profile, clock, backgroundSources: [policy]));
-            var journal = await factory.CreateAsync(candidate, "Prepare a bounded task plan.", AgentPlanningOwner.ProjectTaskPlan, session => {
-                var draft = AgentInheritedPlanningTestData.Create(session, parentMode).PlanningDecision!;
-                return new(draft.OriginalTarget, draft.InheritedOrigin! with { CapturedAtUtc = clock.Now - (basisAge ?? TimeSpan.FromMinutes(1)) });
+            var journal = await factory.CreateAsync(candidate, "Prepare a bounded task plan.", AgentPlanningOwner.ProjectTaskPlan, (binding, _) => {
+                var draft = AgentInheritedPlanningTestData.Create(binding.Session, parentMode).PlanningDecision!;
+                return Task.FromResult(new AgentInheritedPlanningBinding(draft.OriginalTarget,
+                    draft.InheritedOrigin! with { CapturedAtUtc = clock.Now - (basisAge ?? TimeSpan.FromMinutes(1)) }));
             });
             var saved = await files.Store.SaveExecutionRunDetailAsync(new(candidate with { ToolAdmission = journal }, null, [], []));
             return new(files, saved.Run, clock, policy);

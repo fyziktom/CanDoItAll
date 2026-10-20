@@ -4,6 +4,11 @@ Current work resumed on 2026-10-18 under the [resumption record](validation/2026
 The original end-to-end outcome remains active. SPA work stays on its own
 `codex/concurrent-mutations` branch and must not be merged into SPA main.
 
+The [asynchronous child-binding checkpoint](validation/2026-10-19-asynchronous-child-binding.md)
+passes all 192 selected cases. Original target checks run inside exact new-only admission;
+cancellation and source revocation during the await prevent initial save. The concrete
+Process/Workbench path remains the next integration work.
+
 The [root funding checkpoint](validation/2026-10-19-process-run-budget-funding.md) passes
 361/361 selected cases after correcting the legacy optional-parent SQL projection.
 Local and descendant work now share one genuine root budget, with atomic reservations,

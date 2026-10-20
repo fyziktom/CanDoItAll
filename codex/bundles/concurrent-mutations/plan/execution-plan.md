@@ -101,3 +101,5 @@ Reopen runtime policy if the selected publication cannot validate its material i
 atomically or a replan can duplicate an uncertain external effect. Invalidate dependent
 proof when source/migrations/contracts/asset mode change. Do not substitute prose for
 missing SQL, browser, process or retained-data evidence.
+
+P07 continuation: [asynchronous original binding](../validation/2026-10-19-asynchronous-child-binding.md) passes 192 selected cases, repeating the prior 185 workspace/journal/MAF/architecture behaviors and seven new await/cancellation/source-revocation cases. Continue with selected Process source authority and inherited Workbench publication under the existing integration plan.

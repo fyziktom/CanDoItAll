@@ -47,7 +47,7 @@ public sealed class AgentInheritedPlanningWorkspaceTests {
         var result = await fixture.ExecuteAsync(fixture.Request with {
             OriginalInput = "Replacement input must not enter the provider.", ActivityOperationId = AgentExecutionOperationId.New(),
             Context = ExecutionInvocationContext.Empty with { SourceId = "replacement" },
-            Bind = _ => throw new InvalidOperationException("Retained execution must not create a new binding.")
+            BindAsync = (_, _) => throw new InvalidOperationException("Retained execution must not create a new binding.")
         });
         Assert.NotNull(result.Execution);
         Assert.Equal(original.SourceId, result.Run.SourceId);
