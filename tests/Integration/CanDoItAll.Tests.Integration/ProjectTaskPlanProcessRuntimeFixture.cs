@@ -9,6 +9,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Integration.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -33,7 +34,7 @@ internal sealed class ProjectTaskPlanProcessRuntimeFixture : IAsyncDisposable {
     internal AgentToolSessionReference Session => Source.Original.ToolAdmission!.Session.Reference;
 
     internal static async Task<ProjectTaskPlanProcessRuntimeFixture> CreateAsync(bool agentSource = true, bool sameExecutor = false,
-        bool includeOperationContract = true) {
+        bool includeOperationContract = true, IInterceptor? processReadProbe = null) {
         var wire = new MafPlanningProviderFixture.Wire { ResponseText = ProjectTaskPlanAgentFixture.Draft };
         var client = new HttpClient(wire);
         wire.Client = client;
@@ -41,7 +42,7 @@ internal sealed class ProjectTaskPlanProcessRuntimeFixture : IAsyncDisposable {
             NoOpMafProviderStreamingDispatchGate.Instance, wire, httpClientSelector: wire), NullLogger<MafPlanningStepRuntime>.Instance);
         AgentToolSemanticDigest? contract = null;
         try {
-            var source = await ProjectTaskPlanProcessFixture.CreateAsync(agentSource, sameExecutor, registeredSource: true,
+            var source = await ProjectTaskPlanProcessFixture.CreateAsync(agentSource, sameExecutor, processReadProbe, registeredSource: true,
                 runtimeContract: (agent, provider, participant) => {
                     var captured = runtime.CaptureRuntimeContract(agent, provider, participant);
                     contract = captured;

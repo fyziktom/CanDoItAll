@@ -56,6 +56,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectTaskPlanAgentParticipant>();
         services.AddScoped<ProjectTaskPlanAgentAdmission>();
         services.AddScoped<ProjectTaskPlanProcessReadAuthority>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessDecisionChildOutcomeReader, ProjectTaskPlanProcessOutcomeReader>());
         services.AddScoped<ProjectTaskPlanAgentPublication>();
         services.AddScoped<ProjectTaskPlanProcessPublication>();
         services.AddScoped<ProjectTaskPlanSavedPublicationResolver>();

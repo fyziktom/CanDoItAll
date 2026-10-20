@@ -135,10 +135,14 @@ internal static class ProjectTaskPlanProcessCodec {
     }
 
     internal static ProjectTaskPlanProcessCommand Resolve(AgentPlanningDecisionObservation observation,
+        AgentToolSessionAdmission session, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding)
+        => Resolve(observation.Decision, session, payload, binding);
+
+    internal static ProjectTaskPlanProcessCommand Resolve(AgentPlanningDecisionRecord decision,
         AgentToolSessionAdmission session, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding) {
-        var target = Target(observation.Decision);
-        return new(target, ProjectTaskPlanAgentCodec.Resolve(observation, session, payload, binding,
-            PublicationTarget(target, observation.Decision), basis => (Material(observation.Decision.InheritedOrigin!, basis), target.WriteContext)));
+        var target = Target(decision);
+        return new(target, ProjectTaskPlanAgentCodec.Resolve(decision, session, payload, binding,
+            PublicationTarget(target, decision), basis => (Material(decision.InheritedOrigin!, basis), target.WriteContext)));
     }
 
     private static ProjectTaskPlanPublicationTarget PublicationTarget(ProjectTaskPlanProcessTarget target, AgentPlanningDecisionRecord decision)

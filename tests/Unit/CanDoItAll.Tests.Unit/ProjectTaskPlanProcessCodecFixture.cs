@@ -79,7 +79,7 @@ internal sealed record ProjectTaskPlanProcessCodecFixture(ProjectTaskPlanProcess
         => AgentToolProtocolEnvelope.Create(ProcessDecisionChildMaterialBindingCodec.Format,
             ProcessDecisionChildMaterialBindingCodec.Version, ProcessDecisionChildMaterialBindingCodec.Serialize(parent));
 
-    internal (AgentPlanningDecisionObservation Observation, AgentToolPreparedPayload Payload, AgentToolApprovalBinding Binding) Prepare() {
+    internal (AgentPlanningDecisionObservation Observation, AgentToolPreparedPayload Payload, AgentToolApprovalBinding Binding, ExecutionRunRecord Run) Prepare() {
         var prepared = ProjectTaskPlanProcessCodec.Prepare(Decision, Basis, Draft);
         var step = Decision.Current.Steps[^1];
         var dispatch = Journal.ProviderDispatches.Single(item => item.Id == step.ProviderDispatchId);
@@ -102,6 +102,6 @@ internal sealed record ProjectTaskPlanProcessCodecFixture(ProjectTaskPlanProcess
             "Inherited task-plan codec", ProjectTaskPlanProcessContract.SourceKind, Target.Source.Evidence.StepKey,
             "", "", "", "", "{}", "", "", "", "", ExecutionState.WaitingOnTool, null,
             Start, Start.AddSeconds(1), Start, null, "", null, []) { ToolAdmission = journal };
-        return (AgentPlanningDecisionObservation.From(run)!, payload, binding);
+        return (AgentPlanningDecisionObservation.From(run)!, payload, binding, run);
     }
 }

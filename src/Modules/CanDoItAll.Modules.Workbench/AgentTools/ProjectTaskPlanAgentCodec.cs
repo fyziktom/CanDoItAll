@@ -142,13 +142,12 @@ internal static class ProjectTaskPlanAgentCodec {
     internal static ProjectTaskPlanAgentCommand Resolve(AgentPlanningDecisionObservation observation,
         AgentToolSessionAdmission session, AgentToolPreparedPayload payload, AgentToolApprovalBinding binding) {
         var target = Target(observation.Decision);
-        return new(target, Resolve(observation, session, payload, binding, PublicationTarget(target, observation.Decision), Basis));
+        return new(target, Resolve(observation.Decision, session, payload, binding, PublicationTarget(target, observation.Decision), Basis));
     }
 
-    internal static ProjectTaskPlanCommand Resolve(AgentPlanningDecisionObservation observation, AgentToolSessionAdmission session,
+    internal static ProjectTaskPlanCommand Resolve(AgentPlanningDecisionRecord decision, AgentToolSessionAdmission session,
         AgentToolPreparedPayload payload, AgentToolApprovalBinding binding, ProjectTaskPlanPublicationTarget target,
         Func<AgentPlanningBasisRecord, (ProjectTaskPlanBasis Material, ProjectTaskPlanWriteContext Context)> readOriginalBasis) {
-        var decision = observation.Decision;
         if (target.Session != session || payload.SourcePreparation is not { } envelope ||
             decision.Session != session.Reference || !target.Caller.MatchesSource(target.SourceKind) ||
             payload.ToolName != ProjectStructureToolPolicy.ProjectTaskPlanPublish ||

@@ -112,6 +112,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>());
         });
+        services.TryAddScoped<ISandboxWorkspaceHistoricalReadStore>(serviceProvider => {
+            var state = serviceProvider.GetRequiredService<IDatabaseRuntimeState>();
+            return new CanonicalAgentHistoricalReadStore(
+                serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile,
+                AgentHistoricalReceiptReviewService.RequireInitialized(state), state,
+                serviceProvider.GetRequiredService<IOptions<StorageOptions>>(),
+                serviceProvider.GetRequiredService<IHostEnvironment>());
+        });
         services.TryAddScoped<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>
         {
