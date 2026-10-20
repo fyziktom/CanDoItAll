@@ -29,16 +29,7 @@ public sealed class EfProcessExecutionMutationGuard(
         var key = RootLockKey(expected.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var evidence = expected.Evidence;
-        var state = await context.RuntimeStates.FromSqlInterpolated($"""
-            SELECT * FROM process_runtime_states WHERE "RunId" = {evidence.RunId.Value} FOR SHARE
-            """).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        if (state is null || state.RootRunId != expected.RootRunId.Value) {
-            throw new ProcessExecutionAuthorityMismatchException("The Process root binding no longer matches the admitted native effect.");
-        }
-        await context.RuntimeStepAssignments.FromSqlInterpolated($"""
-            SELECT * FROM process_runtime_step_assignments
-            WHERE "RunId" = {evidence.RunId.Value} AND "StepInstanceId" = {evidence.StepInstanceId.Value} FOR SHARE
-            """).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        await ProcessExecutionSourceRowLocks.AcquireAsync(context, expected.RootRunId, evidence, cancellationToken);
         var result = await EfProcessExecutionAuthorityQuery.ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken);
         if (result.Snapshot is not { ObservedCurrentDispatch: true } current || current.OwnerFingerprint != expected.OwnerFingerprint ||
                 current.ProjectReference != expected.ProjectReference || current.RootRunId != expected.RootRunId ||

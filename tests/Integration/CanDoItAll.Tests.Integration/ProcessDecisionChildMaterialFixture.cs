@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Runtime;
@@ -14,9 +15,11 @@ internal sealed record ProcessDecisionChildMaterialFixture(ProcessRuntimeCommitR
     ProcessDecisionChildMaterialBinding Binding, ProcessDecisionMaterial Material) {
     internal static async Task<ProcessDecisionChildMaterialFixture> CreateAsync(ProcessPersistenceDbContext context,
         IServiceProvider services, ReadBasisMode mode = ReadBasisMode.RunSnapshot, bool descendant = false,
-        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent, bool prepared = false) {
-        var owner = Owner(context, services);
-        var preparation = prepared ? ProcessPreparedLaunchFixture.Create() : null;
+        ProcessDecisionChildOwner executor = ProcessDecisionChildOwner.Agent, bool prepared = false, ProcessLaunchAuthority? authority = null) {
+        var owner = authority is null ? Owner(context, services) : new EfProcessRuntimeUnitOfWork(context, services.GetRequiredService<TimeProvider>(),
+            services.GetRequiredService<CoordinatedDatabaseTransaction>(), services.GetRequiredService<IProcessProjectAdmissionPolicy>(),
+            services.GetRequiredService<IProcessLaunchAuthorityPolicy>(), runtimeDatabase: services.GetRequiredService<ICanonicalRuntimeDatabase>());
+        var preparation = prepared || authority is not null ? ProcessPreparedLaunchFixture.Create(authority) : null;
         var initial = Initial(services, request: preparation?.InitialCommit);
         if (mode == ReadBasisMode.StepSnapshot) {
             var root = ProcessDecisionRunPolicyFixture.Root(initial.OriginalState.RunId, initial.InitialPlan!.Definition.VersionId,

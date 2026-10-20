@@ -111,3 +111,5 @@ The [inherited snapshot prerequisite](../validation/2026-10-20-inherited-publica
 ## Process Project/root ordering checkpoint
 
 The [reviewed design](P07-process-project-lock-order.md) is implemented and [validated](../validation/2026-10-20-process-project-lock-order.md): 194 distinct selected passing cases across an exact test-only bridge, complete portability enforcement, unchanged production during fixture repair and retained initial failures. Next connect canonical selected-source reads and the enlisted publication fence, then actual Workbench/Agent continuation and atomic parent outcomes. Keep Workflow/manager/settings activation gated on their own integration proof.
+
+The [selected source fence](../validation/2026-10-20-selected-publication-fence.md) now has 126 distinct passing cases across an exact test-only bridge. Continue with the enlisted Workbench hook, original inherited target/held source and parent-owned Core/MAF continuation. Process/Workflow/manager/settings activation and workload qualification remain open.

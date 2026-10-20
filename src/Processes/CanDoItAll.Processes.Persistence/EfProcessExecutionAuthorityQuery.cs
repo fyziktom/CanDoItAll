@@ -9,7 +9,7 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class EfProcessExecutionAuthorityQuery(
     IDbContextFactory<ProcessPersistenceDbContext> factory,
-    TimeProvider clock) {
+    TimeProvider clock) : IProcessDecisionDispatchAuthorityQuery {
     public async Task<ProcessExecutionProjectAuthorityResult> ReadAsync(ProcessExecutionClaimEvidence evidence,
         CancellationToken cancellationToken = default) {
         var result = await ReadDispatchAsync(evidence, cancellationToken).ConfigureAwait(false);

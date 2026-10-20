@@ -91,3 +91,24 @@ A relational initial Process commit collects its original runtime, executable an
 Gate acquisition is deliberately separate from current lifetime/authority validation. An already accepted initial command returns its original receipt before those current checks, including after Project retirement. Initial scoped replay requires the configured coordinator and Project policy; application composition provides them. InMemory keeps its prior path. Native link delivery already uses Project-before-prepared-receipt order.
 
 The future inherited task publisher must acquire its exact Process source/generation fence inside its existing ReadCommitted transaction after Project gates and before business staging. The ordering repair alone grants no inherited mutation authority. The existing per-root semaphore registry still requires bounded-retention/fairness review before capacity closure. Design, real root/subprocess races, test-only repair bridge and retained evidence are recorded in the [lock-order checkpoint](../../codex/bundles/concurrent-mutations/validation/2026-10-20-process-project-lock-order.md).
+
+## Selected Process publication source
+
+`IProcessDecisionDispatchAuthorityQuery` exposes the existing exact child/material query at
+the Process Application boundary. Its result describes saved Process identity and observed
+liveness; current Agent/operator permissions and business write authority remain with the
+effect owner.
+
+`IProcessDecisionPublicationFence.RequireSelectedAsync` requires the effect owner's existing
+PostgreSQL ReadCommitted transaction, after all original Project gates. It takes the root
+lock and share-locks the source runtime/assignment rows before comparing the complete saved
+dispatch source, ignoring only observation time and observed-current flag. Assignment repair
+does not take the root lock, so its row must remain protected until the effect transaction
+ends. Canonical child/material/registered contract checks and a final claim-time check occur
+after asynchronous waits. A copied fingerprint cannot authorize substituted source fields.
+
+Dispatch requires the original live claim. Manager review requires an open retained child
+in the waiting-for-review generation and no active or live claim; it does not revive dispatch
+or settle the child. Selected publication requires actual saved launch authority. The bare
+child fence and legacy source guard keep their existing contracts. This foundation does not
+activate inherited task publication, saved-effect dispatch or Process/Workflow producers.

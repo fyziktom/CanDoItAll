@@ -114,6 +114,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessCanvasAuthoringAdapter>();
         services.TryAddScoped<ProcessTemplateAuthoringAdapter>();
         services.TryAddScoped<EfProcessExecutionAuthorityQuery>();
+        services.TryAddScoped<IProcessDecisionDispatchAuthorityQuery>(provider => provider.GetRequiredService<EfProcessExecutionAuthorityQuery>());
         services.TryAddScoped<EfProcessDecisionChildQuery>();
         services.TryAddScoped<IProcessDecisionChildReader>(provider => provider.GetRequiredService<EfProcessDecisionChildQuery>());
         services.TryAddScoped<ProcessDecisionChildMaterialReader>();
