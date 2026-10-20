@@ -107,8 +107,9 @@ Release build, portability enforcement and documentation/rendering checks pass; 
 runtime-policy and capacity work is still active. The selected publication authority now has
 [a passing 72-case checkpoint](validation/2026-10-19-selected-publication-cost.md),
 including all six unrelated writers below one second during that historical SQL wait.
-The 2026-10-20 enlisted-hook run subsequently failed this reference; current
-responsiveness is reopened. Wider
+The 2026-10-20 enlisted-hook run subsequently failed this reference; the
+[workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) then passed
+the unchanged reference after a source optimization. Wider
 capacity and actual RunSnapshot/StepSnapshot/Refresh/Replan runtime activation remain open.
 The [runtime result codec extraction](validation/2026-10-19-runtime-result-codec.md)
 also passes compatibility proof. The [saved-effect runtime adapter](validation/2026-10-19-saved-effect-runtime.md)
@@ -327,3 +328,5 @@ The [Process Project/root lock-order repair](validation/2026-10-20-process-proje
 The [selected Process publication fence](validation/2026-10-20-selected-publication-fence.md) has 126 distinct passing cases across an exact one-test-file bridge. It requires the original saved source and canonical material, protects assignment repair through effect commit, and rechecks claim time after waits. Actual inherited business publication, saved effects, producer and manager activation remain open.
 
 The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
+
+The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67â€“670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.

@@ -103,7 +103,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         IAgentCatalogMutationPolicy? catalogMutationPolicy = null,
         DurableFileWriter? fileWriter = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
-        physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
+        physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive);
         var durableFileWriter = fileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
         runLeaseWriter = durableFileWriter;
         jsonStore = new FileSandboxWorkspaceJsonStore(

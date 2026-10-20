@@ -120,3 +120,10 @@ must include its current permission checks and selected Process fence at both po
 The ordinary Agent adapter retains its held current-authority check. A refusal before
 commit rolls back tasks and receipt together; a completed receipt remains on the original
 read/recovery path without acquiring new mutation authority.
+
+The file workspace store uses explicit ordinal comparison for its internally generated
+paths. This avoids filesystem case-probe writes during coordinated publication. Policies
+remain fresh and recheck containment, ancestors, links and mutation targets around waits
+and commit. The general Infrastructure factory retains filesystem detection by default;
+an explicitly configured comparison is a caller's path contract, not cached filesystem
+evidence. Durable flushes, journals, OS locks and recovery stages are unchanged.

@@ -1,6 +1,8 @@
 # Enlisted task publication and reopened responsiveness reference
 
-Status: correctness prerequisite implemented; performance validation remains open.
+Status: correctness prerequisite implemented; this run retains its failed performance reference.
+The subsequent [source optimization](2026-10-20-workspace-path-probe.md) passes the same
+reference; broader performance validation remains open.
 Backend branch is `concurrent-mutations`; SPA remains on `codex/concurrent-mutations`.
 
 The [design](../plan/P07-enlisted-task-publication.md) adds a required enlisted check to
