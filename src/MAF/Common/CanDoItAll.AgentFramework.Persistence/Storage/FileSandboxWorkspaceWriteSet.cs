@@ -55,6 +55,11 @@ internal sealed class FileSandboxWorkspaceWriteSet {
         return new(keys);
     }
 
+    internal static FileSandboxWorkspaceWriteSet Planning(ExecutionRunRecord run, Guid? additionalAgentId) {
+        var selected = Run(run, run, readsAgent: true);
+        return additionalAgentId is { } id ? new(selected.keys.Append(Agent(id))) : selected;
+    }
+
     internal static FileSandboxWorkspaceWriteSet Workspace(SandboxWorkspaceDocument before, SandboxWorkspaceDocument after) {
         var keys = Catalog(before.ToCatalog(), after.ToCatalog()).keys.ToList();
         foreach (var run in before.ExecutionRuns.Concat(after.ExecutionRuns)) {

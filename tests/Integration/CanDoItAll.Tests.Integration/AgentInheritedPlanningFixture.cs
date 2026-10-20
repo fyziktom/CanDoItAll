@@ -34,11 +34,15 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
         => new(store ?? Files.NewStore(), Files.Profile, Clock, backgroundSources: [Policy]);
 
     internal static async Task<AgentInheritedPlanningFixture> CreateAsync(ReadBasisMode parentMode = ReadBasisMode.StepSnapshot,
-        TimeSpan? basisAge = null, WorkspaceScopeDescriptor? scope = null) {
+        TimeSpan? basisAge = null, WorkspaceScopeDescriptor? scope = null, AgentToolProfileBinding? profile = null,
+        Func<AgentDefinition, AgentDefinition>? configureAgent = null) {
         var files = await AgentToolAdmissionJournalFixture.CreateAsync(includeRecoveryInput: true,
-            storageScope: scope,
-            configureAgent: agent => agent with {
-                ConfigurationJson = AgentThinkingEffortConfiguration.WriteAgentOverride(agent.ConfigurationJson, null)
+            storageScope: scope, profileBinding: profile,
+            configureAgent: agent => {
+                var selected = configureAgent is null ? agent : configureAgent(agent);
+                return selected with {
+                    ConfigurationJson = AgentThinkingEffortConfiguration.WriteAgentOverride(selected.ConfigurationJson, null)
+                };
             });
         try {
             var clock = new AgentPlanningLiveOwnerFixture.PlanningClock(files.Detail.Run.CreatedAtUtc);

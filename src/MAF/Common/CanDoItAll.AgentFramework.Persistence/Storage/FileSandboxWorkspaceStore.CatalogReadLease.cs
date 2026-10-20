@@ -22,19 +22,24 @@ public sealed partial class FileSandboxWorkspaceStore : IAgentCatalogReadLeaseSt
                 cancellationToken).ConfigureAwait(false);
             FileAgentPlanningPublicationSnapshotLease.RequireOriginal(expected, layout.Scope, saved);
             var original = saved!;
+            var paths = PendingCommitJournalPaths.Append(layout.RunPath(original.Run.Id));
+            if (original.ChatSession is { } chat) {
+                paths = paths.Append(layout.SessionPath(chat.Id));
+            }
             var witness = await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
-                PendingCommitJournalPaths.Append(layout.RunPath(original.Run.Id)).Append(layout.SessionPath(original.ChatSession!.Id)),
+                paths,
                 [layout.RunRoot(original.Run.Id)], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
                 SharedPublicationPaths).ConfigureAwait(false);
-            _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(original.Run, original.Run, readsAgent: true),
+            _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Planning(original.Run, expected.AdditionalAgentId),
                 witness, cancellationToken).ConfigureAwait(false);
             var current = await executionSliceStore.LoadRunAdmissionSnapshotAsync(original.Run.Id, cancellationToken).ConfigureAwait(false);
             FileAgentPlanningPublicationSnapshotLease.RequireOriginal(expected, layout.Scope, current);
             var catalog = await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
-            var agent = catalog.Agents.SingleOrDefault(item => item.Id == expected.Session.AgentId)
-                ?? throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged);
-            var selectedCapabilities = agent.Capabilities.Select(item => item.CapabilityId).ToHashSet();
-            var lease = new FileAgentPlanningPublicationSnapshotLease(operation, expected, catalog.CatalogDataRevision, agent,
+            var selectedIds = expected.AdditionalAgentId is { } additional ? new[] { expected.Session.AgentId, additional } : [expected.Session.AgentId];
+            var agents = selectedIds.Select(id => catalog.Agents.SingleOrDefault(item => item.Id == id)
+                ?? throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged)).ToImmutableArray();
+            var selectedCapabilities = agents.SelectMany(agent => agent.Capabilities).Select(item => item.CapabilityId).ToHashSet();
+            var lease = new FileAgentPlanningPublicationSnapshotLease(operation, expected, catalog.CatalogDataRevision, agents,
                 current!, catalog.Capabilities.Where(item => selectedCapabilities.Contains(item.Id)));
             await operation.ReleaseWorkspaceForAuthoritySnapshotAsync().ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();

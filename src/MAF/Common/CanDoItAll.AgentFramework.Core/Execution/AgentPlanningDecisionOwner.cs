@@ -93,6 +93,7 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         held.RequireActive();
         var claim = AgentToolInvocationClaim.Current;
         if (claim is null || !ReferenceEquals(claim.RunLease, work.Lease) || claim.Binding != binding ||
+            held.Original.Origin != AgentPlanningPublicationOrigin.Interactive ||
             held.Original.Session != work.OriginalRun.ToolAdmission!.Session) {
             throw new AgentPlanningAdmissionException(work.DecisionId, work.Generation, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
@@ -102,7 +103,7 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         if (selected.State != AgentToolProposalState.Executing || selected.DispatchClaimId != claim.Id ||
             selected.ApprovalStatus != ExecutionApprovalStatus.Approved || selected.ApprovedDigest != selected.Payload.Digest ||
             selected.Payload != claim.Proposal.Payload || run.Outcome is not null || run.State != ExecutionState.Running ||
-            run.MetadataJson != work.OriginalRun.MetadataJson || held.OriginalChatSession.LatestExecutionRunId != run.Id) {
+            run.MetadataJson != work.OriginalRun.MetadataJson || held.OriginalChatSession?.LatestExecutionRunId != run.Id) {
             throw new AgentPlanningAdmissionException(work.DecisionId, work.Generation, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
         return RequireMutation(work, run, binding);

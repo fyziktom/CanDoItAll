@@ -105,3 +105,5 @@ missing SQL, browser, process or retained-data evidence.
 P07 continuation: [asynchronous original binding](../validation/2026-10-19-asynchronous-child-binding.md) passes 192 selected cases, repeating the prior 185 workspace/journal/MAF/architecture behaviors and seven new await/cancellation/source-revocation cases. Continue with selected Process source authority and inherited Workbench publication under the existing integration plan.
 
 P07 continuation: [selected child dispatch authority](../validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. Continue with registered source routing and inherited publication, preserving legacy denial and avoiding nested source/executor catalog leases.
+
+The [inherited snapshot prerequisite](../validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected cases. No Process/Workflow activation is implied. Next resolve the complete initial Process Project/root gate ordering while preserving original duplicate receipts, then implement held-source authorization, the enlisted publication fence and parent-owned effects/outcomes.

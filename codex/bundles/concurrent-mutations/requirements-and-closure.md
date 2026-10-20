@@ -180,3 +180,5 @@ separate. Concrete producer/publication integration and R5/R6 closure remain ope
 The [asynchronous child binding](validation/2026-10-19-asynchronous-child-binding.md) passes all 192 selected cases. It enables original database target/context reads inside exact new-only admission, with cancellation and current source checks after the await. It does not close R5/R6 or activate Process/Workflow producers.
 
 The [selected Process dispatch query](validation/2026-10-19-selected-child-dispatch.md) passes 86 cases. It binds original child/grant/policy/material and exact current claim without loading the material payload. Producer routing, inherited business effects and manager continuation remain open.
+
+The [inherited publication snapshot](validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected cases, including two-Agent ordering, cancellation, current revocation and the selected SQL-wait reference. The initial fixture failures and coarse lease responsiveness failure are retained. R5/R6 remain open: resolve the initial Process Project/root lock inversion before adding the business fence and actual continuation.

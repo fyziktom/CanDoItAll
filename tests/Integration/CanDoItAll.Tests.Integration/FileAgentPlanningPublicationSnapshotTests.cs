@@ -19,7 +19,7 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         var lease = await scenario.AcquireAsync();
         Assert.Equal(scenario.Expected, lease.Original);
         AssertOriginalRun(scenario.Run, lease.OriginalRun);
-        Assert.Equal(scenario.Run.ChatSessionId, lease.OriginalChatSession.Id);
+        Assert.Equal(scenario.Run.ChatSessionId, Assert.IsType<ChatSessionRecord>(lease.OriginalChatSession).Id);
         Assert.Throws<NotSupportedException>(() => ((IList<string>)lease.Agent.Tags).Add("caller alias"));
         Assert.Throws<NotSupportedException>(() => ((IList<AgentDefinition>)lease.Agents).Clear());
         scenario.RequireAllSelectedKeysHeld();
@@ -174,12 +174,12 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(expected, options), JsonSerializer.SerializeToUtf8Bytes(actual, options));
     }
 
-    private static async Task RunAsync(Func<Scenario, Task> body) {
+    internal static async Task RunAsync(Func<Scenario, Task> body, bool inherited = false, bool additionalAgent = false) {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var failures = new List<Exception>();
         Scenario? scenario = null;
         try {
-            scenario = await Scenario.CreateAsync(deadline.Token);
+            scenario = await Scenario.CreateAsync(deadline.Token, inherited, additionalAgent);
             await body(scenario);
         } catch (Exception failure) {
             failures.Add(failure);
@@ -201,8 +201,9 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         }
     }
 
-    private sealed class Scenario {
+    internal sealed class Scenario {
         private readonly AgentToolAdmissionJournalFixture files;
+        private readonly AgentInheritedPlanningFixture? inherited;
         private readonly Guid unrelatedId;
         private readonly CancellationToken token;
         private readonly DurableFileWriter writer = new(new PhysicalFileSystemPathPolicyFactory());
@@ -217,31 +218,42 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         internal FileSandboxWorkspaceStore Store => files.NewStore();
         internal FileSandboxWorkspaceStorageLayout Layout { get; }
         internal AgentDefinition Agent => files.Agent;
+        internal AgentInheritedPlanningFixture Inherited => inherited ?? throw new InvalidOperationException("An inherited scenario is required.");
+        internal Guid? AdditionalAgentId { get; }
         internal Guid UnrelatedId => unrelatedId;
-        internal ExecutionRunRecord Run => files.Detail.Run;
-        internal AgentPlanningPublicationExpectation Expected => new(files.StorageScope, Run.ToolAdmission!.Session, Run.Revision, Run.ToolAdmission.Revision);
+        internal ExecutionRunRecord Run => inherited?.Original ?? files.Detail.Run;
+        internal AgentPlanningPublicationExpectation Expected => inherited is null
+            ? new(files.StorageScope, Run.ToolAdmission!.Session, Run.Revision, Run.ToolAdmission.Revision)
+            : AgentPlanningPublicationExpectation.Inherited(files.StorageScope, Run.ToolAdmission!.Session,
+                Run.Revision, Run.ToolAdmission.Revision, AdditionalAgentId);
         internal IAgentPlanningPublicationSnapshotLease? Lease { get; private set; }
-        private string[] KeyPaths => FileSandboxWorkspaceWriteSet.Run(Run, Run, true).LockPaths(Layout).ToArray();
+        internal string[] KeyPaths => FileSandboxWorkspaceWriteSet.Planning(Run, AdditionalAgentId).LockPaths(Layout).ToArray();
 
-        private Scenario(AgentToolAdmissionJournalFixture files, Guid unrelatedId, CancellationToken token) {
+        private Scenario(AgentToolAdmissionJournalFixture files, Guid unrelatedId, CancellationToken token,
+            AgentInheritedPlanningFixture? inherited, Guid? additionalAgentId) {
             this.files = files;
             this.unrelatedId = unrelatedId;
             this.token = token;
+            this.inherited = inherited;
+            AdditionalAgentId = additionalAgentId;
             Layout = new(files.WorkspaceRoot, files.StorageScope);
         }
 
-        internal static async Task<Scenario> CreateAsync(CancellationToken token) {
+        internal static async Task<Scenario> CreateAsync(CancellationToken token, bool inherited, bool additionalAgent) {
             var profile = new AgentToolProfileBinding(Guid.NewGuid(), "planning-authority-fixture", new(1));
-            var files = await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: profile,
-                storageScope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), configureAgent: agent => agent with {
-                    Id = Guid.NewGuid(), Name = "Selected publication fixture", TemplateKey = "selected-publication-fixture",
-                    IsTemplate = false, Status = AgentLifecycleStatus.Active, Permissions = agent.Permissions with { CanUseTools = true }
-                });
+            var source = inherited ? await AgentInheritedPlanningFixture.CreateAsync(profile: profile,
+                scope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), configureAgent: ConfigureAgent) : null;
+            var files = source?.Files ?? await AgentToolAdmissionJournalFixture.CreateAsync(profileBinding: profile,
+                storageScope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), configureAgent: ConfigureAgent);
             try {
                 var unrelated = files.Agent with { Id = Guid.NewGuid(), Name = "Unrelated publication fixture",
                     TemplateKey = "unrelated-publication-fixture" };
-                await files.Store.UpdateCatalogAsync(current => current with { Agents = [.. current.Agents, unrelated] }, token);
-                return new(files, unrelated.Id, token);
+                var selected = additionalAgent ? files.Agent with { Id = Guid.NewGuid(), Name = "Launching Agent fixture",
+                    TemplateKey = "launching-agent-fixture" } : null;
+                await files.Store.UpdateCatalogAsync(current => current with {
+                    Agents = selected is null ? [.. current.Agents, unrelated] : [.. current.Agents, unrelated, selected]
+                }, token);
+                return new(files, unrelated.Id, token, source, selected?.Id);
             } catch (Exception primary) {
                 try {
                     await files.DisposeAsync();
@@ -250,6 +262,11 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
                 }
                 throw;
             }
+
+            static AgentDefinition ConfigureAgent(AgentDefinition agent) => agent with {
+                Id = Guid.NewGuid(), Name = "Selected publication fixture", TemplateKey = "selected-publication-fixture",
+                IsTemplate = false, Status = AgentLifecycleStatus.Active, Permissions = agent.Permissions with { CanUseTools = true }
+            };
         }
 
         internal void StartAcquire(CancellationToken cancellationToken) {
@@ -284,7 +301,8 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
             }
         }
 
-        internal async Task HoldRunKeyAsync() => blocker = await writer.AcquireCoordinationAsync(Layout.RootPath, KeyPaths[1],
+        internal async Task HoldRunKeyAsync() => blocker = await writer.AcquireCoordinationAsync(Layout.RootPath,
+            FileSandboxWorkspaceWriteSet.Run(Run with { ChatSessionId = null }, Run with { ChatSessionId = null }, false).LockPaths(Layout).Single(),
             TimeSpan.FromSeconds(5), false, Token);
 
         internal async Task ReleaseBlockerAsync() {
@@ -305,18 +323,19 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         }
 
         internal async Task RequireAgentKeyHeldAsync() {
-            var path = KeyPaths[0];
-            while (true) {
-                Token.ThrowIfCancellationRequested();
-                if (File.Exists(path)) {
-                    try {
-                        using var available = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-                    } catch (IOException) {
-                        Assert.False(acquiring!.IsCompleted);
-                        return;
+            foreach (var path in KeyPaths.Take(AdditionalAgentId is null ? 1 : 2)) {
+                while (true) {
+                    Token.ThrowIfCancellationRequested();
+                    if (File.Exists(path)) {
+                        try {
+                            using var available = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                        } catch (IOException) {
+                            Assert.False(acquiring!.IsCompleted);
+                            break;
+                        }
                     }
+                    await Task.Delay(TimeSpan.FromMilliseconds(10), Token);
                 }
-                await Task.Delay(TimeSpan.FromMilliseconds(10), Token);
             }
         }
 
@@ -381,7 +400,7 @@ public sealed class FileAgentPlanningPublicationSnapshotTests {
         }
     }
 
-    private sealed class KeyWait : IDisposable {
+    internal sealed class KeyWait : IDisposable {
         private readonly Activity parent = new Activity("selected-publication-test").Start();
         private readonly ActivityListener listener;
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

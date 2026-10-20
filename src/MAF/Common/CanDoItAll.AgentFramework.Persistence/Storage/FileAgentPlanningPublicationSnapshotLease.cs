@@ -12,20 +12,20 @@ internal sealed class FileAgentPlanningPublicationSnapshotLease : IAgentPlanning
     private readonly CatalogDataRevision revision;
     private readonly AgentDefinition agent;
     private readonly ExecutionRunRecord run;
-    private readonly ChatSessionRecord chat;
+    private readonly ChatSessionRecord? chat;
     private readonly ImmutableArray<AgentDefinition> agents;
     private readonly ImmutableArray<CapabilityCatalogItem> capabilities;
 
     internal FileAgentPlanningPublicationSnapshotLease(FileSandboxWorkspacePublicationScope held,
-        AgentPlanningPublicationExpectation original, CatalogDataRevision revision, AgentDefinition agent,
+        AgentPlanningPublicationExpectation original, CatalogDataRevision revision, ImmutableArray<AgentDefinition> agents,
         ExecutionRunAdmissionSnapshot saved, IEnumerable<CapabilityCatalogItem> capabilities) {
         this.held = held;
         this.original = original;
         this.revision = revision;
-        this.agent = FileSandboxWorkspacePreparedValues.Freeze(agent);
+        this.agents = agents.Select(FileSandboxWorkspacePreparedValues.Freeze).ToImmutableArray();
+        agent = this.agents.Single(item => item.Id == original.Session.AgentId);
         run = FileSandboxWorkspacePreparedValues.Freeze(saved.Run);
-        chat = FileSandboxWorkspacePreparedValues.Freeze(saved.ChatSession!);
-        agents = [this.agent];
+        chat = saved.ChatSession is { } session ? FileSandboxWorkspacePreparedValues.Freeze(session) : null;
         this.capabilities = capabilities.Select(item => item with { Tags = item.Tags.ToImmutableArray() }).ToImmutableArray();
     }
 
@@ -65,7 +65,7 @@ internal sealed class FileAgentPlanningPublicationSnapshotLease : IAgentPlanning
             return run;
         }
     }
-    public ChatSessionRecord OriginalChatSession {
+    public ChatSessionRecord? OriginalChatSession {
         get {
             RequireActive();
             return chat;
@@ -99,16 +99,24 @@ internal sealed class FileAgentPlanningPublicationSnapshotLease : IAgentPlanning
         var chat = saved?.ChatSession;
         var session = expected.Session;
         var journal = run?.ToolAdmission;
-        if (scope != expected.Scope || run is null || chat is null || journal is null ||
+        if (scope != expected.Scope || run is null || journal is null ||
                 run.Id != session.Reference.ExecutionRunId || run.AgentId != session.AgentId ||
-                run.ChatSessionId != session.Reference.ChatSessionId || run.Revision != expected.RunRevision ||
-                chat.Id != session.Reference.ChatSessionId || chat.AgentId != session.AgentId ||
-                chat.LatestExecutionRunId != run.Id || journal.Revision != expected.JournalRevision || journal.Session != session) {
+                run.Revision != expected.RunRevision || journal.Revision != expected.JournalRevision || journal.Session != session) {
             throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged);
         }
         journal.Validate();
+        if (expected.Origin == AgentPlanningPublicationOrigin.Inherited) {
+            if (chat is not null || run.ChatSessionId is not null ||
+                journal.SchemaVersion != AgentToolJournalRecord.InheritedPlanningSchemaVersion || journal.PlanningDecision?.InheritedOrigin is null) {
+                throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged);
+            }
+            _ = AgentPlanningRunMetadata.Read(run);
+            return;
+        }
         var authority = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson);
-        if (authority is null || authority.AuthorityId != session.Reference.AuthorityId || authority.AgentId != session.AgentId ||
+        if (chat is null || run.ChatSessionId != session.Reference.ChatSessionId || chat.Id != session.Reference.ChatSessionId ||
+                chat.AgentId != session.AgentId || chat.LatestExecutionRunId != run.Id ||
+                authority is null || authority.AuthorityId != session.Reference.AuthorityId || authority.AgentId != session.AgentId ||
                 authority.DatabaseProfileId != session.Profile.ProfileId || authority.DatabaseProfileGeneration != session.Profile.Generation) {
             throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged);
         }

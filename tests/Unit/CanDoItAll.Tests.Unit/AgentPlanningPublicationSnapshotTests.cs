@@ -31,6 +31,42 @@ public sealed class AgentPlanningPublicationSnapshotTests {
         Assert.NotEqual(session, expected.Session);
         Assert.Equal(AgentRuntimeContextPurpose.InteractiveChat, expected.Session.Purpose);
         Assert.Null(expected.Session.Reference.BackgroundSource);
+        Assert.Equal(AgentPlanningPublicationOrigin.Interactive, expected.Origin);
+        Assert.Null(expected.AdditionalAgentId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Inherited_expectation_keeps_background_identity_and_bounded_optional_Agent(bool additional) {
+        var session = InheritedSession();
+        var scope = WorkspaceScopeDescriptor.Organization(session.Profile.ProfileId.ToString("N"));
+        Guid? selected = additional ? Guid.NewGuid() : null;
+        var expected = AgentPlanningPublicationExpectation.Inherited(scope, session, 13, 29, selected);
+        Assert.Equal(AgentPlanningPublicationOrigin.Inherited, expected.Origin);
+        Assert.Equal(session, expected.Session);
+        Assert.NotSame(session, expected.Session);
+        Assert.Equal(scope, expected.Scope);
+        Assert.Equal(13, expected.RunRevision);
+        Assert.Equal(29, expected.JournalRevision);
+        Assert.Equal(selected, expected.AdditionalAgentId);
+        Assert.Throws<ArgumentException>(() => new AgentPlanningPublicationExpectation(scope, session, 13, 29));
+    }
+
+    [Fact]
+    public void Inherited_factory_refuses_interactive_or_missing_source_invalid_scope_and_selected_Agent() {
+        var session = InheritedSession();
+        var scope = WorkspaceScopeDescriptor.Organization(session.Profile.ProfileId.ToString("N"));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope, session, 1, 1, Guid.Empty));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope, session, 1, 1, session.AgentId));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope,
+            session with { Purpose = AgentRuntimeContextPurpose.InteractiveChat }, 1, 1));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope,
+            session with { Reference = Session().Reference }, 1, 1));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope, Session(), 1, 1));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(WorkspaceScopeDescriptor.Sandbox, session, 1, 1));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope, session, 0, 1));
+        Assert.Throws<ArgumentException>(() => AgentPlanningPublicationExpectation.Inherited(scope, session, 1, 0));
     }
 
     [Fact]
@@ -77,6 +113,10 @@ public sealed class AgentPlanningPublicationSnapshotTests {
     private static AgentToolSessionAdmission Session() => new(
         new(Guid.NewGuid(), Guid.NewGuid(), new(Guid.NewGuid())), Guid.NewGuid(), AgentRuntimeContextPurpose.InteractiveChat,
         new(Guid.NewGuid(), "Original profile fingerprint", new(7)));
+
+    private static AgentToolSessionAdmission InheritedSession() => new(
+        new(Guid.NewGuid(), Guid.Empty, default, new("process-step", "original-step", new(new string('a', 64)), new(new string('b', 64)))),
+        Guid.NewGuid(), AgentRuntimeContextPurpose.GovernedProcessAutomation, new(Guid.NewGuid(), "Original profile fingerprint", new(7)));
 
     private sealed class LegacyStore : IAgentCatalogReadLeaseStore {
         public int CoarseCalls { get; private set; }

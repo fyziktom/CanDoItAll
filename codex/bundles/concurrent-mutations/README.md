@@ -317,3 +317,5 @@ The [Process publication claim-lifetime repair](validation/2026-10-19-publicatio
 passes all 106 selected cases. Dispatch now requires the exact active claim and attempt
 with unexpired lifetime after the root lock; historical read and manager review remain
 separate. Concrete producer/publication integration and R5/R6 closure remain open.
+
+The [inherited publication snapshot checkpoint](validation/2026-10-20-inherited-publication-snapshot.md) passes 238 corrected selected cases. It holds the executor and optional launching Agent in one ordered key set without retaining the workspace gate. The coarse SQL-wait comparison remains negative evidence. Actual inherited publication and Process/Workflow activation remain open.

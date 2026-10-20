@@ -716,3 +716,7 @@ The c4-asynchronous-child-binding root records ownership before creation and reu
 ## Selected Process dispatch checkpoint
 
 The c4-selected-child-dispatch root records ownership before creation and reuses the isolated PostgreSQL 18 fixture, standard Release outputs and 119 resource families. All 86 cases pass under complete observation; source/runtime is unchanged. No observed process or database-name delta remains; three unattributed TEMP entries are preserved. The freeze is released. The [validation record](validation/2026-10-19-selected-child-dispatch.md) retains exact identities. The shared fixture and historical cleanup denials remain open.
+
+## Inherited publication snapshot checkpoint
+
+The initial and corrected c4-inherited-publication-snapshot roots record ownership before allocation and reuse standard Release, the existing isolated PostgreSQL fixture and 119 resource families. The initial run retains 235/239 passes, three fixture failures and the coarse SQL-wait negative comparison; the corrected run passes all 238 positive cases. Observers cover both complete runs, source/runtime identity verifies before release, and no observed process or database-name delta remains. All three owned measurement-row cleanups pass. Seven unattributed TEMP entries per run are preserved. Historical cleanup denials and the still-required shared fixture remain open. Exact identities and proof hashes are in the [validation record](validation/2026-10-20-inherited-publication-snapshot.md).
