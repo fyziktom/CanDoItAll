@@ -584,7 +584,7 @@ public sealed partial class AgentToolAdmissionJournal : IAgentToolAdmissionVerif
         var journal = RequireJournal(snapshot.Run);
         if (claim.RunLease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch) {
             var admitted = RequireBoundSavedEffect(claim.RunLease);
-            journal = RequireSavedOriginal(admitted.Run, new(snapshot.Run, snapshot.ChatSession, [], []), compareRevision: false);
+            journal = RequireSavedOriginal(admitted.Run, new(snapshot.Run, snapshot.ChatSession, [], []), compareRevision: false, admitted.Parent);
         }
         RequireCurrent(journal.Session, snapshot, claim.RunLease.Mode);
         RequireLease(claim.RunLease, journal);

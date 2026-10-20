@@ -16,36 +16,56 @@ public sealed partial class AgentToolAdmissionJournal {
         return (await ReadSavedEffectSnapshotAsync(lease, cancellationToken)).Run;
     }
 
+    public WorkspaceScopeDescriptor RequireSavedEffectContextScope(AgentToolRunLease lease) {
+        var admitted = RequireBoundSavedEffect(lease);
+        if (admitted.Parent is { } parent) {
+            parent.RequireOriginal(admitted.Run);
+            return AgentPlanningRunMetadata.ReadScope(admitted.Run);
+        }
+        return AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(admitted.Run.MetadataJson)?.WorkspaceScope
+            ?? throw Failure("The saved effect has no original interactive context scope.");
+    }
+
     public Task<AgentToolRunLease> AcquireSavedEffectDispatchAsync(AgentSavedEffectContinuationRequest request,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
-        => AcquireSavedEffectDispatchAsync(request, currentRead, null, null, cancellationToken);
+        => AcquireSavedEffectDispatchAsync(request, currentRead, null, null, null, cancellationToken);
 
     internal Task<AgentToolRunLease> AcquirePlanningEffectDispatchAsync(AgentPlanningDecisionOwner owner,
         AgentSavedEffectContinuationRequest request, AgentPlanningDecisionExpectation expected,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(expected);
-        return AcquireSavedEffectDispatchAsync(request, currentRead, owner, expected, cancellationToken);
+        return AcquireSavedEffectDispatchAsync(request, currentRead, owner, expected, null, cancellationToken);
+    }
+
+    internal Task<AgentToolRunLease> AcquireInheritedPlanningEffectDispatchAsync(AgentPlanningDecisionOwner owner,
+        AgentSavedEffectContinuationRequest request, AgentPlanningDecisionExpectation expected, AgentInheritedSavedEffectContinuation parent,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(parent);
+        return AcquireSavedEffectDispatchAsync(request, currentRead, owner, expected, parent, cancellationToken);
     }
 
     private async Task<AgentToolRunLease> AcquireSavedEffectDispatchAsync(AgentSavedEffectContinuationRequest request,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead,
         AgentPlanningDecisionOwner? planningOwner, AgentPlanningDecisionExpectation? planningExpected,
-        CancellationToken cancellationToken) {
+        AgentInheritedSavedEffectContinuation? parent, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(currentRead);
         var original = await RequireSavedRequestAsync(request.ExecutionRunId, request.ChatSessionId,
-            request.ExpectedRunRevision, request.ExpectedJournalRevision, cancellationToken, planningExpected);
-        await RequireSavedReadAsync(original, currentRead, cancellationToken);
+            request.ExpectedRunRevision, request.ExpectedJournalRevision, cancellationToken, planningExpected, parent);
+        await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
         var handle = await leases.AcquireToolDispatchLeaseAsync(request.ExecutionRunId, cancellationToken);
         try {
+            await RequireSavedReadAsync(original, currentRead, cancellationToken, parent);
             var lease = new AgentToolRunLease(this, original.ToolAdmission!.Session.Reference, Guid.NewGuid(), handle,
                 AgentToolRunLeaseMode.SavedEffectDispatch);
             long started = 0;
             var saved = await writer.UpdateExecutionRunDetailAsync(request.ExecutionRunId, current => {
-                var journal = RequireSavedOriginal(original, current, compareRevision: true);
+                var journal = RequireSavedOriginal(original, current, compareRevision: true, parent);
                 if (planningExpected is not null) {
-                    RequirePlanningExpectation(current.Run, planningExpected);
+                    RequirePlanningExpectation(current.Run, planningExpected, inherited: parent is not null);
                 }
                 RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
                 var selected = AgentToolJournalTransitions.RequireProposal(journal, request.Binding);
@@ -85,7 +105,7 @@ public sealed partial class AgentToolAdmissionJournal {
                 };
             }, cancellationToken);
             lease.AdmitSavedEffect(this, new(saved.Run with { PendingApprovals = saved.Run.PendingApprovals.ToImmutableArray() },
-                request.Binding, currentRead));
+                request.Binding, currentRead, parent));
             if (planningOwner is not null) {
                 lease.AdmitPlanningWork(this, new(planningOwner, lease, saved.Run, started));
             }
@@ -130,7 +150,7 @@ public sealed partial class AgentToolAdmissionJournal {
             throw Failure("This saved lease cannot select another original effect.");
         }
         var observed = await ReadSavedEffectSnapshotAsync(lease, cancellationToken);
-        RequireSavedMutationCeiling(observed.Run);
+        RequireSavedMutationCeiling(observed.Run, admitted.Parent);
         var selected = RequireSelectedPrepared(RequireJournal(observed.Run), binding);
         lease.PlanningWork?.RequireMutation(observed.Run, binding);
         if (selected.Payload != restored) {
@@ -140,9 +160,9 @@ public sealed partial class AgentToolAdmissionJournal {
         var claimId = Guid.NewGuid();
         var saved = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
             RequireBoundSavedEffect(lease);
-            var journal = RequireSavedOriginal(admitted.Run, current, compareRevision: true);
+            var journal = RequireSavedOriginal(admitted.Run, current, compareRevision: true, admitted.Parent);
             RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
-            RequireSavedMutationCeiling(current.Run);
+            RequireSavedMutationCeiling(current.Run, admitted.Parent);
             RequireLease(lease, journal);
             var proposal = RequireSelectedPrepared(journal, binding);
             lease.PlanningWork?.RequireMutation(current.Run, binding);
@@ -172,7 +192,7 @@ public sealed partial class AgentToolAdmissionJournal {
         }
         var saved = await writer.UpdateExecutionRunDetailAsync(lease.Session.ExecutionRunId, current => {
             RequireBoundSavedEffect(lease);
-            var journal = RequireSavedOriginal(observed.Run, current, compareRevision: true);
+            var journal = RequireSavedOriginal(observed.Run, current, compareRevision: true, admitted.Parent);
             RequireCurrent(journal.Session, new(current.Run, current.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
             RequireLease(lease, journal);
             if (AgentToolJournalTransitions.RequireProposal(journal, admitted.Binding) != selected) {
@@ -230,17 +250,18 @@ public sealed partial class AgentToolAdmissionJournal {
     }
 
     private async Task<ExecutionRunRecord> RequireSavedRequestAsync(Guid runId, Guid? chatId, long runRevision,
-        long journalRevision, CancellationToken cancellationToken, AgentPlanningDecisionExpectation? planningExpected = null) {
+        long journalRevision, CancellationToken cancellationToken, AgentPlanningDecisionExpectation? planningExpected = null,
+        AgentInheritedSavedEffectContinuation? parent = null) {
         var snapshot = await RequireSnapshotAsync(runId, cancellationToken);
         var run = snapshot.Run with { PendingApprovals = snapshot.Run.PendingApprovals.ToImmutableArray() };
         var journal = RequireJournal(run);
-        RequireSavedJournal(run, journal);
+        RequireSavedJournal(run, journal, parent);
         if (planningExpected is null) {
             if (journal.SchemaVersion != AgentToolJournalRecord.EffectJournalSchemaVersion) {
                 throw Failure("Planning actions require their original decision owner and exact displayed expectation.");
             }
         } else {
-            RequirePlanningExpectation(run, planningExpected);
+            RequirePlanningExpectation(run, planningExpected, inherited: parent is not null);
         }
         RequireCurrent(journal.Session, new(run, snapshot.ChatSession), AgentToolRunLeaseMode.SavedEffectDispatch);
         if (run.ChatSessionId != chatId || run.Revision != runRevision || journal.Revision != journalRevision) {
@@ -262,19 +283,30 @@ public sealed partial class AgentToolAdmissionJournal {
         CancellationToken cancellationToken) {
         var admitted = RequireBoundSavedEffect(lease);
         var snapshot = await RequireSnapshotAsync(lease.Session.ExecutionRunId, cancellationToken);
-        var journal = RequireSavedOriginal(admitted.Run, new(snapshot.Run, snapshot.ChatSession, [], []), compareRevision: false);
+        var journal = RequireSavedOriginal(admitted.Run, new(snapshot.Run, snapshot.ChatSession, [], []), compareRevision: false, admitted.Parent);
         RequireCurrent(journal.Session, snapshot, AgentToolRunLeaseMode.SavedEffectDispatch);
         RequireLease(lease, journal);
-        await RequireSavedReadAsync(snapshot.Run, admitted.CurrentRead, cancellationToken);
+        await RequireSavedReadAsync(snapshot.Run, admitted.CurrentRead, cancellationToken, admitted.Parent);
         lease.RequireOwner(this);
         return snapshot;
     }
 
     private async Task RequireSavedReadAsync(ExecutionRunRecord run,
-        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken) {
-        await RequireEffectReadPolicyAsync(run, AgentToolSessionObservation.From(run), currentRead,
-            recheckAfterBackground: false, cancellationToken);
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken,
+        AgentInheritedSavedEffectContinuation? parent = null) {
+        await RequireEffectReadPolicyAsync(run, AgentToolSessionObservation.From(run),
+            parent is null ? currentRead : RequireParentReadAsync,
+            recheckAfterBackground: parent is not null, cancellationToken,
+            parent is null ? BackgroundCheck.Read : BackgroundCheck.Dispatch);
         cancellationToken.ThrowIfCancellationRequested();
+
+        async ValueTask<bool> RequireParentReadAsync(AgentToolSessionObservation observation, CancellationToken token) {
+            if (!await currentRead(observation, token)) {
+                return false;
+            }
+            await parent!.RequireCurrentAsync(run, token);
+            return true;
+        }
     }
 
     private async ValueTask<AgentToolReceiptReconciliationAdmission> RequireSavedEffectReceiptAsync(
@@ -299,7 +331,7 @@ public sealed partial class AgentToolAdmissionJournal {
         var admitted = RequireBoundSavedEffect(claim.RunLease);
         await writer.UpdateExecutionRunDetailAsync(claim.RunLease.Session.ExecutionRunId, current => {
             claim.RequireOwner(this);
-            var journal = RequireSavedOriginal(admitted.Run, current, compareRevision: false);
+            var journal = RequireSavedOriginal(admitted.Run, current, compareRevision: false, admitted.Parent);
             RequireLease(claim.RunLease, journal);
             var proposal = AgentToolJournalTransitions.RequireProposal(journal, claim.Binding);
             if (preserveUncertainty && proposal.State == AgentToolProposalState.Completed && proposal.DispatchClaimId == claim.Id) {
@@ -314,9 +346,9 @@ public sealed partial class AgentToolAdmissionJournal {
     }
 
     private static AgentToolJournalRecord RequireSavedOriginal(ExecutionRunRecord original, ExecutionRunDetail current,
-        bool compareRevision) {
+        bool compareRevision, AgentInheritedSavedEffectContinuation? parent = null) {
         var journal = RequireOriginalRun(original, current, compareRevision);
-        RequireSavedJournal(current.Run, journal);
+        RequireSavedJournal(current.Run, journal, parent);
         return journal;
     }
 
@@ -335,17 +367,21 @@ public sealed partial class AgentToolAdmissionJournal {
         return journal;
     }
 
-    private static void RequireSavedJournal(ExecutionRunRecord run, AgentToolJournalRecord journal) {
-        var supported = journal.SchemaVersion == AgentToolJournalRecord.EffectJournalSchemaVersion
-            ? journal.Segments.Length == 1
-            : journal.SchemaVersion == AgentToolJournalRecord.PlanningSchemaVersion &&
-                journal.PlanningDecision?.Current.Steps.IsEmpty == false;
-        if (!supported ||
-            journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.Session.Reference.BackgroundSource is not null ||
-            !string.IsNullOrEmpty(run.ProcessRunId) || journal.Segments.IsEmpty ||
+    private static void RequireSavedJournal(ExecutionRunRecord run, AgentToolJournalRecord journal,
+        AgentInheritedSavedEffectContinuation? parent = null) {
+        var supported = journal.SchemaVersion switch {
+            AgentToolJournalRecord.EffectJournalSchemaVersion => parent is null && journal.Segments.Length == 1,
+            AgentToolJournalRecord.PlanningSchemaVersion => parent is null && journal.PlanningDecision?.Current.Steps.IsEmpty == false,
+            AgentToolJournalRecord.InheritedPlanningSchemaVersion => parent is not null && journal.PlanningDecision?.Current.Steps.IsEmpty == false,
+            _ => false
+        };
+        var interactiveMismatch = parent is null && (journal.Session.Reference.BackgroundSource is not null || !string.IsNullOrEmpty(run.ProcessRunId));
+        if (!supported || interactiveMismatch ||
+            journal.Support != AgentToolAdmissionSupport.EffectJournalOnly || journal.Segments.IsEmpty ||
             journal.Segments.Any(segment => segment.CheckpointKind != AgentToolCheckpointKind.EffectsOnly)) {
-            throw Failure("Saved effect dispatch requires an original interactive effects-only or planning admission.");
+            throw Failure("Saved effect dispatch requires its original supported admission and explicit decision owner.");
         }
+        parent?.RequireOriginal(run);
     }
 
     private static void RequirePreparedOwnerEffect(AgentToolProposalRecord proposal) {
@@ -356,7 +392,11 @@ public sealed partial class AgentToolAdmissionJournal {
         }
     }
 
-    private static void RequireSavedMutationCeiling(ExecutionRunRecord run) {
+    private static void RequireSavedMutationCeiling(ExecutionRunRecord run, AgentInheritedSavedEffectContinuation? parent) {
+        if (parent is not null) {
+            parent.RequireOriginal(run);
+            return;
+        }
         if (AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson) is not { MutationAllowed: true }) {
             throw Failure("The original execution authority did not permit mutation.");
         }

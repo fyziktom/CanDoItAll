@@ -33,6 +33,29 @@ internal sealed class AgentInheritedPlanningFixture : IAsyncDisposable {
     internal AgentToolAdmissionJournal NewJournal(FileSandboxWorkspaceStore? store = null)
         => new(store ?? Files.NewStore(), Files.Profile, Clock, backgroundSources: [Policy]);
 
+    internal static Task<AgentInheritedPlanningFixture> CreateForPublicationAsync() {
+        var profile = new AgentToolProfileBinding(Guid.NewGuid(), "inherited-saved-effect-profile", new(1));
+        return CreateAsync(scope: WorkspaceScopeDescriptor.Organization(profile.ProfileId.ToString("N")), profile: profile,
+            configureAgent: agent => agent with {
+                Id = Guid.NewGuid(), Name = "Inherited saved effect fixture", TemplateKey = string.Empty,
+                IsTemplate = false, ConfigurationJson = "{}"
+            });
+    }
+
+    internal async Task<ExecutionRunRecord> WaitForApprovalAsync() {
+        await using var lease = await StartAsync();
+        using var bound = lease.Bind();
+        var work = lease.PlanningWork!;
+        await InheritAsync(work);
+        var dispatch = await EnterAsync(work);
+        var call = AgentPlanningLiveOwnerFixture.Publication();
+        await Owner.AdmitResponseAsync(work, dispatch.Id, dispatch.RequestDigest,
+            AgentPlanningDecisionTestData.Envelope("{\"response\":1}"), call, default);
+        Clock.Advance(TimeSpan.FromSeconds(1));
+        return await Owner.PauseForApprovalAsync(work, new(Guid.NewGuid().ToString("D"), call.CallId,
+            call.Payload.ToolName, "function", "Review original inherited task plan.", call.Payload.ArgumentsJson), default);
+    }
+
     internal static async Task<AgentInheritedPlanningFixture> CreateAsync(ReadBasisMode parentMode = ReadBasisMode.StepSnapshot,
         TimeSpan? basisAge = null, WorkspaceScopeDescriptor? scope = null, AgentToolProfileBinding? profile = null,
         Func<AgentDefinition, AgentDefinition>? configureAgent = null) {

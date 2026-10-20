@@ -194,7 +194,8 @@ internal sealed record AgentToolPinnedRunSnapshot(ExecutionRunAdmissionSnapshot 
     ImmutableArray<ExecutionApprovalRecord> Approvals, AgentToolPinnedReceiptEvidence Evidence);
 
 internal sealed record AgentSavedEffectAdmission(ExecutionRunRecord Run, AgentToolApprovalBinding Binding,
-    Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> CurrentRead);
+    Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> CurrentRead,
+    AgentInheritedSavedEffectContinuation? Parent = null);
 
 public sealed class AgentToolInvocationClaim {
     private static readonly AsyncLocal<AgentToolInvocationClaim?> current = new();

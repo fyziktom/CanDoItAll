@@ -732,3 +732,14 @@ The initial and repaired c4-selected-publication-fence roots recorded ownership 
 The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
 The [workspace path-probe repair](validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67–670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+
+## Live-parent saved-effect continuation checkpoint
+
+The c4-parent-saved-continuation, c4-parent-saved-continuation-final and
+c4-parent-saved-continuation-verified roots are Released. All reused standard Release
+outputs and the existing isolated PostgreSQL 18 fixture. Earlier 190/200 and 13/14 results
+are retained; the verified candidate repeats and passes all 201 selected cases. Complete
+source/runtime identities and observer coverage pass. Every candidate has zero remaining
+observed processes and zero database-name delta. Four, three and seven respective
+unattributed TEMP deltas are preserved without deletion authority. Shared fixture use and
+historical cleanup denials remain open. See the [validation record](validation/2026-10-20-parent-saved-effect-continuation.md) for exact identities and retained proof hashes.

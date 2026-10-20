@@ -9,12 +9,25 @@ public enum AgentSavedEffectDispatchSupport {
 }
 
 public sealed record AgentSavedEffectDispatchRequest {
-    public AgentSavedEffectDispatchRequest(AgentToolSessionReference session, AgentToolApprovalBinding binding) {
+    public AgentSavedEffectDispatchRequest(AgentToolSessionReference session, AgentToolApprovalBinding binding)
+        : this(session, binding, AgentRuntimeContextPurpose.InteractiveChat) { }
+
+    public static AgentSavedEffectDispatchRequest ForInherited(AgentToolSessionReference session, AgentToolApprovalBinding binding)
+        => new(session, binding, AgentRuntimeContextPurpose.GovernedProcessAutomation);
+
+    private AgentSavedEffectDispatchRequest(AgentToolSessionReference session, AgentToolApprovalBinding binding,
+        AgentRuntimeContextPurpose purpose) {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(binding);
-        if (session.BackgroundSource is not null || binding.BatchId.Value == Guid.Empty || binding.IntentId.Value == Guid.Empty ||
+        var originalSession = purpose switch {
+            AgentRuntimeContextPurpose.InteractiveChat => session.BackgroundSource is null,
+            AgentRuntimeContextPurpose.GovernedProcessAutomation => session.BackgroundSource is not null &&
+                session.ChatSessionId == Guid.Empty && session.AuthorityId.Value == Guid.Empty,
+            _ => false
+        };
+        if (!originalSession || binding.BatchId.Value == Guid.Empty || binding.IntentId.Value == Guid.Empty ||
             binding.SemanticVersion < 1 || string.IsNullOrWhiteSpace(binding.Digest.Value)) {
-            throw new ArgumentException("Saved dispatch requires one exact interactive-session proposal binding.");
+            throw new ArgumentException("Saved dispatch requires an exact proposal binding and its original session kind.");
         }
         Session = session;
         Binding = binding;

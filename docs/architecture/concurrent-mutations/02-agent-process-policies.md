@@ -454,6 +454,26 @@ access and the business owner's original-parent check are mandatory on recovery.
 retained record grants no new dispatch or work interval. See the
 [admission evidence](../../../codex/bundles/concurrent-mutations/validation/2026-10-19-exact-inherited-admission.md).
 
+Inherited saved effects have a separate parent-authorized Core entry. Its owner-issued
+lease retains the original parent source, material, policy and grant. Caller, parent and
+registered background dispatch authority are checked again after lease waits and before
+claiming an effect; generic and interactive saved entries continue to reject inherited
+journals. Publication still requires the real claim, selected original snapshot, live work
+and basis limits, plus the effect owner's enlisted business-source fence. Actual committed
+or unknown outcomes can be recorded after authority is revoked, without granting disclosure
+or another dispatch. Manager review, inherited cancellation and historical receipt access
+are separate paths and are not enabled by this entry.
+
+The runtime request has a named inherited factory; constructing it grants no dispatch
+authority and the interactive constructor still rejects background sessions.
+MAF restores this admitted effect with its original context scope and source, without
+interactive governance. The registered provider must support governed Process automation;
+the usual current Agent permissions, Process policy contributor, exact restoration,
+receipt preflight and invocation authorization remain required. Core owns metadata parsing;
+Tooling receives an explicit immutable inherited context without a dependency on Core or
+product modules. The Workbench tool remains interactive-only until its inherited material
+and transaction authority adapter and actual producer are integrated.
+
 This journal and provider path is implemented and tested. Actual Process/Workflow
 producers, inherited Workbench effects and current manager continuation are still gated;
 the protocol alone does not enable their settings. See the

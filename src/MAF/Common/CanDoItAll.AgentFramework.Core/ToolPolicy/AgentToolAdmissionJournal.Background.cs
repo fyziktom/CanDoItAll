@@ -46,13 +46,16 @@ public sealed partial class AgentToolAdmissionJournal {
         return journal;
     }
 
-    public async Task<bool> CanReadBackgroundResultAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default) {
+    public Task<bool> CanReadBackgroundResultAsync(ExecutionRunRecord run, CancellationToken cancellationToken = default)
+        => CanAccessBackgroundSourceAsync(run, readOnly: true, cancellationToken);
+
+    private async Task<bool> CanAccessBackgroundSourceAsync(ExecutionRunRecord run, bool readOnly, CancellationToken cancellationToken) {
         var journal = run.ToolAdmission ?? throw Failure("The execution has no saved tool journal.");
         journal.Validate();
         var background = journal.Session.Reference.BackgroundSource ?? throw Failure("The execution is not admitted from a background source.");
         RequireBackgroundIdentity(journal.Session, run, background);
         var current = await RequireBackgroundPolicy(background.SourceKind).ObserveAsync(run, profile, cancellationToken);
-        return current.OwnerFingerprint == background.OwnerFingerprint && current.ReadAllowed;
+        return current.OwnerFingerprint == background.OwnerFingerprint && current.ReadAllowed && (readOnly || current.DispatchAllowed);
     }
 
     public async Task<AgentToolBackgroundReservation> PrepareBackgroundReservationAsync(ExecutionRunRecord candidate,
@@ -78,12 +81,10 @@ public sealed partial class AgentToolAdmissionJournal {
 
     private async Task RequireBackgroundSourceAsync(ExecutionRunRecord run, bool readOnly, CancellationToken cancellationToken) {
         using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("tool.journal.source-authority");
-        if (run.ToolAdmission?.Session.Reference.BackgroundSource is not { } source) {
+        if (run.ToolAdmission?.Session.Reference.BackgroundSource is null) {
             return;
         }
-        RequireBackgroundIdentity(run.ToolAdmission.Session, run, source);
-        var current = await RequireBackgroundPolicy(source.SourceKind).ObserveAsync(run, profile, cancellationToken);
-        if (current.OwnerFingerprint != source.OwnerFingerprint || !current.ReadAllowed || !readOnly && !current.DispatchAllowed) {
+        if (!await CanAccessBackgroundSourceAsync(run, readOnly, cancellationToken)) {
             throw Failure("The original background source binding or current owner authorization no longer permits this operation.");
         }
     }

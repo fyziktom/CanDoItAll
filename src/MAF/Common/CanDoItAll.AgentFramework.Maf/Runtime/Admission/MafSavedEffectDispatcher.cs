@@ -39,15 +39,17 @@ internal sealed class MafSavedEffectDispatcher(
         }
 
         var original = selected.Payload;
+        var context = await ReadContextAsync(run, lease, cancellationToken);
         var provider = RequireSingle(providers.Where(item => item.SupportsSavedEffect(original)), "runtime tool provider");
         var descriptor = provider.Descriptor ?? throw Denied("The saved-effect provider has no stable ownership descriptor.");
-        if (!descriptor.SupportedPurposes.Contains(AgentRuntimeToolProviderPurpose.InteractiveChat) ||
+        var purpose = context.InheritedOrigin is null ? AgentRuntimeToolProviderPurpose.InteractiveChat
+            : AgentRuntimeToolProviderPurpose.GovernedProcessAutomation;
+        if (!descriptor.SupportedPurposes.Contains(purpose) ||
             descriptor.AttachmentPhase != AgentRuntimeToolAttachmentPhase.RuntimeProviders ||
             ToolContractCatalog.WorkspaceToolNames.Contains(original.ToolName, StringComparer.OrdinalIgnoreCase)) {
-            throw Denied("Saved dispatch requires an interactive module effect provider; configured workspace tools require their original context protocol.");
+            throw Denied("Saved dispatch requires a module effect provider supporting its original purpose; workspace tools require their original context protocol.");
         }
         var receiptProvider = RequireSingle(receiptProviders.Where(item => item.Supports(original.ToolName)), "receipt owner");
-        var context = await ReadContextAsync(run, cancellationToken);
         var restored = await provider.RestoreSavedEffectAsync(context, original, cancellationToken);
         var metadata = restored.Metadata;
         if (metadata.ProviderKey != descriptor.ProviderKey || metadata.ToolName != original.ToolName ||
@@ -67,13 +69,13 @@ internal sealed class MafSavedEffectDispatcher(
 
         var pathPolicy = pathPolicyFactory.Create(workspaceRoot);
         await using var workspace = workspaceServicesFactory.Create(WorkspaceExecutionScope.ForRun(
-            pathPolicy.RootPath, context.Governance.WorkspaceScope, context.Governance, run.Id,
+            pathPolicy.RootPath, context.ContextScope, context.Governance, run.Id,
             ExternalTargetRootBindingScope.Resolve(context.Agent), pathPolicy.CaseSensitivity));
-        var inspection = new MafScriptPolicyInspectionService(pathPolicy.RootPath, context.Governance.WorkspaceScope,
+        var inspection = new MafScriptPolicyInspectionService(pathPolicy.RootPath, context.ContextScope,
             pathPolicyFactory, workspace.ExternalTargetPathRegistry);
         var claim = await journal.ClaimSavedInvocationAsync(lease, request.Binding, original, cancellationToken);
         using var boundClaim = claim.Bind();
-        using var audit = WorkspaceExecutionAuditContext.BeginScope(run, context.Governance.WorkspaceScope, workspaceScope);
+        using var audit = WorkspaceExecutionAuditContext.BeginScope(run, context.ContextScope, workspaceScope);
         using var ownership = AgentRuntimeToolOwnershipContext.BeginScope(new(
             descriptor.ProviderKey, descriptor.DisplayName, original.ToolName));
         using var effects = AgentToolInvocationEffectScope.Begin();
@@ -107,10 +109,15 @@ internal sealed class MafSavedEffectDispatcher(
         }
     }
 
-    private async Task<AgentRuntimeSavedEffectContext> ReadContextAsync(ExecutionRunRecord run, CancellationToken cancellationToken) {
+    private async Task<AgentRuntimeSavedEffectContext> ReadContextAsync(ExecutionRunRecord run, AgentToolRunLease lease,
+        CancellationToken cancellationToken) {
         await using var current = await catalog.AcquireAgentReadLeaseAsync(run.AgentId, cancellationToken);
         if (current.Scope != workspaceScope || current.Agent is not { } agent || agent.Id != run.AgentId) {
             throw Denied("The current Agent catalog does not match this runtime workspace.");
+        }
+        if (run.ToolAdmission!.PlanningDecision?.InheritedOrigin is { } origin) {
+            return AgentRuntimeSavedEffectContext.ForInherited(run.ToolAdmission.Session, agent, origin,
+                journal.RequireSavedEffectContextScope(lease));
         }
         var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson)
             ?? throw Denied("The original saved effect has no execution governance.");

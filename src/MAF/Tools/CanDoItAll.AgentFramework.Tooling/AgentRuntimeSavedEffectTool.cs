@@ -6,15 +6,38 @@ namespace CanDoItAll.AgentFramework.Tooling;
 
 public sealed record AgentRuntimeSavedEffectContext {
     public AgentRuntimeSavedEffectContext(AgentToolSessionAdmission session, AgentDefinition agent,
-        AgentExecutionGovernanceSnapshot governance) {
+        AgentExecutionGovernanceSnapshot governance)
+        : this(session, agent, governance?.WorkspaceScope ?? throw new ArgumentNullException(nameof(governance)), governance, null) { }
+
+    public static AgentRuntimeSavedEffectContext ForInherited(AgentToolSessionAdmission session, AgentDefinition agent,
+        AgentPlanningInheritedOrigin original, WorkspaceScopeDescriptor contextScope) {
+        ArgumentNullException.ThrowIfNull(original);
+        _ = original.ResolvePolicy();
+        return new(session, agent, contextScope, null, original);
+    }
+
+    private AgentRuntimeSavedEffectContext(AgentToolSessionAdmission session, AgentDefinition agent,
+        WorkspaceScopeDescriptor contextScope, AgentExecutionGovernanceSnapshot? governance, AgentPlanningInheritedOrigin? original) {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(governance);
-        if (session.Reference.BackgroundSource is not null || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
-            session.AgentId != agent.Id || governance.AgentId != agent.Id ||
-            governance.AuthorityId != session.Reference.AuthorityId || governance.DatabaseProfileId != session.Profile.ProfileId ||
-            governance.DatabaseProfileGeneration != session.Profile.Generation || !governance.ReadAllowed || !governance.MutationAllowed) {
-            throw new ArgumentException("Saved-effect restoration requires the exact admitted interactive authority and selected Agent.");
+        ArgumentNullException.ThrowIfNull(contextScope);
+        if (session.AgentId != agent.Id || !Enum.IsDefined(contextScope.Kind) ||
+            contextScope.Kind != WorkspaceScopeKind.Sandbox && string.IsNullOrWhiteSpace(contextScope.Key) ||
+            contextScope != new WorkspaceScopeDescriptor(contextScope.Kind, contextScope.Key)) {
+            throw new ArgumentException("Saved-effect restoration requires its admitted Agent and canonical context scope.");
+        }
+        if (original is not null) {
+            if (governance is not null || session.Purpose != AgentRuntimeContextPurpose.GovernedProcessAutomation ||
+                session.Reference.BackgroundSource != original.Source || session.Profile != original.Profile ||
+                original.AgentId != agent.Id || session.Reference.AuthorityId.Value != Guid.Empty ||
+                session.Reference.ChatSessionId != Guid.Empty) {
+                throw new ArgumentException("Inherited restoration requires its exact original parent source, profile and executor.");
+            }
+        } else if (session.Reference.BackgroundSource is not null || session.Purpose != AgentRuntimeContextPurpose.InteractiveChat ||
+            governance is null || governance.AgentId != agent.Id || governance.AuthorityId != session.Reference.AuthorityId ||
+            governance.DatabaseProfileId != session.Profile.ProfileId || governance.DatabaseProfileGeneration != session.Profile.Generation ||
+            !governance.ReadAllowed || !governance.MutationAllowed) {
+            throw new ArgumentException("Interactive restoration requires the exact admitted execution authority.");
         }
         Session = session;
         Agent = agent with {
@@ -23,11 +46,15 @@ public sealed record AgentRuntimeSavedEffectContext {
             Tags = agent.Tags.ToImmutableArray()
         };
         Governance = governance;
+        InheritedOrigin = original;
+        ContextScope = contextScope;
     }
 
     public AgentToolSessionAdmission Session { get; }
     public AgentDefinition Agent { get; }
-    public AgentExecutionGovernanceSnapshot Governance { get; }
+    public AgentExecutionGovernanceSnapshot? Governance { get; }
+    public AgentPlanningInheritedOrigin? InheritedOrigin { get; }
+    public WorkspaceScopeDescriptor ContextScope { get; }
 }
 
 public sealed record AgentRuntimeSavedEffectTool {

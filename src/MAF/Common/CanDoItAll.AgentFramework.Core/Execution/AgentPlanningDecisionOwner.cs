@@ -21,6 +21,11 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         CancellationToken cancellationToken)
         => journal.AcquirePlanningEffectDispatchAsync(this, request, expected, currentRead, cancellationToken);
 
+    public Task<AgentToolRunLease> ResumeInheritedSavedEffectAsync(AgentSavedEffectContinuationRequest request,
+        AgentPlanningDecisionExpectation expected, AgentInheritedSavedEffectContinuation parent,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
+        => journal.AcquireInheritedPlanningEffectDispatchAsync(this, request, expected, parent, currentRead, cancellationToken);
+
     public Task<ExecutionRunDetail> RefreshAsync(AgentPlanningDecisionExpectation expected, bool automatic,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, CancellationToken cancellationToken)
         => journal.ChangeClosedPlanningAsync(expected, currentRead, current => {
@@ -93,7 +98,6 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         held.RequireActive();
         var claim = AgentToolInvocationClaim.Current;
         if (claim is null || !ReferenceEquals(claim.RunLease, work.Lease) || claim.Binding != binding ||
-            held.Original.Origin != AgentPlanningPublicationOrigin.Interactive ||
             held.Original.Session != work.OriginalRun.ToolAdmission!.Session) {
             throw new AgentPlanningAdmissionException(work.DecisionId, work.Generation, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
@@ -103,8 +107,19 @@ public sealed class AgentPlanningDecisionOwner(AgentToolAdmissionJournal journal
         if (selected.State != AgentToolProposalState.Executing || selected.DispatchClaimId != claim.Id ||
             selected.ApprovalStatus != ExecutionApprovalStatus.Approved || selected.ApprovedDigest != selected.Payload.Digest ||
             selected.Payload != claim.Proposal.Payload || run.Outcome is not null || run.State != ExecutionState.Running ||
-            run.MetadataJson != work.OriginalRun.MetadataJson || held.OriginalChatSession?.LatestExecutionRunId != run.Id) {
+            run.MetadataJson != work.OriginalRun.MetadataJson) {
             throw new AgentPlanningAdmissionException(work.DecisionId, work.Generation, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+        }
+        if (work.OriginalRun.ToolAdmission.PlanningDecision?.InheritedOrigin is not null) {
+            var parent = work.Lease.RequireSavedEffect(journal).Parent;
+            if (parent is null || held.Original.Origin != AgentPlanningPublicationOrigin.Inherited ||
+                held.OriginalChatSession is not null || held.Original.Scope != AgentPlanningRunMetadata.ReadScope(run)) {
+                throw Refuse(run.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
+            }
+            parent.RequireOriginal(run);
+        } else if (held.Original.Origin != AgentPlanningPublicationOrigin.Interactive ||
+            held.OriginalChatSession?.LatestExecutionRunId != run.Id) {
+            throw Refuse(run.ToolAdmission!.PlanningDecision!, AgentPlanningAdmissionRefusal.OriginalStepChanged);
         }
         return RequireMutation(work, run, binding);
     }

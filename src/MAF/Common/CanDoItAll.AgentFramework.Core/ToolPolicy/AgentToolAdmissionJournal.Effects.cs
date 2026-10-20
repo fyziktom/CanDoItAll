@@ -307,10 +307,10 @@ public sealed partial class AgentToolAdmissionJournal {
 
     private async ValueTask RequireEffectReadPolicyAsync(ExecutionRunRecord run, AgentToolSessionObservation observation,
         Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>> currentRead, bool recheckAfterBackground,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, BackgroundCheck backgroundCheck = BackgroundCheck.Read) {
         try {
             if (!await currentRead(observation, cancellationToken) || observation.Session.Reference.BackgroundSource is not null &&
-                (!await CanReadBackgroundResultAsync(run, cancellationToken) ||
+                (!await CanAccessBackgroundSourceAsync(run, backgroundCheck == BackgroundCheck.Read, cancellationToken) ||
                     recheckAfterBackground && !await currentRead(observation, cancellationToken))) {
                 throw new AgentToolReceiptAccessDeniedException();
             }

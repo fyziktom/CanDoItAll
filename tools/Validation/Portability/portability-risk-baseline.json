@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-10-20T04:40:14.412652+00:00",
+  "generated_utc": "2026-10-20T06:35:52.847774+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -27328,19 +27328,19 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafSavedEffectDispatcher.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "aaa150a7a0a631b1eb52185de49d3411abe79d7cf3a3f55601401cb111f6c789",
+      "source_fingerprint": "770c8514ebac9cdb8e0932e3589bc28220c0a7419d8b329be0a89899a45371d1",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafSavedEffectDispatcher.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a376fdeefa1042c6cdfa13f498aba936618b6eed5b21018ead3dc5bf2988b9d1",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafSavedEffectDispatcher.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "ce357f96e764b937644ac58c5372dc6bc6aaff7bca0b77a0e5a265eb466aa1bc",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Admission/MafSavedEffectDispatcher.cs",
-      "category": "absolute-path-field",
-      "source_fingerprint": "e963958cb520399f8ba335aecbbd6919e7c6b5563259fd819c101dc8f3bceb4e",
       "count": 1
     },
     {

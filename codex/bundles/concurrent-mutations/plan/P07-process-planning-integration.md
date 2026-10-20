@@ -142,3 +142,11 @@ The [selected publication fence](../validation/2026-10-20-selected-publication-f
 The [enlisted task publication checkpoint](../validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.
 
 The [workspace path-probe repair](../validation/2026-10-20-workspace-path-probe.md) passes all 75 selected cases. Exact internal path comparison removes repeated filesystem case-probe writes while preserving fresh containment/link validation and durable journals. The identical selected SQL-wait reference now has all six writers below one second (162.67–670.72 ms). Earlier negative evidence is retained; sustained capacity and inherited runtime activation remain open.
+
+The [live-parent saved-effect continuation checkpoint](../validation/2026-10-20-parent-saved-effect-continuation.md) passes all
+201 selected cases on one frozen candidate. Core retains exact original parent authority,
+receipt/claim ownership and finite work; MAF accepts an explicit inherited context/request
+through its existing governed Process policy pipeline. Both earlier failed candidates
+remain recorded. Five direct Release builds and full portability enforcement pass. Actual
+Workbench/Process producer, workspace approval lifecycle, manager/historical recovery,
+Workflow and capacity remain open; this does not activate inherited product publication.
