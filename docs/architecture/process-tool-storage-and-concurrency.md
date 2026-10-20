@@ -112,3 +112,11 @@ in the waiting-for-review generation and no active or live claim; it does not re
 or settle the child. Selected publication requires actual saved launch authority. The bare
 child fence and legacy source guard keep their existing contracts. This foundation does not
 activate inherited task publication, saved-effect dispatch or Process/Workflow producers.
+
+The task publisher separates its pretransaction current-authority check from the required
+`RequireEnlistedAsync` checks immediately before staging and after flush. Those checks run
+after the Project gates, inside the existing effect transaction. An inherited source adapter
+must include its current permission checks and selected Process fence at both points.
+The ordinary Agent adapter retains its held current-authority check. A refusal before
+commit rolls back tasks and receipt together; a completed receipt remains on the original
+read/recovery path without acquiring new mutation authority.

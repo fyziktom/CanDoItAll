@@ -154,6 +154,7 @@ public sealed class ProjectTaskPlanActiveWorkTests {
         private sealed class Held(ActiveWorkAuthority owner, IProjectTaskPlanHeldAuthority authority) : IProjectTaskPlanActiveWorkAuthority {
             public ImmutableArray<ProjectWriteAdmission> AdditionalProjects => authority.AdditionalProjects;
             public Task RequireCurrentAsync(CancellationToken cancellationToken) => authority.RequireCurrentAsync(cancellationToken);
+            public Task RequireEnlistedAsync(CancellationToken cancellationToken) => authority.RequireEnlistedAsync(cancellationToken);
             public void RequireActiveWork(ProjectTaskPlanSource source, DecisionDataPolicy policy) {
                 Assert.Equal(owner.expected.Source, source);
                 Assert.Equal(owner.expected.Policy, policy);

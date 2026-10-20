@@ -11,6 +11,7 @@ internal interface IProjectTaskPlanPublicationAuthority {
 internal interface IProjectTaskPlanHeldAuthority : IAsyncDisposable {
     ImmutableArray<ProjectWriteAdmission> AdditionalProjects { get; }
     Task RequireCurrentAsync(CancellationToken cancellationToken);
+    Task RequireEnlistedAsync(CancellationToken cancellationToken);
 }
 
 internal interface IProjectTaskPlanReceiptAccess {

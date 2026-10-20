@@ -105,13 +105,13 @@ internal sealed class ProjectTaskPlanPublisher {
                 if (!ProjectTaskPlanBasisCodec.MaterialEquals(command.Basis, current.Basis)) {
                     throw new PublicationRefused(ProjectTaskPlanRefusal.BasisChanged);
                 }
-                await authority.RequireCurrentAsync(cancellationToken);
+                await authority.RequireEnlistedAsync(cancellationToken);
                 var staged = ProjectTaskPlanTaskStaging.StageNewPlainTasks(context, target, command.Proposal, current, current.Basis.CapturedAtUtc);
                 accepted = new(operation, command.Basis.Project.Expectation, command.Source, digest,
                     current.Basis.CapturedAtUtc, epoch.ReplayUntilUtc, staged.Tasks);
                 context.Add(ProjectTaskPlanOperationProtocol.CreateReceipt(accepted, invocation.Caller));
                 await context.SaveChangesAsync(cancellationToken);
-                await authority.RequireCurrentAsync(cancellationToken);
+                await authority.RequireEnlistedAsync(cancellationToken);
                 await admissions.RequireManyForMutationAsync(expectedProjects, cancellationToken);
                 await epochs.RequireAdmissibleAsync(context, epoch, cancellationToken);
                 RequirePolicy(command, await FiniteOperationEpochStore.ReadTimeAsync(context, cancellationToken), authority);

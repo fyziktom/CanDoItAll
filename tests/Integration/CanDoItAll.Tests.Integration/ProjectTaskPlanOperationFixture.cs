@@ -203,6 +203,7 @@ internal sealed class TaskPlanAuthority : IProjectTaskPlanPublicationAuthority, 
 
     private sealed class Held(TaskPlanAuthority owner, ImmutableArray<ProjectWriteAdmission> projects) : IProjectTaskPlanHeldAuthority {
         public ImmutableArray<ProjectWriteAdmission> AdditionalProjects => projects;
+        public Task RequireEnlistedAsync(CancellationToken cancellationToken) => RequireCurrentAsync(cancellationToken);
         public Task RequireCurrentAsync(CancellationToken cancellationToken) {
             cancellationToken.ThrowIfCancellationRequested();
             owner.Require();

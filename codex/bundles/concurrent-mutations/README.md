@@ -106,7 +106,9 @@ Release build, portability enforcement and documentation/rendering checks pass; 
 [resumption record](validation/2026-10-18-resumption.md). The remaining lifecycle,
 runtime-policy and capacity work is still active. The selected publication authority now has
 [a passing 72-case checkpoint](validation/2026-10-19-selected-publication-cost.md),
-including all six unrelated writers below one second during a real SQL wait. Wider
+including all six unrelated writers below one second during that historical SQL wait.
+The 2026-10-20 enlisted-hook run subsequently failed this reference; current
+responsiveness is reopened. Wider
 capacity and actual RunSnapshot/StepSnapshot/Refresh/Replan runtime activation remain open.
 The [runtime result codec extraction](validation/2026-10-19-runtime-result-codec.md)
 also passes compatibility proof. The [saved-effect runtime adapter](validation/2026-10-19-saved-effect-runtime.md)
@@ -323,3 +325,5 @@ The [inherited publication snapshot checkpoint](validation/2026-10-20-inherited-
 The [Process Project/root lock-order repair](validation/2026-10-20-process-project-lock-order.md) has 194 distinct passing selected cases across an exact test-only bridge. Initial and child commits take original Project gates before Process roots; accepted receipts still recover after retirement. All six new ordering/cancellation races pass. Inherited publication and R5/R6 activation remain open.
 
 The [selected Process publication fence](validation/2026-10-20-selected-publication-fence.md) has 126 distinct passing cases across an exact one-test-file bridge. It requires the original saved source and canonical material, protects assignment repair through effect commit, and rechecks claim time after waits. Actual inherited business publication, saved effects, producer and manager activation remain open.
+
+The [enlisted task publication checkpoint](validation/2026-10-20-enlisted-task-publication.md) passes all 72 correctness cases, including real Process expiry before staging and after flush. Its one-second selected-guard performance reference failed for two writers (1006.85 and 1066.32 ms); current responsiveness is reopened and is not a green gate. Inherited producer/continuation and wider capacity remain open.

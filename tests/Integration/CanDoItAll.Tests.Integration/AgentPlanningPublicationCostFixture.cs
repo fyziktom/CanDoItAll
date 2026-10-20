@@ -534,6 +534,7 @@ internal sealed class AgentPlanningPublicationCostFixture(string outputRoot, Age
             : IProjectTaskPlanHeldAuthority {
             private bool disposed;
             public ImmutableArray<ProjectWriteAdmission> AdditionalProjects => [];
+            public Task RequireEnlistedAsync(CancellationToken cancellationToken) => RequireCurrentAsync(cancellationToken);
             public Task RequireCurrentAsync(CancellationToken cancellationToken) {
                 cancellationToken.ThrowIfCancellationRequested();
                 ObjectDisposedException.ThrowIf(disposed, this);

@@ -37,6 +37,8 @@ internal sealed class ProjectTaskPlanAgentAuthority(ProjectTaskPlanAgentCommand 
         return Task.CompletedTask;
     }
 
+    public Task RequireEnlistedAsync(CancellationToken cancellationToken) => RequireCurrentAsync(cancellationToken);
+
     public void RequireActiveWork(ProjectTaskPlanSource expected, DecisionDataPolicy policy) {
         RequireActive();
         if (expected != original.Command.Source || policy != original.Command.Policy) {
